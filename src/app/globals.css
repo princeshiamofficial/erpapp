@@ -6,81 +6,81 @@
 @layer base {
   :root {
     --background: 0 0% 100%; /* White */
-    --foreground: 224 71.4% 4.1%; /* Dark Blue-Gray */
+    --foreground: 0 0% 13%; /* Near Black */
     --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
+    --card-foreground: 0 0% 13%;
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
-    --primary: 210 70% 50%; /* Modern Blue */
-    --primary-foreground: 0 0% 100%; /* White */
-    --secondary: 215 27.9% 90.0%; /* Light Gray-Blue */
-    --secondary-foreground: 224 71.4% 4.1%;
-    --muted: 215 27.9% 90.0%;
-    --muted-foreground: 220 9.1% 46.1%; /* Medium Gray */
-    --accent: 210 70% 95%; /* Very Light Blue (for subtle highlights) */
-    --accent-foreground: 210 70% 40%; /* Darker shade of primary */
-    --destructive: 0 72.2% 50.6%; /* Red */
-    --destructive-foreground: 0 0% 100%;
-    --border: 215 20.2% 85.1%; /* Light Gray */
-    --input: 215 20.2% 85.1%;
-    --ring: 210 70% 50%;
-    --radius: 0.75rem; /* Slightly larger radius for a softer look */
+    --popover-foreground: 0 0% 13%;
+    --primary: 24 96% 53%; /* Orange */
+    --primary-foreground: 0 0% 100%; /* White for text on Orange */
+    --secondary: 0 0% 96.1%; /* Very Light Gray */
+    --secondary-foreground: 0 0% 13%; /* Near Black for text on secondary */
+    --muted: 0 0% 90%; /* Light Gray */
+    --muted-foreground: 0 0% 45.1%; /* Medium Gray */
+    --accent: 0 84% 60%; /* Red */
+    --accent-foreground: 0 0% 100%; /* White for text on Red */
+    --destructive: 0 84% 60%; /* Red */
+    --destructive-foreground: 0 0% 100%; /* White */
+    --border: 0 0% 89.8%; /* Light Gray Border */
+    --input: 0 0% 89.8%;
+    --ring: 24 96% 53%; /* Orange for focus rings */
+    --radius: 0.75rem;
 
     /* Chart colors */
-    --chart-1: 210 70% 50%;
-    --chart-2: 0 72.2% 50.6%;
-    --chart-3: 142.1 70.6% 45.3%;
-    --chart-4: 43.6 95.7% 50%;
-    --chart-5: 20.5 90.2% 48.2%;
+    --chart-1: 24 96% 53%; /* Orange */
+    --chart-2: 0 84% 60%;  /* Red */
+    --chart-3: 24 96% 70%; /* Lighter Orange */
+    --chart-4: 0 0% 50%;   /* Gray */
+    --chart-5: 24 60% 40%; /* Darker, less saturated Orange */
 
     /* Sidebar specific variables - Light Mode */
-    --sidebar-background: 220 15% 96%; /* Off-white/very light gray for sidebar */
-    --sidebar-foreground: 224 71.4% 4.1%;
-    --sidebar-primary: 210 70% 50%;
+    --sidebar-background: 0 0% 98%; /* Off-white for sidebar */
+    --sidebar-foreground: 0 0% 13%;
+    --sidebar-primary: 24 96% 53%; /* Orange */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 27.9% 88.0%; /* Slightly darker for sidebar accent */
-    --sidebar-accent-foreground: 210 70% 40%;
-    --sidebar-border: 215 20.2% 80.1%;
-    --sidebar-ring: 210 70% 50%;
+    --sidebar-accent: 24 96% 90%; /* Light orange for sidebar hover */
+    --sidebar-accent-foreground: 24 96% 40%; /* Darker orange for text on light orange hover */
+    --sidebar-border: 0 0% 89.8%;
+    --sidebar-ring: 24 96% 53%;
   }
 
   .dark {
-    --background: 224 71.4% 4.1%; /* Dark Blue-Gray */
-    --foreground: 210 20% 98%; /* Very Light Gray */
-    --card: 224 71.4% 6.1%; /* Slightly lighter dark for cards */
-    --card-foreground: 210 20% 98%;
-    --popover: 224 71.4% 4.1%;
-    --popover-foreground: 210 20% 98%;
-    --primary: 210 70% 60%; /* Lighter Blue for dark mode primary */
-    --primary-foreground: 224 71.4% 4.1%;
-    --secondary: 220 14.3% 15.1%; /* Dark Gray-Blue */
-    --secondary-foreground: 210 20% 98%;
-    --muted: 220 14.3% 15.1%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 220 14.3% 20.1%; /* Darker accent for dark mode */
-    --accent-foreground: 210 70% 70%;
-    --destructive: 0 62.8% 50.6%; /* Red for dark mode */
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 14.3% 20.1%; /* Darker Border */
-    --input: 220 14.3% 20.1%;
-    --ring: 210 70% 60%;
+    --background: 0 0% 13%; /* Near Black */
+    --foreground: 0 0% 98%; /* Off-white */
+    --card: 0 0% 16%; /* Slightly lighter dark for cards */
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 24 90% 60%; /* Lighter/brighter Orange for dark mode */
+    --primary-foreground: 0 0% 0%; /* Black for text on Orange in dark mode */
+    --secondary: 0 0% 20%; /* Dark Gray */
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 20%;
+    --muted-foreground: 0 0% 62.8%; /* Lighter Gray for muted text */
+    --accent: 0 75% 65%; /* Lighter/brighter Red for dark mode */
+    --accent-foreground: 0 0% 0%; /* Black for text on Red in dark mode */
+    --destructive: 0 75% 65%; /* Red for dark mode */
+    --destructive-foreground: 0 0% 0%; /* Black */
+    --border: 0 0% 25%; /* Darker Border */
+    --input: 0 0% 25%;
+    --ring: 24 90% 60%;
     
     /* Chart colors */
-    --chart-1: 210 70% 60%;
-    --chart-2: 0 62.8% 50.6%;
-    --chart-3: 142.1 70.6% 45.3%;
-    --chart-4: 43.6 95.7% 50%;
-    --chart-5: 20.5 90.2% 48.2%;
+    --chart-1: 24 90% 60%; /* Orange */
+    --chart-2: 0 75% 65%;  /* Red */
+    --chart-3: 24 90% 75%; /* Lighter Orange */
+    --chart-4: 0 0% 70%;   /* Light Gray */
+    --chart-5: 24 60% 50%; /* Darker, less saturated Orange */
     
     /* Sidebar specific variables for dark mode */
-    --sidebar-background: 224 71.4% 5.1%; /* Darker sidebar bg */
-    --sidebar-foreground: 210 20% 98%;
-    --sidebar-primary: 210 70% 60%;
-    --sidebar-primary-foreground: 224 71.4% 4.1%;
-    --sidebar-accent: 220 14.3% 18.1%;
-    --sidebar-accent-foreground: 210 70% 70%;
-    --sidebar-border: 220 14.3% 15.1%;
-    --sidebar-ring: 210 70% 60%;
+    --sidebar-background: 0 0% 10%; /* Darker sidebar bg */
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 24 90% 60%; /* Orange */
+    --sidebar-primary-foreground: 0 0% 0%; /* Black */
+    --sidebar-accent: 24 80% 25%; /* Darker orange for sidebar hover */
+    --sidebar-accent-foreground: 24 90% 70%; /* Lighter orange for text on dark orange hover */
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 24 90% 60%;
   }
 }
 
