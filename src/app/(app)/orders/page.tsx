@@ -99,21 +99,21 @@ export default function OrdersPage() {
         )}
       </div>
 
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Order List</CardTitle>
-          <CardDescription>A summary of recent and active orders. {currentUser.role === 'CRM' ? "Showing orders assigned to you." : "Showing all orders."}</CardDescription>
+      <Card className="shadow-xl border bg-card">
+        <CardHeader className="border-b">
+          <CardTitle className="text-card-foreground">Order List</CardTitle>
+          <CardDescription className="text-muted-foreground">A summary of recent and active orders. {currentUser.role === 'CRM' ? "Showing orders assigned to you." : "Showing all orders."}</CardDescription>
           <div className="mt-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input 
               placeholder="Search orders (ID, Customer, Company, CRM)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm pl-10"
+              className="max-w-sm pl-10 bg-background"
             />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -128,25 +128,26 @@ export default function OrdersPage() {
               </TableHeader>
               <TableBody>
                 {filteredOrders.map((order) => (
-                  <TableRow key={order.id}>
+                  <TableRow key={order.id} className="hover:bg-muted/30 transition-colors">
                     <TableCell>
                       <Link href={`/track/${order.id}`} className="font-medium text-primary hover:underline">
                         {order.id}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-foreground">{order.customerName} <br/><small className="text-muted-foreground">{order.companyName}</small></TableCell>
+                    <TableCell className="text-card-foreground">{order.customerName} <br/><small className="text-muted-foreground">{order.companyName}</small></TableCell>
                     <TableCell>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                         order.currentStatus === 'IN_PRODUCTION' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
                         order.currentStatus === 'PENDING_CLIENT_APPROVAL' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
                         order.currentStatus === 'SHIPPED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
                         order.currentStatus === 'IDEA_SUBMITTED' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' :
+                        order.currentStatus === 'READY_FOR_DESIGN' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300' :
                          'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                       }`}>
                         {formatStatus(order.currentStatus)}
                       </span>
                     </TableCell>
-                    <TableCell className="text-foreground">{order.crmUserName}</TableCell>
+                    <TableCell className="text-card-foreground">{order.crmUserName}</TableCell>
                     <TableCell className="text-muted-foreground">{formatDate(order.createdAt)}</TableCell>
                     <TableCell>
                        <Link href={`/track/${order.id}`} passHref>
@@ -158,7 +159,7 @@ export default function OrdersPage() {
                  {filteredOrders.length === 0 && (
                     <TableRow>
                         <TableCell colSpan={6} className="text-center py-10">
-                            <Image src="https://placehold.co/300x200.png" alt="No orders" data-ai-hint="empty state illustration" width={300} height={200} className="mx-auto rounded-md" />
+                            <Image src="https://placehold.co/300x200.png" alt="No orders" data-ai-hint="empty state illustration" width={300} height={200} className="mx-auto rounded-md opacity-70" />
                             <p className="mt-4 text-muted-foreground">
                               {searchTerm ? "No orders match your search criteria." : "No orders found. Start by creating a new one!"}
                             </p>

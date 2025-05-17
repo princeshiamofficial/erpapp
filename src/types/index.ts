@@ -9,6 +9,8 @@ export interface User {
   companyName?: string;
   password?: string; // Added for login, should not be stored long-term in client state after auth
   avatarUrl?: string; // Added for profile picture
+  monthlyOrderTarget?: number;
+  weeklyOrderTarget?: number;
 }
 
 export type OrderStatus =
@@ -17,6 +19,7 @@ export type OrderStatus =
   | "PENDING_CLIENT_APPROVAL"
   | "CHANGES_REQUESTED"
   | "APPROVED_FOR_PRODUCTION"
+  | "READY_FOR_DESIGN" // New status
   | "IN_PRODUCTION"
   | "QUALITY_CHECK"
   | "SHIPPED"

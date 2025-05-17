@@ -19,8 +19,8 @@ interface EditTrackingLinkDialogProps {
 
 const ALL_ORDER_STATUSES: OrderStatus[] = [
   "IDEA_SUBMITTED", "DESIGN_IN_PROGRESS", "PENDING_CLIENT_APPROVAL", 
-  "CHANGES_REQUESTED", "APPROVED_FOR_PRODUCTION", "IN_PRODUCTION", 
-  "QUALITY_CHECK", "SHIPPED", "DELIVERED", "CANCELLED", "ON_HOLD"
+  "CHANGES_REQUESTED", "APPROVED_FOR_PRODUCTION", "READY_FOR_DESIGN", 
+  "IN_PRODUCTION", "QUALITY_CHECK", "SHIPPED", "DELIVERED", "CANCELLED", "ON_HOLD"
 ];
 
 export function EditTrackingLinkDialog({ trackingLink, currentUser, onTrackingLinkUpdated, children }: EditTrackingLinkDialogProps) {
@@ -137,4 +137,3 @@ export function EditTrackingLinkDialog({ trackingLink, currentUser, onTrackingLi
     </Dialog>
   );
 }
-

@@ -88,21 +88,21 @@ export default function TrackingLinksPage() {
         )} */}
       </div>
 
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>Active Tracking Links</CardTitle>
-          <CardDescription>Overview of generated tracking links and their status.</CardDescription>
+      <Card className="shadow-xl border bg-card">
+        <CardHeader className="border-b">
+          <CardTitle className="text-card-foreground">Active Tracking Links</CardTitle>
+          <CardDescription className="text-muted-foreground">Overview of generated tracking links and their status.</CardDescription>
            <div className="mt-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input 
               placeholder="Search links (ID, Customer, CRM)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm pl-10"
+              className="max-w-sm pl-10 bg-background"
             />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -118,33 +118,34 @@ export default function TrackingLinksPage() {
               </TableHeader>
               <TableBody>
                 {filteredTrackingLinks.map((link) => (
-                  <TableRow key={link.id}>
+                  <TableRow key={link.id} className="hover:bg-muted/30 transition-colors">
                     <TableCell>
                        <Link href={`/track/${link.id}`} className="font-medium text-primary hover:underline">
                         {link.id}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-foreground">{link.customerName}</TableCell>
+                    <TableCell className="text-card-foreground">{link.customerName}</TableCell>
                     <TableCell>
-                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                         link.isPublic ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
                       }`}>
                         {link.isPublic ? 'Public' : 'Private'}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                         link.currentStatus === 'IN_PRODUCTION' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
                         link.currentStatus === 'PENDING_CLIENT_APPROVAL' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
                         link.currentStatus === 'SHIPPED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
                         link.currentStatus === 'IDEA_SUBMITTED' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' :
+                        link.currentStatus === 'READY_FOR_DESIGN' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300' :
                          'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                       }`}>
                         {formatStatus(link.currentStatus)}
                       </span>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{mockViews[link.id] || 0}</TableCell>
-                    <TableCell className="text-foreground">{link.crmUserName}</TableCell>
+                    <TableCell className="text-card-foreground">{link.crmUserName}</TableCell>
                     <TableCell className="space-x-2 whitespace-nowrap">
                       <Link href={`/track/${link.id}`} passHref>
                         <Button variant="outline" size="sm"><Eye className="mr-1 h-4 w-4" />View Public Page</Button>
@@ -160,7 +161,7 @@ export default function TrackingLinksPage() {
                 {filteredTrackingLinks.length === 0 && (
                     <TableRow>
                         <TableCell colSpan={7} className="text-center py-10">
-                            <Image src="https://placehold.co/300x200.png" alt="No tracking links" data-ai-hint="empty state link" width={300} height={200} className="mx-auto rounded-md" />
+                            <Image src="https://placehold.co/300x200.png" alt="No tracking links" data-ai-hint="empty state link" width={300} height={200} className="mx-auto rounded-md opacity-70" />
                             <p className="mt-4 text-muted-foreground">
                               {searchTerm ? "No tracking links match your search." : "No tracking links found."}
                             </p>
