@@ -4,15 +4,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Edit, Trash2, KeyRound } from "lucide-react"; // Added KeyRound
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole } from "@/types";
-import { MOCK_USERS } from "@/lib/auth-constants";
+import { MOCK_USERS, updateUserPassword } from "@/lib/auth-constants"; // Imported updateUserPassword
 import Image from "next/image";
 import { AddUserDialog } from '@/components/users/add-user-dialog';
 import { EditUserRoleDialog } from '@/components/users/edit-user-role-dialog';
 import { DeleteUserDialog } from '@/components/users/delete-user-dialog';
+import { ChangePasswordDialog } from '@/components/users/change-password-dialog'; // Added
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
@@ -23,6 +24,8 @@ export default function UsersPage() {
   
   const [users, setUsers] = useState<User[]>(MOCK_USERS);
   const [searchTerm, setSearchTerm] = useState('');
+  // State for ChangePasswordDialog is managed within the dialog trigger logic if needed, or can be added here.
+  // For simplicity, we'll trigger it directly from the map.
 
   useEffect(() => {
     if (currentUser && currentUser.role !== 'ADMIN') {
@@ -31,15 +34,37 @@ export default function UsersPage() {
   }, [currentUser, router]);
 
   const handleUserAdded = (newUser: User) => {
+    // In a real app, MOCK_USERS would be updated via API, and then we'd refetch or update local state.
+    // For this mock, we'll add to MOCK_USERS directly (though this won't persist across refreshes without further logic)
+    // and update the local state for immediate UI update.
+    MOCK_USERS.push(newUser); // This mutates the imported array, which is okay for this demo.
     setUsers(prevUsers => [...prevUsers, newUser]);
   };
 
   const handleUserRoleUpdated = (updatedUser: User) => {
+    const userIndex = MOCK_USERS.findIndex(u => u.id === updatedUser.id);
+    if (userIndex !== -1) MOCK_USERS[userIndex].role = updatedUser.role;
     setUsers(prevUsers => prevUsers.map(u => u.id === updatedUser.id ? updatedUser : u));
   };
 
   const handleUserDeleted = (userId: string) => {
+    const userIndex = MOCK_USERS.findIndex(u => u.id === userId);
+    if (userIndex !== -1) MOCK_USERS.splice(userIndex, 1);
     setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
+  };
+
+  const handlePasswordChanged = async (userId: string, newPassword: string): Promise<boolean> => {
+    const success = updateUserPassword(userId, newPassword);
+    if (success) {
+      // Optionally, if you want to re-render the list or update local state specifically,
+      // you could refetch or map users here. Since MOCK_USERS is mutated,
+      // and login reads from it, this is sufficient for the mock.
+      // For a visual update if needed, you could:
+      // setUsers(prevUsers => prevUsers.map(u => u.id === userId ? {...u, password: newPassword /* or just spread u */} : u));
+      // However, we don't display passwords, so a direct re-render of `users` state might not be needed
+      // unless other user properties were changed alongside password.
+    }
+    return success;
   };
   
   const filteredUsers = useMemo(() => {
@@ -53,8 +78,6 @@ export default function UsersPage() {
   }, [users, searchTerm]);
 
   if (!currentUser || currentUser.role !== 'ADMIN') {
-    // This check is important, but the layout already provides a loader/redirect.
-    // However, this explicit check handles the case where a non-admin might somehow land here.
     return <div className="p-6">Access Denied. You must be an administrator to view this page.</div>;
   }
 
@@ -98,7 +121,7 @@ export default function UsersPage() {
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Company</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -117,7 +140,10 @@ export default function UsersPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{user.companyName || 'N/A'}</TableCell>
-                    <TableCell className="space-x-2 whitespace-nowrap">
+                    <TableCell className="space-x-2 whitespace-nowrap text-right">
+                      <ChangePasswordDialog user={user} onPasswordChanged={handlePasswordChanged}>
+                        <Button variant="outline" size="sm"><KeyRound className="mr-1 h-4 w-4" />Change Pwd</Button>
+                      </ChangePasswordDialog>
                       <EditUserRoleDialog user={user} onUserRoleUpdated={handleUserRoleUpdated}>
                         <Button variant="outline" size="sm"><Edit className="mr-1 h-4 w-4" />Edit Role</Button>
                       </EditUserRoleDialog>

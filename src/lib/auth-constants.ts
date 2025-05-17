@@ -1,3 +1,4 @@
+
 import type { User } from '@/types';
 
 // For mock purposes, all users will have the password "password"
@@ -19,4 +20,14 @@ export const findUserByEmailAndPassword = (email: string, pass: string): User | 
     return userWithoutPassword as User;
   }
   return undefined;
+};
+
+// Helper to update a user's password
+export const updateUserPassword = (userId: string, newPassword: string): boolean => {
+  const userIndex = MOCK_USERS.findIndex(user => user.id === userId);
+  if (userIndex !== -1) {
+    MOCK_USERS[userIndex].password = newPassword;
+    return true; // Indicate success
+  }
+  return false; // Indicate user not found or failure
 };
