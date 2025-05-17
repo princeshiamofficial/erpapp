@@ -11,7 +11,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
 import { Progress } from '@/components/ui/progress';
-import { Skeleton } from '@/components/ui/skeleton'; // Added Skeleton
+import { Skeleton } from '@/components/ui/skeleton';
+import type { User } from '@/types';
 
 interface ActivityItem {
   id: string;
@@ -24,53 +25,8 @@ interface ActivityItem {
   timestamp: string;
 }
 
-const mockRecentActivities: ActivityItem[] = [
-  {
-    id: 'act-001',
-    type: 'status_update',
-    orderId: 'ORD-001',
-    title: 'Status changed to IN_PRODUCTION',
-    details: 'Production has commenced for Tech Solutions Inc.',
-    userName: 'Bob CRM',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'act-002',
-    type: 'new_comment',
-    orderId: 'ORD-002',
-    title: 'New comment on GreenScape Ltd.',
-    details: 'Alice (Client): "Could we get an update on the design phase?"',
-    userName: 'Alice Wonderland',
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'act-003',
-    type: 'order_created',
-    orderId: 'ORD-004',
-    title: 'New Order: Innovate Fast',
-    details: 'Order created by David CRM.',
-    userName: 'David CRM',
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-  },
-   {
-    id: 'act-004',
-    type: 'status_update',
-    orderId: 'ORD-003',
-    title: 'Status changed to SHIPPED',
-    details: 'Innovate Hub order has been shipped.',
-    userName: 'System',
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'act-005',
-    type: 'dr_assigned',
-    orderId: 'ORD-001',
-    title: 'Designer Assigned to Tech Solutions Inc.',
-    details: 'Carol DesignerRep assigned by Bob CRM.',
-    userName: 'Bob CRM',
-    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
+// Mock recent activities removed, this should come from a real data source.
+const recentActivities: ActivityItem[] = [];
 
 const getActivityIcon = (type: ActivityItem['type']) => {
   switch (type) {
@@ -97,15 +53,16 @@ const getInitials = (name: string) => {
 const LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY = 'trackflow-global-monthly-sales-target';
 const LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY = 'trackflow-global-weekly-sales-target';
 
-const DEFAULT_GLOBAL_MONTHLY_TARGET = 120; 
-const DEFAULT_GLOBAL_WEEKLY_TARGET = 30;  
+const DEFAULT_GLOBAL_MONTHLY_TARGET = 0; // Default to 0 if not set
+const DEFAULT_GLOBAL_WEEKLY_TARGET = 0;  // Default to 0 if not set
 
-const MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM = 67; 
-const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 12;  
+// Mock current orders completed removed, this should come from a real data source.
+const MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM = 0; 
+const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 0;  
 
 const getProgressColorClass = (percentage: number): string => {
   if (percentage < 0) percentage = 0;
-  const colorPercentage = Math.min(percentage, 100); // Cap at 100 for color logic
+  const colorPercentage = Math.min(percentage, 100);
   if (colorPercentage < 33) return 'bg-red-500 dark:bg-red-600';
   if (colorPercentage < 67) return 'bg-yellow-500 dark:bg-yellow-400';
   return 'bg-green-500 dark:bg-green-600';
@@ -122,8 +79,7 @@ export default function DashboardPage() {
   const [isSetGlobalWeeklyTargetDialogOpen, setIsSetGlobalWeeklyTargetDialogOpen] = useState(false);
   
   useEffect(() => {
-    setIsClient(true); // Component has mounted
-    // Safe localStorage access
+    setIsClient(true); 
     const storedGlobalMonthly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY);
     if (storedGlobalMonthly) {
       setGlobalMonthlyOrderTarget(parseInt(storedGlobalMonthly, 10));
@@ -136,6 +92,10 @@ export default function DashboardPage() {
 
   const crmEffectiveMonthlyTarget = currentUser?.role === 'CRM' ? (currentUser.monthlyOrderTarget ?? globalMonthlyOrderTarget) : globalMonthlyOrderTarget;
   const crmEffectiveWeeklyTarget = currentUser?.role === 'CRM' ? (currentUser.weeklyOrderTarget ?? globalWeeklyOrderTarget) : globalWeeklyOrderTarget;
+
+  // Data for CRM's completed orders - should come from a real data source
+  const crmMonthlyOrdersCompleted = currentUser?.role === 'CRM' ? MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM : 0;
+  const crmWeeklyOrdersCompleted = currentUser?.role === 'CRM' ? MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM : 0;
 
 
   const handleSetGlobalMonthlyOrderTarget = (newTarget: number) => {
@@ -155,7 +115,6 @@ export default function DashboardPage() {
   };
 
   if (!currentUser) {
-    // Basic loading state, can be replaced with a more elaborate Skeleton
     return (
       <div className="space-y-8 p-4 sm:p-6 lg:p-8">
         <Skeleton className="h-40 w-full rounded-lg" />
@@ -168,7 +127,7 @@ export default function DashboardPage() {
   }
 
   let summaryCards = [
-    { title: "Active Orders", value: "125", icon: Package, change: "+15.2% this month", dataAiHint: "delivery boxes", type: "info" as const, trend: "up" as const },
+    { title: "Active Orders", value: "0", icon: Package, change: "+0% this month", dataAiHint: "delivery boxes", type: "info" as const, trend: "up" as const }, // Value should come from real data
   ];
 
   if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
@@ -196,18 +155,18 @@ export default function DashboardPage() {
     summaryCards.push(
       {
         title: "Your Monthly Orders",
-        value: `${MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM} / ${crmEffectiveMonthlyTarget} Orders`,
+        value: `${crmMonthlyOrdersCompleted} / ${crmEffectiveMonthlyTarget} Orders`,
         icon: CalendarDays,
-        currentCompleted: MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM,
+        currentCompleted: crmMonthlyOrdersCompleted,
         targetValue: crmEffectiveMonthlyTarget,
         dataAiHint: "monthly calendar checklist",
         type: "progress" as const
       },
       {
         title: "Your Weekly Orders",
-        value: `${MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM} / ${crmEffectiveWeeklyTarget} Orders`,
+        value: `${crmWeeklyOrdersCompleted} / ${crmEffectiveWeeklyTarget} Orders`,
         icon: CalendarClock,
-        currentCompleted: MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM,
+        currentCompleted: crmWeeklyOrdersCompleted,
         targetValue: crmEffectiveWeeklyTarget,
         dataAiHint: "weekly calendar tasks",
         type: "progress" as const
@@ -230,7 +189,7 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3"> {/* Adjusted grid columns */}
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
         {summaryCards.map((card) => {
           let progressPercentage = 0;
           let progressColorClass = '';
@@ -322,7 +281,7 @@ export default function DashboardPage() {
           <CardContent className="h-[calc(100%-72px)] sm:h-[calc(100%-80px)] p-0"> 
             <ScrollArea className="h-full">
               <div className="p-2 sm:p-4 space-y-2 sm:space-y-3">
-                {mockRecentActivities.map((activity) => (
+                {recentActivities.length > 0 ? recentActivities.map((activity) => (
                   <div key={activity.id} className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-3.5 rounded-lg hover:bg-primary/5 transition-colors border border-transparent hover:border-primary/20 cursor-pointer group">
                     <div className="flex-shrink-0 pt-1 sm:pt-1.5 text-primary">
                       {getActivityIcon(activity.type)}
@@ -335,17 +294,17 @@ export default function DashboardPage() {
                            <AvatarImage src={activity.userAvatar || `https://placehold.co/40x40.png?text=${getInitials(activity.userName)}`} alt={activity.userName} data-ai-hint="user avatar"/>
                           <AvatarFallback className="text-xs bg-primary/10 text-primary">{getInitials(activity.userName)}</AvatarFallback>
                         </Avatar>
-                        <div className="text-xs text-muted-foreground"> {/* Changed from p to div */}
+                        <div className="text-xs text-muted-foreground">
                           {activity.userName} &bull; {isClient ? formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true }) : <Skeleton className="h-3 w-20 inline-block" />}
                         </div>
                       </div>
                     </div>
                   </div>
-                ))}
-                {mockRecentActivities.length === 0 && (
+                )) : (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
                     <ListChecks className="w-16 h-16 sm:w-20 sm:w-20 mb-4 opacity-20" />
                     <p className="text-md sm:text-lg">No recent activity.</p>
+                    <p className="text-xs text-muted-foreground">Updates will appear here as they happen.</p>
                   </div>
                 )}
               </div>

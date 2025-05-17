@@ -12,17 +12,12 @@ import Link from "next/link";
 import type { TrackingLink, User, CustomStatus } from '@/types';
 import { EditTrackingLinkDialog } from '@/components/tracking-links/edit-tracking-link-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getOrders } from '@/lib/order-service'; // Use new Firestore service
+import { getOrders } from '@/lib/order-service'; 
 import { getStatusById, getContrastTextColor, getStatuses } from '@/lib/status-service';
 import { Skeleton } from '@/components/ui/skeleton';
 
-// Dummy views data for demonstration - in a real app this would come from analytics or backend
-const mockViews: {[key: string]: number} = {
-  "ORD-001": 102,
-  "ORD-002": 5,
-  "ORD-003": 250,
-  "ORD-XYZ123": 150,
-};
+// Removed mockViews constant
+// const mockViews: {[key: string]: number} = { ... };
 
 export default function TrackingLinksPage() {
   const { currentUser } = useAuth();
@@ -31,7 +26,6 @@ export default function TrackingLinksPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  // For Edit Dialog
   const [selectedLink, setSelectedLink] = useState<TrackingLink | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
@@ -39,14 +33,13 @@ export default function TrackingLinksPage() {
     setIsLoading(true);
     try {
       const [fetchedLinks, fetchedStatuses] = await Promise.all([
-        getOrders(), // Tracking links are derived from orders
+        getOrders(),
         getStatuses()
       ]);
       setTrackingLinks(fetchedLinks);
       setAllStatuses(fetchedStatuses);
     } catch (error) {
       console.error("Failed to fetch tracking links or statuses:", error);
-      // Add toast notification
     } finally {
       setIsLoading(false);
     }
@@ -61,17 +54,16 @@ export default function TrackingLinksPage() {
     if (status) {
       return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
     }
-    return { name: statusId, color: '#ccc', textColor: '#000' }; // Fallback
+    return { name: statusId, color: '#ccc', textColor: '#000' };
   }, [allStatuses]);
 
-  // Permissions
   const canEditSpecificLink = (link: TrackingLink) => {
     if (!currentUser) return false;
     return ['ADMIN', 'DESIGNER_REPRESENTATIVE', 'CRM', 'SYSTEM_ADMIN'].includes(currentUser.role);
   };
   
   const handleTrackingLinkUpdated = () => {
-    fetchData(); // Refresh list after update
+    fetchData(); 
     setIsEditDialogOpen(false);
   };
 
@@ -197,7 +189,7 @@ export default function TrackingLinksPage() {
                             {statusInfo.name}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{mockViews[link.id] || 0}</TableCell>
+                        <TableCell className="text-muted-foreground">{0}</TableCell> {/* Display 0 for views */}
                         <TableCell className="text-card-foreground">{link.crmUserName}</TableCell>
                         <TableCell className="text-card-foreground">{link.designerRepresentativeName || 'N/A'}</TableCell>
                         <TableCell className="pr-6 text-right space-x-1 sm:space-x-1.5 whitespace-nowrap">
