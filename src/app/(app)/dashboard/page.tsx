@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, CheckSquare, Users, DollarSign, ListChecks, MessageSquare, PlusCircle, UserCircle, Target, Edit3, CalendarDays, CalendarClock, Briefcase, Trophy, Star } from 'lucide-react';
+import { Package, Users, ListChecks, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Briefcase, Trophy, Star } from 'lucide-react';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -183,8 +183,6 @@ export default function DashboardPage() {
 
   const summaryCards = [
     { title: "Active Orders", value: "125", icon: Package, change: "+15.2%", dataAiHint: "delivery boxes" },
-    { title: "Pending Approval", value: "12", icon: CheckSquare, change: "-3.1%", dataAiHint: "checklist form" },
-    { title: "Revenue (MTD)", value: "$15,6K", icon: DollarSign, change: "+8.0%", dataAiHint: "financial chart" },
     {
       title: "Monthly Order Target (CRM)",
       value: `${monthlyOrderTarget} Orders`, // Base target value
@@ -220,7 +218,7 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {summaryCards.map((card) => {
           const isTargetCard = card.actionType === 'monthly' || card.actionType === 'weekly';
           let currentCompleted = 0;
@@ -391,4 +389,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
