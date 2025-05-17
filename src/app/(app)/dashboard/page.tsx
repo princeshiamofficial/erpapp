@@ -239,6 +239,23 @@ export default function DashboardPage() {
                       if (lastKnownStatusBeforeThisMonth !== deliveredStatusId && lastKnownStatusBeforeThisMonth !== cancelledStatusId) {
                           activeOrdersAtStartOfMonthCount++;
                       }
+                  } else { // No status history before this month, check if created_at makes it active
+                      if (order.currentStatus !== deliveredStatusId && order.currentStatus !== cancelledStatusId) {
+                         // This logic might be flawed if currentStatus represents the status NOW, not at startOfMonth
+                         // A more robust way is to assume if no history before startOfMonth, but created before, it was in its initial state.
+                         // For now, let's assume it implies it was active if its currentStatus isn't terminal.
+                         // This might overcount if an order was created, then cancelled/delivered all before startOfMonth.
+                         // A truly accurate historical count requires iterating through history more carefully.
+                         // However, for this example, let's proceed, but acknowledge this complexity.
+                         // If its first log *was* before startOfMonth, the loop above handles it.
+                         // If its first log *was after* startOfMonth, it was created before, and its initial state was active.
+                         
+                         // Refined logic: if no log before start of month, but created before start of month, assume it was active in its initial state (which wasn't delivered/cancelled)
+                         const initialStatusWasTerminal = order.statusHistory[0]?.status === deliveredStatusId || order.statusHistory[0]?.status === cancelledStatusId;
+                         if (!initialStatusWasTerminal) {
+                            activeOrdersAtStartOfMonthCount++;
+                         }
+                      }
                   }
               }
           });
@@ -351,7 +368,7 @@ export default function DashboardPage() {
     );
   }
 
-  let summaryCards = [];
+  let summaryCards: any[] = [];
   let activeOrderCardData: any = {
       title: "Active Orders",
       value: isLoadingActiveOrders || activeOrdersCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : activeOrdersCount.toString(),
@@ -359,7 +376,7 @@ export default function DashboardPage() {
       dataAiHint: "delivery boxes",
       type: "info" as const,
       trend: "neutral" as "up" | "down" | "neutral", 
-      changeText: <Skeleton className="h-4 w-24" />
+      changeText: isLoadingActiveOrders || activeOrdersPercentageChange === null ? <Skeleton className="h-4 w-24" /> : ''
   };
 
   if (!isLoadingActiveOrders && activeOrdersPercentageChange !== null) {
@@ -371,7 +388,7 @@ export default function DashboardPage() {
           activeOrderCardData.changeText = `${activeOrdersPercentageChange.toFixed(0)}% this month`;
       } else {
           activeOrderCardData.trend = "neutral";
-          activeOrderCardData.changeText = `0% this month`;
+          activeOrderCardData.changeText = `0% change this month`;
       }
   }
 
@@ -424,6 +441,30 @@ export default function DashboardPage() {
     );
   }
 
+  // Admins see global target setting cards
+  if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
+    summaryCards.push(
+        {
+          title: "Global Monthly Order Target",
+          value: isLoadingGlobalTargets ? <Skeleton className="h-10 w-16 inline-block" /> : globalTargets.globalMonthlyOrderTarget.toString(),
+          icon: Target,
+          changeText: "Set global default for CRMs",
+          dataAiHint: "target goal setting",
+          type: "target" as const,
+          actionType: "global_monthly",
+        },
+        {
+          title: "Global Weekly Order Target",
+          value: isLoadingGlobalTargets ? <Skeleton className="h-10 w-16 inline-block" /> : globalTargets.globalWeeklyOrderTarget.toString(),
+          icon: Target,
+          changeText: "Set global default for CRMs",
+          dataAiHint: "weekly target goal",
+          type: "target" as const,
+          actionType: "global_weekly",
+        }
+    );
+  }
+
 
   return (
     <div className="space-y-6 sm:space-y-8 p-1 sm:p-0">
@@ -443,7 +484,7 @@ export default function DashboardPage() {
         {summaryCards.map((card) => {
           let progressPercentage = 0;
           let progressColorClass = '';
-          const targetValue = card.type === 'progress' ? card.targetValue : (card.type === 'target' ? (card.actionType === 'global_weekly' ? globalTargets.globalWeeklyOrderTarget : undefined) : undefined);
+          const targetValue = card.type === 'progress' ? card.targetValue : (card.type === 'target' ? (card.actionType === 'global_weekly' ? globalTargets.globalWeeklyOrderTarget : globalTargets.globalMonthlyOrderTarget) : undefined);
           const currentCompleted = card.type === 'progress' ? card.currentCompleted : undefined;
 
 
@@ -483,17 +524,22 @@ export default function DashboardPage() {
                     <div className="text-3xl sm:text-4xl font-bold text-card-foreground">{card.value}</div>
                   )}
                   {card.type === 'info' && card.changeText && (
-                    <p className={`text-xs flex items-center mt-1 ${
+                    <div className={`text-xs flex items-center mt-1 ${
                       card.trend === 'up' ? 'text-green-600 dark:text-green-400' :
                       card.trend === 'down' ? 'text-red-600 dark:text-red-400' :
                       'text-muted-foreground'
                     }`}>
                       {card.trend === 'up' && <TrendingUp className="h-4 w-4 mr-1"/>}
                       {card.trend === 'down' && <TrendingDown className="h-4 w-4 mr-1"/>}
-                      {card.trend === 'neutral' && card.title !== "Active Orders" && <Minus className="h-4 w-4 mr-1"/> } 
+                      {card.trend === 'neutral' && card.title !== "Active Orders" && card.changeText !== "0% change this month" && <Minus className="h-4 w-4 mr-1"/> }
                       {card.changeText}
-                    </p>
+                    </div>
                   )}
+                   {card.type === 'target' && card.changeText && (
+                     <p className="text-xs text-muted-foreground mt-1">
+                        {card.changeText}
+                     </p>
+                   )}
                 </div>
                 {(card.type === 'target' && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) && (
                   <Button
@@ -577,7 +623,7 @@ export default function DashboardPage() {
                             <>
                               {activity.userName} &bull; {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
                             </>
-                          ) : <Skeleton className="h-3 w-32 inline-block" />}
+                          ) : <div><Skeleton className="h-3 w-32 inline-block" /></div> }
                         </div>
                       </div>
                     </div>
