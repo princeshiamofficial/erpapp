@@ -19,15 +19,21 @@ export async function submitCommentAction(
   }
 
   try {
-    const newComment: Omit<Comment, 'id' | 'timestamp'> = {
+    // Prepare the comment object, only including userId if it's defined
+    const commentPayload: Omit<Comment, 'id' | 'timestamp'> = {
       userName: commentData.userName,
       text: commentData.text,
       isInternal: commentData.isInternal,
-      userId: commentData.userId,
     };
 
-    const updatedOrder = await addCommentToOrder(orderId, newComment);
+    if (commentData.userId !== undefined) {
+      commentPayload.userId = commentData.userId;
+    }
+
+    const updatedOrder = await addCommentToOrder(orderId, commentPayload);
+    
     if (!updatedOrder) {
+      // This means addCommentToOrder itself indicated a failure (e.g., updateOrder failed)
       return { error: "Failed to add comment to order." };
     }
 
@@ -38,3 +44,4 @@ export async function submitCommentAction(
     return { error: error instanceof Error ? error.message : "Failed to submit comment." };
   }
 }
+

@@ -196,11 +196,17 @@ export const addOrder = async (orderData: {
 export const updateOrder = async (id: string, updates: Partial<TrackingLink>): Promise<boolean> => {
   try {
     const orderDoc = doc(db, ORDERS_COLLECTION, id);
-    const sanitizedUpdates: Partial<TrackingLink> = {};
+    const sanitizedUpdates: { [key: string]: any } = {}; // Use a more general type for sanitizedUpdates
     for (const key in updates) {
       if (Object.prototype.hasOwnProperty.call(updates, key)) {
         const value = updates[key as keyof TrackingLink];
-        (sanitizedUpdates as any)[key] = value === undefined ? null : value;
+        // Ensure undefined values are converted to null or omitted if necessary
+        // For simple fields, null is fine. For nested objects/arrays, ensure they are also sanitized.
+        if (value !== undefined) {
+          sanitizedUpdates[key] = value;
+        } else {
+          sanitizedUpdates[key] = null; // Default to null if undefined
+        }
       }
     }
     await updateDoc(orderDoc, sanitizedUpdates);
@@ -217,11 +223,22 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
     if (!order) {
       throw new Error(`Order ${orderId} not found.`);
     }
-    const newComment: Comment = {
-      ...commentData,
+
+    const baseComment: Partial<Comment> = {
       id: uuidv4(),
       timestamp: new Date().toISOString(),
+      userName: commentData.userName,
+      text: commentData.text,
+      isInternal: commentData.isInternal,
     };
+
+    if (commentData.userId !== undefined) {
+      baseComment.userId = commentData.userId;
+    }
+    
+    // Cast to Comment after ensuring no undefined properties that Firestore would reject
+    const newComment = baseComment as Comment;
+
     const updatedComments = [...order.comments, newComment];
     
     const success = await updateOrder(orderId, { comments: updatedComments });
@@ -230,7 +247,6 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
       return undefined; 
     }
     
-    // Return the order object with the new comments array for immediate UI update
     return { ...order, comments: updatedComments }; 
 
   } catch (error) {
@@ -238,3 +254,4 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
     return undefined;
   }
 };
+
