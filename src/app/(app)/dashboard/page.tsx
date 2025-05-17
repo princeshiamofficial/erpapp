@@ -2,12 +2,12 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Link from "next/link"; // Added import
+import Link from "next/link";
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks } from 'lucide-react';
+import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks, Edit } from 'lucide-react'; // Added Edit
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
@@ -24,8 +24,8 @@ interface ActivityItem {
   title: string;
   details: string;
   userName: string;
-  userAvatar?: string; // Will use initials placeholder for now
-  timestamp: string; // ISO string
+  userAvatar?: string; 
+  timestamp: string; 
 }
 
 const getActivityIcon = (type: ActivityItem['type']) => {
@@ -69,7 +69,7 @@ const getProgressColorClass = (percentage: number): string => {
 };
 
 const MAX_RECENT_ACTIVITIES_DISPLAY = 15;
-const ORDERS_TO_SCAN_FOR_ACTIVITY = 10; // Fetch latest 10 orders to generate activity from
+const ORDERS_TO_SCAN_FOR_ACTIVITY = 10; 
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
@@ -87,19 +87,17 @@ export default function DashboardPage() {
   const fetchRecentActivities = useCallback(async () => {
     setIsLoadingActivities(true);
     try {
-      const fetchedOrders = await getOrders(); // This fetches all, consider limiting for performance
+      const fetchedOrders = await getOrders(); 
       const allStatuses = await getStatuses();
       const statusMap = new Map(allStatuses.map(s => [s.id, s.name]));
 
       const activities: ActivityItem[] = [];
 
-      // Process a limited number of most recent orders for activity
       const sortedOrders = [...fetchedOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       const ordersToProcess = sortedOrders.slice(0, ORDERS_TO_SCAN_FOR_ACTIVITY);
 
 
       for (const order of ordersToProcess) {
-        // Order Created Activity
         activities.push({
           id: `order-created-${order.id}`,
           type: 'order_created',
@@ -110,7 +108,6 @@ export default function DashboardPage() {
           timestamp: order.createdAt,
         });
 
-        // Status Update & DR Assigned Activities
         let drAssignedForThisOrder = false;
         for (const log of order.statusHistory) {
           const statusName = statusMap.get(log.status) || log.status;
@@ -124,7 +121,6 @@ export default function DashboardPage() {
             timestamp: log.timestamp,
           });
 
-          // Check for DR assignment within status notes or if DR is set and status indicates readiness
           if (!drAssignedForThisOrder && order.designerRepresentativeName && log.notes?.toLowerCase().includes(`assigned to designer: ${order.designerRepresentativeName.toLowerCase()}`)) {
             activities.push({
               id: `dr-assigned-${order.id}-${log.id}`,
@@ -139,9 +135,6 @@ export default function DashboardPage() {
           }
         }
         
-        // Fallback for DR assignment if not caught in status history notes (e.g. if DR was assigned without a specific note pattern)
-        // This might create a duplicate if already caught, or an activity with order creation time if DR was assigned at creation and not logged separately.
-        // A more robust system would have a dedicated DR assignment log/timestamp.
         if (!drAssignedForThisOrder && order.designerRepresentativeName) {
             const readyForDesignLog = order.statusHistory.find(log => statusMap.get(log.status)?.toLowerCase() === 'ready for design');
             activities.push({
@@ -150,16 +143,14 @@ export default function DashboardPage() {
               orderId: order.id,
               title: `Designer Assigned: ${order.id}`,
               details: `${order.designerRepresentativeName} assigned.`,
-              userName: readyForDesignLog?.changedByUserName || order.crmUserName, // Best guess for user
-              timestamp: readyForDesignLog?.timestamp || order.createdAt, // Best guess for time
+              userName: readyForDesignLog?.changedByUserName || order.crmUserName, 
+              timestamp: readyForDesignLog?.timestamp || order.createdAt, 
             });
         }
 
-
-        // Comment Activities
         for (const comment of order.comments) {
           if (comment.isInternal && currentUser?.role !== 'ADMIN' && currentUser?.role !== 'SYSTEM_ADMIN' && currentUser?.id !== order.crmUserId && currentUser?.id !== order.designerRepresentativeId) {
-            continue; // Skip internal comments for non-involved users
+            continue; 
           }
           activities.push({
             id: comment.id,
@@ -173,13 +164,11 @@ export default function DashboardPage() {
         }
       }
 
-      // Sort all activities by timestamp and take the most recent ones
       const sortedActivities = activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setRecentActivities(sortedActivities.slice(0, MAX_RECENT_ACTIVITIES_DISPLAY));
 
     } catch (error) {
       console.error("Failed to fetch recent activities:", error);
-      // Optionally set an error state to display in the UI
     } finally {
       setIsLoadingActivities(false);
     }
@@ -188,7 +177,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setIsClient(true);
-    if (currentUser) { // Only fetch activities if a user is logged in
+    if (currentUser) { 
         fetchRecentActivities();
     }
     const storedGlobalMonthly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY);
@@ -199,7 +188,7 @@ export default function DashboardPage() {
     if (storedGlobalWeekly) {
       setGlobalWeeklyOrderTarget(parseInt(storedGlobalWeekly, 10));
     }
-  }, [fetchRecentActivities, currentUser]); // Add currentUser as a dependency
+  }, [fetchRecentActivities, currentUser]); 
 
   const crmEffectiveMonthlyTarget = currentUser?.role === 'CRM' ? (currentUser.monthlyOrderTarget ?? globalMonthlyOrderTarget) : globalMonthlyOrderTarget;
   const crmEffectiveWeeklyTarget = currentUser?.role === 'CRM' ? (currentUser.weeklyOrderTarget ?? globalWeeklyOrderTarget) : globalWeeklyOrderTarget;
@@ -236,12 +225,19 @@ export default function DashboardPage() {
     );
   }
 
-  let summaryCards = [
-    { title: "Active Orders", value: "0", icon: Package, change: "+0% this month", dataAiHint: "delivery boxes", type: "info" as const, trend: "up" as const },
-  ];
+  let summaryCards = [];
 
   if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
     summaryCards.push(
+      { 
+        title: "Active Orders", 
+        value: "0", // This should be dynamically calculated from orders later
+        icon: Package, 
+        change: "+0% this month", 
+        dataAiHint: "delivery boxes", 
+        type: "info" as const, 
+        trend: "up" as const 
+      },
       {
         title: "Global Monthly Order Target",
         value: `${globalMonthlyOrderTarget} Orders`,
@@ -263,6 +259,15 @@ export default function DashboardPage() {
     );
   } else if (currentUser.role === 'CRM') {
     summaryCards.push(
+      { 
+        title: "Active Orders", 
+        value: "0", // This should be dynamically calculated from orders later
+        icon: Package, 
+        change: "+0% this month", 
+        dataAiHint: "delivery boxes", 
+        type: "info" as const, 
+        trend: "up" as const 
+      },
       {
         title: "Your Monthly Orders",
         value: `${crmMonthlyOrdersCompleted} / ${crmEffectiveMonthlyTarget} Orders`,
@@ -280,6 +285,18 @@ export default function DashboardPage() {
         targetValue: crmEffectiveWeeklyTarget,
         dataAiHint: "weekly calendar tasks",
         type: "progress" as const
+      }
+    );
+  } else { // For Designer Representatives or other roles
+     summaryCards.push(
+      { 
+        title: "Active Orders", 
+        value: "0", // This should be dynamically calculated from orders later
+        icon: Package, 
+        change: "+0% this month", 
+        dataAiHint: "delivery boxes", 
+        type: "info" as const, 
+        trend: "up" as const 
       }
     );
   }
@@ -340,7 +357,7 @@ export default function DashboardPage() {
                        <TrendingUp className="h-4 w-4 mr-1"/> {card.change}
                     </p>
                   )}
-                  {card.change && card.type !== 'info' && (
+                  {card.change && card.type === 'target' && ( // Use 'target' type for consistency
                      <p className="text-xs text-muted-foreground mt-1">{card.change}</p>
                   )}
                 </div>
@@ -354,7 +371,7 @@ export default function DashboardPage() {
                       if (card.actionType === 'global_weekly') setIsSetGlobalWeeklyTargetDialogOpen(true);
                     }}
                   >
-                    <Edit3 className="mr-1.5 h-3.5 w-3.5" /> Edit Global Target
+                    <Edit className="mr-1.5 h-3.5 w-3.5" /> Edit Global Target
                   </Button>
                 )}
               </CardContent>
@@ -441,5 +458,4 @@ export default function DashboardPage() {
     </div>
   );
 }
-
     
