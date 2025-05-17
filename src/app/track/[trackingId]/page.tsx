@@ -48,7 +48,7 @@ const formatDate = (dateString: string) => {
 const getStatusIcon = (status: OrderStatus) => {
   // Using semantic colors which are generally good practice for status indicators
   if (status === "DELIVERED" || status === "APPROVED_FOR_PRODUCTION") return <CheckCircle className="h-5 w-5 mr-2 text-green-500" />;
-  if (status === "READY_FOR_DESIGN") return <Info className="h-5 w-5 mr-2 text-teal-500" />; // Example for new status
+  if (status === "READY_FOR_DESIGN") return <Info className="h-5 w-5 mr-2 text-teal-500" />; 
   return <Info className="h-5 w-5 mr-2 text-blue-500" />;
 };
 
@@ -58,8 +58,10 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
   const data = mockTrackingData; 
 
   const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     const lastStatusEntry = data.statusHistory[data.statusHistory.length - 1];
     const timestampToUse = lastStatusEntry?.timestamp || new Date().toISOString(); 
     setLastUpdatedDisplay(formatDate(timestampToUse));
@@ -84,7 +86,7 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
       </header>
 
       <main className="max-w-4xl mx-auto space-y-10">
-        <Card className="shadow-xl overflow-hidden border border-card-border bg-card hover:shadow-2xl transition-shadow duration-300">
+        <Card className="shadow-xl overflow-hidden border border-border bg-card hover:shadow-2xl transition-shadow duration-300">
           <CardHeader className="bg-card p-6 border-b border-border/70">
             <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4">
               <Package className="h-12 w-12 text-primary mb-3 sm:mb-0" />
@@ -104,7 +106,7 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
                 {formatStatus(data.currentStatus)}
               </p>
               <p className="text-sm text-muted-foreground mt-1">
-                Last updated: {lastUpdatedDisplay !== null ? lastUpdatedDisplay : 'Calculating...'}
+                Last updated: {lastUpdatedDisplay !== null && isClient ? lastUpdatedDisplay : 'Calculating...'}
               </p>
             </div>
             
@@ -122,7 +124,8 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
                     <div className="flex-1 pt-px">
                       <p className={`font-semibold text-md ${index === 0 ? 'text-primary' : 'text-foreground'}`}>{formatStatus(entry.status)}</p>
                       <p className="text-sm text-muted-foreground flex items-center">
-                        <CalendarDays className="h-4 w-4 mr-1.5 opacity-70" /> {formatDate(entry.timestamp)} by {entry.changedByUserName}
+                        <CalendarDays className="h-4 w-4 mr-1.5 opacity-70" /> 
+                        {isClient ? formatDate(entry.timestamp) : 'Loading date...'} by {entry.changedByUserName}
                       </p>
                       {entry.notes && <p className="text-sm mt-1.5 bg-muted/50 p-3 rounded-md border border-border/50 text-foreground/80">{entry.notes}</p>}
                     </div>
@@ -133,7 +136,7 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
           </CardContent>
         </Card>
 
-        <Card className="shadow-xl border border-card-border bg-card hover:shadow-2xl transition-shadow duration-300">
+        <Card className="shadow-xl border border-border bg-card hover:shadow-2xl transition-shadow duration-300">
           <CardHeader className="bg-card p-6 border-b border-border/70">
             <div className="flex items-center space-x-3">
               <MessageSquare className="h-8 w-8 text-primary" />
@@ -153,7 +156,8 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
                     <div className="flex items-center justify-between mb-0.5">
                       <p className="text-sm font-semibold text-foreground">{comment.userName}</p>
                       <p className="text-xs text-muted-foreground flex items-center">
-                        <Clock className="h-3.5 w-3.5 mr-1 opacity-70" /> {formatDate(comment.timestamp)}
+                        <Clock className="h-3.5 w-3.5 mr-1 opacity-70" /> 
+                        {isClient ? formatDate(comment.timestamp) : 'Loading date...'}
                       </p>
                     </div>
                     <p className="text-sm text-foreground/90">{comment.text}</p>
