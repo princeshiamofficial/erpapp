@@ -6,26 +6,38 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy, Star, Users } from 'lucide-react';
-import Image from 'next/image';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface CrmPerformanceData {
   userId: string;
   userName: string;
   userAvatar?: string;
-  monthlyOrdersCompleted: number;
+  ordersCompleted: number; // Generic field for orders
   rank?: number;
 }
 
-// Mock CRM performance data - in a real app, fetch this from your backend
-const mockCrmPerformance: CrmPerformanceData[] = [
-  { userId: 'user-crm-001', userName: 'Bob CRM', monthlyOrdersCompleted: 75, userAvatar: `https://placehold.co/40x40.png?text=BC` },
-  { userId: 'user-crm-002', userName: 'David CRM', monthlyOrdersCompleted: 62, userAvatar: `https://placehold.co/40x40.png?text=DC` },
-  { userId: 'user-crm-003', userName: 'Eve CRM', monthlyOrdersCompleted: 88, userAvatar: `https://placehold.co/40x40.png?text=EC` }, // Mock user
-  { userId: 'user-crm-004', userName: 'Frank CRM', monthlyOrdersCompleted: 50, userAvatar: `https://placehold.co/40x40.png?text=FC` }, // Mock user
-  { userId: 'user-crm-005', userName: 'Grace CRM', monthlyOrdersCompleted: 95, userAvatar: `https://placehold.co/40x40.png?text=GC` }, // Mock user
-  { userId: 'user-crm-006', userName: 'Henry CRM', monthlyOrdersCompleted: 70, userAvatar: `https://placehold.co/40x40.png?text=HC` }, // Mock user
-].sort((a, b) => b.monthlyOrdersCompleted - a.monthlyOrdersCompleted)
+// Mock CRM monthly performance data
+const mockCrmMonthlyPerformance: CrmPerformanceData[] = [
+  { userId: 'user-crm-001', userName: 'Bob CRM', ordersCompleted: 75, userAvatar: `https://placehold.co/40x40.png?text=BC` },
+  { userId: 'user-crm-002', userName: 'David CRM', ordersCompleted: 62, userAvatar: `https://placehold.co/40x40.png?text=DC` },
+  { userId: 'user-crm-003', userName: 'Eve CRM', ordersCompleted: 88, userAvatar: `https://placehold.co/40x40.png?text=EC` },
+  { userId: 'user-crm-004', userName: 'Frank CRM', ordersCompleted: 50, userAvatar: `https://placehold.co/40x40.png?text=FC` },
+  { userId: 'user-crm-005', userName: 'Grace CRM', ordersCompleted: 95, userAvatar: `https://placehold.co/40x40.png?text=GC` },
+  { userId: 'user-crm-006', userName: 'Henry CRM', ordersCompleted: 70, userAvatar: `https://placehold.co/40x40.png?text=HC` },
+].sort((a, b) => b.ordersCompleted - a.ordersCompleted)
  .map((crm, index) => ({ ...crm, rank: index + 1 }));
+
+ // Mock CRM weekly performance data
+const mockCrmWeeklyPerformance: CrmPerformanceData[] = [
+  { userId: 'user-crm-001', userName: 'Bob CRM', ordersCompleted: 18, userAvatar: `https://placehold.co/40x40.png?text=BC` },
+  { userId: 'user-crm-002', userName: 'David CRM', ordersCompleted: 15, userAvatar: `https://placehold.co/40x40.png?text=DC` },
+  { userId: 'user-crm-003', userName: 'Eve CRM', ordersCompleted: 22, userAvatar: `https://placehold.co/40x40.png?text=EC` },
+  { userId: 'user-crm-004', userName: 'Frank CRM', ordersCompleted: 12, userAvatar: `https://placehold.co/40x40.png?text=FC` },
+  { userId: 'user-crm-005', userName: 'Grace CRM', ordersCompleted: 25, userAvatar: `https://placehold.co/40x40.png?text=GC` },
+  { userId: 'user-crm-006', userName: 'Henry CRM', ordersCompleted: 16, userAvatar: `https://placehold.co/40x40.png?text=HC` },
+].sort((a, b) => b.ordersCompleted - a.ordersCompleted)
+ .map((crm, index) => ({ ...crm, rank: index + 1 }));
+
 
 const getInitials = (name: string) => {
     const names = name.split(' ');
@@ -49,53 +61,80 @@ const getRankColorClass = (rank?: number): string => {
   return 'border-border bg-card hover:shadow-md';
 }
 
+const LeaderboardList: React.FC<{ data: CrmPerformanceData[], timePeriod: 'month' | 'week' }> = ({ data, timePeriod }) => {
+  return (
+    <ScrollArea className="h-[calc(100vh-280px)] md:h-auto md:max-h-[600px]"> {/* Adjust height as needed */}
+      <div className="p-6 space-y-4">
+        {data.map((crm) => (
+          <div key={crm.userId} className={`flex items-center space-x-4 p-4 rounded-lg border transition-all duration-200 ease-in-out shadow-sm hover:shadow-lg ${getRankColorClass(crm.rank)}`}>
+            <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center text-xl font-bold">
+               {getRankIcon(crm.rank)}
+            </div>
+            <Avatar className="h-12 w-12 border-2 border-primary/30">
+              <AvatarImage src={crm.userAvatar || `https://placehold.co/48x48.png?text=${getInitials(crm.userName)}`} alt={crm.userName} data-ai-hint="user avatar" />
+              <AvatarFallback className="text-lg bg-primary/20 text-primary">{getInitials(crm.userName)}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <p className="text-lg font-semibold text-foreground leading-tight">{crm.userName}</p>
+              <p className="text-sm text-muted-foreground">{crm.ordersCompleted} orders this {timePeriod}</p>
+            </div>
+            <div className="text-lg font-bold text-primary">
+              #{crm.rank}
+            </div>
+          </div>
+        ))}
+        {data.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full py-10 text-muted-foreground">
+            <Users className="w-20 h-20 mb-4 opacity-50" />
+            <p className="text-lg">No CRM performance data available for this {timePeriod}.</p>
+            <p>Check back later for updates.</p>
+          </div>
+        )}
+      </div>
+    </ScrollArea>
+  );
+};
+
 export default function LeaderboardPage() {
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">CRM Sales Leaderboard</h1>
         <p className="text-muted-foreground">
-          Ranking of CRM performance based on monthly orders completed.
+          Ranking of CRM performance based on orders completed.
         </p>
       </div>
 
-      <Card className="shadow-xl bg-card">
-        <CardHeader>
-          <CardTitle className="text-foreground">Top Performing CRMs</CardTitle>
-          <CardDescription className="text-muted-foreground">Monthly orders completed ranking.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <ScrollArea className="h-[calc(100vh-220px)] md:h-auto md:max-h-[600px]"> {/* Adjust height as needed */}
-            <div className="p-6 space-y-4">
-              {mockCrmPerformance.map((crm) => (
-                <div key={crm.userId} className={`flex items-center space-x-4 p-4 rounded-lg border transition-all duration-200 ease-in-out shadow-sm hover:shadow-lg ${getRankColorClass(crm.rank)}`}>
-                  <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center text-xl font-bold">
-                     {getRankIcon(crm.rank)}
-                  </div>
-                  <Avatar className="h-12 w-12 border-2 border-primary/30">
-                    <AvatarImage src={crm.userAvatar || `https://placehold.co/48x48.png?text=${getInitials(crm.userName)}`} alt={crm.userName} data-ai-hint="user avatar" />
-                    <AvatarFallback className="text-lg bg-primary/20 text-primary">{getInitials(crm.userName)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="text-lg font-semibold text-foreground leading-tight">{crm.userName}</p>
-                    <p className="text-sm text-muted-foreground">{crm.monthlyOrdersCompleted} orders this month</p>
-                  </div>
-                  <div className="text-lg font-bold text-primary">
-                    #{crm.rank}
-                  </div>
-                </div>
-              ))}
-              {mockCrmPerformance.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full py-10 text-muted-foreground">
-                  <Users className="w-20 h-20 mb-4 opacity-50" />
-                  <p className="text-lg">No CRM performance data available.</p>
-                  <p>Check back later for updates.</p>
-                </div>
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+      <Tabs defaultValue="monthly" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="monthly">Monthly Performance</TabsTrigger>
+          <TabsTrigger value="weekly">Weekly Performance</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="monthly">
+          <Card className="shadow-xl bg-card">
+            <CardHeader>
+              <CardTitle className="text-foreground">Top Performing CRMs (Monthly)</CardTitle>
+              <CardDescription className="text-muted-foreground">Monthly orders completed ranking.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <LeaderboardList data={mockCrmMonthlyPerformance} timePeriod="month" />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="weekly">
+          <Card className="shadow-xl bg-card">
+            <CardHeader>
+              <CardTitle className="text-foreground">Top Performing CRMs (Weekly)</CardTitle>
+              <CardDescription className="text-muted-foreground">Weekly orders completed ranking.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <LeaderboardList data={mockCrmWeeklyPerformance} timePeriod="week" />
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
