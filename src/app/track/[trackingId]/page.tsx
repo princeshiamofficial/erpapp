@@ -48,7 +48,7 @@ const formatDate = (dateString: string) => {
 
 export default function PublicTrackingPage({ params: paramsProp }: PublicTrackingPageProps) {
   const params = use(paramsProp);
-  const { trackingId } = params;
+  const { trackingId } = params; // trackingId is now available
   const data = mockTrackingData; // In a real app, fetch data based on trackingId
 
   if (!data) {
@@ -56,10 +56,10 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent/10 py-8 px-4 sm:px-6 lg:px-8">
       <header className="text-center mb-10">
         <div className="inline-flex items-center space-x-3 text-primary">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary">
                 <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M2 7L12 12M12 12L22 7M12 12V22M12 2V12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M17 4.5L7 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -85,7 +85,7 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
           <CardContent className="p-6 space-y-6">
             <div>
               <h3 className="text-xl font-semibold mb-2 text-primary">Current Status</h3>
-              <p className="text-2xl font-bold text-accent">{formatStatus(data.currentStatus)}</p>
+              <p className="text-2xl font-bold text-primary">{formatStatus(data.currentStatus)}</p>
               <p className="text-sm text-muted-foreground">Last updated: {formatDate(data.statusHistory[data.statusHistory.length -1]?.timestamp || new Date().toISOString())}</p>
             </div>
             
@@ -98,7 +98,7 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
                 <div className="absolute left-[calc(0.375rem)] top-0 bottom-0 w-0.5 bg-border"></div>
                 {data.statusHistory.slice().reverse().map((entry, index) => (
                   <div key={index} className="flex items-start space-x-3 relative">
-                    <div className={`absolute left-[-0.625rem] top-1.5 h-3 w-3 rounded-full ${index === 0 ? 'bg-primary ring-4 ring-primary/30' : 'bg-muted-foreground'}`}></div>
+                    <div className={`absolute left-[-0.625rem] top-1.5 h-3 w-3 rounded-full ${index === 0 ? 'bg-primary ring-4 ring-primary/30' : 'bg-border'}`}></div>
                     <div className="flex-1">
                       <p className={`font-semibold ${index === 0 ? 'text-primary' : 'text-foreground'}`}>{formatStatus(entry.status)}</p>
                       <p className="text-sm text-muted-foreground flex items-center">

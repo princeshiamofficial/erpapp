@@ -3,7 +3,7 @@
 
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, CheckSquare, Users, DollarSign } from 'lucide-react'; // Updated import
+import { Package, CheckSquare, Users, DollarSign } from 'lucide-react';
 import Image from 'next/image';
 
 export default function DashboardPage() {
@@ -23,7 +23,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="shadow-lg">
+      <Card className="shadow-xl bg-gradient-to-r from-primary/5 to-accent/5">
         <CardHeader>
           <CardTitle className="text-3xl">Welcome to TrackFlow, {currentUser.name}!</CardTitle>
           <CardDescription className="text-lg">
@@ -37,7 +37,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {summaryCards.map((card) => (
-          <Card key={card.title} className="shadow-md hover:shadow-lg transition-shadow">
+          <Card key={card.title} className="shadow-md hover:shadow-lg transition-shadow border hover:border-accent duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
               <card.icon className="h-5 w-5 text-muted-foreground" />
@@ -53,7 +53,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="shadow-md">
+        <Card className="shadow-xl">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>Overview of recent order updates and comments.</CardDescription>
@@ -62,7 +62,7 @@ export default function DashboardPage() {
             <Image src="https://placehold.co/600x300.png" alt="Recent Activity Placeholder" data-ai-hint="activity feed" width={600} height={300} className="rounded-md object-cover" />
           </CardContent>
         </Card>
-        <Card className="shadow-md">
+        <Card className="shadow-xl">
           <CardHeader>
             <CardTitle>Order Status Distribution</CardTitle>
             <CardDescription>Visual breakdown of current order statuses.</CardDescription>
