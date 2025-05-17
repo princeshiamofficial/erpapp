@@ -78,6 +78,10 @@ export function EditTrackingLinkDialog({ trackingLink, currentUser, onTrackingLi
     });
     setIsOpen(false);
   };
+  
+  // Determine if the current user can edit fields. Admin, DR, and CRM can.
+  const canEditFields = currentUser && ['ADMIN', 'DESIGNER_REPRESENTATIVE', 'CRM'].includes(currentUser.role);
+
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -102,8 +106,7 @@ export function EditTrackingLinkDialog({ trackingLink, currentUser, onTrackingLi
                 id="isPublic"
                 checked={isPublic}
                 onCheckedChange={setIsPublic}
-                aria-readonly={currentUser.role === 'CRM'} // Only designers/admins should toggle this
-                disabled={currentUser.role === 'CRM'}
+                disabled={!canEditFields}
               />
             </div>
 
@@ -112,7 +115,7 @@ export function EditTrackingLinkDialog({ trackingLink, currentUser, onTrackingLi
                <Select 
                 value={currentStatus} 
                 onValueChange={(value) => setCurrentStatus(value as OrderStatus)}
-                disabled={currentUser.role === 'CRM'} // Only designers/admins should change status from here
+                disabled={!canEditFields}
               >
                 <SelectTrigger id="currentStatus">
                   <SelectValue placeholder="Select order status" />
@@ -127,7 +130,7 @@ export function EditTrackingLinkDialog({ trackingLink, currentUser, onTrackingLi
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <Button type="submit">Save Changes</Button>
+            <Button type="submit" disabled={!canEditFields}>Save Changes</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -51,10 +51,8 @@ export default function TrackingLinksPage() {
   const canManageLinks = currentUser?.role === 'ADMIN' || currentUser?.role === 'DESIGNER_REPRESENTATIVE';
   const canEditSpecificLink = (link: TrackingLink) => {
     if (!currentUser) return false;
-    if (currentUser.role === 'ADMIN') return true;
-    if (currentUser.role === 'DESIGNER_REPRESENTATIVE') return true; // Designers can edit status/public toggle
-    // CRMs generally cannot edit from this page, they create.
-    return false;
+    // Admin, CRM, and Designer Representatives can edit
+    return ['ADMIN', 'DESIGNER_REPRESENTATIVE', 'CRM'].includes(currentUser.role);
   };
   
   const handleTrackingLinkUpdated = (updatedLink: TrackingLink) => {
