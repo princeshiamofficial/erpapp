@@ -30,15 +30,26 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  // Set default initial status if available
   useEffect(() => {
-    const ideaSubmittedStatus = availableStatuses.find(s => s.name === "Idea Submitted");
-    if (ideaSubmittedStatus) {
-      setInitialStatusId(ideaSubmittedStatus.id);
-    } else if (availableStatuses.length > 0) {
-      setInitialStatusId(availableStatuses[0].id); // Fallback to first available
+    if (isOpen) {
+      // Only set/reset initialStatusId if it's not already a valid available status,
+      // or if it's empty. This preserves user selection if availableStatuses changes reference
+      // but the selection is still valid.
+      const currentStatusIsValid = availableStatuses.some(status => status.id === initialStatusId);
+      if (!initialStatusId || !currentStatusIsValid) {
+        const ideaSubmittedStatus = availableStatuses.find(s => s.name === "Idea Submitted");
+        let defaultId = '';
+        if (ideaSubmittedStatus) {
+          defaultId = ideaSubmittedStatus.id;
+        } else if (availableStatuses.length > 0) {
+          defaultId = availableStatuses[0].id;
+        }
+        if (initialStatusId !== defaultId) { // Avoid redundant setState
+            setInitialStatusId(defaultId);
+        }
+      }
     }
-  }, [availableStatuses, isOpen]);
+  }, [isOpen, availableStatuses, initialStatusId]);
 
 
   const resetForm = () => {
@@ -47,8 +58,15 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setAddress('');
     setPhoneNumber('');
     setService('');
+    // Determine default status for next opening
     const ideaSubmittedStatus = availableStatuses.find(s => s.name === "Idea Submitted");
-    setInitialStatusId(ideaSubmittedStatus ? ideaSubmittedStatus.id : (availableStatuses.length > 0 ? availableStatuses[0].id : ''));
+    let defaultResetId = '';
+    if (ideaSubmittedStatus) {
+      defaultResetId = ideaSubmittedStatus.id;
+    } else if (availableStatuses.length > 0) {
+      defaultResetId = availableStatuses[0].id;
+    }
+    setInitialStatusId(defaultResetId);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -85,7 +103,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         title: "Order Created",
         description: `Order ${result.id} for ${customerName} has been created.`,
       });
-      onOrderCreated(); // Trigger refresh or other actions on parent
+      onOrderCreated(); 
       setIsOpen(false);
       resetForm();
     }
@@ -134,6 +152,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   {availableStatuses.map(status => (
                     <SelectItem key={status.id} value={status.id}>{status.name}</SelectItem>
                   ))}
+                  {availableStatuses.length === 0 && <SelectItem value="" disabled>No statuses available</SelectItem>}
                 </SelectContent>
               </Select>
             </div>

@@ -16,8 +16,9 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
 import { getStatusById, getContrastTextColor, getStatuses } from '@/lib/status-service';
 import { AssignDrDialog } from '@/components/orders/assign-dr-dialog';
-import { getOrders } from '@/lib/order-service'; // Use new Firestore service
+import { getOrders } from '@/lib/order-service'; 
 import { Skeleton } from '@/components/ui/skeleton';
+import { createOrderAction, assignDrToOrderAction } from './actions';
 
 
 const formatDate = (dateString: string | undefined) => {
@@ -63,11 +64,11 @@ export default function OrdersPage() {
   }, [fetchOrderData]);
   
   const getStatusDisplayInfo = useCallback(async (statusId: string): Promise<{ name: string; color: string; textColor: string }> => {
-    const status = allStatuses.find(s => s.id === statusId) || await getStatusById(statusId);
+    const status = allStatuses.find(s => s.id === statusId) || await getStatusById(statusId); // Fallback to direct fetch if not in allStatuses
     if (status) {
       return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
     }
-    return { name: statusId, color: '#ccc', textColor: '#000' }; // Fallback
+    return { name: statusId, color: '#ccc', textColor: '#000' }; // Fallback for unknown status
   }, [allStatuses]);
 
 
@@ -99,17 +100,22 @@ export default function OrdersPage() {
     const fetchAllDisplayInfo = async () => {
       const displayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
       for (const order of filteredOrders) {
-        if (!orderStatusDisplay[order.currentStatus]) {
+        if (!orderStatusDisplay[order.currentStatus]) { // Only fetch if not already cached
           displayInfoMap[order.currentStatus] = await getStatusDisplayInfo(order.currentStatus);
         }
       }
-      setOrderStatusDisplay(prev => ({ ...prev, ...displayInfoMap }));
+      if (Object.keys(displayInfoMap).length > 0) { // Only update state if there are new entries
+        setOrderStatusDisplay(prev => ({ ...prev, ...displayInfoMap }));
+      }
     };
     if (filteredOrders.length > 0 && allStatuses.length > 0) {
       fetchAllDisplayInfo();
     }
-  }, [filteredOrders, getStatusDisplayInfo, allStatuses, orderStatusDisplay]);
+  }, [filteredOrders, getStatusDisplayInfo, allStatuses, orderStatusDisplay]); // Added orderStatusDisplay to deps
   
+  const memoizedAvailableStatusesForDialog = useMemo(() => {
+    return allStatuses.filter(s => !s.isSystemStatus || s.name === "Idea Submitted");
+  }, [allStatuses]);
 
   if (!currentUser) return (
     <div className="flex h-screen w-full items-center justify-center">
@@ -129,8 +135,11 @@ export default function OrdersPage() {
         {canCreateOrder && (
           <CreateOrderDialog 
             currentUser={currentUser} 
-            availableStatuses={allStatuses.filter(s => !s.isSystemStatus || s.name === "Idea Submitted")} // Allow "Idea Submitted"
-            onOrderCreated={() => fetchOrderData()} // Refresh list on creation
+            availableStatuses={memoizedAvailableStatusesForDialog} 
+            onOrderCreated={() => {
+              // Server action handles revalidation. We might just want to close dialog.
+              // fetchOrderData(); // This might be redundant if revalidatePath works as expected.
+            }}
           >
             <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow font-semibold">
               <PlusCircle className="mr-2 h-5 w-5" />
@@ -240,8 +249,10 @@ export default function OrdersPage() {
                              {canCreateOrder && !searchTerm && (
                                 <CreateOrderDialog 
                                   currentUser={currentUser} 
-                                  availableStatuses={allStatuses.filter(s => !s.isSystemStatus || s.name === "Idea Submitted")}
-                                  onOrderCreated={() => fetchOrderData()}
+                                  availableStatuses={memoizedAvailableStatusesForDialog}
+                                  onOrderCreated={() => {
+                                    // Server action handles revalidation.
+                                  }}
                                 >
                                     <Button size="sm" className="mt-4">
                                         <PlusCircle className="mr-2 h-4 w-4" /> Create Order
@@ -257,7 +268,7 @@ export default function OrdersPage() {
         </CardContent>
       </Card>
 
-      {selectedOrderForDrAssignment && currentUser && (
+      {selectedOrderForDrAssignment && currentUser && allStatuses.length > 0 && (
         <AssignDrDialog
           isOpen={isAssignDrDialogOpen}
           onOpenChange={setIsAssignDrDialogOpen}
@@ -266,7 +277,8 @@ export default function OrdersPage() {
           allStatuses={allStatuses}
           onDrAssigned={() => {
             setIsAssignDrDialogOpen(false);
-            fetchOrderData(); // Refresh the order list
+            // Server action handles revalidation
+            // fetchOrderData(); // This might be redundant
           }}
         />
       )}
