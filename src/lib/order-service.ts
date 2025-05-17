@@ -36,7 +36,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       address: "123 Tech Ave, Silicon Valley, CA 94001",
       phoneNumber: "555-0101",
       service: "Custom Software Development",
-      crmUserId: "user-admin-default", // This ID may need to match the actual seeded admin ID
+      crmUserId: "user-admin-default", 
       crmUserName: "Default Admin",
       isPublic: true,
       designerRepresentativeId: null,
@@ -48,10 +48,10 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       address: "456 Green Rd, Meadowville, TX 75001",
       phoneNumber: "555-0102",
       service: "Landscaping Design Package",
-      crmUserId: "user-admin-default", // This ID may need to match the actual seeded admin ID
+      crmUserId: "user-admin-default", 
       crmUserName: "Default Admin",
       isPublic: false,
-      designerRepresentativeId: null, // Example: This would be set via UI
+      designerRepresentativeId: null, 
       designerRepresentativeName: null,
     },
   ];
@@ -66,7 +66,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     ...firstOrderBaseData,
     id: firstOrderId,
     createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    currentStatus: inProductionStatus.id,
+    currentStatus: inProductionStatus.id, // Use ID
     statusHistory: [
       { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: ideaSubmittedStatus.id, changedByUserId: firstOrderBaseData.crmUserId, changedByUserName: firstOrderBaseData.crmUserName, notes: "Order created, requirements gathered." },
       { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: inProductionStatus.id, changedByUserId: firstOrderBaseData.crmUserId, changedByUserName: firstOrderBaseData.crmUserName, notes: "Production has commenced." }
@@ -89,7 +89,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     ...secondOrderBaseData,
     id: secondOrderId,
     createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    currentStatus: pendingApprovalStatus.id,
+    currentStatus: pendingApprovalStatus.id, // Use ID
     statusHistory: [
       { id: uuidv4(), timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), status: ideaSubmittedStatus.id, changedByUserId: secondOrderBaseData.crmUserId, changedByUserName: secondOrderBaseData.crmUserName, notes: "New landscaping project initiated." },
       { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: readyForDesignStatus.id, changedByUserId: secondOrderBaseData.crmUserId, changedByUserName: secondOrderBaseData.crmUserName, notes: "Order ready for design team." },
@@ -115,12 +115,6 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
   const ordersCol = collection(db, ORDERS_COLLECTION);
   const q = query(ordersCol, orderBy("createdAt", "desc"));
   const snapshot = await getDocs(q);
-  
-  // No longer automatically seeding if empty. Data must be added via UI.
-  // if (snapshot.empty) {
-  //   console.log('No orders found in Firestore, seeding initial orders.');
-  //   return await seedInitialOrders();
-  // }
   
   return snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as TrackingLink));
 };
@@ -153,10 +147,7 @@ export const addOrder = async (orderData: {
   const now = new Date().toISOString();
   
   const ordersCol = collection(db, ORDERS_COLLECTION);
-  // Efficiently get current max order number
-  // For very large collections, a separate counter document or a more complex query might be better.
-  // For this app's scale, querying and iterating is acceptable.
-  const allOrdersSnapshot = await getDocs(query(ordersCol, orderBy('id', 'desc'))); // Order by ID to potentially find max faster if IDs are sortable
+  const allOrdersSnapshot = await getDocs(query(ordersCol, orderBy('id', 'desc'))); 
   let maxOrderNumber = 0;
   allOrdersSnapshot.forEach(docSnap => {
     const docId = docSnap.id;
@@ -233,15 +224,14 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
     };
     const updatedComments = [...order.comments, newComment];
     
-    const orderToUpdate = { ...order, comments: updatedComments };
-    Object.keys(orderToUpdate).forEach(key => {
-      if (orderToUpdate[key as keyof TrackingLink] === undefined) {
-        (orderToUpdate as any)[key] = null;
-      }
-    });
+    const success = await updateOrder(orderId, { comments: updatedComments });
+    if (!success) {
+      console.error(`Failed to update comments for order ${orderId} via updateOrder.`);
+      return undefined; 
+    }
     
-    await updateOrder(orderId, { comments: updatedComments });
-    return { ...orderToUpdate, comments: updatedComments };
+    // Return the order object with the new comments array for immediate UI update
+    return { ...order, comments: updatedComments }; 
 
   } catch (error) {
     console.error(`Error adding comment to order ${orderId}:`, error);

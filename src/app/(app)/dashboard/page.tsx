@@ -25,8 +25,15 @@ interface ActivityItem {
   timestamp: string;
 }
 
-// Mock recent activities removed, this should come from a real data source.
-const recentActivities: ActivityItem[] = [];
+// Mock recent activities - In a real app, this would come from a backend
+const mockRecentActivities: ActivityItem[] = [
+  { id: '1', type: 'order_created', orderId: 'ORD-001', title: 'New Order Created: ORD-001', details: 'Customer: Tech Solutions Inc.', userName: 'Default Admin', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), userAvatar: 'https://placehold.co/40x40.png?text=DA' },
+  { id: '2', type: 'status_update', orderId: 'ORD-001', title: 'Status Update: ORD-001 to In Production', details: 'Order moved to production phase.', userName: 'Default Admin', timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), userAvatar: 'https://placehold.co/40x40.png?text=DA' },
+  { id: '3', type: 'new_comment', orderId: 'ORD-001', title: 'New Comment on ORD-001', details: 'Client: "Looking forward to the demo!"', userName: 'Tech Solutions Inc. (Client)', timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), userAvatar: 'https://placehold.co/40x40.png?text=TS' },
+  { id: '4', type: 'dr_assigned', orderId: 'ORD-002', title: 'Designer Assigned to ORD-002', details: 'Carol DesignerRep assigned.', userName: 'Default Admin', timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), userAvatar: 'https://placehold.co/40x40.png?text=DA' },
+  { id: '5', type: 'status_update', orderId: 'ORD-002', title: 'Status Update: ORD-002 to Pending Client Approval', details: 'Initial designs submitted.', userName: 'Carol DesignerRep', timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), userAvatar: 'https://placehold.co/40x40.png?text=CD' },
+];
+
 
 const getActivityIcon = (type: ActivityItem['type']) => {
   switch (type) {
@@ -53,16 +60,15 @@ const getInitials = (name: string) => {
 const LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY = 'trackflow-global-monthly-sales-target';
 const LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY = 'trackflow-global-weekly-sales-target';
 
-const DEFAULT_GLOBAL_MONTHLY_TARGET = 0; // Default to 0 if not set
-const DEFAULT_GLOBAL_WEEKLY_TARGET = 0;  // Default to 0 if not set
+const DEFAULT_GLOBAL_MONTHLY_TARGET = 0; 
+const DEFAULT_GLOBAL_WEEKLY_TARGET = 0;  
 
-// Mock current orders completed removed, this should come from a real data source.
 const MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM = 0; 
 const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 0;  
 
 const getProgressColorClass = (percentage: number): string => {
   if (percentage < 0) percentage = 0;
-  const colorPercentage = Math.min(percentage, 100);
+  const colorPercentage = Math.min(percentage, 100); // Cap at 100 for color calculation
   if (colorPercentage < 33) return 'bg-red-500 dark:bg-red-600';
   if (colorPercentage < 67) return 'bg-yellow-500 dark:bg-yellow-400';
   return 'bg-green-500 dark:bg-green-600';
@@ -93,7 +99,6 @@ export default function DashboardPage() {
   const crmEffectiveMonthlyTarget = currentUser?.role === 'CRM' ? (currentUser.monthlyOrderTarget ?? globalMonthlyOrderTarget) : globalMonthlyOrderTarget;
   const crmEffectiveWeeklyTarget = currentUser?.role === 'CRM' ? (currentUser.weeklyOrderTarget ?? globalWeeklyOrderTarget) : globalWeeklyOrderTarget;
 
-  // Data for CRM's completed orders - should come from a real data source
   const crmMonthlyOrdersCompleted = currentUser?.role === 'CRM' ? MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM : 0;
   const crmWeeklyOrdersCompleted = currentUser?.role === 'CRM' ? MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM : 0;
 
@@ -127,7 +132,7 @@ export default function DashboardPage() {
   }
 
   let summaryCards = [
-    { title: "Active Orders", value: "0", icon: Package, change: "+0% this month", dataAiHint: "delivery boxes", type: "info" as const, trend: "up" as const }, // Value should come from real data
+    { title: "Active Orders", value: "0", icon: Package, change: "+0% this month", dataAiHint: "delivery boxes", type: "info" as const, trend: "up" as const },
   ];
 
   if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
@@ -281,7 +286,7 @@ export default function DashboardPage() {
           <CardContent className="h-[calc(100%-72px)] sm:h-[calc(100%-80px)] p-0"> 
             <ScrollArea className="h-full">
               <div className="p-2 sm:p-4 space-y-2 sm:space-y-3">
-                {recentActivities.length > 0 ? recentActivities.map((activity) => (
+                {mockRecentActivities.length > 0 ? mockRecentActivities.map((activity) => (
                   <div key={activity.id} className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-3.5 rounded-lg hover:bg-primary/5 transition-colors border border-transparent hover:border-primary/20 cursor-pointer group">
                     <div className="flex-shrink-0 pt-1 sm:pt-1.5 text-primary">
                       {getActivityIcon(activity.type)}
@@ -302,7 +307,7 @@ export default function DashboardPage() {
                   </div>
                 )) : (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
-                    <ListChecks className="w-16 h-16 sm:w-20 sm:w-20 mb-4 opacity-20" />
+                    <ListChecks className="w-16 h-16 sm:w-20 sm:h-20 mb-4 opacity-20" />
                     <p className="text-md sm:text-lg">No recent activity.</p>
                     <p className="text-xs text-muted-foreground">Updates will appear here as they happen.</p>
                   </div>
