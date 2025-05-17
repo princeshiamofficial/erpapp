@@ -15,9 +15,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { getOrders } from '@/lib/order-service'; 
 import { getStatusById, getContrastTextColor, getStatuses } from '@/lib/status-service';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge'; // Added import for Badge
 
 // Removed mockViews constant
-// const mockViews: {[key: string]: number} = { ... };
 
 export default function TrackingLinksPage() {
   const { currentUser } = useAuth();
@@ -242,3 +242,5 @@ export default function TrackingLinksPage() {
     </div>
   );
 }
+
+    
