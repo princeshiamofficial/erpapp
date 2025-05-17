@@ -1,6 +1,6 @@
 
 import { db } from './firebase';
-import { collection, getDocs, doc, addDoc, updateDoc, getDoc, query, orderBy, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, query, orderBy,getCountFromServer } from 'firebase/firestore';
 import type { TrackingLink, Comment, OrderLogEntry, CustomStatus } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getStatuses } from './status-service'; // To get default status IDs
@@ -14,10 +14,10 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
   const ideaSubmittedStatus = statuses.find(s => s.name === 'Idea Submitted');
   const inProductionStatus = statuses.find(s => s.name === 'In Production');
   const pendingApprovalStatus = statuses.find(s => s.name === 'Pending Client Approval');
-  const shippedStatus = statuses.find(s => s.name === 'Shipped');
+  // const shippedStatus = statuses.find(s => s.name === 'Shipped'); // Not used in current seed
   const readyForDesignStatus = statuses.find(s => s.name === 'Ready for Design');
 
-  if (!ideaSubmittedStatus || !inProductionStatus || !pendingApprovalStatus || !shippedStatus || !readyForDesignStatus) {
+  if (!ideaSubmittedStatus || !inProductionStatus || !pendingApprovalStatus || !readyForDesignStatus) {
     console.error("Default statuses not found, cannot seed initial orders properly.");
     return [];
   }
@@ -30,7 +30,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       phoneNumber: "555-0101",
       service: "Custom Software Development",
       crmUserId: "user-admin-default", 
-      crmUserName: "Default Admin", // Assuming an admin created this for demo
+      crmUserName: "Default Admin",
       isPublic: true,
       designerRepresentativeId: undefined,
       designerRepresentativeName: undefined,
@@ -44,51 +44,52 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       crmUserId: "user-admin-default", 
       crmUserName: "Default Admin",
       isPublic: false,
-      designerRepresentativeId: "user-dr-001", // Mock DR ID
-      designerRepresentativeName: "Carol DesignerRep", // Mock DR Name
+      designerRepresentativeId: "user-dr-001", 
+      designerRepresentativeName: "Carol DesignerRep", 
     },
   ];
 
   const ordersRef = collection(db, ORDERS_COLLECTION);
   const createdOrders: TrackingLink[] = [];
-  let orderIndex = 0;
+  
+  const firstOrderId = "ORD-001";
+  const firstOrderBaseData = initialOrdersData[0];
+  const firstOrder: TrackingLink = {
+    ...firstOrderBaseData,
+    id: firstOrderId,
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    currentStatus: inProductionStatus.id,
+    statusHistory: [
+      { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: ideaSubmittedStatus.id, changedByUserId: firstOrderBaseData.crmUserId, changedByUserName: firstOrderBaseData.crmUserName, notes: "Order created, requirements gathered." },
+      { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: inProductionStatus.id, changedByUserId: firstOrderBaseData.crmUserId, changedByUserName: firstOrderBaseData.crmUserName, notes: "Production has commenced." }
+    ],
+    comments: [
+      { id: uuidv4(), userName: "Tech Solutions Inc. (Client)", text: "Looking forward to the first demo!", timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), isInternal: false }
+    ],
+  };
+  const firstDocRef = doc(ordersRef, firstOrderId);
+  await setDoc(firstDocRef, firstOrder);
+  createdOrders.push(firstOrder);
 
-  for (const orderBaseData of initialOrdersData) {
-    let currentStatusId: string;
-    let statusHistory: OrderLogEntry[];
+  const secondOrderId = "ORD-002";
+  const secondOrderBaseData = initialOrdersData[1];
+  const secondOrder: TrackingLink = {
+    ...secondOrderBaseData,
+    id: secondOrderId,
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
+    currentStatus: pendingApprovalStatus.id,
+    statusHistory: [
+      { id: uuidv4(), timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), status: ideaSubmittedStatus.id, changedByUserId: secondOrderBaseData.crmUserId, changedByUserName: secondOrderBaseData.crmUserName, notes: "New landscaping project initiated." },
+      { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: readyForDesignStatus.id, changedByUserId: secondOrderBaseData.crmUserId, changedByUserName: secondOrderBaseData.crmUserName, notes: "Order ready for design team." },
+      { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: pendingApprovalStatus.id, changedByUserId: secondOrderBaseData.designerRepresentativeId || "user-dr-001", changedByUserName: secondOrderBaseData.designerRepresentativeName || "Carol DesignerRep", notes: "Initial designs submitted for client approval." }
+    ],
+    comments: [],
+  };
+  const secondDocRef = doc(ordersRef, secondOrderId);
+  await setDoc(secondDocRef, secondOrder);
+  createdOrders.push(secondOrder);
 
-    if (orderIndex === 0) { // For Tech Solutions Inc.
-      currentStatusId = inProductionStatus.id;
-      statusHistory = [
-        { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: ideaSubmittedStatus.id, changedByUserId: orderBaseData.crmUserId, changedByUserName: orderBaseData.crmUserName, notes: "Order created, requirements gathered." },
-        { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: inProductionStatus.id, changedByUserId: orderBaseData.crmUserId, changedByUserName: orderBaseData.crmUserName, notes: "Production has commenced." }
-      ];
-    } else { // For GreenScape Ltd.
-      currentStatusId = pendingApprovalStatus.id;
-      statusHistory = [
-        { id: uuidv4(), timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), status: ideaSubmittedStatus.id, changedByUserId: orderBaseData.crmUserId, changedByUserName: orderBaseData.crmUserName, notes: "New landscaping project initiated." },
-        { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: readyForDesignStatus.id, changedByUserId: orderBaseData.crmUserId, changedByUserName: orderBaseData.crmUserName, notes: "Order ready for design team." },
-        { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: pendingApprovalStatus.id, changedByUserId: orderBaseData.designerRepresentativeId || "user-dr-001", changedByUserName: orderBaseData.designerRepresentativeName || "Carol DesignerRep", notes: "Initial designs submitted for client approval." }
-      ];
-    }
-
-    const newOrder: TrackingLink = {
-      ...orderBaseData,
-      id: `ORD-${uuidv4().slice(0,8).toUpperCase()}`, // Generate a unique ID for the order
-      createdAt: new Date(Date.now() - (initialOrdersData.length - orderIndex) * 24 * 60 * 60 * 1000).toISOString(), // Stagger creation times
-      currentStatus: currentStatusId,
-      statusHistory: statusHistory,
-      comments: orderIndex === 0 ? [
-        { id: uuidv4(), userName: "Tech Solutions Inc. (Client)", text: "Looking forward to the first demo!", timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), isInternal: false }
-      ] : [],
-    };
-    
-    const docRef = doc(ordersRef, newOrder.id); // Use our custom ID for the document
-    await setDoc(docRef, newOrder);
-    createdOrders.push(newOrder);
-    orderIndex++;
-  }
-  console.log('Initial orders seeded in Firestore.');
+  console.log('Initial orders seeded in Firestore with sequential IDs.');
   return createdOrders;
 };
 
@@ -132,12 +133,27 @@ export const addOrder = async (orderData: {
     crmUserName: string 
 }): Promise<TrackingLink> => {
   const now = new Date().toISOString();
-  const orderId = `ORD-${uuidv4().slice(0,8).toUpperCase()}`;
+  
+  // Generate new sequential Order ID
+  const ordersCol = collection(db, ORDERS_COLLECTION);
+  const snapshot = await getDocs(ordersCol);
+  let maxOrderNumber = 0;
+  snapshot.forEach(doc => {
+    const docId = doc.id;
+    if (docId.startsWith("ORD-")) {
+      const numPart = parseInt(docId.substring(4), 10);
+      if (!isNaN(numPart) && numPart > maxOrderNumber) {
+        maxOrderNumber = numPart;
+      }
+    }
+  });
+  const newOrderNumber = maxOrderNumber + 1;
+  const orderId = `ORD-${String(newOrderNumber).padStart(3, '0')}`;
 
   const initialLogEntry: OrderLogEntry = {
     id: uuidv4(),
     timestamp: now,
-    status: orderData.initialStatusId, // This is already an ID
+    status: orderData.initialStatusId,
     changedByUserId: orderData.crmUserId,
     changedByUserName: orderData.crmUserName,
     notes: "Order created.",
@@ -195,4 +211,11 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
     console.error(`Error adding comment to order ${orderId}:`, error);
     return undefined;
   }
+};
+
+// Helper function to get current order count - might be useful elsewhere or can be removed if not needed
+export const getOrderCount = async (): Promise<number> => {
+    const ordersCol = collection(db, ORDERS_COLLECTION);
+    const snapshot = await getCountFromServer(ordersCol);
+    return snapshot.data().count;
 };
