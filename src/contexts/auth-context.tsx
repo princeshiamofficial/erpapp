@@ -2,15 +2,16 @@
 "use client";
 
 import type { User } from '@/types';
-import { MOCK_USERS, findUserByEmailAndPassword } from '@/lib/auth-constants';
+import { MOCK_USERS, findUserByEmailAndPassword, updateUserAvatarInMock } from '@/lib/auth-constants';
 import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 interface AuthContextType {
   currentUser: User | null;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<boolean>; // Updated for password
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
+  updateUserAvatar: (avatarUrl: string) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,16 +22,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    // Try to load user from localStorage (very basic persistence for demo)
     const storedUser = localStorage.getItem('trackflow-user');
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser) as User;
-        // Validate if this user is one of our mock users
-        // We don't store password in localStorage, so we find by ID to re-validate
         const validatedUser = MOCK_USERS.find(mockUser => mockUser.id === parsedUser.id);
         if (validatedUser) {
-          const { password, ...userToStore } = validatedUser; // Ensure password is not in currentUser state
+          // Ensure the stored user in state is always fresh from MOCK_USERS (which might have updated avatar)
+          const { password, ...userToStore } = validatedUser;
           setCurrentUser(userToStore as User);
         } else {
           localStorage.removeItem('trackflow-user');
@@ -45,13 +44,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (email: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
     const user = findUserByEmailAndPassword(email, pass);
     if (user) {
-      // The password is already removed by findUserByEmailAndPassword
       setCurrentUser(user);
-      localStorage.setItem('trackflow-user', JSON.stringify(user)); // Store user without password
+      localStorage.setItem('trackflow-user', JSON.stringify(user));
       setIsLoading(false);
       router.push('/dashboard');
       return true;
@@ -66,8 +63,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/login');
   };
 
+  const updateUserAvatar = async (avatarUrl: string): Promise<boolean> => {
+    if (!currentUser) return false;
+    setIsLoading(true);
+    
+    // Simulate API call to update avatar
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const success = updateUserAvatarInMock(currentUser.id, avatarUrl);
+
+    if (success) {
+      const updatedUser = { ...currentUser, avatarUrl };
+      setCurrentUser(updatedUser);
+      localStorage.setItem('trackflow-user', JSON.stringify(updatedUser));
+      setIsLoading(false);
+      return true;
+    }
+    setIsLoading(false);
+    return false;
+  };
+
   return (
-    <AuthContext.Provider value={{ currentUser, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ currentUser, isLoading, login, logout, updateUserAvatar }}>
       {children}
     </AuthContext.Provider>
   );

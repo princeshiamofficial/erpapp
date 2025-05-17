@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,7 +13,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/auth-context";
-import { LogOut, User as UserIcon, Settings } from "lucide-react"; // Import UserIcon as a different name
+import { LogOut, User as UserIcon, Settings, Edit3 } from "lucide-react"; // Added Edit3
+import { EditProfileDialog } from "@/components/users/edit-profile-dialog"; // Added import
 
 export function UserNav() {
   const { currentUser, logout } = useAuth();
@@ -32,8 +34,11 @@ export function UserNav() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10 border-2 border-primary">
-            {/* Placeholder for user image - consider adding Gravatar or similar */}
-            <AvatarImage src={`https://placehold.co/100x100.png?text=${getInitials(currentUser.name)}`} alt={currentUser.name} data-ai-hint="abstract avatar" />
+            <AvatarImage 
+              src={currentUser.avatarUrl || `https://placehold.co/100x100.png?text=${getInitials(currentUser.name)}`} 
+              alt={currentUser.name} 
+              data-ai-hint={currentUser.avatarUrl ? "user uploaded" : "abstract avatar"} 
+            />
             <AvatarFallback className="bg-primary text-primary-foreground text-lg">
               {getInitials(currentUser.name)}
             </AvatarFallback>
@@ -54,13 +59,19 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
+          <EditProfileDialog>
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer">
+              <Edit3 className="mr-2 h-4 w-4" /> 
+              <span>Edit Profile</span>
+            </DropdownMenuItem>
+          </EditProfileDialog>
+          <DropdownMenuItem disabled>
             <UserIcon className="mr-2 h-4 w-4" />
-            <span>Profile</span>
+            <span>Profile (Soon)</span>
           </DropdownMenuItem>
-          <DropdownMenuItem>
+          <DropdownMenuItem disabled>
             <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
+            <span>Settings (Soon)</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />

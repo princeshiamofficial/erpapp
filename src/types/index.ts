@@ -8,6 +8,7 @@ export interface User {
   role: UserRole;
   companyName?: string;
   password?: string; // Added for login, should not be stored long-term in client state after auth
+  avatarUrl?: string; // Added for profile picture
 }
 
 export type OrderStatus =
