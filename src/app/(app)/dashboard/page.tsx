@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks, Edit, PackageCheck, Truck, TrendingDown, Minus } from 'lucide-react';
+import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks, Edit, PackageCheck, Truck, TrendingDown, Minus, RefreshCw } from 'lucide-react';
 import { formatDistanceToNow, startOfMonth, endOfMonth, isWithinInterval, startOfWeek, endOfWeek } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
@@ -59,7 +59,6 @@ const DEFAULT_GLOBAL_TARGETS_STATE: GlobalSalesTargets = {
   globalWeeklyOrderTarget: 0,
 };
 
-// These mock values will be replaced once actual order data integration for CRMs is done
 const MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM = 0;
 const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 0;
 
@@ -107,7 +106,7 @@ export default function DashboardPage() {
     } catch (error) {
       console.error("Failed to fetch global sales targets:", error);
       toast({ title: "Error", description: "Could not load global sales targets.", variant: "destructive" });
-      setGlobalTargets(DEFAULT_GLOBAL_TARGETS_STATE); // Fallback to defaults
+      setGlobalTargets(DEFAULT_GLOBAL_TARGETS_STATE); 
     } finally {
       setIsLoadingGlobalTargets(false);
     }
@@ -117,7 +116,7 @@ export default function DashboardPage() {
   const fetchDashboardData = useCallback(async () => {
     setIsLoadingActivities(true);
     setIsLoadingActiveOrders(true);
-    setActiveOrdersPercentageChange(null); // Reset while loading
+    setActiveOrdersPercentageChange(null);
     setIsLoadingMonthlyDeliveries(true);
     setIsLoadingWeeklyDeliveries(true);
 
@@ -204,7 +203,6 @@ export default function DashboardPage() {
       const sortedActivities = activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setRecentActivities(sortedActivities.slice(0, MAX_RECENT_ACTIVITIES_DISPLAY));
 
-      // Calculate active orders
       const deliveredStatusId = allStatuses.find(s => s.name.toLowerCase() === 'delivered')?.id;
       const cancelledStatusId = allStatuses.find(s => s.name.toLowerCase() === 'cancelled')?.id;
       
@@ -213,15 +211,14 @@ export default function DashboardPage() {
       });
       setActiveOrdersCount(currentActiveOrders.length);
 
-      // Calculate active orders at start of month for percentage change
       const now = new Date();
       const startOfCurrentMonth = startOfMonth(now);
       let activeOrdersAtStartOfMonthCount = 0;
 
-      if (deliveredStatusId || cancelledStatusId) { // Ensure we have these to compare against
+      if (deliveredStatusId || cancelledStatusId) { 
           fetchedOrders.forEach(order => {
               const orderCreatedAt = new Date(order.createdAt);
-              if (orderCreatedAt < startOfCurrentMonth) { // Order must exist before this month
+              if (orderCreatedAt < startOfCurrentMonth) { 
                   let lastKnownStatusBeforeThisMonth = '';
                   let mostRecentLogTimestamp = new Date(0); 
 
@@ -239,23 +236,11 @@ export default function DashboardPage() {
                       if (lastKnownStatusBeforeThisMonth !== deliveredStatusId && lastKnownStatusBeforeThisMonth !== cancelledStatusId) {
                           activeOrdersAtStartOfMonthCount++;
                       }
-                  } else { // No status history before this month, check if created_at makes it active
-                      if (order.currentStatus !== deliveredStatusId && order.currentStatus !== cancelledStatusId) {
-                         // This logic might be flawed if currentStatus represents the status NOW, not at startOfMonth
-                         // A more robust way is to assume if no history before startOfMonth, but created before, it was in its initial state.
-                         // For now, let's assume it implies it was active if its currentStatus isn't terminal.
-                         // This might overcount if an order was created, then cancelled/delivered all before startOfMonth.
-                         // A truly accurate historical count requires iterating through history more carefully.
-                         // However, for this example, let's proceed, but acknowledge this complexity.
-                         // If its first log *was* before startOfMonth, the loop above handles it.
-                         // If its first log *was after* startOfMonth, it was created before, and its initial state was active.
-                         
-                         // Refined logic: if no log before start of month, but created before start of month, assume it was active in its initial state (which wasn't delivered/cancelled)
+                  } else { 
                          const initialStatusWasTerminal = order.statusHistory[0]?.status === deliveredStatusId || order.statusHistory[0]?.status === cancelledStatusId;
                          if (!initialStatusWasTerminal) {
                             activeOrdersAtStartOfMonthCount++;
                          }
-                      }
                   }
               }
           });
@@ -264,13 +249,12 @@ export default function DashboardPage() {
       if (activeOrdersAtStartOfMonthCount > 0) {
           setActiveOrdersPercentageChange(((currentActiveOrders.length - activeOrdersAtStartOfMonthCount) / activeOrdersAtStartOfMonthCount) * 100);
       } else if (currentActiveOrders.length > 0) {
-          setActiveOrdersPercentageChange(100); // From 0 to N is a 100% increase (or "New")
+          setActiveOrdersPercentageChange(100); 
       } else {
-          setActiveOrdersPercentageChange(0); // Both 0, so 0% change
+          setActiveOrdersPercentageChange(0); 
       }
 
 
-      // Calculate monthly and weekly deliveries
       if (deliveredStatusId) {
         const monthStart = startOfMonth(now);
         const monthEnd = endOfMonth(now);
@@ -312,7 +296,6 @@ export default function DashboardPage() {
     } finally {
       setIsLoadingActivities(false);
       setIsLoadingActiveOrders(false);
-      // Percentage change loading is implicitly handled by activeOrdersPercentageChange === null
       setIsLoadingMonthlyDeliveries(false);
       setIsLoadingWeeklyDeliveries(false);
     }
@@ -359,11 +342,11 @@ export default function DashboardPage() {
   if (!currentUser) {
     return (
       <div className="space-y-8 p-4 sm:p-6 lg:p-8">
-        <Skeleton className="h-40 w-full rounded-lg" />
+        <Skeleton className="h-40 w-full rounded-xl" />
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-lg" />)}
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-xl" />)}
         </div>
-        <Skeleton className="h-80 w-full rounded-lg" />
+        <Skeleton className="h-80 w-full rounded-xl" />
       </div>
     );
   }
@@ -441,7 +424,6 @@ export default function DashboardPage() {
     );
   }
 
-  // Admins see global target setting cards
   if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
     summaryCards.push(
         {
@@ -464,7 +446,6 @@ export default function DashboardPage() {
         }
     );
   }
-
 
   return (
     <div className="space-y-6 sm:space-y-8 p-1 sm:p-0">
@@ -524,7 +505,7 @@ export default function DashboardPage() {
                     <div className="text-3xl sm:text-4xl font-bold text-card-foreground">{card.value}</div>
                   )}
                   {card.type === 'info' && card.changeText && (
-                    <div className={`text-xs flex items-center mt-1 ${
+                    <div className={`text-xs sm:text-sm flex items-center mt-1 ${
                       card.trend === 'up' ? 'text-green-600 dark:text-green-400' :
                       card.trend === 'down' ? 'text-red-600 dark:text-red-400' :
                       'text-muted-foreground'
@@ -536,7 +517,7 @@ export default function DashboardPage() {
                     </div>
                   )}
                    {card.type === 'target' && card.changeText && (
-                     <p className="text-xs text-muted-foreground mt-1">
+                     <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                         {card.changeText}
                      </p>
                    )}
@@ -582,9 +563,14 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
         <Card className="shadow-lg bg-card h-[350px] sm:h-[400px] transition-shadow duration-300 ease-in-out hover:shadow-xl rounded-xl border-border/30">
-          <CardHeader className="border-b border-border/50 py-3 sm:py-4 px-4 sm:px-6">
-            <CardTitle className="text-lg sm:text-xl font-semibold text-foreground">Recent Activity</CardTitle>
-            <CardDescription className="text-muted-foreground text-xs sm:text-sm">Latest order updates and comments.</CardDescription>
+          <CardHeader className="border-b border-border/50 py-3 sm:py-4 px-4 sm:px-6 flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg sm:text-xl font-semibold text-foreground">Recent Activity</CardTitle>
+              <CardDescription className="text-muted-foreground text-xs sm:text-sm">Latest order updates and comments.</CardDescription>
+            </div>
+            <Button variant="ghost" size="icon" onClick={fetchDashboardData} className="text-muted-foreground hover:text-primary h-8 w-8 sm:h-9 sm:w-9" title="Refresh Activity">
+                <RefreshCw className={`h-4 w-4 sm:h-5 sm:w-5 ${isLoadingActivities ? 'animate-spin': ''}`} />
+            </Button>
           </CardHeader>
           <CardContent className="h-[calc(100%-72px)] sm:h-[calc(100%-80px)] p-0">
             <ScrollArea className="h-full">
@@ -623,7 +609,7 @@ export default function DashboardPage() {
                             <>
                               {activity.userName} &bull; {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
                             </>
-                          ) : <div><Skeleton className="h-3 w-32 inline-block" /></div> }
+                          ) : <div className="h-3 w-32"><Skeleton className="h-full w-full" /></div> }
                         </div>
                       </div>
                     </div>
@@ -648,3 +634,4 @@ export default function DashboardPage() {
     
 
     
+
