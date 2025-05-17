@@ -82,6 +82,9 @@ export default function DashboardPage() {
   const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
   const [isLoadingGlobalTargets, setIsLoadingGlobalTargets] = useState(true);
+  const [activeOrdersCount, setActiveOrdersCount] = useState<number | null>(null);
+  const [isLoadingActiveOrders, setIsLoadingActiveOrders] = useState(true);
+
 
   const [globalTargets, setGlobalTargets] = useState<GlobalSalesTargets>(DEFAULT_GLOBAL_TARGETS_STATE);
 
@@ -103,20 +106,23 @@ export default function DashboardPage() {
   }, [toast]);
 
 
-  const fetchRecentActivities = useCallback(async () => {
+  const fetchDashboardData = useCallback(async () => {
     setIsLoadingActivities(true);
+    setIsLoadingActiveOrders(true);
     try {
-      const fetchedOrders = await getOrders();
-      const allStatuses = await getStatuses();
+      const [fetchedOrders, allStatuses] = await Promise.all([
+        getOrders(),
+        getStatuses()
+      ]);
+      
       const statusMap = new Map(allStatuses.map(s => [s.id, s.name]));
-
       const activities: ActivityItem[] = [];
 
       const sortedOrders = [...fetchedOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      const ordersToProcess = sortedOrders.slice(0, ORDERS_TO_SCAN_FOR_ACTIVITY);
+      const ordersToProcessForActivity = sortedOrders.slice(0, ORDERS_TO_SCAN_FOR_ACTIVITY);
 
 
-      for (const order of ordersToProcess) {
+      for (const order of ordersToProcessForActivity) {
         activities.push({
           id: `order-created-${order.id}`,
           type: 'order_created',
@@ -186,21 +192,34 @@ export default function DashboardPage() {
       const sortedActivities = activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setRecentActivities(sortedActivities.slice(0, MAX_RECENT_ACTIVITIES_DISPLAY));
 
+      // Calculate active orders
+      const deliveredStatusId = allStatuses.find(s => s.name.toLowerCase() === 'delivered')?.id;
+      const cancelledStatusId = allStatuses.find(s => s.name.toLowerCase() === 'cancelled')?.id;
+      
+      const activeOrders = fetchedOrders.filter(order => {
+        return order.currentStatus !== deliveredStatusId && order.currentStatus !== cancelledStatusId;
+      });
+      setActiveOrdersCount(activeOrders.length);
+
+
     } catch (error) {
-      console.error("Failed to fetch recent activities:", error);
+      console.error("Failed to fetch dashboard data:", error);
+      toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive" });
+      setActiveOrdersCount(0); // Fallback on error
     } finally {
       setIsLoadingActivities(false);
+      setIsLoadingActiveOrders(false);
     }
-  }, [currentUser]);
+  }, [currentUser, toast]);
 
 
   useEffect(() => {
     setIsClient(true);
     fetchGlobalTargets();
     if (currentUser) {
-        fetchRecentActivities();
+        fetchDashboardData();
     }
-  }, [fetchRecentActivities, currentUser, fetchGlobalTargets]);
+  }, [fetchDashboardData, currentUser, fetchGlobalTargets]);
 
   const crmEffectiveMonthlyTarget = currentUser?.role === 'CRM' ? (currentUser.monthlyOrderTarget ?? globalTargets.globalMonthlyOrderTarget) : globalTargets.globalMonthlyOrderTarget;
   const crmEffectiveWeeklyTarget = currentUser?.role === 'CRM' ? (currentUser.weeklyOrderTarget ?? globalTargets.globalWeeklyOrderTarget) : globalTargets.globalWeeklyOrderTarget;
@@ -212,8 +231,8 @@ export default function DashboardPage() {
   const handleSetGlobalMonthlyOrderTarget = async (newTarget: number) => {
     const result = await setGlobalTargetAction('monthly', newTarget);
     if (result.success) {
-      setGlobalTargets(prev => ({ ...prev, globalMonthlyOrderTarget: newTarget }));
       toast({ title: "Success", description: `Global monthly target updated to ${newTarget}.` });
+      await fetchGlobalTargets(); // Re-fetch from Firestore
     } else {
       toast({ title: "Error", description: result.error || "Could not update global monthly target.", variant: "destructive" });
     }
@@ -223,8 +242,8 @@ export default function DashboardPage() {
   const handleSetGlobalWeeklyOrderTarget = async (newTarget: number) => {
     const result = await setGlobalTargetAction('weekly', newTarget);
      if (result.success) {
-      setGlobalTargets(prev => ({ ...prev, globalWeeklyOrderTarget: newTarget }));
       toast({ title: "Success", description: `Global weekly target updated to ${newTarget}.` });
+      await fetchGlobalTargets(); // Re-fetch from Firestore
     } else {
       toast({ title: "Error", description: result.error || "Could not update global weekly target.", variant: "destructive" });
     }
@@ -249,9 +268,9 @@ export default function DashboardPage() {
     summaryCards.push(
       {
         title: "Active Orders",
-        value: "0", // This should be dynamically calculated from orders later
+        value: isLoadingActiveOrders || activeOrdersCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : activeOrdersCount.toString(),
         icon: Package,
-        change: "+0% this month",
+        change: "+0% this month", // Placeholder
         dataAiHint: "delivery boxes",
         type: "info" as const,
         trend: "up" as const
@@ -279,9 +298,9 @@ export default function DashboardPage() {
     summaryCards.push(
       {
         title: "Active Orders",
-        value: "0", // This should be dynamically calculated from orders later
+        value: isLoadingActiveOrders || activeOrdersCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : activeOrdersCount.toString(),
         icon: Package,
-        change: "+0% this month",
+        change: "+0% this month", // Placeholder
         dataAiHint: "delivery boxes",
         type: "info" as const,
         trend: "up" as const
@@ -311,9 +330,9 @@ export default function DashboardPage() {
      summaryCards.push(
       {
         title: "Active Orders",
-        value: "0", // This should be dynamically calculated from orders later
+        value: isLoadingActiveOrders || activeOrdersCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : activeOrdersCount.toString(),
         icon: Package,
-        change: "+0% this month",
+        change: "+0% this month", // Placeholder
         dataAiHint: "delivery boxes",
         type: "info" as const,
         trend: "up" as const
@@ -486,3 +505,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
