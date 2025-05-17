@@ -17,7 +17,7 @@ import {
 import { AppHeader } from '@/components/layout/AppHeader';
 import { SidebarNavigation } from '@/components/layout/SidebarNavigation';
 import { Button } from '@/components/ui/button';
-import { LogOut, Settings2 } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 
@@ -45,27 +45,35 @@ export default function AuthenticatedLayout({
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <Sidebar collapsible="icon" className="border-r border-sidebar-border shadow-md">
-        <SidebarHeader className="p-4 flex items-center justify-between">
+      <Sidebar 
+        collapsible="icon" 
+        className="border-r border-sidebar-border shadow-lg bg-sidebar text-sidebar-foreground"
+      >
+        <SidebarHeader className="p-4 flex items-center justify-between h-16">
           <Link href="/dashboard" className="flex items-center space-x-2 text-primary hover:text-primary/80 transition-colors group-data-[collapsible=icon]:hidden">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-[0_1px_2px_hsl(var(--primary)/0.7)]">
                 <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M2 7L12 12M12 12L22 7M12 12V22M12 2V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M17 4.5L7 9.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <span className="font-bold text-xl">TrackFlow</span>
+            <span className="font-bold text-xl tracking-tight">TrackFlow</span>
           </Link>
           <div className="group-data-[collapsible=icon]:mx-auto">
-             <SidebarTrigger className="hidden md:flex" /> {/* Hidden on mobile, AppHeader has one for mobile */}
+             <SidebarTrigger className="hidden md:flex text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" />
           </div>
         </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu className="p-2">
+        <SidebarContent className="flex-1">
+          <SidebarMenu className="p-2 space-y-1">
             <SidebarNavigation />
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-2 border-t border-sidebar-border">
-          <Button variant="ghost" className="w-full justify-start group-data-[collapsible=icon]:justify-center" onClick={logout} title="Logout">
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-data-[collapsible=icon]:justify-center" 
+            onClick={logout} 
+            title="Logout"
+          >
             <LogOut className="mr-3 h-5 w-5 shrink-0 group-data-[collapsible=icon]:mr-0" />
             <span className="truncate group-data-[collapsible=icon]:hidden">Logout</span>
           </Button>
@@ -73,11 +81,10 @@ export default function AuthenticatedLayout({
       </Sidebar>
       <SidebarInset>
         <AppHeader />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-secondary/30 min-h-[calc(100vh-4rem)]">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-background min-h-[calc(100vh-4rem)]">
           {children}
         </main>
       </SidebarInset>
     </SidebarProvider>
   );
 }
-

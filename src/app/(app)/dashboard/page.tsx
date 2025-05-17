@@ -6,8 +6,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, ListChecks, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target } from 'lucide-react';
-import Image from 'next/image';
+import { Package, ListChecks, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, Users, Trophy, Star } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
@@ -19,7 +18,7 @@ interface ActivityItem {
   orderId: string;
   title: string;
   details: string;
-  userName: string;
+  userName:string;
   userAvatar?: string;
   timestamp: string;
 }
@@ -52,6 +51,24 @@ const mockRecentActivities: ActivityItem[] = [
     userName: 'David CRM',
     timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
   },
+   {
+    id: 'act-004',
+    type: 'status_update',
+    orderId: 'ORD-003',
+    title: 'Status changed to SHIPPED',
+    details: 'Innovate Hub order has been shipped.',
+    userName: 'System',
+    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+  },
+  {
+    id: 'act-005',
+    type: 'new_comment',
+    orderId: 'ORD-001',
+    title: 'Internal comment on Tech Solutions Inc.',
+    details: 'Carol (DR): "Design files uploaded to shared drive."',
+    userName: 'Carol DesignerRep',
+    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+  },
 ];
 
 const getActivityIcon = (type: ActivityItem['type']) => {
@@ -61,9 +78,9 @@ const getActivityIcon = (type: ActivityItem['type']) => {
     case 'new_comment':
       return <MessageSquare className="h-5 w-5 text-green-500" />;
     case 'order_created':
-      return <PlusCircle className="h-5 w-5 text-purple-500" />;
+      return <PlusCircle className="h-5 w-5 text-accent" />; // Use accent for created
     default:
-      return <UserCircle className="h-5 w-5 text-gray-500" />;
+      return <UserCircle className="h-5 w-5 text-muted-foreground" />;
   }
 };
 
@@ -85,22 +102,20 @@ const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 12;  // For the logged-in C
 const getProgressColorClass = (percentage: number): string => {
   if (percentage < 0) percentage = 0;
   const colorPercentage = Math.min(percentage, 100);
-  if (colorPercentage <= 33) return '[&>div]:bg-destructive';
-  if (colorPercentage <= 66) return '[&>div]:bg-yellow-400';
-  return '[&>div]:bg-green-500';
+  if (colorPercentage < 33) return '[&>div]:bg-destructive';
+  if (colorPercentage < 67) return '[&>div]:bg-yellow-400 dark:[&>div]:bg-yellow-500';
+  return '[&>div]:bg-green-500 dark:[&>div]:bg-green-600';
 };
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
 
-  // Global default targets (managed by Admin)
   const [globalMonthlyOrderTarget, setGlobalMonthlyOrderTarget] = useState<number>(DEFAULT_GLOBAL_MONTHLY_TARGET);
   const [globalWeeklyOrderTarget, setGlobalWeeklyOrderTarget] = useState<number>(DEFAULT_GLOBAL_WEEKLY_TARGET);
 
   const [isSetGlobalMonthlyTargetDialogOpen, setIsSetGlobalMonthlyTargetDialogOpen] = useState(false);
   const [isSetGlobalWeeklyTargetDialogOpen, setIsSetGlobalWeeklyTargetDialogOpen] = useState(false);
 
-  // Effective targets for the logged-in CRM user
   const crmEffectiveMonthlyTarget = currentUser?.role === 'CRM' ? (currentUser.monthlyOrderTarget ?? globalMonthlyOrderTarget) : 0;
   const crmEffectiveWeeklyTarget = currentUser?.role === 'CRM' ? (currentUser.weeklyOrderTarget ?? globalWeeklyOrderTarget) : 0;
 
@@ -132,7 +147,7 @@ export default function DashboardPage() {
   }
 
   let summaryCards = [
-    { title: "Active Orders", value: "125", icon: Package, change: "+15.2%", dataAiHint: "delivery boxes", type: "info" as const },
+    { title: "Active Orders", value: "125", icon: Package, change: "+15.2% from last month", dataAiHint: "delivery boxes", type: "info" as const },
   ];
 
   if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
@@ -181,20 +196,20 @@ export default function DashboardPage() {
 
 
   return (
-    <div className="space-y-6">
-      <Card className="shadow-xl bg-gradient-to-br from-primary/90 via-primary/80 to-accent/80 border-primary/70">
-        <CardHeader>
-          <CardTitle className="text-3xl text-primary-foreground">Welcome to TrackFlow, {currentUser.name}!</CardTitle>
+    <div className="space-y-8">
+      <Card className="shadow-2xl bg-gradient-to-tr from-primary via-primary/80 to-accent/90 border-primary/50">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-4xl font-bold text-primary-foreground drop-shadow-sm">Welcome to TrackFlow, {currentUser.name.split(' ')[0]}!</CardTitle>
           <CardDescription className="text-lg text-primary-foreground/90">
-            You are logged in as {currentUser.role}. Here's a quick overview of your workspace.
+            You are logged in as {currentUser.role.replace(/_/g, ' ')}. Here's a quick overview of your workspace.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-primary-foreground/95">This is your main dashboard. From here, you can navigate to various sections of the application using the sidebar.</p>
+          <p className="text-primary-foreground/95 max-w-2xl">This is your main dashboard. From here, you can navigate to various sections of the application using the sidebar. Stay on top of your tasks and monitor key metrics.</p>
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {summaryCards.map((card) => {
           let progressPercentage = 0;
           let progressColorClass = '';
@@ -207,42 +222,44 @@ export default function DashboardPage() {
           return (
             <Card 
               key={card.title} 
-              className="shadow-md hover:shadow-xl transition-all duration-300 ease-in-out border hover:border-primary/70 bg-card relative flex flex-col hover:scale-[1.03]"
+              className="shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out border hover:border-primary/50 bg-card relative flex flex-col group hover:scale-[1.03]"
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-card-foreground">{card.title}</CardTitle>
-                <card.icon className="h-5 w-5 text-muted-foreground" />
+                <CardTitle className="text-base font-semibold text-card-foreground">{card.title}</CardTitle>
+                <card.icon className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
               </CardHeader>
               <CardContent className="flex-grow flex flex-col justify-between">
                 <div>
                   {card.type === 'progress' ? (
                     <>
-                      <div className="text-2xl font-bold text-card-foreground">
-                        {card.currentCompleted} <span className="text-lg text-muted-foreground">/ {card.targetValue} Orders</span>
+                      <div className="text-3xl font-bold text-card-foreground">
+                        {card.currentCompleted} <span className="text-xl text-muted-foreground">/ {card.targetValue} Orders</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1 mb-2">
+                      <p className="text-xs text-muted-foreground mt-1 mb-3">
                         ({progressPercentage.toFixed(0)}% complete)
                       </p>
-                      <Progress value={Math.min(progressPercentage, 100)} className={`h-2 mb-3 ${progressColorClass}`} aria-label={`${card.title} progress ${progressPercentage.toFixed(0)}%`} />
+                      <Progress value={Math.min(progressPercentage, 100)} className={`h-2.5 mb-3 ${progressColorClass}`} aria-label={`${card.title} progress ${progressPercentage.toFixed(0)}%`} />
                     </>
                   ) : (
-                    <div className="text-2xl font-bold text-card-foreground">{card.value}</div>
+                    <div className="text-3xl font-bold text-card-foreground">{card.value}</div>
                   )}
-                  <p className="text-xs text-muted-foreground">
-                    {card.change}
-                  </p>
+                  {card.change && (
+                    <p className="text-xs text-muted-foreground">
+                      {card.change}
+                    </p>
+                  )}
                 </div>
                 {(card.type === 'target' && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) && (
                   <Button
                     variant="outline"
                     size="sm"
-                    className="mt-auto border-primary/50 text-primary hover:bg-primary/10 hover:text-primary self-end"
+                    className="mt-auto border-primary/50 text-primary hover:bg-primary/10 hover:text-primary self-end transition-colors group-hover:border-primary"
                     onClick={() => {
                       if (card.actionType === 'global_monthly') setIsSetGlobalMonthlyTargetDialogOpen(true);
                       if (card.actionType === 'global_weekly') setIsSetGlobalWeeklyTargetDialogOpen(true);
                     }}
                   >
-                    <Edit3 className="mr-1 h-3 w-3" /> Edit Global
+                    <Edit3 className="mr-1.5 h-3.5 w-3.5" /> Edit Global
                   </Button>
                 )}
               </CardContent>
@@ -271,25 +288,25 @@ export default function DashboardPage() {
       )}
 
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
-        <Card className="shadow-xl bg-card h-[350px] transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-2xl">
+        <Card className="shadow-xl bg-card h-[400px] transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-2xl">
           <CardHeader>
-            <CardTitle className="text-foreground">Recent Activity</CardTitle>
+            <CardTitle className="text-xl font-semibold text-foreground">Recent Activity</CardTitle>
             <CardDescription className="text-muted-foreground">Overview of recent order updates and comments.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[calc(100%-76px)] p-0">
+          <CardContent className="h-[calc(100%-84px)] p-0"> {/* Adjusted height based on new header size */}
             <ScrollArea className="h-full">
               <div className="p-6 space-y-4">
                 {mockRecentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 pt-1">
+                  <div key={activity.id} className="flex items-start space-x-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                    <div className="flex-shrink-0 pt-1 text-primary">
                       {getActivityIcon(activity.type)}
                     </div>
                     <div className="flex-1">
                       <p className="text-sm font-medium text-foreground leading-tight">{activity.title}</p>
                       <p className="text-xs text-muted-foreground">{activity.details}</p>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src={activity.userAvatar || `https://placehold.co/40x40.png?text=${getInitials(activity.userName)}`} alt={activity.userName} data-ai-hint="user avatar"/>
+                      <div className="flex items-center space-x-2 mt-1.5">
+                        <Avatar className="h-6 w-6">
+                           <AvatarImage src={activity.userAvatar || `https://placehold.co/40x40.png?text=${getInitials(activity.userName)}`} alt={activity.userName} data-ai-hint="user avatar"/>
                           <AvatarFallback className="text-xs bg-primary/20 text-primary">{getInitials(activity.userName)}</AvatarFallback>
                         </Avatar>
                         <p className="text-xs text-muted-foreground">
@@ -300,9 +317,9 @@ export default function DashboardPage() {
                   </div>
                 ))}
                 {mockRecentActivities.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                    <ListChecks className="w-16 h-16 mb-4 opacity-50" />
-                    <p>No recent activity to display.</p>
+                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
+                    <ListChecks className="w-20 h-20 mb-4 opacity-50" />
+                    <p className="text-lg">No recent activity to display.</p>
                   </div>
                 )}
               </div>
@@ -313,5 +330,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    

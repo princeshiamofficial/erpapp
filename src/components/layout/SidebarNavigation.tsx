@@ -12,7 +12,7 @@ import {
   Link2,
   Settings,
   FileText,
-  Award // Added Award icon
+  Award
 } from "lucide-react";
 import type { UserRole } from "@/types";
 
@@ -51,10 +51,22 @@ export function SidebarNavigation() {
               <SidebarMenuButton
                 asChild
                 isActive={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))}
-                tooltip={{ children: item.label, side: 'right', align: 'center' }}
+                tooltip={{ 
+                    children: item.label, 
+                    side: 'right', 
+                    align: 'center', 
+                    className: "bg-sidebar-primary text-sidebar-primary-foreground" 
+                }}
                 disabled={item.disabled}
                 aria-disabled={item.disabled}
-                className={item.disabled ? "cursor-not-allowed opacity-50" : ""}
+                className={
+                  cn(
+                    "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    (pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))) && 
+                    "bg-sidebar-accent text-sidebar-accent-foreground font-semibold",
+                    item.disabled && "cursor-not-allowed opacity-50 hover:bg-transparent hover:text-sidebar-foreground"
+                  )
+                }
               >
                 <a className="flex items-center w-full">
                   <item.icon className="mr-3 h-5 w-5 shrink-0" />

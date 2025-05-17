@@ -9,53 +9,55 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%; /* White */
+    /* Light Mode - Orange, Red, White, Black (Dark Gray) */
+    --background: 0 0% 98%; /* Very Light Gray, almost White */
     --foreground: 0 0% 10%; /* Very Dark Gray / Almost Black */
 
     --card: 0 0% 100%; /* White */
-    --card-foreground: 0 0% 10%; /* Very Dark Gray / Almost Black */
+    --card-foreground: 0 0% 10%;
 
-    --popover: 0 0% 100%; /* White */
-    --popover-foreground: 0 0% 10%; /* Very Dark Gray / Almost Black */
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
 
-    --primary: 24 95% 55%; /* Orange */
-    --primary-foreground: 0 0% 100%; /* White */
+    --primary: 24 100% 58%; /* Vibrant Orange */
+    --primary-foreground: 0 0% 100%; /* White for contrast on Orange */
 
-    --secondary: 0 0% 96%; /* Light Gray */
-    --secondary-foreground: 24 95% 55%; /* Orange */
+    --secondary: 0 0% 94%; /* Light Gray */
+    --secondary-foreground: 24 95% 50%; /* Darker Orange for secondary text on light gray */
 
     --muted: 0 0% 90%; /* Muted Gray */
     --muted-foreground: 0 0% 45%; /* Muted Text Gray */
 
-    --accent: 0 80% 58%; /* Red */
+    --accent: 0 85% 60%; /* Vibrant Red */
     --accent-foreground: 0 0% 100%; /* White */
 
-    --destructive: 0 84% 60%; /* Red */
+    --destructive: 0 84% 60%; /* Red (same as accent for destructive) */
     --destructive-foreground: 0 0% 100%; /* White */
 
-    --border: 0 0% 88%; /* Light Gray Border */
-    --input: 0 0% 95%; /* Light Gray Input */
-    --ring: 24 95% 55%; /* Orange Ring */
+    --border: 0 0% 90%; /* Light Gray Border */
+    --input: 0 0% 96%; /* Lighter Gray Input */
+    --ring: 24 100% 58%; /* Vibrant Orange Ring */
 
-    --chart-1: 24 95% 55%; /* Primary Orange */
-    --chart-2: 0 80% 58%;  /* Accent Red */
+    --chart-1: 24 100% 58%; /* Primary Orange */
+    --chart-2: 0 85% 60%;  /* Accent Red */
     --chart-3: 24 95% 70%; /* Lighter Orange */
     --chart-4: 0 80% 70%;  /* Lighter Red */
     --chart-5: 0 0% 50%;   /* Gray */
-    --radius: 0.5rem;
+    --radius: 0.75rem; /* Slightly more rounded */
 
-    /* Sidebar specific variables */
-    --sidebar-background: 0 0% 98%; /* Very Light Gray */
-    --sidebar-foreground: 0 0% 10%; /* Very Dark Gray / Almost Black */
-    --sidebar-primary: 24 95% 55%; /* Orange */
-    --sidebar-primary-foreground: 0 0% 100%; /* White */
-    --sidebar-accent: 24 95% 60%; /* Slightly Lighter Orange for hover */
-    --sidebar-accent-foreground: 0 0% 100%; /* White */
-    --sidebar-border: 0 0% 92%; /* Light Gray Border for Sidebar */
-    --sidebar-ring: 24 95% 55%; /* Orange Ring for Sidebar */
+    /* Sidebar specific variables - Light Mode */
+    --sidebar-background: 0 0% 100%; /* White */
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary: 24 100% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 24 100% 95%; /* Very Light Orange for hover */
+    --sidebar-accent-foreground: 24 100% 50%; /* Darker Orange for text on hover */
+    --sidebar-border: 0 0% 92%;
+    --sidebar-ring: 24 100% 58%;
   }
 
   .dark {
+    /* Dark Mode - Orange, Red, Black, White */
     --background: 0 0% 8%; /* Very Dark Gray / Almost Black */
     --foreground: 0 0% 98%; /* Very Light Gray / Almost White */
 
@@ -65,40 +67,40 @@ body {
     --popover: 0 0% 12%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 24 100% 65%; /* Bright Orange */
-    --primary-foreground: 0 0% 5%; /* Very Dark Gray / Black for contrast */
+    --primary: 24 95% 58%; /* Rich Orange */
+    --primary-foreground: 0 0% 98%; /* Almost white for contrast on orange */
 
     --secondary: 0 0% 15%; /* Dark Gray Secondary */
-    --secondary-foreground: 0 0% 98%; /* Almost White */
+    --secondary-foreground: 0 0% 98%;
 
     --muted: 0 0% 20%; /* Dark Muted Gray */
     --muted-foreground: 0 0% 65%; /* Light Muted Gray Text */
 
-    --accent: 0 90% 70%; /* Bright Red */
-    --accent-foreground: 0 0% 5%; /* Very Dark Gray / Black for contrast */
+    --accent: 0 80% 65%; /* Bright Red */
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 80% 60%; /* Bright Red Destructive */
-    --destructive-foreground: 0 0% 98%; /* Almost White */
+    --destructive: 0 75% 55%; /* Slightly darker Red Destructive */
+    --destructive-foreground: 0 0% 98%;
 
     --border: 0 0% 25%; /* Medium Dark Gray Border */
     --input: 0 0% 18%; /* Dark Gray Input */
-    --ring: 24 100% 65%; /* Bright Orange Ring */
+    --ring: 24 95% 58%; /* Rich Orange Ring */
 
-    --chart-1: 24 100% 65%; /* Primary Bright Orange */
-    --chart-2: 0 90% 70%;   /* Accent Bright Red */
-    --chart-3: 24 100% 50%; /* Darker Bright Orange */
-    --chart-4: 0 90% 55%;   /* Darker Bright Red */
-    --chart-5: 0 0% 70%;    /* Light Gray */
+    --chart-1: 24 95% 58%;
+    --chart-2: 0 80% 65%;
+    --chart-3: 24 90% 50%;
+    --chart-4: 0 75% 55%;
+    --chart-5: 0 0% 70%;
 
     /* Sidebar specific variables for dark mode */
     --sidebar-background: 0 0% 10%; /* Darker variant for sidebar */
-    --sidebar-foreground: 0 0% 95%; /* Light Gray / Almost White */
-    --sidebar-primary: 24 100% 65%; /* Bright Orange */
-    --sidebar-primary-foreground: 0 0% 5%; /* Very Dark Gray / Black */
-    --sidebar-accent: 24 100% 70%; /* Lighter Bright Orange for hover */
-    --sidebar-accent-foreground: 0 0% 5%; /* Very Dark Gray / Black */
-    --sidebar-border: 0 0% 20%; /* Dark Gray Border for Sidebar */
-    --sidebar-ring: 24 100% 65%; /* Bright Orange Ring for Sidebar */
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 24 95% 58%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 0 0% 18%; /* Darker Accent for hover */
+    --sidebar-accent-foreground: 24 95% 65%; /* Brighter Orange text on hover */
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 24 95% 58%;
   }
 }
 
@@ -108,5 +110,7 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
