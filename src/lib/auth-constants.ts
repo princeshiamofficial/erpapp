@@ -5,11 +5,10 @@ import type { User } from '@/types';
 const DEFAULT_MOCK_PASSWORD = "password";
 
 export const MOCK_USERS: User[] = [
-  { id: 'user-sysadmin-001', name: 'Sam System', email: 'sysadmin@trackflow.dev', role: 'SYSTEM_ADMIN', companyName: 'TrackFlow Inc.', password: DEFAULT_MOCK_PASSWORD, avatarUrl: undefined, monthlyOrderTarget: 0, weeklyOrderTarget: 0 },
-  { id: 'user-admin-001', name: 'Alice Admin', email: 'admin@trackflow.dev', role: 'ADMIN', companyName: 'TrackFlow Inc.', password: DEFAULT_MOCK_PASSWORD, avatarUrl: undefined, monthlyOrderTarget: 0, weeklyOrderTarget: 0 },
-  { id: 'user-crm-001', name: 'Bob CRM', email: 'bob.crm@trackflow.dev', role: 'CRM', companyName: 'TrackFlow Inc.', password: DEFAULT_MOCK_PASSWORD, avatarUrl: undefined, monthlyOrderTarget: 100, weeklyOrderTarget: 25 },
-  { id: 'user-dr-001', name: 'Carol DesignerRep', email: 'carol.dr@trackflow.dev', role: 'DESIGNER_REPRESENTATIVE', companyName: 'TrackFlow Inc.', password: DEFAULT_MOCK_PASSWORD, avatarUrl: undefined, monthlyOrderTarget: 0, weeklyOrderTarget: 0 },
-  { id: 'user-crm-002', name: 'David CRM', email: 'david.crm@trackflow.dev', role: 'CRM', companyName: 'TrackFlow Inc.', password: DEFAULT_MOCK_PASSWORD, avatarUrl: undefined, monthlyOrderTarget: 120, weeklyOrderTarget: 30 },
+  // All demo accounts have been removed.
+  // You can add a default System Admin or Admin here if needed for initial setup.
+  // Example:
+  // { id: 'user-admin-init', name: 'Initial Admin', email: 'initadmin@trackflow.dev', role: 'ADMIN', companyName: 'TrackFlow Inc.', password: DEFAULT_MOCK_PASSWORD, avatarUrl: undefined, monthlyOrderTarget: 0, weeklyOrderTarget: 0 },
 ];
 
 // Helper to get a user by email and password (for mock login)
