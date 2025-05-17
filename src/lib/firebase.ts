@@ -3,19 +3,17 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getAnalytics, isSupported as isAnalyticsSupported } from "firebase/analytics";
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY", // REPLACE WITH YOUR ACTUAL CONFIG
-  authDomain: "YOUR_AUTH_DOMAIN", // REPLACE WITH YOUR ACTUAL CONFIG
-  projectId: "YOUR_PROJECT_ID", // REPLACE WITH YOUR ACTUAL CONFIG
-  storageBucket: "YOUR_STORAGE_BUCKET", // REPLACE WITH YOUR ACTUAL CONFIG
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // REPLACE WITH YOUR ACTUAL CONFIG
-  appId: "YOUR_APP_ID", // REPLACE WITH YOUR ACTUAL CONFIG
-  measurementId: "YOUR_MEASUREMENT_ID" // Optional
+  apiKey: "AIzaSyA-OULKM7hL85JFSGlNs0BHdIuTOVN73-I",
+  authDomain: "colorhut-57f5a.firebaseapp.com",
+  projectId: "colorhut-57f5a",
+  storageBucket: "colorhut-57f5a.firebasestorage.app",
+  messagingSenderId: "282903959856",
+  appId: "1:282903959856:web:287ace0c706eb0b11990f5",
+  measurementId: "G-57S6VYXE7H"
 };
 
 // Initialize Firebase
@@ -27,6 +25,17 @@ if (!getApps().length) {
 }
 
 const db = getFirestore(app);
-const auth = getAuth(app); // We'll use this later for Firebase Auth
+const auth = getAuth(app);
 
-export { app, db, auth };
+// Initialize Analytics if supported
+let analytics;
+if (typeof window !== 'undefined') {
+  isAnalyticsSupported().then((supported) => {
+    if (supported) {
+      analytics = getAnalytics(app);
+    }
+  });
+}
+
+
+export { app, db, auth, analytics };
