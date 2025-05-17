@@ -7,8 +7,8 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks, Edit } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks, Edit, PackageCheck, Truck } from 'lucide-react';
+import { formatDistanceToNow, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
 import { Progress } from '@/components/ui/progress';
@@ -84,6 +84,8 @@ export default function DashboardPage() {
   const [isLoadingGlobalTargets, setIsLoadingGlobalTargets] = useState(true);
   const [activeOrdersCount, setActiveOrdersCount] = useState<number | null>(null);
   const [isLoadingActiveOrders, setIsLoadingActiveOrders] = useState(true);
+  const [monthlyDeliveriesCount, setMonthlyDeliveriesCount] = useState<number | null>(null);
+  const [isLoadingMonthlyDeliveries, setIsLoadingMonthlyDeliveries] = useState(true);
 
 
   const [globalTargets, setGlobalTargets] = useState<GlobalSalesTargets>(DEFAULT_GLOBAL_TARGETS_STATE);
@@ -109,6 +111,7 @@ export default function DashboardPage() {
   const fetchDashboardData = useCallback(async () => {
     setIsLoadingActivities(true);
     setIsLoadingActiveOrders(true);
+    setIsLoadingMonthlyDeliveries(true);
     try {
       const [fetchedOrders, allStatuses] = await Promise.all([
         getOrders(),
@@ -201,14 +204,36 @@ export default function DashboardPage() {
       });
       setActiveOrdersCount(activeOrders.length);
 
+      // Calculate monthly deliveries
+      if (deliveredStatusId) {
+        const now = new Date();
+        const monthStart = startOfMonth(now);
+        const monthEnd = endOfMonth(now);
+        let deliveriesThisMonth = 0;
+
+        fetchedOrders.forEach(order => {
+          const deliveredLog = order.statusHistory.find(
+            log => log.status === deliveredStatusId && isWithinInterval(new Date(log.timestamp), { start: monthStart, end: monthEnd })
+          );
+          if (deliveredLog) {
+            deliveriesThisMonth++;
+          }
+        });
+        setMonthlyDeliveriesCount(deliveriesThisMonth);
+      } else {
+        setMonthlyDeliveriesCount(0); // If 'Delivered' status doesn't exist
+      }
+
 
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
       toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive" });
       setActiveOrdersCount(0); // Fallback on error
+      setMonthlyDeliveriesCount(0);
     } finally {
       setIsLoadingActivities(false);
       setIsLoadingActiveOrders(false);
+      setIsLoadingMonthlyDeliveries(false);
     }
   }, [currentUser, toast]);
 
@@ -276,13 +301,12 @@ export default function DashboardPage() {
         trend: "up" as const
       },
       {
-        title: "Global Monthly Order Target",
-        value: isLoadingGlobalTargets ? <Skeleton className="h-6 w-24 inline-block" /> : `${globalTargets.globalMonthlyOrderTarget} Orders`,
-        icon: Target,
-        change: "Set global default for CRMs",
-        dataAiHint: "target goal",
-        actionType: 'global_monthly' as const,
-        type: "target" as const
+        title: "Monthly Deliveries",
+        value: isLoadingMonthlyDeliveries || monthlyDeliveriesCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : monthlyDeliveriesCount.toString(),
+        icon: Truck, // Or PackageCheck
+        change: "This month",
+        dataAiHint: "delivery truck calendar",
+        type: "info" as const,
       },
       {
         title: "Global Weekly Order Target",
@@ -359,7 +383,7 @@ export default function DashboardPage() {
         {summaryCards.map((card) => {
           let progressPercentage = 0;
           let progressColorClass = '';
-          const targetValue = card.type === 'progress' ? card.targetValue : (card.type === 'target' ? (card.actionType === 'global_monthly' ? globalTargets.globalMonthlyOrderTarget : globalTargets.globalWeeklyOrderTarget) : undefined);
+          const targetValue = card.type === 'progress' ? card.targetValue : (card.type === 'target' ? (card.actionType === 'global_weekly' ? globalTargets.globalWeeklyOrderTarget : undefined) : undefined);
           const currentCompleted = card.type === 'progress' ? card.currentCompleted : undefined;
 
 
@@ -403,7 +427,7 @@ export default function DashboardPage() {
                        <TrendingUp className="h-4 w-4 mr-1"/> {card.change}
                     </p>
                   )}
-                  {card.change && card.type === 'target' && (
+                  {card.change && card.type !== 'info' && card.type !== 'progress' && ( // Only for 'target' or other future types
                      <p className="text-xs text-muted-foreground mt-1">{card.change}</p>
                   )}
                 </div>
@@ -429,6 +453,8 @@ export default function DashboardPage() {
 
       {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && isClient && (
         <>
+          {/* This dialog is no longer directly triggered by a card, but can be kept for future use or removed if "Global Monthly Target" card is permanently replaced */}
+          {/* 
           <SetSalesTargetDialog
             isOpen={isSetGlobalMonthlyTargetDialogOpen}
             onOpenChange={setIsSetGlobalMonthlyTargetDialogOpen}
@@ -436,6 +462,7 @@ export default function DashboardPage() {
             onSetTarget={handleSetGlobalMonthlyOrderTarget}
             targetType="monthly"
           />
+          */}
           <SetSalesTargetDialog
             isOpen={isSetGlobalWeeklyTargetDialogOpen}
             onOpenChange={setIsSetGlobalWeeklyTargetDialogOpen}
@@ -505,5 +532,6 @@ export default function DashboardPage() {
     </div>
   );
 }
+    
 
     
