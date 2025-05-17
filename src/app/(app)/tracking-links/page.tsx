@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { Link2, Eye, Edit3, Search } from "lucide-react";
+import { Link2, Eye, Edit3, Search, ClipboardCopy, Check } from "lucide-react"; // Added ClipboardCopy and Check
 import { useAuth } from "@/contexts/auth-context";
 import Image from "next/image";
 import Link from "next/link";
@@ -17,13 +17,17 @@ import { getStatusById, getContrastTextColor, getStatuses } from '@/lib/status-s
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { updateTrackingLinkAction } from './actions'; 
+import { useToast } from '@/hooks/use-toast'; // Added useToast
 
 export default function TrackingLinksPage() {
   const { currentUser } = useAuth();
+  const { toast } = useToast(); // Initialize toast
   const [trackingLinks, setTrackingLinks] = useState<TrackingLink[]>([]);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
+
 
   const [selectedLink, setSelectedLink] = useState<TrackingLink | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -39,10 +43,11 @@ export default function TrackingLinksPage() {
       setAllStatuses(fetchedStatuses);
     } catch (error) {
       console.error("Failed to fetch tracking links or statuses:", error);
+      toast({ title: "Error", description: "Could not load tracking links or statuses.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchData();
@@ -64,6 +69,19 @@ export default function TrackingLinksPage() {
   const handleTrackingLinkUpdated = () => {
     fetchData(); 
     setIsEditDialogOpen(false);
+  };
+
+  const handleCopyLink = async (linkId: string) => {
+    const urlToCopy = `${window.location.origin}/track/${linkId}`;
+    try {
+      await navigator.clipboard.writeText(urlToCopy);
+      toast({ title: "Link Copied!", description: "The tracking link has been copied to your clipboard." });
+      setCopiedLinkId(linkId);
+      setTimeout(() => setCopiedLinkId(null), 2000); // Reset icon after 2 seconds
+    } catch (err) {
+      console.error('Failed to copy: ', err);
+      toast({ title: "Copy Failed", description: "Could not copy the link. Please try again.", variant: "destructive" });
+    }
   };
 
   const filteredTrackingLinks = useMemo(() => {
@@ -161,8 +179,9 @@ export default function TrackingLinksPage() {
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell className="pr-6 text-right space-x-2">
-                        <Skeleton className="h-8 w-8 inline-block rounded" />
-                        <Skeleton className="h-8 w-8 inline-block rounded" />
+                        <Skeleton className="h-9 w-9 inline-block rounded-md" />
+                        <Skeleton className="h-9 w-9 inline-block rounded-md" />
+                        <Skeleton className="h-9 w-9 inline-block rounded-md" />
                       </TableCell>
                     </TableRow>
                   ))
@@ -191,9 +210,13 @@ export default function TrackingLinksPage() {
                         <TableCell className="text-card-foreground">{link.crmUserName}</TableCell>
                         <TableCell className="text-card-foreground">{link.designerRepresentativeName || 'N/A'}</TableCell>
                         <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
+                          <Button variant="outline" size="sm" className="h-9 px-3" onClick={() => handleCopyLink(link.id)} title="Copy Link">
+                            {copiedLinkId === link.id ? <Check className="h-4 w-4 text-green-500" /> : <ClipboardCopy className="h-4 w-4" />}
+                            <span className="ml-1.5">{copiedLinkId === link.id ? "Copied!" : "Copy"}</span>
+                          </Button>
                           <Link href={`/track/${link.id}`} passHref>
                             <Button variant="outline" size="sm" className="h-9 px-3">
-                              <Eye className="mr-1.5 h-4 w-4" />View Public
+                              <Eye className="mr-1.5 h-4 w-4" /> View
                             </Button>
                           </Link>
                           {canEditSpecificLink(link) && (
@@ -241,4 +264,5 @@ export default function TrackingLinksPage() {
 
 
     
+
 
