@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy, Star, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { motion } from 'framer-motion';
 
 interface CrmPerformanceData {
   userId: string;
@@ -63,13 +64,17 @@ const getRankColorClass = (rank?: number): string => {
 
 const LeaderboardList: React.FC<{ data: CrmPerformanceData[], timePeriod: 'month' | 'week' }> = ({ data, timePeriod }) => {
   return (
-    <ScrollArea className="h-[calc(100vh-280px)] md:h-auto md:max-h-[600px]"> {/* Adjust height as needed */}
+    <ScrollArea className="h-[calc(100vh-280px)] md:h-auto md:max-h-[600px]">
       <div className="p-6 space-y-4">
-        {data.map((crm, index) => (
-          <div 
+        {data.map((crm) => (
+          <motion.div
+            layout // This enables FLIP animation
             key={crm.userId} 
-            className={`flex items-center space-x-4 p-4 rounded-lg border transition-all duration-300 ease-in-out shadow-sm hover:shadow-xl hover:scale-[1.02] ${getRankColorClass(crm.rank)} animate-slide-in-up`}
-            style={{ animationDelay: `${index * 100}ms`, opacity: 0 }} // Initial opacity 0 for animation
+            className={`flex items-center space-x-4 p-4 rounded-lg border transition-all duration-300 ease-in-out shadow-sm hover:shadow-xl hover:scale-[1.02] ${getRankColorClass(crm.rank)}`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
           >
             <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center text-xl font-bold">
                {getRankIcon(crm.rank)}
@@ -85,7 +90,7 @@ const LeaderboardList: React.FC<{ data: CrmPerformanceData[], timePeriod: 'month
             <div className="text-lg font-bold text-primary">
               #{crm.rank}
             </div>
-          </div>
+          </motion.div>
         ))}
         {data.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full py-10 text-muted-foreground">
@@ -142,3 +147,4 @@ export default function LeaderboardPage() {
     </div>
   );
 }
+
