@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, Users, ListChecks, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Briefcase, Trophy, Star } from 'lucide-react';
+import { Package, ListChecks, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock } from 'lucide-react';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -71,15 +71,6 @@ const mockRecentActivities: ActivityItem[] = [
     timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
-
-interface CrmPerformanceData {
-  userId: string;
-  userName: string;
-  userAvatar?: string;
-  monthlyOrdersCompleted: number;
-  rank?: number;
-}
-
 
 const getActivityIcon = (type: ActivityItem['type']) => {
   switch (type) {
@@ -154,31 +145,6 @@ export default function DashboardPage() {
 
   if (!currentUser) {
     return null;
-  }
-
-  // Mock CRM performance data - in a real app, fetch this from your backend
-  const mockCrmPerformance: CrmPerformanceData[] = [
-    { userId: 'user-crm-001', userName: 'Bob CRM', monthlyOrdersCompleted: 75, userAvatar: `https://placehold.co/40x40.png?text=BC` },
-    { userId: 'user-crm-002', userName: 'David CRM', monthlyOrdersCompleted: 62, userAvatar: `https://placehold.co/40x40.png?text=DC` },
-    { userId: 'user-crm-003', userName: 'Eve CRM', monthlyOrdersCompleted: 88, userAvatar: `https://placehold.co/40x40.png?text=EC` }, // Mock user, not in MOCK_USERS
-    { userId: 'user-crm-004', userName: 'Frank CRM', monthlyOrdersCompleted: 50, userAvatar: `https://placehold.co/40x40.png?text=FC` }, // Mock user
-  ].sort((a, b) => b.monthlyOrdersCompleted - a.monthlyOrdersCompleted)
-   .map((crm, index) => ({ ...crm, rank: index + 1 }));
-
-  const getRankIcon = (rank?: number) => {
-    if (!rank) return <span className="text-sm font-medium text-muted-foreground">{rank || '-'}</span>;
-    if (rank === 1) return <Trophy className="h-5 w-5 text-yellow-400" title="Gold" />;
-    if (rank === 2) return <Trophy className="h-5 w-5 text-slate-400" title="Silver" />;
-    if (rank === 3) return <Trophy className="h-5 w-5 text-orange-400" title="Bronze" />;
-    return <Star className="h-4 w-4 text-muted-foreground" title={`Rank ${rank}`} />;
-  };
-
-  const getRankColorClass = (rank?: number): string => {
-    if (!rank) return 'border-border';
-    if (rank === 1) return 'border-yellow-400 bg-yellow-400/10 hover:shadow-yellow-400/20';
-    if (rank === 2) return 'border-slate-400 bg-slate-400/10 hover:shadow-slate-400/20';
-    if (rank === 3) return 'border-orange-400 bg-orange-400/10 hover:shadow-orange-400/20';
-    return 'border-border bg-card hover:shadow-md';
   }
 
   const summaryCards = [
@@ -301,7 +267,7 @@ export default function DashboardPage() {
         </>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1"> {/* Adjusted grid for single card */}
         <Card className="shadow-xl bg-card h-[350px] transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-2xl">
           <CardHeader>
             <CardTitle className="text-foreground">Recent Activity</CardTitle>
@@ -340,51 +306,6 @@ export default function DashboardPage() {
             </ScrollArea>
           </CardContent>
         </Card>
-        <Card className="shadow-xl bg-card h-[350px] transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-2xl">
-          <CardHeader>
-            <CardTitle className="text-foreground">Order Status Distribution</CardTitle>
-            <CardDescription className="text-muted-foreground">Visual breakdown of current order statuses.</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[calc(100%-76px)] flex items-center justify-center">
-            {/* Placeholder for chart component */}
-            <Image src="https://placehold.co/600x300.png" alt="Order Status Chart Placeholder" data-ai-hint="pie chart" width={600} height={300} className="rounded-md object-contain max-h-full"/>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-xl bg-card h-[350px] transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-2xl">
-          <CardHeader>
-            <CardTitle className="text-foreground">CRM Sales Leaderboard</CardTitle>
-            <CardDescription className="text-muted-foreground">Top performing CRMs (Monthly Orders)</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[calc(100%-76px)] p-0">
-            <ScrollArea className="h-full">
-              <div className="p-6 space-y-3">
-                {mockCrmPerformance.map((crm) => (
-                  <div key={crm.userId} className={`flex items-center space-x-3 p-3 rounded-lg border transition-all duration-200 ease-in-out shadow-sm hover:shadow-lg hover:scale-[1.03] ${getRankColorClass(crm.rank)}`}>
-                    <div className="flex-shrink-0 w-8 flex items-center justify-center">
-                       {getRankIcon(crm.rank)}
-                    </div>
-                    <Avatar className="h-9 w-9 border">
-                      <AvatarImage src={crm.userAvatar || `https://placehold.co/40x40.png?text=${getInitials(crm.userName)}`} alt={crm.userName} data-ai-hint="user avatar" />
-                      <AvatarFallback className="text-xs bg-primary/20 text-primary">{getInitials(crm.userName)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground leading-tight">{crm.userName}</p>
-                      <p className="text-xs text-muted-foreground">{crm.monthlyOrdersCompleted} orders this month</p>
-                    </div>
-                  </div>
-                ))}
-                {mockCrmPerformance.length === 0 && (
-                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                    <Users className="w-16 h-16 mb-4 opacity-50" />
-                    <p>No CRM performance data available.</p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
       </div>
     </div>
   );
