@@ -1,0 +1,81 @@
+"use client";
+
+import React, { useEffect } { 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
+import { 
+  Sidebar, 
+  SidebarProvider, 
+  SidebarHeader, 
+  SidebarContent, 
+  SidebarFooter, 
+  SidebarMenu,
+  SidebarInset,
+  SidebarTrigger
+} from '@/components/ui/sidebar';
+import { AppHeader } from '@/components/layout/AppHeader';
+import { SidebarNavigation } from '@/components/layout/SidebarNavigation';
+import { Button } from '@/components/ui/button';
+import { LogOut, Settings2 } from 'lucide-react';
+import Link from 'next/link';
+import { Loader2 } from 'lucide-react';
+
+export default function AuthenticatedLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const { currentUser, isLoading, logout } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !currentUser) {
+      router.replace('/login');
+    }
+  }, [currentUser, isLoading, router]);
+
+  if (isLoading || !currentUser) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <SidebarProvider defaultOpen={true}>
+      <Sidebar collapsible="icon" className="border-r border-sidebar-border shadow-md">
+        <SidebarHeader className="p-4 flex items-center justify-between">
+          <Link href="/dashboard" className="flex items-center space-x-2 text-primary hover:text-primary/80 transition-colors group-data-[collapsible=icon]:hidden">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M2 7L12 12M12 12L22 7M12 12V22M12 2V12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M17 4.5L7 9.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span className="font-bold text-xl">TrackFlow</span>
+          </Link>
+          <div className="group-data-[collapsible=icon]:mx-auto">
+             <SidebarTrigger className="hidden md:flex" /> {/* Hidden on mobile, AppHeader has one for mobile */}
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarMenu className="p-2">
+            <SidebarNavigation />
+          </SidebarMenu>
+        </SidebarContent>
+        <SidebarFooter className="p-2 border-t border-sidebar-border">
+          <Button variant="ghost" className="w-full justify-start group-data-[collapsible=icon]:justify-center" onClick={logout} title="Logout">
+            <LogOut className="mr-3 h-5 w-5 shrink-0 group-data-[collapsible=icon]:mr-0" />
+            <span className="truncate group-data-[collapsible=icon]:hidden">Logout</span>
+          </Button>
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset>
+        <AppHeader />
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-secondary/30 min-h-[calc(100vh-4rem)]">
+          {children}
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}
