@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useEffect } { 'react';
+import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { 
@@ -79,3 +80,4 @@ export default function AuthenticatedLayout({
     </SidebarProvider>
   );
 }
+
