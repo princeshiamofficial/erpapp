@@ -114,9 +114,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
             <p className="text-3xl sm:text-4xl font-bold ml-[40px] mt-1" style={{ color: currentStatusInfo.color }}>
               {currentStatusInfo.name}
             </p>
-            <p className="text-sm text-muted-foreground mt-1.5 ml-[40px]">
+            <div className="text-sm text-muted-foreground mt-1.5 ml-[40px]">
               Last updated: {isClient ? formatDate(lastStatusUpdateTimestamp) : <Skeleton className="h-4 w-48 inline-block" />}
-            </p>
+            </div>
           </div>
 
           <Separator className="my-6 sm:my-8 bg-border/30" />
@@ -192,12 +192,12 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
                     </div>
                     <div className="flex-1 pt-px ml-2 sm:ml-3">
                       <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
-                      <p className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5">
+                      <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5">
                         <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" /> 
                         {isClient ? formatDate(entry.timestamp) : <Skeleton className="h-4 w-32" />} 
                         <span className="mx-1.5 hidden sm:inline">&bull;</span> 
                         <span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span>
-                      </p>
+                      </div>
                       {entry.notes && <p className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm">{entry.notes}</p>}
                     </div>
                   </div>
@@ -277,3 +277,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
     </main>
   );
 }
+
+
+    
