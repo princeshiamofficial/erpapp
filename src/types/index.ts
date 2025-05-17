@@ -6,55 +6,54 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  companyName?: string;
-  password?: string; // Added for login, should not be stored long-term in client state after auth
-  avatarUrl?: string; // Added for profile picture
-  monthlyOrderTarget?: number;
-  weeklyOrderTarget?: number;
+  companyName?: string | null; // Allow null
+  password?: string; 
+  avatarUrl?: string | null; // Allow null
+  monthlyOrderTarget?: number | null; // Allow null
+  weeklyOrderTarget?: number | null; // Allow null
 }
-
-// OrderStatus union type is removed. Statuses are now represented by CustomStatus.id (string).
 
 export interface CustomStatus {
   id: string;
   name: string;
   color: string;
-  isSystemStatus?: boolean; // True if it's a default status that can't be deleted/renamed easily
+  isSystemStatus?: boolean; 
 }
 
 export interface OrderLogEntry {
   id: string;
   timestamp: string; // ISO string
-  status: string; // Now stores the ID of a CustomStatus
+  status: string; //  ID of a CustomStatus
   changedByUserId: string;
   changedByUserName: string;
   notes?: string;
 }
 
-// This type represents an Order and its associated Tracking Link information
 export interface TrackingLink {
-  id: string; // Unique, unguessable order ID (Firestore document ID)
+  id: string; 
   customerName: string;
   companyName: string;
-  address: string; 
-  phoneNumber?: string; 
-  service?: string; 
+  address: string;
+  phoneNumber?: string | null; // Allow null
+  service?: string | null; // Allow null
   crmUserId: string;
   crmUserName: string;
-  designerRepresentativeId?: string; 
-  designerRepresentativeName?: string;
+  designerRepresentativeId?: string | null; // Allow null
+  designerRepresentativeName?: string | null; // Allow null
   createdAt: string; // ISO string
   isPublic: boolean;
-  currentStatus: string; // Now stores the ID of a CustomStatus
+  currentStatus: string; // ID of a CustomStatus
   statusHistory: OrderLogEntry[];
-  comments: Comment[]; 
+  comments: Comment[];
 }
 
 export interface Comment {
   id: string;
-  userId?: string;
-  userName: string; 
+  userId?: string; // Optional: ID of the user who made the comment if they are an app user
+  userName: string; // Name of the person who commented (can be client name or app user name)
   text: string;
   timestamp: string; // ISO string
-  isInternal: boolean; 
+  isInternal: boolean; // True if comment is only for internal team members
 }
+
+    

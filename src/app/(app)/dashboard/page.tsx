@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -12,7 +12,9 @@ import { Button } from '@/components/ui/button';
 import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { User } from '@/types';
+import type { User, TrackingLink, CustomStatus, OrderLogEntry, Comment as OrderComment } from '@/types';
+import { getOrders } from '@/lib/order-service';
+import { getStatuses, getStatusById } from '@/lib/status-service';
 
 interface ActivityItem {
   id: string;
@@ -20,20 +22,10 @@ interface ActivityItem {
   orderId: string;
   title: string;
   details: string;
-  userName:string;
-  userAvatar?: string;
-  timestamp: string;
+  userName: string;
+  userAvatar?: string; // Will use initials placeholder for now
+  timestamp: string; // ISO string
 }
-
-// Mock recent activities - In a real app, this would come from a backend
-const mockRecentActivities: ActivityItem[] = [
-  { id: '1', type: 'order_created', orderId: 'ORD-001', title: 'New Order Created: ORD-001', details: 'Customer: Tech Solutions Inc.', userName: 'Default Admin', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), userAvatar: 'https://placehold.co/40x40.png?text=DA' },
-  { id: '2', type: 'status_update', orderId: 'ORD-001', title: 'Status Update: ORD-001 to In Production', details: 'Order moved to production phase.', userName: 'Default Admin', timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(), userAvatar: 'https://placehold.co/40x40.png?text=DA' },
-  { id: '3', type: 'new_comment', orderId: 'ORD-001', title: 'New Comment on ORD-001', details: 'Client: "Looking forward to the demo!"', userName: 'Tech Solutions Inc. (Client)', timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(), userAvatar: 'https://placehold.co/40x40.png?text=TS' },
-  { id: '4', type: 'dr_assigned', orderId: 'ORD-002', title: 'Designer Assigned to ORD-002', details: 'Carol DesignerRep assigned.', userName: 'Default Admin', timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), userAvatar: 'https://placehold.co/40x40.png?text=DA' },
-  { id: '5', type: 'status_update', orderId: 'ORD-002', title: 'Status Update: ORD-002 to Pending Client Approval', details: 'Initial designs submitted.', userName: 'Carol DesignerRep', timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), userAvatar: 'https://placehold.co/40x40.png?text=CD' },
-];
-
 
 const getActivityIcon = (type: ActivityItem['type']) => {
   switch (type) {
@@ -42,7 +34,7 @@ const getActivityIcon = (type: ActivityItem['type']) => {
     case 'new_comment':
       return <MessageSquare className="h-5 w-5 text-green-500" />;
     case 'order_created':
-      return <PlusCircle className="h-5 w-5 text-accent" />; 
+      return <PlusCircle className="h-5 w-5 text-accent" />;
     case 'dr_assigned':
       return <UserCircle className="h-5 w-5 text-purple-500" />;
     default:
@@ -60,32 +52,142 @@ const getInitials = (name: string) => {
 const LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY = 'trackflow-global-monthly-sales-target';
 const LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY = 'trackflow-global-weekly-sales-target';
 
-const DEFAULT_GLOBAL_MONTHLY_TARGET = 0; 
-const DEFAULT_GLOBAL_WEEKLY_TARGET = 0;  
+const DEFAULT_GLOBAL_MONTHLY_TARGET = 0;
+const DEFAULT_GLOBAL_WEEKLY_TARGET = 0;
 
-const MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM = 0; 
-const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 0;  
+// These mock values will be replaced once actual order data integration for CRMs is done
+const MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM = 0;
+const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 0;
 
 const getProgressColorClass = (percentage: number): string => {
   if (percentage < 0) percentage = 0;
-  const colorPercentage = Math.min(percentage, 100); // Cap at 100 for color calculation
+  const colorPercentage = Math.min(percentage, 100);
   if (colorPercentage < 33) return 'bg-red-500 dark:bg-red-600';
   if (colorPercentage < 67) return 'bg-yellow-500 dark:bg-yellow-400';
   return 'bg-green-500 dark:bg-green-600';
 };
 
+const MAX_RECENT_ACTIVITIES_DISPLAY = 15;
+const ORDERS_TO_SCAN_FOR_ACTIVITY = 10; // Fetch latest 10 orders to generate activity from
+
 export default function DashboardPage() {
   const { currentUser } = useAuth();
   const [isClient, setIsClient] = useState(false);
+
+  const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
+  const [isLoadingActivities, setIsLoadingActivities] = useState(true);
 
   const [globalMonthlyOrderTarget, setGlobalMonthlyOrderTarget] = useState<number>(DEFAULT_GLOBAL_MONTHLY_TARGET);
   const [globalWeeklyOrderTarget, setGlobalWeeklyOrderTarget] = useState<number>(DEFAULT_GLOBAL_WEEKLY_TARGET);
 
   const [isSetGlobalMonthlyTargetDialogOpen, setIsSetGlobalMonthlyTargetDialogOpen] = useState(false);
   const [isSetGlobalWeeklyTargetDialogOpen, setIsSetGlobalWeeklyTargetDialogOpen] = useState(false);
-  
+
+  const fetchRecentActivities = useCallback(async () => {
+    setIsLoadingActivities(true);
+    try {
+      const fetchedOrders = await getOrders(); // This fetches all, consider limiting for performance
+      const allStatuses = await getStatuses();
+      const statusMap = new Map(allStatuses.map(s => [s.id, s.name]));
+
+      const activities: ActivityItem[] = [];
+
+      // Process a limited number of most recent orders for activity
+      const sortedOrders = [...fetchedOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const ordersToProcess = sortedOrders.slice(0, ORDERS_TO_SCAN_FOR_ACTIVITY);
+
+
+      for (const order of ordersToProcess) {
+        // Order Created Activity
+        activities.push({
+          id: `order-created-${order.id}`,
+          type: 'order_created',
+          orderId: order.id,
+          title: `New Order: ${order.id}`,
+          details: `For ${order.customerName}`,
+          userName: order.crmUserName,
+          timestamp: order.createdAt,
+        });
+
+        // Status Update & DR Assigned Activities
+        let drAssignedForThisOrder = false;
+        for (const log of order.statusHistory) {
+          const statusName = statusMap.get(log.status) || log.status;
+          activities.push({
+            id: log.id,
+            type: 'status_update',
+            orderId: order.id,
+            title: `Status: ${order.id} to ${statusName}`,
+            details: log.notes || `Order status changed to ${statusName}`,
+            userName: log.changedByUserName,
+            timestamp: log.timestamp,
+          });
+
+          // Check for DR assignment within status notes or if DR is set and status indicates readiness
+          if (!drAssignedForThisOrder && order.designerRepresentativeName && log.notes?.toLowerCase().includes(`assigned to designer: ${order.designerRepresentativeName.toLowerCase()}`)) {
+            activities.push({
+              id: `dr-assigned-${order.id}-${log.id}`,
+              type: 'dr_assigned',
+              orderId: order.id,
+              title: `Designer Assigned: ${order.id}`,
+              details: `${order.designerRepresentativeName} assigned by ${log.changedByUserName}.`,
+              userName: log.changedByUserName,
+              timestamp: log.timestamp,
+            });
+            drAssignedForThisOrder = true;
+          }
+        }
+        
+        // Fallback for DR assignment if not caught in status history notes (e.g. if DR was assigned without a specific note pattern)
+        // This might create a duplicate if already caught, or an activity with order creation time if DR was assigned at creation and not logged separately.
+        // A more robust system would have a dedicated DR assignment log/timestamp.
+        if (!drAssignedForThisOrder && order.designerRepresentativeName) {
+            const readyForDesignLog = order.statusHistory.find(log => statusMap.get(log.status)?.toLowerCase() === 'ready for design');
+            activities.push({
+              id: `dr-assigned-${order.id}-fallback`,
+              type: 'dr_assigned',
+              orderId: order.id,
+              title: `Designer Assigned: ${order.id}`,
+              details: `${order.designerRepresentativeName} assigned.`,
+              userName: readyForDesignLog?.changedByUserName || order.crmUserName, // Best guess for user
+              timestamp: readyForDesignLog?.timestamp || order.createdAt, // Best guess for time
+            });
+        }
+
+
+        // Comment Activities
+        for (const comment of order.comments) {
+          if (comment.isInternal && currentUser?.role !== 'ADMIN' && currentUser?.role !== 'SYSTEM_ADMIN' && currentUser?.id !== order.crmUserId && currentUser?.id !== order.designerRepresentativeId) {
+            continue; // Skip internal comments for non-involved users
+          }
+          activities.push({
+            id: comment.id,
+            type: 'new_comment',
+            orderId: order.id,
+            title: `New Comment on ${order.id}`,
+            details: comment.text.substring(0, 100) + (comment.text.length > 100 ? '...' : ''),
+            userName: comment.userName,
+            timestamp: comment.timestamp,
+          });
+        }
+      }
+
+      // Sort all activities by timestamp and take the most recent ones
+      const sortedActivities = activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setRecentActivities(sortedActivities.slice(0, MAX_RECENT_ACTIVITIES_DISPLAY));
+
+    } catch (error) {
+      console.error("Failed to fetch recent activities:", error);
+      // Optionally set an error state to display in the UI
+    } finally {
+      setIsLoadingActivities(false);
+    }
+  }, [currentUser]);
+
+
   useEffect(() => {
-    setIsClient(true); 
+    setIsClient(true);
+    fetchRecentActivities();
     const storedGlobalMonthly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY);
     if (storedGlobalMonthly) {
       setGlobalMonthlyOrderTarget(parseInt(storedGlobalMonthly, 10));
@@ -94,7 +196,7 @@ export default function DashboardPage() {
     if (storedGlobalWeekly) {
       setGlobalWeeklyOrderTarget(parseInt(storedGlobalWeekly, 10));
     }
-  }, []);
+  }, [fetchRecentActivities]);
 
   const crmEffectiveMonthlyTarget = currentUser?.role === 'CRM' ? (currentUser.monthlyOrderTarget ?? globalMonthlyOrderTarget) : globalMonthlyOrderTarget;
   const crmEffectiveWeeklyTarget = currentUser?.role === 'CRM' ? (currentUser.weeklyOrderTarget ?? globalWeeklyOrderTarget) : globalWeeklyOrderTarget;
@@ -205,8 +307,8 @@ export default function DashboardPage() {
           }
 
           return (
-            <Card 
-              key={card.title} 
+            <Card
+              key={card.title}
               className="shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out border bg-card relative flex flex-col group hover:scale-[1.02] rounded-xl overflow-hidden border-border/30"
             >
               <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pt-4 sm:pt-5 px-4 sm:px-5">
@@ -283,16 +385,32 @@ export default function DashboardPage() {
             <CardTitle className="text-lg sm:text-xl font-semibold text-foreground">Recent Activity</CardTitle>
             <CardDescription className="text-muted-foreground text-xs sm:text-sm">Latest order updates and comments.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[calc(100%-72px)] sm:h-[calc(100%-80px)] p-0"> 
+          <CardContent className="h-[calc(100%-72px)] sm:h-[calc(100%-80px)] p-0">
             <ScrollArea className="h-full">
               <div className="p-2 sm:p-4 space-y-2 sm:space-y-3">
-                {mockRecentActivities.length > 0 ? mockRecentActivities.map((activity) => (
+                {isLoadingActivities ? (
+                  [...Array(5)].map((_, i) => (
+                    <div key={`skel-activity-${i}`} className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-3.5 rounded-lg border border-transparent">
+                      <Skeleton className="h-5 w-5 sm:h-6 sm:w-6 rounded-md mt-1 sm:mt-1.5" />
+                      <div className="flex-1 space-y-1.5">
+                        <Skeleton className="h-4 w-3/4 rounded" />
+                        <Skeleton className="h-3 w-1/2 rounded" />
+                         <div className="flex items-center space-x-2 mt-1.5 sm:mt-2">
+                           <Skeleton className="h-6 w-6 sm:h-7 sm:w-7 rounded-full" />
+                           <Skeleton className="h-3 w-24 rounded" />
+                         </div>
+                      </div>
+                    </div>
+                  ))
+                ) : recentActivities.length > 0 ? recentActivities.map((activity) => (
                   <div key={activity.id} className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-3.5 rounded-lg hover:bg-primary/5 transition-colors border border-transparent hover:border-primary/20 cursor-pointer group">
                     <div className="flex-shrink-0 pt-1 sm:pt-1.5 text-primary">
                       {getActivityIcon(activity.type)}
                     </div>
                     <div className="flex-1">
-                      <p className="text-xs sm:text-sm font-medium text-foreground leading-tight group-hover:text-primary transition-colors">{activity.title}</p>
+                      <Link href={`/track/${activity.orderId}`} className="group">
+                        <p className="text-xs sm:text-sm font-medium text-foreground leading-tight group-hover:text-primary transition-colors group-hover:underline">{activity.title}</p>
+                      </Link>
                       <p className="text-xs text-muted-foreground">{activity.details}</p>
                       <div className="flex items-center space-x-2 mt-1.5 sm:mt-2">
                         <Avatar className="h-6 w-6 sm:h-7 sm:w-7 border border-border/50">
@@ -320,6 +438,5 @@ export default function DashboardPage() {
     </div>
   );
 }
-
 
     
