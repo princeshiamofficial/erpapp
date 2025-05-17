@@ -1,13 +1,16 @@
 
 "use client";
 
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, CheckSquare, Users, DollarSign, ListChecks, MessageSquare, PlusCircle, UserCircle } from 'lucide-react';
+import { Package, CheckSquare, Users, DollarSign, ListChecks, MessageSquare, PlusCircle, UserCircle, Target, Edit3 } from 'lucide-react';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
 
 // Define a type for recent activity items
 interface ActivityItem {
@@ -89,9 +92,25 @@ const getInitials = (name: string) => {
     return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
 }
 
+const LOCAL_STORAGE_SALES_TARGET_KEY = 'trackflow-monthly-sales-target';
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
+  const [salesTarget, setSalesTarget] = useState<number>(0);
+  const [isSetTargetDialogOpen, setIsSetTargetDialogOpen] = useState(false);
+
+  useEffect(() => {
+    const storedTarget = localStorage.getItem(LOCAL_STORAGE_SALES_TARGET_KEY);
+    if (storedTarget) {
+      setSalesTarget(parseFloat(storedTarget));
+    }
+  }, []);
+
+  const handleSetSalesTarget = (newTarget: number) => {
+    setSalesTarget(newTarget);
+    localStorage.setItem(LOCAL_STORAGE_SALES_TARGET_KEY, newTarget.toString());
+    setIsSetTargetDialogOpen(false);
+  };
 
   if (!currentUser) {
     return null; // Or a loading state, though layout should handle unauthorized access
@@ -100,28 +119,35 @@ export default function DashboardPage() {
   const summaryCards = [
     { title: "Active Orders", value: "125", icon: Package, change: "+15.2%", dataAiHint: "delivery boxes" },
     { title: "Pending Approval", value: "12", icon: CheckSquare, change: "-3.1%", dataAiHint: "checklist form" },
-    { title: "New Users", value: "8", icon: Users, change: "+5", dataAiHint: "team collaboration" },
     { title: "Revenue (MTD)", value: "$15,6K", icon: DollarSign, change: "+8.0%", dataAiHint: "financial chart" },
+    { 
+      title: "Sales Target (Monthly)", 
+      value: `$${salesTarget.toLocaleString()}`, 
+      icon: Target, 
+      change: currentUser.role === 'ADMIN' ? "Editable by Admin" : "", 
+      dataAiHint: "target goal",
+      isAdminOnlyAction: true
+    },
   ];
 
 
   return (
     <div className="space-y-6">
-      <Card className="shadow-xl bg-gradient-to-br from-primary/15 via-card to-primary/10 border-primary/20">
+      <Card className="shadow-xl bg-gradient-to-br from-primary/80 via-primary/60 to-primary/80 border-primary/70">
         <CardHeader>
-          <CardTitle className="text-3xl text-foreground">Welcome to TrackFlow, {currentUser.name}!</CardTitle>
-          <CardDescription className="text-lg text-foreground/80">
+          <CardTitle className="text-3xl text-primary-foreground">Welcome to TrackFlow, {currentUser.name}!</CardTitle>
+          <CardDescription className="text-lg text-primary-foreground/90">
             You are logged in as {currentUser.role}. Here's a quick overview of your workspace.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-foreground/90">This is your main dashboard. From here, you can navigate to various sections of the application using the sidebar.</p>
+          <p className="text-primary-foreground/95">This is your main dashboard. From here, you can navigate to various sections of the application using the sidebar.</p>
         </CardContent>
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {summaryCards.map((card) => (
-          <Card key={card.title} className="shadow-md hover:shadow-lg transition-shadow border hover:border-primary/70 duration-300 bg-card">
+          <Card key={card.title} className="shadow-md hover:shadow-lg transition-shadow border hover:border-primary/70 duration-300 bg-card relative">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-card-foreground">{card.title}</CardTitle>
               <card.icon className="h-5 w-5 text-muted-foreground" />
@@ -129,20 +155,39 @@ export default function DashboardPage() {
             <CardContent>
               <div className="text-2xl font-bold text-card-foreground">{card.value}</div>
               <p className="text-xs text-muted-foreground">
-                {card.change} from last month
+                {card.change}
               </p>
+              {card.isAdminOnlyAction && currentUser.role === 'ADMIN' && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="absolute bottom-3 right-3"
+                  onClick={() => setIsSetTargetDialogOpen(true)}
+                >
+                  <Edit3 className="mr-1 h-3 w-3" /> Edit
+                </Button>
+              )}
             </CardContent>
           </Card>
         ))}
       </div>
+      
+      {currentUser.role === 'ADMIN' && (
+        <SetSalesTargetDialog
+          isOpen={isSetTargetDialogOpen}
+          onOpenChange={setIsSetTargetDialogOpen}
+          currentTarget={salesTarget}
+          onSetTarget={handleSetSalesTarget}
+        />
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="shadow-xl bg-card">
+        <Card className="shadow-xl bg-card h-[350px]">
           <CardHeader>
             <CardTitle className="text-foreground">Recent Activity</CardTitle>
             <CardDescription className="text-muted-foreground">Overview of recent order updates and comments.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[350px] p-0">
+          <CardContent className="h-[calc(100%-76px)] p-0"> {/* Adjust height based on header */}
             <ScrollArea className="h-full">
               <div className="p-6 space-y-4">
                 {mockRecentActivities.map((activity) => (
@@ -175,16 +220,17 @@ export default function DashboardPage() {
             </ScrollArea>
           </CardContent>
         </Card>
-        <Card className="shadow-xl bg-card">
+        <Card className="shadow-xl bg-card h-[350px]">
           <CardHeader>
             <CardTitle className="text-foreground">Order Status Distribution</CardTitle>
             <CardDescription className="text-muted-foreground">Visual breakdown of current order statuses.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[350px] flex items-center justify-center">
-            <Image src="https://placehold.co/600x300.png" alt="Order Status Chart Placeholder" data-ai-hint="pie chart" width={600} height={300} className="rounded-md object-cover"/>
+          <CardContent className="h-[calc(100%-76px)] flex items-center justify-center"> {/* Adjust height */}
+            <Image src="https://placehold.co/600x300.png" alt="Order Status Chart Placeholder" data-ai-hint="pie chart" width={600} height={300} className="rounded-md object-contain max-h-full"/>
           </CardContent>
         </Card>
       </div>
     </div>
   );
 }
+
