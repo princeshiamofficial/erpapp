@@ -6,13 +6,12 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, CheckSquare, Users, DollarSign, ListChecks, MessageSquare, PlusCircle, UserCircle, Target, Edit3 } from 'lucide-react';
+import { Package, CheckSquare, Users, DollarSign, ListChecks, MessageSquare, PlusCircle, UserCircle, Target, Edit3, CalendarDays, CalendarClock } from 'lucide-react';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
 
-// Define a type for recent activity items
 interface ActivityItem {
   id: string;
   type: 'status_update' | 'new_comment' | 'order_created';
@@ -20,11 +19,10 @@ interface ActivityItem {
   title: string;
   details: string;
   userName: string;
-  userAvatar?: string; // Optional: URL to user avatar
-  timestamp: string; // ISO string
+  userAvatar?: string;
+  timestamp: string;
 }
 
-// Mock recent activity data
 const mockRecentActivities: ActivityItem[] = [
   {
     id: 'act-001',
@@ -33,7 +31,7 @@ const mockRecentActivities: ActivityItem[] = [
     title: 'Status changed to IN_PRODUCTION',
     details: 'Production has commenced for Tech Solutions Inc.',
     userName: 'Bob CRM',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'act-002',
@@ -42,7 +40,7 @@ const mockRecentActivities: ActivityItem[] = [
     title: 'New comment on GreenScape Ltd.',
     details: 'Alice (Client): "Could we get an update on the design phase?"',
     userName: 'Alice Wonderland',
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
+    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'act-003',
@@ -51,7 +49,7 @@ const mockRecentActivities: ActivityItem[] = [
     title: 'New Order: Innovate Fast',
     details: 'Order created by David CRM.',
     userName: 'David CRM',
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'act-004',
@@ -60,7 +58,7 @@ const mockRecentActivities: ActivityItem[] = [
     title: 'Status changed to SHIPPED',
     details: 'Innovate Hub order has been shipped.',
     userName: 'System',
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
     id: 'act-005',
@@ -69,14 +67,14 @@ const mockRecentActivities: ActivityItem[] = [
     title: 'Internal note on Tech Solutions Inc.',
     details: 'Carol DR: "Client approved final mockups."',
     userName: 'Carol DesignerRep',
-    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
 
 const getActivityIcon = (type: ActivityItem['type']) => {
   switch (type) {
     case 'status_update':
-      return <ListChecks className="h-5 w-5 text-blue-500" />;
+      return <ListChecks className="h-5 w-5 text-primary" />;
     case 'new_comment':
       return <MessageSquare className="h-5 w-5 text-green-500" />;
     case 'order_created':
@@ -92,28 +90,41 @@ const getInitials = (name: string) => {
     return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
 }
 
-const LOCAL_STORAGE_SALES_TARGET_KEY = 'trackflow-monthly-sales-target';
+const LOCAL_STORAGE_MONTHLY_SALES_TARGET_KEY = 'trackflow-monthly-sales-target';
+const LOCAL_STORAGE_WEEKLY_SALES_TARGET_KEY = 'trackflow-weekly-sales-target';
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
-  const [salesTarget, setSalesTarget] = useState<number>(0);
-  const [isSetTargetDialogOpen, setIsSetTargetDialogOpen] = useState(false);
+  const [monthlySalesTarget, setMonthlySalesTarget] = useState<number>(50000); // Default
+  const [weeklySalesTarget, setWeeklySalesTarget] = useState<number>(10000); // Default
+  const [isSetMonthlyTargetDialogOpen, setIsSetMonthlyTargetDialogOpen] = useState(false);
+  const [isSetWeeklyTargetDialogOpen, setIsSetWeeklyTargetDialogOpen] = useState(false);
 
   useEffect(() => {
-    const storedTarget = localStorage.getItem(LOCAL_STORAGE_SALES_TARGET_KEY);
-    if (storedTarget) {
-      setSalesTarget(parseFloat(storedTarget));
+    const storedMonthlyTarget = localStorage.getItem(LOCAL_STORAGE_MONTHLY_SALES_TARGET_KEY);
+    if (storedMonthlyTarget) {
+      setMonthlySalesTarget(parseFloat(storedMonthlyTarget));
+    }
+    const storedWeeklyTarget = localStorage.getItem(LOCAL_STORAGE_WEEKLY_SALES_TARGET_KEY);
+    if (storedWeeklyTarget) {
+      setWeeklySalesTarget(parseFloat(storedWeeklyTarget));
     }
   }, []);
 
-  const handleSetSalesTarget = (newTarget: number) => {
-    setSalesTarget(newTarget);
-    localStorage.setItem(LOCAL_STORAGE_SALES_TARGET_KEY, newTarget.toString());
-    setIsSetTargetDialogOpen(false);
+  const handleSetMonthlySalesTarget = (newTarget: number) => {
+    setMonthlySalesTarget(newTarget);
+    localStorage.setItem(LOCAL_STORAGE_MONTHLY_SALES_TARGET_KEY, newTarget.toString());
+    setIsSetMonthlyTargetDialogOpen(false);
+  };
+
+  const handleSetWeeklySalesTarget = (newTarget: number) => {
+    setWeeklySalesTarget(newTarget);
+    localStorage.setItem(LOCAL_STORAGE_WEEKLY_SALES_TARGET_KEY, newTarget.toString());
+    setIsSetWeeklyTargetDialogOpen(false);
   };
 
   if (!currentUser) {
-    return null; // Or a loading state, though layout should handle unauthorized access
+    return null;
   }
 
   const summaryCards = [
@@ -121,19 +132,29 @@ export default function DashboardPage() {
     { title: "Pending Approval", value: "12", icon: CheckSquare, change: "-3.1%", dataAiHint: "checklist form" },
     { title: "Revenue (MTD)", value: "$15,6K", icon: DollarSign, change: "+8.0%", dataAiHint: "financial chart" },
     { 
-      title: "Sales Target (Monthly)", 
-      value: `$${salesTarget.toLocaleString()}`, 
-      icon: Target, 
-      change: currentUser.role === 'ADMIN' ? "Editable by Admin" : "", 
-      dataAiHint: "target goal",
-      isAdminOnlyAction: true
+      title: "Monthly Sales Target (CRM)", 
+      value: `$${monthlySalesTarget.toLocaleString()}`, 
+      icon: CalendarDays, 
+      change: currentUser.role === 'ADMIN' ? "Editable by Admin" : "Set by Admin", 
+      dataAiHint: "monthly calendar target",
+      isAdminOnlyAction: true,
+      actionType: 'monthly' as const
+    },
+    { 
+      title: "Weekly Sales Target (CRM)", 
+      value: `$${weeklySalesTarget.toLocaleString()}`, 
+      icon: CalendarClock, 
+      change: currentUser.role === 'ADMIN' ? "Editable by Admin" : "Set by Admin", 
+      dataAiHint: "weekly calendar goal",
+      isAdminOnlyAction: true,
+      actionType: 'weekly' as const
     },
   ];
 
 
   return (
     <div className="space-y-6">
-      <Card className="shadow-xl bg-gradient-to-br from-primary/80 via-primary/60 to-primary/80 border-primary/70">
+      <Card className="shadow-xl bg-gradient-to-br from-primary/90 via-primary/70 to-primary/90 border-primary/70">
         <CardHeader>
           <CardTitle className="text-3xl text-primary-foreground">Welcome to TrackFlow, {currentUser.name}!</CardTitle>
           <CardDescription className="text-lg text-primary-foreground/90">
@@ -145,7 +166,7 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {summaryCards.map((card) => (
           <Card key={card.title} className="shadow-md hover:shadow-lg transition-shadow border hover:border-primary/70 duration-300 bg-card relative">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -161,8 +182,11 @@ export default function DashboardPage() {
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="absolute bottom-3 right-3"
-                  onClick={() => setIsSetTargetDialogOpen(true)}
+                  className="absolute bottom-3 right-3 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
+                  onClick={() => {
+                    if (card.actionType === 'monthly') setIsSetMonthlyTargetDialogOpen(true);
+                    if (card.actionType === 'weekly') setIsSetWeeklyTargetDialogOpen(true);
+                  }}
                 >
                   <Edit3 className="mr-1 h-3 w-3" /> Edit
                 </Button>
@@ -173,12 +197,22 @@ export default function DashboardPage() {
       </div>
       
       {currentUser.role === 'ADMIN' && (
-        <SetSalesTargetDialog
-          isOpen={isSetTargetDialogOpen}
-          onOpenChange={setIsSetTargetDialogOpen}
-          currentTarget={salesTarget}
-          onSetTarget={handleSetSalesTarget}
-        />
+        <>
+          <SetSalesTargetDialog
+            isOpen={isSetMonthlyTargetDialogOpen}
+            onOpenChange={setIsSetMonthlyTargetDialogOpen}
+            currentTarget={monthlySalesTarget}
+            onSetTarget={handleSetMonthlySalesTarget}
+            targetType="monthly"
+          />
+          <SetSalesTargetDialog
+            isOpen={isSetWeeklyTargetDialogOpen}
+            onOpenChange={setIsSetWeeklyTargetDialogOpen}
+            currentTarget={weeklySalesTarget}
+            onSetTarget={handleSetWeeklySalesTarget}
+            targetType="weekly"
+          />
+        </>
       )}
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -187,7 +221,7 @@ export default function DashboardPage() {
             <CardTitle className="text-foreground">Recent Activity</CardTitle>
             <CardDescription className="text-muted-foreground">Overview of recent order updates and comments.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[calc(100%-76px)] p-0"> {/* Adjust height based on header */}
+          <CardContent className="h-[calc(100%-76px)] p-0">
             <ScrollArea className="h-full">
               <div className="p-6 space-y-4">
                 {mockRecentActivities.map((activity) => (
@@ -225,7 +259,7 @@ export default function DashboardPage() {
             <CardTitle className="text-foreground">Order Status Distribution</CardTitle>
             <CardDescription className="text-muted-foreground">Visual breakdown of current order statuses.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[calc(100%-76px)] flex items-center justify-center"> {/* Adjust height */}
+          <CardContent className="h-[calc(100%-76px)] flex items-center justify-center">
             <Image src="https://placehold.co/600x300.png" alt="Order Status Chart Placeholder" data-ai-hint="pie chart" width={600} height={300} className="rounded-md object-contain max-h-full"/>
           </CardContent>
         </Card>

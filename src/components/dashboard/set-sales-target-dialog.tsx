@@ -20,13 +20,15 @@ interface SetSalesTargetDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   currentTarget: number;
   onSetTarget: (newTarget: number) => void;
+  targetType: 'monthly' | 'weekly';
 }
 
 export function SetSalesTargetDialog({ 
   isOpen, 
   onOpenChange, 
   currentTarget, 
-  onSetTarget 
+  onSetTarget,
+  targetType
 }: SetSalesTargetDialogProps) {
   const [targetAmount, setTargetAmount] = useState<string>(currentTarget.toString());
   const { toast } = useToast();
@@ -50,18 +52,21 @@ export function SetSalesTargetDialog({
     }
     onSetTarget(newTarget);
     toast({
-      title: "Sales Target Updated",
-      description: `Monthly sales target set to $${newTarget.toLocaleString()}.`,
+      title: `${targetType === 'monthly' ? 'Monthly' : 'Weekly'} Sales Target Updated`,
+      description: `${targetType === 'monthly' ? 'Monthly' : 'Weekly'} sales target set to $${newTarget.toLocaleString()}.`,
     });
   };
+
+  const dialogTitle = targetType === 'monthly' ? 'Set Monthly Sales Target (CRM)' : 'Set Weekly Sales Target (CRM)';
+  const dialogDescription = `Enter the new ${targetType} sales target amount for CRMs. This will be visible on the dashboard.`;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Set Monthly Sales Target</DialogTitle>
+          <DialogTitle>{dialogTitle}</DialogTitle>
           <DialogDescription>
-            Enter the new monthly sales target amount. This will be visible on the dashboard.
+            {dialogDescription}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -91,3 +96,4 @@ export function SetSalesTargetDialog({
     </Dialog>
   );
 }
+
