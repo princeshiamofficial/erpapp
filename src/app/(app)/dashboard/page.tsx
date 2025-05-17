@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from "next/link"; // Added import
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -187,7 +188,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setIsClient(true);
-    fetchRecentActivities();
+    if (currentUser) { // Only fetch activities if a user is logged in
+        fetchRecentActivities();
+    }
     const storedGlobalMonthly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY);
     if (storedGlobalMonthly) {
       setGlobalMonthlyOrderTarget(parseInt(storedGlobalMonthly, 10));
@@ -196,7 +199,7 @@ export default function DashboardPage() {
     if (storedGlobalWeekly) {
       setGlobalWeeklyOrderTarget(parseInt(storedGlobalWeekly, 10));
     }
-  }, [fetchRecentActivities]);
+  }, [fetchRecentActivities, currentUser]); // Add currentUser as a dependency
 
   const crmEffectiveMonthlyTarget = currentUser?.role === 'CRM' ? (currentUser.monthlyOrderTarget ?? globalMonthlyOrderTarget) : globalMonthlyOrderTarget;
   const crmEffectiveWeeklyTarget = currentUser?.role === 'CRM' ? (currentUser.weeklyOrderTarget ?? globalWeeklyOrderTarget) : globalWeeklyOrderTarget;
