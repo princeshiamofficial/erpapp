@@ -65,10 +65,11 @@ const LeaderboardList: React.FC<{ data: CrmPerformanceData[], timePeriod: 'month
   return (
     <ScrollArea className="h-[calc(100vh-280px)] md:h-auto md:max-h-[600px]"> {/* Adjust height as needed */}
       <div className="p-6 space-y-4">
-        {data.map((crm) => (
+        {data.map((crm, index) => (
           <div 
             key={crm.userId} 
-            className={`flex items-center space-x-4 p-4 rounded-lg border transition-all duration-300 ease-in-out shadow-sm hover:shadow-xl hover:scale-[1.02] ${getRankColorClass(crm.rank)}`}
+            className={`flex items-center space-x-4 p-4 rounded-lg border transition-all duration-300 ease-in-out shadow-sm hover:shadow-xl hover:scale-[1.02] ${getRankColorClass(crm.rank)} animate-slide-in-up`}
+            style={{ animationDelay: `${index * 100}ms`, opacity: 0 }} // Initial opacity 0 for animation
           >
             <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center text-xl font-bold">
                {getRankIcon(crm.rank)}
@@ -114,7 +115,7 @@ export default function LeaderboardPage() {
           <TabsTrigger value="weekly">Weekly Performance</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="monthly">
+        <TabsContent value="monthly" className="data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:zoom-in-95">
           <Card className="shadow-xl bg-card transition-all duration-300 ease-in-out hover:shadow-2xl">
             <CardHeader>
               <CardTitle className="text-foreground">Top Performing CRMs (Monthly)</CardTitle>
@@ -126,7 +127,7 @@ export default function LeaderboardPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="weekly">
+        <TabsContent value="weekly" className="data-[state=active]:animate-in data-[state=active]:fade-in-0 data-[state=active]:zoom-in-95">
           <Card className="shadow-xl bg-card transition-all duration-300 ease-in-out hover:shadow-2xl">
             <CardHeader>
               <CardTitle className="text-foreground">Top Performing CRMs (Weekly)</CardTitle>
@@ -141,4 +142,3 @@ export default function LeaderboardPage() {
     </div>
   );
 }
-
