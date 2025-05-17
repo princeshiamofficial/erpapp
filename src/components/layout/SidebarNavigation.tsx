@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -10,7 +11,8 @@ import {
   Users, 
   Link2,
   Settings,
-  FileText
+  FileText,
+  Award // Added Award icon
 } from "lucide-react";
 import type { UserRole } from "@/types";
 
@@ -26,6 +28,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
   { href: "/orders", label: "Orders", icon: Package, roles: ["ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
   { href: "/tracking-links", label: "Tracking Links", icon: Link2, roles: ["ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
+  { href: "/leaderboard", label: "Leaderboard", icon: Award, roles: ["ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] }, // New Leaderboard item
   { href: "/users", label: "User Management", icon: Users, roles: ["ADMIN"] },
   { href: "/reports", label: "Reports", icon: FileText, roles: ["ADMIN"], disabled: true },
   { href: "/settings", label: "Settings", icon: Settings, roles: ["ADMIN"], disabled: true },
