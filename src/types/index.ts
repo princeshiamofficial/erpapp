@@ -42,6 +42,8 @@ export interface TrackingLink {
   customerName: string;
   companyName: string;
   address: string; // Added as per requirement for CRM input
+  phoneNumber?: string; // New field
+  service?: string; // New field
   crmUserId: string;
   crmUserName: string;
   createdAt: string; // ISO string

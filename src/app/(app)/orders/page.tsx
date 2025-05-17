@@ -20,6 +20,8 @@ const initialMockOrders: TrackingLink[] = [
     customerName: "Tech Solutions Inc.", 
     companyName: "Tech Solutions Inc.",
     address: "123 Tech Ave",
+    phoneNumber: "555-0101",
+    service: "Custom Software Development",
     crmUserId: "user-crm-001",
     crmUserName: "Bob CRM",
     createdAt: "2023-10-26T10:00:00Z",
@@ -33,6 +35,8 @@ const initialMockOrders: TrackingLink[] = [
     customerName: "GreenScape Ltd.", 
     companyName: "GreenScape Ltd.",
     address: "456 Green Rd",
+    phoneNumber: "555-0102",
+    service: "Landscaping Design",
     crmUserId: "user-crm-002",
     crmUserName: "David CRM",
     createdAt: "2023-10-25T10:00:00Z",
@@ -57,7 +61,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<TrackingLink[]>(initialMockOrders);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const canCreateOrder = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN';
+  const canCreateOrder = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
 
   const handleOrderCreated = (newOrder: TrackingLink) => {
     setOrders(prevOrders => [newOrder, ...prevOrders]);
@@ -73,6 +77,8 @@ export default function OrdersPage() {
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.phoneNumber && order.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (order.service && order.service.toLowerCase().includes(searchTerm.toLowerCase())) ||
       order.crmUserName.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [orders, searchTerm, currentUser]);
@@ -91,7 +97,7 @@ export default function OrdersPage() {
         </div>
         {canCreateOrder && (
           <CreateOrderDialog currentUser={currentUser} onOrderCreated={handleOrderCreated}>
-            <Button size="lg">
+            <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-shadow">
               <PlusCircle className="mr-2 h-5 w-5" />
               Create New Order
             </Button>
@@ -106,10 +112,10 @@ export default function OrdersPage() {
           <div className="mt-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input 
-              placeholder="Search orders (ID, Customer, Company, CRM)..."
+              placeholder="Search orders (ID, Customer, Phone, Service...)"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm pl-10 bg-background"
+              className="max-w-md pl-10 bg-background"
             />
           </div>
         </CardHeader>

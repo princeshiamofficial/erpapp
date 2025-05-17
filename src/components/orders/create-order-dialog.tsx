@@ -21,6 +21,8 @@ export function CreateOrderDialog({ currentUser, onOrderCreated, children }: Cre
   const [customerName, setCustomerName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [address, setAddress] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [service, setService] = useState('');
   const { toast } = useToast();
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -51,6 +53,8 @@ export function CreateOrderDialog({ currentUser, onOrderCreated, children }: Cre
       customerName,
       companyName,
       address,
+      phoneNumber: phoneNumber || undefined,
+      service: service || undefined,
       crmUserId: currentUser.id,
       crmUserName: currentUser.name,
       createdAt: now,
@@ -70,6 +74,8 @@ export function CreateOrderDialog({ currentUser, onOrderCreated, children }: Cre
     setCustomerName('');
     setCompanyName('');
     setAddress('');
+    setPhoneNumber('');
+    setService('');
   };
 
   return (
@@ -83,7 +89,7 @@ export function CreateOrderDialog({ currentUser, onOrderCreated, children }: Cre
           <DialogDescription>Enter customer and order details.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
             <div className="space-y-1">
               <Label htmlFor="customerName">Customer Name</Label>
               <Input id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} required />
@@ -96,8 +102,16 @@ export function CreateOrderDialog({ currentUser, onOrderCreated, children }: Cre
               <Label htmlFor="address">Address</Label>
               <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required />
             </div>
+            <div className="space-y-1">
+              <Label htmlFor="phoneNumber">Phone Number</Label>
+              <Input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="Optional" />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="service">Service</Label>
+              <Input id="service" value={service} onChange={(e) => setService(e.target.value)} placeholder="e.g., Custom Design, Printing (Optional)" />
+            </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
             <Button type="submit">Create Order</Button>
           </DialogFooter>

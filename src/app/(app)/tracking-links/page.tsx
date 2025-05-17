@@ -18,16 +18,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 const initialMockTrackingLinks: TrackingLink[] = [
    { 
     id: "ORD-001", customerName: "Tech Solutions Inc.", companyName: "Tech Solutions Inc.", address: "123 Tech Ave",
+    phoneNumber: "555-0101", service: "Custom Software Development",
     crmUserId: "user-crm-001", crmUserName: "Bob CRM", createdAt: "2023-10-26T10:00:00Z", isPublic: true,
     currentStatus: "IN_PRODUCTION", statusHistory: [], comments: []
   },
   { 
     id: "ORD-002", customerName: "GreenScape Ltd.", companyName: "GreenScape Ltd.", address: "456 Green Rd",
+    phoneNumber: "555-0102", service: "Landscaping Design",
     crmUserId: "user-crm-002", crmUserName: "David CRM", createdAt: "2023-10-25T10:00:00Z", isPublic: false,
     currentStatus: "PENDING_CLIENT_APPROVAL", statusHistory: [], comments: []
   },
    { 
     id: "ORD-003", customerName: "Innovate Hub", companyName: "Innovate Hub", address: "789 Innovate St",
+    phoneNumber: "555-0103", service: "Mobile App Development",
     crmUserId: "user-crm-001", crmUserName: "Bob CRM", createdAt: "2023-10-24T10:00:00Z", isPublic: true,
     currentStatus: "SHIPPED", statusHistory: [], comments: []
   },
@@ -48,11 +51,11 @@ export default function TrackingLinksPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Permissions
-  const canManageLinks = currentUser?.role === 'ADMIN' || currentUser?.role === 'DESIGNER_REPRESENTATIVE';
+  const canManageLinks = currentUser?.role === 'ADMIN' || currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'SYSTEM_ADMIN';
   const canEditSpecificLink = (link: TrackingLink) => {
     if (!currentUser) return false;
-    // Admin, CRM, and Designer Representatives can edit
-    return ['ADMIN', 'DESIGNER_REPRESENTATIVE', 'CRM'].includes(currentUser.role);
+    // Admin, CRM, DR, and System Admin can edit
+    return ['ADMIN', 'DESIGNER_REPRESENTATIVE', 'CRM', 'SYSTEM_ADMIN'].includes(currentUser.role);
   };
   
   const handleTrackingLinkUpdated = (updatedLink: TrackingLink) => {
@@ -64,6 +67,8 @@ export default function TrackingLinksPage() {
     return trackingLinks.filter(link => 
       link.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       link.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (link.phoneNumber && link.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (link.service && link.service.toLowerCase().includes(searchTerm.toLowerCase())) ||
       link.crmUserName.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [trackingLinks, searchTerm]);
@@ -79,13 +84,6 @@ export default function TrackingLinksPage() {
             Manage and monitor public tracking links for orders.
           </p>
         </div>
-        {/* Button for generating new link is part of Order Creation now */}
-        {/* {canManageLinks && (
-          <Button size="lg" disabled> 
-            <Link2 className="mr-2 h-5 w-5" />
-            Generate New Link
-          </Button>
-        )} */}
       </div>
 
       <Card className="shadow-xl border bg-card">
@@ -95,10 +93,10 @@ export default function TrackingLinksPage() {
            <div className="mt-4 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input 
-              placeholder="Search links (ID, Customer, CRM)..."
+              placeholder="Search links (ID, Customer, Phone, Service...)"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm pl-10 bg-background"
+              className="max-w-md pl-10 bg-background"
             />
           </div>
         </CardHeader>
