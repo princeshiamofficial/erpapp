@@ -13,8 +13,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/auth-context";
-import { LogOut, User as UserIcon, Settings, Edit3 } from "lucide-react"; // Added Edit3
-import { EditProfileDialog } from "@/components/users/edit-profile-dialog"; // Added import
+import { LogOut, User as UserIcon, Settings, Edit3 } from "lucide-react";
+import { EditProfileDialog } from "@/components/users/edit-profile-dialog";
 
 export function UserNav() {
   const { currentUser, logout } = useAuth();
@@ -37,7 +37,7 @@ export function UserNav() {
             <AvatarImage 
               src={currentUser.avatarUrl || `https://placehold.co/100x100.png?text=${getInitials(currentUser.name)}`} 
               alt={currentUser.name} 
-              data-ai-hint={currentUser.avatarUrl ? "user uploaded" : "abstract avatar"} 
+              data-ai-hint={currentUser.avatarUrl ? "user uploaded" : "abstract lettermark"} 
             />
             <AvatarFallback className="bg-primary text-primary-foreground text-lg">
               {getInitials(currentUser.name)}
