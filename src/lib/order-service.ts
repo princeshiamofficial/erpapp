@@ -1,7 +1,7 @@
 
 import { db } from './firebase';
-import { collection, getDocs, doc, addDoc, updateDoc, getDoc, query, where, Timestamp, orderBy, limit } from 'firebase/firestore';
-import type { TrackingLink, Comment, OrderLogEntry } from '@/types';
+import { collection, getDocs, doc, addDoc, updateDoc, getDoc, query, orderBy, setDoc } from 'firebase/firestore';
+import type { TrackingLink, Comment, OrderLogEntry, CustomStatus } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getStatuses } from './status-service'; // To get default status IDs
 
@@ -9,7 +9,8 @@ const ORDERS_COLLECTION = 'orders';
 
 // Helper to seed initial orders if the collection is empty
 const seedInitialOrders = async (): Promise<TrackingLink[]> => {
-  const statuses = await getStatuses(); // Ensure statuses are loaded/seeded
+  const statuses: CustomStatus[] = await getStatuses(); // Ensure statuses are loaded/seeded
+  
   const ideaSubmittedStatus = statuses.find(s => s.name === 'Idea Submitted');
   const inProductionStatus = statuses.find(s => s.name === 'In Production');
   const pendingApprovalStatus = statuses.find(s => s.name === 'Pending Client Approval');
@@ -21,24 +22,18 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     return [];
   }
   
-  const initialOrdersData: Omit<TrackingLink, 'id' | 'createdAt'>[] = [
+  const initialOrdersData: Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments' | 'currentStatus'>[] = [
     {
       customerName: "Tech Solutions Inc.",
       companyName: "Tech Solutions Inc.",
       address: "123 Tech Ave, Silicon Valley, CA 94001",
       phoneNumber: "555-0101",
       service: "Custom Software Development",
-      crmUserId: "user-crm-001", // Corresponds to Bob CRM
-      crmUserName: "Bob CRM",
+      crmUserId: "user-admin-default", 
+      crmUserName: "Default Admin", // Assuming an admin created this for demo
       isPublic: true,
-      currentStatus: inProductionStatus.id,
-      statusHistory: [
-        { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: ideaSubmittedStatus.id, changedByUserId: "user-crm-001", changedByUserName: "Bob CRM", notes: "Order created, requirements gathered." },
-        { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: inProductionStatus.id, changedByUserId: "user-crm-001", changedByUserName: "Bob CRM", notes: "Production has commenced." }
-      ],
-      comments: [
-        { id: uuidv4(), userName: "Tech Solutions Inc. (Client)", text: "Looking forward to the first demo!", timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), isInternal: false }
-      ],
+      designerRepresentativeId: undefined,
+      designerRepresentativeName: undefined,
     },
     {
       customerName: "GreenScape Ltd.",
@@ -46,38 +41,52 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       address: "456 Green Rd, Meadowville, TX 75001",
       phoneNumber: "555-0102",
       service: "Landscaping Design Package",
-      crmUserId: "user-crm-002", // Corresponds to David CRM
-      crmUserName: "David CRM",
+      crmUserId: "user-admin-default", 
+      crmUserName: "Default Admin",
       isPublic: false,
-      currentStatus: pendingApprovalStatus.id,
-      statusHistory: [
-        { id: uuidv4(), timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), status: ideaSubmittedStatus.id, changedByUserId: "user-crm-002", changedByUserName: "David CRM", notes: "New landscaping project initiated." },
-        { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: readyForDesignStatus.id, changedByUserId: "user-crm-002", changedByUserName: "David CRM", notes: "Order ready for design team." },
-        { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: pendingApprovalStatus.id, changedByUserId: "user-dr-001", changedByUserName: "Carol DesignerRep", notes: "Initial designs submitted for client approval." }
-      ],
-      comments: [],
-      designerRepresentativeId: "user-dr-001",
-      designerRepresentativeName: "Carol DesignerRep",
+      designerRepresentativeId: "user-dr-001", // Mock DR ID
+      designerRepresentativeName: "Carol DesignerRep", // Mock DR Name
     },
   ];
 
   const ordersRef = collection(db, ORDERS_COLLECTION);
   const createdOrders: TrackingLink[] = [];
+  let orderIndex = 0;
 
-  for (const orderData of initialOrdersData) {
+  for (const orderBaseData of initialOrdersData) {
+    let currentStatusId: string;
+    let statusHistory: OrderLogEntry[];
+
+    if (orderIndex === 0) { // For Tech Solutions Inc.
+      currentStatusId = inProductionStatus.id;
+      statusHistory = [
+        { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: ideaSubmittedStatus.id, changedByUserId: orderBaseData.crmUserId, changedByUserName: orderBaseData.crmUserName, notes: "Order created, requirements gathered." },
+        { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: inProductionStatus.id, changedByUserId: orderBaseData.crmUserId, changedByUserName: orderBaseData.crmUserName, notes: "Production has commenced." }
+      ];
+    } else { // For GreenScape Ltd.
+      currentStatusId = pendingApprovalStatus.id;
+      statusHistory = [
+        { id: uuidv4(), timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), status: ideaSubmittedStatus.id, changedByUserId: orderBaseData.crmUserId, changedByUserName: orderBaseData.crmUserName, notes: "New landscaping project initiated." },
+        { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: readyForDesignStatus.id, changedByUserId: orderBaseData.crmUserId, changedByUserName: orderBaseData.crmUserName, notes: "Order ready for design team." },
+        { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: pendingApprovalStatus.id, changedByUserId: orderBaseData.designerRepresentativeId || "user-dr-001", changedByUserName: orderBaseData.designerRepresentativeName || "Carol DesignerRep", notes: "Initial designs submitted for client approval." }
+      ];
+    }
+
     const newOrder: TrackingLink = {
-      ...orderData,
-      id: `ORD-${uuidv4().slice(0,8).toUpperCase()}`,
-      createdAt: new Date().toISOString(),
+      ...orderBaseData,
+      id: `ORD-${uuidv4().slice(0,8).toUpperCase()}`, // Generate a unique ID for the order
+      createdAt: new Date(Date.now() - (initialOrdersData.length - orderIndex) * 24 * 60 * 60 * 1000).toISOString(), // Stagger creation times
+      currentStatus: currentStatusId,
+      statusHistory: statusHistory,
+      comments: orderIndex === 0 ? [
+        { id: uuidv4(), userName: "Tech Solutions Inc. (Client)", text: "Looking forward to the first demo!", timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), isInternal: false }
+      ] : [],
     };
-    // Convert string dates in statusHistory and comments to Firestore Timestamps if needed by your setup
-    // For simplicity, we store as ISO strings for now. Firestore can handle these.
-    const docRef = doc(ordersRef, newOrder.id);
-    await addDoc(ordersRef, newOrder); // Using addDoc for simplicity, Firestore generates ID which we are overriding with our own 'id' field.
-    // For custom IDs:
-    // const docRef = doc(db, ORDERS_COLLECTION, newOrder.id);
-    // await setDoc(docRef, newOrder);
+    
+    const docRef = doc(ordersRef, newOrder.id); // Use our custom ID for the document
+    await setDoc(docRef, newOrder);
     createdOrders.push(newOrder);
+    orderIndex++;
   }
   console.log('Initial orders seeded in Firestore.');
   return createdOrders;
@@ -86,7 +95,6 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
 
 export const getOrders = async (): Promise<TrackingLink[]> => {
   const ordersCol = collection(db, ORDERS_COLLECTION);
-  // Optionally order by creation date or other fields
   const q = query(ordersCol, orderBy("createdAt", "desc"));
   const snapshot = await getDocs(q);
   
@@ -95,7 +103,7 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
     return await seedInitialOrders();
   }
   
-  return snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as TrackingLink));
+  return snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as TrackingLink));
 };
 
 export const getOrderById = async (id: string): Promise<TrackingLink | undefined> => {
@@ -103,7 +111,7 @@ export const getOrderById = async (id: string): Promise<TrackingLink | undefined
     const docRef = doc(db, ORDERS_COLLECTION, id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() } as TrackingLink;
+      return { ...docSnap.data(), id: docSnap.id } as TrackingLink;
     }
     console.warn(`Order with ID "${id}" not found.`);
     return undefined;
@@ -113,35 +121,49 @@ export const getOrderById = async (id: string): Promise<TrackingLink | undefined
   }
 };
 
-export const addOrder = async (orderData: Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments'> & { initialStatusId: string, crmUserId: string, crmUserName: string }): Promise<TrackingLink> => {
+export const addOrder = async (orderData: {
+    customerName: string;
+    companyName: string;
+    address: string;
+    phoneNumber?: string;
+    service?: string;
+    initialStatusId: string; 
+    crmUserId: string; 
+    crmUserName: string 
+}): Promise<TrackingLink> => {
   const now = new Date().toISOString();
+  const orderId = `ORD-${uuidv4().slice(0,8).toUpperCase()}`;
+
   const initialLogEntry: OrderLogEntry = {
     id: uuidv4(),
     timestamp: now,
-    status: orderData.initialStatusId,
+    status: orderData.initialStatusId, // This is already an ID
     changedByUserId: orderData.crmUserId,
     changedByUserName: orderData.crmUserName,
     notes: "Order created.",
   };
 
   const newOrder: TrackingLink = {
-    ...orderData,
-    id: `ORD-${uuidv4().slice(0,8).toUpperCase()}`,
+    id: orderId,
+    customerName: orderData.customerName,
+    companyName: orderData.companyName,
+    address: orderData.address,
+    phoneNumber: orderData.phoneNumber,
+    service: orderData.service,
+    crmUserId: orderData.crmUserId,
+    crmUserName: orderData.crmUserName,
     createdAt: now,
     statusHistory: [initialLogEntry],
     comments: [],
-    isPublic: false, // Default to non-public
-    currentStatus: orderData.initialStatusId,
+    isPublic: false, 
+    currentStatus: orderData.initialStatusId, 
+    designerRepresentativeId: undefined,
+    designerRepresentativeName: undefined,
   };
 
-  // Use the custom ID 'newOrder.id' for the document ID
-  const orderDocRef = doc(db, ORDERS_COLLECTION, newOrder.id);
-  await addDoc(collection(db, ORDERS_COLLECTION), newOrder); // addDoc will create an auto-ID, we want to use newOrder.id
-  // Corrected: Use setDoc with our custom ID.
-  // await setDoc(orderDocRef, newOrder); // This would use our custom ID `newOrder.id`
-  // For this refactor, let's allow Firestore to generate ID and our `id` field is just a property.
-  const addedDocRef = await addDoc(collection(db, ORDERS_COLLECTION), newOrder);
-  return { ...newOrder, id: addedDocRef.id }; // Return the order with Firestore's generated ID
+  const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
+  await setDoc(orderDocRef, newOrder);
+  return newOrder; 
 };
 
 export const updateOrder = async (id: string, updates: Partial<TrackingLink>): Promise<boolean> => {
@@ -155,14 +177,14 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
   }
 };
 
-export const addCommentToOrder = async (orderId: string, comment: Omit<Comment, 'id' | 'timestamp'>): Promise<TrackingLink | undefined> => {
+export const addCommentToOrder = async (orderId: string, commentData: Omit<Comment, 'id' | 'timestamp'>): Promise<TrackingLink | undefined> => {
   try {
     const order = await getOrderById(orderId);
     if (!order) {
       throw new Error(`Order ${orderId} not found.`);
     }
     const newComment: Comment = {
-      ...comment,
+      ...commentData,
       id: uuidv4(),
       timestamp: new Date().toISOString(),
     };

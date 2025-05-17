@@ -7,18 +7,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Send, MessageSquare, Package, UserCircle, CalendarDays, Clock, CheckCircle, Info, Phone, Briefcase, Building, MapPin, UserCheck } from "lucide-react";
 import Image from "next/image";
-import type { Comment, CustomStatus, TrackingLink } from "@/types"; // Use CustomStatus
+import type { Comment, CustomStatus, TrackingLink } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Label } from '@/components/ui/label';
-import { getStatusById, getContrastTextColor } from '@/lib/status-service'; // For status name/color resolution
+import { getContrastTextColor } from '@/lib/status-service';
 import { submitCommentAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface OrderDetailsClientProps {
   order: TrackingLink;
-  allStatuses: CustomStatus[]; // Pass all statuses for efficient lookup
+  allStatuses: CustomStatus[]; 
 }
 
 export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDetailsClientProps) {
@@ -30,7 +30,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
 
   useEffect(() => {
     setIsClient(true);
-    setOrder(initialOrder); // Update state if initialOrder changes (e.g., due to revalidation)
+    setOrder(initialOrder); 
   }, [initialOrder]);
 
   const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
@@ -38,24 +38,24 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
     if (status) {
       return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
     }
-    return { name: statusId, color: '#ccc', textColor: '#000' }; // Fallback
+    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' }; // Fallback to a neutral color
   }, [allStatuses]);
 
   const currentStatusInfo = getStatusDisplayInfo(order.currentStatus);
 
   const formatDate = (dateString: string | undefined) => {
-    if (!isClient || !dateString) return "Loading date..."; // Or a skeleton
+    if (!isClient || !dateString) return "Loading date..."; 
     try {
       return new Date(dateString).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
     } catch (e) {
       return "Invalid Date";
     }
   };
-
+  
   const getStatusIcon = (statusId: string, sizeClass = "h-6 w-6") => {
-    const statusInfo = getStatusDisplayInfo(statusId); // Get full status info
+    const statusInfo = getStatusDisplayInfo(statusId); 
     const commonClasses = `${sizeClass} mr-2 flex-shrink-0`;
-    // Simplified icon logic, can be expanded based on status names/properties
+    
     if (statusInfo.name.toLowerCase().includes("delivered") || statusInfo.name.toLowerCase().includes("shipped") || statusInfo.name.toLowerCase().includes("approved")) return <CheckCircle className={`${commonClasses} text-green-500`} />;
     if (statusInfo.name.toLowerCase().includes("design")) return <Info className={`${commonClasses} text-teal-500`} />; 
     if (statusInfo.name.toLowerCase().includes("production")) return <Info className={`${commonClasses} text-blue-500`} />;
@@ -71,9 +71,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
         return;
     }
     setIsSubmittingComment(true);
-    // Assuming public comments are from the customer. UserID might not be available.
     const result = await submitCommentAction(order.id, {
-        userName: `${order.customerName} (Client)`, // Or a generic "Visitor"
+        userName: `${order.customerName} (Client)`, 
         text: newComment,
         isInternal: false, 
     });
@@ -81,15 +80,16 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
     if ('error' in result) {
         toast({ title: "Error", description: result.error, variant: "destructive" });
     } else {
-        setOrder(result); // Update local order state with the new comment
+        setOrder(result); 
         setNewComment('');
         toast({ title: "Success", description: "Your comment has been submitted." });
     }
     setIsSubmittingComment(false);
   };
 
-
   const publicComments = order.comments.filter(c => !c.isInternal);
+  const lastStatusUpdateTimestamp = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1].timestamp : order.createdAt;
+
 
   return (
     <main className="max-w-4xl mx-auto space-y-8 sm:space-y-10">
@@ -115,7 +115,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
               {currentStatusInfo.name}
             </p>
             <p className="text-sm text-muted-foreground mt-1.5 ml-[40px]">
-              Last updated: {isClient ? formatDate(order.statusHistory[order.statusHistory.length - 1]?.timestamp) : <Skeleton className="h-4 w-32 inline-block" />}
+              Last updated: {isClient ? formatDate(lastStatusUpdateTimestamp) : <Skeleton className="h-4 w-48 inline-block" />}
             </p>
           </div>
 
@@ -123,7 +123,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
 
           <div>
             <h3 className="text-xl font-semibold mb-4 sm:mb-5 text-foreground">Order Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-4 sm:gap-y-5 text-md">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-4 sm:gap-y-5 text-sm sm:text-base">
               <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
                 <UserCircle className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
                 <div>
@@ -161,7 +161,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
                <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
                   <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
                   <div>
-                    <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Order Placed</span> {isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-24" />}
+                    <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Order Placed</span> {isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-32" />}
                   </div>
                 </div>
                 {order.designerRepresentativeName && (
@@ -194,7 +194,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
                       <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
                       <p className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5">
                         <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" /> 
-                        {isClient ? formatDate(entry.timestamp) : <Skeleton className="h-4 w-28" />} 
+                        {isClient ? formatDate(entry.timestamp) : <Skeleton className="h-4 w-32" />} 
                         <span className="mx-1.5 hidden sm:inline">&bull;</span> 
                         <span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span>
                       </p>
@@ -238,7 +238,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
             ))}
             {publicComments.length === 0 && (
                 <div className="text-center py-8 sm:py-10">
-                  <Image src="https://placehold.co/200x150.png?text=No+Comments" alt="No comments yet" data-ai-hint="empty message illustration" width={150} height={112} className="mx-auto rounded-lg opacity-50 shadow-sm" />
+                  <Image src="https://placehold.co/200x150.png?text=No+Comments" alt="No comments yet" data-ai-hint="empty message" width={150} height={112} className="mx-auto rounded-lg opacity-50 shadow-sm" />
                   <p className="mt-4 sm:mt-5 text-muted-foreground text-md sm:text-lg">No public comments yet.</p>
                   <p className="text-xs sm:text-sm text-muted-foreground">Be the first to add one using the form below!</p>
                 </div>
@@ -277,4 +277,3 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
     </main>
   );
 }
-

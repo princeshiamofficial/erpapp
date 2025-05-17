@@ -13,24 +13,19 @@ export interface User {
   weeklyOrderTarget?: number;
 }
 
-export type OrderStatus =
-  | "IDEA_SUBMITTED"
-  | "DESIGN_IN_PROGRESS"
-  | "PENDING_CLIENT_APPROVAL"
-  | "CHANGES_REQUESTED"
-  | "APPROVED_FOR_PRODUCTION"
-  | "READY_FOR_DESIGN" // New status
-  | "IN_PRODUCTION"
-  | "QUALITY_CHECK"
-  | "SHIPPED"
-  | "DELIVERED"
-  | "CANCELLED"
-  | "ON_HOLD";
+// OrderStatus union type is removed. Statuses are now represented by CustomStatus.id (string).
+
+export interface CustomStatus {
+  id: string;
+  name: string;
+  color: string;
+  isSystemStatus?: boolean; // True if it's a default status that can't be deleted/renamed easily
+}
 
 export interface OrderLogEntry {
   id: string;
   timestamp: string; // ISO string
-  status: OrderStatus;
+  status: string; // Now stores the ID of a CustomStatus
   changedByUserId: string;
   changedByUserName: string;
   notes?: string;
@@ -38,28 +33,28 @@ export interface OrderLogEntry {
 
 // This type represents an Order and its associated Tracking Link information
 export interface TrackingLink {
-  id: string; // Unique, unguessable order ID
+  id: string; // Unique, unguessable order ID (Firestore document ID)
   customerName: string;
   companyName: string;
-  address: string; // Added as per requirement for CRM input
-  phoneNumber?: string; // New field
-  service?: string; // New field
+  address: string; 
+  phoneNumber?: string; 
+  service?: string; 
   crmUserId: string;
   crmUserName: string;
+  designerRepresentativeId?: string; 
+  designerRepresentativeName?: string;
   createdAt: string; // ISO string
   isPublic: boolean;
-  currentStatus: OrderStatus;
+  currentStatus: string; // Now stores the ID of a CustomStatus
   statusHistory: OrderLogEntry[];
-  comments: Comment[]; // Public comments associated with this order/link
-  // designerRepresentativeId?: string; // Optional: If a specific DR is assigned
+  comments: Comment[]; 
 }
 
 export interface Comment {
   id: string;
-  // trackingLinkId: string; // Comments are now part of TrackingLink.comments
   userId?: string;
-  userName: string; // Can be customer name, or internal user name
+  userName: string; 
   text: string;
   timestamp: string; // ISO string
-  isInternal: boolean; // Differentiates public client comments from internal team comments
+  isInternal: boolean; 
 }
