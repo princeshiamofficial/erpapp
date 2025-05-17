@@ -17,11 +17,11 @@ import { getStatusById, getContrastTextColor, getStatuses } from '@/lib/status-s
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { updateTrackingLinkAction } from './actions'; 
-import { useToast } from '@/hooks/use-toast'; // Added useToast
+import { useToast } from '@/hooks/use-toast'; 
 
 export default function TrackingLinksPage() {
   const { currentUser } = useAuth();
-  const { toast } = useToast(); // Initialize toast
+  const { toast } = useToast(); 
   const [trackingLinks, setTrackingLinks] = useState<TrackingLink[]>([]);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -74,13 +74,26 @@ export default function TrackingLinksPage() {
   const handleCopyLink = async (linkId: string) => {
     const urlToCopy = `${window.location.origin}/track/${linkId}`;
     try {
+      if (!navigator.clipboard) {
+        throw new Error("Clipboard API not available.");
+      }
       await navigator.clipboard.writeText(urlToCopy);
       toast({ title: "Link Copied!", description: "The tracking link has been copied to your clipboard." });
       setCopiedLinkId(linkId);
       setTimeout(() => setCopiedLinkId(null), 2000); // Reset icon after 2 seconds
     } catch (err) {
       console.error('Failed to copy: ', err);
-      toast({ title: "Copy Failed", description: "Could not copy the link. Please try again.", variant: "destructive" });
+      let description = "Could not copy the link. Please try copying manually.";
+      if (err instanceof Error) {
+        if (err.name === 'NotAllowedError') {
+          description = "Clipboard access was denied. Please check your browser permissions or copy manually.";
+        } else if (err.message.toLowerCase().includes("permissions policy")) {
+          description = "Clipboard access is restricted by the current page's permissions policy. Please try copying manually.";
+        } else if (err.message.includes("Clipboard API not available") || !window.isSecureContext) {
+           description = "Copying to clipboard requires a secure connection (HTTPS) or is not supported by your browser. Please copy manually.";
+        }
+      }
+      toast({ title: "Copy Failed", description, variant: "destructive" });
     }
   };
 
@@ -212,16 +225,18 @@ export default function TrackingLinksPage() {
                         <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
                           <Button variant="outline" size="sm" className="h-9 px-3" onClick={() => handleCopyLink(link.id)} title="Copy Link">
                             {copiedLinkId === link.id ? <Check className="h-4 w-4 text-green-500" /> : <ClipboardCopy className="h-4 w-4" />}
-                            <span className="ml-1.5">{copiedLinkId === link.id ? "Copied!" : "Copy"}</span>
+                            <span className="ml-1.5 sm:inline hidden">{copiedLinkId === link.id ? "Copied!" : "Copy"}</span>
                           </Button>
                           <Link href={`/track/${link.id}`} passHref>
                             <Button variant="outline" size="sm" className="h-9 px-3">
-                              <Eye className="mr-1.5 h-4 w-4" /> View
+                              <Eye className="mr-1.5 h-4 w-4" /> 
+                              <span className="sm:inline hidden">View</span>
                             </Button>
                           </Link>
                           {canEditSpecificLink(link) && (
                             <Button variant="outline" size="sm" className="h-9 px-3" onClick={() => { setSelectedLink(link); setIsEditDialogOpen(true);}}>
-                              <Edit3 className="mr-1.5 h-4 w-4" />Edit
+                              <Edit3 className="mr-1.5 h-4 w-4" />
+                              <span className="sm:inline hidden">Edit</span>
                             </Button>
                           )}
                         </TableCell>
@@ -264,5 +279,6 @@ export default function TrackingLinksPage() {
 
 
     
+
 
 
