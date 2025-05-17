@@ -76,9 +76,9 @@ const getActivityIcon = (type: ActivityItem['type']) => {
     case 'status_update':
       return <ListChecks className="h-5 w-5 text-primary" />;
     case 'new_comment':
-      return <MessageSquare className="h-5 w-5 text-green-500" />; // Keep semantic color
+      return <MessageSquare className="h-5 w-5 text-green-500" />;
     case 'order_created':
-      return <PlusCircle className="h-5 w-5 text-accent" />; 
+      return <PlusCircle className="h-5 w-5 text-accent-foreground" />; 
     default:
       return <UserCircle className="h-5 w-5 text-muted-foreground" />;
   }
@@ -93,8 +93,8 @@ const getInitials = (name: string) => {
 const LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY = 'trackflow-global-monthly-sales-target';
 const LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY = 'trackflow-global-weekly-sales-target';
 
-const DEFAULT_GLOBAL_MONTHLY_TARGET = 100;
-const DEFAULT_GLOBAL_WEEKLY_TARGET = 20;
+const DEFAULT_GLOBAL_MONTHLY_TARGET = 120; // Adjusted for potential higher volume
+const DEFAULT_GLOBAL_WEEKLY_TARGET = 30;  // Adjusted for potential higher volume
 
 const MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM = 67; 
 const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 12;  
@@ -102,9 +102,9 @@ const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 12;
 const getProgressColorClass = (percentage: number): string => {
   if (percentage < 0) percentage = 0;
   const colorPercentage = Math.min(percentage, 100);
-  if (colorPercentage < 33) return '[&>div]:bg-destructive'; // Use theme destructive
-  if (colorPercentage < 67) return '[&>div]:bg-yellow-400 dark:[&>div]:bg-yellow-500'; // Keep semantic yellow
-  return '[&>div]:bg-green-500 dark:[&>div]:bg-green-600'; // Keep semantic green
+  if (colorPercentage < 33) return '[&>div]:bg-destructive';
+  if (colorPercentage < 67) return '[&>div]:bg-yellow-500 dark:[&>div]:bg-yellow-600'; // Adjusted yellow for better visibility
+  return '[&>div]:bg-green-500 dark:[&>div]:bg-green-600'; // Adjusted green for better visibility
 };
 
 export default function DashboardPage() {
@@ -115,10 +115,8 @@ export default function DashboardPage() {
 
   const [isSetGlobalMonthlyTargetDialogOpen, setIsSetGlobalMonthlyTargetDialogOpen] = useState(false);
   const [isSetGlobalWeeklyTargetDialogOpen, setIsSetGlobalWeeklyTargetDialogOpen] = useState(false);
-
-  const crmEffectiveMonthlyTarget = currentUser?.role === 'CRM' ? (currentUser.monthlyOrderTarget ?? globalMonthlyOrderTarget) : 0;
-  const crmEffectiveWeeklyTarget = currentUser?.role === 'CRM' ? (currentUser.weeklyOrderTarget ?? globalWeeklyOrderTarget) : 0;
-
+  
+  // Ensure targets are read from localStorage after component mounts client-side
   useEffect(() => {
     const storedGlobalMonthly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY);
     if (storedGlobalMonthly) {
@@ -129,6 +127,10 @@ export default function DashboardPage() {
       setGlobalWeeklyOrderTarget(parseInt(storedGlobalWeekly, 10));
     }
   }, []);
+
+  const crmEffectiveMonthlyTarget = currentUser?.role === 'CRM' ? (currentUser.monthlyOrderTarget ?? globalMonthlyOrderTarget) : globalMonthlyOrderTarget;
+  const crmEffectiveWeeklyTarget = currentUser?.role === 'CRM' ? (currentUser.weeklyOrderTarget ?? globalWeeklyOrderTarget) : globalWeeklyOrderTarget;
+
 
   const handleSetGlobalMonthlyOrderTarget = (newTarget: number) => {
     setGlobalMonthlyOrderTarget(newTarget);
@@ -196,16 +198,16 @@ export default function DashboardPage() {
 
 
   return (
-    <div className="space-y-8">
-      <Card className="shadow-lg bg-card border">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-3xl font-bold text-card-foreground">Welcome to TrackFlow, {currentUser.name.split(' ')[0]}!</CardTitle>
-          <CardDescription className="text-lg text-muted-foreground">
-            You are logged in as {currentUser.role.replace(/_/g, ' ')}. Here's a quick overview of your workspace.
+    <div className="space-y-8 p-1">
+      <Card className="shadow-xl bg-card border border-border/70 rounded-lg overflow-hidden">
+        <CardHeader className="pb-4 bg-gradient-to-r from-primary/80 to-primary/60 text-primary-foreground p-6">
+          <CardTitle className="text-3xl font-bold">Welcome to TrackFlow, {currentUser.name.split(' ')[0]}!</CardTitle>
+          <CardDescription className="text-lg text-primary-foreground/90">
+            You are logged in as {currentUser.role.replace(/_/g, ' ')}. Here's your workspace overview.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="text-card-foreground/90 max-w-2xl">This is your main dashboard. From here, you can navigate to various sections of the application using the sidebar. Stay on top of your tasks and monitor key metrics.</p>
+        <CardContent className="p-6">
+          <p className="text-card-foreground/90 max-w-3xl">This is your central hub for managing orders and tracking progress. Use the sidebar to navigate through different sections and stay on top of your tasks and key metrics.</p>
         </CardContent>
       </Card>
 
@@ -222,29 +224,29 @@ export default function DashboardPage() {
           return (
             <Card 
               key={card.title} 
-              className="shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out border bg-card relative flex flex-col group hover:scale-[1.02]"
+              className="shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out border bg-card relative flex flex-col group hover:scale-[1.02] rounded-lg"
             >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-base font-semibold text-card-foreground">{card.title}</CardTitle>
-                <card.icon className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-5 px-5">
+                <CardTitle className="text-md font-semibold text-card-foreground">{card.title}</CardTitle>
+                <card.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </CardHeader>
-              <CardContent className="flex-grow flex flex-col justify-between">
+              <CardContent className="flex-grow flex flex-col justify-between px-5 pb-5">
                 <div>
                   {card.type === 'progress' ? (
                     <>
-                      <div className="text-3xl font-bold text-card-foreground">
-                        {card.currentCompleted} <span className="text-xl text-muted-foreground">/ {card.targetValue} Orders</span>
+                      <div className="text-2xl font-bold text-card-foreground">
+                        {card.currentCompleted} <span className="text-lg text-muted-foreground">/ {card.targetValue} Orders</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1 mb-3">
+                      <p className="text-xs text-muted-foreground mt-1 mb-2">
                         ({progressPercentage.toFixed(0)}% complete)
                       </p>
-                      <Progress value={Math.min(progressPercentage, 100)} className={`h-2.5 mb-3 ${progressColorClass}`} aria-label={`${card.title} progress ${progressPercentage.toFixed(0)}%`} />
+                      <Progress value={Math.min(progressPercentage, 100)} className={`h-2 rounded-full mb-3 ${progressColorClass}`} aria-label={`${card.title} progress ${progressPercentage.toFixed(0)}%`} />
                     </>
                   ) : (
                     <div className="text-3xl font-bold text-card-foreground">{card.value}</div>
                   )}
                   {card.change && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {card.change}
                     </p>
                   )}
@@ -253,13 +255,13 @@ export default function DashboardPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="mt-auto self-end transition-colors group-hover:border-primary group-hover:text-primary"
+                    className="mt-3 self-start transition-colors group-hover:border-primary group-hover:text-primary text-xs py-1 px-2.5 h-auto border-border/80 hover:bg-accent"
                     onClick={() => {
                       if (card.actionType === 'global_monthly') setIsSetGlobalMonthlyTargetDialogOpen(true);
                       if (card.actionType === 'global_weekly') setIsSetGlobalWeeklyTargetDialogOpen(true);
                     }}
                   >
-                    <Edit3 className="mr-1.5 h-3.5 w-3.5" /> Edit Global
+                    <Edit3 className="mr-1.5 h-3 w-3" /> Edit Global
                   </Button>
                 )}
               </CardContent>
@@ -287,18 +289,18 @@ export default function DashboardPage() {
         </>
       )}
 
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1"> {/* Changed from md:grid-cols-3 lg:grid-cols-3 */}
-        <Card className="shadow-lg bg-card h-[400px] transition-shadow duration-300 ease-in-out hover:shadow-xl">
-          <CardHeader>
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
+        <Card className="shadow-lg bg-card h-[400px] transition-shadow duration-300 ease-in-out hover:shadow-xl rounded-lg">
+          <CardHeader className="border-b border-border/70">
             <CardTitle className="text-xl font-semibold text-foreground">Recent Activity</CardTitle>
             <CardDescription className="text-muted-foreground">Overview of recent order updates and comments.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[calc(100%-84px)] p-0"> 
+          <CardContent className="h-[calc(100%-92px)] p-0"> 
             <ScrollArea className="h-full">
               <div className="p-6 space-y-4">
                 {mockRecentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex-shrink-0 pt-1">
+                  <div key={activity.id} className="flex items-start space-x-4 p-3 rounded-md hover:bg-accent transition-colors border border-transparent hover:border-border">
+                    <div className="flex-shrink-0 pt-1 text-primary">
                       {getActivityIcon(activity.type)}
                     </div>
                     <div className="flex-1">
@@ -318,7 +320,7 @@ export default function DashboardPage() {
                 ))}
                 {mockRecentActivities.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
-                    <ListChecks className="w-20 h-20 mb-4 opacity-50" />
+                    <ListChecks className="w-16 h-16 mb-4 opacity-30" />
                     <p className="text-lg">No recent activity to display.</p>
                   </div>
                 )}

@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { MOCK_USERS } from '@/lib/auth-constants';
-import { Loader2, LogIn, KeyRound } from 'lucide-react';
+import { Loader2, LogIn, KeyRound, ShieldCheck } from 'lucide-react';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -42,22 +42,22 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md shadow-xl bg-card border">
-      <CardHeader className="text-center pt-8">
-        <div className="mx-auto mb-6">
-          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary drop-shadow-[0_2px_4px_hsl(var(--primary)/0.5)]">
+    <Card className="w-full max-w-md shadow-2xl bg-card border border-border/50 rounded-xl">
+      <CardHeader className="text-center pt-10 pb-6">
+        <div className="mx-auto mb-6 p-3 bg-primary/10 rounded-full inline-block shadow-sm">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary drop-shadow-[0_1px_2px_hsl(var(--primary)/0.5)]">
             <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M2 7L12 12M12 12L22 7M12 12V22M12 2V12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M17 4.5L7 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
-        <CardTitle className="text-4xl font-bold text-card-foreground">Welcome to TrackFlow</CardTitle>
-        <CardDescription className="text-muted-foreground text-base pt-1">Sign in to access your dashboard.</CardDescription>
+        <CardTitle className="text-3xl font-bold text-card-foreground">Welcome to TrackFlow</CardTitle>
+        <CardDescription className="text-muted-foreground text-base pt-1">Sign in to access your secure dashboard.</CardDescription>
       </CardHeader>
-      <CardContent className="py-8">
+      <CardContent className="py-6 px-8">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-base text-card-foreground">Email Address</Label>
+            <Label htmlFor="email" className="text-sm font-medium text-card-foreground">Email Address</Label>
             <Input
               id="email"
               type="email"
@@ -65,11 +65,11 @@ export function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="h-12 text-base bg-background focus:bg-background/90"
+              className="h-11 text-base bg-background/70 focus:bg-background border-border/70 focus:border-primary"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password" className="text-base text-card-foreground">Password</Label>
+            <Label htmlFor="password" className="text-sm font-medium text-card-foreground">Password</Label>
             <Input
               id="password"
               type="password"
@@ -77,30 +77,34 @@ export function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="h-12 text-base bg-background focus:bg-background/90"
+              className="h-11 text-base bg-background/70 focus:bg-background border-border/70 focus:border-primary"
             />
           </div>
-          <Button type="submit" className="w-full h-12 text-lg shadow-md hover:shadow-lg transition-shadow" disabled={isLoading}>
+          <Button type="submit" className="w-full h-12 text-lg font-semibold shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isLoading}>
             {isLoading ? (
               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
             ) : (
               <LogIn className="mr-2 h-5 w-5" />
             )}
-            Sign In
+            Sign In Securely
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="flex flex-col items-start text-sm text-muted-foreground pt-6 pb-8">
+      <CardFooter className="flex flex-col items-start text-sm text-muted-foreground pt-6 pb-8 px-8 bg-secondary/30 rounded-b-xl border-t border-border/30">
         <p className="font-semibold mb-2 text-card-foreground">Demo Accounts:</p>
-        <ul className="list-disc list-inside space-y-1.5">
+        <ul className="list-disc list-inside space-y-1 text-xs">
           {MOCK_USERS.map(user => (
-            <li key={user.id}><span className="font-medium text-foreground/90">{user.email}</span> ({user.role})</li>
+            <li key={user.id}><span className="font-medium text-foreground/80">{user.email}</span> ({user.role.replace(/_/g, ' ')})</li>
           ))}
           <li className="mt-2 flex items-center">
             <KeyRound className="inline-block mr-1.5 h-4 w-4 text-muted-foreground" /> 
-            <span>Password for all demo accounts: <span className="font-semibold text-foreground/90">password</span></span>
+            <span>Password for all: <span className="font-semibold text-foreground/80">password</span></span>
           </li>
         </ul>
+         <div className="mt-4 text-xs flex items-center text-green-600 dark:text-green-400">
+            <ShieldCheck className="h-4 w-4 mr-1.5" />
+            <span>All connections are secure and encrypted.</span>
+        </div>
       </CardFooter>
     </Card>
   );

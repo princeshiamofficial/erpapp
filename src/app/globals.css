@@ -5,82 +5,82 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 0 0% 100%; /* White */
+    --foreground: 224 71.4% 4.1%; /* Dark Blue-Gray */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 224 71.4% 4.1%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --popover-foreground: 224 71.4% 4.1%;
+    --primary: 210 70% 50%; /* Modern Blue */
+    --primary-foreground: 0 0% 100%; /* White */
+    --secondary: 215 27.9% 90.0%; /* Light Gray-Blue */
+    --secondary-foreground: 224 71.4% 4.1%;
+    --muted: 215 27.9% 90.0%;
+    --muted-foreground: 220 9.1% 46.1%; /* Medium Gray */
+    --accent: 210 70% 95%; /* Very Light Blue (for subtle highlights) */
+    --accent-foreground: 210 70% 40%; /* Darker shade of primary */
+    --destructive: 0 72.2% 50.6%; /* Red */
+    --destructive-foreground: 0 0% 100%;
+    --border: 215 20.2% 85.1%; /* Light Gray */
+    --input: 215 20.2% 85.1%;
+    --ring: 210 70% 50%;
+    --radius: 0.75rem; /* Slightly larger radius for a softer look */
 
     /* Chart colors */
-    --chart-1: 222.2 47.4% 11.2%;
+    --chart-1: 210 70% 50%;
     --chart-2: 0 72.2% 50.6%;
     --chart-3: 142.1 70.6% 45.3%;
     --chart-4: 43.6 95.7% 50%;
     --chart-5: 20.5 90.2% 48.2%;
 
-    /* Sidebar specific variables - Light Mode (Neutral) */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222.2 84% 4.9%;
-    --sidebar-primary: 222.2 47.4% 11.2%;
-    --sidebar-primary-foreground: 210 40% 98%;
-    --sidebar-accent: 210 40% 96.1%;
-    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
-    --sidebar-border: 214.3 31.8% 91.4%;
-    --sidebar-ring: 222.2 84% 4.9%;
+    /* Sidebar specific variables - Light Mode */
+    --sidebar-background: 220 15% 96%; /* Off-white/very light gray for sidebar */
+    --sidebar-foreground: 224 71.4% 4.1%;
+    --sidebar-primary: 210 70% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 27.9% 88.0%; /* Slightly darker for sidebar accent */
+    --sidebar-accent-foreground: 210 70% 40%;
+    --sidebar-border: 215 20.2% 80.1%;
+    --sidebar-ring: 210 70% 50%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
+    --background: 224 71.4% 4.1%; /* Dark Blue-Gray */
+    --foreground: 210 20% 98%; /* Very Light Gray */
+    --card: 224 71.4% 6.1%; /* Slightly lighter dark for cards */
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71.4% 4.1%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 210 70% 60%; /* Lighter Blue for dark mode primary */
+    --primary-foreground: 224 71.4% 4.1%;
+    --secondary: 220 14.3% 15.1%; /* Dark Gray-Blue */
+    --secondary-foreground: 210 20% 98%;
+    --muted: 220 14.3% 15.1%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --accent: 220 14.3% 20.1%; /* Darker accent for dark mode */
+    --accent-foreground: 210 70% 70%;
+    --destructive: 0 62.8% 50.6%; /* Red for dark mode */
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 14.3% 20.1%; /* Darker Border */
+    --input: 220 14.3% 20.1%;
+    --ring: 210 70% 60%;
     
     /* Chart colors */
-    --chart-1: 210 40% 98%;
-    --chart-2: 0 62.8% 30.6%;
-    --chart-3: 142.1 70.6% 35.3%;
-    --chart-4: 43.6 95.7% 40%;
-    --chart-5: 20.5 90.2% 38.2%;
+    --chart-1: 210 70% 60%;
+    --chart-2: 0 62.8% 50.6%;
+    --chart-3: 142.1 70.6% 45.3%;
+    --chart-4: 43.6 95.7% 50%;
+    --chart-5: 20.5 90.2% 48.2%;
     
-    /* Sidebar specific variables for dark mode (Neutral) */
-    --sidebar-background: 222.2 84% 4.9%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 210 40% 98%;
-    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
-    --sidebar-accent: 217.2 32.6% 17.5%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217.2 32.6% 17.5%;
-    --sidebar-ring: 212.7 26.8% 83.9%;
+    /* Sidebar specific variables for dark mode */
+    --sidebar-background: 224 71.4% 5.1%; /* Darker sidebar bg */
+    --sidebar-foreground: 210 20% 98%;
+    --sidebar-primary: 210 70% 60%;
+    --sidebar-primary-foreground: 224 71.4% 4.1%;
+    --sidebar-accent: 220 14.3% 18.1%;
+    --sidebar-accent-foreground: 210 70% 70%;
+    --sidebar-border: 220 14.3% 15.1%;
+    --sidebar-ring: 210 70% 60%;
   }
 }
 
@@ -90,8 +90,39 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-geist-sans), sans-serif;
+    font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+  /* Custom scrollbar for webkit browsers */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-muted/50;
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-primary/50;
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/70;
+  }
+}
+
+@layer components {
+  .table-action-button {
+    @apply h-8 w-8 p-0; /* Standard size for table action icons */
+  }
+  .page-header {
+    @apply mb-6 pb-4 border-b border-border/70;
+  }
+  .page-title {
+      @apply text-3xl font-bold tracking-tight text-foreground;
+  }
+  .page-description {
+      @apply text-base text-muted-foreground mt-1;
   }
 }
