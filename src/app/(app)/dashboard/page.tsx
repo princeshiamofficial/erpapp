@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks, Edit } from 'lucide-react'; // Added Edit
+import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks, Edit } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
@@ -15,7 +15,11 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { User, TrackingLink, CustomStatus, OrderLogEntry, Comment as OrderComment } from '@/types';
 import { getOrders } from '@/lib/order-service';
-import { getStatuses, getStatusById } from '@/lib/status-service';
+import { getStatuses } from '@/lib/status-service';
+import { getGlobalSalesTargets, type GlobalSalesTargets } from '@/lib/settings-service';
+import { setGlobalTargetAction } from './actions';
+import { useToast } from '@/hooks/use-toast';
+
 
 interface ActivityItem {
   id: string;
@@ -24,8 +28,8 @@ interface ActivityItem {
   title: string;
   details: string;
   userName: string;
-  userAvatar?: string; 
-  timestamp: string; 
+  userAvatar?: string;
+  timestamp: string;
 }
 
 const getActivityIcon = (type: ActivityItem['type']) => {
@@ -50,11 +54,10 @@ const getInitials = (name: string) => {
     return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
 }
 
-const LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY = 'trackflow-global-monthly-sales-target';
-const LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY = 'trackflow-global-weekly-sales-target';
-
-const DEFAULT_GLOBAL_MONTHLY_TARGET = 0;
-const DEFAULT_GLOBAL_WEEKLY_TARGET = 0;
+const DEFAULT_GLOBAL_TARGETS_STATE: GlobalSalesTargets = {
+  globalMonthlyOrderTarget: 0,
+  globalWeeklyOrderTarget: 0,
+};
 
 // These mock values will be replaced once actual order data integration for CRMs is done
 const MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM = 0;
@@ -69,25 +72,41 @@ const getProgressColorClass = (percentage: number): string => {
 };
 
 const MAX_RECENT_ACTIVITIES_DISPLAY = 15;
-const ORDERS_TO_SCAN_FOR_ACTIVITY = 10; 
+const ORDERS_TO_SCAN_FOR_ACTIVITY = 10;
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
+  const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
 
   const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
+  const [isLoadingGlobalTargets, setIsLoadingGlobalTargets] = useState(true);
 
-  const [globalMonthlyOrderTarget, setGlobalMonthlyOrderTarget] = useState<number>(DEFAULT_GLOBAL_MONTHLY_TARGET);
-  const [globalWeeklyOrderTarget, setGlobalWeeklyOrderTarget] = useState<number>(DEFAULT_GLOBAL_WEEKLY_TARGET);
+  const [globalTargets, setGlobalTargets] = useState<GlobalSalesTargets>(DEFAULT_GLOBAL_TARGETS_STATE);
 
   const [isSetGlobalMonthlyTargetDialogOpen, setIsSetGlobalMonthlyTargetDialogOpen] = useState(false);
   const [isSetGlobalWeeklyTargetDialogOpen, setIsSetGlobalWeeklyTargetDialogOpen] = useState(false);
 
+  const fetchGlobalTargets = useCallback(async () => {
+    setIsLoadingGlobalTargets(true);
+    try {
+      const targets = await getGlobalSalesTargets();
+      setGlobalTargets(targets);
+    } catch (error) {
+      console.error("Failed to fetch global sales targets:", error);
+      toast({ title: "Error", description: "Could not load global sales targets.", variant: "destructive" });
+      setGlobalTargets(DEFAULT_GLOBAL_TARGETS_STATE); // Fallback to defaults
+    } finally {
+      setIsLoadingGlobalTargets(false);
+    }
+  }, [toast]);
+
+
   const fetchRecentActivities = useCallback(async () => {
     setIsLoadingActivities(true);
     try {
-      const fetchedOrders = await getOrders(); 
+      const fetchedOrders = await getOrders();
       const allStatuses = await getStatuses();
       const statusMap = new Map(allStatuses.map(s => [s.id, s.name]));
 
@@ -134,7 +153,7 @@ export default function DashboardPage() {
             drAssignedForThisOrder = true;
           }
         }
-        
+
         if (!drAssignedForThisOrder && order.designerRepresentativeName) {
             const readyForDesignLog = order.statusHistory.find(log => statusMap.get(log.status)?.toLowerCase() === 'ready for design');
             activities.push({
@@ -143,14 +162,14 @@ export default function DashboardPage() {
               orderId: order.id,
               title: `Designer Assigned: ${order.id}`,
               details: `${order.designerRepresentativeName} assigned.`,
-              userName: readyForDesignLog?.changedByUserName || order.crmUserName, 
-              timestamp: readyForDesignLog?.timestamp || order.createdAt, 
+              userName: readyForDesignLog?.changedByUserName || order.crmUserName,
+              timestamp: readyForDesignLog?.timestamp || order.createdAt,
             });
         }
 
         for (const comment of order.comments) {
           if (comment.isInternal && currentUser?.role !== 'ADMIN' && currentUser?.role !== 'SYSTEM_ADMIN' && currentUser?.id !== order.crmUserId && currentUser?.id !== order.designerRepresentativeId) {
-            continue; 
+            continue;
           }
           activities.push({
             id: comment.id,
@@ -177,38 +196,37 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setIsClient(true);
-    if (currentUser) { 
+    fetchGlobalTargets();
+    if (currentUser) {
         fetchRecentActivities();
     }
-    const storedGlobalMonthly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY);
-    if (storedGlobalMonthly) {
-      setGlobalMonthlyOrderTarget(parseInt(storedGlobalMonthly, 10));
-    }
-    const storedGlobalWeekly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY);
-    if (storedGlobalWeekly) {
-      setGlobalWeeklyOrderTarget(parseInt(storedGlobalWeekly, 10));
-    }
-  }, [fetchRecentActivities, currentUser]); 
+  }, [fetchRecentActivities, currentUser, fetchGlobalTargets]);
 
-  const crmEffectiveMonthlyTarget = currentUser?.role === 'CRM' ? (currentUser.monthlyOrderTarget ?? globalMonthlyOrderTarget) : globalMonthlyOrderTarget;
-  const crmEffectiveWeeklyTarget = currentUser?.role === 'CRM' ? (currentUser.weeklyOrderTarget ?? globalWeeklyOrderTarget) : globalWeeklyOrderTarget;
+  const crmEffectiveMonthlyTarget = currentUser?.role === 'CRM' ? (currentUser.monthlyOrderTarget ?? globalTargets.globalMonthlyOrderTarget) : globalTargets.globalMonthlyOrderTarget;
+  const crmEffectiveWeeklyTarget = currentUser?.role === 'CRM' ? (currentUser.weeklyOrderTarget ?? globalTargets.globalWeeklyOrderTarget) : globalTargets.globalWeeklyOrderTarget;
 
   const crmMonthlyOrdersCompleted = currentUser?.role === 'CRM' ? MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM : 0;
   const crmWeeklyOrdersCompleted = currentUser?.role === 'CRM' ? MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM : 0;
 
 
-  const handleSetGlobalMonthlyOrderTarget = (newTarget: number) => {
-    setGlobalMonthlyOrderTarget(newTarget);
-    if (typeof window !== 'undefined') {
-        localStorage.setItem(LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY, newTarget.toString());
+  const handleSetGlobalMonthlyOrderTarget = async (newTarget: number) => {
+    const result = await setGlobalTargetAction('monthly', newTarget);
+    if (result.success) {
+      setGlobalTargets(prev => ({ ...prev, globalMonthlyOrderTarget: newTarget }));
+      toast({ title: "Success", description: `Global monthly target updated to ${newTarget}.` });
+    } else {
+      toast({ title: "Error", description: result.error || "Could not update global monthly target.", variant: "destructive" });
     }
     setIsSetGlobalMonthlyTargetDialogOpen(false);
   };
 
-  const handleSetGlobalWeeklyOrderTarget = (newTarget: number) => {
-    setGlobalWeeklyOrderTarget(newTarget);
-     if (typeof window !== 'undefined') {
-        localStorage.setItem(LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY, newTarget.toString());
+  const handleSetGlobalWeeklyOrderTarget = async (newTarget: number) => {
+    const result = await setGlobalTargetAction('weekly', newTarget);
+     if (result.success) {
+      setGlobalTargets(prev => ({ ...prev, globalWeeklyOrderTarget: newTarget }));
+      toast({ title: "Success", description: `Global weekly target updated to ${newTarget}.` });
+    } else {
+      toast({ title: "Error", description: result.error || "Could not update global weekly target.", variant: "destructive" });
     }
     setIsSetGlobalWeeklyTargetDialogOpen(false);
   };
@@ -229,18 +247,18 @@ export default function DashboardPage() {
 
   if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
     summaryCards.push(
-      { 
-        title: "Active Orders", 
+      {
+        title: "Active Orders",
         value: "0", // This should be dynamically calculated from orders later
-        icon: Package, 
-        change: "+0% this month", 
-        dataAiHint: "delivery boxes", 
-        type: "info" as const, 
-        trend: "up" as const 
+        icon: Package,
+        change: "+0% this month",
+        dataAiHint: "delivery boxes",
+        type: "info" as const,
+        trend: "up" as const
       },
       {
         title: "Global Monthly Order Target",
-        value: `${globalMonthlyOrderTarget} Orders`,
+        value: isLoadingGlobalTargets ? <Skeleton className="h-6 w-24 inline-block" /> : `${globalTargets.globalMonthlyOrderTarget} Orders`,
         icon: Target,
         change: "Set global default for CRMs",
         dataAiHint: "target goal",
@@ -249,7 +267,7 @@ export default function DashboardPage() {
       },
       {
         title: "Global Weekly Order Target",
-        value: `${globalWeeklyOrderTarget} Orders`,
+        value: isLoadingGlobalTargets ? <Skeleton className="h-6 w-24 inline-block" /> : `${globalTargets.globalWeeklyOrderTarget} Orders`,
         icon: Target,
         change: "Set global default for CRMs",
         dataAiHint: "target goal small",
@@ -259,14 +277,14 @@ export default function DashboardPage() {
     );
   } else if (currentUser.role === 'CRM') {
     summaryCards.push(
-      { 
-        title: "Active Orders", 
+      {
+        title: "Active Orders",
         value: "0", // This should be dynamically calculated from orders later
-        icon: Package, 
-        change: "+0% this month", 
-        dataAiHint: "delivery boxes", 
-        type: "info" as const, 
-        trend: "up" as const 
+        icon: Package,
+        change: "+0% this month",
+        dataAiHint: "delivery boxes",
+        type: "info" as const,
+        trend: "up" as const
       },
       {
         title: "Your Monthly Orders",
@@ -275,7 +293,8 @@ export default function DashboardPage() {
         currentCompleted: crmMonthlyOrdersCompleted,
         targetValue: crmEffectiveMonthlyTarget,
         dataAiHint: "monthly calendar checklist",
-        type: "progress" as const
+        type: "progress" as const,
+        isLoadingTargetValue: isLoadingGlobalTargets && currentUser.monthlyOrderTarget === undefined,
       },
       {
         title: "Your Weekly Orders",
@@ -284,19 +303,20 @@ export default function DashboardPage() {
         currentCompleted: crmWeeklyOrdersCompleted,
         targetValue: crmEffectiveWeeklyTarget,
         dataAiHint: "weekly calendar tasks",
-        type: "progress" as const
+        type: "progress" as const,
+        isLoadingTargetValue: isLoadingGlobalTargets && currentUser.weeklyOrderTarget === undefined,
       }
     );
   } else { // For Designer Representatives or other roles
      summaryCards.push(
-      { 
-        title: "Active Orders", 
+      {
+        title: "Active Orders",
         value: "0", // This should be dynamically calculated from orders later
-        icon: Package, 
-        change: "+0% this month", 
-        dataAiHint: "delivery boxes", 
-        type: "info" as const, 
-        trend: "up" as const 
+        icon: Package,
+        change: "+0% this month",
+        dataAiHint: "delivery boxes",
+        type: "info" as const,
+        trend: "up" as const
       }
     );
   }
@@ -320,9 +340,12 @@ export default function DashboardPage() {
         {summaryCards.map((card) => {
           let progressPercentage = 0;
           let progressColorClass = '';
+          const targetValue = card.type === 'progress' ? card.targetValue : (card.type === 'target' ? (card.actionType === 'global_monthly' ? globalTargets.globalMonthlyOrderTarget : globalTargets.globalWeeklyOrderTarget) : undefined);
+          const currentCompleted = card.type === 'progress' ? card.currentCompleted : undefined;
 
-          if (card.type === 'progress' && card.targetValue && card.targetValue > 0) {
-            progressPercentage = ( (card.currentCompleted ?? 0) / card.targetValue) * 100;
+
+          if (card.type === 'progress' && targetValue && targetValue > 0) {
+            progressPercentage = ( (currentCompleted ?? 0) / targetValue) * 100;
             progressColorClass = getProgressColorClass(progressPercentage);
           }
 
@@ -340,15 +363,19 @@ export default function DashboardPage() {
               <CardContent className="flex-grow flex flex-col justify-between px-4 sm:px-5 pb-4 sm:pb-5">
                 <div>
                   {card.type === 'progress' ? (
-                    <>
-                      <div className="text-2xl sm:text-3xl font-bold text-card-foreground">
-                        {card.currentCompleted} <span className="text-lg sm:text-xl text-muted-foreground">/ {card.targetValue}</span>
-                      </div>
-                       <p className="text-xs sm:text-sm text-muted-foreground mt-1 mb-2">
-                        Orders ({progressPercentage.toFixed(0)}% complete)
-                      </p>
-                      <Progress value={Math.min(progressPercentage, 100)} indicatorClassName={progressColorClass} className="h-2 sm:h-2.5 rounded-full mb-3" aria-label={`${card.title} progress ${progressPercentage.toFixed(0)}%`} />
-                    </>
+                     card.isLoadingTargetValue ? <Skeleton className="h-12 w-3/4 mb-3" /> : (
+                      <>
+                        <div className="text-2xl sm:text-3xl font-bold text-card-foreground">
+                          {currentCompleted} <span className="text-lg sm:text-xl text-muted-foreground">/ {targetValue}</span>
+                        </div>
+                         <p className="text-xs sm:text-sm text-muted-foreground mt-1 mb-2">
+                          Orders ({progressPercentage.toFixed(0)}% complete)
+                        </p>
+                        <Progress value={Math.min(progressPercentage, 100)} indicatorClassName={progressColorClass} className="h-2 sm:h-2.5 rounded-full mb-3" aria-label={`${card.title} progress ${progressPercentage.toFixed(0)}%`} />
+                      </>
+                     )
+                  ) : card.type === 'target' ? (
+                     isLoadingGlobalTargets ? <Skeleton className="h-10 w-32" /> : <div className="text-3xl sm:text-4xl font-bold text-card-foreground">{card.value}</div>
                   ) : (
                     <div className="text-3xl sm:text-4xl font-bold text-card-foreground">{card.value}</div>
                   )}
@@ -357,7 +384,7 @@ export default function DashboardPage() {
                        <TrendingUp className="h-4 w-4 mr-1"/> {card.change}
                     </p>
                   )}
-                  {card.change && card.type === 'target' && ( // Use 'target' type for consistency
+                  {card.change && card.type === 'target' && (
                      <p className="text-xs text-muted-foreground mt-1">{card.change}</p>
                   )}
                 </div>
@@ -370,6 +397,7 @@ export default function DashboardPage() {
                       if (card.actionType === 'global_monthly') setIsSetGlobalMonthlyTargetDialogOpen(true);
                       if (card.actionType === 'global_weekly') setIsSetGlobalWeeklyTargetDialogOpen(true);
                     }}
+                    disabled={isLoadingGlobalTargets}
                   >
                     <Edit className="mr-1.5 h-3.5 w-3.5" /> Edit Global Target
                   </Button>
@@ -385,14 +413,14 @@ export default function DashboardPage() {
           <SetSalesTargetDialog
             isOpen={isSetGlobalMonthlyTargetDialogOpen}
             onOpenChange={setIsSetGlobalMonthlyTargetDialogOpen}
-            currentTarget={globalMonthlyOrderTarget}
+            currentTarget={globalTargets.globalMonthlyOrderTarget}
             onSetTarget={handleSetGlobalMonthlyOrderTarget}
             targetType="monthly"
           />
           <SetSalesTargetDialog
             isOpen={isSetGlobalWeeklyTargetDialogOpen}
             onOpenChange={setIsSetGlobalWeeklyTargetDialogOpen}
-            currentTarget={globalWeeklyOrderTarget}
+            currentTarget={globalTargets.globalWeeklyOrderTarget}
             onSetTarget={handleSetGlobalWeeklyOrderTarget}
             targetType="weekly"
           />
@@ -458,4 +486,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-    

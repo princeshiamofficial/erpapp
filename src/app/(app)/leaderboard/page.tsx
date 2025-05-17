@@ -12,11 +12,13 @@ import { getUsers } from '@/lib/user-service';
 import { getOrders } from '@/lib/order-service';
 import type { User, TrackingLink } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getGlobalSalesTargets, type GlobalSalesTargets } from '@/lib/settings-service';
+import { useToast } from '@/hooks/use-toast';
 
-const LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY = 'trackflow-global-monthly-sales-target';
-const LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY = 'trackflow-global-weekly-sales-target';
-const DEFAULT_GLOBAL_MONTHLY_TARGET = 100; // Default if nothing in localStorage
-const DEFAULT_GLOBAL_WEEKLY_TARGET = 20;  // Default if nothing in localStorage
+const DEFAULT_GLOBAL_TARGETS_STATE: GlobalSalesTargets = {
+  globalMonthlyOrderTarget: 0,
+  globalWeeklyOrderTarget: 0,
+};
 
 interface CrmPerformanceData {
   userId: string;
@@ -68,7 +70,7 @@ const LeaderboardList: React.FC<{ data: CrmPerformanceData[], timePeriod: 'month
       </div>
     );
   }
-  
+
   if (data.length === 0) {
       return (
         <div className="flex flex-col items-center justify-center h-full py-16 text-muted-foreground">
@@ -84,8 +86,8 @@ const LeaderboardList: React.FC<{ data: CrmPerformanceData[], timePeriod: 'month
       <div className="p-1 sm:p-4 md:p-6 space-y-4">
         {data.map((crm) => (
             <motion.div
-              layout 
-              key={crm.userId} 
+              layout
+              key={crm.userId}
               className={`flex items-center space-x-3 p-3 rounded-lg border transition-all duration-300 ease-in-out shadow-sm hover:shadow-lg hover:scale-[1.01] ${getRankColorClass(crm.rank)}`}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -117,33 +119,31 @@ const LeaderboardList: React.FC<{ data: CrmPerformanceData[], timePeriod: 'month
 };
 
 export default function LeaderboardPage() {
-  const [globalMonthlyTarget, setGlobalMonthlyTarget] = useState(DEFAULT_GLOBAL_MONTHLY_TARGET);
-  const [globalWeeklyTarget, setGlobalWeeklyTarget] = useState(DEFAULT_GLOBAL_WEEKLY_TARGET);
-  
+  const { toast } = useToast();
+  const [globalTargets, setGlobalTargets] = useState<GlobalSalesTargets>(DEFAULT_GLOBAL_TARGETS_STATE);
+
   const [crmMonthlyPerformance, setCrmMonthlyPerformance] = useState<CrmPerformanceData[]>([]);
   const [crmWeeklyPerformance, setCrmWeeklyPerformance] = useState<CrmPerformanceData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const calculatePerformanceData = useCallback((
-    crmUsers: User[], 
+    crmUsers: User[],
     allOrders: TrackingLink[],
-    globalTarget: number,
+    globalTargetValue: number, // This is either globalMonthly or globalWeekly from Firestore
     targetField: 'monthlyOrderTarget' | 'weeklyOrderTarget'
   ): CrmPerformanceData[] => {
     return crmUsers
       .map(user => {
         const userOrders = allOrders.filter(order => order.crmUserId === user.id);
-        // For "ordersCompleted", we are counting all orders linked to the CRM.
-        // This could be refined later to only count orders in a "completed" status if needed.
         const ordersCompleted = userOrders.length;
         const specificTarget = user[targetField];
-        
+
         return {
           userId: user.id,
           userName: user.name,
           userAvatar: user.avatarUrl || undefined,
           ordersCompleted: ordersCompleted,
-          target: specificTarget && specificTarget > 0 ? specificTarget : globalTarget,
+          target: specificTarget && specificTarget > 0 ? specificTarget : globalTargetValue,
         };
       })
       .sort((a, b) => b.ordersCompleted - a.ordersCompleted)
@@ -155,35 +155,30 @@ export default function LeaderboardPage() {
     const fetchLeaderboardData = async () => {
       setIsLoading(true);
       try {
-        const storedMonthly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY);
-        const currentGlobalMonthlyTarget = storedMonthly ? parseInt(storedMonthly, 10) : DEFAULT_GLOBAL_MONTHLY_TARGET;
-        setGlobalMonthlyTarget(currentGlobalMonthlyTarget);
-
-        const storedWeekly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY);
-        const currentGlobalWeeklyTarget = storedWeekly ? parseInt(storedWeekly, 10) : DEFAULT_GLOBAL_WEEKLY_TARGET;
-        setGlobalWeeklyTarget(currentGlobalWeeklyTarget);
+        const fetchedGlobalTargets = await getGlobalSalesTargets();
+        setGlobalTargets(fetchedGlobalTargets);
 
         const allUsers = await getUsers();
         const crmUsers = allUsers.filter(user => user.role === 'CRM');
         const allOrders = await getOrders();
 
         setCrmMonthlyPerformance(
-          calculatePerformanceData(crmUsers, allOrders, currentGlobalMonthlyTarget, 'monthlyOrderTarget')
+          calculatePerformanceData(crmUsers, allOrders, fetchedGlobalTargets.globalMonthlyOrderTarget, 'monthlyOrderTarget')
         );
         setCrmWeeklyPerformance(
-          calculatePerformanceData(crmUsers, allOrders, currentGlobalWeeklyTarget, 'weeklyOrderTarget')
+          calculatePerformanceData(crmUsers, allOrders, fetchedGlobalTargets.globalWeeklyOrderTarget, 'weeklyOrderTarget')
         );
 
       } catch (error) {
         console.error("Failed to fetch leaderboard data:", error);
-        // Optionally set an error state to display in UI
+        toast({ title: "Error", description: "Could not load leaderboard data.", variant: "destructive" });
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchLeaderboardData();
-  }, [calculatePerformanceData]);
+  }, [calculatePerformanceData, toast]);
 
   return (
     <div className="space-y-6">
@@ -227,4 +222,3 @@ export default function LeaderboardPage() {
     </div>
   );
 }
-
