@@ -238,7 +238,10 @@ export default function DashboardPage() {
           }
 
           return (
-            <Card key={card.title} className="shadow-md hover:shadow-lg transition-shadow border hover:border-primary/70 duration-300 bg-card relative flex flex-col">
+            <Card 
+              key={card.title} 
+              className="shadow-md hover:shadow-xl transition-all duration-300 ease-in-out border hover:border-primary/70 bg-card relative flex flex-col hover:scale-[1.03]"
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-card-foreground">{card.title}</CardTitle>
                 <card.icon className="h-5 w-5 text-muted-foreground" />
@@ -301,7 +304,7 @@ export default function DashboardPage() {
       )}
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="shadow-xl bg-card h-[350px]">
+        <Card className="shadow-xl bg-card h-[350px] transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-2xl">
           <CardHeader>
             <CardTitle className="text-foreground">Recent Activity</CardTitle>
             <CardDescription className="text-muted-foreground">Overview of recent order updates and comments.</CardDescription>
@@ -339,7 +342,7 @@ export default function DashboardPage() {
             </ScrollArea>
           </CardContent>
         </Card>
-        <Card className="shadow-xl bg-card h-[350px]">
+        <Card className="shadow-xl bg-card h-[350px] transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-2xl">
           <CardHeader>
             <CardTitle className="text-foreground">Order Status Distribution</CardTitle>
             <CardDescription className="text-muted-foreground">Visual breakdown of current order statuses.</CardDescription>
@@ -350,7 +353,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-xl bg-card h-[350px]">
+        <Card className="shadow-xl bg-card h-[350px] transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-2xl">
           <CardHeader>
             <CardTitle className="text-foreground">CRM Sales Leaderboard</CardTitle>
             <CardDescription className="text-muted-foreground">Top performing CRMs (Monthly Orders)</CardDescription>
@@ -359,7 +362,7 @@ export default function DashboardPage() {
             <ScrollArea className="h-full">
               <div className="p-6 space-y-3">
                 {mockCrmPerformance.map((crm) => (
-                  <div key={crm.userId} className={`flex items-center space-x-3 p-3 rounded-lg border transition-all duration-200 ease-in-out shadow-sm hover:shadow-lg ${getRankColorClass(crm.rank)}`}>
+                  <div key={crm.userId} className={`flex items-center space-x-3 p-3 rounded-lg border transition-all duration-200 ease-in-out shadow-sm hover:shadow-lg hover:scale-[1.03] ${getRankColorClass(crm.rank)}`}>
                     <div className="flex-shrink-0 w-8 flex items-center justify-center">
                        {getRankIcon(crm.rank)}
                     </div>

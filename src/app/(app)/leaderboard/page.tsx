@@ -66,7 +66,10 @@ const LeaderboardList: React.FC<{ data: CrmPerformanceData[], timePeriod: 'month
     <ScrollArea className="h-[calc(100vh-280px)] md:h-auto md:max-h-[600px]"> {/* Adjust height as needed */}
       <div className="p-6 space-y-4">
         {data.map((crm) => (
-          <div key={crm.userId} className={`flex items-center space-x-4 p-4 rounded-lg border transition-all duration-200 ease-in-out shadow-sm hover:shadow-lg ${getRankColorClass(crm.rank)}`}>
+          <div 
+            key={crm.userId} 
+            className={`flex items-center space-x-4 p-4 rounded-lg border transition-all duration-300 ease-in-out shadow-sm hover:shadow-xl hover:scale-[1.02] ${getRankColorClass(crm.rank)}`}
+          >
             <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center text-xl font-bold">
                {getRankIcon(crm.rank)}
             </div>
@@ -112,7 +115,7 @@ export default function LeaderboardPage() {
         </TabsList>
 
         <TabsContent value="monthly">
-          <Card className="shadow-xl bg-card">
+          <Card className="shadow-xl bg-card transition-all duration-300 ease-in-out hover:shadow-2xl">
             <CardHeader>
               <CardTitle className="text-foreground">Top Performing CRMs (Monthly)</CardTitle>
               <CardDescription className="text-muted-foreground">Monthly orders completed ranking.</CardDescription>
@@ -124,7 +127,7 @@ export default function LeaderboardPage() {
         </TabsContent>
 
         <TabsContent value="weekly">
-          <Card className="shadow-xl bg-card">
+          <Card className="shadow-xl bg-card transition-all duration-300 ease-in-out hover:shadow-2xl">
             <CardHeader>
               <CardTitle className="text-foreground">Top Performing CRMs (Weekly)</CardTitle>
               <CardDescription className="text-muted-foreground">Weekly orders completed ranking.</CardDescription>
@@ -138,3 +141,4 @@ export default function LeaderboardPage() {
     </div>
   );
 }
+
