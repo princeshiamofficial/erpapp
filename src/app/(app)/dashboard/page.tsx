@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, ListChecks, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock } from 'lucide-react';
+import { Package, ListChecks, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target } from 'lucide-react';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -52,24 +52,6 @@ const mockRecentActivities: ActivityItem[] = [
     userName: 'David CRM',
     timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
   },
-  {
-    id: 'act-004',
-    type: 'status_update',
-    orderId: 'ORD-003',
-    title: 'Status changed to SHIPPED',
-    details: 'Innovate Hub order has been shipped.',
-    userName: 'System',
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'act-005',
-    type: 'new_comment',
-    orderId: 'ORD-001',
-    title: 'Internal note on Tech Solutions Inc.',
-    details: 'Carol DR: "Client approved final mockups."',
-    userName: 'Carol DesignerRep',
-    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-  },
 ];
 
 const getActivityIcon = (type: ActivityItem['type']) => {
@@ -77,9 +59,9 @@ const getActivityIcon = (type: ActivityItem['type']) => {
     case 'status_update':
       return <ListChecks className="h-5 w-5 text-primary" />;
     case 'new_comment':
-      return <MessageSquare className="h-5 w-5 text-green-500" />; // Kept green for comments for visual distinction
+      return <MessageSquare className="h-5 w-5 text-green-500" />;
     case 'order_created':
-      return <PlusCircle className="h-5 w-5 text-purple-500" />; // Kept purple for new orders
+      return <PlusCircle className="h-5 w-5 text-purple-500" />;
     default:
       return <UserCircle className="h-5 w-5 text-gray-500" />;
   }
@@ -91,83 +73,111 @@ const getInitials = (name: string) => {
     return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
 }
 
-const LOCAL_STORAGE_MONTHLY_SALES_TARGET_KEY = 'trackflow-monthly-sales-target';
-const LOCAL_STORAGE_WEEKLY_SALES_TARGET_KEY = 'trackflow-weekly-sales-target';
+const LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY = 'trackflow-global-monthly-sales-target';
+const LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY = 'trackflow-global-weekly-sales-target';
 
-// Mock current completed orders (in a real app, this would come from a database)
-const MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED = 67;
-const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED = 12;
+const DEFAULT_GLOBAL_MONTHLY_TARGET = 100;
+const DEFAULT_GLOBAL_WEEKLY_TARGET = 20;
+
+const MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM = 67; // For the logged-in CRM
+const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 12;  // For the logged-in CRM
 
 const getProgressColorClass = (percentage: number): string => {
   if (percentage < 0) percentage = 0;
-  // For color, cap at 100 for simplicity, actual percentage can be > 100
   const colorPercentage = Math.min(percentage, 100);
-
-  if (colorPercentage <= 33) return '[&>div]:bg-destructive'; // Red
-  if (colorPercentage <= 66) return '[&>div]:bg-yellow-400'; // Yellow
-  return '[&>div]:bg-green-500'; // Green
+  if (colorPercentage <= 33) return '[&>div]:bg-destructive';
+  if (colorPercentage <= 66) return '[&>div]:bg-yellow-400';
+  return '[&>div]:bg-green-500';
 };
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
-  const [monthlyOrderTarget, setMonthlyOrderTarget] = useState<number>(100); // Default quantity
-  const [weeklyOrderTarget, setWeeklyOrderTarget] = useState<number>(20); // Default quantity
-  const [isSetMonthlyTargetDialogOpen, setIsSetMonthlyTargetDialogOpen] = useState(false);
-  const [isSetWeeklyTargetDialogOpen, setIsSetWeeklyTargetDialogOpen] = useState(false);
 
-  // Mocking current completed orders - in a real app, fetch this data
-  const [currentMonthlyOrdersCompleted, setCurrentMonthlyOrdersCompleted] = useState(MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED);
-  const [currentWeeklyOrdersCompleted, setCurrentWeeklyOrdersCompleted] = useState(MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED);
+  // Global default targets (managed by Admin)
+  const [globalMonthlyOrderTarget, setGlobalMonthlyOrderTarget] = useState<number>(DEFAULT_GLOBAL_MONTHLY_TARGET);
+  const [globalWeeklyOrderTarget, setGlobalWeeklyOrderTarget] = useState<number>(DEFAULT_GLOBAL_WEEKLY_TARGET);
 
+  const [isSetGlobalMonthlyTargetDialogOpen, setIsSetGlobalMonthlyTargetDialogOpen] = useState(false);
+  const [isSetGlobalWeeklyTargetDialogOpen, setIsSetGlobalWeeklyTargetDialogOpen] = useState(false);
+
+  // Effective targets for the logged-in CRM user
+  const crmEffectiveMonthlyTarget = currentUser?.role === 'CRM' ? (currentUser.monthlyOrderTarget ?? globalMonthlyOrderTarget) : 0;
+  const crmEffectiveWeeklyTarget = currentUser?.role === 'CRM' ? (currentUser.weeklyOrderTarget ?? globalWeeklyOrderTarget) : 0;
 
   useEffect(() => {
-    const storedMonthlyTarget = localStorage.getItem(LOCAL_STORAGE_MONTHLY_SALES_TARGET_KEY);
-    if (storedMonthlyTarget) {
-      setMonthlyOrderTarget(parseInt(storedMonthlyTarget, 10));
+    const storedGlobalMonthly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY);
+    if (storedGlobalMonthly) {
+      setGlobalMonthlyOrderTarget(parseInt(storedGlobalMonthly, 10));
     }
-    const storedWeeklyTarget = localStorage.getItem(LOCAL_STORAGE_WEEKLY_SALES_TARGET_KEY);
-    if (storedWeeklyTarget) {
-      setWeeklyOrderTarget(parseInt(storedWeeklyTarget, 10));
+    const storedGlobalWeekly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY);
+    if (storedGlobalWeekly) {
+      setGlobalWeeklyOrderTarget(parseInt(storedGlobalWeekly, 10));
     }
   }, []);
 
-  const handleSetMonthlyOrderTarget = (newTarget: number) => {
-    setMonthlyOrderTarget(newTarget);
-    localStorage.setItem(LOCAL_STORAGE_MONTHLY_SALES_TARGET_KEY, newTarget.toString());
-    setIsSetMonthlyTargetDialogOpen(false);
+  const handleSetGlobalMonthlyOrderTarget = (newTarget: number) => {
+    setGlobalMonthlyOrderTarget(newTarget);
+    localStorage.setItem(LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY, newTarget.toString());
+    setIsSetGlobalMonthlyTargetDialogOpen(false);
   };
 
-  const handleSetWeeklyOrderTarget = (newTarget: number) => {
-    setWeeklyOrderTarget(newTarget);
-    localStorage.setItem(LOCAL_STORAGE_WEEKLY_SALES_TARGET_KEY, newTarget.toString());
-    setIsSetWeeklyTargetDialogOpen(false);
+  const handleSetGlobalWeeklyOrderTarget = (newTarget: number) => {
+    setGlobalWeeklyOrderTarget(newTarget);
+    localStorage.setItem(LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY, newTarget.toString());
+    setIsSetGlobalWeeklyTargetDialogOpen(false);
   };
 
   if (!currentUser) {
     return null;
   }
 
-  const summaryCards = [
-    { title: "Active Orders", value: "125", icon: Package, change: "+15.2%", dataAiHint: "delivery boxes" },
-    {
-      title: "Monthly Order Target (CRM)",
-      value: `${monthlyOrderTarget} Orders`, // Base target value
-      icon: CalendarDays,
-      change: currentUser.role === 'ADMIN' ? "Editable by Admin" : "Set by Admin",
-      dataAiHint: "monthly calendar checklist",
-      isAdminOnlyAction: true,
-      actionType: 'monthly' as const
-    },
-    {
-      title: "Weekly Order Target (CRM)",
-      value: `${weeklyOrderTarget} Orders`, // Base target value
-      icon: CalendarClock,
-      change: currentUser.role === 'ADMIN' ? "Editable by Admin" : "Set by Admin",
-      dataAiHint: "weekly calendar tasks",
-      isAdminOnlyAction: true,
-      actionType: 'weekly' as const
-    },
+  let summaryCards = [
+    { title: "Active Orders", value: "125", icon: Package, change: "+15.2%", dataAiHint: "delivery boxes", type: "info" as const },
   ];
+
+  if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
+    summaryCards.push(
+      {
+        title: "Global Monthly Order Target",
+        value: `${globalMonthlyOrderTarget} Orders`,
+        icon: Target,
+        change: "Set global default for CRMs",
+        dataAiHint: "target goal",
+        actionType: 'global_monthly' as const,
+        type: "target" as const
+      },
+      {
+        title: "Global Weekly Order Target",
+        value: `${globalWeeklyOrderTarget} Orders`,
+        icon: Target,
+        change: "Set global default for CRMs",
+        dataAiHint: "target goal small",
+        actionType: 'global_weekly' as const,
+        type: "target" as const
+      }
+    );
+  } else if (currentUser.role === 'CRM') {
+    summaryCards.push(
+      {
+        title: "Your Monthly Order Target",
+        value: `${MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM} / ${crmEffectiveMonthlyTarget} Orders`,
+        icon: CalendarDays,
+        currentCompleted: MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM,
+        targetValue: crmEffectiveMonthlyTarget,
+        dataAiHint: "monthly calendar checklist",
+        type: "progress" as const
+      },
+      {
+        title: "Your Weekly Order Target",
+        value: `${MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM} / ${crmEffectiveWeeklyTarget} Orders`,
+        icon: CalendarClock,
+        currentCompleted: MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM,
+        targetValue: crmEffectiveWeeklyTarget,
+        dataAiHint: "weekly calendar tasks",
+        type: "progress" as const
+      }
+    );
+  }
 
 
   return (
@@ -186,18 +196,11 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {summaryCards.map((card) => {
-          const isTargetCard = card.actionType === 'monthly' || card.actionType === 'weekly';
-          let currentCompleted = 0;
-          let target = 0;
           let progressPercentage = 0;
           let progressColorClass = '';
 
-          if (isTargetCard) {
-            currentCompleted = card.actionType === 'monthly' ? currentMonthlyOrdersCompleted : currentWeeklyOrdersCompleted;
-            target = card.actionType === 'monthly' ? monthlyOrderTarget : weeklyOrderTarget;
-            if (target > 0) {
-              progressPercentage = (currentCompleted / target) * 100;
-            }
+          if (card.type === 'progress' && card.targetValue && card.targetValue > 0) {
+            progressPercentage = ( (card.currentCompleted ?? 0) / card.targetValue) * 100;
             progressColorClass = getProgressColorClass(progressPercentage);
           }
 
@@ -212,10 +215,10 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent className="flex-grow flex flex-col justify-between">
                 <div>
-                  {isTargetCard ? (
+                  {card.type === 'progress' ? (
                     <>
                       <div className="text-2xl font-bold text-card-foreground">
-                        {currentCompleted} <span className="text-lg text-muted-foreground">/ {target} Orders</span>
+                        {card.currentCompleted} <span className="text-lg text-muted-foreground">/ {card.targetValue} Orders</span>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1 mb-2">
                         ({progressPercentage.toFixed(0)}% complete)
@@ -229,17 +232,17 @@ export default function DashboardPage() {
                     {card.change}
                   </p>
                 </div>
-                {card.isAdminOnlyAction && currentUser.role === 'ADMIN' && (
+                {(card.type === 'target' && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) && (
                   <Button
                     variant="outline"
                     size="sm"
                     className="mt-auto border-primary/50 text-primary hover:bg-primary/10 hover:text-primary self-end"
                     onClick={() => {
-                      if (card.actionType === 'monthly') setIsSetMonthlyTargetDialogOpen(true);
-                      if (card.actionType === 'weekly') setIsSetWeeklyTargetDialogOpen(true);
+                      if (card.actionType === 'global_monthly') setIsSetGlobalMonthlyTargetDialogOpen(true);
+                      if (card.actionType === 'global_weekly') setIsSetGlobalWeeklyTargetDialogOpen(true);
                     }}
                   >
-                    <Edit3 className="mr-1 h-3 w-3" /> Edit
+                    <Edit3 className="mr-1 h-3 w-3" /> Edit Global
                   </Button>
                 )}
               </CardContent>
@@ -248,26 +251,26 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {currentUser.role === 'ADMIN' && (
+      {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && (
         <>
           <SetSalesTargetDialog
-            isOpen={isSetMonthlyTargetDialogOpen}
-            onOpenChange={setIsSetMonthlyTargetDialogOpen}
-            currentTarget={monthlyOrderTarget}
-            onSetTarget={handleSetMonthlyOrderTarget}
+            isOpen={isSetGlobalMonthlyTargetDialogOpen}
+            onOpenChange={setIsSetGlobalMonthlyTargetDialogOpen}
+            currentTarget={globalMonthlyOrderTarget}
+            onSetTarget={handleSetGlobalMonthlyOrderTarget}
             targetType="monthly"
           />
           <SetSalesTargetDialog
-            isOpen={isSetWeeklyTargetDialogOpen}
-            onOpenChange={setIsSetWeeklyTargetDialogOpen}
-            currentTarget={weeklyOrderTarget}
-            onSetTarget={handleSetWeeklyOrderTarget}
+            isOpen={isSetGlobalWeeklyTargetDialogOpen}
+            onOpenChange={setIsSetGlobalWeeklyTargetDialogOpen}
+            currentTarget={globalWeeklyOrderTarget}
+            onSetTarget={handleSetGlobalWeeklyOrderTarget}
             targetType="weekly"
           />
         </>
       )}
 
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1"> {/* Adjusted grid for single card */}
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
         <Card className="shadow-xl bg-card h-[350px] transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-2xl">
           <CardHeader>
             <CardTitle className="text-foreground">Recent Activity</CardTitle>
@@ -310,3 +313,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
