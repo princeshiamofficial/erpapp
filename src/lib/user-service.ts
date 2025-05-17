@@ -2,25 +2,38 @@
 'use server'; // Potentially for some functions if called directly from Server Components/Actions
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc, query, where, addDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc, query, where, orderBy } from 'firebase/firestore';
 import type { User, UserRole } from '@/types';
-import { v4 as uuidv4 } from 'uuid'; // For generating IDs if not using Firestore auto-ID for main user ID
+// Removed v4 as uuidv4 from here as we'll generate sequential IDs for new users
 
 const USERS_COLLECTION = 'users';
 
-// Add a new user to Firestore
+// Add a new user to Firestore with sequential ID
 export const addUser = async (userData: Omit<User, 'id'>): Promise<User> => {
-  // For consistency with how other entities are handled, let's use a generated ID.
-  // Firestore's addDoc would also generate one, but we often want to set it ourselves.
-  const userId = uuidv4(); 
+  const usersCol = collection(db, USERS_COLLECTION);
+  // Fetch all users to determine the next ID. This could be optimized for very large user bases.
+  // For now, we assume a manageable number of users.
+  const allUsersSnapshot = await getDocs(query(usersCol, orderBy('id', 'desc')));
+  let maxUserNumber = 0;
+  allUsersSnapshot.forEach(docSnap => {
+    const docId = docSnap.id;
+    if (docId.startsWith("User-")) {
+      const numPart = parseInt(docId.substring(5), 10); // "User-" is 5 chars
+      if (!isNaN(numPart) && numPart > maxUserNumber) {
+        maxUserNumber = numPart;
+      }
+    }
+  });
+  const newUserNumber = maxUserNumber + 1;
+  const userId = `User-${String(newUserNumber).padStart(3, '0')}`;
+
   const newUser: User = {
     ...userData,
     id: userId,
-    // Ensure optional fields are null if not provided, to prevent Firestore 'undefined' error
     companyName: userData.companyName || null,
     avatarUrl: userData.avatarUrl || null,
-    monthlyOrderTarget: userData.monthlyOrderTarget || 0,
-    weeklyOrderTarget: userData.weeklyOrderTarget || 0,
+    monthlyOrderTarget: userData.monthlyOrderTarget === undefined ? null : userData.monthlyOrderTarget,
+    weeklyOrderTarget: userData.weeklyOrderTarget === undefined ? null : userData.weeklyOrderTarget,
   };
   const userDocRef = doc(db, USERS_COLLECTION, userId);
   await setDoc(userDocRef, newUser);
@@ -31,11 +44,6 @@ export const addUser = async (userData: Omit<User, 'id'>): Promise<User> => {
 export const getUsers = async (): Promise<User[]> => {
   const usersCol = collection(db, USERS_COLLECTION);
   const snapshot = await getDocs(usersCol);
-  if (snapshot.empty) {
-    // Optionally seed an initial admin user if collection is empty and MOCK_USERS based login is also removed
-    // For now, assume admin is added via MOCK_USERS for initial login or seeded by another process.
-    return [];
-  }
   return snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as User));
 };
 
@@ -75,7 +83,7 @@ export const updateUserRoleInFirestore = async (userId: string, role: UserRole):
   }
 };
 
-// Update user's password (stores plain text, still mock-like)
+// Update user's password (stores plain text)
 export const updateUserPasswordInFirestore = async (userId: string, newPasswordPlainText: string): Promise<boolean> => {
   try {
     const userDoc = doc(db, USERS_COLLECTION, userId);
@@ -100,12 +108,12 @@ export const updateUserAvatarInFirestore = async (userId: string, avatarUrl: str
 };
 
 // Update user's sales targets
-export const updateUserTargetsInFirestore = async (userId: string, monthlyTarget: number, weeklyTarget: number): Promise<boolean> => {
+export const updateUserTargetsInFirestore = async (userId: string, monthlyTarget: number | null, weeklyTarget: number | null): Promise<boolean> => {
   try {
     const userDoc = doc(db, USERS_COLLECTION, userId);
     await updateDoc(userDoc, { 
-      monthlyOrderTarget: monthlyTarget, 
-      weeklyOrderTarget: weeklyTarget 
+      monthlyOrderTarget: monthlyTarget === undefined ? null : monthlyTarget, 
+      weeklyOrderTarget: weeklyTarget === undefined ? null : weeklyTarget 
     });
     return true;
   } catch (error) {
@@ -126,7 +134,7 @@ export const deleteUserFromFirestore = async (userId: string): Promise<boolean> 
   }
 };
 
-// Helper to seed initial admin if users collection is empty (call this once, e.g. in a setup script or AuthProvider)
+// Helper to seed initial admin if users collection is empty
 export const seedInitialAdminUser = async () => {
   const usersRef = collection(db, USERS_COLLECTION);
   const q = query(usersRef, where("email", "==", "admin@colorhut.dev"));
@@ -135,17 +143,17 @@ export const seedInitialAdminUser = async () => {
   if (snapshot.empty) {
     console.log("No admin user found, seeding initial admin...");
     try {
-      await addUser({
+      await addUser({ // addUser will now generate the sequential ID, e.g., User-001
         name: 'Default Admin', 
         email: 'admin@colorhut.dev', 
         role: 'ADMIN', 
         companyName: 'Color Hut Inc.', 
-        password: "password", // Storing plain text password for demo
+        password: "password", 
         avatarUrl: null, 
         monthlyOrderTarget: 0, 
         weeklyOrderTarget: 0 
       });
-      console.log("Default Admin user seeded into Firestore.");
+      console.log("Default Admin user seeded into Firestore with sequential ID.");
     } catch (error) {
       console.error("Error seeding admin user:", error);
     }
