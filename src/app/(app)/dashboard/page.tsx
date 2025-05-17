@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks, Edit, PackageCheck, Truck } from 'lucide-react';
-import { formatDistanceToNow, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { formatDistanceToNow, startOfMonth, endOfMonth, isWithinInterval, startOfWeek, endOfWeek } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
 import { Progress } from '@/components/ui/progress';
@@ -82,10 +82,15 @@ export default function DashboardPage() {
   const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
   const [isLoadingGlobalTargets, setIsLoadingGlobalTargets] = useState(true);
+  
   const [activeOrdersCount, setActiveOrdersCount] = useState<number | null>(null);
   const [isLoadingActiveOrders, setIsLoadingActiveOrders] = useState(true);
+  
   const [monthlyDeliveriesCount, setMonthlyDeliveriesCount] = useState<number | null>(null);
   const [isLoadingMonthlyDeliveries, setIsLoadingMonthlyDeliveries] = useState(true);
+
+  const [weeklyDeliveriesCount, setWeeklyDeliveriesCount] = useState<number | null>(null);
+  const [isLoadingWeeklyDeliveries, setIsLoadingWeeklyDeliveries] = useState(true);
 
 
   const [globalTargets, setGlobalTargets] = useState<GlobalSalesTargets>(DEFAULT_GLOBAL_TARGETS_STATE);
@@ -112,6 +117,8 @@ export default function DashboardPage() {
     setIsLoadingActivities(true);
     setIsLoadingActiveOrders(true);
     setIsLoadingMonthlyDeliveries(true);
+    setIsLoadingWeeklyDeliveries(true);
+
     try {
       const [fetchedOrders, allStatuses] = await Promise.all([
         getOrders(),
@@ -204,36 +211,50 @@ export default function DashboardPage() {
       });
       setActiveOrdersCount(activeOrders.length);
 
-      // Calculate monthly deliveries
+      // Calculate monthly and weekly deliveries
       if (deliveredStatusId) {
         const now = new Date();
         const monthStart = startOfMonth(now);
         const monthEnd = endOfMonth(now);
+        const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Assuming week starts on Monday
+        const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+        
         let deliveriesThisMonth = 0;
+        let deliveriesThisWeek = 0;
 
         fetchedOrders.forEach(order => {
-          const deliveredLog = order.statusHistory.find(
+          const deliveredLogMonth = order.statusHistory.find(
             log => log.status === deliveredStatusId && isWithinInterval(new Date(log.timestamp), { start: monthStart, end: monthEnd })
           );
-          if (deliveredLog) {
+          if (deliveredLogMonth) {
             deliveriesThisMonth++;
+          }
+          const deliveredLogWeek = order.statusHistory.find(
+            log => log.status === deliveredStatusId && isWithinInterval(new Date(log.timestamp), { start: weekStart, end: weekEnd })
+          );
+          if (deliveredLogWeek) {
+            deliveriesThisWeek++;
           }
         });
         setMonthlyDeliveriesCount(deliveriesThisMonth);
+        setWeeklyDeliveriesCount(deliveriesThisWeek);
       } else {
-        setMonthlyDeliveriesCount(0); // If 'Delivered' status doesn't exist
+        setMonthlyDeliveriesCount(0); 
+        setWeeklyDeliveriesCount(0);
       }
 
 
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
       toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive" });
-      setActiveOrdersCount(0); // Fallback on error
+      setActiveOrdersCount(0); 
       setMonthlyDeliveriesCount(0);
+      setWeeklyDeliveriesCount(0);
     } finally {
       setIsLoadingActivities(false);
       setIsLoadingActiveOrders(false);
       setIsLoadingMonthlyDeliveries(false);
+      setIsLoadingWeeklyDeliveries(false);
     }
   }, [currentUser, toast]);
 
@@ -257,7 +278,7 @@ export default function DashboardPage() {
     const result = await setGlobalTargetAction('monthly', newTarget);
     if (result.success) {
       toast({ title: "Success", description: `Global monthly target updated to ${newTarget}.` });
-      await fetchGlobalTargets(); // Re-fetch from Firestore
+      await fetchGlobalTargets(); 
     } else {
       toast({ title: "Error", description: result.error || "Could not update global monthly target.", variant: "destructive" });
     }
@@ -268,7 +289,7 @@ export default function DashboardPage() {
     const result = await setGlobalTargetAction('weekly', newTarget);
      if (result.success) {
       toast({ title: "Success", description: `Global weekly target updated to ${newTarget}.` });
-      await fetchGlobalTargets(); // Re-fetch from Firestore
+      await fetchGlobalTargets(); 
     } else {
       toast({ title: "Error", description: result.error || "Could not update global weekly target.", variant: "destructive" });
     }
@@ -295,7 +316,7 @@ export default function DashboardPage() {
         title: "Active Orders",
         value: isLoadingActiveOrders || activeOrdersCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : activeOrdersCount.toString(),
         icon: Package,
-        change: "+0% this month", // Placeholder
+        change: "+0% this month", 
         dataAiHint: "delivery boxes",
         type: "info" as const,
         trend: "up" as const
@@ -303,19 +324,18 @@ export default function DashboardPage() {
       {
         title: "Monthly Deliveries",
         value: isLoadingMonthlyDeliveries || monthlyDeliveriesCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : monthlyDeliveriesCount.toString(),
-        icon: Truck, // Or PackageCheck
+        icon: PackageCheck,
         change: "This month",
         dataAiHint: "delivery truck calendar",
         type: "info" as const,
       },
       {
-        title: "Global Weekly Order Target",
-        value: isLoadingGlobalTargets ? <Skeleton className="h-6 w-24 inline-block" /> : `${globalTargets.globalWeeklyOrderTarget} Orders`,
-        icon: Target,
-        change: "Set global default for CRMs",
-        dataAiHint: "target goal small",
-        actionType: 'global_weekly' as const,
-        type: "target" as const
+        title: "Weekly Deliveries",
+        value: isLoadingWeeklyDeliveries || weeklyDeliveriesCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : weeklyDeliveriesCount.toString(),
+        icon: Truck,
+        change: "This week",
+        dataAiHint: "delivery van calendar",
+        type: "info" as const,
       }
     );
   } else if (currentUser.role === 'CRM') {
@@ -324,7 +344,7 @@ export default function DashboardPage() {
         title: "Active Orders",
         value: isLoadingActiveOrders || activeOrdersCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : activeOrdersCount.toString(),
         icon: Package,
-        change: "+0% this month", // Placeholder
+        change: "+0% this month", 
         dataAiHint: "delivery boxes",
         type: "info" as const,
         trend: "up" as const
@@ -350,13 +370,13 @@ export default function DashboardPage() {
         isLoadingTargetValue: isLoadingGlobalTargets && currentUser.weeklyOrderTarget === undefined,
       }
     );
-  } else { // For Designer Representatives or other roles
+  } else { 
      summaryCards.push(
       {
         title: "Active Orders",
         value: isLoadingActiveOrders || activeOrdersCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : activeOrdersCount.toString(),
         icon: Package,
-        change: "+0% this month", // Placeholder
+        change: "+0% this month", 
         dataAiHint: "delivery boxes",
         type: "info" as const,
         trend: "up" as const
@@ -427,7 +447,7 @@ export default function DashboardPage() {
                        <TrendingUp className="h-4 w-4 mr-1"/> {card.change}
                     </p>
                   )}
-                  {card.change && card.type !== 'info' && card.type !== 'progress' && ( // Only for 'target' or other future types
+                  {card.change && card.type !== 'info' && card.type !== 'progress' && ( 
                      <p className="text-xs text-muted-foreground mt-1">{card.change}</p>
                   )}
                 </div>
@@ -512,7 +532,11 @@ export default function DashboardPage() {
                           <AvatarFallback className="text-xs bg-primary/10 text-primary">{getInitials(activity.userName)}</AvatarFallback>
                         </Avatar>
                         <div className="text-xs text-muted-foreground">
-                          {activity.userName} &bull; {isClient ? formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true }) : <Skeleton className="h-3 w-20 inline-block" />}
+                          {isClient ? (
+                            <>
+                              {activity.userName} &bull; {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+                            </>
+                          ) : <Skeleton className="h-3 w-32 inline-block" />}
                         </div>
                       </div>
                     </div>
