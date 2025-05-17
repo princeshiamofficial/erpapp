@@ -11,8 +11,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  updateUserAvatar: (avatarUrl: string | null) => Promise<boolean>; // For current user updating own avatar, allow null for removal
-  refreshCurrentUser: () => Promise<void>; // To refresh user data from Firestore
+  updateUserAvatar: (avatarUrl: string | null) => Promise<boolean>;
+  refreshCurrentUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,99 +24,120 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const initializeAuth = async () => {
+      console.log("AuthContext: Initializing auth...");
       try {
-        // Ensure initial admin user seeding is attempted and awaited.
-        // This is crucial for the first run to prevent login before admin exists.
-        await seedInitialAdminUser();
+        await seedInitialAdminUser(); // Ensures admin exists or is created in Firestore
+        console.log("AuthContext: Initial admin user seeding attempted.");
 
         const storedUserJson = localStorage.getItem('colorhut-user');
         if (storedUserJson) {
+          console.log("AuthContext: Found user in localStorage.");
           try {
             const storedUser = JSON.parse(storedUserJson) as User;
-            // Validate against Firestore or ensure fields are present
             if (storedUser && storedUser.id) {
-              // Fetch the latest user data from Firestore to ensure it's up-to-date
+              console.log(`AuthContext: Validating stored user ID: ${storedUser.id} against Firestore.`);
               const firestoreUser = await getUserById(storedUser.id);
               if (firestoreUser) {
+                console.log("AuthContext: Stored user validated against Firestore. Setting current user.");
                 const { password, ...userToStore } = firestoreUser;
                 setCurrentUser(userToStore as User);
               } else {
-                // User in localStorage not found in Firestore, clear it
+                console.log("AuthContext: Stored user NOT found in Firestore. Clearing localStorage.");
                 localStorage.removeItem('colorhut-user');
                 setCurrentUser(null);
               }
             } else {
-              // Invalid user object in localStorage
+              console.log("AuthContext: Invalid user object in localStorage. Clearing.");
               localStorage.removeItem('colorhut-user');
               setCurrentUser(null);
             }
           } catch (error) {
-            console.error("Failed to parse or validate stored user:", error);
+            console.error("AuthContext: Failed to parse or validate stored user:", error);
             localStorage.removeItem('colorhut-user');
             setCurrentUser(null);
           }
+        } else {
+          console.log("AuthContext: No user found in localStorage.");
         }
       } catch (seedError) {
-        console.error("Error during initial admin user seeding:", seedError);
-        // Depending on app requirements, you might want to handle this more gracefully
+        console.error("AuthContext: Error during initial admin user seeding phase:", seedError);
       } finally {
-        setIsLoading(false); // All initial async setup is done
+        console.log("AuthContext: Initialization complete. Setting isLoading to false.");
+        setIsLoading(false);
       }
     };
 
     initializeAuth();
-  }, []); // Empty dependency array ensures this runs once on mount
+  }, []);
 
   const login = async (email: string, pass: string): Promise<boolean> => {
-    setIsLoading(true); // Indicate loading during login attempt
+    console.log(`AuthContext: Login attempt for email: ${email}`);
+    setIsLoading(true);
     const userFromDb = await getUserByEmail(email);
     
-    if (userFromDb && userFromDb.password === pass) { // Still using plain text password for demo
-      const { password, ...userToStore } = userFromDb;
-      setCurrentUser(userToStore as User);
-      localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
-      router.push('/dashboard');
+    if (userFromDb) {
+      console.log(`AuthContext: User found in DB for email ${email}:`, userFromDb);
+      if (userFromDb.password === pass) {
+        console.log("AuthContext: Password matches. Login successful.");
+        const { password, ...userToStore } = userFromDb;
+        setCurrentUser(userToStore as User);
+        localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
+        router.push('/dashboard');
+        setIsLoading(false);
+        return true;
+      } else {
+        console.log("AuthContext: Password does NOT match.");
+        setIsLoading(false);
+        return false;
+      }
+    } else {
+      console.log(`AuthContext: User NOT found in DB for email ${email}.`);
       setIsLoading(false);
-      return true;
+      return false;
     }
-    setIsLoading(false);
-    return false;
   };
 
   const logout = () => {
+    console.log("AuthContext: Logging out user.");
     setCurrentUser(null);
     localStorage.removeItem('colorhut-user');
     router.push('/login');
   };
 
   const updateUserAvatar = async (avatarUrl: string | null): Promise<boolean> => {
-    if (!currentUser || !currentUser.id) return false;
-    // No global isLoading toggle here, as this is a specific action, not initial load
+    if (!currentUser || !currentUser.id) {
+      console.log("AuthContext: updateUserAvatar - No current user or user ID.");
+      return false;
+    }
     
     const success = await updateUserAvatarInFirestore(currentUser.id, avatarUrl);
 
     if (success) {
-      // Ensure avatarUrl in User type can be string | null | undefined for flexibility
-      // If User.avatarUrl is `string | undefined`, and Firestore stores null, then `null` becomes `undefined` here.
+      console.log("AuthContext: Avatar updated successfully in Firestore. Updating local state.");
       const updatedUser = { ...currentUser, avatarUrl: avatarUrl ?? undefined };
       setCurrentUser(updatedUser);
       localStorage.setItem('colorhut-user', JSON.stringify(updatedUser));
+    } else {
+      console.log("AuthContext: Failed to update avatar in Firestore.");
     }
     return success;
   };
 
   const refreshCurrentUser = async () => {
     if (currentUser && currentUser.id) {
-      // Consider a specific loading state for refresh if needed, not global setIsLoading
+      console.log(`AuthContext: Refreshing current user data for ID: ${currentUser.id}`);
       const firestoreUser = await getUserById(currentUser.id);
       if (firestoreUser) {
+        console.log("AuthContext: Fetched latest user data. Updating local state.");
         const { password, ...userToStore } = firestoreUser;
         setCurrentUser(userToStore as User);
         localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
       } else {
-        // User might have been deleted, log them out
+        console.log("AuthContext: Current user not found in Firestore during refresh. Logging out.");
         logout();
       }
+    } else {
+      console.log("AuthContext: refreshCurrentUser - No current user to refresh.");
     }
   };
 
