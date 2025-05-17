@@ -15,7 +15,7 @@ interface EditUserRoleDialogProps {
   children: React.ReactNode;
 }
 
-const USER_ROLES: UserRole[] = ["ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"];
+const USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"];
 
 export function EditUserRoleDialog({ user, onUserRoleUpdated, children }: EditUserRoleDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -32,7 +32,7 @@ export function EditUserRoleDialog({ user, onUserRoleUpdated, children }: EditUs
     onUserRoleUpdated(updatedUser);
     toast({
       title: "User Role Updated",
-      description: `${user.name}'s role has been updated to ${selectedRole}.`,
+      description: `${user.name}'s role has been updated to ${selectedRole.replace(/_/g, ' ')}.`,
     });
     setIsOpen(false);
   };

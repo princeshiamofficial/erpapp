@@ -5,6 +5,7 @@ import type { User } from '@/types';
 const DEFAULT_MOCK_PASSWORD = "password";
 
 export const MOCK_USERS: User[] = [
+  { id: 'user-sysadmin-001', name: 'Sam System', email: 'sysadmin@trackflow.dev', role: 'SYSTEM_ADMIN', companyName: 'TrackFlow Inc.', password: DEFAULT_MOCK_PASSWORD },
   { id: 'user-admin-001', name: 'Alice Admin', email: 'admin@trackflow.dev', role: 'ADMIN', companyName: 'TrackFlow Inc.', password: DEFAULT_MOCK_PASSWORD },
   { id: 'user-crm-001', name: 'Bob CRM', email: 'bob.crm@trackflow.dev', role: 'CRM', companyName: 'TrackFlow Inc.', password: DEFAULT_MOCK_PASSWORD },
   { id: 'user-dr-001', name: 'Carol DesignerRep', email: 'carol.dr@trackflow.dev', role: 'DESIGNER_REPRESENTATIVE', companyName: 'TrackFlow Inc.', password: DEFAULT_MOCK_PASSWORD },

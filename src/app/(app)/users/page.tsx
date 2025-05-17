@@ -28,7 +28,7 @@ export default function UsersPage() {
   // For simplicity, we'll trigger it directly from the map.
 
   useEffect(() => {
-    if (currentUser && currentUser.role !== 'ADMIN') {
+    if (currentUser && currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
       router.replace('/dashboard'); 
     }
   }, [currentUser, router]);
@@ -77,7 +77,7 @@ export default function UsersPage() {
     );
   }, [users, searchTerm]);
 
-  if (!currentUser || currentUser.role !== 'ADMIN') {
+  if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
     return <div className="p-6">Access Denied. You must be an administrator to view this page.</div>;
   }
 
@@ -131,6 +131,7 @@ export default function UsersPage() {
                     <TableCell className="text-muted-foreground">{user.email}</TableCell>
                     <TableCell>
                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        user.role === 'SYSTEM_ADMIN' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' : // More distinct color for SYSTEM_ADMIN
                         user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' :
                         user.role === 'CRM' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
                         user.role === 'DESIGNER_REPRESENTATIVE' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 

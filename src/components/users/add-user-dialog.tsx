@@ -15,7 +15,7 @@ interface AddUserDialogProps {
   children: React.ReactNode;
 }
 
-const USER_ROLES: UserRole[] = ["ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"];
+const USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"];
 
 export function AddUserDialog({ onUserAdded, children }: AddUserDialogProps) {
   const [isOpen, setIsOpen] = useState(false);

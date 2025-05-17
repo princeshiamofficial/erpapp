@@ -1,5 +1,5 @@
 
-export type UserRole = "ADMIN" | "CRM" | "DESIGNER_REPRESENTATIVE";
+export type UserRole = "ADMIN" | "CRM" | "DESIGNER_REPRESENTATIVE" | "SYSTEM_ADMIN";
 
 export interface User {
   id: string;
