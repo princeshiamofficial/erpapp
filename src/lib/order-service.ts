@@ -1,6 +1,6 @@
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, query, orderBy,getCountFromServer } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, orderBy, getCountFromServer, writeBatch } from 'firebase/firestore';
 import type { TrackingLink, Comment, OrderLogEntry, CustomStatus } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getStatuses } from './status-service'; // To get default status IDs
@@ -14,7 +14,6 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
   const ideaSubmittedStatus = statuses.find(s => s.name === 'Idea Submitted');
   const inProductionStatus = statuses.find(s => s.name === 'In Production');
   const pendingApprovalStatus = statuses.find(s => s.name === 'Pending Client Approval');
-  // const shippedStatus = statuses.find(s => s.name === 'Shipped'); // Not used in current seed
   const readyForDesignStatus = statuses.find(s => s.name === 'Ready for Design');
 
   if (!ideaSubmittedStatus || !inProductionStatus || !pendingApprovalStatus || !readyForDesignStatus) {
@@ -22,18 +21,27 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     return [];
   }
   
-  const initialOrdersData: Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments' | 'currentStatus'>[] = [
+  // Define base data for seeded orders, explicitly making optional fields part of the type for clarity
+  type SeedOrderBase = Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments' | 'currentStatus'> & {
+    phoneNumber?: string;
+    service?: string;
+    designerRepresentativeId?: string;
+    designerRepresentativeName?: string;
+  };
+
+  const initialOrdersData: SeedOrderBase[] = [
     {
       customerName: "Tech Solutions Inc.",
       companyName: "Tech Solutions Inc.",
       address: "123 Tech Ave, Silicon Valley, CA 94001",
-      phoneNumber: "555-0101",
-      service: "Custom Software Development",
+      phoneNumber: "555-0101", // Example: provide or set to null later
+      service: "Custom Software Development", // Example: provide or set to null later
       crmUserId: "user-admin-default", 
       crmUserName: "Default Admin",
       isPublic: true,
-      designerRepresentativeId: undefined,
-      designerRepresentativeName: undefined,
+      // No DR assigned initially for ORD-001
+      designerRepresentativeId: undefined, // Will be converted to null
+      designerRepresentativeName: undefined, // Will be converted to null
     },
     {
       customerName: "GreenScape Ltd.",
@@ -51,7 +59,8 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
 
   const ordersRef = collection(db, ORDERS_COLLECTION);
   const createdOrders: TrackingLink[] = [];
-  
+  const batch = writeBatch(db); // Use a batch for seeding
+
   const firstOrderId = "ORD-001";
   const firstOrderBaseData = initialOrdersData[0];
   const firstOrder: TrackingLink = {
@@ -66,9 +75,13 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     comments: [
       { id: uuidv4(), userName: "Tech Solutions Inc. (Client)", text: "Looking forward to the first demo!", timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), isInternal: false }
     ],
+    phoneNumber: firstOrderBaseData.phoneNumber || null,
+    service: firstOrderBaseData.service || null,
+    designerRepresentativeId: firstOrderBaseData.designerRepresentativeId || null,
+    designerRepresentativeName: firstOrderBaseData.designerRepresentativeName || null,
   };
   const firstDocRef = doc(ordersRef, firstOrderId);
-  await setDoc(firstDocRef, firstOrder);
+  batch.set(firstDocRef, firstOrder);
   createdOrders.push(firstOrder);
 
   const secondOrderId = "ORD-002";
@@ -84,12 +97,18 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: pendingApprovalStatus.id, changedByUserId: secondOrderBaseData.designerRepresentativeId || "user-dr-001", changedByUserName: secondOrderBaseData.designerRepresentativeName || "Carol DesignerRep", notes: "Initial designs submitted for client approval." }
     ],
     comments: [],
+    phoneNumber: secondOrderBaseData.phoneNumber || null,
+    service: secondOrderBaseData.service || null,
+    // designerRepresentativeId and Name are correctly set from secondOrderBaseData if they exist
+    designerRepresentativeId: secondOrderBaseData.designerRepresentativeId || null,
+    designerRepresentativeName: secondOrderBaseData.designerRepresentativeName || null,
   };
   const secondDocRef = doc(ordersRef, secondOrderId);
-  await setDoc(secondDocRef, secondOrder);
+  batch.set(secondDocRef, secondOrder);
   createdOrders.push(secondOrder);
 
-  console.log('Initial orders seeded in Firestore with sequential IDs.');
+  await batch.commit();
+  console.log('Initial orders seeded in Firestore with sequential IDs and null for undefined optionals.');
   return createdOrders;
 };
 
@@ -134,12 +153,11 @@ export const addOrder = async (orderData: {
 }): Promise<TrackingLink> => {
   const now = new Date().toISOString();
   
-  // Generate new sequential Order ID
   const ordersCol = collection(db, ORDERS_COLLECTION);
-  const snapshot = await getDocs(ordersCol);
+  const snapshot = await getDocs(ordersCol); // Consider optimizing for large collections
   let maxOrderNumber = 0;
-  snapshot.forEach(doc => {
-    const docId = doc.id;
+  snapshot.forEach(docSnap => {
+    const docId = docSnap.id;
     if (docId.startsWith("ORD-")) {
       const numPart = parseInt(docId.substring(4), 10);
       if (!isNaN(numPart) && numPart > maxOrderNumber) {
@@ -164,8 +182,8 @@ export const addOrder = async (orderData: {
     customerName: orderData.customerName,
     companyName: orderData.companyName,
     address: orderData.address,
-    phoneNumber: orderData.phoneNumber,
-    service: orderData.service,
+    phoneNumber: orderData.phoneNumber || null, // Set to null if undefined
+    service: orderData.service || null, // Set to null if undefined
     crmUserId: orderData.crmUserId,
     crmUserName: orderData.crmUserName,
     createdAt: now,
@@ -173,8 +191,8 @@ export const addOrder = async (orderData: {
     comments: [],
     isPublic: false, 
     currentStatus: orderData.initialStatusId, 
-    designerRepresentativeId: undefined,
-    designerRepresentativeName: undefined,
+    designerRepresentativeId: null, // Explicitly null on creation
+    designerRepresentativeName: null, // Explicitly null on creation
   };
 
   const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
@@ -185,7 +203,22 @@ export const addOrder = async (orderData: {
 export const updateOrder = async (id: string, updates: Partial<TrackingLink>): Promise<boolean> => {
   try {
     const orderDoc = doc(db, ORDERS_COLLECTION, id);
-    await updateDoc(orderDoc, updates);
+    // Before updating, ensure no 'undefined' values are in 'updates'
+    const sanitizedUpdates: Partial<TrackingLink> = {};
+    for (const key in updates) {
+      if (Object.prototype.hasOwnProperty.call(updates, key)) {
+        const value = updates[key as keyof TrackingLink];
+        if (value !== undefined) {
+          (sanitizedUpdates as any)[key] = value;
+        } else {
+          // If you want to remove a field, you'd use Firestore's deleteField()
+          // For now, we'll just ensure undefined isn't passed.
+          // If the intention was to set to null for "empty", that should be handled before calling updateOrder.
+          (sanitizedUpdates as any)[key] = null; // Or omit, depending on desired behavior
+        }
+      }
+    }
+    await updateDoc(orderDoc, sanitizedUpdates);
     return true;
   } catch (error) {
     console.error(`Error updating order ${id}:`, error);
@@ -205,15 +238,26 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
       timestamp: new Date().toISOString(),
     };
     const updatedComments = [...order.comments, newComment];
+    
+    // Ensure the order object passed to updateOrder is clean
+    const orderToUpdate = { ...order, comments: updatedComments };
+    // Remove any potential undefined top-level fields from orderToUpdate before passing to updateOrder
+    // This is a bit defensive, as updateOrder now also sanitizes.
+    Object.keys(orderToUpdate).forEach(key => {
+      if (orderToUpdate[key as keyof TrackingLink] === undefined) {
+        delete orderToUpdate[key as keyof TrackingLink];
+      }
+    });
+    
     await updateOrder(orderId, { comments: updatedComments });
-    return { ...order, comments: updatedComments };
+    return { ...orderToUpdate, comments: updatedComments };
+
   } catch (error) {
     console.error(`Error adding comment to order ${orderId}:`, error);
     return undefined;
   }
 };
 
-// Helper function to get current order count - might be useful elsewhere or can be removed if not needed
 export const getOrderCount = async (): Promise<number> => {
     const ordersCol = collection(db, ORDERS_COLLECTION);
     const snapshot = await getCountFromServer(ordersCol);
