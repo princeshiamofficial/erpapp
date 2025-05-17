@@ -7,9 +7,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea"; // Added Textarea import
 import type { TrackingLink, CustomStatus, User } from "@/types";
 import { useToast } from '@/hooks/use-toast';
-import { updateTrackingLinkAction } from '@/app/(app)/tracking-links/actions'; // Server action
+import { updateTrackingLinkAction } from '@/app/(app)/tracking-links/actions'; 
 
 
 interface EditTrackingLinkDialogProps {
@@ -18,7 +19,7 @@ interface EditTrackingLinkDialogProps {
   trackingLink: TrackingLink;
   currentUser: User;
   availableStatuses: CustomStatus[];
-  onTrackingLinkUpdated: () => void; // Simplified callback
+  onTrackingLinkUpdated: () => void; 
 }
 
 export function EditTrackingLinkDialog({ 
@@ -31,6 +32,7 @@ export function EditTrackingLinkDialog({
 }: EditTrackingLinkDialogProps) {
   const [isPublic, setIsPublic] = useState(trackingLink.isPublic);
   const [currentStatusId, setCurrentStatusId] = useState<string>(trackingLink.currentStatus);
+  const [statusNotes, setStatusNotes] = useState(''); // New state for notes
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -38,6 +40,7 @@ export function EditTrackingLinkDialog({
     if (isOpen) {
       setIsPublic(trackingLink.isPublic);
       setCurrentStatusId(trackingLink.currentStatus);
+      setStatusNotes(''); // Reset notes when dialog opens
     }
   }, [trackingLink, isOpen]);
 
@@ -45,18 +48,27 @@ export function EditTrackingLinkDialog({
     e.preventDefault();
     setIsSubmitting(true);
 
-    const updates: { isPublic?: boolean; currentStatus?: string } = {};
+    const updates: { isPublic?: boolean; currentStatus?: string; statusNotes?: string } = {}; // Add statusNotes to updates type
+    let statusChanged = false;
+
     if (isPublic !== trackingLink.isPublic) {
       updates.isPublic = isPublic;
     }
     if (currentStatusId !== trackingLink.currentStatus) {
       updates.currentStatus = currentStatusId;
+      statusChanged = true;
     }
+
+    // Only include statusNotes if the status actually changed
+    if (statusChanged && statusNotes.trim()) {
+      updates.statusNotes = statusNotes.trim();
+    }
+
 
     if (Object.keys(updates).length === 0) {
       toast({ title: "No Changes", description: "No changes were made to the tracking link." });
       setIsSubmitting(false);
-      onOpenChange(false); // Close dialog
+      onOpenChange(false); 
       return;
     }
     
@@ -67,23 +79,21 @@ export function EditTrackingLinkDialog({
       toast({ title: "Update Failed", description: result.error, variant: "destructive" });
     } else {
       toast({ title: "Tracking Link Updated", description: `Link ${trackingLink.id} has been updated.` });
-      onTrackingLinkUpdated(); // Notify parent to refresh data
+      onTrackingLinkUpdated(); 
     }
   };
   
-  // Allow ADMIN, SYSTEM_ADMIN, CRM, and DESIGNER_REPRESENTATIVE to edit fields
   const canEditFields = currentUser && ['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      {/* DialogTrigger is now handled by the parent component */}
-      <DialogContent className="sm:max-w-md p-6">
+      <DialogContent className="sm:max-w-lg p-6">
         <DialogHeader>
           <DialogTitle>Edit Tracking Link: {trackingLink.id}</DialogTitle>
           <DialogDescription>Order for: {trackingLink.customerName} ({trackingLink.companyName})</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-6 py-4">
+          <div className="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="flex items-center justify-between space-x-2 p-3 bg-secondary/30 rounded-md border border-border/20">
               <Label htmlFor="isPublic" className="flex flex-col space-y-1 cursor-pointer">
                 <span>Publicly Accessible</span>
@@ -99,22 +109,37 @@ export function EditTrackingLinkDialog({
               />
             </div>
 
-            <div className="space-y-1 p-3 bg-secondary/30 rounded-md border border-border/20">
-              <Label htmlFor="currentStatus">Order Status</Label>
-               <Select 
-                value={currentStatusId} 
-                onValueChange={(value) => setCurrentStatusId(value)}
-                disabled={!canEditFields || isSubmitting}
-              >
-                <SelectTrigger id="currentStatus">
-                  <SelectValue placeholder="Select order status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableStatuses.map(status => (
-                    <SelectItem key={status.id} value={status.id}>{status.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="space-y-3 p-3 bg-secondary/30 rounded-md border border-border/20">
+              <div>
+                <Label htmlFor="currentStatus">Order Status</Label>
+                 <Select 
+                  value={currentStatusId} 
+                  onValueChange={(value) => setCurrentStatusId(value)}
+                  disabled={!canEditFields || isSubmitting}
+                >
+                  <SelectTrigger id="currentStatus" className="mt-1">
+                    <SelectValue placeholder="Select order status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableStatuses.map(status => (
+                      <SelectItem key={status.id} value={status.id}>{status.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {currentStatusId !== trackingLink.currentStatus && ( // Only show notes if status is changing
+                <div>
+                  <Label htmlFor="statusNotes">Status Update Notes (Optional)</Label>
+                  <Textarea
+                    id="statusNotes"
+                    placeholder="Add any relevant notes for this status change..."
+                    value={statusNotes}
+                    onChange={(e) => setStatusNotes(e.target.value)}
+                    className="mt-1 min-h-[80px]"
+                    disabled={!canEditFields || isSubmitting}
+                  />
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter className="pt-4 border-t mt-2">

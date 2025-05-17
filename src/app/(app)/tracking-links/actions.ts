@@ -2,8 +2,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { TrackingLink, User, OrderLogEntry } from "@/types";
-import { updateOrder, getOrderById } from "@/lib/order-service"; // Use new Firestore service
+import type { TrackingLink, User, OrderLogEntry, CustomStatus } from "@/types";
+import { updateOrder, getOrderById } from "@/lib/order-service"; 
+import { getStatusById } from "@/lib/status-service"; // To get status name for notes
 import { v4 as uuidv4 } from 'uuid';
 
 export async function updateTrackingLinkAction(
@@ -11,6 +12,7 @@ export async function updateTrackingLinkAction(
   updates: {
     isPublic?: boolean;
     currentStatus?: string; // Status ID
+    statusNotes?: string; // Optional notes for status change
   },
   currentUser: User
 ): Promise<TrackingLink | { error: string }> {
@@ -29,27 +31,35 @@ export async function updateTrackingLinkAction(
 
     if (updates.isPublic !== undefined && updates.isPublic !== currentOrder.isPublic) {
       dataToUpdate.isPublic = updates.isPublic;
-      newLogEntries.push({
-        id: uuidv4(),
-        timestamp: new Date().toISOString(),
-        status: currentOrder.currentStatus, // Keep current status for this log
-        changedByUserId: currentUser.id,
-        changedByUserName: currentUser.name,
-        notes: `Link visibility changed to ${updates.isPublic ? 'Public' : 'Private'}.`,
-      });
+      // Optional: Log visibility change if needed, or keep it silent. For now, silent.
+      // newLogEntries.push({
+      //   id: uuidv4(),
+      //   timestamp: new Date().toISOString(),
+      //   status: currentOrder.currentStatus, 
+      //   changedByUserId: currentUser.id,
+      //   changedByUserName: currentUser.name,
+      //   notes: `Link visibility changed to ${updates.isPublic ? 'Public' : 'Private'}.`,
+      // });
     }
 
     if (updates.currentStatus && updates.currentStatus !== currentOrder.currentStatus) {
       dataToUpdate.currentStatus = updates.currentStatus;
-      // In a real app, you'd fetch the status name using getStatusById for the notes.
-      // For now, we'll just use the ID in the note if the full status object isn't readily available here.
+      
+      const newStatusObject = await getStatusById(updates.currentStatus);
+      const newStatusName = newStatusObject ? newStatusObject.name : updates.currentStatus; // Fallback to ID if name not found
+
+      let logNotes = `Status changed to ${newStatusName}.`;
+      if (updates.statusNotes && updates.statusNotes.trim() !== "") {
+        logNotes = updates.statusNotes.trim(); 
+      }
+      
       newLogEntries.push({
         id: uuidv4(),
         timestamp: new Date().toISOString(),
         status: updates.currentStatus,
         changedByUserId: currentUser.id,
         changedByUserName: currentUser.name,
-        notes: `Status changed to ID: ${updates.currentStatus}.`, // Ideally, fetch status name
+        notes: logNotes,
       });
     }
     
@@ -58,7 +68,7 @@ export async function updateTrackingLinkAction(
     }
 
     if (Object.keys(dataToUpdate).length === 0) {
-      return { error: "No changes to apply." }; // Or return the current order
+      return { error: "No changes to apply." }; 
     }
 
     const success = await updateOrder(orderId, dataToUpdate);
