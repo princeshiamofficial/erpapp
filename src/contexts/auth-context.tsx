@@ -2,16 +2,17 @@
 "use client";
 
 import type { User } from '@/types';
-import { MOCK_USERS, findUserByEmailAndPassword, updateUserAvatarInMock } from '@/lib/auth-constants';
 import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { getUserByEmail, seedInitialAdminUser, updateUserAvatarInFirestore, getUserById } from '@/lib/user-service'; // Import Firestore user service
 
 interface AuthContextType {
   currentUser: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  updateUserAvatar: (avatarUrl: string) => Promise<boolean>;
+  updateUserAvatar: (avatarUrl: string) => Promise<boolean>; // For current user updating own avatar
+  refreshCurrentUser: () => Promise<void>; // To refresh user data from Firestore
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -22,68 +23,95 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('trackflow-user');
-    if (storedUser) {
+    // Seed initial admin user if not present in Firestore.
+    // This is a good place for one-time setup.
+    seedInitialAdminUser();
+
+    const storedUserJson = localStorage.getItem('colorhut-user');
+    if (storedUserJson) {
       try {
-        const parsedUser = JSON.parse(storedUser) as User;
-        const validatedUser = MOCK_USERS.find(mockUser => mockUser.id === parsedUser.id);
-        if (validatedUser) {
-          // Ensure the stored user in state is always fresh from MOCK_USERS (which might have updated avatar)
-          const { password, ...userToStore } = validatedUser;
-          setCurrentUser(userToStore as User);
+        const storedUser = JSON.parse(storedUserJson) as User;
+        // Validate against Firestore or ensure fields are present
+        if (storedUser && storedUser.id) {
+          // Fetch the latest user data from Firestore to ensure it's up-to-date
+          getUserById(storedUser.id).then(firestoreUser => {
+            if (firestoreUser) {
+              const { password, ...userToStore } = firestoreUser;
+              setCurrentUser(userToStore as User);
+            } else {
+              // User in localStorage not found in Firestore, clear it
+              localStorage.removeItem('colorhut-user');
+            }
+            setIsLoading(false);
+          });
         } else {
-          localStorage.removeItem('trackflow-user');
+          localStorage.removeItem('colorhut-user');
+          setIsLoading(false);
         }
       } catch (error) {
         console.error("Failed to parse stored user:", error);
-        localStorage.removeItem('trackflow-user');
+        localStorage.removeItem('colorhut-user');
+        setIsLoading(false);
       }
+    } else {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   const login = async (email: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    const user = findUserByEmailAndPassword(email, pass);
-    if (user) {
-      setCurrentUser(user);
-      localStorage.setItem('trackflow-user', JSON.stringify(user));
-      setIsLoading(false);
+    const userFromDb = await getUserByEmail(email);
+    setIsLoading(false);
+
+    if (userFromDb && userFromDb.password === pass) { // Still using plain text password for demo
+      const { password, ...userToStore } = userFromDb;
+      setCurrentUser(userToStore as User);
+      localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
       router.push('/dashboard');
       return true;
     }
-    setIsLoading(false);
     return false;
   };
 
   const logout = () => {
     setCurrentUser(null);
-    localStorage.removeItem('trackflow-user');
+    localStorage.removeItem('colorhut-user');
     router.push('/login');
   };
 
-  const updateUserAvatar = async (avatarUrl: string): Promise<boolean> => {
-    if (!currentUser) return false;
+  const updateUserAvatar = async (avatarUrl: string | null): Promise<boolean> => { // Allow null for removal
+    if (!currentUser || !currentUser.id) return false;
     setIsLoading(true);
     
-    // Simulate API call to update avatar
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const success = updateUserAvatarInMock(currentUser.id, avatarUrl);
+    const success = await updateUserAvatarInFirestore(currentUser.id, avatarUrl);
 
     if (success) {
-      const updatedUser = { ...currentUser, avatarUrl };
+      const updatedUser = { ...currentUser, avatarUrl: avatarUrl ?? undefined };
       setCurrentUser(updatedUser);
-      localStorage.setItem('trackflow-user', JSON.stringify(updatedUser));
-      setIsLoading(false);
-      return true;
+      localStorage.setItem('colorhut-user', JSON.stringify(updatedUser));
     }
     setIsLoading(false);
-    return false;
+    return success;
+  };
+
+  const refreshCurrentUser = async () => {
+    if (currentUser && currentUser.id) {
+      setIsLoading(true);
+      const firestoreUser = await getUserById(currentUser.id);
+      if (firestoreUser) {
+        const { password, ...userToStore } = firestoreUser;
+        setCurrentUser(userToStore as User);
+        localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
+      } else {
+        // User might have been deleted, log them out
+        logout();
+      }
+      setIsLoading(false);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, isLoading, login, logout, updateUserAvatar }}>
+    <AuthContext.Provider value={{ currentUser, isLoading, login, logout, updateUserAvatar, refreshCurrentUser }}>
       {children}
     </AuthContext.Provider>
   );

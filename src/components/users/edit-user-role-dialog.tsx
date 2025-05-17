@@ -11,8 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 
 interface EditUserRoleDialogProps {
   user: User;
-  currentUser: User; // Add currentUser to determine permissions
-  onUserRoleUpdated: (updatedUser: User) => void;
+  currentUser: User;
+  onUserRoleUpdated: (updatedUser: {id: string, role: UserRole}) => Promise<void>; // Changed signature
   children: React.ReactNode;
 }
 
@@ -21,6 +21,7 @@ const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_RE
 export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, children }: EditUserRoleDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>(user.role);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -31,54 +32,32 @@ export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, child
 
   const canChangeRole = () => {
     if (!currentUser) return false;
-
-    // System Admin can change anyone's role
-    if (currentUser.role === 'SYSTEM_ADMIN') {
-      return true;
-    }
-
-    // Admin specific restrictions
+    if (currentUser.role === 'SYSTEM_ADMIN') return true;
     if (currentUser.role === 'ADMIN') {
-      // Admin cannot change their own role
-      if (currentUser.id === user.id) {
-        return false;
-      }
-      // Admin cannot change another Admin's role
-      if (user.role === 'ADMIN') {
-        return false;
-      }
-      // Admin cannot change a System Admin's role
-      if (user.role === 'SYSTEM_ADMIN') {
-        return false;
-      }
-      // Admins can change CRM or DR roles
+      if (currentUser.id === user.id) return false; // Admin cannot change their own role
+      if (user.role === 'ADMIN' || user.role === 'SYSTEM_ADMIN') return false; // Admin cannot change other Admins or System Admins
       return true;
     }
-    
-    // Other roles (CRM, DR) cannot change any roles by default (this dialog likely won't be opened for them)
     return false;
   };
 
   const isRoleChangeAllowed = canChangeRole();
 
   const getAvailableRolesForSelection = (): UserRole[] => {
-    if (currentUser.role === 'SYSTEM_ADMIN') {
-      return ALL_USER_ROLES;
-    }
+    if (currentUser.role === 'SYSTEM_ADMIN') return ALL_USER_ROLES;
     if (currentUser.role === 'ADMIN') {
-      // Admins can only assign CRM or DR roles
-      // And they cannot edit roles of other Admins or System Admins
       if (user.role === 'ADMIN' || user.role === 'SYSTEM_ADMIN' || user.id === currentUser.id) {
-        return [user.role]; // Only allow selecting the current role (effectively disabling change)
+        return [user.role]; 
       }
-      return ['CRM', 'DESIGNER_REPRESENTATIVE'];
+      // Admins can assign/change to ADMIN, CRM, DESIGNER_REPRESENTATIVE for non-admin/sysadmin users
+      return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
     }
-    return [user.role]; // Default to only current role if no permissions
+    return [user.role]; 
   };
 
   const availableRoles = getAvailableRolesForSelection();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isRoleChangeAllowed) {
       toast({
@@ -92,13 +71,17 @@ export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, child
         setIsOpen(false);
         return;
     }
-    const updatedUser = { ...user, role: selectedRole };
-    onUserRoleUpdated(updatedUser);
-    toast({
-      title: "User Role Updated",
-      description: `${user.name}'s role has been updated to ${selectedRole.replace(/_/g, ' ')}.`,
-    });
-    setIsOpen(false);
+    setIsSubmitting(true);
+    try {
+      await onUserRoleUpdated({ id: user.id, role: selectedRole });
+      // Toast is handled in UsersPage after successful fetch
+      setIsOpen(false);
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      toast({ title: "Error", description: "Could not update user role.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -118,13 +101,13 @@ export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, child
               <p className="col-span-3 font-medium">{user.name} ({user.email})</p>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="role" className="text-right">Role</Label>
+              <Label htmlFor="role-edit" className="text-right">Role</Label>
               <Select 
                 value={selectedRole} 
                 onValueChange={(value) => setSelectedRole(value as UserRole)}
-                disabled={!isRoleChangeAllowed || (availableRoles.length === 1 && availableRoles[0] === user.role)}
+                disabled={!isRoleChangeAllowed || (availableRoles.length === 1 && availableRoles[0] === user.role) || isSubmitting}
               >
-                <SelectTrigger className="col-span-3">
+                <SelectTrigger id="role-edit" className="col-span-3">
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
@@ -143,8 +126,10 @@ export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, child
             )}
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <Button type="submit" disabled={!isRoleChangeAllowed || selectedRole === user.role}>Save Changes</Button>
+            <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>Cancel</Button>
+            <Button type="submit" disabled={!isRoleChangeAllowed || selectedRole === user.role || isSubmitting}>
+              {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

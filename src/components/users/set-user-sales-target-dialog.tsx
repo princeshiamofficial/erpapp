@@ -88,9 +88,9 @@ export function SetUserSalesTargetDialog({ user, onTargetsSet, children }: SetUs
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="space-y-1">
-              <Label htmlFor="monthlyTarget">Monthly Order Target</Label>
+              <Label htmlFor="monthlyTarget-set">Monthly Order Target</Label>
               <Input
-                id="monthlyTarget"
+                id="monthlyTarget-set"
                 type="number"
                 value={monthlyTarget}
                 onChange={(e) => setMonthlyTarget(e.target.value)}
@@ -98,12 +98,13 @@ export function SetUserSalesTargetDialog({ user, onTargetsSet, children }: SetUs
                 min="0"
                 step="1"
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="weeklyTarget">Weekly Order Target</Label>
+              <Label htmlFor="weeklyTarget-set">Weekly Order Target</Label>
               <Input
-                id="weeklyTarget"
+                id="weeklyTarget-set"
                 type="number"
                 value={weeklyTarget}
                 onChange={(e) => setWeeklyTarget(e.target.value)}
@@ -111,6 +112,7 @@ export function SetUserSalesTargetDialog({ user, onTargetsSet, children }: SetUs
                 min="0"
                 step="1"
                 required
+                disabled={isLoading}
               />
             </div>
           </div>

@@ -1,14 +1,13 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target } from "lucide-react";
+import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole } from "@/types";
-import { MOCK_USERS, updateUserPassword, updateUserAvatarInMock, updateUserTargetsInMock } from "@/lib/auth-constants";
 import Image from "next/image";
 import { AddUserDialog } from '@/components/users/add-user-dialog';
 import { EditUserRoleDialog } from '@/components/users/edit-user-role-dialog';
@@ -20,86 +19,106 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Logo } from '@/components/layout/Logo';
-
+import { 
+  getUsers, 
+  addUser, 
+  updateUserRoleInFirestore, 
+  deleteUserFromFirestore, 
+  updateUserPasswordInFirestore, 
+  updateUserAvatarInFirestore, 
+  updateUserTargetsInFirestore 
+} from '@/lib/user-service';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function UsersPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, refreshCurrentUser } = useAuth(); // Added refreshCurrentUser
   const router = useRouter();
+  const { toast } = useToast();
   
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  useEffect(() => {
-    // Ensure the local state reflects the potentially updated MOCK_USERS from auth-constants
-    setUsers([...MOCK_USERS]); 
-  }, []);
+  const fetchUsers = useCallback(async () => {
+    setIsLoadingUsers(true);
+    try {
+      const fetchedUsers = await getUsers();
+      setUsers(fetchedUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast({ title: "Error", description: "Could not load users from database.", variant: "destructive" });
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  }, [toast]);
 
-
   useEffect(() => {
-    if (currentUser && currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
+    if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) {
+      fetchUsers();
+    } else if (currentUser) {
       router.replace('/dashboard'); 
     }
-  }, [currentUser, router]);
+  }, [currentUser, router, fetchUsers]);
 
-  const handleUserAdded = (newUser: User) => {
-    if (!MOCK_USERS.find(u => u.id === newUser.id)) {
-        MOCK_USERS.push(newUser); // Add to the "source of truth"
+  const handleUserAdded = async (newUserData: Omit<User, 'id'>) => {
+    // The addUser service function now returns the full User object with ID
+    await addUser(newUserData); 
+    toast({ title: "User Added", description: `${newUserData.name} has been added. Default password is 'password'.`});
+    fetchUsers(); // Refresh list
+    if (newUserData.email === currentUser?.email) { // If admin added themselves (e.g. during setup)
+      await refreshCurrentUser(); // Refresh context if current user was potentially added/updated
+    }
+  };
+
+  const handleUserRoleUpdated = async (userId: string, role: UserRole) => {
+    const success = await updateUserRoleInFirestore(userId, role);
+    if (success) {
+      toast({ title: "Role Updated", description: `User role has been updated.`});
+      fetchUsers();
+      if (userId === currentUser?.id) await refreshCurrentUser();
     } else {
-        // This case should ideally not happen if IDs are truly unique for new users
-        const userIndex = MOCK_USERS.findIndex(u => u.id === newUser.id);
-        if (userIndex !== -1) MOCK_USERS[userIndex] = newUser;
+      toast({ title: "Error", description: "Could not update user role.", variant: "destructive"});
     }
-    setUsers([...MOCK_USERS]); // Update local state from the source
   };
 
-  const handleUserRoleUpdated = (updatedUser: User) => {
-    const userIndex = MOCK_USERS.findIndex(u => u.id === updatedUser.id);
-    if (userIndex !== -1) {
-      MOCK_USERS[userIndex].role = updatedUser.role;
+  const handleUserDeleted = async (userId: string) => {
+    const success = await deleteUserFromFirestore(userId);
+    if (success) {
+      toast({ title: "User Deleted", description: `User has been deleted.`});
+      fetchUsers();
+    } else {
+      toast({ title: "Error", description: "Could not delete user.", variant: "destructive"});
     }
-    setUsers(prevUsers => prevUsers.map(u => u.id === updatedUser.id ? { ...u, role: updatedUser.role } : u));
-  };
-
-  const handleUserDeleted = (userId: string) => {
-    const userIndex = MOCK_USERS.findIndex(u => u.id === userId);
-    if (userIndex !== -1) {
-      MOCK_USERS.splice(userIndex, 1);
-    }
-    setUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
   };
 
   const handlePasswordChanged = async (userId: string, newPassword: string): Promise<boolean> => {
-    // The updateUserPassword function in auth-constants updates MOCK_USERS directly
-    return updateUserPassword(userId, newPassword);
+    const success = await updateUserPasswordInFirestore(userId, newPassword);
+    // Toast is handled in dialog or here if preferred
+    if (success && userId === currentUser?.id) await refreshCurrentUser(); // If admin changes own password
+    return success; // Let dialog handle toast
   };
 
   const handleUserAvatarSetByAdmin = async (userId: string, avatarUrl: string | null): Promise<boolean> => {
-    // updateUserAvatarInMock updates MOCK_USERS
-    const success = updateUserAvatarInMock(userId, avatarUrl);
+    const success = await updateUserAvatarInFirestore(userId, avatarUrl);
     if (success) {
-      setUsers(prevUsers => 
-        prevUsers.map(u => 
-          u.id === userId ? { ...u, avatarUrl: avatarUrl ?? undefined } : u
-        )
-      );
+      fetchUsers(); // Refresh list to show new avatar
+      if (userId === currentUser?.id) await refreshCurrentUser(); // If admin updates own avatar
     }
-    return success;
+    return success; // Let dialog handle toast
   };
   
   const handleUserTargetsSetByAdmin = async (userId: string, monthlyTarget: number, weeklyTarget: number): Promise<boolean> => {
-    // updateUserTargetsInMock updates MOCK_USERS
-    const success = updateUserTargetsInMock(userId, monthlyTarget, weeklyTarget);
+    const success = await updateUserTargetsInFirestore(userId, monthlyTarget, weeklyTarget);
     if (success) {
-        setUsers(prevUsers => 
-            prevUsers.map(u => 
-                u.id === userId ? { ...u, monthlyOrderTarget: monthlyTarget, weeklyOrderTarget: weeklyTarget } : u
-            )
-        );
+      fetchUsers();
+       if (userId === currentUser?.id) await refreshCurrentUser();
     }
-    return success;
+    return success; // Let dialog handle toast
   };
 
   const getInitials = (name: string) => {
+    if (!name) return '??';
     const names = name.split(' ');
     if (names.length === 1) return names[0].charAt(0).toUpperCase();
     return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
@@ -116,7 +135,6 @@ export default function UsersPage() {
   }, [users, searchTerm]);
 
   if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
-    // Basic loading/denial state. Ideally, a more robust loading component or redirect logic
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-6 text-center">
         <Logo className="h-16 w-16 mb-6 text-primary" />
@@ -129,30 +147,34 @@ export default function UsersPage() {
   
   const canCurrentUserEditRoleOf = (targetUser: User): boolean => {
     if (!currentUser) return false;
-    if (currentUser.role === 'SYSTEM_ADMIN') return true; // System admin can edit anyone
+    if (currentUser.role === 'SYSTEM_ADMIN') return true; 
     if (currentUser.role === 'ADMIN') {
-      // Admin cannot edit own role, other Admin roles, or System Admin roles
       return !(currentUser.id === targetUser.id || targetUser.role === 'ADMIN' || targetUser.role === 'SYSTEM_ADMIN');
     }
     return false;
   };
 
-
   return (
-    <div className="space-y-6 p-4 sm:p-6">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
         <div>
           <h1 className="page-title">User Management</h1>
           <p className="page-description">
-            Manage user accounts, roles, and permissions.
+            Manage user accounts, roles, and permissions from Firestore.
           </p>
         </div>
-        <AddUserDialog onUserAdded={handleUserAdded} currentUser={currentUser}>
-          <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow">
-            <PlusCircle className="mr-2 h-5 w-5" />
-            Add New User
+        <div className="flex gap-2">
+          <Button variant="outline" size="lg" onClick={fetchUsers} disabled={isLoadingUsers} className="w-full sm:w-auto rounded-md shadow-md hover:shadow-lg transition-shadow">
+            <RefreshCw className={`mr-2 h-5 w-5 ${isLoadingUsers ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
-        </AddUserDialog>
+          <AddUserDialog onUserAdded={handleUserAdded} currentUser={currentUser}>
+            <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow">
+              <PlusCircle className="mr-2 h-5 w-5" />
+              Add New User
+            </Button>
+          </AddUserDialog>
+        </div>
       </div>
       
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
@@ -183,7 +205,21 @@ export default function UsersPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map((user) => (
+                {isLoadingUsers ? (
+                  [...Array(3)].map((_, i) => (
+                    <TableRow key={`skel-user-${i}`}>
+                      <TableCell className="pl-6"><Skeleton className="h-10 w-10 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell className="pr-6 text-right space-x-1.5">
+                        {[...Array(4)].map((_, j) => <Skeleton key={j} className="h-9 w-9 inline-block rounded-md" />)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : filteredUsers.length > 0 ? (
+                  filteredUsers.map((user) => (
                   <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
                     <TableCell className="pl-6">
                       <Avatar className="h-10 w-10 border border-border/70 shadow-sm">
@@ -212,7 +248,7 @@ export default function UsersPage() {
                       <ChangePasswordDialog user={user} onPasswordChanged={handlePasswordChanged}>
                         <Button variant="outline" size="icon" title="Change Password" className="table-action-button h-9 w-9 sm:h-9 sm:w-9"><KeyRound className="h-4 w-4" /></Button>
                       </ChangePasswordDialog>
-                      <EditUserRoleDialog user={user} currentUser={currentUser} onUserRoleUpdated={handleUserRoleUpdated}>
+                      <EditUserRoleDialog user={user} currentUser={currentUser} onUserRoleUpdated={(updatedUser) => handleUserRoleUpdated(updatedUser.id, updatedUser.role)}>
                         <Button variant="outline" size="icon" title="Edit Role" className="table-action-button h-9 w-9 sm:h-9 sm:w-9" disabled={!canCurrentUserEditRoleOf(user)}><Edit className="h-4 w-4" /></Button>
                       </EditUserRoleDialog>
                       {user.role === 'CRM' && (
@@ -220,23 +256,23 @@ export default function UsersPage() {
                             <Button variant="outline" size="icon" title="Set Sales Targets" className="table-action-button h-9 w-9 sm:h-9 sm:w-9"><Target className="h-4 w-4"/></Button>
                         </SetUserSalesTargetDialog>
                       )}
-                      {currentUser.id !== user.id && !(user.role === 'SYSTEM_ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') && (
-                        <DeleteUserDialog user={user} onUserDeleted={handleUserDeleted}>
+                      {currentUser.id !== user.id && !(user.role === 'SYSTEM_ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') && ( // Prevent deleting self or SysAdmin by non-SysAdmin
+                        <DeleteUserDialog user={user} onUserDeleted={() => handleUserDeleted(user.id)}>
                            <Button variant="destructive" size="icon" title="Delete User" className="table-action-button h-9 w-9 sm:h-9 sm:w-9"><Trash2 className="h-4 w-4" /></Button>
                         </DeleteUserDialog>
                       )}
                     </TableCell>
                   </TableRow>
-                ))}
-                 {filteredUsers.length === 0 && (
+                ))
+                 ) : (
                     <TableRow>
                         <TableCell colSpan={6} className="text-center py-12 h-[300px]">
                              <Image src="https://placehold.co/240x180.png" alt="No users" data-ai-hint="empty state users" width={180} height={135} className="mx-auto rounded-md opacity-60 mb-4" />
                             <p className="text-lg text-muted-foreground font-medium">
-                              {searchTerm ? "No users match your search." : "No users found."}
+                              {searchTerm ? "No users match your search." : "No users found in database."}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                                {searchTerm ? "Try a different search term." : "Add users to manage them here."}
+                                {searchTerm ? "Try a different search term." : (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') ? "Add users to manage them here." : "User data could not be loaded."}
                             </p>
                         </TableCell>
                     </TableRow>

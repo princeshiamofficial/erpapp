@@ -21,8 +21,8 @@ import Image from 'next/image';
 
 interface SetUserAvatarDialogProps {
   user: User;
-  onAvatarChanged: (userId: string, avatarUrl: string | null) => Promise<boolean>; // Allow null for removal
-  children: React.ReactNode; // To use as DialogTrigger
+  onAvatarChanged: (userId: string, avatarUrl: string | null) => Promise<boolean>; 
+  children: React.ReactNode; 
 }
 
 export function SetUserAvatarDialog({ user, onAvatarChanged, children }: SetUserAvatarDialogProps) {
@@ -49,8 +49,6 @@ export function SetUserAvatarDialog({ user, onAvatarChanged, children }: SetUser
       objectUrl = URL.createObjectURL(selectedFile);
       setPreviewUrl(objectUrl);
     }
-    // If no file selected, previewUrl is already set to user.avatarUrl or null by the other effect
-
     return () => {
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
@@ -61,7 +59,7 @@ export function SetUserAvatarDialog({ user, onAvatarChanged, children }: SetUser
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+      if (file.size > 2 * 1024 * 1024) { 
         toast({
           title: "File too large",
           description: "Please select an image smaller than 2MB.",
@@ -83,7 +81,7 @@ export function SetUserAvatarDialog({ user, onAvatarChanged, children }: SetUser
 
   const handleRemovePreview = () => {
     setSelectedFile(null);
-    setPreviewUrl(user.avatarUrl || null); // Revert to original avatar or null
+    setPreviewUrl(user.avatarUrl || null); 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -91,7 +89,7 @@ export function SetUserAvatarDialog({ user, onAvatarChanged, children }: SetUser
 
   const handleRemoveAvatar = async () => {
     setIsLoading(true);
-    const success = await onAvatarChanged(user.id, null); // Pass null to signify removal
+    const success = await onAvatarChanged(user.id, null); 
     setIsLoading(false);
 
     if (success) {
@@ -100,8 +98,7 @@ export function SetUserAvatarDialog({ user, onAvatarChanged, children }: SetUser
         description: `${user.name}'s profile picture has been removed.`,
       });
       setSelectedFile(null);
-      setPreviewUrl(null); // Update preview to show no avatar
-      // Optionally close dialog: setIsOpen(false);
+      setPreviewUrl(null); 
     } else {
       toast({
         title: "Update Failed",
@@ -144,26 +141,31 @@ export function SetUserAvatarDialog({ user, onAvatarChanged, children }: SetUser
           variant: "destructive",
         });
       };
-    } else if (previewUrl === null && user.avatarUrl) {
-      // This means the avatar was removed (via handleRemoveAvatar which sets previewUrl to null)
-      // and now the user is saving this "removed" state.
-      // The actual removal was handled by onAvatarChanged(user.id, null) already.
-      // So we can just close.
+    } else if (previewUrl === null && (user.avatarUrl || user.avatarUrl === null)) { 
+        // This covers two cases:
+        // 1. Avatar was already null and no new file selected (no change).
+        // 2. Avatar was present, then removed (handleRemoveAvatar called), and user saves.
+        //    In this case, onAvatarChanged(user.id, null) was already called by handleRemoveAvatar.
+        //    So, we only need to close if it's now null after being non-null,
+        //    or if it was already null and remains null.
+      if (previewUrl === null && user.avatarUrl !== null) {
+          // This means it was removed by handleRemoveAvatar and state is already updated
+          // Toast was shown by handleRemoveAvatar
+      } else if (previewUrl === null && user.avatarUrl === null) {
+          // No change
+          toast({ title: "No Change", description: "Avatar remains unset."});
+      }
       setIsLoading(false);
       setIsOpen(false);
+
     } else if (!selectedFile && previewUrl === user.avatarUrl) {
-        // No changes made
+        toast({ title: "No Change", description: "Avatar was not changed."});
         setIsLoading(false);
         setIsOpen(false);
-        return;
     } else {
-      // Should not happen if logic is correct, means no file but preview changed without selection?
+      // Should ideally not be reached if logic is correct.
       setIsLoading(false);
-      toast({
-        title: "No Changes",
-        description: "No new avatar was selected.",
-        variant: "default"
-      });
+       toast({ title: "No Change", description: "No new avatar was selected or current one removed."});
       setIsOpen(false);
     }
   };
@@ -187,7 +189,7 @@ export function SetUserAvatarDialog({ user, onAvatarChanged, children }: SetUser
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="avatarFileAdmin" className="text-sm font-medium">
+              <Label htmlFor="avatarFileAdmin-set" className="text-sm font-medium">
                 Profile Picture
               </Label>
               <div className="flex items-center gap-4">
@@ -211,25 +213,26 @@ export function SetUserAvatarDialog({ user, onAvatarChanged, children }: SetUser
                     variant="outline"
                     onClick={() => fileInputRef.current?.click()}
                     className="w-full"
+                    disabled={isLoading}
                   >
                     <UploadCloud className="mr-2 h-4 w-4" /> {selectedFile ? "Change Image" : "Upload Image"}
                   </Button>
                   <Input
-                    id="avatarFileAdmin"
+                    id="avatarFileAdmin-set"
                     type="file"
                     accept="image/*"
                     ref={fileInputRef}
                     onChange={handleFileChange}
-                    className="hidden" // Visually hidden, triggered by button
+                    className="hidden"
+                    disabled={isLoading}
                   />
-                  {selectedFile && ( // Show cancel selection only if a new file is staged
-                    <Button type="button" variant="ghost" size="sm" onClick={handleRemovePreview} className="text-xs text-muted-foreground hover:text-destructive">
+                  {selectedFile && ( 
+                    <Button type="button" variant="ghost" size="sm" onClick={handleRemovePreview} className="text-xs text-muted-foreground hover:text-destructive" disabled={isLoading}>
                       <XCircle className="mr-1 h-3 w-3" /> Cancel Selection
                     </Button>
                   )}
                 </div>
               </div>
-               {/* Show remove button if there's an existing avatar AND no new file is selected for upload */}
               {user.avatarUrl && !selectedFile && previewUrl && (
                 <Button type="button" variant="link" size="sm" onClick={handleRemoveAvatar} className="text-destructive hover:text-destructive/80 px-0 mt-2 flex items-center" disabled={isLoading}>
                   <Trash2 className="mr-1 h-4 w-4" /> Remove Current Avatar

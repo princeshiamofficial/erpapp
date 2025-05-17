@@ -1,13 +1,19 @@
 
 import type { User } from '@/types';
+// getUserByEmail will now be used from user-service.ts for login
+// MOCK_USERS can be kept for local testing or removed if login fully relies on Firestore.
+// For now, keep it to ensure the existing login flow for the initial admin isn't broken
+// before full migration of AuthContext.
 
 // For mock purposes, all users will have the password "password"
 const DEFAULT_MOCK_PASSWORD = "password";
 
+// This array can now be very minimal or used as a fallback if Firestore is empty.
+// Ideally, the user-service.ts seedInitialAdminUser function handles the first admin.
 export const MOCK_USERS: User[] = [
   { 
-    id: 'user-admin-default', 
-    name: 'Default Admin', 
+    id: 'user-admin-default-local-mock', // Changed ID to avoid clash if seeded
+    name: 'Default Admin (Local Mock)', 
     email: 'admin@colorhut.dev', 
     role: 'ADMIN', 
     companyName: 'Color Hut Inc.', 
@@ -18,45 +24,23 @@ export const MOCK_USERS: User[] = [
   },
 ];
 
-// Helper to get a user by email and password (for mock login)
-export const findUserByEmailAndPassword = (email: string, pass: string): User | undefined => {
-  const user = MOCK_USERS.find(user => user.email.toLowerCase() === email.toLowerCase());
+// This function will be replaced by calls to user-service.ts's getUserByEmail for actual login.
+// It can remain for local testing if needed, but AuthContext should primarily use the service.
+export const findUserByEmailAndPasswordInMock = (email: string, pass: string): User | undefined => {
+  const user = MOCK_USERS.find(u => u.email.toLowerCase() === email.toLowerCase());
   if (user && user.password === pass) {
-    // Return user object without the password for security in client state
     const { password, ...userWithoutPassword } = user;
     return userWithoutPassword as User;
   }
   return undefined;
 };
 
-// Helper to update a user's password
-export const updateUserPassword = (userId: string, newPassword: string): boolean => {
-  const userIndex = MOCK_USERS.findIndex(user => user.id === userId);
-  if (userIndex !== -1) {
-    MOCK_USERS[userIndex].password = newPassword;
-    return true; // Indicate success
-  }
-  return false; // Indicate user not found or failure
-};
+// These functions are now effectively replaced by their Firestore counterparts in user-service.ts
+// and will be called by the Admin User Management page directly via user-service.
+// They are removed here to avoid confusion. If any part of the app still relies on them for
+// non-admin-related user profile updates (e.g. user updating their own profile through MOCK_USERS),
+// that logic would also need to migrate to user-service.ts.
 
-// Helper to update a user's avatar URL
-export const updateUserAvatarInMock = (userId: string, avatarUrl: string | null): boolean => {
-  const userIndex = MOCK_USERS.findIndex(user => user.id === userId);
-  if (userIndex !== -1) {
-    MOCK_USERS[userIndex].avatarUrl = avatarUrl ?? undefined; // Store null as undefined
-    return true;
-  }
-  return false;
-};
-
-// Helper to update a user's sales targets in the mock data
-export const updateUserTargetsInMock = (userId: string, monthlyTarget: number, weeklyTarget: number): boolean => {
-  const userIndex = MOCK_USERS.findIndex(user => user.id === userId);
-  if (userIndex !== -1 && MOCK_USERS[userIndex].role === 'CRM') {
-    MOCK_USERS[userIndex].monthlyOrderTarget = monthlyTarget;
-    MOCK_USERS[userIndex].weeklyOrderTarget = weeklyTarget;
-    return true;
-  }
-  return false;
-};
-
+// export const updateUserPassword = (userId: string, newPassword: string): boolean => { ... };
+// export const updateUserAvatarInMock = (userId: string, avatarUrl: string | null): boolean => { ... };
+// export const updateUserTargetsInMock = (userId: string, monthlyTarget: number, weeklyTarget: number): boolean => { ... };

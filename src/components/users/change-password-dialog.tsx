@@ -21,7 +21,7 @@ import { KeyRound } from 'lucide-react';
 interface ChangePasswordDialogProps {
   user: User;
   onPasswordChanged: (userId: string, newPassword: string) => Promise<boolean>;
-  children: React.ReactNode; // To use as DialogTrigger
+  children: React.ReactNode; 
 }
 
 export function ChangePasswordDialog({ user, onPasswordChanged, children }: ChangePasswordDialogProps) {
@@ -56,7 +56,7 @@ export function ChangePasswordDialog({ user, onPasswordChanged, children }: Chan
       });
       return;
     }
-    if (newPassword.length < 6) { // Basic password length validation
+    if (newPassword.length < 6) { 
         toast({
             title: "Validation Error",
             description: "Password must be at least 6 characters long.",
@@ -101,25 +101,27 @@ export function ChangePasswordDialog({ user, onPasswordChanged, children }: Chan
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="space-y-1">
-              <Label htmlFor="newPassword">New Password</Label>
+              <Label htmlFor="newPassword-change">New Password</Label>
               <Input
-                id="newPassword"
+                id="newPassword-change"
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Enter new password"
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Label htmlFor="confirmPassword-change">Confirm New Password</Label>
               <Input
-                id="confirmPassword"
+                id="confirmPassword-change"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm new password"
                 required
+                disabled={isLoading}
               />
             </div>
           </div>
