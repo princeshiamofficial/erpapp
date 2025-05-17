@@ -42,7 +42,7 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md shadow-2xl bg-card/80 backdrop-blur-lg border border-primary/20">
+    <Card className="w-full max-w-md shadow-xl bg-card border">
       <CardHeader className="text-center pt-8">
         <div className="mx-auto mb-6">
           <svg width="56" height="56" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary drop-shadow-[0_2px_4px_hsl(var(--primary)/0.5)]">
@@ -65,7 +65,7 @@ export function LoginForm() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="h-12 text-base bg-background/70 focus:bg-background"
+              className="h-12 text-base bg-background focus:bg-background/90"
             />
           </div>
           <div className="space-y-2">
@@ -77,7 +77,7 @@ export function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="h-12 text-base bg-background/70 focus:bg-background"
+              className="h-12 text-base bg-background focus:bg-background/90"
             />
           </div>
           <Button type="submit" className="w-full h-12 text-lg shadow-md hover:shadow-lg transition-shadow" disabled={isLoading}>

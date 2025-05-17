@@ -46,32 +46,30 @@ const formatDate = (dateString: string) => {
 };
 
 const getStatusIcon = (status: OrderStatus) => {
+  // Using semantic colors which are generally good practice for status indicators
   if (status === "DELIVERED" || status === "APPROVED_FOR_PRODUCTION") return <CheckCircle className="h-4 w-4 mr-1.5 text-green-500" />;
   return <Info className="h-4 w-4 mr-1.5 text-blue-500" />;
 };
 
 export default function PublicTrackingPage({ params: paramsProp }: PublicTrackingPageProps) {
-  const params = use(paramsProp); // Next.js hook for server-side params
+  const params = use(paramsProp); 
   const { trackingId } = params; 
-  // In a real app, you would fetch data based on trackingId here
-  // For now, we use mock data and assume it matches the trackingId or is generic
   const data = mockTrackingData; 
 
   const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState<string | null>(null);
 
   useEffect(() => {
-    // This effect runs only on the client after hydration
     const lastStatusEntry = data.statusHistory[data.statusHistory.length - 1];
-    const timestampToUse = lastStatusEntry?.timestamp || new Date().toISOString(); // Fallback to now if history is empty
+    const timestampToUse = lastStatusEntry?.timestamp || new Date().toISOString(); 
     setLastUpdatedDisplay(formatDate(timestampToUse));
   }, [data.statusHistory]);
 
-  if (!data) { // Basic check, in real app this would be more robust
+  if (!data) { 
     return <div className="p-6 text-center text-lg font-semibold">Tracking ID <span className="text-primary">{trackingId}</span> not found.</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
       <header className="text-center mb-12">
         <div className="inline-flex items-center space-x-3 text-primary mb-2">
             <svg width="56" height="56" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary drop-shadow-[0_2px_4px_hsl(var(--primary)/0.5)]">
@@ -79,18 +77,18 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
                 <path d="M2 7L12 12M12 12L22 7M12 12V22M12 2V12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M17 4.5L7 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <h1 className="text-5xl font-extrabold tracking-tight text-primary">TrackFlow</h1>
+            <h1 className="text-5xl font-extrabold tracking-tight text-foreground">TrackFlow</h1>
         </div>
         <p className="text-xl text-muted-foreground">Order Tracking Portal</p>
       </header>
 
       <main className="max-w-4xl mx-auto space-y-10">
-        <Card className="shadow-xl overflow-hidden border-border hover:border-primary/30 transition-all duration-300 hover:shadow-2xl bg-card">
-          <CardHeader className="bg-card p-6 border-b border-border">
+        <Card className="shadow-xl overflow-hidden border hover:border-muted-foreground/50 transition-all duration-300 hover:shadow-2xl bg-card">
+          <CardHeader className="bg-card p-6 border-b">
             <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4">
               <Package className="h-12 w-12 text-primary mb-3 sm:mb-0" />
               <div>
-                <CardTitle className="text-2xl md:text-3xl font-semibold text-primary">Order ID: {data.id}</CardTitle>
+                <CardTitle className="text-2xl md:text-3xl font-semibold text-card-foreground">Order ID: {data.id}</CardTitle>
                 <CardDescription className="text-md text-muted-foreground">
                   Tracking information for {data.customerName} ({data.companyName})
                 </CardDescription>
@@ -114,7 +112,6 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
             <div>
               <h3 className="text-xl font-semibold mb-4 text-foreground">Status History</h3>
               <div className="space-y-6 relative pl-6">
-                {/* Timeline line */}
                 <div className="absolute left-[0.625rem] top-0 bottom-0 w-0.5 bg-border rounded-full"></div>
                 {data.statusHistory.slice().reverse().map((entry, index) => (
                   <div key={index} className="flex items-start space-x-4 relative">
@@ -126,7 +123,7 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
                       <p className="text-sm text-muted-foreground flex items-center">
                         <CalendarDays className="h-4 w-4 mr-1.5 opacity-70" /> {formatDate(entry.timestamp)} by {entry.changedByUserName}
                       </p>
-                      {entry.notes && <p className="text-sm mt-1.5 bg-muted/50 p-3 rounded-md border border-border text-foreground/80">{entry.notes}</p>}
+                      {entry.notes && <p className="text-sm mt-1.5 bg-muted/50 p-3 rounded-md border text-foreground/80">{entry.notes}</p>}
                     </div>
                   </div>
                 ))}
@@ -135,18 +132,18 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
           </CardContent>
         </Card>
 
-        <Card className="shadow-xl border-border hover:border-primary/30 transition-all duration-300 hover:shadow-2xl bg-card">
-          <CardHeader className="bg-card p-6 border-b border-border">
+        <Card className="shadow-xl border hover:border-muted-foreground/50 transition-all duration-300 hover:shadow-2xl bg-card">
+          <CardHeader className="bg-card p-6 border-b">
             <div className="flex items-center space-x-3">
               <MessageSquare className="h-8 w-8 text-primary" />
-              <CardTitle className="text-2xl font-semibold text-primary">Comments & Updates ({data.comments.filter(c => !c.isInternal).length})</CardTitle>
+              <CardTitle className="text-2xl font-semibold text-card-foreground">Comments & Updates ({data.comments.filter(c => !c.isInternal).length})</CardTitle>
             </div>
             <CardDescription className="text-muted-foreground mt-1">Share updates or ask questions about this order.</CardDescription>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
             <div className="space-y-5 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
               {data.comments.filter(c => !c.isInternal).map((comment) => (
-                <div key={comment.id} className="flex items-start space-x-3 p-4 bg-muted/30 rounded-lg shadow-sm border border-border">
+                <div key={comment.id} className="flex items-start space-x-3 p-4 bg-muted/30 rounded-lg shadow-sm border">
                   <Avatar className="h-11 w-11 border-2 border-primary/40">
                      <AvatarImage src={`https://placehold.co/44x44.png?text=${comment.userName.slice(0,2).toUpperCase()}`} alt={comment.userName} data-ai-hint="user avatar"/>
                     <AvatarFallback className="bg-primary/20 text-primary font-semibold">{comment.userName.slice(0,2).toUpperCase()}</AvatarFallback>
@@ -174,17 +171,18 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
             <div>
               <Label htmlFor="comment" className="text-lg font-semibold mb-3 block text-foreground">Add a Comment</Label>
               <Textarea id="comment" placeholder="Type your message here..." className="min-h-[120px] text-base mb-4 p-3 focus:border-primary" />
-              <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground shadow-md hover:shadow-lg transition-all duration-300">
+              <Button size="lg" className="w-full sm:w-auto shadow-md hover:shadow-lg transition-all duration-300">
                 <Send className="mr-2 h-5 w-5" /> Submit Comment
               </Button>
             </div>
           </CardContent>
         </Card>
       </main>
-      <footer className="text-center mt-16 py-8 border-t border-border">
+      <footer className="text-center mt-16 py-8 border-t">
         <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} TrackFlow. All rights reserved.</p>
         <p className="text-xs text-muted-foreground/70 mt-1">Powered by Innovation</p>
       </footer>
     </div>
   );
 }
+

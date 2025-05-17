@@ -76,9 +76,9 @@ const getActivityIcon = (type: ActivityItem['type']) => {
     case 'status_update':
       return <ListChecks className="h-5 w-5 text-primary" />;
     case 'new_comment':
-      return <MessageSquare className="h-5 w-5 text-green-500" />;
+      return <MessageSquare className="h-5 w-5 text-green-500" />; // Keep semantic color
     case 'order_created':
-      return <PlusCircle className="h-5 w-5 text-accent" />; // Use accent for created
+      return <PlusCircle className="h-5 w-5 text-accent" />; 
     default:
       return <UserCircle className="h-5 w-5 text-muted-foreground" />;
   }
@@ -96,15 +96,15 @@ const LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY = 'trackflow-global-weekly-sa
 const DEFAULT_GLOBAL_MONTHLY_TARGET = 100;
 const DEFAULT_GLOBAL_WEEKLY_TARGET = 20;
 
-const MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM = 67; // For the logged-in CRM
-const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 12;  // For the logged-in CRM
+const MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM = 67; 
+const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 12;  
 
 const getProgressColorClass = (percentage: number): string => {
   if (percentage < 0) percentage = 0;
   const colorPercentage = Math.min(percentage, 100);
-  if (colorPercentage < 33) return '[&>div]:bg-destructive';
-  if (colorPercentage < 67) return '[&>div]:bg-yellow-400 dark:[&>div]:bg-yellow-500';
-  return '[&>div]:bg-green-500 dark:[&>div]:bg-green-600';
+  if (colorPercentage < 33) return '[&>div]:bg-destructive'; // Use theme destructive
+  if (colorPercentage < 67) return '[&>div]:bg-yellow-400 dark:[&>div]:bg-yellow-500'; // Keep semantic yellow
+  return '[&>div]:bg-green-500 dark:[&>div]:bg-green-600'; // Keep semantic green
 };
 
 export default function DashboardPage() {
@@ -197,15 +197,15 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <Card className="shadow-2xl bg-gradient-to-tr from-primary via-primary/80 to-accent/90 border-primary/50">
+      <Card className="shadow-lg bg-card border">
         <CardHeader className="pb-4">
-          <CardTitle className="text-4xl font-bold text-primary-foreground drop-shadow-sm">Welcome to TrackFlow, {currentUser.name.split(' ')[0]}!</CardTitle>
-          <CardDescription className="text-lg text-primary-foreground/90">
+          <CardTitle className="text-3xl font-bold text-card-foreground">Welcome to TrackFlow, {currentUser.name.split(' ')[0]}!</CardTitle>
+          <CardDescription className="text-lg text-muted-foreground">
             You are logged in as {currentUser.role.replace(/_/g, ' ')}. Here's a quick overview of your workspace.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-primary-foreground/95 max-w-2xl">This is your main dashboard. From here, you can navigate to various sections of the application using the sidebar. Stay on top of your tasks and monitor key metrics.</p>
+          <p className="text-card-foreground/90 max-w-2xl">This is your main dashboard. From here, you can navigate to various sections of the application using the sidebar. Stay on top of your tasks and monitor key metrics.</p>
         </CardContent>
       </Card>
 
@@ -222,7 +222,7 @@ export default function DashboardPage() {
           return (
             <Card 
               key={card.title} 
-              className="shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out border hover:border-primary/50 bg-card relative flex flex-col group hover:scale-[1.03]"
+              className="shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out border bg-card relative flex flex-col group hover:scale-[1.02]"
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-base font-semibold text-card-foreground">{card.title}</CardTitle>
@@ -253,7 +253,7 @@ export default function DashboardPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="mt-auto border-primary/50 text-primary hover:bg-primary/10 hover:text-primary self-end transition-colors group-hover:border-primary"
+                    className="mt-auto self-end transition-colors group-hover:border-primary group-hover:text-primary"
                     onClick={() => {
                       if (card.actionType === 'global_monthly') setIsSetGlobalMonthlyTargetDialogOpen(true);
                       if (card.actionType === 'global_weekly') setIsSetGlobalWeeklyTargetDialogOpen(true);
@@ -287,18 +287,18 @@ export default function DashboardPage() {
         </>
       )}
 
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
-        <Card className="shadow-xl bg-card h-[400px] transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-2xl">
+      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1"> {/* Changed from md:grid-cols-3 lg:grid-cols-3 */}
+        <Card className="shadow-lg bg-card h-[400px] transition-shadow duration-300 ease-in-out hover:shadow-xl">
           <CardHeader>
             <CardTitle className="text-xl font-semibold text-foreground">Recent Activity</CardTitle>
             <CardDescription className="text-muted-foreground">Overview of recent order updates and comments.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[calc(100%-84px)] p-0"> {/* Adjusted height based on new header size */}
+          <CardContent className="h-[calc(100%-84px)] p-0"> 
             <ScrollArea className="h-full">
               <div className="p-6 space-y-4">
                 {mockRecentActivities.map((activity) => (
                   <div key={activity.id} className="flex items-start space-x-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex-shrink-0 pt-1 text-primary">
+                    <div className="flex-shrink-0 pt-1">
                       {getActivityIcon(activity.type)}
                     </div>
                     <div className="flex-1">

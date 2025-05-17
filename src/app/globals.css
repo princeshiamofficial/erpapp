@@ -3,104 +3,84 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
-}
-
 @layer base {
   :root {
-    /* Light Mode - Orange, Red, White, Black (Dark Gray) */
-    --background: 0 0% 98%; /* Very Light Gray, almost White */
-    --foreground: 0 0% 10%; /* Very Dark Gray / Almost Black */
-
-    --card: 0 0% 100%; /* White */
-    --card-foreground: 0 0% 10%;
-
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --radius: 0.5rem;
 
-    --primary: 24 100% 58%; /* Vibrant Orange */
-    --primary-foreground: 0 0% 100%; /* White for contrast on Orange */
+    /* Chart colors */
+    --chart-1: 222.2 47.4% 11.2%;
+    --chart-2: 0 72.2% 50.6%;
+    --chart-3: 142.1 70.6% 45.3%;
+    --chart-4: 43.6 95.7% 50%;
+    --chart-5: 20.5 90.2% 48.2%;
 
-    --secondary: 0 0% 94%; /* Light Gray */
-    --secondary-foreground: 24 95% 50%; /* Darker Orange for secondary text on light gray */
-
-    --muted: 0 0% 90%; /* Muted Gray */
-    --muted-foreground: 0 0% 45%; /* Muted Text Gray */
-
-    --accent: 0 85% 60%; /* Vibrant Red */
-    --accent-foreground: 0 0% 100%; /* White */
-
-    --destructive: 0 84% 60%; /* Red (same as accent for destructive) */
-    --destructive-foreground: 0 0% 100%; /* White */
-
-    --border: 0 0% 90%; /* Light Gray Border */
-    --input: 0 0% 96%; /* Lighter Gray Input */
-    --ring: 24 100% 58%; /* Vibrant Orange Ring */
-
-    --chart-1: 24 100% 58%; /* Primary Orange */
-    --chart-2: 0 85% 60%;  /* Accent Red */
-    --chart-3: 24 95% 70%; /* Lighter Orange */
-    --chart-4: 0 80% 70%;  /* Lighter Red */
-    --chart-5: 0 0% 50%;   /* Gray */
-    --radius: 0.75rem; /* Slightly more rounded */
-
-    /* Sidebar specific variables - Light Mode */
-    --sidebar-background: 0 0% 100%; /* White */
-    --sidebar-foreground: 0 0% 10%;
-    --sidebar-primary: 24 100% 58%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 24 100% 95%; /* Very Light Orange for hover */
-    --sidebar-accent-foreground: 24 100% 50%; /* Darker Orange for text on hover */
-    --sidebar-border: 0 0% 92%;
-    --sidebar-ring: 24 100% 58%;
+    /* Sidebar specific variables - Light Mode (Neutral) */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222.2 84% 4.9%;
+    --sidebar-primary: 222.2 47.4% 11.2%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 210 40% 96.1%;
+    --sidebar-accent-foreground: 222.2 47.4% 11.2%;
+    --sidebar-border: 214.3 31.8% 91.4%;
+    --sidebar-ring: 222.2 84% 4.9%;
   }
 
   .dark {
-    /* Dark Mode - Orange, Red, Black, White */
-    --background: 0 0% 8%; /* Very Dark Gray / Almost Black */
-    --foreground: 0 0% 98%; /* Very Light Gray / Almost White */
-
-    --card: 0 0% 12%; /* Dark Gray Card */
-    --card-foreground: 0 0% 98%;
-
-    --popover: 0 0% 12%;
-    --popover-foreground: 0 0% 98%;
-
-    --primary: 24 95% 58%; /* Rich Orange */
-    --primary-foreground: 0 0% 98%; /* Almost white for contrast on orange */
-
-    --secondary: 0 0% 15%; /* Dark Gray Secondary */
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 0 0% 20%; /* Dark Muted Gray */
-    --muted-foreground: 0 0% 65%; /* Light Muted Gray Text */
-
-    --accent: 0 80% 65%; /* Bright Red */
-    --accent-foreground: 0 0% 98%;
-
-    --destructive: 0 75% 55%; /* Slightly darker Red Destructive */
-    --destructive-foreground: 0 0% 98%;
-
-    --border: 0 0% 25%; /* Medium Dark Gray Border */
-    --input: 0 0% 18%; /* Dark Gray Input */
-    --ring: 24 95% 58%; /* Rich Orange Ring */
-
-    --chart-1: 24 95% 58%;
-    --chart-2: 0 80% 65%;
-    --chart-3: 24 90% 50%;
-    --chart-4: 0 75% 55%;
-    --chart-5: 0 0% 70%;
-
-    /* Sidebar specific variables for dark mode */
-    --sidebar-background: 0 0% 10%; /* Darker variant for sidebar */
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 24 95% 58%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 0 0% 18%; /* Darker Accent for hover */
-    --sidebar-accent-foreground: 24 95% 65%; /* Brighter Orange text on hover */
-    --sidebar-border: 0 0% 20%;
-    --sidebar-ring: 24 95% 58%;
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    
+    /* Chart colors */
+    --chart-1: 210 40% 98%;
+    --chart-2: 0 62.8% 30.6%;
+    --chart-3: 142.1 70.6% 35.3%;
+    --chart-4: 43.6 95.7% 40%;
+    --chart-5: 20.5 90.2% 38.2%;
+    
+    /* Sidebar specific variables for dark mode (Neutral) */
+    --sidebar-background: 222.2 84% 4.9%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 210 40% 98%;
+    --sidebar-primary-foreground: 222.2 47.4% 11.2%;
+    --sidebar-accent: 217.2 32.6% 17.5%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 217.2 32.6% 17.5%;
+    --sidebar-ring: 212.7 26.8% 83.9%;
   }
 }
 
@@ -110,6 +90,7 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-geist-sans), sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
