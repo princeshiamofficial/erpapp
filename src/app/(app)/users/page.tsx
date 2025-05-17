@@ -4,17 +4,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Edit, Trash2, KeyRound, UserCog } from "lucide-react"; // Added UserCog
+import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole } from "@/types";
-import { MOCK_USERS, updateUserPassword, updateUserAvatarInMock } from "@/lib/auth-constants"; // Imported updateUserAvatarInMock
+import { MOCK_USERS, updateUserPassword, updateUserAvatarInMock, updateUserTargetsInMock } from "@/lib/auth-constants";
 import Image from "next/image";
 import { AddUserDialog } from '@/components/users/add-user-dialog';
 import { EditUserRoleDialog } from '@/components/users/edit-user-role-dialog';
 import { DeleteUserDialog } from '@/components/users/delete-user-dialog';
 import { ChangePasswordDialog } from '@/components/users/change-password-dialog';
-import { SetUserAvatarDialog } from '@/components/users/set-user-avatar-dialog'; // Added
+import { SetUserAvatarDialog } from '@/components/users/set-user-avatar-dialog';
+import { SetUserSalesTargetDialog } from '@/components/users/set-user-sales-target-dialog';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -28,10 +29,8 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    // Refresh users from MOCK_USERS in case of external changes (like avatar updates)
-    // This ensures the user list reflects the latest state from the mock "database"
     setUsers([...MOCK_USERS]);
-  }, [MOCK_USERS]);
+  }, []);
 
 
   useEffect(() => {
@@ -41,27 +40,19 @@ export default function UsersPage() {
   }, [currentUser, router]);
 
   const handleUserAdded = (newUser: User) => {
-    // MOCK_USERS is mutated by AddUserDialog's call to onUserAdded which uses this.
-    // So we just need to update local state for re-render.
-    // In a real app, MOCK_USERS would be updated via API, and then we'd refetch or update local state.
-    // For this mock, directly adding to MOCK_USERS (if not already done by underlying logic)
-    // and then updating local state.
-    
-    // Check if user already exists in MOCK_USERS by ID to prevent duplicates if logic changes
     if (!MOCK_USERS.find(u => u.id === newUser.id)) {
         MOCK_USERS.push(newUser);
     } else {
-        // If user exists, update it. This might happen if add logic is more complex
         const userIndex = MOCK_USERS.findIndex(u => u.id === newUser.id);
         if (userIndex !== -1) MOCK_USERS[userIndex] = newUser;
     }
-    setUsers([...MOCK_USERS]); // Ensure re-render with fresh MOCK_USERS
+    setUsers([...MOCK_USERS]);
   };
 
   const handleUserRoleUpdated = (updatedUser: User) => {
     const userIndex = MOCK_USERS.findIndex(u => u.id === updatedUser.id);
     if (userIndex !== -1) MOCK_USERS[userIndex].role = updatedUser.role;
-    setUsers(prevUsers => prevUsers.map(u => u.id === updatedUser.id ? updatedUser : u));
+    setUsers(prevUsers => prevUsers.map(u => u.id === updatedUser.id ? { ...u, role: updatedUser.role } : u));
   };
 
   const handleUserDeleted = (userId: string) => {
@@ -72,7 +63,6 @@ export default function UsersPage() {
 
   const handlePasswordChanged = async (userId: string, newPassword: string): Promise<boolean> => {
     return updateUserPassword(userId, newPassword);
-    // No need to setUsers here as password is not displayed and MOCK_USERS is mutated directly
   };
 
   const handleUserAvatarSetByAdmin = async (userId: string, avatarUrl: string | null): Promise<boolean> => {
@@ -83,6 +73,18 @@ export default function UsersPage() {
           u.id === userId ? { ...u, avatarUrl: avatarUrl ?? undefined } : u
         )
       );
+    }
+    return success;
+  };
+  
+  const handleUserTargetsSetByAdmin = async (userId: string, monthlyTarget: number, weeklyTarget: number): Promise<boolean> => {
+    const success = updateUserTargetsInMock(userId, monthlyTarget, weeklyTarget);
+    if (success) {
+        setUsers(prevUsers => 
+            prevUsers.map(u => 
+                u.id === userId ? { ...u, monthlyOrderTarget: monthlyTarget, weeklyOrderTarget: weeklyTarget } : u
+            )
+        );
     }
     return success;
   };
@@ -106,6 +108,16 @@ export default function UsersPage() {
   if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
     return <div className="p-6">Access Denied. You must be an administrator to view this page.</div>;
   }
+  
+  const canCurrentUserEditRoleOf = (targetUser: User): boolean => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'SYSTEM_ADMIN') return true;
+    if (currentUser.role === 'ADMIN') {
+      // Admin cannot edit own role, other Admin roles, or System Admin roles
+      return !(currentUser.id === targetUser.id || targetUser.role === 'ADMIN' || targetUser.role === 'SYSTEM_ADMIN');
+    }
+    return false;
+  };
 
 
   return (
@@ -117,77 +129,82 @@ export default function UsersPage() {
             Manage user accounts, roles, and permissions.
           </p>
         </div>
-        <AddUserDialog onUserAdded={handleUserAdded}>
-          <Button size="lg">
+        <AddUserDialog onUserAdded={handleUserAdded} currentUser={currentUser}>
+          <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow">
             <PlusCircle className="mr-2 h-5 w-5" />
             Add New User
           </Button>
         </AddUserDialog>
       </div>
       
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle>All Users</CardTitle>
-          <CardDescription>List of all registered users in TrackFlow.</CardDescription>
-           <div className="mt-4">
-            <Input 
-              placeholder="Search users (name, email, role, company)..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
+      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+        <CardHeader className="border-b p-5">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <CardTitle className="text-card-foreground text-xl">All Users</CardTitle>
+             <div className="relative w-full sm:max-w-sm">
+                <Input 
+                    placeholder="Search users (name, email, role, company)..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="bg-background h-10 rounded-md shadow-sm"
+                />
+            </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Avatar</TableHead>
+                  <TableHead className="pl-6">Avatar</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Company</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="pr-6 text-right min-w-[280px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <Avatar className="h-9 w-9">
+                  <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
+                    <TableCell className="pl-6">
+                      <Avatar className="h-10 w-10 border border-border/70 shadow-sm">
                         <AvatarImage src={user.avatarUrl || `https://placehold.co/40x40.png?text=${getInitials(user.name)}`} alt={user.name} data-ai-hint="user face" />
-                        <AvatarFallback className="bg-primary/20 text-primary">{getInitials(user.name)}</AvatarFallback>
+                        <AvatarFallback className="bg-primary/10 text-primary font-semibold">{getInitials(user.name)}</AvatarFallback>
                       </Avatar>
                     </TableCell>
                     <TableCell className="font-medium text-foreground">{user.name}</TableCell>
                     <TableCell className="text-muted-foreground">{user.email}</TableCell>
                     <TableCell>
-                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        user.role === 'SYSTEM_ADMIN' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
-                        user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' :
-                        user.role === 'CRM' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
-                        user.role === 'DESIGNER_REPRESENTATIVE' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 
-                        'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
+                        user.role === 'SYSTEM_ADMIN' ? 'bg-red-500/20 text-red-700 border-red-500/30 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/20' :
+                        user.role === 'ADMIN' ? 'bg-purple-500/20 text-purple-700 border-purple-500/30 dark:bg-purple-500/10 dark:text-purple-300 dark:border-purple-500/20' :
+                        user.role === 'CRM' ? 'bg-blue-500/20 text-blue-700 border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-300 dark:border-blue-500/20' :
+                        user.role === 'DESIGNER_REPRESENTATIVE' ? 'bg-green-500/20 text-green-700 border-green-500/30 dark:bg-green-500/10 dark:text-green-300 dark:border-green-500/20' : 
+                        'bg-gray-500/20 text-gray-700 border-gray-500/30 dark:bg-gray-500/10 dark:text-gray-300 dark:border-gray-500/20'
                       }`}>
                         {user.role.replace(/_/g, ' ')}
                       </span>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{user.companyName || 'N/A'}</TableCell>
-                    <TableCell className="space-x-1 whitespace-nowrap text-right">
+                    <TableCell className="pr-6 text-right space-x-1.5 whitespace-nowrap">
                       <SetUserAvatarDialog user={user} onAvatarChanged={handleUserAvatarSetByAdmin}>
-                        <Button variant="outline" size="sm" title="Set Avatar"><UserCog className="h-4 w-4" /></Button>
+                        <Button variant="outline" size="sm" title="Set Avatar" className="table-action-button h-9 px-3"><UserCog className="h-4 w-4" /></Button>
                       </SetUserAvatarDialog>
                       <ChangePasswordDialog user={user} onPasswordChanged={handlePasswordChanged}>
-                        <Button variant="outline" size="sm" title="Change Password"><KeyRound className="h-4 w-4" /></Button>
+                        <Button variant="outline" size="sm" title="Change Password" className="table-action-button h-9 px-3"><KeyRound className="h-4 w-4" /></Button>
                       </ChangePasswordDialog>
-                      <EditUserRoleDialog user={user} onUserRoleUpdated={handleUserRoleUpdated}>
-                        <Button variant="outline" size="sm" title="Edit Role"><Edit className="h-4 w-4" /></Button>
+                      <EditUserRoleDialog user={user} currentUser={currentUser} onUserRoleUpdated={handleUserRoleUpdated}>
+                        <Button variant="outline" size="sm" title="Edit Role" className="table-action-button h-9 px-3" disabled={!canCurrentUserEditRoleOf(user)}><Edit className="h-4 w-4" /></Button>
                       </EditUserRoleDialog>
-                      {/* Prevent deleting self or system admin if current user is not system admin */}
+                      {user.role === 'CRM' && (
+                        <SetUserSalesTargetDialog user={user} onTargetsSet={handleUserTargetsSetByAdmin}>
+                            <Button variant="outline" size="sm" title="Set Sales Targets" className="table-action-button h-9 px-3"><Target className="h-4 w-4"/></Button>
+                        </SetUserSalesTargetDialog>
+                      )}
                       {currentUser.id !== user.id && !(user.role === 'SYSTEM_ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') && (
                         <DeleteUserDialog user={user} onUserDeleted={handleUserDeleted}>
-                           <Button variant="destructive" size="sm" title="Delete User" className="text-destructive-foreground hover:bg-destructive/90"><Trash2 className="h-4 w-4" /></Button>
+                           <Button variant="destructive" size="sm" title="Delete User" className="table-action-button h-9 px-3"><Trash2 className="h-4 w-4" /></Button>
                         </DeleteUserDialog>
                       )}
                     </TableCell>
@@ -195,10 +212,13 @@ export default function UsersPage() {
                 ))}
                  {filteredUsers.length === 0 && (
                     <TableRow>
-                        <TableCell colSpan={6} className="text-center py-10">
-                             <Image src="https://placehold.co/300x200.png" alt="No users" data-ai-hint="empty state users" width={300} height={200} className="mx-auto rounded-md" />
-                            <p className="mt-4 text-muted-foreground">
-                              {searchTerm ? "No users match your search." : "No users found. Add users to manage them here."}
+                        <TableCell colSpan={6} className="text-center py-12">
+                             <Image src="https://placehold.co/240x180.png" alt="No users" data-ai-hint="empty state users" width={180} height={135} className="mx-auto rounded-md opacity-50 mb-4" />
+                            <p className="text-lg text-muted-foreground font-medium">
+                              {searchTerm ? "No users match your search." : "No users found."}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                                {searchTerm ? "Try a different search term." : "Add users to manage them here."}
                             </p>
                         </TableCell>
                     </TableRow>
@@ -211,3 +231,4 @@ export default function UsersPage() {
     </div>
   );
 }
+

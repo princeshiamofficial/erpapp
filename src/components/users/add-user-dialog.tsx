@@ -14,12 +14,13 @@ import { UserCircle, UploadCloud, XCircle } from 'lucide-react';
 
 interface AddUserDialogProps {
   onUserAdded: (newUser: User) => void;
+  currentUser: User; // To determine which roles can be assigned
   children: React.ReactNode;
 }
 
-const USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"];
+const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"];
 
-export function AddUserDialog({ onUserAdded, children }: AddUserDialogProps) {
+export function AddUserDialog({ onUserAdded, currentUser, children }: AddUserDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -32,7 +33,6 @@ export function AddUserDialog({ onUserAdded, children }: AddUserDialogProps) {
 
   useEffect(() => {
     if (!isOpen) {
-      // Reset form fields when dialog closes
       setName('');
       setEmail('');
       setCompanyName('');
@@ -51,7 +51,7 @@ export function AddUserDialog({ onUserAdded, children }: AddUserDialogProps) {
       objectUrl = URL.createObjectURL(selectedFile);
       setPreviewUrl(objectUrl);
     } else {
-      setPreviewUrl(null); // Clear preview if no file selected
+      setPreviewUrl(null);
     }
 
     return () => {
@@ -60,6 +60,18 @@ export function AddUserDialog({ onUserAdded, children }: AddUserDialogProps) {
       }
     };
   }, [selectedFile]);
+
+  const getAssignableRoles = (): UserRole[] => {
+    if (currentUser.role === 'SYSTEM_ADMIN') {
+      return ALL_USER_ROLES;
+    }
+    if (currentUser.role === 'ADMIN') {
+      // Admins can create other Admins, CRMs, or DRs, but not System Admins
+      return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
+    }
+    return []; // Should not happen as only admins open this
+  };
+  const assignableRoles = getAssignableRoles();
 
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,19 +137,21 @@ export function AddUserDialog({ onUserAdded, children }: AddUserDialogProps) {
     }
 
     const newUser: User = {
-      id: `user-${Date.now()}`, // Simple unique ID for mock
+      id: `user-${Date.now()}`, 
       name,
       email,
       role,
       companyName: companyName || undefined,
       avatarUrl: avatarBase64Url,
-      password: 'password', // Default password for new users
+      password: 'password', 
+      monthlyOrderTarget: 0, // Default target
+      weeklyOrderTarget: 0,  // Default target
     };
 
     onUserAdded(newUser);
     toast({
       title: "User Added",
-      description: `${name} has been added successfully.`,
+      description: `${name} has been added successfully. Default password is 'password'.`,
     });
     setIsOpen(false);
   };
@@ -147,13 +161,13 @@ export function AddUserDialog({ onUserAdded, children }: AddUserDialogProps) {
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg"> {/* Increased width slightly */}
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
           <DialogDescription>Enter the details for the new user. Default password is 'password'.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
+          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">Name</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" required />
@@ -173,14 +187,13 @@ export function AddUserDialog({ onUserAdded, children }: AddUserDialogProps) {
                   <SelectValue placeholder="Select a role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {USER_ROLES.map(r => (
+                  {assignableRoles.map(r => (
                     <SelectItem key={r} value={r}>{r.replace(/_/g, ' ')}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Avatar Upload Section */}
             <div className="grid grid-cols-4 items-start gap-4 mt-2">
               <Label htmlFor="avatarFile" className="text-right pt-2">Avatar</Label>
               <div className="col-span-3 space-y-2">
@@ -231,12 +244,13 @@ export function AddUserDialog({ onUserAdded, children }: AddUserDialogProps) {
             </div>
 
           </div>
-          <DialogFooter className="pt-4 border-t">
+          <DialogFooter className="pt-4 border-t border-border/30">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <Button type="submit">Add User</Button>
+            <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground">Add User</Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
+
