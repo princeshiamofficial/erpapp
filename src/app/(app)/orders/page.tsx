@@ -216,19 +216,19 @@ export default function OrdersPage() {
                         <TableCell className="text-card-foreground">{order.crmUserName}</TableCell>
                         <TableCell className="text-card-foreground">{order.designerRepresentativeName || 'N/A'}</TableCell>
                         <TableCell className="text-muted-foreground">{isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-20" />}</TableCell>
-                        <TableCell className="pr-6 text-right space-x-1 sm:space-x-1.5 whitespace-nowrap">
+                        <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
                           {canAssignDr && (
                             <Button 
                               variant="outline" 
                               size="sm" 
-                              className="table-action-button h-9 px-3"
+                              className="h-9 px-3"
                               onClick={() => { setSelectedOrderForDrAssignment(order); setIsAssignDrDialogOpen(true); }}
                             >
                               <Users2 className="mr-1.5 h-4 w-4" /> {order.designerRepresentativeId ? "Re-assign DR" : "Assign DR"}
                             </Button>
                           )}
                           <Link href={`/track/${order.id}`} passHref>
-                            <Button variant="outline" size="sm" className="table-action-button h-9 px-3">
+                            <Button variant="outline" size="sm" className="h-9 px-3">
                               <Eye className="mr-1.5 h-4 w-4" /> View
                             </Button>
                           </Link>
