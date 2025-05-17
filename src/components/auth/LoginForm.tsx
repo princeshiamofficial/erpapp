@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -8,30 +9,31 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { MOCK_USERS } from '@/lib/auth-constants';
-import { Loader2, LogIn } from 'lucide-react';
+import { Loader2, LogIn, KeyRound } from 'lucide-react';
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) {
+    if (!email || !password) {
       toast({
         title: "Login Error",
-        description: "Please enter an email address.",
+        description: "Please enter both email and password.",
         variant: "destructive",
       });
       return;
     }
     setIsLoading(true);
-    const success = await login(email);
+    const success = await login(email, password);
     if (!success) {
       toast({
         title: "Login Failed",
-        description: "Invalid email or user not found. Try one of the demo accounts.",
+        description: "Invalid email, password, or user not found. Try one of the demo accounts with password 'password'.",
         variant: "destructive",
       });
     }
@@ -40,7 +42,7 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md shadow-xl">
+    <Card className="w-full max-w-md shadow-xl bg-card">
       <CardHeader className="text-center">
         <div className="mx-auto mb-4">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary">
@@ -49,19 +51,31 @@ export function LoginForm() {
             <path d="M17 4.5L7 9.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </div>
-        <CardTitle className="text-3xl font-bold">Welcome to TrackFlow</CardTitle>
-        <CardDescription>Sign in to access your dashboard.</CardDescription>
+        <CardTitle className="text-3xl font-bold text-card-foreground">Welcome to TrackFlow</CardTitle>
+        <CardDescription className="text-muted-foreground">Sign in to access your dashboard.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-base">Email Address</Label>
+            <Label htmlFor="email" className="text-base text-card-foreground">Email Address</Label>
             <Input
               id="email"
               type="email"
               placeholder="e.g., admin@trackflow.dev"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              required
+              className="h-12 text-base"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-base text-card-foreground">Password</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
               className="h-12 text-base"
             />
@@ -76,12 +90,13 @@ export function LoginForm() {
           </Button>
         </form>
       </CardContent>
-      <CardFooter className="flex flex-col items-start text-sm text-muted-foreground pt-4">
-        <p className="font-semibold mb-1">Demo Accounts:</p>
-        <ul className="list-disc list-inside">
+      <CardFooter className="flex flex-col items-start text-sm text-muted-foreground pt-6">
+        <p className="font-semibold mb-1 text-card-foreground">Demo Accounts:</p>
+        <ul className="list-disc list-inside space-y-1">
           {MOCK_USERS.map(user => (
-            <li key={user.id}>{user.email} ({user.role})</li>
+            <li key={user.id}><span className="font-medium text-foreground/90">{user.email}</span> ({user.role})</li>
           ))}
+          <li className="mt-1"><KeyRound className="inline-block mr-1.5 h-4 w-4 text-muted-foreground" /> Password for all demo accounts: <span className="font-semibold text-foreground/90">password</span></li>
         </ul>
       </CardFooter>
     </Card>

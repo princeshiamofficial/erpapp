@@ -6,7 +6,8 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  companyName?: string; 
+  companyName?: string;
+  password?: string; // Added for login, should not be stored long-term in client state after auth
 }
 
 export type OrderStatus =
@@ -50,7 +51,7 @@ export interface TrackingLink {
 export interface Comment {
   id: string;
   // trackingLinkId: string; // Comments are now part of TrackingLink.comments
-  userId?: string; 
+  userId?: string;
   userName: string; // Can be customer name, or internal user name
   text: string;
   timestamp: string; // ISO string

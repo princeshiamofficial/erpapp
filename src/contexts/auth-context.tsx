@@ -1,14 +1,15 @@
+
 "use client";
 
 import type { User } from '@/types';
-import { MOCK_USERS, findUserByEmail } from '@/lib/auth-constants';
+import { MOCK_USERS, findUserByEmailAndPassword } from '@/lib/auth-constants';
 import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 interface AuthContextType {
   currentUser: User | null;
   isLoading: boolean;
-  login: (email: string) => Promise<boolean>; // Simple email-based mock login
+  login: (email: string, password: string) => Promise<boolean>; // Updated for password
   logout: () => void;
 }
 
@@ -26,8 +27,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const parsedUser = JSON.parse(storedUser) as User;
         // Validate if this user is one of our mock users
-        if (MOCK_USERS.some(mockUser => mockUser.id === parsedUser.id)) {
-          setCurrentUser(parsedUser);
+        // We don't store password in localStorage, so we find by ID to re-validate
+        const validatedUser = MOCK_USERS.find(mockUser => mockUser.id === parsedUser.id);
+        if (validatedUser) {
+          const { password, ...userToStore } = validatedUser; // Ensure password is not in currentUser state
+          setCurrentUser(userToStore as User);
         } else {
           localStorage.removeItem('trackflow-user');
         }
@@ -39,14 +43,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string): Promise<boolean> => {
+  const login = async (email: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
-    const user = findUserByEmail(email);
+    const user = findUserByEmailAndPassword(email, pass);
     if (user) {
+      // The password is already removed by findUserByEmailAndPassword
       setCurrentUser(user);
-      localStorage.setItem('trackflow-user', JSON.stringify(user));
+      localStorage.setItem('trackflow-user', JSON.stringify(user)); // Store user without password
       setIsLoading(false);
       router.push('/dashboard');
       return true;
