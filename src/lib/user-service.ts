@@ -2,30 +2,48 @@
 'use server'; // Potentially for some functions if called directly from Server Components/Actions
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc, query, where, orderBy, runTransaction } from 'firebase/firestore';
 import type { User, UserRole } from '@/types';
-// Removed v4 as uuidv4 from here as we'll generate sequential IDs for new users
 
 const USERS_COLLECTION = 'users';
 
-// Add a new user to Firestore with sequential ID
+const getRolePrefix = (role: UserRole): string => {
+  switch (role) {
+    case 'ADMIN':
+      return 'Admin-';
+    case 'CRM':
+      return 'CRM-';
+    case 'DESIGNER_REPRESENTATIVE':
+      return 'DR-';
+    case 'SYSTEM_ADMIN':
+      return 'SysAdmin-';
+    default:
+      // Fallback, though all roles should be covered
+      return 'User-'; 
+  }
+};
+
+// Add a new user to Firestore with role-specific sequential ID
 export const addUser = async (userData: Omit<User, 'id'>): Promise<User> => {
   const usersCol = collection(db, USERS_COLLECTION);
-  // Fetch all users to determine the next ID. This could be optimized for very large user bases.
-  // For now, we assume a manageable number of users.
-  const allUsersSnapshot = await getDocs(query(usersCol, orderBy('id', 'desc')));
+  const rolePrefix = getRolePrefix(userData.role);
+
+  // Query for users with the same role prefix to determine the next sequential number
+  const q = query(usersCol, where('id', '>=', rolePrefix), where('id', '<', rolePrefix + '\uffff'), orderBy('id', 'desc'));
+  const roleUsersSnapshot = await getDocs(q);
+  
   let maxUserNumber = 0;
-  allUsersSnapshot.forEach(docSnap => {
+  roleUsersSnapshot.forEach(docSnap => {
     const docId = docSnap.id;
-    if (docId.startsWith("User-")) {
-      const numPart = parseInt(docId.substring(5), 10); // "User-" is 5 chars
+    if (docId.startsWith(rolePrefix)) {
+      const numPart = parseInt(docId.substring(rolePrefix.length), 10);
       if (!isNaN(numPart) && numPart > maxUserNumber) {
         maxUserNumber = numPart;
       }
     }
   });
   const newUserNumber = maxUserNumber + 1;
-  const userId = `User-${String(newUserNumber).padStart(3, '0')}`;
+  const userId = `${rolePrefix}${String(newUserNumber).padStart(3, '0')}`;
 
   const newUser: User = {
     ...userData,
@@ -43,12 +61,14 @@ export const addUser = async (userData: Omit<User, 'id'>): Promise<User> => {
 // Get all users from Firestore
 export const getUsers = async (): Promise<User[]> => {
   const usersCol = collection(db, USERS_COLLECTION);
-  const snapshot = await getDocs(usersCol);
+  const q = query(usersCol, orderBy("name", "asc")); // Order by name for consistent listing
+  const snapshot = await getDocs(q);
   return snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as User));
 };
 
 // Get a single user by ID
 export const getUserById = async (userId: string): Promise<User | null> => {
+  if (!userId) return null;
   const userDocRef = doc(db, USERS_COLLECTION, userId);
   const docSnap = await getDoc(userDocRef);
   if (docSnap.exists()) {
@@ -138,24 +158,26 @@ export const deleteUserFromFirestore = async (userId: string): Promise<boolean> 
 export const seedInitialAdminUser = async () => {
   const usersRef = collection(db, USERS_COLLECTION);
   const q = query(usersRef, where("email", "==", "admin@colorhut.dev"));
-  const snapshot = await getDocs(q);
-
-  if (snapshot.empty) {
-    console.log("No admin user found, seeding initial admin...");
-    try {
-      await addUser({ // addUser will now generate the sequential ID, e.g., User-001
+  
+  try {
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      console.log("No admin user found, seeding initial admin...");
+      // The addUser function will now assign an ID like 'Admin-001' or 'SysAdmin-001' based on role
+      await addUser({ 
         name: 'Default Admin', 
         email: 'admin@colorhut.dev', 
-        role: 'ADMIN', 
+        role: 'SYSTEM_ADMIN', // Defaulting to SYSTEM_ADMIN for initial setup power
         companyName: 'Color Hut Inc.', 
         password: "password", 
         avatarUrl: null, 
         monthlyOrderTarget: 0, 
         weeklyOrderTarget: 0 
       });
-      console.log("Default Admin user seeded into Firestore with sequential ID.");
-    } catch (error) {
-      console.error("Error seeding admin user:", error);
+      console.log("Default Admin user (SYSTEM_ADMIN) seeded into Firestore with role-specific ID.");
     }
+  } catch (error) {
+    console.error("Error checking or seeding admin user:", error);
   }
 };
+
