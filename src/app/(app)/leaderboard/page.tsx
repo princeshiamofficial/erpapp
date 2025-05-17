@@ -5,11 +5,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Trophy, Star, Users, Target as TargetIcon } from 'lucide-react';
+import { Trophy, Star, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from 'framer-motion';
-import { MOCK_USERS } from '@/lib/auth-constants'; // Assuming MOCK_USERS contains target info
-import { Progress } from '@/components/ui/progress';
+import { MOCK_USERS } from '@/lib/auth-constants'; 
 
 const LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY = 'trackflow-global-monthly-sales-target';
 const LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY = 'trackflow-global-weekly-sales-target';
@@ -47,22 +46,11 @@ const getRankColorClass = (rank?: number): string => {
   return 'border-border bg-card hover:shadow-md';
 };
 
-const getProgressColorClass = (percentage: number): string => {
-  if (percentage < 0) percentage = 0;
-  const colorPercentage = Math.min(percentage, 100);
-  if (colorPercentage <= 33) return '[&>div]:bg-destructive';
-  if (colorPercentage <= 66) return '[&>div]:bg-yellow-400';
-  return '[&>div]:bg-green-500';
-};
-
 const LeaderboardList: React.FC<{ data: CrmPerformanceData[], timePeriod: 'month' | 'week' }> = ({ data, timePeriod }) => {
   return (
-    <ScrollArea className="h-[calc(100vh-280px)] md:h-auto md:max-h-[calc(100vh-320px)]"> {/* Adjusted height */}
+    <ScrollArea className="h-[calc(100vh-280px)] md:h-auto md:max-h-[calc(100vh-320px)]">
       <div className="p-1 sm:p-4 md:p-6 space-y-4">
-        {data.map((crm) => {
-          const progressPercentage = crm.target > 0 ? (crm.ordersCompleted / crm.target) * 100 : 0;
-          const progressColor = getProgressColorClass(progressPercentage);
-          return (
+        {data.map((crm) => (
             <motion.div
               layout 
               key={crm.userId} 
@@ -84,14 +72,13 @@ const LeaderboardList: React.FC<{ data: CrmPerformanceData[], timePeriod: 'month
                 <div className="text-xs text-muted-foreground mt-0.5">
                   {crm.ordersCompleted} / {crm.target} orders this {timePeriod}
                 </div>
-                <Progress value={Math.min(progressPercentage, 100)} className={`h-1.5 mt-1 ${progressColor}`} />
               </div>
               <div className="text-md font-bold text-primary ml-2">
                 #{crm.rank}
               </div>
             </motion.div>
-          );
-        })}
+          )
+        )}
         {data.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full py-10 text-muted-foreground">
             <Users className="w-20 h-20 mb-4 opacity-50" />
@@ -177,5 +164,3 @@ export default function LeaderboardPage() {
     </div>
   );
 }
-
-    
