@@ -9,7 +9,7 @@ const geistSans = GeistSans;
 // const geistMono = GeistMono; // Removed usage
 
 export const metadata: Metadata = {
-  title: 'TrackFlow',
+  title: 'Color Hut',
   description: 'Seamless Order Tracking and Management',
 };
 

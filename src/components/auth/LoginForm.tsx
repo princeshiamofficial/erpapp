@@ -48,7 +48,7 @@ export function LoginForm() {
         <div className="mx-auto mb-6">
            <Logo className="h-16 w-16 text-primary drop-shadow-[0_3px_5px_hsl(var(--primary)/0.4)]" />
         </div>
-        <CardTitle className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 dark:to-orange-300 pb-1">TrackFlow</CardTitle>
+        <CardTitle className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 dark:to-orange-300 pb-1">Color Hut</CardTitle>
         <CardDescription className="text-muted-foreground text-md pt-1">Sign in to your workspace.</CardDescription>
       </CardHeader>
       <CardContent className="py-6 px-8">

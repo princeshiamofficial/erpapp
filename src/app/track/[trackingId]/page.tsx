@@ -32,7 +32,7 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
        <header className="text-center mb-8 sm:mb-12">
         <div className="inline-flex items-center space-x-2 sm:space-x-3 text-primary mb-2">
             <Logo className="h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16" />
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 dark:to-orange-300">TrackFlow</h1>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 dark:to-orange-300">Color Hut</h1>
         </div>
         <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground font-light">Seamless Order Tracking</p>
       </header>
@@ -42,7 +42,7 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
       </Suspense>
 
       <footer className="text-center mt-16 sm:mt-20 py-8 sm:py-10 border-t border-border/30">
-        <p className="text-sm sm:text-md text-muted-foreground">&copy; {new Date().getFullYear()} TrackFlow. All rights reserved.</p>
+        <p className="text-sm sm:text-md text-muted-foreground">&copy; {new Date().getFullYear()} Color Hut. All rights reserved.</p>
         <p className="text-xs sm:text-sm text-muted-foreground/70 mt-1 sm:mt-1.5">Precision Order Tracking, Simplified.</p>
       </footer>
     </div>
