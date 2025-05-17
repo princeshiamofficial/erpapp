@@ -13,7 +13,7 @@ import {
   Settings,
   FileText,
   Award,
-  BarChart3 // More generic icon for reports
+  BarChart3 
 } from "lucide-react";
 import type { UserRole } from "@/types";
 import { cn } from "@/lib/utils";
@@ -57,22 +57,22 @@ export function SidebarNavigation() {
                     children: item.label, 
                     side: 'right', 
                     align: 'center', 
-                    className: "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg border-none text-xs px-2 py-1" 
+                    className: "bg-primary text-primary-foreground shadow-lg border-none text-xs px-2.5 py-1.5 rounded-md" 
                 }}
                 disabled={item.disabled}
                 aria-disabled={item.disabled}
                 className={
                   cn(
-                    "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-medium",
+                    "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-medium py-2.5 px-3 h-auto rounded-lg transition-all duration-200 ease-in-out transform hover:translate-x-1",
                     (pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))) && 
-                    "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-sm",
-                    item.disabled && "cursor-not-allowed opacity-60 hover:bg-transparent hover:text-sidebar-foreground/80"
+                    "bg-gradient-to-r from-primary to-orange-500 text-primary-foreground font-semibold shadow-md hover:shadow-lg",
+                    item.disabled && "cursor-not-allowed opacity-50 hover:bg-transparent hover:text-sidebar-foreground/80 hover:translate-x-0"
                   )
                 }
               >
-                <a className="flex items-center w-full h-9">
+                <a className="flex items-center w-full">
                   <item.icon className="mr-3 h-5 w-5 shrink-0" />
-                  <span className="truncate group-data-[collapsible=icon]:hidden">
+                  <span className="truncate group-data-[collapsible=icon]:hidden text-sm">
                     {item.label}
                   </span>
                 </a>

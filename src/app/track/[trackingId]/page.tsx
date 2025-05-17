@@ -58,7 +58,8 @@ const getStatusIcon = (status: OrderStatus, sizeClass = "h-6 w-6") => {
   if (status === "DELIVERED" || status === "SHIPPED" || status === "APPROVED_FOR_PRODUCTION") return <CheckCircle className={`${commonClasses} text-green-500`} />;
   if (status === "READY_FOR_DESIGN") return <Info className={`${commonClasses} text-teal-500`} />; 
   if (status === "IN_PRODUCTION") return <Info className={`${commonClasses} text-blue-500`} />;
-  if (status === "PENDING_CLIENT_APPROVAL" || status === "CHANGES_REQUESTED") return <Clock className={`${commonClasses} text-yellow-500`} />;
+  if (status === "PENDING_CLIENT_APPROVAL" || status === "CHANGES_REQUESTED") return <Clock className={`${commonClasses} text-yellow-600`} />;
+  if (status === "CANCELLED") return <Info className={`${commonClasses} text-red-500`} />;
   return <Info className={`${commonClasses} text-gray-500`} />;
 };
 
@@ -86,27 +87,27 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-accent/20 py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary">
+    <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-background to-secondary/30 py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary">
       <header className="text-center mb-12">
         <div className="inline-flex items-center space-x-3 text-primary mb-2">
-            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary drop-shadow-[0_2px_4px_hsl(var(--primary)/0.4)]">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-primary drop-shadow-[0_3px_5px_hsl(var(--primary)/0.4)]">
                 <path d="M12 2L2 7V17L12 22L22 17V7L12 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M2 7L12 12M12 12L22 7M12 12V22M12 2V12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M17 4.5L7 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <h1 className="text-5xl font-extrabold tracking-tight text-foreground">TrackFlow</h1>
+            <h1 className="text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 dark:to-orange-300">TrackFlow</h1>
         </div>
-        <p className="text-xl text-muted-foreground">Order Tracking Portal</p>
+        <p className="text-2xl text-muted-foreground font-light">Seamless Order Tracking</p>
       </header>
 
       <main className="max-w-4xl mx-auto space-y-10">
-        <Card className="shadow-2xl overflow-hidden border border-border/50 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
-          <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/50">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-4">
-              <Package className="h-12 w-12 sm:h-16 sm:w-16 text-primary mb-3 sm:mb-0 flex-shrink-0" />
+        <Card className="shadow-2xl overflow-hidden border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
+          <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6">
+              <Package className="h-16 w-16 sm:h-20 sm:w-20 text-primary mb-4 sm:mb-0 flex-shrink-0 p-3 bg-primary/10 rounded-lg border border-primary/20" />
               <div>
-                <CardTitle className="text-2xl md:text-3xl font-semibold text-card-foreground">Order ID: <span className="text-primary">{data.id}</span></CardTitle>
-                <CardDescription className="text-md text-muted-foreground mt-1">
+                <CardTitle className="text-3xl md:text-4xl font-semibold text-card-foreground">Order ID: <span className="text-primary font-bold">{data.id}</span></CardTitle>
+                <CardDescription className="text-md text-muted-foreground mt-1.5">
                   Tracking information for {data.customerName}
                 </CardDescription>
               </div>
@@ -115,83 +116,85 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
           <CardContent className="p-6 sm:p-8 space-y-8">
             <div>
               <h3 className="text-xl font-semibold mb-2 text-foreground flex items-center">
-                {getStatusIcon(data.currentStatus, "h-7 w-7")}
+                {getStatusIcon(data.currentStatus, "h-8 w-8")}
                 Current Status
               </h3>
-              <p className="text-3xl font-bold text-primary ml-[36px]"> {/* Align with text after icon */}
+              <p className="text-4xl font-bold text-primary ml-[40px] mt-1"> {/* Align with text after icon */}
                 {formatStatus(data.currentStatus)}
               </p>
-              <p className="text-sm text-muted-foreground mt-1 ml-[36px]">
+              <p className="text-sm text-muted-foreground mt-1.5 ml-[40px]">
                 Last updated: {lastUpdatedDisplay !== null && isClient ? lastUpdatedDisplay : 'Calculating...'}
               </p>
             </div>
 
-            <Separator className="my-6 bg-border/30" />
+            <Separator className="my-8 bg-border/30" />
 
             <div>
-              <h3 className="text-xl font-semibold mb-4 text-foreground">Order Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                <div className="flex items-start">
-                  <UserCircle className="h-5 w-5 mr-3 mt-0.5 text-muted-foreground flex-shrink-0" />
+              <h3 className="text-xl font-semibold mb-5 text-foreground">Order Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5 text-md">
+                <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
+                  <UserCircle className="h-6 w-6 mt-0.5 text-primary flex-shrink-0" />
                   <div>
-                    <span className="font-medium text-foreground block">Customer</span> {data.customerName}
+                    <span className="font-medium text-foreground block text-sm text-muted-foreground">Customer</span> {data.customerName}
                   </div>
                 </div>
-                <div className="flex items-start">
-                  <Building className="h-5 w-5 mr-3 mt-0.5 text-muted-foreground flex-shrink-0" />
+                <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
+                  <Building className="h-6 w-6 mt-0.5 text-primary flex-shrink-0" />
                   <div>
-                    <span className="font-medium text-foreground block">Company</span> {data.companyName}
+                    <span className="font-medium text-foreground block text-sm text-muted-foreground">Company</span> {data.companyName}
                   </div>
                 </div>
-                 <div className="flex items-start md:col-span-2">
-                  <MapPin className="h-5 w-5 mr-3 mt-0.5 text-muted-foreground flex-shrink-0" />
+                 <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 md:col-span-2">
+                  <MapPin className="h-6 w-6 mt-0.5 text-primary flex-shrink-0" />
                   <div>
-                    <span className="font-medium text-foreground block">Address</span> {data.address}
+                    <span className="font-medium text-foreground block text-sm text-muted-foreground">Address</span> {data.address}
                   </div>
                 </div>
                 {data.phoneNumber && (
-                  <div className="flex items-start">
-                    <Phone className="h-5 w-5 mr-3 mt-0.5 text-muted-foreground flex-shrink-0" />
+                  <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
+                    <Phone className="h-6 w-6 mt-0.5 text-primary flex-shrink-0" />
                     <div>
-                      <span className="font-medium text-foreground block">Phone</span> {data.phoneNumber}
+                      <span className="font-medium text-foreground block text-sm text-muted-foreground">Phone</span> {data.phoneNumber}
                     </div>
                   </div>
                 )}
                 {data.service && (
-                  <div className="flex items-start">
-                    <Briefcase className="h-5 w-5 mr-3 mt-0.5 text-muted-foreground flex-shrink-0" />
+                  <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
+                    <Briefcase className="h-6 w-6 mt-0.5 text-primary flex-shrink-0" />
                     <div>
-                      <span className="font-medium text-foreground block">Service</span> {data.service}
+                      <span className="font-medium text-foreground block text-sm text-muted-foreground">Service</span> {data.service}
                     </div>
                   </div>
                 )}
-                 <div className="flex items-start md:col-span-2">
-                    <CalendarDays className="h-5 w-5 mr-3 mt-0.5 text-muted-foreground flex-shrink-0" />
+                 <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 md:col-span-2">
+                    <CalendarDays className="h-6 w-6 mt-0.5 text-primary flex-shrink-0" />
                     <div>
-                      <span className="font-medium text-foreground block">Order Placed</span> {isClient ? formatDate(data.createdAt) : 'Loading date...'}
+                      <span className="font-medium text-foreground block text-sm text-muted-foreground">Order Placed</span> {isClient ? formatDate(data.createdAt) : 'Loading date...'}
                     </div>
                   </div>
               </div>
             </div>
             
-            <Separator className="my-6 bg-border/30" />
+            <Separator className="my-8 bg-border/30" />
 
             <div>
-              <h3 className="text-xl font-semibold mb-5 text-foreground">Status History</h3>
-              <div className="space-y-6 relative pl-5 border-l-2 border-border/30 ml-2">
+              <h3 className="text-xl font-semibold mb-6 text-foreground">Status History</h3>
+              <div className="space-y-8 relative pl-6 border-l-2 border-primary/30 ml-3">
                 {data.statusHistory.slice().reverse().map((entry, index) => (
-                  <div key={entry.id} className="flex items-start space-x-4 relative">
-                    <div className={`absolute -left-[1.08rem] top-1 h-7 w-7 rounded-full flex items-center justify-center ring-4 ring-background ${index === 0 ? 'bg-primary' : 'bg-muted border-2 border-border'}`}>
-                      {getStatusIcon(entry.status, "h-4 w-4 !mr-0") }
-                       {index === 0 && <CheckCircle className={`h-4 w-4 text-primary-foreground ${getStatusIcon(entry.status, "h-4 w-4 !mr-0").props.className.includes('text-green-500') ? '' : 'hidden'}`} />}
+                  <div key={entry.id} className="flex items-start space-x-4 relative group">
+                    <div className={`absolute -left-[1.45rem] top-1 h-9 w-9 rounded-full flex items-center justify-center ring-4 ring-background transition-all duration-200 ${index === 0 ? 'bg-primary shadow-lg' : 'bg-muted border-2 border-border group-hover:bg-primary/20 group-hover:border-primary/50'}`}>
+                      {index === 0 ? 
+                        <CheckCircle className={`h-5 w-5 text-primary-foreground`} /> :
+                        getStatusIcon(entry.status, "h-4 w-4 !mr-0 group-hover:text-primary")
+                      }
                     </div>
-                    <div className="flex-1 pt-px ml-2">
-                      <p className={`font-semibold text-md ${index === 0 ? 'text-primary' : 'text-foreground'}`}>{formatStatus(entry.status)}</p>
-                      <p className="text-xs text-muted-foreground flex items-center">
-                        <CalendarDays className="h-3.5 w-3.5 mr-1.5 opacity-70" /> 
-                        {isClient ? formatDate(entry.timestamp) : 'Loading date...'} <span className="mx-1.5">&bull;</span> {entry.changedByUserName}
+                    <div className="flex-1 pt-px ml-3">
+                      <p className={`font-semibold text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{formatStatus(entry.status)}</p>
+                      <p className="text-sm text-muted-foreground flex items-center mt-0.5">
+                        <CalendarDays className="h-4 w-4 mr-1.5 opacity-70" /> 
+                        {isClient ? formatDate(entry.timestamp) : 'Loading date...'} <span className="mx-2">&bull;</span> {entry.changedByUserName}
                       </p>
-                      {entry.notes && <p className="text-sm mt-2 bg-muted/50 p-3 rounded-md border border-border/50 text-foreground/80">{entry.notes}</p>}
+                      {entry.notes && <p className="text-md mt-2.5 bg-muted/50 p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm">{entry.notes}</p>}
                     </div>
                   </div>
                 ))}
@@ -200,56 +203,56 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
           </CardContent>
         </Card>
 
-        <Card className="shadow-xl border border-border/50 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
-          <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/50">
-            <div className="flex items-center space-x-3">
-              <MessageSquare className="h-8 w-8 text-primary flex-shrink-0" />
+        <Card className="shadow-xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
+          <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
+            <div className="flex items-center space-x-4">
+              <MessageSquare className="h-10 w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" />
               <CardTitle className="text-2xl font-semibold text-card-foreground">Comments & Updates ({data.comments.filter(c => !c.isInternal).length})</CardTitle>
             </div>
-            <CardDescription className="text-muted-foreground mt-1 ml-11">Share updates or ask questions about this order.</CardDescription>
+            <CardDescription className="text-muted-foreground mt-1 ml-[56px]">Share updates or ask questions about this order.</CardDescription>
           </CardHeader>
           <CardContent className="p-6 sm:p-8 space-y-6">
-            <div className="space-y-5 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+            <div className="space-y-5 max-h-[500px] overflow-y-auto pr-3 custom-scrollbar">
               {data.comments.filter(c => !c.isInternal).map((comment) => (
-                <div key={comment.id} className="flex items-start space-x-3 p-4 bg-secondary/50 rounded-lg shadow-sm border border-border/40">
-                  <Avatar className="h-10 w-10 border-2 border-primary/20 flex-shrink-0">
+                <div key={comment.id} className="flex items-start space-x-4 p-4 bg-secondary/40 rounded-lg shadow-sm border border-border/30 hover:border-primary/30 transition-colors">
+                  <Avatar className="h-11 w-11 border-2 border-primary/30 flex-shrink-0 shadow-sm">
                      <AvatarImage src={`https://placehold.co/44x44.png?text=${comment.userName.slice(0,2).toUpperCase()}`} alt={comment.userName} data-ai-hint="user avatar"/>
-                    <AvatarFallback className="bg-primary/10 text-primary font-semibold">{comment.userName.slice(0,2).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">{comment.userName.slice(0,2).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <p className="text-sm font-semibold text-foreground">{comment.userName}</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-md font-semibold text-foreground">{comment.userName}</p>
                       <p className="text-xs text-muted-foreground flex items-center">
-                        <Clock className="h-3.5 w-3.5 mr-1 opacity-70" /> 
+                        <Clock className="h-3.5 w-3.5 mr-1.5 opacity-70" /> 
                         {isClient ? formatDate(comment.timestamp) : 'Loading date...'}
                       </p>
                     </div>
-                    <p className="text-sm text-foreground/90 whitespace-pre-wrap">{comment.text}</p>
+                    <p className="text-md text-foreground/90 whitespace-pre-wrap">{comment.text}</p>
                   </div>
                 </div>
               ))}
               {data.comments.filter(c => !c.isInternal).length === 0 && (
-                 <div className="text-center py-8">
-                    <Image src="https://placehold.co/200x150.png?text=No+Comments" alt="No comments yet" data-ai-hint="empty message illustration" width={150} height={112} className="mx-auto rounded-md opacity-60" />
-                    <p className="mt-4 text-muted-foreground text-md">No public comments yet.</p>
+                 <div className="text-center py-10">
+                    <Image src="https://placehold.co/200x150.png?text=No+Comments" alt="No comments yet" data-ai-hint="empty message illustration" width={180} height={135} className="mx-auto rounded-lg opacity-50 shadow-sm" />
+                    <p className="mt-5 text-muted-foreground text-lg">No public comments yet.</p>
                     <p className="text-sm text-muted-foreground">Be the first to add one using the form below!</p>
                  </div>
               )}
             </div>
-            <Separator className="my-6 bg-border/30" />
+            <Separator className="my-8 bg-border/30" />
             <div>
-              <Label htmlFor="comment" className="text-lg font-semibold mb-3 block text-foreground">Add a Comment</Label>
-              <Textarea id="comment" placeholder="Type your message here..." className="min-h-[120px] text-base mb-4 p-3 focus:border-primary bg-background/70 border-border/70 rounded-md" />
-              <Button size="lg" className="w-full sm:w-auto shadow-md hover:shadow-lg transition-all duration-300 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
-                <Send className="mr-2 h-5 w-5" /> Submit Comment
+              <Label htmlFor="comment" className="text-xl font-semibold mb-4 block text-foreground">Add a Comment</Label>
+              <Textarea id="comment" placeholder="Type your message here..." className="min-h-[140px] text-base mb-4 p-4 focus:border-primary bg-background/80 border-border/70 rounded-lg shadow-sm text-md" />
+              <Button size="lg" className="w-full sm:w-auto shadow-lg hover:shadow-primary/40 transition-all duration-300 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-md py-3 px-6 rounded-lg transform hover:scale-[1.02]">
+                <Send className="mr-2.5 h-5 w-5" /> Submit Comment
               </Button>
             </div>
           </CardContent>
         </Card>
       </main>
-      <footer className="text-center mt-16 py-8 border-t border-border/30">
-        <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} TrackFlow. All rights reserved.</p>
-        <p className="text-xs text-muted-foreground/70 mt-1">Precision Order Tracking, Simplified.</p>
+      <footer className="text-center mt-20 py-10 border-t border-border/30">
+        <p className="text-md text-muted-foreground">&copy; {new Date().getFullYear()} TrackFlow. All rights reserved.</p>
+        <p className="text-sm text-muted-foreground/70 mt-1.5">Precision Order Tracking, Simplified.</p>
       </footer>
     </div>
   );

@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, ListChecks, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, Users, Trophy, Star } from 'lucide-react';
+import { Package, ListChecks, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, Users, Trophy, Star, TrendingUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
@@ -93,8 +93,8 @@ const getInitials = (name: string) => {
 const LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY = 'trackflow-global-monthly-sales-target';
 const LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY = 'trackflow-global-weekly-sales-target';
 
-const DEFAULT_GLOBAL_MONTHLY_TARGET = 120; // Adjusted for potential higher volume
-const DEFAULT_GLOBAL_WEEKLY_TARGET = 30;  // Adjusted for potential higher volume
+const DEFAULT_GLOBAL_MONTHLY_TARGET = 120; 
+const DEFAULT_GLOBAL_WEEKLY_TARGET = 30;  
 
 const MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM = 67; 
 const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 12;  
@@ -103,8 +103,8 @@ const getProgressColorClass = (percentage: number): string => {
   if (percentage < 0) percentage = 0;
   const colorPercentage = Math.min(percentage, 100);
   if (colorPercentage < 33) return '[&>div]:bg-destructive';
-  if (colorPercentage < 67) return '[&>div]:bg-yellow-500 dark:[&>div]:bg-yellow-600'; // Adjusted yellow for better visibility
-  return '[&>div]:bg-green-500 dark:[&>div]:bg-green-600'; // Adjusted green for better visibility
+  if (colorPercentage < 67) return '[&>div]:bg-orange-400 dark:[&>div]:bg-orange-500';
+  return '[&>div]:bg-green-500 dark:[&>div]:bg-green-600';
 };
 
 export default function DashboardPage() {
@@ -116,7 +116,6 @@ export default function DashboardPage() {
   const [isSetGlobalMonthlyTargetDialogOpen, setIsSetGlobalMonthlyTargetDialogOpen] = useState(false);
   const [isSetGlobalWeeklyTargetDialogOpen, setIsSetGlobalWeeklyTargetDialogOpen] = useState(false);
   
-  // Ensure targets are read from localStorage after component mounts client-side
   useEffect(() => {
     const storedGlobalMonthly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY);
     if (storedGlobalMonthly) {
@@ -149,7 +148,7 @@ export default function DashboardPage() {
   }
 
   let summaryCards = [
-    { title: "Active Orders", value: "125", icon: Package, change: "+15.2% from last month", dataAiHint: "delivery boxes", type: "info" as const },
+    { title: "Active Orders", value: "125", icon: Package, change: "+15.2% this month", dataAiHint: "delivery boxes", type: "info" as const, trend: "up" as const },
   ];
 
   if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
@@ -176,7 +175,7 @@ export default function DashboardPage() {
   } else if (currentUser.role === 'CRM') {
     summaryCards.push(
       {
-        title: "Your Monthly Order Target",
+        title: "Your Monthly Orders",
         value: `${MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM} / ${crmEffectiveMonthlyTarget} Orders`,
         icon: CalendarDays,
         currentCompleted: MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM,
@@ -185,7 +184,7 @@ export default function DashboardPage() {
         type: "progress" as const
       },
       {
-        title: "Your Weekly Order Target",
+        title: "Your Weekly Orders",
         value: `${MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM} / ${crmEffectiveWeeklyTarget} Orders`,
         icon: CalendarClock,
         currentCompleted: MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM,
@@ -199,15 +198,15 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8 p-1">
-      <Card className="shadow-xl bg-card border border-border/70 rounded-lg overflow-hidden">
-        <CardHeader className="pb-4 bg-gradient-to-r from-primary/80 to-primary/60 text-primary-foreground p-6">
-          <CardTitle className="text-3xl font-bold">Welcome to TrackFlow, {currentUser.name.split(' ')[0]}!</CardTitle>
+      <Card className="shadow-xl bg-card border-border/50 rounded-lg overflow-hidden transform hover:shadow-primary/20 transition-shadow duration-300">
+        <CardHeader className="pb-4 bg-gradient-to-r from-primary to-orange-500 dark:from-primary dark:to-orange-600 text-primary-foreground p-6 rounded-t-lg">
+          <CardTitle className="text-4xl font-bold">Welcome, {currentUser.name.split(' ')[0]}!</CardTitle>
           <CardDescription className="text-lg text-primary-foreground/90">
-            You are logged in as {currentUser.role.replace(/_/g, ' ')}. Here's your workspace overview.
+            You are logged in as <span className="font-semibold">{currentUser.role.replace(/_/g, ' ')}</span>. Here's your workspace overview.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6">
-          <p className="text-card-foreground/90 max-w-3xl">This is your central hub for managing orders and tracking progress. Use the sidebar to navigate through different sections and stay on top of your tasks and key metrics.</p>
+          <p className="text-card-foreground/90 max-w-3xl text-md">This is your central hub for managing orders and tracking progress. Use the sidebar to navigate and stay on top of your tasks and key metrics.</p>
         </CardContent>
       </Card>
 
@@ -224,44 +223,49 @@ export default function DashboardPage() {
           return (
             <Card 
               key={card.title} 
-              className="shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out border bg-card relative flex flex-col group hover:scale-[1.02] rounded-lg"
+              className="shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out border bg-card relative flex flex-col group hover:scale-[1.03] rounded-lg overflow-hidden"
             >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-5 px-5">
-                <CardTitle className="text-md font-semibold text-card-foreground">{card.title}</CardTitle>
-                <card.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pt-5 px-5">
+                <CardTitle className="text-lg font-semibold text-card-foreground">{card.title}</CardTitle>
+                <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                  <card.icon className="h-6 w-6 text-primary group-hover:scale-110 transition-transform" />
+                </div>
               </CardHeader>
               <CardContent className="flex-grow flex flex-col justify-between px-5 pb-5">
                 <div>
                   {card.type === 'progress' ? (
                     <>
-                      <div className="text-2xl font-bold text-card-foreground">
-                        {card.currentCompleted} <span className="text-lg text-muted-foreground">/ {card.targetValue} Orders</span>
+                      <div className="text-3xl font-bold text-card-foreground">
+                        {card.currentCompleted} <span className="text-xl text-muted-foreground">/ {card.targetValue}</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1 mb-2">
-                        ({progressPercentage.toFixed(0)}% complete)
+                       <p className="text-sm text-muted-foreground mt-1 mb-2">
+                        Orders ({progressPercentage.toFixed(0)}% complete)
                       </p>
-                      <Progress value={Math.min(progressPercentage, 100)} className={`h-2 rounded-full mb-3 ${progressColorClass}`} aria-label={`${card.title} progress ${progressPercentage.toFixed(0)}%`} />
+                      <Progress value={Math.min(progressPercentage, 100)} className={`h-2.5 rounded-full mb-3 ${progressColorClass}`} aria-label={`${card.title} progress ${progressPercentage.toFixed(0)}%`} />
                     </>
                   ) : (
-                    <div className="text-3xl font-bold text-card-foreground">{card.value}</div>
+                    <div className="text-4xl font-bold text-card-foreground">{card.value}</div>
                   )}
-                  {card.change && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {card.change}
+                  {card.change && card.type === 'info' && (
+                     <p className="text-xs text-green-600 dark:text-green-400 flex items-center mt-1">
+                       <TrendingUp className="h-4 w-4 mr-1"/> {card.change}
                     </p>
+                  )}
+                  {card.change && card.type !== 'info' && (
+                     <p className="text-xs text-muted-foreground mt-1">{card.change}</p>
                   )}
                 </div>
                 {(card.type === 'target' && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) && (
                   <Button
                     variant="outline"
                     size="sm"
-                    className="mt-3 self-start transition-colors group-hover:border-primary group-hover:text-primary text-xs py-1 px-2.5 h-auto border-border/80 hover:bg-accent"
+                    className="mt-4 self-start transition-all group-hover:border-primary group-hover:text-primary group-hover:bg-primary/5 text-xs py-1.5 px-3 h-auto border-border/80 hover:bg-primary/10 rounded-md shadow-sm hover:shadow-md"
                     onClick={() => {
                       if (card.actionType === 'global_monthly') setIsSetGlobalMonthlyTargetDialogOpen(true);
                       if (card.actionType === 'global_weekly') setIsSetGlobalWeeklyTargetDialogOpen(true);
                     }}
                   >
-                    <Edit3 className="mr-1.5 h-3 w-3" /> Edit Global
+                    <Edit3 className="mr-1.5 h-3.5 w-3.5" /> Edit Global Target
                   </Button>
                 )}
               </CardContent>
@@ -290,26 +294,26 @@ export default function DashboardPage() {
       )}
 
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
-        <Card className="shadow-lg bg-card h-[400px] transition-shadow duration-300 ease-in-out hover:shadow-xl rounded-lg">
-          <CardHeader className="border-b border-border/70">
+        <Card className="shadow-lg bg-card h-[400px] transition-shadow duration-300 ease-in-out hover:shadow-xl rounded-lg border-border/50">
+          <CardHeader className="border-b border-border/50 py-4 px-6">
             <CardTitle className="text-xl font-semibold text-foreground">Recent Activity</CardTitle>
-            <CardDescription className="text-muted-foreground">Overview of recent order updates and comments.</CardDescription>
+            <CardDescription className="text-muted-foreground text-sm">Latest order updates and comments.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[calc(100%-92px)] p-0"> 
+          <CardContent className="h-[calc(100%-80px)] p-0"> 
             <ScrollArea className="h-full">
-              <div className="p-6 space-y-4">
+              <div className="p-4 space-y-3">
                 {mockRecentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-4 p-3 rounded-md hover:bg-accent transition-colors border border-transparent hover:border-border">
-                    <div className="flex-shrink-0 pt-1 text-primary">
+                  <div key={activity.id} className="flex items-start space-x-4 p-3.5 rounded-lg hover:bg-primary/5 transition-colors border border-transparent hover:border-primary/20 cursor-pointer group">
+                    <div className="flex-shrink-0 pt-1.5 text-primary">
                       {getActivityIcon(activity.type)}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground leading-tight">{activity.title}</p>
+                      <p className="text-sm font-medium text-foreground leading-tight group-hover:text-primary transition-colors">{activity.title}</p>
                       <p className="text-xs text-muted-foreground">{activity.details}</p>
-                      <div className="flex items-center space-x-2 mt-1.5">
-                        <Avatar className="h-6 w-6">
+                      <div className="flex items-center space-x-2 mt-2">
+                        <Avatar className="h-7 w-7 border border-border/50">
                            <AvatarImage src={activity.userAvatar || `https://placehold.co/40x40.png?text=${getInitials(activity.userName)}`} alt={activity.userName} data-ai-hint="user avatar"/>
-                          <AvatarFallback className="text-xs bg-primary/20 text-primary">{getInitials(activity.userName)}</AvatarFallback>
+                          <AvatarFallback className="text-xs bg-primary/10 text-primary">{getInitials(activity.userName)}</AvatarFallback>
                         </Avatar>
                         <p className="text-xs text-muted-foreground">
                           {activity.userName} &bull; {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
@@ -320,8 +324,8 @@ export default function DashboardPage() {
                 ))}
                 {mockRecentActivities.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
-                    <ListChecks className="w-16 h-16 mb-4 opacity-30" />
-                    <p className="text-lg">No recent activity to display.</p>
+                    <ListChecks className="w-20 h-20 mb-4 opacity-20" />
+                    <p className="text-lg">No recent activity.</p>
                   </div>
                 )}
               </div>
