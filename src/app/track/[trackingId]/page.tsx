@@ -1,13 +1,16 @@
+
 "use client";
 
+import { use } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Send, MessageSquare, Package, UserCircle, CalendarDays, Clock } from "lucide-react";
 import Image from "next/image";
-import type { Comment, OrderStatus } from "@/types"; // Assuming types are defined
+import type { Comment, OrderStatus } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { Label } from '@/components/ui/label';
 
 interface PublicTrackingPageProps {
   params: { trackingId: string };
@@ -43,7 +46,8 @@ const formatDate = (dateString: string) => {
 };
 
 
-export default function PublicTrackingPage({ params }: PublicTrackingPageProps) {
+export default function PublicTrackingPage({ params: paramsProp }: PublicTrackingPageProps) {
+  const params = use(paramsProp);
   const { trackingId } = params;
   const data = mockTrackingData; // In a real app, fetch data based on trackingId
 
@@ -160,26 +164,3 @@ export default function PublicTrackingPage({ params }: PublicTrackingPageProps) 
     </div>
   );
 }
-
-// Re-define Label as it's used in this file
-import * as React from "react";
-import * as LabelPrimitive from "@radix-ui/react-label";
-import { cva } from "class-variance-authority";
-import { cn } from "@/lib/utils";
-
-const labelVariants = cva(
-  "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-);
-
-const Label = React.forwardRef<
-  React.ElementRef<typeof LabelPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof LabelPrimitive.Root>
->(({ className, ...props }, ref) => (
-  <LabelPrimitive.Root
-    ref={ref}
-    className={cn(labelVariants(), className)}
-    {...props}
-  />
-));
-Label.displayName = LabelPrimitive.Root.displayName;
-
