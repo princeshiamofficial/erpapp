@@ -11,7 +11,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  updateUserAvatar: (avatarUrl: string) => Promise<boolean>; // For current user updating own avatar
+  updateUserAvatar: (avatarUrl: string | null) => Promise<boolean>; // For current user updating own avatar, allow null for removal
   refreshCurrentUser: () => Promise<void>; // To refresh user data from Firestore
 }
 
@@ -23,53 +23,63 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const router = useRouter();
 
   useEffect(() => {
-    // Seed initial admin user if not present in Firestore.
-    // This is a good place for one-time setup.
-    seedInitialAdminUser();
-
-    const storedUserJson = localStorage.getItem('colorhut-user');
-    if (storedUserJson) {
+    const initializeAuth = async () => {
       try {
-        const storedUser = JSON.parse(storedUserJson) as User;
-        // Validate against Firestore or ensure fields are present
-        if (storedUser && storedUser.id) {
-          // Fetch the latest user data from Firestore to ensure it's up-to-date
-          getUserById(storedUser.id).then(firestoreUser => {
-            if (firestoreUser) {
-              const { password, ...userToStore } = firestoreUser;
-              setCurrentUser(userToStore as User);
+        // Ensure initial admin user seeding is attempted and awaited.
+        // This is crucial for the first run to prevent login before admin exists.
+        await seedInitialAdminUser();
+
+        const storedUserJson = localStorage.getItem('colorhut-user');
+        if (storedUserJson) {
+          try {
+            const storedUser = JSON.parse(storedUserJson) as User;
+            // Validate against Firestore or ensure fields are present
+            if (storedUser && storedUser.id) {
+              // Fetch the latest user data from Firestore to ensure it's up-to-date
+              const firestoreUser = await getUserById(storedUser.id);
+              if (firestoreUser) {
+                const { password, ...userToStore } = firestoreUser;
+                setCurrentUser(userToStore as User);
+              } else {
+                // User in localStorage not found in Firestore, clear it
+                localStorage.removeItem('colorhut-user');
+                setCurrentUser(null);
+              }
             } else {
-              // User in localStorage not found in Firestore, clear it
+              // Invalid user object in localStorage
               localStorage.removeItem('colorhut-user');
+              setCurrentUser(null);
             }
-            setIsLoading(false);
-          });
-        } else {
-          localStorage.removeItem('colorhut-user');
-          setIsLoading(false);
+          } catch (error) {
+            console.error("Failed to parse or validate stored user:", error);
+            localStorage.removeItem('colorhut-user');
+            setCurrentUser(null);
+          }
         }
-      } catch (error) {
-        console.error("Failed to parse stored user:", error);
-        localStorage.removeItem('colorhut-user');
-        setIsLoading(false);
+      } catch (seedError) {
+        console.error("Error during initial admin user seeding:", seedError);
+        // Depending on app requirements, you might want to handle this more gracefully
+      } finally {
+        setIsLoading(false); // All initial async setup is done
       }
-    } else {
-      setIsLoading(false);
-    }
-  }, []);
+    };
+
+    initializeAuth();
+  }, []); // Empty dependency array ensures this runs once on mount
 
   const login = async (email: string, pass: string): Promise<boolean> => {
-    setIsLoading(true);
+    setIsLoading(true); // Indicate loading during login attempt
     const userFromDb = await getUserByEmail(email);
-    setIsLoading(false);
-
+    
     if (userFromDb && userFromDb.password === pass) { // Still using plain text password for demo
       const { password, ...userToStore } = userFromDb;
       setCurrentUser(userToStore as User);
       localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
       router.push('/dashboard');
+      setIsLoading(false);
       return true;
     }
+    setIsLoading(false);
     return false;
   };
 
@@ -79,24 +89,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     router.push('/login');
   };
 
-  const updateUserAvatar = async (avatarUrl: string | null): Promise<boolean> => { // Allow null for removal
+  const updateUserAvatar = async (avatarUrl: string | null): Promise<boolean> => {
     if (!currentUser || !currentUser.id) return false;
-    setIsLoading(true);
+    // No global isLoading toggle here, as this is a specific action, not initial load
     
     const success = await updateUserAvatarInFirestore(currentUser.id, avatarUrl);
 
     if (success) {
+      // Ensure avatarUrl in User type can be string | null | undefined for flexibility
+      // If User.avatarUrl is `string | undefined`, and Firestore stores null, then `null` becomes `undefined` here.
       const updatedUser = { ...currentUser, avatarUrl: avatarUrl ?? undefined };
       setCurrentUser(updatedUser);
       localStorage.setItem('colorhut-user', JSON.stringify(updatedUser));
     }
-    setIsLoading(false);
     return success;
   };
 
   const refreshCurrentUser = async () => {
     if (currentUser && currentUser.id) {
-      setIsLoading(true);
+      // Consider a specific loading state for refresh if needed, not global setIsLoading
       const firestoreUser = await getUserById(currentUser.id);
       if (firestoreUser) {
         const { password, ...userToStore } = firestoreUser;
@@ -106,7 +117,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         // User might have been deleted, log them out
         logout();
       }
-      setIsLoading(false);
     }
   };
 
