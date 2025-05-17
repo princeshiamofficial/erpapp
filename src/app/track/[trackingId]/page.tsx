@@ -1,7 +1,7 @@
 
 "use client";
 
-import { use } from 'react';
+import { use, useState, useEffect } from 'react'; // Added useState, useEffect
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -48,8 +48,17 @@ const formatDate = (dateString: string) => {
 
 export default function PublicTrackingPage({ params: paramsProp }: PublicTrackingPageProps) {
   const params = use(paramsProp);
-  const { trackingId } = params; // trackingId is now available
-  const data = mockTrackingData; // In a real app, fetch data based on trackingId
+  const { trackingId } = params; 
+  const data = mockTrackingData; 
+
+  const [lastUpdatedDisplay, setLastUpdatedDisplay] = useState<string | null>(null);
+
+  useEffect(() => {
+    // This effect runs only on the client after hydration
+    const lastStatusEntry = data.statusHistory[data.statusHistory.length - 1];
+    const timestampToUse = lastStatusEntry?.timestamp || new Date().toISOString();
+    setLastUpdatedDisplay(formatDate(timestampToUse));
+  }, [data.statusHistory]); // data.statusHistory is from mock data, so it's stable for this component instance
 
   if (!data) {
     return <div className="p-6 text-center">Tracking ID not found.</div>;
@@ -64,19 +73,19 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
                 <path d="M2 7L12 12M12 12L22 7M12 12V22M12 2V12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M17 4.5L7 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <h1 className="text-4xl font-extrabold tracking-tight">TrackFlow</h1>
+            <h1 className="text-4xl font-extrabold tracking-tight text-primary">TrackFlow</h1>
         </div>
         <p className="mt-2 text-xl text-muted-foreground">Order Tracking Portal</p>
       </header>
 
       <main className="max-w-4xl mx-auto space-y-8">
-        <Card className="shadow-xl overflow-hidden">
-          <CardHeader className="bg-card-foreground/5 p-6">
+        <Card className="shadow-xl overflow-hidden border-primary/20 hover:border-primary/50 transition-all duration-300 hover:shadow-2xl">
+          <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6">
             <div className="flex items-center space-x-4">
               <Package className="h-10 w-10 text-primary" />
               <div>
-                <CardTitle className="text-2xl md:text-3xl">Order ID: {data.id}</CardTitle>
-                <CardDescription className="text-md">
+                <CardTitle className="text-2xl md:text-3xl text-primary-foreground group-hover:text-primary transition-colors">Order ID: {data.id}</CardTitle>
+                <CardDescription className="text-md text-primary-foreground/80 group-hover:text-muted-foreground transition-colors">
                   Tracking information for {data.customerName} ({data.companyName})
                 </CardDescription>
               </div>
@@ -86,7 +95,9 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
             <div>
               <h3 className="text-xl font-semibold mb-2 text-primary">Current Status</h3>
               <p className="text-2xl font-bold text-primary">{formatStatus(data.currentStatus)}</p>
-              <p className="text-sm text-muted-foreground">Last updated: {formatDate(data.statusHistory[data.statusHistory.length -1]?.timestamp || new Date().toISOString())}</p>
+              <p className="text-sm text-muted-foreground">
+                Last updated: {lastUpdatedDisplay !== null ? lastUpdatedDisplay : 'Calculating...'}
+              </p>
             </div>
             
             <Separator />
@@ -113,13 +124,13 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
           </CardContent>
         </Card>
 
-        <Card className="shadow-xl">
-          <CardHeader>
+        <Card className="shadow-xl border-primary/20 hover:border-primary/50 transition-all duration-300 hover:shadow-2xl">
+          <CardHeader className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
             <div className="flex items-center space-x-3">
               <MessageSquare className="h-8 w-8 text-primary" />
-              <CardTitle className="text-2xl">Comments & Updates ({data.comments.filter(c => !c.isInternal).length})</CardTitle>
+              <CardTitle className="text-2xl text-primary-foreground group-hover:text-primary transition-colors">Comments & Updates ({data.comments.filter(c => !c.isInternal).length})</CardTitle>
             </div>
-            <CardDescription>Share updates or ask questions about this order.</CardDescription>
+            <CardDescription className="text-primary-foreground/80 group-hover:text-muted-foreground transition-colors">Share updates or ask questions about this order.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
@@ -151,7 +162,7 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
             <div>
               <Label htmlFor="comment" className="text-lg font-semibold mb-2 block text-primary">Add a Comment</Label>
               <Textarea id="comment" placeholder="Type your message here..." className="min-h-[100px] text-base mb-3" />
-              <Button size="lg" className="w-full sm:w-auto">
+              <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90">
                 <Send className="mr-2 h-5 w-5" /> Submit Comment
               </Button>
             </div>
@@ -164,3 +175,4 @@ export default function PublicTrackingPage({ params: paramsProp }: PublicTrackin
     </div>
   );
 }
+
