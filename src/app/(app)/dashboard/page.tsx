@@ -3,8 +3,92 @@
 
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, CheckSquare, Users, DollarSign } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Package, CheckSquare, Users, DollarSign, ListChecks, MessageSquare, PlusCircle, UserCircle } from 'lucide-react';
 import Image from 'next/image';
+import { formatDistanceToNow } from 'date-fns';
+
+// Define a type for recent activity items
+interface ActivityItem {
+  id: string;
+  type: 'status_update' | 'new_comment' | 'order_created';
+  orderId: string;
+  title: string;
+  details: string;
+  userName: string;
+  userAvatar?: string; // Optional: URL to user avatar
+  timestamp: string; // ISO string
+}
+
+// Mock recent activity data
+const mockRecentActivities: ActivityItem[] = [
+  {
+    id: 'act-001',
+    type: 'status_update',
+    orderId: 'ORD-001',
+    title: 'Status changed to IN_PRODUCTION',
+    details: 'Production has commenced for Tech Solutions Inc.',
+    userName: 'Bob CRM',
+    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+  },
+  {
+    id: 'act-002',
+    type: 'new_comment',
+    orderId: 'ORD-002',
+    title: 'New comment on GreenScape Ltd.',
+    details: 'Alice (Client): "Could we get an update on the design phase?"',
+    userName: 'Alice Wonderland',
+    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
+  },
+  {
+    id: 'act-003',
+    type: 'order_created',
+    orderId: 'ORD-004',
+    title: 'New Order: Innovate Fast',
+    details: 'Order created by David CRM.',
+    userName: 'David CRM',
+    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
+  },
+  {
+    id: 'act-004',
+    type: 'status_update',
+    orderId: 'ORD-003',
+    title: 'Status changed to SHIPPED',
+    details: 'Innovate Hub order has been shipped.',
+    userName: 'System',
+    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+  },
+  {
+    id: 'act-005',
+    type: 'new_comment',
+    orderId: 'ORD-001',
+    title: 'Internal note on Tech Solutions Inc.',
+    details: 'Carol DR: "Client approved final mockups."',
+    userName: 'Carol DesignerRep',
+    timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3 days ago
+  },
+];
+
+const getActivityIcon = (type: ActivityItem['type']) => {
+  switch (type) {
+    case 'status_update':
+      return <ListChecks className="h-5 w-5 text-blue-500" />;
+    case 'new_comment':
+      return <MessageSquare className="h-5 w-5 text-green-500" />;
+    case 'order_created':
+      return <PlusCircle className="h-5 w-5 text-purple-500" />;
+    default:
+      return <UserCircle className="h-5 w-5 text-gray-500" />;
+  }
+};
+
+const getInitials = (name: string) => {
+    const names = name.split(' ');
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
+}
+
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
@@ -58,8 +142,37 @@ export default function DashboardPage() {
             <CardTitle className="text-foreground">Recent Activity</CardTitle>
             <CardDescription className="text-muted-foreground">Overview of recent order updates and comments.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px] flex items-center justify-center">
-            <Image src="https://placehold.co/600x300.png" alt="Recent Activity Placeholder" data-ai-hint="activity feed" width={600} height={300} className="rounded-md object-cover" />
+          <CardContent className="h-[350px] p-0">
+            <ScrollArea className="h-full">
+              <div className="p-6 space-y-4">
+                {mockRecentActivities.map((activity) => (
+                  <div key={activity.id} className="flex items-start space-x-3">
+                    <div className="flex-shrink-0 pt-1">
+                      {getActivityIcon(activity.type)}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-foreground leading-tight">{activity.title}</p>
+                      <p className="text-xs text-muted-foreground">{activity.details}</p>
+                      <div className="flex items-center space-x-2 mt-1">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={activity.userAvatar || `https://placehold.co/40x40.png?text=${getInitials(activity.userName)}`} alt={activity.userName} data-ai-hint="user avatar"/>
+                          <AvatarFallback className="text-xs bg-primary/20 text-primary">{getInitials(activity.userName)}</AvatarFallback>
+                        </Avatar>
+                        <p className="text-xs text-muted-foreground">
+                          {activity.userName} &bull; {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {mockRecentActivities.length === 0 && (
+                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                    <ListChecks className="w-16 h-16 mb-4 opacity-50" />
+                    <p>No recent activity to display.</p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
           </CardContent>
         </Card>
         <Card className="shadow-xl bg-card">
@@ -67,7 +180,7 @@ export default function DashboardPage() {
             <CardTitle className="text-foreground">Order Status Distribution</CardTitle>
             <CardDescription className="text-muted-foreground">Visual breakdown of current order statuses.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[300px] flex items-center justify-center">
+          <CardContent className="h-[350px] flex items-center justify-center">
             <Image src="https://placehold.co/600x300.png" alt="Order Status Chart Placeholder" data-ai-hint="pie chart" width={600} height={300} className="rounded-md object-cover"/>
           </CardContent>
         </Card>
