@@ -23,27 +23,27 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="shadow-xl bg-gradient-to-r from-primary/5 to-accent/5">
+      <Card className="shadow-xl bg-gradient-to-br from-primary/15 via-card to-primary/10 border-primary/20">
         <CardHeader>
-          <CardTitle className="text-3xl">Welcome to TrackFlow, {currentUser.name}!</CardTitle>
-          <CardDescription className="text-lg">
+          <CardTitle className="text-3xl text-foreground">Welcome to TrackFlow, {currentUser.name}!</CardTitle>
+          <CardDescription className="text-lg text-foreground/80">
             You are logged in as {currentUser.role}. Here's a quick overview of your workspace.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p>This is your main dashboard. From here, you can navigate to various sections of the application using the sidebar.</p>
+          <p className="text-foreground/90">This is your main dashboard. From here, you can navigate to various sections of the application using the sidebar.</p>
         </CardContent>
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {summaryCards.map((card) => (
-          <Card key={card.title} className="shadow-md hover:shadow-lg transition-shadow border hover:border-accent duration-300">
+          <Card key={card.title} className="shadow-md hover:shadow-lg transition-shadow border hover:border-primary/70 duration-300 bg-card">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+              <CardTitle className="text-sm font-medium text-card-foreground">{card.title}</CardTitle>
               <card.icon className="h-5 w-5 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{card.value}</div>
+              <div className="text-2xl font-bold text-card-foreground">{card.value}</div>
               <p className="text-xs text-muted-foreground">
                 {card.change} from last month
               </p>
@@ -53,19 +53,19 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="shadow-xl">
+        <Card className="shadow-xl bg-card">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Overview of recent order updates and comments.</CardDescription>
+            <CardTitle className="text-foreground">Recent Activity</CardTitle>
+            <CardDescription className="text-muted-foreground">Overview of recent order updates and comments.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] flex items-center justify-center">
             <Image src="https://placehold.co/600x300.png" alt="Recent Activity Placeholder" data-ai-hint="activity feed" width={600} height={300} className="rounded-md object-cover" />
           </CardContent>
         </Card>
-        <Card className="shadow-xl">
+        <Card className="shadow-xl bg-card">
           <CardHeader>
-            <CardTitle>Order Status Distribution</CardTitle>
-            <CardDescription>Visual breakdown of current order statuses.</CardDescription>
+            <CardTitle className="text-foreground">Order Status Distribution</CardTitle>
+            <CardDescription className="text-muted-foreground">Visual breakdown of current order statuses.</CardDescription>
           </CardHeader>
           <CardContent className="h-[300px] flex items-center justify-center">
             <Image src="https://placehold.co/600x300.png" alt="Order Status Chart Placeholder" data-ai-hint="pie chart" width={600} height={300} className="rounded-md object-cover"/>
