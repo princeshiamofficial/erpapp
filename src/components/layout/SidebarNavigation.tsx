@@ -15,6 +15,7 @@ import {
   Award
 } from "lucide-react";
 import type { UserRole } from "@/types";
+import { cn } from "@/lib/utils"; // Added import
 
 interface NavItem {
   href: string;
@@ -82,3 +83,4 @@ export function SidebarNavigation() {
     </>
   );
 }
+
