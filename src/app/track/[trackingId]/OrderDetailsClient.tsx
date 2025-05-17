@@ -227,10 +227,10 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
                 <div className="flex-1">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1">
                     <p className="text-sm sm:text-md font-semibold text-foreground">{comment.userName}</p>
-                    <p className="text-xs text-muted-foreground flex items-center mt-0.5 sm:mt-0">
+                    <div className="text-xs text-muted-foreground flex items-center mt-0.5 sm:mt-0">
                       <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1.5 opacity-70" /> 
                       {isClient ? formatDate(comment.timestamp) : <Skeleton className="h-3 w-24" />}
-                    </p>
+                    </div>
                   </div>
                   <p className="text-sm sm:text-md text-foreground/90 whitespace-pre-wrap">{comment.text}</p>
                 </div>
@@ -278,5 +278,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
   );
 }
 
+    
 
     
