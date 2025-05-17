@@ -140,13 +140,17 @@ export default function DashboardPage() {
 
   const handleSetGlobalMonthlyOrderTarget = (newTarget: number) => {
     setGlobalMonthlyOrderTarget(newTarget);
-    localStorage.setItem(LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY, newTarget.toString());
+    if (typeof window !== 'undefined') {
+        localStorage.setItem(LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY, newTarget.toString());
+    }
     setIsSetGlobalMonthlyTargetDialogOpen(false);
   };
 
   const handleSetGlobalWeeklyOrderTarget = (newTarget: number) => {
     setGlobalWeeklyOrderTarget(newTarget);
-    localStorage.setItem(LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY, newTarget.toString());
+     if (typeof window !== 'undefined') {
+        localStorage.setItem(LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY, newTarget.toString());
+    }
     setIsSetGlobalWeeklyTargetDialogOpen(false);
   };
 
@@ -214,19 +218,19 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8 p-1 sm:p-0">
-      <Card className="shadow-2xl bg-card border-border/30 rounded-xl overflow-hidden transform hover:shadow-primary/20 transition-shadow duration-300">
-        <CardHeader className="pb-4 bg-gradient-to-br from-card to-secondary/30 dark:from-card dark:to-background/20 text-card-foreground p-6 sm:p-8 rounded-t-xl">
+      <Card className="shadow-2xl bg-gradient-to-br from-primary/80 via-primary to-orange-600 dark:from-primary/70 dark:via-primary dark:to-orange-500 border-none text-primary-foreground rounded-xl overflow-hidden transform hover:shadow-primary/20 transition-shadow duration-300">
+        <CardHeader className="pb-4 p-6 sm:p-8">
           <CardTitle className="text-3xl sm:text-4xl font-bold">Welcome, {currentUser.name.split(' ')[0]}!</CardTitle>
-          <CardDescription className="text-md sm:text-lg text-muted-foreground/90">
-            You are logged in as <span className="font-semibold text-primary">{currentUser.role.replace(/_/g, ' ')}</span>. Here's your workspace overview.
+          <CardDescription className="text-md sm:text-lg text-primary-foreground/80">
+            You are logged in as <span className="font-semibold text-white">{currentUser.role.replace(/_/g, ' ')}</span>. Here's your workspace overview.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-6 sm:p-8">
-          <p className="text-card-foreground/90 max-w-3xl text-sm sm:text-md">This is your central hub for managing orders and tracking progress. Use the sidebar to navigate and stay on top of your tasks and key metrics.</p>
+        <CardContent className="p-6 sm:p-8 pt-0">
+          <p className="text-primary-foreground/90 max-w-3xl text-sm sm:text-md">This is your central hub for managing orders and tracking progress. Use the sidebar to navigate and stay on top of your tasks and key metrics.</p>
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3"> {/* Adjusted grid columns */}
         {summaryCards.map((card) => {
           let progressPercentage = 0;
           let progressColorClass = '';
@@ -331,9 +335,9 @@ export default function DashboardPage() {
                            <AvatarImage src={activity.userAvatar || `https://placehold.co/40x40.png?text=${getInitials(activity.userName)}`} alt={activity.userName} data-ai-hint="user avatar"/>
                           <AvatarFallback className="text-xs bg-primary/10 text-primary">{getInitials(activity.userName)}</AvatarFallback>
                         </Avatar>
-                        <p className="text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground"> {/* Changed from p to div */}
                           {activity.userName} &bull; {isClient ? formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true }) : <Skeleton className="h-3 w-20 inline-block" />}
-                        </p>
+                        </div>
                       </div>
                     </div>
                   </div>
