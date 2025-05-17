@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, CheckSquare, Users, DollarSign, ListChecks, MessageSquare, PlusCircle, UserCircle, Target, Edit3, CalendarDays, CalendarClock } from 'lucide-react';
+import { Package, CheckSquare, Users, DollarSign, ListChecks, MessageSquare, PlusCircle, UserCircle, Target, Edit3, CalendarDays, CalendarClock, Briefcase } from 'lucide-react';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -95,30 +95,30 @@ const LOCAL_STORAGE_WEEKLY_SALES_TARGET_KEY = 'trackflow-weekly-sales-target';
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
-  const [monthlySalesTarget, setMonthlySalesTarget] = useState<number>(50000); // Default
-  const [weeklySalesTarget, setWeeklySalesTarget] = useState<number>(10000); // Default
+  const [monthlyOrderTarget, setMonthlyOrderTarget] = useState<number>(100); // Default quantity
+  const [weeklyOrderTarget, setWeeklyOrderTarget] = useState<number>(20); // Default quantity
   const [isSetMonthlyTargetDialogOpen, setIsSetMonthlyTargetDialogOpen] = useState(false);
   const [isSetWeeklyTargetDialogOpen, setIsSetWeeklyTargetDialogOpen] = useState(false);
 
   useEffect(() => {
     const storedMonthlyTarget = localStorage.getItem(LOCAL_STORAGE_MONTHLY_SALES_TARGET_KEY);
     if (storedMonthlyTarget) {
-      setMonthlySalesTarget(parseFloat(storedMonthlyTarget));
+      setMonthlyOrderTarget(parseInt(storedMonthlyTarget, 10));
     }
     const storedWeeklyTarget = localStorage.getItem(LOCAL_STORAGE_WEEKLY_SALES_TARGET_KEY);
     if (storedWeeklyTarget) {
-      setWeeklySalesTarget(parseFloat(storedWeeklyTarget));
+      setWeeklyOrderTarget(parseInt(storedWeeklyTarget, 10));
     }
   }, []);
 
-  const handleSetMonthlySalesTarget = (newTarget: number) => {
-    setMonthlySalesTarget(newTarget);
+  const handleSetMonthlyOrderTarget = (newTarget: number) => {
+    setMonthlyOrderTarget(newTarget);
     localStorage.setItem(LOCAL_STORAGE_MONTHLY_SALES_TARGET_KEY, newTarget.toString());
     setIsSetMonthlyTargetDialogOpen(false);
   };
 
-  const handleSetWeeklySalesTarget = (newTarget: number) => {
-    setWeeklySalesTarget(newTarget);
+  const handleSetWeeklyOrderTarget = (newTarget: number) => {
+    setWeeklyOrderTarget(newTarget);
     localStorage.setItem(LOCAL_STORAGE_WEEKLY_SALES_TARGET_KEY, newTarget.toString());
     setIsSetWeeklyTargetDialogOpen(false);
   };
@@ -132,20 +132,20 @@ export default function DashboardPage() {
     { title: "Pending Approval", value: "12", icon: CheckSquare, change: "-3.1%", dataAiHint: "checklist form" },
     { title: "Revenue (MTD)", value: "$15,6K", icon: DollarSign, change: "+8.0%", dataAiHint: "financial chart" },
     { 
-      title: "Monthly Sales Target (CRM)", 
-      value: `$${monthlySalesTarget.toLocaleString()}`, 
+      title: "Monthly Order Target (CRM)", 
+      value: `${monthlyOrderTarget} Orders`, 
       icon: CalendarDays, 
       change: currentUser.role === 'ADMIN' ? "Editable by Admin" : "Set by Admin", 
-      dataAiHint: "monthly calendar target",
+      dataAiHint: "monthly calendar checklist",
       isAdminOnlyAction: true,
       actionType: 'monthly' as const
     },
     { 
-      title: "Weekly Sales Target (CRM)", 
-      value: `$${weeklySalesTarget.toLocaleString()}`, 
+      title: "Weekly Order Target (CRM)", 
+      value: `${weeklyOrderTarget} Orders`, 
       icon: CalendarClock, 
       change: currentUser.role === 'ADMIN' ? "Editable by Admin" : "Set by Admin", 
-      dataAiHint: "weekly calendar goal",
+      dataAiHint: "weekly calendar tasks",
       isAdminOnlyAction: true,
       actionType: 'weekly' as const
     },
@@ -201,15 +201,15 @@ export default function DashboardPage() {
           <SetSalesTargetDialog
             isOpen={isSetMonthlyTargetDialogOpen}
             onOpenChange={setIsSetMonthlyTargetDialogOpen}
-            currentTarget={monthlySalesTarget}
-            onSetTarget={handleSetMonthlySalesTarget}
+            currentTarget={monthlyOrderTarget}
+            onSetTarget={handleSetMonthlyOrderTarget}
             targetType="monthly"
           />
           <SetSalesTargetDialog
             isOpen={isSetWeeklyTargetDialogOpen}
             onOpenChange={setIsSetWeeklyTargetDialogOpen}
-            currentTarget={weeklySalesTarget}
-            onSetTarget={handleSetWeeklySalesTarget}
+            currentTarget={weeklyOrderTarget}
+            onSetTarget={handleSetWeeklyOrderTarget}
             targetType="weekly"
           />
         </>

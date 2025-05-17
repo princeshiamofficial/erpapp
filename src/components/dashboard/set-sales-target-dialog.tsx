@@ -30,35 +30,35 @@ export function SetSalesTargetDialog({
   onSetTarget,
   targetType
 }: SetSalesTargetDialogProps) {
-  const [targetAmount, setTargetAmount] = useState<string>(currentTarget.toString());
+  const [targetQuantity, setTargetQuantity] = useState<string>(currentTarget.toString());
   const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen) {
-      setTargetAmount(currentTarget.toString());
+      setTargetQuantity(currentTarget.toString());
     }
   }, [isOpen, currentTarget]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const newTarget = parseFloat(targetAmount);
+    const newTarget = parseInt(targetQuantity, 10);
     if (isNaN(newTarget) || newTarget < 0) {
       toast({
         title: "Invalid Target",
-        description: "Please enter a valid positive number for the sales target.",
+        description: "Please enter a valid positive number for the target quantity.",
         variant: "destructive",
       });
       return;
     }
     onSetTarget(newTarget);
     toast({
-      title: `${targetType === 'monthly' ? 'Monthly' : 'Weekly'} Sales Target Updated`,
-      description: `${targetType === 'monthly' ? 'Monthly' : 'Weekly'} sales target set to $${newTarget.toLocaleString()}.`,
+      title: `${targetType === 'monthly' ? 'Monthly' : 'Weekly'} Order Target Updated`,
+      description: `${targetType === 'monthly' ? 'Monthly' : 'Weekly'} order target set to ${newTarget} orders.`,
     });
   };
 
-  const dialogTitle = targetType === 'monthly' ? 'Set Monthly Sales Target (CRM)' : 'Set Weekly Sales Target (CRM)';
-  const dialogDescription = `Enter the new ${targetType} sales target amount for CRMs. This will be visible on the dashboard.`;
+  const dialogTitle = targetType === 'monthly' ? 'Set Monthly Order Target (CRM)' : 'Set Weekly Order Target (CRM)';
+  const dialogDescription = `Enter the new ${targetType} order target quantity for CRMs. This will be visible on the dashboard.`;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -72,15 +72,15 @@ export function SetSalesTargetDialog({
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="space-y-1">
-              <Label htmlFor="targetAmount">Target Amount ($)</Label>
+              <Label htmlFor="targetQuantity">Target Quantity (Orders)</Label>
               <Input
-                id="targetAmount"
+                id="targetQuantity"
                 type="number"
-                value={targetAmount}
-                onChange={(e) => setTargetAmount(e.target.value)}
-                placeholder="e.g., 50000"
+                value={targetQuantity}
+                onChange={(e) => setTargetQuantity(e.target.value)}
+                placeholder="e.g., 100"
                 min="0"
-                step="100"
+                step="1"
                 required
               />
             </div>
