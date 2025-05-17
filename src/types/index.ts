@@ -45,15 +45,16 @@ export interface TrackingLink {
   currentStatus: string; // ID of a CustomStatus
   statusHistory: OrderLogEntry[];
   comments: Comment[];
+  viewCount?: number;
 }
 
 export interface Comment {
   id: string;
-  userId?: string; // Optional: ID of the user who made the comment if they are an app user
-  userName: string; // Name of the person who commented (can be client name or app user name)
+  userId?: string | null; 
+  userName: string; 
   text: string;
   timestamp: string; // ISO string
-  isInternal: boolean; // True if comment is only for internal team members
+  isInternal: boolean; 
 }
 
     

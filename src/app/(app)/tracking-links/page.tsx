@@ -16,7 +16,7 @@ import { getOrders } from '@/lib/order-service';
 import { getStatusById, getContrastTextColor, getStatuses } from '@/lib/status-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { updateTrackingLinkAction } from './actions'; // Ensure this is imported for the dialog
+import { updateTrackingLinkAction } from './actions'; 
 
 export default function TrackingLinksPage() {
   const { currentUser } = useAuth();
@@ -58,12 +58,11 @@ export default function TrackingLinksPage() {
 
   const canEditSpecificLink = (link: TrackingLink) => {
     if (!currentUser) return false;
-    // Allow ADMIN, SYSTEM_ADMIN, CRM, and DESIGNER_REPRESENTATIVE to edit
     return ['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role);
   };
   
   const handleTrackingLinkUpdated = () => {
-    fetchData(); // Re-fetch data to reflect changes
+    fetchData(); 
     setIsEditDialogOpen(false);
   };
 
@@ -171,7 +170,39 @@ export default function TrackingLinksPage() {
                   filteredTrackingLinks.map((link) => {
                     const statusInfo = orderStatusDisplay[link.currentStatus] || { name: link.currentStatus, color: '#ccc', textColor: '#000' };
                     return (
-<TableRow key={link.id} className="hover:bg-muted/50 transition-colors"><TableCell className="pl-6"><Link href={`/track/${link.id}`} className="font-medium text-primary hover:underline">{link.id}</Link></TableCell><TableCell className="text-card-foreground">{link.customerName}</TableCell><TableCell><span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${link.isPublic ? 'bg-green-500/20 text-green-700 border-green-500/30 dark:bg-green-500/10 dark:text-green-300 dark:border-green-500/20' : 'bg-red-500/20 text-red-700 border-red-500/30 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/20'}`}>{link.isPublic ? 'Public' : 'Private'}</span></TableCell><TableCell><Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">{statusInfo.name}</Badge></TableCell><TableCell className="text-muted-foreground">{0}</TableCell><TableCell className="text-card-foreground">{link.crmUserName}</TableCell><TableCell className="text-card-foreground">{link.designerRepresentativeName || 'N/A'}</TableCell><TableCell className="pr-6 text-right space-x-2 whitespace-nowrap"><Link href={`/track/${link.id}`} passHref><Button variant="outline" size="sm" className="h-9 px-3"><Eye className="mr-1.5 h-4 w-4" />View Public</Button></Link>{canEditSpecificLink(link) && (<Button variant="outline" size="sm" className="h-9 px-3" onClick={() => { setSelectedLink(link); setIsEditDialogOpen(true);}}><Edit3 className="mr-1.5 h-4 w-4" />Edit</Button>)}</TableCell></TableRow>
+                      <TableRow key={link.id} className="hover:bg-muted/50 transition-colors">
+                        <TableCell className="pl-6">
+                          <Link href={`/track/${link.id}`} className="font-medium text-primary hover:underline">
+                            {link.id}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-card-foreground">{link.customerName}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${link.isPublic ? 'bg-green-500/20 text-green-700 border-green-500/30 dark:bg-green-500/10 dark:text-green-300 dark:border-green-500/20' : 'bg-red-500/20 text-red-700 border-red-500/30 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/20'}`}>
+                            {link.isPublic ? 'Public' : 'Private'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
+                            {statusInfo.name}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{link.viewCount || 0}</TableCell>
+                        <TableCell className="text-card-foreground">{link.crmUserName}</TableCell>
+                        <TableCell className="text-card-foreground">{link.designerRepresentativeName || 'N/A'}</TableCell>
+                        <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
+                          <Link href={`/track/${link.id}`} passHref>
+                            <Button variant="outline" size="sm" className="h-9 px-3">
+                              <Eye className="mr-1.5 h-4 w-4" />View Public
+                            </Button>
+                          </Link>
+                          {canEditSpecificLink(link) && (
+                            <Button variant="outline" size="sm" className="h-9 px-3" onClick={() => { setSelectedLink(link); setIsEditDialogOpen(true);}}>
+                              <Edit3 className="mr-1.5 h-4 w-4" />Edit
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
                     );
                   })
                 ) : (
@@ -210,3 +241,4 @@ export default function TrackingLinksPage() {
 
 
     
+

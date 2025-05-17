@@ -1,14 +1,12 @@
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, orderBy, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, orderBy, writeBatch, runTransaction } from 'firebase/firestore';
 import type { TrackingLink, Comment, OrderLogEntry, CustomStatus } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { getStatuses } from './status-service'; // To get default status IDs
+import { getStatuses } from './status-service'; 
 
 const ORDERS_COLLECTION = 'orders';
 
-// Helper to seed initial orders if the collection is empty
-// This function will NOT be called automatically anymore.
 const seedInitialOrders = async (): Promise<TrackingLink[]> => {
   const statuses: CustomStatus[] = await getStatuses();
   
@@ -22,7 +20,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     return [];
   }
   
-  type SeedOrderBase = Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments' | 'currentStatus'> & {
+  type SeedOrderBase = Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments' | 'currentStatus' | 'viewCount'> & {
     phoneNumber?: string;
     service?: string;
     designerRepresentativeId?: string;
@@ -66,7 +64,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     ...firstOrderBaseData,
     id: firstOrderId,
     createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-    currentStatus: inProductionStatus.id, // Use ID
+    currentStatus: inProductionStatus.id, 
     statusHistory: [
       { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: ideaSubmittedStatus.id, changedByUserId: firstOrderBaseData.crmUserId, changedByUserName: firstOrderBaseData.crmUserName, notes: "Order created, requirements gathered." },
       { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: inProductionStatus.id, changedByUserId: firstOrderBaseData.crmUserId, changedByUserName: firstOrderBaseData.crmUserName, notes: "Production has commenced." }
@@ -78,6 +76,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     service: firstOrderBaseData.service || null,
     designerRepresentativeId: firstOrderBaseData.designerRepresentativeId || null,
     designerRepresentativeName: firstOrderBaseData.designerRepresentativeName || null,
+    viewCount: 0,
   };
   const firstDocRef = doc(ordersRef, firstOrderId);
   batch.set(firstDocRef, firstOrder);
@@ -89,7 +88,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     ...secondOrderBaseData,
     id: secondOrderId,
     createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-    currentStatus: pendingApprovalStatus.id, // Use ID
+    currentStatus: pendingApprovalStatus.id,
     statusHistory: [
       { id: uuidv4(), timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), status: ideaSubmittedStatus.id, changedByUserId: secondOrderBaseData.crmUserId, changedByUserName: secondOrderBaseData.crmUserName, notes: "New landscaping project initiated." },
       { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: readyForDesignStatus.id, changedByUserId: secondOrderBaseData.crmUserId, changedByUserName: secondOrderBaseData.crmUserName, notes: "Order ready for design team." },
@@ -100,13 +99,14 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     service: secondOrderBaseData.service || null,
     designerRepresentativeId: secondOrderBaseData.designerRepresentativeId || null,
     designerRepresentativeName: secondOrderBaseData.designerRepresentativeName || null,
+    viewCount: 0,
   };
   const secondDocRef = doc(ordersRef, secondOrderId);
   batch.set(secondDocRef, secondOrder);
   createdOrders.push(secondOrder);
 
   await batch.commit();
-  console.log('Initial orders seeded in Firestore with sequential IDs and null for undefined optionals.');
+  console.log('Initial orders seeded in Firestore with sequential IDs and viewCount.');
   return createdOrders;
 };
 
@@ -186,6 +186,7 @@ export const addOrder = async (orderData: {
     currentStatus: orderData.initialStatusId, 
     designerRepresentativeId: null,
     designerRepresentativeName: null,
+    viewCount: 0,
   };
 
   const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
@@ -196,16 +197,14 @@ export const addOrder = async (orderData: {
 export const updateOrder = async (id: string, updates: Partial<TrackingLink>): Promise<boolean> => {
   try {
     const orderDoc = doc(db, ORDERS_COLLECTION, id);
-    const sanitizedUpdates: { [key: string]: any } = {}; // Use a more general type for sanitizedUpdates
+    const sanitizedUpdates: { [key: string]: any } = {}; 
     for (const key in updates) {
       if (Object.prototype.hasOwnProperty.call(updates, key)) {
         const value = updates[key as keyof TrackingLink];
-        // Ensure undefined values are converted to null or omitted if necessary
-        // For simple fields, null is fine. For nested objects/arrays, ensure they are also sanitized.
         if (value !== undefined) {
           sanitizedUpdates[key] = value;
         } else {
-          sanitizedUpdates[key] = null; // Default to null if undefined
+          sanitizedUpdates[key] = null;
         }
       }
     }
@@ -224,20 +223,14 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
       throw new Error(`Order ${orderId} not found.`);
     }
 
-    const baseComment: Partial<Comment> = {
+    const newComment: Comment = {
       id: uuidv4(),
       timestamp: new Date().toISOString(),
       userName: commentData.userName,
       text: commentData.text,
       isInternal: commentData.isInternal,
+      ...(commentData.userId && { userId: commentData.userId }), // Only include userId if it exists
     };
-
-    if (commentData.userId !== undefined) {
-      baseComment.userId = commentData.userId;
-    }
-    
-    // Cast to Comment after ensuring no undefined properties that Firestore would reject
-    const newComment = baseComment as Comment;
 
     const updatedComments = [...order.comments, newComment];
     
@@ -255,3 +248,20 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
   }
 };
 
+export const incrementOrderViewCount = async (orderId: string): Promise<void> => {
+  const orderRef = doc(db, ORDERS_COLLECTION, orderId);
+  try {
+    await runTransaction(db, async (transaction) => {
+      const orderDoc = await transaction.get(orderRef);
+      if (!orderDoc.exists()) {
+        throw new Error(`Order ${orderId} not found for incrementing view count.`);
+      }
+      const currentViewCount = orderDoc.data().viewCount || 0;
+      transaction.update(orderRef, { viewCount: currentViewCount + 1 });
+    });
+    console.log(`View count incremented for order ${orderId}`);
+  } catch (error) {
+    console.error(`Error incrementing view count for order ${orderId}:`, error);
+    // Decide if you want to re-throw or handle silently
+  }
+};

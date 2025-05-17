@@ -1,7 +1,7 @@
 
 import { Suspense } from 'react';
 import { OrderDetailsClient } from './OrderDetailsClient';
-import { getOrderById } from '@/lib/order-service'; // Use new Firestore service
+import { getOrderById, incrementOrderViewCount } from '@/lib/order-service'; 
 import { getStatuses } from '@/lib/status-service';
 import { notFound } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,19 +12,22 @@ interface PublicTrackingPageProps {
   params: { trackingId: string };
 }
 
-// This is now a Server Component
 export default async function PublicTrackingPage({ params }: PublicTrackingPageProps) {
   const trackingId = params.trackingId;
   
-  // Fetch order and statuses on the server
-  // Using Promise.all to fetch in parallel
+  // Increment view count when the page is accessed
+  // This is a server-side operation before rendering
+  if (trackingId) {
+    await incrementOrderViewCount(trackingId);
+  }
+
   const [orderData, allStatuses] = await Promise.all([
     getOrderById(trackingId),
-    getStatuses() // Fetch all statuses to pass to client for display mapping
+    getStatuses() 
   ]);
 
   if (!orderData) {
-    notFound(); // Or return a custom "not found" component
+    notFound(); 
   }
 
   return (
@@ -110,3 +113,4 @@ function TrackingPageSkeleton() {
     </div>
   );
 }
+
