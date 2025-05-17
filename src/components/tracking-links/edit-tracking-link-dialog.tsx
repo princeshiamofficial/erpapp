@@ -71,7 +71,8 @@ export function EditTrackingLinkDialog({
     }
   };
   
-  const canEditFields = currentUser && ['ADMIN', 'DESIGNER_REPRESENTATIVE', 'CRM', 'SYSTEM_ADMIN'].includes(currentUser.role);
+  // Allow ADMIN, SYSTEM_ADMIN, CRM, and DESIGNER_REPRESENTATIVE to edit fields
+  const canEditFields = currentUser && ['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>

@@ -58,8 +58,8 @@ export default function TrackingLinksPage() {
 
   const canEditSpecificLink = (link: TrackingLink) => {
     if (!currentUser) return false;
-    // Allow ADMIN, CRM, and DR to edit links for status changes as per previous request
-    return ['ADMIN', 'DESIGNER_REPRESENTATIVE', 'CRM', 'SYSTEM_ADMIN'].includes(currentUser.role);
+    // Allow ADMIN, SYSTEM_ADMIN, CRM, and DESIGNER_REPRESENTATIVE to edit
+    return ['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role);
   };
   
   const handleTrackingLinkUpdated = () => {
