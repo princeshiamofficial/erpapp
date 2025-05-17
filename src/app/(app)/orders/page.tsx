@@ -13,6 +13,7 @@ import { CreateOrderDialog } from '@/components/orders/create-order-dialog';
 import type { TrackingLink, OrderStatus } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { cn } from "@/lib/utils"; // Added import
 
 // Initial mock data, will be managed by state
 const initialMockOrders: TrackingLink[] = [
@@ -71,10 +72,10 @@ const formatDate = (dateString: string) => {
 
 const getStatusBadgeVariant = (status: OrderStatus): "default" | "secondary" | "destructive" | "outline" => {
   switch (status) {
-    case 'IN_PRODUCTION': return 'default'; // Blue (Primary)
-    case 'PENDING_CLIENT_APPROVAL': return 'secondary'; // Yellow-ish (Secondary might need theme adjustment)
-    case 'SHIPPED': return 'default'; // Using primary, but could be green.
-    case 'READY_FOR_DESIGN': return 'outline'; // Teal-ish / Outline (Outline is good for distinct status)
+    case 'IN_PRODUCTION': return 'default'; 
+    case 'PENDING_CLIENT_APPROVAL': return 'secondary'; 
+    case 'SHIPPED': return 'default'; 
+    case 'READY_FOR_DESIGN': return 'outline'; 
     case 'IDEA_SUBMITTED': return 'outline';
     case 'DELIVERED': return 'default';
     case 'CANCELLED': return 'destructive';
@@ -226,3 +227,6 @@ export default function OrdersPage() {
     </div>
   );
 }
+
+
+    
