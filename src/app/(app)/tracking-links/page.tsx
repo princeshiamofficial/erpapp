@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
@@ -9,57 +9,70 @@ import { Link2, Eye, Edit3, Search } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import Image from "next/image";
 import Link from "next/link";
-import type { TrackingLink, OrderStatus, User } from '@/types'; // Assuming types are defined
+import type { TrackingLink, User, CustomStatus } from '@/types';
 import { EditTrackingLinkDialog } from '@/components/tracking-links/edit-tracking-link-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { getOrders } from '@/lib/order-service'; // Use new Firestore service
+import { getStatusById, getContrastTextColor, getStatuses } from '@/lib/status-service';
+import { Skeleton } from '@/components/ui/skeleton';
 
-// Initial mock data, mirrors orders for now. In a real app, this might be derived or a separate collection.
-// For this scaffold, we'll assume TrackingLinks are essentially Orders with tracking-specific properties.
-const initialMockTrackingLinks: TrackingLink[] = [
-   { 
-    id: "ORD-001", customerName: "Tech Solutions Inc.", companyName: "Tech Solutions Inc.", address: "123 Tech Ave",
-    phoneNumber: "555-0101", service: "Custom Software Development",
-    crmUserId: "user-crm-001", crmUserName: "Bob CRM", createdAt: "2023-10-26T10:00:00Z", isPublic: true,
-    currentStatus: "IN_PRODUCTION", statusHistory: [], comments: []
-  },
-  { 
-    id: "ORD-002", customerName: "GreenScape Ltd.", companyName: "GreenScape Ltd.", address: "456 Green Rd",
-    phoneNumber: "555-0102", service: "Landscaping Design",
-    crmUserId: "user-crm-002", crmUserName: "David CRM", createdAt: "2023-10-25T10:00:00Z", isPublic: false,
-    currentStatus: "PENDING_CLIENT_APPROVAL", statusHistory: [], comments: []
-  },
-   { 
-    id: "ORD-003", customerName: "Innovate Hub", companyName: "Innovate Hub", address: "789 Innovate St",
-    phoneNumber: "555-0103", service: "Mobile App Development",
-    crmUserId: "user-crm-001", crmUserName: "Bob CRM", createdAt: "2023-10-24T10:00:00Z", isPublic: true,
-    currentStatus: "SHIPPED", statusHistory: [], comments: []
-  },
-];
-
-// Dummy views data for demonstration
+// Dummy views data for demonstration - in a real app this would come from analytics or backend
 const mockViews: {[key: string]: number} = {
   "ORD-001": 102,
   "ORD-002": 5,
   "ORD-003": 250,
-}
-
-const formatStatus = (status: OrderStatus) => status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  "ORD-XYZ123": 150,
+};
 
 export default function TrackingLinksPage() {
   const { currentUser } = useAuth();
-  const [trackingLinks, setTrackingLinks] = useState<TrackingLink[]>(initialMockTrackingLinks);
+  const [trackingLinks, setTrackingLinks] = useState<TrackingLink[]>([]);
+  const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // For Edit Dialog
+  const [selectedLink, setSelectedLink] = useState<TrackingLink | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [fetchedLinks, fetchedStatuses] = await Promise.all([
+        getOrders(), // Tracking links are derived from orders
+        getStatuses()
+      ]);
+      setTrackingLinks(fetchedLinks);
+      setAllStatuses(fetchedStatuses);
+    } catch (error) {
+      console.error("Failed to fetch tracking links or statuses:", error);
+      // Add toast notification
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const getStatusDisplayInfo = useCallback(async (statusId: string): Promise<{ name: string; color: string; textColor: string }> => {
+    const status = allStatuses.find(s => s.id === statusId) || await getStatusById(statusId);
+    if (status) {
+      return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
+    }
+    return { name: statusId, color: '#ccc', textColor: '#000' }; // Fallback
+  }, [allStatuses]);
 
   // Permissions
-  const canManageLinks = currentUser?.role === 'ADMIN' || currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'SYSTEM_ADMIN';
   const canEditSpecificLink = (link: TrackingLink) => {
     if (!currentUser) return false;
-    // Admin, CRM, DR, and System Admin can edit
     return ['ADMIN', 'DESIGNER_REPRESENTATIVE', 'CRM', 'SYSTEM_ADMIN'].includes(currentUser.role);
   };
   
-  const handleTrackingLinkUpdated = (updatedLink: TrackingLink) => {
-    setTrackingLinks(prevLinks => prevLinks.map(link => link.id === updatedLink.id ? updatedLink : link));
+  const handleTrackingLinkUpdated = () => {
+    fetchData(); // Refresh list after update
+    setIsEditDialogOpen(false);
   };
 
   const filteredTrackingLinks = useMemo(() => {
@@ -69,99 +82,151 @@ export default function TrackingLinksPage() {
       link.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (link.phoneNumber && link.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (link.service && link.service.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      link.crmUserName.toLowerCase().includes(searchTerm.toLowerCase())
+      link.crmUserName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (link.designerRepresentativeName && link.designerRepresentativeName.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [trackingLinks, searchTerm]);
 
-  if (!currentUser) return null;
+  const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
+
+  useEffect(() => {
+    const fetchAllDisplayInfo = async () => {
+      const displayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
+      for (const link of filteredTrackingLinks) {
+        if (!orderStatusDisplay[link.currentStatus]) {
+          displayInfoMap[link.currentStatus] = await getStatusDisplayInfo(link.currentStatus);
+        }
+      }
+      setOrderStatusDisplay(prev => ({ ...prev, ...displayInfoMap }));
+    };
+    if (filteredTrackingLinks.length > 0 && allStatuses.length > 0) {
+      fetchAllDisplayInfo();
+    }
+  }, [filteredTrackingLinks, getStatusDisplayInfo, allStatuses, orderStatusDisplay]);
+
+
+  if (!currentUser) return (
+     <div className="flex h-screen w-full items-center justify-center">
+      <p>Loading user data...</p>
+    </div>
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tracking Links</h1>
-          <p className="text-muted-foreground">
+          <h1 className="page-title">Tracking Links</h1>
+          <p className="page-description">
             Manage and monitor public tracking links for orders.
           </p>
         </div>
       </div>
 
-      <Card className="shadow-xl border bg-card">
-        <CardHeader className="border-b">
-          <CardTitle className="text-card-foreground">Active Tracking Links</CardTitle>
-          <CardDescription className="text-muted-foreground">Overview of generated tracking links and their status.</CardDescription>
-           <div className="mt-4 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input 
-              placeholder="Search links (ID, Customer, Phone, Service...)"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md pl-10 bg-background"
-            />
-          </div>
+      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+        <CardHeader className="border-b p-5">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div>
+                    <CardTitle className="text-card-foreground text-xl">Active Tracking Links</CardTitle>
+                    <CardDescription className="text-muted-foreground text-sm mt-0.5">Overview of generated tracking links and their status.</CardDescription>
+                </div>
+                <div className="relative w-full sm:max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input 
+                    placeholder="Search links (ID, Customer, Service...)"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 bg-background h-10 rounded-md w-full"
+                    />
+                </div>
+            </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Link ID (Order ID)</TableHead>
+                  <TableHead className="pl-6">Link ID (Order)</TableHead>
                   <TableHead>Customer</TableHead>
-                  <TableHead>Public Status</TableHead>
+                  <TableHead>Visibility</TableHead>
                   <TableHead>Order Status</TableHead>
                   <TableHead>Views</TableHead>
-                  <TableHead>Created By (CRM)</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead>CRM Contact</TableHead>
+                  <TableHead>Assigned DR</TableHead>
+                  <TableHead className="pr-6 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTrackingLinks.map((link) => (
-                  <TableRow key={link.id} className="hover:bg-muted/30 transition-colors">
-                    <TableCell>
-                       <Link href={`/track/${link.id}`} className="font-medium text-primary hover:underline">
-                        {link.id}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-card-foreground">{link.customerName}</TableCell>
-                    <TableCell>
-                       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                        link.isPublic ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
-                      }`}>
-                        {link.isPublic ? 'Public' : 'Private'}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                        link.currentStatus === 'IN_PRODUCTION' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300' :
-                        link.currentStatus === 'PENDING_CLIENT_APPROVAL' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' :
-                        link.currentStatus === 'SHIPPED' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                        link.currentStatus === 'IDEA_SUBMITTED' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300' :
-                        link.currentStatus === 'READY_FOR_DESIGN' ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300' :
-                         'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
-                      }`}>
-                        {formatStatus(link.currentStatus)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{mockViews[link.id] || 0}</TableCell>
-                    <TableCell className="text-card-foreground">{link.crmUserName}</TableCell>
-                    <TableCell className="space-x-2 whitespace-nowrap">
-                      <Link href={`/track/${link.id}`} passHref>
-                        <Button variant="outline" size="sm"><Eye className="mr-1 h-4 w-4" />View Public Page</Button>
-                      </Link>
-                      {canEditSpecificLink(link) && (
-                        <EditTrackingLinkDialog trackingLink={link} currentUser={currentUser} onTrackingLinkUpdated={handleTrackingLinkUpdated}>
-                          <Button variant="outline" size="sm"><Edit3 className="mr-1 h-4 w-4" />Edit</Button>
-                        </EditTrackingLinkDialog>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filteredTrackingLinks.length === 0 && (
+                {isLoading ? (
+                   [...Array(3)].map((_, i) => (
+                    <TableRow key={`skel-link-${i}`}>
+                      <TableCell className="pl-6"><Skeleton className="h-5 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-10" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell className="pr-6 text-right space-x-2">
+                        <Skeleton className="h-8 w-8 inline-block rounded" />
+                        <Skeleton className="h-8 w-8 inline-block rounded" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : filteredTrackingLinks.length > 0 ? (
+                  filteredTrackingLinks.map((link) => {
+                    const statusInfo = orderStatusDisplay[link.currentStatus] || { name: link.currentStatus, color: '#ccc', textColor: '#000' };
+                    return (
+                      <TableRow key={link.id} className="hover:bg-muted/50 transition-colors">
+                        <TableCell className="pl-6">
+                          <Link href={`/track/${link.id}`} className="font-medium text-primary hover:underline">
+                            {link.id}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-card-foreground">{link.customerName}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${
+                            link.isPublic 
+                              ? 'bg-green-500/20 text-green-700 border-green-500/30 dark:bg-green-500/10 dark:text-green-300 dark:border-green-500/20' 
+                              : 'bg-red-500/20 text-red-700 border-red-500/30 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/20'
+                          }`}>
+                            {link.isPublic ? 'Public' : 'Private'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
+                            {statusInfo.name}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{mockViews[link.id] || 0}</TableCell>
+                        <TableCell className="text-card-foreground">{link.crmUserName}</TableCell>
+                        <TableCell className="text-card-foreground">{link.designerRepresentativeName || 'N/A'}</TableCell>
+                        <TableCell className="pr-6 text-right space-x-1 sm:space-x-1.5 whitespace-nowrap">
+                          <Link href={`/track/${link.id}`} passHref>
+                            <Button variant="outline" size="sm" className="table-action-button h-9 px-3"><Eye className="mr-1.5 h-4 w-4" />View Public</Button>
+                          </Link>
+                          {canEditSpecificLink(link) && (
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="table-action-button h-9 px-3"
+                                onClick={() => { setSelectedLink(link); setIsEditDialogOpen(true);}}
+                            >
+                                <Edit3 className="mr-1.5 h-4 w-4" />Edit
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                ) : (
                     <TableRow>
-                        <TableCell colSpan={7} className="text-center py-10">
-                            <Image src="https://placehold.co/300x200.png" alt="No tracking links" data-ai-hint="empty state link" width={300} height={200} className="mx-auto rounded-md opacity-70" />
-                            <p className="mt-4 text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center py-12 h-[300px]">
+                            <Image src="https://placehold.co/240x180.png" alt="No tracking links" data-ai-hint="empty state link" width={180} height={135} className="mx-auto rounded-md opacity-60 mb-4" />
+                            <p className="text-lg text-muted-foreground font-medium">
                               {searchTerm ? "No tracking links match your search." : "No tracking links found."}
+                            </p>
+                             <p className="text-sm text-muted-foreground">
+                                {searchTerm ? "Try a different search term." : "Orders will appear here once created."}
                             </p>
                         </TableCell>
                     </TableRow>
@@ -171,6 +236,17 @@ export default function TrackingLinksPage() {
           </div>
         </CardContent>
       </Card>
+
+      {selectedLink && currentUser && allStatuses.length > 0 && (
+        <EditTrackingLinkDialog
+          isOpen={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          trackingLink={selectedLink}
+          currentUser={currentUser}
+          availableStatuses={allStatuses}
+          onTrackingLinkUpdated={handleTrackingLinkUpdated}
+        />
+      )}
     </div>
   );
 }

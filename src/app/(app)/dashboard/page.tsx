@@ -6,15 +6,16 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, ListChecks, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, Users, Trophy, Star, TrendingUp } from 'lucide-react';
+import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton'; // Added Skeleton
 
 interface ActivityItem {
   id: string;
-  type: 'status_update' | 'new_comment' | 'order_created';
+  type: 'status_update' | 'new_comment' | 'order_created' | 'dr_assigned';
   orderId: string;
   title: string;
   details: string;
@@ -62,11 +63,11 @@ const mockRecentActivities: ActivityItem[] = [
   },
   {
     id: 'act-005',
-    type: 'new_comment',
+    type: 'dr_assigned',
     orderId: 'ORD-001',
-    title: 'Internal comment on Tech Solutions Inc.',
-    details: 'Carol (DR): "Design files uploaded to shared drive."',
-    userName: 'Carol DesignerRep',
+    title: 'Designer Assigned to Tech Solutions Inc.',
+    details: 'Carol DesignerRep assigned by Bob CRM.',
+    userName: 'Bob CRM',
     timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
@@ -78,13 +79,16 @@ const getActivityIcon = (type: ActivityItem['type']) => {
     case 'new_comment':
       return <MessageSquare className="h-5 w-5 text-green-500" />;
     case 'order_created':
-      return <PlusCircle className="h-5 w-5 text-accent-foreground" />; 
+      return <PlusCircle className="h-5 w-5 text-accent" />; 
+    case 'dr_assigned':
+      return <UserCircle className="h-5 w-5 text-purple-500" />;
     default:
       return <UserCircle className="h-5 w-5 text-muted-foreground" />;
   }
 };
 
 const getInitials = (name: string) => {
+    if (!name) return '??';
     const names = name.split(' ');
     if (names.length === 1) return names[0].charAt(0).toUpperCase();
     return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
@@ -101,14 +105,15 @@ const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 12;
 
 const getProgressColorClass = (percentage: number): string => {
   if (percentage < 0) percentage = 0;
-  const colorPercentage = Math.min(percentage, 100);
-  if (colorPercentage < 33) return '[&>div]:bg-destructive';
-  if (colorPercentage < 67) return '[&>div]:bg-orange-400 dark:[&>div]:bg-orange-500';
-  return '[&>div]:bg-green-500 dark:[&>div]:bg-green-600';
+  const colorPercentage = Math.min(percentage, 100); // Cap at 100 for color logic
+  if (colorPercentage < 33) return 'bg-red-500 dark:bg-red-600';
+  if (colorPercentage < 67) return 'bg-yellow-500 dark:bg-yellow-400';
+  return 'bg-green-500 dark:bg-green-600';
 };
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
+  const [isClient, setIsClient] = useState(false);
 
   const [globalMonthlyOrderTarget, setGlobalMonthlyOrderTarget] = useState<number>(DEFAULT_GLOBAL_MONTHLY_TARGET);
   const [globalWeeklyOrderTarget, setGlobalWeeklyOrderTarget] = useState<number>(DEFAULT_GLOBAL_WEEKLY_TARGET);
@@ -117,6 +122,8 @@ export default function DashboardPage() {
   const [isSetGlobalWeeklyTargetDialogOpen, setIsSetGlobalWeeklyTargetDialogOpen] = useState(false);
   
   useEffect(() => {
+    setIsClient(true); // Component has mounted
+    // Safe localStorage access
     const storedGlobalMonthly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY);
     if (storedGlobalMonthly) {
       setGlobalMonthlyOrderTarget(parseInt(storedGlobalMonthly, 10));
@@ -144,7 +151,16 @@ export default function DashboardPage() {
   };
 
   if (!currentUser) {
-    return null;
+    // Basic loading state, can be replaced with a more elaborate Skeleton
+    return (
+      <div className="space-y-8 p-4 sm:p-6 lg:p-8">
+        <Skeleton className="h-40 w-full rounded-lg" />
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-lg" />)}
+        </div>
+        <Skeleton className="h-80 w-full rounded-lg" />
+      </div>
+    );
   }
 
   let summaryCards = [
@@ -197,20 +213,20 @@ export default function DashboardPage() {
 
 
   return (
-    <div className="space-y-8 p-1">
-      <Card className="shadow-xl bg-card border-border/50 rounded-lg overflow-hidden transform hover:shadow-primary/20 transition-shadow duration-300">
-        <CardHeader className="pb-4 bg-gradient-to-r from-primary to-orange-500 dark:from-primary dark:to-orange-600 text-primary-foreground p-6 rounded-t-lg">
-          <CardTitle className="text-4xl font-bold">Welcome, {currentUser.name.split(' ')[0]}!</CardTitle>
-          <CardDescription className="text-lg text-primary-foreground/90">
-            You are logged in as <span className="font-semibold">{currentUser.role.replace(/_/g, ' ')}</span>. Here's your workspace overview.
+    <div className="space-y-6 sm:space-y-8 p-1 sm:p-0">
+      <Card className="shadow-2xl bg-card border-border/30 rounded-xl overflow-hidden transform hover:shadow-primary/20 transition-shadow duration-300">
+        <CardHeader className="pb-4 bg-gradient-to-br from-card to-secondary/30 dark:from-card dark:to-background/20 text-card-foreground p-6 sm:p-8 rounded-t-xl">
+          <CardTitle className="text-3xl sm:text-4xl font-bold">Welcome, {currentUser.name.split(' ')[0]}!</CardTitle>
+          <CardDescription className="text-md sm:text-lg text-muted-foreground/90">
+            You are logged in as <span className="font-semibold text-primary">{currentUser.role.replace(/_/g, ' ')}</span>. Here's your workspace overview.
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-6">
-          <p className="text-card-foreground/90 max-w-3xl text-md">This is your central hub for managing orders and tracking progress. Use the sidebar to navigate and stay on top of your tasks and key metrics.</p>
+        <CardContent className="p-6 sm:p-8">
+          <p className="text-card-foreground/90 max-w-3xl text-sm sm:text-md">This is your central hub for managing orders and tracking progress. Use the sidebar to navigate and stay on top of your tasks and key metrics.</p>
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
         {summaryCards.map((card) => {
           let progressPercentage = 0;
           let progressColorClass = '';
@@ -223,28 +239,28 @@ export default function DashboardPage() {
           return (
             <Card 
               key={card.title} 
-              className="shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out border bg-card relative flex flex-col group hover:scale-[1.03] rounded-lg overflow-hidden"
+              className="shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out border bg-card relative flex flex-col group hover:scale-[1.02] rounded-xl overflow-hidden border-border/30"
             >
-              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pt-5 px-5">
-                <CardTitle className="text-lg font-semibold text-card-foreground">{card.title}</CardTitle>
-                <div className="p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
-                  <card.icon className="h-6 w-6 text-primary group-hover:scale-110 transition-transform" />
+              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pt-4 sm:pt-5 px-4 sm:px-5">
+                <CardTitle className="text-md sm:text-lg font-semibold text-card-foreground">{card.title}</CardTitle>
+                <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                  <card.icon className="h-5 w-5 sm:h-6 sm:w-6 text-primary group-hover:scale-110 transition-transform" />
                 </div>
               </CardHeader>
-              <CardContent className="flex-grow flex flex-col justify-between px-5 pb-5">
+              <CardContent className="flex-grow flex flex-col justify-between px-4 sm:px-5 pb-4 sm:pb-5">
                 <div>
                   {card.type === 'progress' ? (
                     <>
-                      <div className="text-3xl font-bold text-card-foreground">
-                        {card.currentCompleted} <span className="text-xl text-muted-foreground">/ {card.targetValue}</span>
+                      <div className="text-2xl sm:text-3xl font-bold text-card-foreground">
+                        {card.currentCompleted} <span className="text-lg sm:text-xl text-muted-foreground">/ {card.targetValue}</span>
                       </div>
-                       <p className="text-sm text-muted-foreground mt-1 mb-2">
+                       <p className="text-xs sm:text-sm text-muted-foreground mt-1 mb-2">
                         Orders ({progressPercentage.toFixed(0)}% complete)
                       </p>
-                      <Progress value={Math.min(progressPercentage, 100)} className={`h-2.5 rounded-full mb-3 ${progressColorClass}`} aria-label={`${card.title} progress ${progressPercentage.toFixed(0)}%`} />
+                      <Progress value={Math.min(progressPercentage, 100)} indicatorClassName={progressColorClass} className="h-2 sm:h-2.5 rounded-full mb-3" aria-label={`${card.title} progress ${progressPercentage.toFixed(0)}%`} />
                     </>
                   ) : (
-                    <div className="text-4xl font-bold text-card-foreground">{card.value}</div>
+                    <div className="text-3xl sm:text-4xl font-bold text-card-foreground">{card.value}</div>
                   )}
                   {card.change && card.type === 'info' && (
                      <p className="text-xs text-green-600 dark:text-green-400 flex items-center mt-1">
@@ -259,7 +275,7 @@ export default function DashboardPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="mt-4 self-start transition-all group-hover:border-primary group-hover:text-primary group-hover:bg-primary/5 text-xs py-1.5 px-3 h-auto border-border/80 hover:bg-primary/10 rounded-md shadow-sm hover:shadow-md"
+                    className="mt-3 sm:mt-4 self-start transition-all group-hover:border-primary group-hover:text-primary group-hover:bg-primary/5 text-xs py-1.5 px-3 h-auto border-border/80 hover:bg-primary/10 rounded-md shadow-sm hover:shadow-md"
                     onClick={() => {
                       if (card.actionType === 'global_monthly') setIsSetGlobalMonthlyTargetDialogOpen(true);
                       if (card.actionType === 'global_weekly') setIsSetGlobalWeeklyTargetDialogOpen(true);
@@ -274,7 +290,7 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && (
+      {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && isClient && (
         <>
           <SetSalesTargetDialog
             isOpen={isSetGlobalMonthlyTargetDialogOpen}
@@ -294,29 +310,29 @@ export default function DashboardPage() {
       )}
 
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
-        <Card className="shadow-lg bg-card h-[400px] transition-shadow duration-300 ease-in-out hover:shadow-xl rounded-lg border-border/50">
-          <CardHeader className="border-b border-border/50 py-4 px-6">
-            <CardTitle className="text-xl font-semibold text-foreground">Recent Activity</CardTitle>
-            <CardDescription className="text-muted-foreground text-sm">Latest order updates and comments.</CardDescription>
+        <Card className="shadow-lg bg-card h-[350px] sm:h-[400px] transition-shadow duration-300 ease-in-out hover:shadow-xl rounded-xl border-border/30">
+          <CardHeader className="border-b border-border/50 py-3 sm:py-4 px-4 sm:px-6">
+            <CardTitle className="text-lg sm:text-xl font-semibold text-foreground">Recent Activity</CardTitle>
+            <CardDescription className="text-muted-foreground text-xs sm:text-sm">Latest order updates and comments.</CardDescription>
           </CardHeader>
-          <CardContent className="h-[calc(100%-80px)] p-0"> 
+          <CardContent className="h-[calc(100%-72px)] sm:h-[calc(100%-80px)] p-0"> 
             <ScrollArea className="h-full">
-              <div className="p-4 space-y-3">
+              <div className="p-2 sm:p-4 space-y-2 sm:space-y-3">
                 {mockRecentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-4 p-3.5 rounded-lg hover:bg-primary/5 transition-colors border border-transparent hover:border-primary/20 cursor-pointer group">
-                    <div className="flex-shrink-0 pt-1.5 text-primary">
+                  <div key={activity.id} className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-3.5 rounded-lg hover:bg-primary/5 transition-colors border border-transparent hover:border-primary/20 cursor-pointer group">
+                    <div className="flex-shrink-0 pt-1 sm:pt-1.5 text-primary">
                       {getActivityIcon(activity.type)}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground leading-tight group-hover:text-primary transition-colors">{activity.title}</p>
+                      <p className="text-xs sm:text-sm font-medium text-foreground leading-tight group-hover:text-primary transition-colors">{activity.title}</p>
                       <p className="text-xs text-muted-foreground">{activity.details}</p>
-                      <div className="flex items-center space-x-2 mt-2">
-                        <Avatar className="h-7 w-7 border border-border/50">
+                      <div className="flex items-center space-x-2 mt-1.5 sm:mt-2">
+                        <Avatar className="h-6 w-6 sm:h-7 sm:w-7 border border-border/50">
                            <AvatarImage src={activity.userAvatar || `https://placehold.co/40x40.png?text=${getInitials(activity.userName)}`} alt={activity.userName} data-ai-hint="user avatar"/>
                           <AvatarFallback className="text-xs bg-primary/10 text-primary">{getInitials(activity.userName)}</AvatarFallback>
                         </Avatar>
                         <p className="text-xs text-muted-foreground">
-                          {activity.userName} &bull; {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
+                          {activity.userName} &bull; {isClient ? formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true }) : <Skeleton className="h-3 w-20 inline-block" />}
                         </p>
                       </div>
                     </div>
@@ -324,8 +340,8 @@ export default function DashboardPage() {
                 ))}
                 {mockRecentActivities.length === 0 && (
                   <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
-                    <ListChecks className="w-20 h-20 mb-4 opacity-20" />
-                    <p className="text-lg">No recent activity.</p>
+                    <ListChecks className="w-16 h-16 sm:w-20 sm:w-20 mb-4 opacity-20" />
+                    <p className="text-md sm:text-lg">No recent activity.</p>
                   </div>
                 )}
               </div>
