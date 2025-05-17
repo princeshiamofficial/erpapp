@@ -11,6 +11,7 @@ import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
+import { Progress } from '@/components/ui/progress';
 
 interface ActivityItem {
   id: string;
@@ -76,9 +77,9 @@ const getActivityIcon = (type: ActivityItem['type']) => {
     case 'status_update':
       return <ListChecks className="h-5 w-5 text-primary" />;
     case 'new_comment':
-      return <MessageSquare className="h-5 w-5 text-green-500" />;
+      return <MessageSquare className="h-5 w-5 text-green-500" />; // Kept green for comments for visual distinction
     case 'order_created':
-      return <PlusCircle className="h-5 w-5 text-purple-500" />;
+      return <PlusCircle className="h-5 w-5 text-purple-500" />; // Kept purple for new orders
     default:
       return <UserCircle className="h-5 w-5 text-gray-500" />;
   }
@@ -93,12 +94,31 @@ const getInitials = (name: string) => {
 const LOCAL_STORAGE_MONTHLY_SALES_TARGET_KEY = 'trackflow-monthly-sales-target';
 const LOCAL_STORAGE_WEEKLY_SALES_TARGET_KEY = 'trackflow-weekly-sales-target';
 
+// Mock current completed orders (in a real app, this would come from a database)
+const MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED = 67;
+const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED = 12;
+
+const getProgressColorClass = (percentage: number): string => {
+  if (percentage < 0) percentage = 0;
+  // For color, cap at 100 for simplicity, actual percentage can be > 100
+  const colorPercentage = Math.min(percentage, 100);
+
+  if (colorPercentage <= 33) return '[&>div]:bg-destructive'; // Red
+  if (colorPercentage <= 66) return '[&>div]:bg-yellow-400'; // Yellow
+  return '[&>div]:bg-green-500'; // Green
+};
+
 export default function DashboardPage() {
   const { currentUser } = useAuth();
   const [monthlyOrderTarget, setMonthlyOrderTarget] = useState<number>(100); // Default quantity
   const [weeklyOrderTarget, setWeeklyOrderTarget] = useState<number>(20); // Default quantity
   const [isSetMonthlyTargetDialogOpen, setIsSetMonthlyTargetDialogOpen] = useState(false);
   const [isSetWeeklyTargetDialogOpen, setIsSetWeeklyTargetDialogOpen] = useState(false);
+
+  // Mocking current completed orders - in a real app, fetch this data
+  const [currentMonthlyOrdersCompleted, setCurrentMonthlyOrdersCompleted] = useState(MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED);
+  const [currentWeeklyOrdersCompleted, setCurrentWeeklyOrdersCompleted] = useState(MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED);
+
 
   useEffect(() => {
     const storedMonthlyTarget = localStorage.getItem(LOCAL_STORAGE_MONTHLY_SALES_TARGET_KEY);
@@ -131,20 +151,20 @@ export default function DashboardPage() {
     { title: "Active Orders", value: "125", icon: Package, change: "+15.2%", dataAiHint: "delivery boxes" },
     { title: "Pending Approval", value: "12", icon: CheckSquare, change: "-3.1%", dataAiHint: "checklist form" },
     { title: "Revenue (MTD)", value: "$15,6K", icon: DollarSign, change: "+8.0%", dataAiHint: "financial chart" },
-    { 
-      title: "Monthly Order Target (CRM)", 
-      value: `${monthlyOrderTarget} Orders`, 
-      icon: CalendarDays, 
-      change: currentUser.role === 'ADMIN' ? "Editable by Admin" : "Set by Admin", 
+    {
+      title: "Monthly Order Target (CRM)",
+      value: `${monthlyOrderTarget} Orders`, // Base target value
+      icon: CalendarDays,
+      change: currentUser.role === 'ADMIN' ? "Editable by Admin" : "Set by Admin",
       dataAiHint: "monthly calendar checklist",
       isAdminOnlyAction: true,
       actionType: 'monthly' as const
     },
-    { 
-      title: "Weekly Order Target (CRM)", 
-      value: `${weeklyOrderTarget} Orders`, 
-      icon: CalendarClock, 
-      change: currentUser.role === 'ADMIN' ? "Editable by Admin" : "Set by Admin", 
+    {
+      title: "Weekly Order Target (CRM)",
+      value: `${weeklyOrderTarget} Orders`, // Base target value
+      icon: CalendarClock,
+      change: currentUser.role === 'ADMIN' ? "Editable by Admin" : "Set by Admin",
       dataAiHint: "weekly calendar tasks",
       isAdminOnlyAction: true,
       actionType: 'weekly' as const
@@ -154,7 +174,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <Card className="shadow-xl bg-gradient-to-br from-primary/90 via-primary/70 to-primary/90 border-primary/70">
+      <Card className="shadow-xl bg-gradient-to-br from-primary/90 via-primary/80 to-accent/80 border-primary/70">
         <CardHeader>
           <CardTitle className="text-3xl text-primary-foreground">Welcome to TrackFlow, {currentUser.name}!</CardTitle>
           <CardDescription className="text-lg text-primary-foreground/90">
@@ -167,35 +187,66 @@ export default function DashboardPage() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {summaryCards.map((card) => (
-          <Card key={card.title} className="shadow-md hover:shadow-lg transition-shadow border hover:border-primary/70 duration-300 bg-card relative">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-card-foreground">{card.title}</CardTitle>
-              <card.icon className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-card-foreground">{card.value}</div>
-              <p className="text-xs text-muted-foreground">
-                {card.change}
-              </p>
-              {card.isAdminOnlyAction && currentUser.role === 'ADMIN' && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="absolute bottom-3 right-3 border-primary/50 text-primary hover:bg-primary/10 hover:text-primary"
-                  onClick={() => {
-                    if (card.actionType === 'monthly') setIsSetMonthlyTargetDialogOpen(true);
-                    if (card.actionType === 'weekly') setIsSetWeeklyTargetDialogOpen(true);
-                  }}
-                >
-                  <Edit3 className="mr-1 h-3 w-3" /> Edit
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+        {summaryCards.map((card) => {
+          const isTargetCard = card.actionType === 'monthly' || card.actionType === 'weekly';
+          let currentCompleted = 0;
+          let target = 0;
+          let progressPercentage = 0;
+          let progressColorClass = '';
+
+          if (isTargetCard) {
+            currentCompleted = card.actionType === 'monthly' ? currentMonthlyOrdersCompleted : currentWeeklyOrdersCompleted;
+            target = card.actionType === 'monthly' ? monthlyOrderTarget : weeklyOrderTarget;
+            if (target > 0) {
+              progressPercentage = (currentCompleted / target) * 100;
+            }
+            progressColorClass = getProgressColorClass(progressPercentage);
+          }
+
+          return (
+            <Card key={card.title} className="shadow-md hover:shadow-lg transition-shadow border hover:border-primary/70 duration-300 bg-card relative flex flex-col">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-card-foreground">{card.title}</CardTitle>
+                <card.icon className="h-5 w-5 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="flex-grow flex flex-col justify-between">
+                <div>
+                  {isTargetCard ? (
+                    <>
+                      <div className="text-2xl font-bold text-card-foreground">
+                        {currentCompleted} <span className="text-lg text-muted-foreground">/ {target} Orders</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 mb-2">
+                        ({progressPercentage.toFixed(0)}% complete)
+                      </p>
+                      <Progress value={Math.min(progressPercentage, 100)} className={`h-2 mb-3 ${progressColorClass}`} aria-label={`${card.title} progress ${progressPercentage.toFixed(0)}%`} />
+                    </>
+                  ) : (
+                    <div className="text-2xl font-bold text-card-foreground">{card.value}</div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    {card.change}
+                  </p>
+                </div>
+                {card.isAdminOnlyAction && currentUser.role === 'ADMIN' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-auto border-primary/50 text-primary hover:bg-primary/10 hover:text-primary self-end"
+                    onClick={() => {
+                      if (card.actionType === 'monthly') setIsSetMonthlyTargetDialogOpen(true);
+                      if (card.actionType === 'weekly') setIsSetWeeklyTargetDialogOpen(true);
+                    }}
+                  >
+                    <Edit3 className="mr-1 h-3 w-3" /> Edit
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
-      
+
       {currentUser.role === 'ADMIN' && (
         <>
           <SetSalesTargetDialog
@@ -260,6 +311,7 @@ export default function DashboardPage() {
             <CardDescription className="text-muted-foreground">Visual breakdown of current order statuses.</CardDescription>
           </CardHeader>
           <CardContent className="h-[calc(100%-76px)] flex items-center justify-center">
+            {/* Placeholder for chart component */}
             <Image src="https://placehold.co/600x300.png" alt="Order Status Chart Placeholder" data-ai-hint="pie chart" width={600} height={300} className="rounded-md object-contain max-h-full"/>
           </CardContent>
         </Card>
