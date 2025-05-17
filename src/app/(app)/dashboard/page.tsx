@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks, Edit, PackageCheck, Truck } from 'lucide-react';
+import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks, Edit, PackageCheck, Truck, TrendingDown, Minus } from 'lucide-react';
 import { formatDistanceToNow, startOfMonth, endOfMonth, isWithinInterval, startOfWeek, endOfWeek } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
@@ -85,6 +85,7 @@ export default function DashboardPage() {
   
   const [activeOrdersCount, setActiveOrdersCount] = useState<number | null>(null);
   const [isLoadingActiveOrders, setIsLoadingActiveOrders] = useState(true);
+  const [activeOrdersPercentageChange, setActiveOrdersPercentageChange] = useState<number | null>(null);
   
   const [monthlyDeliveriesCount, setMonthlyDeliveriesCount] = useState<number | null>(null);
   const [isLoadingMonthlyDeliveries, setIsLoadingMonthlyDeliveries] = useState(true);
@@ -116,6 +117,7 @@ export default function DashboardPage() {
   const fetchDashboardData = useCallback(async () => {
     setIsLoadingActivities(true);
     setIsLoadingActiveOrders(true);
+    setActiveOrdersPercentageChange(null); // Reset while loading
     setIsLoadingMonthlyDeliveries(true);
     setIsLoadingWeeklyDeliveries(true);
 
@@ -206,17 +208,56 @@ export default function DashboardPage() {
       const deliveredStatusId = allStatuses.find(s => s.name.toLowerCase() === 'delivered')?.id;
       const cancelledStatusId = allStatuses.find(s => s.name.toLowerCase() === 'cancelled')?.id;
       
-      const activeOrders = fetchedOrders.filter(order => {
+      const currentActiveOrders = fetchedOrders.filter(order => {
         return order.currentStatus !== deliveredStatusId && order.currentStatus !== cancelledStatusId;
       });
-      setActiveOrdersCount(activeOrders.length);
+      setActiveOrdersCount(currentActiveOrders.length);
+
+      // Calculate active orders at start of month for percentage change
+      const now = new Date();
+      const startOfCurrentMonth = startOfMonth(now);
+      let activeOrdersAtStartOfMonthCount = 0;
+
+      if (deliveredStatusId || cancelledStatusId) { // Ensure we have these to compare against
+          fetchedOrders.forEach(order => {
+              const orderCreatedAt = new Date(order.createdAt);
+              if (orderCreatedAt < startOfCurrentMonth) { // Order must exist before this month
+                  let lastKnownStatusBeforeThisMonth = '';
+                  let mostRecentLogTimestamp = new Date(0); 
+
+                  order.statusHistory.forEach(log => {
+                      const logTimestamp = new Date(log.timestamp);
+                      if (logTimestamp < startOfCurrentMonth) {
+                          if (logTimestamp > mostRecentLogTimestamp) {
+                              mostRecentLogTimestamp = logTimestamp;
+                              lastKnownStatusBeforeThisMonth = log.status;
+                          }
+                      }
+                  });
+                  
+                  if (lastKnownStatusBeforeThisMonth) {
+                      if (lastKnownStatusBeforeThisMonth !== deliveredStatusId && lastKnownStatusBeforeThisMonth !== cancelledStatusId) {
+                          activeOrdersAtStartOfMonthCount++;
+                      }
+                  }
+              }
+          });
+      }
+      
+      if (activeOrdersAtStartOfMonthCount > 0) {
+          setActiveOrdersPercentageChange(((currentActiveOrders.length - activeOrdersAtStartOfMonthCount) / activeOrdersAtStartOfMonthCount) * 100);
+      } else if (currentActiveOrders.length > 0) {
+          setActiveOrdersPercentageChange(100); // From 0 to N is a 100% increase (or "New")
+      } else {
+          setActiveOrdersPercentageChange(0); // Both 0, so 0% change
+      }
+
 
       // Calculate monthly and weekly deliveries
       if (deliveredStatusId) {
-        const now = new Date();
         const monthStart = startOfMonth(now);
         const monthEnd = endOfMonth(now);
-        const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Assuming week starts on Monday
+        const weekStart = startOfWeek(now, { weekStartsOn: 1 }); 
         const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
         
         let deliveriesThisMonth = 0;
@@ -248,11 +289,13 @@ export default function DashboardPage() {
       console.error("Failed to fetch dashboard data:", error);
       toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive" });
       setActiveOrdersCount(0); 
+      setActiveOrdersPercentageChange(0);
       setMonthlyDeliveriesCount(0);
       setWeeklyDeliveriesCount(0);
     } finally {
       setIsLoadingActivities(false);
       setIsLoadingActiveOrders(false);
+      // Percentage change loading is implicitly handled by activeOrdersPercentageChange === null
       setIsLoadingMonthlyDeliveries(false);
       setIsLoadingWeeklyDeliveries(false);
     }
@@ -309,46 +352,55 @@ export default function DashboardPage() {
   }
 
   let summaryCards = [];
+  let activeOrderCardData: any = {
+      title: "Active Orders",
+      value: isLoadingActiveOrders || activeOrdersCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : activeOrdersCount.toString(),
+      icon: Package,
+      dataAiHint: "delivery boxes",
+      type: "info" as const,
+      trend: "neutral" as "up" | "down" | "neutral", 
+      changeText: <Skeleton className="h-4 w-24" />
+  };
+
+  if (!isLoadingActiveOrders && activeOrdersPercentageChange !== null) {
+      if (activeOrdersPercentageChange > 0) {
+          activeOrderCardData.trend = "up";
+          activeOrderCardData.changeText = `+${activeOrdersPercentageChange.toFixed(0)}% this month`;
+      } else if (activeOrdersPercentageChange < 0) {
+          activeOrderCardData.trend = "down";
+          activeOrderCardData.changeText = `${activeOrdersPercentageChange.toFixed(0)}% this month`;
+      } else {
+          activeOrderCardData.trend = "neutral";
+          activeOrderCardData.changeText = `0% this month`;
+      }
+  }
+
+  summaryCards.push(activeOrderCardData);
+
 
   if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
     summaryCards.push(
       {
-        title: "Active Orders",
-        value: isLoadingActiveOrders || activeOrdersCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : activeOrdersCount.toString(),
-        icon: Package,
-        change: "+0% this month", 
-        dataAiHint: "delivery boxes",
-        type: "info" as const,
-        trend: "up" as const
-      },
-      {
         title: "Monthly Deliveries",
         value: isLoadingMonthlyDeliveries || monthlyDeliveriesCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : monthlyDeliveriesCount.toString(),
         icon: PackageCheck,
-        change: "This month",
+        changeText: "This month",
         dataAiHint: "delivery truck calendar",
         type: "info" as const,
+        trend: "neutral" as "up" | "down" | "neutral",
       },
       {
         title: "Weekly Deliveries",
         value: isLoadingWeeklyDeliveries || weeklyDeliveriesCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : weeklyDeliveriesCount.toString(),
         icon: Truck,
-        change: "This week",
+        changeText: "This week",
         dataAiHint: "delivery van calendar",
         type: "info" as const,
+        trend: "neutral" as "up" | "down" | "neutral",
       }
     );
   } else if (currentUser.role === 'CRM') {
     summaryCards.push(
-      {
-        title: "Active Orders",
-        value: isLoadingActiveOrders || activeOrdersCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : activeOrdersCount.toString(),
-        icon: Package,
-        change: "+0% this month", 
-        dataAiHint: "delivery boxes",
-        type: "info" as const,
-        trend: "up" as const
-      },
       {
         title: "Your Monthly Orders",
         value: `${crmMonthlyOrdersCompleted} / ${crmEffectiveMonthlyTarget} Orders`,
@@ -368,18 +420,6 @@ export default function DashboardPage() {
         dataAiHint: "weekly calendar tasks",
         type: "progress" as const,
         isLoadingTargetValue: isLoadingGlobalTargets && currentUser.weeklyOrderTarget === undefined,
-      }
-    );
-  } else { 
-     summaryCards.push(
-      {
-        title: "Active Orders",
-        value: isLoadingActiveOrders || activeOrdersCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : activeOrdersCount.toString(),
-        icon: Package,
-        change: "+0% this month", 
-        dataAiHint: "delivery boxes",
-        type: "info" as const,
-        trend: "up" as const
       }
     );
   }
@@ -442,13 +482,17 @@ export default function DashboardPage() {
                   ) : (
                     <div className="text-3xl sm:text-4xl font-bold text-card-foreground">{card.value}</div>
                   )}
-                  {card.change && card.type === 'info' && (
-                     <p className="text-xs text-green-600 dark:text-green-400 flex items-center mt-1">
-                       <TrendingUp className="h-4 w-4 mr-1"/> {card.change}
+                  {card.type === 'info' && card.changeText && (
+                    <p className={`text-xs flex items-center mt-1 ${
+                      card.trend === 'up' ? 'text-green-600 dark:text-green-400' :
+                      card.trend === 'down' ? 'text-red-600 dark:text-red-400' :
+                      'text-muted-foreground'
+                    }`}>
+                      {card.trend === 'up' && <TrendingUp className="h-4 w-4 mr-1"/>}
+                      {card.trend === 'down' && <TrendingDown className="h-4 w-4 mr-1"/>}
+                      {card.trend === 'neutral' && card.title !== "Active Orders" && <Minus className="h-4 w-4 mr-1"/> } 
+                      {card.changeText}
                     </p>
-                  )}
-                  {card.change && card.type !== 'info' && card.type !== 'progress' && ( 
-                     <p className="text-xs text-muted-foreground mt-1">{card.change}</p>
                   )}
                 </div>
                 {(card.type === 'target' && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) && (
@@ -473,8 +517,6 @@ export default function DashboardPage() {
 
       {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && isClient && (
         <>
-          {/* This dialog is no longer directly triggered by a card, but can be kept for future use or removed if "Global Monthly Target" card is permanently replaced */}
-          {/* 
           <SetSalesTargetDialog
             isOpen={isSetGlobalMonthlyTargetDialogOpen}
             onOpenChange={setIsSetGlobalMonthlyTargetDialogOpen}
@@ -482,7 +524,6 @@ export default function DashboardPage() {
             onSetTarget={handleSetGlobalMonthlyOrderTarget}
             targetType="monthly"
           />
-          */}
           <SetSalesTargetDialog
             isOpen={isSetGlobalWeeklyTargetDialogOpen}
             onOpenChange={setIsSetGlobalWeeklyTargetDialogOpen}
@@ -556,6 +597,8 @@ export default function DashboardPage() {
     </div>
   );
 }
+    
+
     
 
     
