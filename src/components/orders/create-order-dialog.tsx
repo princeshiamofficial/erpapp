@@ -30,28 +30,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (isOpen) {
-      // Only set/reset initialStatusId if it's not already a valid available status,
-      // or if it's empty. This preserves user selection if availableStatuses changes reference
-      // but the selection is still valid.
-      const currentStatusIsValid = availableStatuses.some(status => status.id === initialStatusId);
-      if (!initialStatusId || !currentStatusIsValid) {
-        const ideaSubmittedStatus = availableStatuses.find(s => s.name === "Idea Submitted");
-        let defaultId = '';
-        if (ideaSubmittedStatus) {
-          defaultId = ideaSubmittedStatus.id;
-        } else if (availableStatuses.length > 0) {
-          defaultId = availableStatuses[0].id;
-        }
-        if (initialStatusId !== defaultId) { // Avoid redundant setState
-            setInitialStatusId(defaultId);
-        }
-      }
-    }
-  }, [isOpen, availableStatuses, initialStatusId]);
-
-
   const resetForm = () => {
     setCustomerName('');
     setCompanyName('');
@@ -59,15 +37,43 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setPhoneNumber('');
     setService('');
     // Determine default status for next opening
-    const ideaSubmittedStatus = availableStatuses.find(s => s.name === "Idea Submitted");
-    let defaultResetId = '';
-    if (ideaSubmittedStatus) {
-      defaultResetId = ideaSubmittedStatus.id;
-    } else if (availableStatuses.length > 0) {
-      defaultResetId = availableStatuses[0].id;
+    if (availableStatuses.length > 0) {
+      const ideaSubmittedStatus = availableStatuses.find(s => s.name === "Idea Submitted");
+      if (ideaSubmittedStatus) {
+        setInitialStatusId(ideaSubmittedStatus.id);
+      } else {
+        setInitialStatusId(availableStatuses[0].id); // Fallback to first available
+      }
+    } else {
+      setInitialStatusId(''); // No statuses available
     }
-    setInitialStatusId(defaultResetId);
   };
+  
+  useEffect(() => {
+    if (isOpen) {
+      // If the dialog is opened and there are statuses available
+      if (availableStatuses.length > 0) {
+        const currentSelectionIsValid = availableStatuses.some(status => status.id === initialStatusId);
+        // If no status is selected OR the current selection is no longer valid (e.g., statuses changed)
+        // OR if initialStatusId is empty (which can happen if dialog was opened when availableStatuses was empty)
+        if (!initialStatusId || !currentSelectionIsValid) {
+          const ideaSubmittedStatus = availableStatuses.find(s => s.name === "Idea Submitted");
+          if (ideaSubmittedStatus) {
+            setInitialStatusId(ideaSubmittedStatus.id);
+          } else {
+            // Fallback to the first available status if "Idea Submitted" is not present
+            setInitialStatusId(availableStatuses[0].id);
+          }
+        }
+      } else {
+        // No statuses available (e.g., loading or error), clear selection to prevent invalid submission
+        // This also handles the case where the dialog opens before statuses are loaded.
+        setInitialStatusId('');
+      }
+    }
+    // No direct reset needed here if dialog is closing, as onOpenChange(false) calls resetForm.
+  }, [isOpen, availableStatuses, initialStatusId]); // Re-run if initialStatusId changes from outside or if availableStatuses updates while dialog is open.
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +81,14 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       toast({
         title: "Validation Error",
         description: "Customer name, company name, address, and initial status are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (availableStatuses.length === 0) {
+      toast({
+        title: "Status Error",
+        description: "No order statuses are available. Cannot create order.",
         variant: "destructive",
       });
       return;
@@ -105,7 +119,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       });
       onOrderCreated(); 
       setIsOpen(false);
-      resetForm();
+      // resetForm will be called by onOpenChange
     }
     setIsSubmitting(false);
   };
@@ -145,8 +159,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             <div className="space-y-1">
               <Label htmlFor="initialStatus">Initial Status</Label>
               <Select value={initialStatusId} onValueChange={setInitialStatusId} required>
-                <SelectTrigger id="initialStatus">
-                  <SelectValue placeholder="Select initial status" />
+                <SelectTrigger id="initialStatus" disabled={availableStatuses.length === 0}>
+                  <SelectValue placeholder={availableStatuses.length === 0 ? "Loading statuses..." : "Select initial status"} />
                 </SelectTrigger>
                 <SelectContent>
                   {availableStatuses.map(status => (
@@ -155,11 +169,12 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   {availableStatuses.length === 0 && <SelectItem value="" disabled>No statuses available</SelectItem>}
                 </SelectContent>
               </Select>
+               {availableStatuses.length === 0 && <p className="text-xs text-muted-foreground mt-1">Statuses are loading or unavailable. Please wait or check admin settings.</p>}
             </div>
           </div>
           <DialogFooter className="pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => { setIsOpen(false); resetForm(); }} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="button" variant="outline" onClick={() => { setIsOpen(false); /* resetForm is called by onOpenChange */ }} disabled={isSubmitting}>Cancel</Button>
+            <Button type="submit" disabled={isSubmitting || !initialStatusId || availableStatuses.length === 0}>
               {isSubmitting ? "Creating..." : "Create Order"}
             </Button>
           </DialogFooter>
