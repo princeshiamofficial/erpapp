@@ -1,19 +1,22 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Trophy, Star, Users } from 'lucide-react';
+import { Trophy, Star, Users, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from 'framer-motion';
-import { MOCK_USERS } from '@/lib/auth-constants'; 
+import { getUsers } from '@/lib/user-service';
+import { getOrders } from '@/lib/order-service';
+import type { User, TrackingLink } from '@/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY = 'trackflow-global-monthly-sales-target';
 const LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY = 'trackflow-global-weekly-sales-target';
-const DEFAULT_GLOBAL_MONTHLY_TARGET = 100;
-const DEFAULT_GLOBAL_WEEKLY_TARGET = 20;
+const DEFAULT_GLOBAL_MONTHLY_TARGET = 100; // Default if nothing in localStorage
+const DEFAULT_GLOBAL_WEEKLY_TARGET = 20;  // Default if nothing in localStorage
 
 interface CrmPerformanceData {
   userId: string;
@@ -25,6 +28,7 @@ interface CrmPerformanceData {
 }
 
 const getInitials = (name: string) => {
+    if (!name) return '??';
     const names = name.split(' ');
     if (names.length === 1) return names[0].charAt(0).toUpperCase();
     return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
@@ -46,7 +50,35 @@ const getRankColorClass = (rank?: number): string => {
   return 'border-border bg-card hover:shadow-md';
 };
 
-const LeaderboardList: React.FC<{ data: CrmPerformanceData[], timePeriod: 'month' | 'week' }> = ({ data, timePeriod }) => {
+const LeaderboardList: React.FC<{ data: CrmPerformanceData[], timePeriod: 'month' | 'week', isLoading: boolean }> = ({ data, timePeriod, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div className="p-1 sm:p-4 md:p-6 space-y-4">
+        {[...Array(5)].map((_, i) => (
+          <div key={`skel-lb-${i}`} className="flex items-center space-x-3 p-3 rounded-lg border border-border/30 shadow-sm h-[76px]">
+            <Skeleton className="h-10 w-8 rounded-md" />
+            <Skeleton className="h-10 w-10 rounded-full" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-4 w-3/4 rounded" />
+              <Skeleton className="h-3 w-1/2 rounded" />
+            </div>
+            <Skeleton className="h-6 w-6 rounded-md" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  
+  if (data.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full py-16 text-muted-foreground">
+          <Users className="w-20 h-20 mb-4 opacity-30" />
+          <p className="text-lg">No CRM performance data available.</p>
+          <p className="text-sm">Check back later or ensure CRMs have assigned orders.</p>
+        </div>
+      );
+  }
+
   return (
     <ScrollArea className="h-[calc(100vh-280px)] md:h-auto md:max-h-[calc(100vh-320px)]">
       <div className="p-1 sm:p-4 md:p-6 space-y-4">
@@ -79,13 +111,6 @@ const LeaderboardList: React.FC<{ data: CrmPerformanceData[], timePeriod: 'month
             </motion.div>
           )
         )}
-        {data.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full py-10 text-muted-foreground">
-            <Users className="w-20 h-20 mb-4 opacity-50" />
-            <p className="text-lg">No CRM performance data available for this {timePeriod}.</p>
-            <p>Check back later for updates.</p>
-          </div>
-        )}
       </div>
     </ScrollArea>
   );
@@ -94,45 +119,83 @@ const LeaderboardList: React.FC<{ data: CrmPerformanceData[], timePeriod: 'month
 export default function LeaderboardPage() {
   const [globalMonthlyTarget, setGlobalMonthlyTarget] = useState(DEFAULT_GLOBAL_MONTHLY_TARGET);
   const [globalWeeklyTarget, setGlobalWeeklyTarget] = useState(DEFAULT_GLOBAL_WEEKLY_TARGET);
+  
+  const [crmMonthlyPerformance, setCrmMonthlyPerformance] = useState<CrmPerformanceData[]>([]);
+  const [crmWeeklyPerformance, setCrmWeeklyPerformance] = useState<CrmPerformanceData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const storedMonthly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY);
-    if (storedMonthly) setGlobalMonthlyTarget(parseInt(storedMonthly, 10));
-    const storedWeekly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY);
-    if (storedWeekly) setGlobalWeeklyTarget(parseInt(storedWeekly, 10));
+  const calculatePerformanceData = useCallback((
+    crmUsers: User[], 
+    allOrders: TrackingLink[],
+    globalTarget: number,
+    targetField: 'monthlyOrderTarget' | 'weeklyOrderTarget'
+  ): CrmPerformanceData[] => {
+    return crmUsers
+      .map(user => {
+        const userOrders = allOrders.filter(order => order.crmUserId === user.id);
+        // For "ordersCompleted", we are counting all orders linked to the CRM.
+        // This could be refined later to only count orders in a "completed" status if needed.
+        const ordersCompleted = userOrders.length;
+        const specificTarget = user[targetField];
+        
+        return {
+          userId: user.id,
+          userName: user.name,
+          userAvatar: user.avatarUrl || undefined,
+          ordersCompleted: ordersCompleted,
+          target: specificTarget && specificTarget > 0 ? specificTarget : globalTarget,
+        };
+      })
+      .sort((a, b) => b.ordersCompleted - a.ordersCompleted)
+      .map((crm, index) => ({ ...crm, rank: index + 1 }));
   }, []);
 
-  const crmUsers = MOCK_USERS.filter(user => user.role === 'CRM');
 
-  const mockCrmMonthlyPerformance: CrmPerformanceData[] = crmUsers.map(user => ({
-    userId: user.id,
-    userName: user.name,
-    userAvatar: user.avatarUrl || `https://placehold.co/40x40.png?text=${getInitials(user.name)}`,
-    ordersCompleted: Math.floor(Math.random() * (user.monthlyOrderTarget || globalMonthlyTarget) * 1.1),
-    target: user.monthlyOrderTarget || globalMonthlyTarget || DEFAULT_GLOBAL_MONTHLY_TARGET,
-  })).sort((a, b) => b.ordersCompleted - a.ordersCompleted)
-   .map((crm, index) => ({ ...crm, rank: index + 1 }));
+  useEffect(() => {
+    const fetchLeaderboardData = async () => {
+      setIsLoading(true);
+      try {
+        const storedMonthly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_MONTHLY_SALES_TARGET_KEY);
+        const currentGlobalMonthlyTarget = storedMonthly ? parseInt(storedMonthly, 10) : DEFAULT_GLOBAL_MONTHLY_TARGET;
+        setGlobalMonthlyTarget(currentGlobalMonthlyTarget);
 
-  const mockCrmWeeklyPerformance: CrmPerformanceData[] = crmUsers.map(user => ({
-    userId: user.id,
-    userName: user.name,
-    userAvatar: user.avatarUrl || `https://placehold.co/40x40.png?text=${getInitials(user.name)}`,
-    ordersCompleted: Math.floor(Math.random() * (user.weeklyOrderTarget || globalWeeklyTarget) * 1.1),
-    target: user.weeklyOrderTarget || globalWeeklyTarget || DEFAULT_GLOBAL_WEEKLY_TARGET,
-  })).sort((a, b) => b.ordersCompleted - a.ordersCompleted)
-   .map((crm, index) => ({ ...crm, rank: index + 1 }));
+        const storedWeekly = localStorage.getItem(LOCAL_STORAGE_GLOBAL_WEEKLY_SALES_TARGET_KEY);
+        const currentGlobalWeeklyTarget = storedWeekly ? parseInt(storedWeekly, 10) : DEFAULT_GLOBAL_WEEKLY_TARGET;
+        setGlobalWeeklyTarget(currentGlobalWeeklyTarget);
+
+        const allUsers = await getUsers();
+        const crmUsers = allUsers.filter(user => user.role === 'CRM');
+        const allOrders = await getOrders();
+
+        setCrmMonthlyPerformance(
+          calculatePerformanceData(crmUsers, allOrders, currentGlobalMonthlyTarget, 'monthlyOrderTarget')
+        );
+        setCrmWeeklyPerformance(
+          calculatePerformanceData(crmUsers, allOrders, currentGlobalWeeklyTarget, 'weeklyOrderTarget')
+        );
+
+      } catch (error) {
+        console.error("Failed to fetch leaderboard data:", error);
+        // Optionally set an error state to display in UI
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLeaderboardData();
+  }, [calculatePerformanceData]);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">CRM Sales Leaderboard</h1>
-        <p className="text-muted-foreground">
-          Ranking of CRM performance. Targets are specific to each CRM or fall back to global defaults.
+      <div className="page-header">
+        <h1 className="page-title">CRM Sales Leaderboard</h1>
+        <p className="page-description">
+          Ranking of CRM performance based on orders managed. Targets are specific to each CRM or fall back to global defaults.
         </p>
       </div>
 
       <Tabs defaultValue="monthly" className="space-y-4">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-2 sm:max-w-xs">
           <TabsTrigger value="monthly">Monthly Performance</TabsTrigger>
           <TabsTrigger value="weekly">Weekly Performance</TabsTrigger>
         </TabsList>
@@ -141,10 +204,10 @@ export default function LeaderboardPage() {
           <Card className="shadow-xl bg-card transition-all duration-300 ease-in-out hover:shadow-2xl">
             <CardHeader>
               <CardTitle className="text-foreground">Top Performing CRMs (Monthly)</CardTitle>
-              <CardDescription className="text-muted-foreground">Monthly orders completed ranking against individual or global targets.</CardDescription>
+              <CardDescription className="text-muted-foreground">Monthly orders managed ranking against individual or global targets.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <LeaderboardList data={mockCrmMonthlyPerformance} timePeriod="month" />
+              <LeaderboardList data={crmMonthlyPerformance} timePeriod="month" isLoading={isLoading} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -153,10 +216,10 @@ export default function LeaderboardPage() {
           <Card className="shadow-xl bg-card transition-all duration-300 ease-in-out hover:shadow-2xl">
             <CardHeader>
               <CardTitle className="text-foreground">Top Performing CRMs (Weekly)</CardTitle>
-              <CardDescription className="text-muted-foreground">Weekly orders completed ranking against individual or global targets.</CardDescription>
+              <CardDescription className="text-muted-foreground">Weekly orders managed ranking against individual or global targets.</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <LeaderboardList data={mockCrmWeeklyPerformance} timePeriod="week" />
+              <LeaderboardList data={crmWeeklyPerformance} timePeriod="week" isLoading={isLoading} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -164,3 +227,4 @@ export default function LeaderboardPage() {
     </div>
   );
 }
+
