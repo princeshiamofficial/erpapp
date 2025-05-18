@@ -58,7 +58,7 @@ export function AssignDrDialog({ isOpen, onOpenChange, order, currentUser, allSt
       return;
     }
     if (!readyForDesignStatus) {
-      toast({ title: "Configuration Error", description: "'Ready for Design' status not found.", variant: "destructive" });
+      toast({ title: "Configuration Error", description: "'Ready for Design' status not found. Please ensure it exists in Admin > Status Management.", variant: "destructive" });
       return;
     }
 
@@ -82,7 +82,7 @@ export function AssignDrDialog({ isOpen, onOpenChange, order, currentUser, allSt
       toast({ title: "Assignment Failed", description: result.error, variant: "destructive" });
     } else {
       toast({ title: "DR Assigned", description: `${selectedDr.name} has been assigned to order ${order.id}.` });
-      onDrAssigned(result);
+      onDrAssigned(result); // This should trigger data refresh and close dialog in parent
     }
   };
 
@@ -106,14 +106,14 @@ export function AssignDrDialog({ isOpen, onOpenChange, order, currentUser, allSt
                 </div>
               ) : (
                 <Select value={selectedDrId} onValueChange={setSelectedDrId} required>
-                  <SelectTrigger id="drSelect">
-                    <SelectValue placeholder="Select a DR" />
+                  <SelectTrigger id="drSelect" disabled={designerReps.length === 0}>
+                    <SelectValue placeholder={designerReps.length === 0 ? "No DRs available" : "Select a DR"} />
                   </SelectTrigger>
                   <SelectContent>
                     {designerReps.map(dr => (
                       <SelectItem key={dr.id} value={dr.id}>{dr.name} ({dr.email})</SelectItem>
                     ))}
-                    {designerReps.length === 0 && <p className="p-2 text-sm text-muted-foreground">No Designer Reps found.</p>}
+                    {designerReps.length === 0 && <p className="p-2 text-sm text-muted-foreground">No Designer Reps found. Please add users with the 'DESIGNER_REPRESENTATIVE' role.</p>}
                   </SelectContent>
                 </Select>
               )}
@@ -121,7 +121,10 @@ export function AssignDrDialog({ isOpen, onOpenChange, order, currentUser, allSt
           </div>
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting || isLoadingDrs || designerReps.length === 0 || !readyForDesignStatus}>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting || isLoadingDrs || !selectedDrId || designerReps.length === 0 || !readyForDesignStatus}
+            >
               {isSubmitting ? "Assigning..." : "Assign DR"}
             </Button>
           </DialogFooter>
