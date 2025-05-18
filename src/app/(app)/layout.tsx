@@ -57,8 +57,8 @@ export default function AuthenticatedLayout({
             <Image 
               src="https://i.ibb.co/mCy9P3gy/lgo-2-01.png" 
               alt="Color Hut Logo" 
-              width={127} 
-              height={32} 
+              width={160} 
+              height={40} 
               priority 
               className="object-contain"
             />
