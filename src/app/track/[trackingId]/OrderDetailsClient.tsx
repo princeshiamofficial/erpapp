@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send, MessageSquare, Package, UserCircle, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, UserCheck, Layers, Star, Tag } from "lucide-react";
+import { Send, MessageSquare, Package, UserCircle, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, UserCheck, Layers, Tag } from "lucide-react";
 import Image from "next/image";
 import type { Comment, CustomStatus, TrackingLink } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -90,6 +90,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
   const publicComments = order.comments.filter(c => !c.isInternal);
   const lastStatusUpdateTimestamp = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1].timestamp : order.createdAt;
 
+  const serviceDetailsString = `${order.model} - ${order.quantity} Pcs (${order.lamination})`;
 
   return (
     <main className="max-w-4xl mx-auto space-y-8 sm:space-y-10">
@@ -124,61 +125,64 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
           <div>
             <h3 className="text-xl font-semibold mb-4 sm:mb-5 text-foreground">Order Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-4 sm:gap-y-5 text-sm sm:text-base">
-              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
-                <Building className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
+              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
+                <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                    <Building className="h-5 w-5 text-primary " />
+                </div>
                 <div>
-                  <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Company</span> {order.companyName}
+                  <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Company</span> {order.companyName}
                 </div>
               </div>
-              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
-                <UserCircle className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
+              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
+                 <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                    <UserCircle className="h-5 w-5 text-primary" />
+                 </div>
                 <div>
-                  <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Contact Person</span> {order.customerName}
+                  <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Contact Person</span> {order.customerName}
                 </div>
               </div>
-               <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 md:col-span-2">
-                <MapPin className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
+               <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all md:col-span-2">
+                <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                    <MapPin className="h-5 w-5 text-primary" />
+                </div>
                 <div>
-                  <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Address</span> {order.address}
+                  <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Address</span> {order.address}
                 </div>
               </div>
               
-              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
-                <Phone className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
+              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
+                <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                    <Phone className="h-5 w-5 text-primary" />
+                </div>
                 <div>
-                  <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Phone</span> {order.phoneNumber}
+                  <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Phone</span> {order.phoneNumber}
                 </div>
               </div>
               
-              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
-                <Layers className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
+              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
+                 <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                    <Layers className="h-5 w-5 text-primary" />
+                 </div>
                 <div>
-                  <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Model</span> {order.model}
+                  <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Service Details</span> {serviceDetailsString}
                 </div>
               </div>
-              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
-                <Tag className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
-                <div>
-                  <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Quantity</span> {order.quantity}
-                </div>
-              </div>
-              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
-                <Star className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
-                <div>
-                  <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Lamination</span> {order.lamination}
-                </div>
-              </div>
-               <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
-                  <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
+
+               <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
+                  <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                    <CalendarDays className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
-                    <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Order Placed</span> {isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-32" />}
+                    <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Order Placed</span> {isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-32" />}
                   </div>
                 </div>
                 {order.designerRepresentativeName && (
-                    <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
-                        <UserCheck className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
+                    <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
+                        <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                            <UserCheck className="h-5 w-5 text-primary" />
+                        </div>
                         <div>
-                            <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Assigned Designer</span> {order.designerRepresentativeName}
+                            <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Assigned Designer</span> {order.designerRepresentativeName}
                         </div>
                     </div>
                 )}
@@ -288,5 +292,4 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
   );
 }
 
-    
     
