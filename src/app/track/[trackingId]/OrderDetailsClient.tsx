@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send, MessageSquare, Package, UserCircle, CalendarDays, Clock, CheckCircle, Info, Phone, Briefcase, Building, MapPin, UserCheck, Layers, Star, Tag } from "lucide-react";
+import { Send, MessageSquare, Package, UserCircle, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, UserCheck, Layers, Star, Tag } from "lucide-react";
 import Image from "next/image";
 import type { Comment, CustomStatus, TrackingLink } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -288,4 +288,5 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
   );
 }
 
+    
     

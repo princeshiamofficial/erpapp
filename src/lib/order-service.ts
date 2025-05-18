@@ -12,6 +12,7 @@ const ORDER_SUBMITTED_ID = 'order-submitted';
 const IN_PRODUCTION_ID = 'in-production';
 const PENDING_CLIENT_APPROVAL_ID = 'pending-client-approval';
 
+
 const seedInitialOrders = async (): Promise<TrackingLink[]> => {
   const statuses: CustomStatus[] = await getStatuses();
 
@@ -26,39 +27,39 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
   if (!pendingApprovalStatus) missingDetailed.push(`ID: '${PENDING_CLIENT_APPROVAL_ID}' (Expected Name: Pending Client Approval)`);
   if (!readyForDesignStatus) missingDetailed.push(`ID: '${READY_FOR_DESIGN_STATUS_ID}' (Expected Name: Ready for Design)`);
 
-
   if (missingDetailed.length > 0) {
     console.error(`Default statuses not found, cannot seed initial orders properly. Specifically missing by ID: ${missingDetailed.join(', ')}. Please check that these statuses exist in your Firestore 'customOrderStatuses' collection with these exact IDs, or ensure the status seeding process is complete and successful.`);
     return [];
   }
   
+  // This secondary check is for type safety although the above check should catch it.
   if (!orderSubmittedStatus || !inProductionStatus || !pendingApprovalStatus || !readyForDesignStatus) {
     console.error("One or more critical status objects are undefined even after attempting to find them by ID. Aborting seedInitialOrders.");
     return [];
   }
 
-  type SeedOrderBase = Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments' | 'currentStatus' | 'viewCount' | 'service'> & {
+  type SeedOrderBase = Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments' | 'currentStatus' | 'viewCount'> & {
     designerRepresentativeId?: string | null;
     designerRepresentativeName?: string | null;
   };
 
   const initialOrdersData: SeedOrderBase[] = [
     {
-      customerName: "Tech Solutions Inc.",
+      customerName: "Tech Solutions Contact", // Example contact person
       companyName: "Tech Solutions Inc.",
       address: "123 Tech Ave, Silicon Valley, CA 94001",
       phoneNumber: "555-0101",
-      model: "Premium Matte",
+      model: "Premium Matte", // Assuming this is a valid model name
       quantity: 500,
-      lamination: "Soft Touch",
-      crmUserId: "SysAdmin-001",
+      lamination: "Soft Touch", // Assuming this is a valid lamination name
+      crmUserId: "SysAdmin-001", // Assuming SysAdmin-001 exists
       crmUserName: "Default Admin",
       isPublic: true,
       designerRepresentativeId: null,
       designerRepresentativeName: null,
     },
     {
-      customerName: "GreenScape Ltd.",
+      customerName: "GreenScape Contact", // Example contact person
       companyName: "GreenScape Ltd.",
       address: "456 Green Rd, Meadowville, TX 75001",
       phoneNumber: "555-0102",
@@ -93,7 +94,6 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     comments: [
       { id: uuidv4(), userName: "Tech Solutions Inc. (Client)", text: "Looking forward to the first demo!", timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), isInternal: false }
     ],
-    service: null, 
     phoneNumber: firstOrderBaseData.phoneNumber,
     model: firstOrderBaseData.model,
     quantity: firstOrderBaseData.quantity,
@@ -121,13 +121,12 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       { id: uuidv4(), timestamp: dateOneDayAgo.toISOString(), status: pendingApprovalStatus.id, changedByUserId: "DR-001", changedByUserName: "Carol DesignerRep", notes: "Initial designs submitted for client approval." }
     ],
     comments: [],
-    service: null, 
     phoneNumber: secondOrderBaseData.phoneNumber,
     model: secondOrderBaseData.model,
     quantity: secondOrderBaseData.quantity,
     lamination: secondOrderBaseData.lamination,
-    designerRepresentativeId: "DR-001",
-    designerRepresentativeName: "Carol DesignerRep",
+    designerRepresentativeId: "DR-001", // Example assignment
+    designerRepresentativeName: "Carol DesignerRep", // Example assignment
     viewCount: 0,
   };
   const secondDocRef = doc(ordersRef, secondOrderId);
@@ -147,17 +146,29 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
 export const getOrders = async (): Promise<TrackingLink[]> => {
   const ordersCol = collection(db, ORDERS_COLLECTION);
   const q = query(ordersCol, orderBy("createdAt", "desc"));
+  let orders: TrackingLink[] = [];
   try {
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
       console.log("No orders found in Firestore, attempting to seed initial orders.");
-      return await seedInitialOrders();
+      orders = await seedInitialOrders();
+    } else {
+      orders = snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as TrackingLink));
     }
-    return snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as TrackingLink));
   } catch (error) {
-    console.error("Error fetching orders:", error);
-    return [];
+    console.error("Error fetching orders from Firestore:", error);
+    // Potentially return an empty array or re-throw, depending on desired error handling
+    // For now, let's attempt to seed if an error occurs during fetch, assuming it might be a first-time setup issue
+    // However, be cautious with this in production as it might mask underlying problems.
+    try {
+      console.warn("Attempting to seed initial orders due to a fetch error. This might indicate a problem if not a first run.");
+      orders = await seedInitialOrders();
+    } catch (seedError) {
+      console.error("Failed to seed orders after a fetch error:", seedError);
+      return []; // Return empty if both fetch and seed fail
+    }
   }
+  return orders;
 };
 
 export const getOrderById = async (id: string): Promise<TrackingLink | undefined> => {
@@ -235,7 +246,6 @@ export const addOrder = async (orderData: {
       companyName: orderData.companyName,
       address: orderData.address,
       phoneNumber: orderData.phoneNumber,
-      service: null, 
       model: orderData.model,
       quantity: orderData.quantity,
       lamination: orderData.lamination,
@@ -264,6 +274,7 @@ export const addOrder = async (orderData: {
 export const updateOrder = async (id: string, updates: Partial<TrackingLink>): Promise<boolean> => {
   try {
     const orderDoc = doc(db, ORDERS_COLLECTION, id);
+    // Sanitize updates: Firestore doesn't allow undefined values. Convert them to null.
     const sanitizedUpdates: { [key: string]: any } = {};
     for (const key in updates) {
       if (Object.prototype.hasOwnProperty.call(updates, key)) {
@@ -271,14 +282,16 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
         sanitizedUpdates[key] = value === undefined ? null : value;
       }
     }
+
     if (Object.keys(sanitizedUpdates).length === 0) {
       console.log(`No updates to apply for order ${id}.`);
-      return true; 
+      return true; // No changes needed, operation considered successful
     }
+
     await updateDoc(orderDoc, sanitizedUpdates);
     return true;
   } catch (error) {
-    console.error(`Error updating order ${id}:`, error);
+    console.error(`Error updating order ${id} in Firestore:`, error);
     return false;
   }
 };
@@ -314,7 +327,7 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
         text: commentData.text,
         isInternal: commentData.isInternal,
         // Conditionally add userId only if it's provided and not undefined
-        ...(commentData.userId !== undefined && { userId: commentData.userId }),
+        ...(commentData.userId && { userId: commentData.userId }),
       };
 
       const updatedComments = [...(order.comments || []), newComment];
@@ -323,12 +336,12 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
       return { ...order, comments: updatedComments };
     }).catch(transactionError => {
         console.error(`Transaction failed for adding comment to order ${orderId}:`, transactionError);
-        return undefined;
+        return undefined; // Explicitly return undefined on transaction failure
     });
 
   } catch (error) {
     console.error(`Error adding comment to order ${orderId}:`, error);
-    return undefined;
+    return undefined; // Explicitly return undefined on outer try-catch failure
   }
 };
 
@@ -340,7 +353,8 @@ export const incrementOrderViewCount = async (orderId: string): Promise<boolean>
       const orderDoc = await transaction.get(orderRef);
       if (!orderDoc.exists()) {
         console.warn(`Order ${orderId} not found for incrementing view count.`);
-        return;
+        // Optionally, throw an error or just return to stop the transaction
+        return; 
       }
       const currentViewCount = orderDoc.data().viewCount || 0;
       transaction.update(orderRef, { viewCount: currentViewCount + 1 });
@@ -351,4 +365,5 @@ export const incrementOrderViewCount = async (orderId: string): Promise<boolean>
     return false;
   }
 };
+    
     

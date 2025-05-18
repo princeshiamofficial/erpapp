@@ -95,9 +95,8 @@ export default function OrdersPage() {
     if (!searchTerm) return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return result.filter(order =>
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (order.companyName && order.companyName.toLowerCase().includes(searchTerm.toLowerCase())) || // Changed from customerName
+      (order.companyName && order.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (order.phoneNumber && order.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (order.service && order.service.toLowerCase().includes(searchTerm.toLowerCase())) ||
       order.crmUserName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (order.designerRepresentativeName && order.designerRepresentativeName.toLowerCase().includes(searchTerm.toLowerCase()))
     ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -114,40 +113,27 @@ export default function OrdersPage() {
   }, [allStatuses]);
 
   useEffect(() => {
-    if (allStatuses.length > 0) {
-      if (filteredOrders.length > 0) {
+    if (allStatuses.length > 0 && filteredOrders.length > 0) {
         const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
         const uniqueStatusIdsInFilteredOrders = new Set<string>();
         filteredOrders.forEach(order => uniqueStatusIdsInFilteredOrders.add(order.currentStatus));
 
         uniqueStatusIdsInFilteredOrders.forEach(statusId => {
-          if (statusId) {
             newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
-          }
         });
-        setOrderStatusDisplay(prevMap => {
-          if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(prevMap)) {
-            return newDisplayInfoMap;
-          }
-          return prevMap;
-        });
-      } else { // No filtered orders, but statuses exist
-        setOrderStatusDisplay(prevMap => {
-          if (Object.keys(prevMap).length > 0) {
-            return {};
-          }
-          return prevMap;
-        });
-      }
-    } else { // No statuses
-      setOrderStatusDisplay(prevMap => {
-        if (Object.keys(prevMap).length > 0) {
-          return {};
+        
+        // Only update if the new map is actually different to prevent loops
+        if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(orderStatusDisplay)) {
+            setOrderStatusDisplay(newDisplayInfoMap);
         }
-        return prevMap;
-      });
+    } else if (allStatuses.length > 0 && filteredOrders.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
+        // If orders are filtered out, clear the display map if it's not already empty
+        setOrderStatusDisplay({});
+    } else if (allStatuses.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
+        // If statuses themselves are not loaded, clear the display map
+        setOrderStatusDisplay({});
     }
-  }, [filteredOrders, allStatuses, getStatusDisplayInfo]);
+  }, [filteredOrders, allStatuses, getStatusDisplayInfo, orderStatusDisplay]);
 
 
   const canCreateOrder = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
@@ -159,9 +145,8 @@ export default function OrdersPage() {
     try {
         console.log("OrdersPage/handleOpenAssignDrDialog: Opening for order:", orderToAssign.id);
         const freshStatuses = await getStatuses();
-        console.log("OrdersPage/handleOpenAssignDrDialog: Fetched freshStatuses for dialog. Count:", freshStatuses.length, "IDs:", freshStatuses.map(s => s.id).join(', '));
-
         const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
+        
         if (rfdCheck) {
             console.log("OrdersPage/handleOpenAssignDrDialog: 'ready-for-design' status in freshStatuses:", JSON.stringify(rfdCheck));
         } else {
@@ -173,11 +158,11 @@ export default function OrdersPage() {
                 duration: 10000,
             });
             setIsLoading(false);
-            return;
+            return; // Prevent opening dialog if critical status is missing
         }
 
-        setAllStatuses(freshStatuses); 
-        setStatusesForDialog(freshStatuses);
+        setAllStatuses(freshStatuses); // Update the main page's status list
+        setStatusesForDialog(freshStatuses); // Pass fresh statuses to dialog
         setSelectedOrderForDrAssignment(orderToAssign);
         setIsAssignDrDialogOpen(true);
     } catch (error) {
@@ -193,7 +178,8 @@ export default function OrdersPage() {
     setOrders(prevOrders =>
       prevOrders.map(o => o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o)
     );
-    // await fetchOrderData(); // Re-fetch to ensure full consistency
+    // Optionally re-fetch for full consistency, though optimistic update should be good.
+    // await fetchOrderData(); 
   }, [toast]);
 
   const handleDeleteOrder = async () => {
@@ -228,9 +214,6 @@ export default function OrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-            {/* <Button variant="outline" size="icon" onClick={fetchOrderData} disabled={isLoading} className="h-10 w-10" title="Refresh Orders">
-                <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin':''}`} />
-            </Button>  */}
             {canCreateOrder && (
             <CreateOrderDialog
                 currentUser={currentUser}
@@ -440,3 +423,5 @@ export default function OrdersPage() {
   );
 }
 
+
+    

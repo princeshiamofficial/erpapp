@@ -33,11 +33,10 @@ export interface OrderLogEntry {
 
 export interface TrackingLink {
   id: string; 
-  customerName: string; // This is now effectively the contact person name
+  customerName: string; 
   companyName: string;
   address: string;
   phoneNumber: string; 
-  service?: string | null; 
   model: string; 
   quantity: number; 
   lamination: string; 
