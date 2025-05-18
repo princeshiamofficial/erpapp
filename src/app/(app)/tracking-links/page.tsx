@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { Link2, Eye, Edit3, Search, ClipboardCopy, Check } from "lucide-react"; // Added ClipboardCopy and Check
+import { Link2, Eye, Edit3, Search, ClipboardCopy, Check, RefreshCw } from "lucide-react"; 
 import { useAuth } from "@/contexts/auth-context";
 import Image from "next/image";
 import Link from "next/link";
@@ -39,7 +39,7 @@ export default function TrackingLinksPage() {
         getOrders(),
         getStatuses()
       ]);
-      setTrackingLinks(fetchedLinks);
+      setTrackingLinks(fetchedLinks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       setAllStatuses(fetchedStatuses);
     } catch (error) {
       console.error("Failed to fetch tracking links or statuses:", error);
@@ -50,15 +50,17 @@ export default function TrackingLinksPage() {
   }, [toast]);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (currentUser) {
+      fetchData();
+    }
+  }, [fetchData, currentUser]);
 
-  const getStatusDisplayInfo = useCallback(async (statusId: string): Promise<{ name: string; color: string; textColor: string }> => {
-    const status = allStatuses.find(s => s.id === statusId) || await getStatusById(statusId);
+  const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
+    const status = allStatuses.find(s => s.id === statusId);
     if (status) {
       return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
     }
-    return { name: statusId, color: '#ccc', textColor: '#000' };
+    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' }; // Fallback
   }, [allStatuses]);
 
   const canEditSpecificLink = (link: TrackingLink) => {
@@ -80,7 +82,7 @@ export default function TrackingLinksPage() {
       await navigator.clipboard.writeText(urlToCopy);
       toast({ title: "Link Copied!", description: "The tracking link has been copied to your clipboard." });
       setCopiedLinkId(linkId);
-      setTimeout(() => setCopiedLinkId(null), 2000); // Reset icon after 2 seconds
+      setTimeout(() => setCopiedLinkId(null), 2000); 
     } catch (err) {
       console.error('Failed to copy: ', err);
       let description = "Could not copy the link. Please try copying manually.";
@@ -89,7 +91,7 @@ export default function TrackingLinksPage() {
           description = "Clipboard access was denied. Please check your browser permissions or copy manually.";
         } else if (err.message.toLowerCase().includes("permissions policy")) {
           description = "Clipboard access is restricted by the current page's permissions policy. Please try copying manually.";
-        } else if (err.message.includes("Clipboard API not available") || !window.isSecureContext) {
+        } else if (err.message.includes("Clipboard API not available") || (typeof window !== 'undefined' && !window.isSecureContext)) {
            description = "Copying to clipboard requires a secure connection (HTTPS) or is not supported by your browser. Please copy manually.";
         }
       }
@@ -113,31 +115,29 @@ export default function TrackingLinksPage() {
   const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
 
   useEffect(() => {
-    const fetchAllDisplayInfo = async () => {
-      const displayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
-      for (const link of filteredTrackingLinks) {
-        if (!orderStatusDisplay[link.currentStatus]) {
-          displayInfoMap[link.currentStatus] = await getStatusDisplayInfo(link.currentStatus);
-        }
-      }
-      if (Object.keys(displayInfoMap).length > 0) {
-        setOrderStatusDisplay(prev => ({ ...prev, ...displayInfoMap }));
-      }
-    };
-    if (filteredTrackingLinks.length > 0 && allStatuses.length > 0) {
-      fetchAllDisplayInfo();
+    if (allStatuses.length > 0 && filteredTrackingLinks.length > 0) {
+      const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
+      const uniqueStatusIds = new Set<string>();
+      filteredTrackingLinks.forEach(link => uniqueStatusIds.add(link.currentStatus));
+      
+      uniqueStatusIds.forEach(statusId => {
+        newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
+      });
+      setOrderStatusDisplay(newDisplayInfoMap);
+    } else if (allStatuses.length === 0 && filteredTrackingLinks.length === 0) {
+       setOrderStatusDisplay({}); // Clear if no orders/statuses
     }
-  }, [filteredTrackingLinks, getStatusDisplayInfo, allStatuses, orderStatusDisplay]);
+  }, [filteredTrackingLinks, allStatuses, getStatusDisplayInfo]);
 
 
   if (!currentUser) return (
      <div className="flex h-screen w-full items-center justify-center">
-      <p>Loading user data...</p>
+       <Loader2 className="h-12 w-12 animate-spin text-primary" />
     </div>
   );
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-6 p-1 sm:p-0">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
         <div>
           <h1 className="page-title">Tracking Links</h1>
@@ -150,18 +150,23 @@ export default function TrackingLinksPage() {
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
+                <div className="flex-grow">
                     <CardTitle className="text-card-foreground text-xl">Active Tracking Links</CardTitle>
                     <CardDescription className="text-muted-foreground text-sm mt-0.5">Overview of generated tracking links and their status.</CardDescription>
                 </div>
-                <div className="relative w-full sm:max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input 
-                    placeholder="Search links (ID, Customer, Service...)"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-background h-10 rounded-md w-full"
-                    />
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
+                        <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+                    </Button>
+                    <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                        placeholder="Search links..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 bg-background h-10 rounded-md w-full"
+                        />
+                    </div>
                 </div>
             </div>
         </CardHeader>
@@ -182,7 +187,7 @@ export default function TrackingLinksPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                   [...Array(3)].map((_, i) => (
+                   [...Array(5)].map((_, i) => (
                     <TableRow key={`skel-link-${i}`}>
                       <TableCell className="pl-6"><Skeleton className="h-5 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
@@ -200,7 +205,7 @@ export default function TrackingLinksPage() {
                   ))
                 ) : filteredTrackingLinks.length > 0 ? (
                   filteredTrackingLinks.map((link) => {
-                    const statusInfo = orderStatusDisplay[link.currentStatus] || { name: link.currentStatus, color: '#ccc', textColor: '#000' };
+                    const statusInfo = orderStatusDisplay[link.currentStatus] || { name: link.currentStatus, color: '#A1A1AA', textColor: '#FFFFFF' };
                     return (
                       <TableRow key={link.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="pl-6">
@@ -225,18 +230,18 @@ export default function TrackingLinksPage() {
                         <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
                           <Button variant="outline" size="sm" className="h-9 px-3" onClick={() => handleCopyLink(link.id)} title="Copy Link">
                             {copiedLinkId === link.id ? <Check className="h-4 w-4 text-green-500" /> : <ClipboardCopy className="h-4 w-4" />}
-                            <span className="ml-1.5 sm:inline hidden">{copiedLinkId === link.id ? "Copied!" : "Copy"}</span>
+                            <span className="ml-1.5 hidden sm:inline">{copiedLinkId === link.id ? "Copied!" : "Copy"}</span>
                           </Button>
                           <Link href={`/track/${link.id}`} passHref>
                             <Button variant="outline" size="sm" className="h-9 px-3">
                               <Eye className="mr-1.5 h-4 w-4" /> 
-                              <span className="sm:inline hidden">View</span>
+                              <span className="hidden sm:inline">View</span>
                             </Button>
                           </Link>
                           {canEditSpecificLink(link) && (
                             <Button variant="outline" size="sm" className="h-9 px-3" onClick={() => { setSelectedLink(link); setIsEditDialogOpen(true);}}>
                               <Edit3 className="mr-1.5 h-4 w-4" />
-                              <span className="sm:inline hidden">Edit</span>
+                              <span className="hidden sm:inline">Edit</span>
                             </Button>
                           )}
                         </TableCell>
@@ -279,6 +284,7 @@ export default function TrackingLinksPage() {
 
 
     
+
 
 
 

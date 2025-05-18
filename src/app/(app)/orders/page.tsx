@@ -66,8 +66,6 @@ export default function OrdersPage() {
     }
   }, [currentUser, fetchOrderData]);
 
-  const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
-
   const filteredOrders = useMemo(() => {
     let result = orders;
     if (currentUser?.role === 'CRM') {
@@ -85,47 +83,31 @@ export default function OrdersPage() {
     ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [orders, searchTerm, currentUser]);
 
-  useEffect(() => {
-    const fetchAllDisplayInfo = async () => {
-      const displayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
-      const statusPromises: Promise<void>[] = [];
-
-      for (const order of filteredOrders) { // filteredOrders is now defined before this useEffect
-        if (!orderStatusDisplay[order.currentStatus]) {
-          statusPromises.push(
-            getStatusDisplayInfo(order.currentStatus).then(info => {
-              if (info) { // Ensure info is not undefined before setting
-                displayInfoMap[order.currentStatus] = info;
-              }
-            })
-          );
-        }
-      }
-      await Promise.all(statusPromises);
-      if (Object.keys(displayInfoMap).length > 0) {
-        setOrderStatusDisplay(prev => ({ ...prev, ...displayInfoMap }));
-      }
-    };
-
-    if (filteredOrders.length > 0 && allStatuses.length > 0) {
-      fetchAllDisplayInfo();
-    }
-  }, [filteredOrders, allStatuses, orderStatusDisplay]); 
-
-  const getStatusDisplayInfo = useCallback(async (statusId: string): Promise<{ name: string; color: string; textColor: string } | undefined> => {
+  const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
+  
+  const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
     const foundStatus = allStatuses.find(s => s.id === statusId);
     if (foundStatus) {
       return { name: foundStatus.name, color: foundStatus.color, textColor: getContrastTextColor(foundStatus.color) };
     }
-    // Fallback to fetching from DB only if not found in the pre-fetched allStatuses
-    // This reduces redundant DB calls if allStatuses is comprehensive
-    const statusFromDb = await getStatusById(statusId);
-    if (statusFromDb) {
-      return { name: statusFromDb.name, color: statusFromDb.color, textColor: getContrastTextColor(statusFromDb.color) };
-    }
-    // Return undefined instead of a default fallback to avoid adding incorrect entries to orderStatusDisplay
-    return undefined; 
+    // Fallback for statuses not yet loaded or found - should be rare if allStatuses is comprehensive
+    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' }; 
   }, [allStatuses]);
+
+  useEffect(() => {
+    if (allStatuses.length > 0 && filteredOrders.length > 0) {
+      const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
+      const uniqueStatusIds = new Set<string>();
+      filteredOrders.forEach(order => uniqueStatusIds.add(order.currentStatus));
+
+      uniqueStatusIds.forEach(statusId => {
+        newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
+      });
+      setOrderStatusDisplay(newDisplayInfoMap);
+    } else if (allStatuses.length === 0 && filteredOrders.length === 0) {
+      setOrderStatusDisplay({}); // Clear if no orders/statuses
+    }
+  }, [filteredOrders, allStatuses, getStatusDisplayInfo]);
 
 
   const canCreateOrder = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
@@ -166,7 +148,7 @@ export default function OrdersPage() {
             <Button
               size="lg"
               className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow font-semibold"
-              disabled={isLoading || (isLoading && allStatuses.length === 0)} // Updated disabled condition
+              disabled={isLoading || (isLoading && allStatuses.length === 0)}
             >
               {(isLoading && allStatuses.length === 0) ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -187,6 +169,9 @@ export default function OrdersPage() {
               <CardDescription className="text-muted-foreground text-sm mt-0.5">{currentUser.role === 'CRM' ? "Showing orders assigned to you." : "Showing all orders."}</CardDescription>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
+               <Button variant="outline" size="icon" onClick={fetchOrderData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
+                 <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+               </Button>
               <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -319,3 +304,4 @@ export default function OrdersPage() {
   );
 }
     
+
