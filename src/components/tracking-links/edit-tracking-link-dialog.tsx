@@ -1,13 +1,13 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react'; // Added useMemo
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea"; // Added Textarea import
+import { Textarea } from "@/components/ui/textarea"; 
 import type { TrackingLink, CustomStatus, User } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { updateTrackingLinkAction } from '@/app/(app)/tracking-links/actions'; 
@@ -32,7 +32,7 @@ export function EditTrackingLinkDialog({
 }: EditTrackingLinkDialogProps) {
   const [isPublic, setIsPublic] = useState(trackingLink.isPublic);
   const [currentStatusId, setCurrentStatusId] = useState<string>(trackingLink.currentStatus);
-  const [statusNotes, setStatusNotes] = useState(''); // New state for notes
+  const [statusNotes, setStatusNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -40,15 +40,22 @@ export function EditTrackingLinkDialog({
     if (isOpen) {
       setIsPublic(trackingLink.isPublic);
       setCurrentStatusId(trackingLink.currentStatus);
-      setStatusNotes(''); // Reset notes when dialog opens
+      setStatusNotes(''); 
     }
   }, [trackingLink, isOpen]);
+
+  const displayableStatuses = useMemo(() => {
+    if (!availableStatuses) return [];
+    return availableStatuses.filter(status =>
+      status.isVisible !== false || status.id === trackingLink.currentStatus
+    );
+  }, [availableStatuses, trackingLink.currentStatus]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    const updates: { isPublic?: boolean; currentStatus?: string; statusNotes?: string } = {}; // Add statusNotes to updates type
+    const updates: { isPublic?: boolean; currentStatus?: string; statusNotes?: string } = {};
     let statusChanged = false;
 
     if (isPublic !== trackingLink.isPublic) {
@@ -59,7 +66,6 @@ export function EditTrackingLinkDialog({
       statusChanged = true;
     }
 
-    // Only include statusNotes if the status actually changed
     if (statusChanged && statusNotes.trim()) {
       updates.statusNotes = statusNotes.trim();
     }
@@ -121,13 +127,19 @@ export function EditTrackingLinkDialog({
                     <SelectValue placeholder="Select order status" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableStatuses.map(status => (
+                    {displayableStatuses.map(status => (
                       <SelectItem key={status.id} value={status.id}>{status.name}</SelectItem>
                     ))}
+                    {displayableStatuses.length === 0 && availableStatuses.length > 0 && (
+                       <div className="p-2 text-sm text-muted-foreground text-center">No visible statuses available for selection.</div>
+                    )}
+                    {availableStatuses.length === 0 && (
+                       <div className="p-2 text-sm text-muted-foreground text-center">Loading statuses...</div>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
-              {currentStatusId !== trackingLink.currentStatus && ( // Only show notes if status is changing
+              {currentStatusId !== trackingLink.currentStatus && ( 
                 <div>
                   <Label htmlFor="statusNotes">Status Update Notes (Optional)</Label>
                   <Textarea
@@ -153,3 +165,4 @@ export function EditTrackingLinkDialog({
     </Dialog>
   );
 }
+
