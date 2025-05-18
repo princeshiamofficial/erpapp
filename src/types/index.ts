@@ -6,12 +6,12 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  companyName?: string | null; // Allow null
+  companyName?: string | null;
   password?: string; 
-  avatarUrl?: string | null; // Allow null
-  monthlyOrderTarget?: number | null; // Allow null
-  weeklyOrderTarget?: number | null; // Allow null
-  isBanned?: boolean; // New field for ban status
+  avatarUrl?: string | null;
+  monthlyOrderTarget?: number | null;
+  weeklyOrderTarget?: number | null;
+  isBanned?: boolean;
 }
 
 export interface CustomStatus {
@@ -37,14 +37,14 @@ export interface TrackingLink {
   companyName: string;
   address: string;
   phoneNumber: string; 
-  service?: string | null; // Allow null - Will be phased out by new fields
+  service?: string | null; 
   model: string; 
   quantity: number; 
   lamination: string; 
   crmUserId: string;
   crmUserName: string;
-  designerRepresentativeId?: string | null; // Allow null
-  designerRepresentativeName?: string | null; // Allow null
+  designerRepresentativeId?: string | null;
+  designerRepresentativeName?: string | null;
   createdAt: string; // ISO string
   isPublic: boolean;
   currentStatus: string; // ID of a CustomStatus
@@ -62,4 +62,13 @@ export interface Comment {
   isInternal: boolean; 
 }
 
+export interface ServiceModelItem {
+  id: string;
+  name: string;
+}
+
+export interface ServiceLaminationItem {
+  id: string;
+  name: string;
+}
     

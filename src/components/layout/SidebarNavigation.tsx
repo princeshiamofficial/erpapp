@@ -10,7 +10,7 @@ import {
   Package, 
   Users, 
   Link2,
-  Settings,
+  Settings2, // Changed from Settings to avoid conflict
   FileText,
   Award,
   BarChart3,
@@ -34,8 +34,9 @@ const navItems: NavItem[] = [
   { href: "/leaderboard", label: "Leaderboard", icon: Award, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
   { href: "/users", label: "User Management", icon: Users, roles: ["SYSTEM_ADMIN", "ADMIN"] },
   { href: "/admin/statuses", label: "Status Management", icon: ListChecks, roles: ["SYSTEM_ADMIN"] },
+  { href: "/admin/service-management", label: "Service Options", icon: Settings2, roles: ["SYSTEM_ADMIN"] },
   { href: "/reports", label: "Reports", icon: BarChart3, roles: ["SYSTEM_ADMIN", "ADMIN"], disabled: true },
-  { href: "/settings", label: "Settings", icon: Settings, roles: ["SYSTEM_ADMIN", "ADMIN"], disabled: true },
+  // { href: "/settings", label: "Settings", icon: Settings, roles: ["SYSTEM_ADMIN", "ADMIN"], disabled: true }, // General settings if needed later
 ];
 
 export function SidebarNavigation() {

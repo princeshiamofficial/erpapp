@@ -1,16 +1,18 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { User, CustomStatus } from "@/types";
+import type { User, CustomStatus, ServiceModelItem, ServiceLaminationItem } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { createOrderAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getModels, getLaminations } from '@/lib/service-options-service'; // Import new service
+import { Loader2 } from 'lucide-react';
 
 interface CreateOrderDialogProps {
   currentUser: User;
@@ -18,9 +20,6 @@ interface CreateOrderDialogProps {
   onOrderCreated: () => void;
   children: React.ReactNode;
 }
-
-const modelOptions = ["Standard Gloss", "Premium Matte", "Eco-Friendly Recycled", "Luxury Silk"];
-const laminationOptions = ["None", "Glossy", "Matte", "Soft Touch", "Anti-Scuff Matte"];
 
 export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children }: CreateOrderDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -31,10 +30,15 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [quantity, setQuantity] = useState<string>('');
   const [lamination, setLamination] = useState<string>('');
   const [initialStatusId, setInitialStatusId] = useState<string>('');
+  
+  const [modelOptions, setModelOptions] = useState<ServiceModelItem[]>([]);
+  const [laminationOptions, setLaminationOptions] = useState<ServiceLaminationItem[]>([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setCompanyName('');
     setAddress('');
     setPhoneNumber('');
@@ -42,10 +46,28 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setQuantity('');
     setLamination('');
     setInitialStatusId(''); 
-  };
+  }, []);
+
+  const fetchOptions = useCallback(async () => {
+    setIsLoadingOptions(true);
+    try {
+      const [fetchedModels, fetchedLaminations] = await Promise.all([
+        getModels(),
+        getLaminations()
+      ]);
+      setModelOptions(fetchedModels);
+      setLaminationOptions(fetchedLaminations);
+    } catch (error) {
+      console.error("Failed to fetch model/lamination options:", error);
+      toast({ title: "Error", description: "Could not load order options.", variant: "destructive" });
+    } finally {
+      setIsLoadingOptions(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
     if (isOpen) {
+      fetchOptions(); // Fetch options when dialog opens
       if (availableStatuses.length > 0) {
         const isCurrentStatusInAvailableList = availableStatuses.some(s => s.id === initialStatusId);
         if (!initialStatusId || !isCurrentStatusInAvailableList) {
@@ -60,14 +82,14 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         setInitialStatusId('');
       }
     }
-  }, [isOpen, availableStatuses, initialStatusId]);
+  }, [isOpen, availableStatuses, initialStatusId, fetchOptions]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyName || !address || !phoneNumber || !model || !quantity || !lamination || !initialStatusId) {
       toast({
         title: "Validation Error",
-        description: "Company name, address, phone number, model, quantity, lamination, and initial status are required.",
+        description: "All fields including Company Name, Address, Phone Number, Model, Quantity, Lamination, and Initial Status are required.",
         variant: "destructive",
       });
       return;
@@ -94,6 +116,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
     const orderData = {
       companyName,
+      // customerName: companyName, // Using companyName as customerName for now
       address,
       phoneNumber,
       model,
@@ -117,9 +140,18 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       });
       onOrderCreated();
       setIsOpen(false); 
+      resetForm();
     }
     setIsSubmitting(false);
   };
+  
+  const canSubmit = !isSubmitting && 
+                    initialStatusId && 
+                    (availableStatuses.length > 0 || !!initialStatusId) &&
+                    modelOptions.length > 0 && 
+                    laminationOptions.length > 0 &&
+                    !isLoadingOptions;
+
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
@@ -129,7 +161,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
-          <DialogDescription>Enter company and order details.</DialogDescription>
+          <DialogDescription>Enter company and order details. All fields are required.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -149,13 +181,13 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="space-y-1 flex-1">
                 <Label htmlFor="model">Model</Label>
-                <Select value={model} onValueChange={setModel} required>
+                <Select value={model} onValueChange={setModel} required disabled={isLoadingOptions || modelOptions.length === 0}>
                   <SelectTrigger id="model">
-                    <SelectValue placeholder="Select model" />
+                    <SelectValue placeholder={isLoadingOptions ? "Loading models..." : (modelOptions.length === 0 ? "No models configured" : "Select model")} />
                   </SelectTrigger>
                   <SelectContent>
                     {modelOptions.map(option => (
-                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                      <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -168,18 +200,25 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
               <div className="space-y-1 flex-1">
                 <Label htmlFor="lamination">Lamination</Label>
-                <Select value={lamination} onValueChange={setLamination} required>
+                <Select value={lamination} onValueChange={setLamination} required disabled={isLoadingOptions || laminationOptions.length === 0}>
                   <SelectTrigger id="lamination">
-                    <SelectValue placeholder="Select lamination" />
+                     <SelectValue placeholder={isLoadingOptions ? "Loading laminations..." : (laminationOptions.length === 0 ? "No laminations configured" : "Select lamination")} />
                   </SelectTrigger>
                   <SelectContent>
                     {laminationOptions.map(option => (
-                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                      <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
+             {(isLoadingOptions && (modelOptions.length === 0 || laminationOptions.length === 0)) && 
+                <div className="flex items-center text-sm text-muted-foreground">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading model & lamination options...
+                </div>
+            }
+
 
             <div className="space-y-1">
               <Label htmlFor="initialStatus">Initial Status</Label>
@@ -198,7 +237,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
           </div>
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => { setIsOpen(false); }} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting || !initialStatusId || (availableStatuses.length === 0 && !initialStatusId) }>
+            <Button type="submit" disabled={!canSubmit}>
               {isSubmitting ? "Creating..." : "Create Order"}
             </Button>
           </DialogFooter>
@@ -207,5 +246,3 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
-
-    
