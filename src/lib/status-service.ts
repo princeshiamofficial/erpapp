@@ -13,7 +13,7 @@ const defaultStatusesData: Omit<CustomStatus, 'id' | 'isSystemStatus'>[] = [
   { name: 'Pending Client Approval', color: '#F59E0B' },
   { name: 'Changes Requested', color: '#EF4444' },
   { name: 'Approved for Production', color: '#10B981' },
-  { name: 'Ready for Design', color: '#14B8A6' }, // This corresponds to READY_FOR_DESIGN_STATUS_ID
+  { name: 'Ready for Design', color: '#14B8A6' },
   { name: 'In Production', color: '#0EA5E9' },
   { name: 'Quality Check', color: '#F97316' },
   { name: 'Shipped', color: '#22C55E' },
@@ -58,42 +58,38 @@ export const getStatuses = async (): Promise<CustomStatus[]> => {
       statuses = await seedDefaultStatuses();
     } else {
       statuses = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as CustomStatus));
-    }
+      
+      // Ensure all default system statuses exist
+      const batch = writeBatch(db);
+      let newStatusesAddedToBatch = false;
 
-    // Ensure 'ready-for-design' status exists, create it if missing (resilience measure)
-    let rfdStatus = statuses.find(s => s.id === READY_FOR_DESIGN_STATUS_ID);
-    if (!rfdStatus) {
-      console.warn(`getStatuses: Critical status '${READY_FOR_DESIGN_STATUS_ID}' not found in fetched list. Attempting to verify/re-create.`);
-      const rfdDocRef = doc(db, STATUSES_COLLECTION, READY_FOR_DESIGN_STATUS_ID);
-      const rfdDocSnap = await getDoc(rfdDocRef);
-      if (!rfdDocSnap.exists()) {
-        console.log(`getStatuses: Document for '${READY_FOR_DESIGN_STATUS_ID}' does not exist. Re-creating it.`);
-        const readyForDesignDefaultData = defaultStatusesData.find(d => d.name === 'Ready for Design');
-        if (readyForDesignDefaultData) {
-          const newRfdStatus: CustomStatus = {
-            id: READY_FOR_DESIGN_STATUS_ID,
-            name: readyForDesignDefaultData.name,
-            color: readyForDesignDefaultData.color,
+      for (const defaultStatusData of defaultStatusesData) {
+        const expectedId = defaultStatusData.name.toLowerCase().replace(/\s+/g, '-');
+        if (!statuses.some(s => s.id === expectedId)) {
+          console.warn(`getStatuses: Default system status with ID '${expectedId}' (Name: "${defaultStatusData.name}") was missing from Firestore. Re-creating it.`);
+          const newSystemStatus: CustomStatus = {
+            id: expectedId,
+            name: defaultStatusData.name,
+            color: defaultStatusData.color,
             isSystemStatus: true,
           };
-          await setDoc(rfdDocRef, newRfdStatus);
-          statuses.push(newRfdStatus); // Add to current list
-          console.log(`getStatuses: Successfully re-created status '${READY_FOR_DESIGN_STATUS_ID}'.`);
-        } else {
-          console.error(`getStatuses: Could not find default data for 'Ready for Design' to re-create it.`);
+          const docRef = doc(db, STATUSES_COLLECTION, expectedId);
+          batch.set(docRef, newSystemStatus);
+          statuses.push(newSystemStatus); // Add to the list we're working with
+          newStatusesAddedToBatch = true;
         }
-      } else {
-         // Document exists but wasn't in the initial getDocs snapshot - unusual, but add it.
-        console.log(`getStatuses: Document for '${READY_FOR_DESIGN_STATUS_ID}' found by direct get. Adding to list.`);
-        const existingRfdData = {id: rfdDocSnap.id, ...rfdDocSnap.data()} as CustomStatus;
-        // Avoid duplicates if it was somehow missed by getDocs but present
-        if(!statuses.some(s => s.id === existingRfdData.id)) {
-            statuses.push(existingRfdData);
+      }
+
+      if (newStatusesAddedToBatch) {
+        try {
+          await batch.commit();
+          console.log('getStatuses: Missing default system statuses were re-seeded.');
+        } catch (commitError) {
+          console.error('getStatuses: Error committing batch for re-seeding missing system statuses:', commitError);
         }
       }
     }
     
-    console.log("getStatuses: Returning status IDs:", statuses.map(s => s.id).join(', '));
     return statuses.sort((a, b) => {
       if (a.isSystemStatus && !b.isSystemStatus) return -1;
       if (!a.isSystemStatus && b.isSystemStatus) return 1;
@@ -186,12 +182,15 @@ export const updateStatus = async (id: string, name: string, color: string): Pro
 
     const updates: Partial<CustomStatus> = {};
     let changed = false;
-    if (color !== existingStatus.color) {
-        updates.color = color;
-        changed = true;
-    }
+    
+    // Allow changing name even for system statuses, but isSystemStatus itself is protected.
+    // UI layer in AdminStatusesPage handles disabling input for system status name changes.
     if (name !== existingStatus.name) {
         updates.name = name;
+        changed = true;
+    }
+    if (color !== existingStatus.color) {
+        updates.color = color;
         changed = true;
     }
     
@@ -261,3 +260,6 @@ export const getContrastTextColor = (hexColor: string): string => {
     return '#000000';
   }
 };
+
+// Export the constant for use in other services
+export { READY_FOR_DESIGN_STATUS_ID };

@@ -3,34 +3,48 @@ import { db } from './firebase';
 import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, orderBy, writeBatch, runTransaction, limit, where } from 'firebase/firestore';
 import type { TrackingLink, Comment, OrderLogEntry, CustomStatus } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { getStatuses } from './status-service';
+import { getStatuses, READY_FOR_DESIGN_STATUS_ID } from './status-service'; // Import READY_FOR_DESIGN_STATUS_ID
 import { format } from 'date-fns';
 
 const ORDERS_COLLECTION = 'orders';
 
+// Define canonical system status IDs
+const ORDER_SUBMITTED_ID = 'order-submitted';
+const IN_PRODUCTION_ID = 'in-production';
+const PENDING_CLIENT_APPROVAL_ID = 'pending-client-approval';
+// READY_FOR_DESIGN_ID is imported from status-service
+
 const seedInitialOrders = async (): Promise<TrackingLink[]> => {
-  const statuses: CustomStatus[] = await getStatuses(); // This fetches statuses from Firestore, or seeds them if empty
+  const statuses: CustomStatus[] = await getStatuses(); 
 
-  // Check if the statuses array is empty, which would indicate a failure in getStatuses or seedDefaultStatuses
   if (statuses.length === 0) {
-    console.error("Cannot seed initial orders: The list of available custom statuses is empty. This likely indicates a problem with fetching or seeding default statuses in 'status-service.ts'. Please check Firestore permissions for 'customOrderStatuses' or the status seeding logic.");
+    console.error("Cannot seed initial orders: getStatuses() returned an empty list, possibly due to Firestore issues.");
     return [];
   }
 
-  const orderSubmittedStatus = statuses.find(s => s.name === 'Order Submitted');
-  const inProductionStatus = statuses.find(s => s.name === 'In Production');
-  const pendingApprovalStatus = statuses.find(s => s.name === 'Pending Client Approval');
-  const readyForDesignStatus = statuses.find(s => s.name === 'Ready for Design');
+  const orderSubmittedStatus = statuses.find(s => s.id === ORDER_SUBMITTED_ID);
+  const inProductionStatus = statuses.find(s => s.id === IN_PRODUCTION_ID);
+  const pendingApprovalStatus = statuses.find(s => s.id === PENDING_CLIENT_APPROVAL_ID);
+  const readyForDesignStatus = statuses.find(s => s.id === READY_FOR_DESIGN_STATUS_ID);
 
+  const missingStatusDetails: string[] = [];
+  if (!orderSubmittedStatus) missingStatusDetails.push(`ID: ${ORDER_SUBMITTED_ID} (Expected Name: Order Submitted)`);
+  if (!inProductionStatus) missingStatusDetails.push(`ID: ${IN_PRODUCTION_ID} (Expected Name: In Production)`);
+  if (!pendingApprovalStatus) missingStatusDetails.push(`ID: ${PENDING_CLIENT_APPROVAL_ID} (Expected Name: Pending Client Approval)`);
+  if (!readyForDesignStatus) missingStatusDetails.push(`ID: ${READY_FOR_DESIGN_STATUS_ID} (Expected Name: Ready for Design)`);
+
+  if (missingStatusDetails.length > 0) {
+    console.error(`Cannot seed initial orders. Critical system statuses missing by ID: ${missingStatusDetails.join('; ')}. This indicates a problem with getStatuses() ensuring all default system statuses are present.`);
+    return [];
+  }
+  
+  // Ensure all found statuses are not undefined before proceeding
   if (!orderSubmittedStatus || !inProductionStatus || !pendingApprovalStatus || !readyForDesignStatus) {
-    let missingDetailed = [];
-    if (!orderSubmittedStatus) missingDetailed.push("'Order Submitted'");
-    if (!inProductionStatus) missingDetailed.push("'In Production'");
-    if (!pendingApprovalStatus) missingDetailed.push("'Pending Client Approval'");
-    if (!readyForDesignStatus) missingDetailed.push("'Ready for Design'");
-    console.error(`Default statuses not found, cannot seed initial orders properly. Specifically missing from the currently loaded statuses: ${missingDetailed.join(', ')}. Please check that these statuses exist in your Firestore 'customOrderStatuses' collection with these exact names, or ensure the status seeding process is complete and successful.`);
+    // This case should ideally be caught by the check above, but as a safeguard:
+    console.error("One or more critical status objects are undefined even after attempting to find them by ID. Aborting seedInitialOrders.");
     return [];
   }
+
 
   type SeedOrderBase = Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments' | 'currentStatus' | 'viewCount'> & {
     phoneNumber?: string;
@@ -46,7 +60,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       address: "123 Tech Ave, Silicon Valley, CA 94001",
       phoneNumber: "555-0101",
       service: "Custom Software Development",
-      crmUserId: "SysAdmin-001", // Assuming a System Admin creates these
+      crmUserId: "SysAdmin-001", 
       crmUserName: "Default Admin",
       isPublic: true,
       designerRepresentativeId: null,
@@ -61,7 +75,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       crmUserId: "SysAdmin-001",
       crmUserName: "Default Admin",
       isPublic: false,
-      designerRepresentativeId: null, // Can be assigned later
+      designerRepresentativeId: null, 
       designerRepresentativeName: null,
     },
   ];
@@ -79,7 +93,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     ...firstOrderBaseData,
     id: firstOrderId,
     createdAt: dateTwoDaysAgo.toISOString(),
-    currentStatus: inProductionStatus.id, // Use ID
+    currentStatus: inProductionStatus.id, 
     statusHistory: [
       { id: uuidv4(), timestamp: dateTwoDaysAgo.toISOString(), status: orderSubmittedStatus.id, changedByUserId: firstOrderBaseData.crmUserId, changedByUserName: firstOrderBaseData.crmUserName, notes: "Order created, requirements gathered." },
       { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: inProductionStatus.id, changedByUserId: firstOrderBaseData.crmUserId, changedByUserName: firstOrderBaseData.crmUserName, notes: "Production has commenced." }
@@ -106,7 +120,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     ...secondOrderBaseData,
     id: secondOrderId,
     createdAt: dateOneDayAgo.toISOString(),
-    currentStatus: pendingApprovalStatus.id, // Use ID
+    currentStatus: pendingApprovalStatus.id, 
     statusHistory: [
       { id: uuidv4(), timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), status: orderSubmittedStatus.id, changedByUserId: secondOrderBaseData.crmUserId, changedByUserName: secondOrderBaseData.crmUserName, notes: "New landscaping project initiated." },
       { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: readyForDesignStatus.id, changedByUserId: secondOrderBaseData.crmUserId, changedByUserName: secondOrderBaseData.crmUserName, notes: "Order ready for design team." },
@@ -128,7 +142,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     console.log('Initial orders seeded in Firestore with new ID format and viewCount.');
   } catch (error) {
     console.error("Error seeding initial orders:", error);
-    return []; // Return empty if seeding orders fails
+    return []; 
   }
   return createdOrders;
 };
@@ -183,11 +197,10 @@ export const addOrder = async (orderData: {
     const idPrefixForToday = `ORD-${dateString}-`;
 
     const ordersRef = collection(db, ORDERS_COLLECTION);
-    // Query for orders with the same date prefix to determine the next sequence number
     const q = query(
       ordersRef,
       where('id', '>=', idPrefixForToday),
-      where('id', '<', idPrefixForToday + '\uffff'), // Lexicographical upper bound
+      where('id', '<', idPrefixForToday + '\uffff'), 
       orderBy('id', 'desc'),
       limit(1)
     );
@@ -197,9 +210,8 @@ export const addOrder = async (orderData: {
 
     if (!querySnapshot.empty) {
       const lastOrderIdToday = querySnapshot.docs[0].id;
-      // Expected format: ORD-YYYYMMDD-NNN
       const parts = lastOrderIdToday.split('-');
-      if (parts.length === 3) { // ORD, YYYYMMDD, NNN
+      if (parts.length === 3) { 
         const lastSequenceToday = parseInt(parts[2], 10);
         if (!isNaN(lastSequenceToday)) {
           newSequence = lastSequenceToday + 1;
@@ -212,7 +224,7 @@ export const addOrder = async (orderData: {
     const initialLogEntry: OrderLogEntry = {
       id: uuidv4(),
       timestamp: transactionTime,
-      status: orderData.initialStatusId, // This is an ID
+      status: orderData.initialStatusId, 
       changedByUserId: orderData.crmUserId,
       changedByUserName: orderData.crmUserName,
       notes: "Order created.",
@@ -231,7 +243,7 @@ export const addOrder = async (orderData: {
       statusHistory: [initialLogEntry],
       comments: [],
       isPublic: false,
-      currentStatus: orderData.initialStatusId, // This is an ID
+      currentStatus: orderData.initialStatusId, 
       designerRepresentativeId: null,
       designerRepresentativeName: null,
       viewCount: 0,
@@ -250,7 +262,6 @@ export const addOrder = async (orderData: {
 export const updateOrder = async (id: string, updates: Partial<TrackingLink>): Promise<boolean> => {
   try {
     const orderDoc = doc(db, ORDERS_COLLECTION, id);
-    // Sanitize updates to ensure no 'undefined' values are passed to Firestore
     const sanitizedUpdates: { [key: string]: any } = {};
     for (const key in updates) {
       if (Object.prototype.hasOwnProperty.call(updates, key)) {
@@ -319,10 +330,10 @@ export const incrementOrderViewCount = async (orderId: string): Promise<boolean>
       const currentViewCount = orderDoc.data().viewCount || 0;
       transaction.update(orderRef, { viewCount: currentViewCount + 1 });
     });
-    console.log(`View count incremented for order ${orderId}`);
     return true;
   } catch (error) {
     console.error(`Error incrementing view count for order ${orderId}:`, error);
     return false;
   }
 };
+
