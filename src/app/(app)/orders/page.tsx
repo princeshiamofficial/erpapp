@@ -14,7 +14,7 @@ import type { TrackingLink, User, CustomStatus } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
-import { getContrastTextColor, getStatuses } from '@/lib/status-service';
+import { getStatuses, getContrastTextColor } from '@/lib/status-service';
 import { AssignDrDialog } from '@/components/orders/assign-dr-dialog';
 import { getOrders } from '@/lib/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -107,7 +107,15 @@ export default function OrdersPage() {
         newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
       });
       setOrderStatusDisplay(newDisplayInfoMap);
-    } else if (allStatuses.length === 0 && filteredOrders.length === 0) {
+    } else if (allStatuses.length === 0 && filteredOrders.length > 0) { // No statuses but orders exist (unlikely if seeding works)
+      const fallbackMap: Record<string, { name: string; color: string; textColor: string }> = {};
+      filteredOrders.forEach(order => {
+         if (!fallbackMap[order.currentStatus]) {
+            fallbackMap[order.currentStatus] = { name: order.currentStatus, color: '#A1A1AA', textColor: '#FFFFFF' };
+         }
+      });
+      setOrderStatusDisplay(fallbackMap);
+    } else if (filteredOrders.length === 0) {
       setOrderStatusDisplay({});
     }
   }, [filteredOrders, allStatuses, getStatusDisplayInfo]);
@@ -124,13 +132,21 @@ export default function OrdersPage() {
     setIsLoading(true); // Indicate loading while preparing dialog
     try {
         const freshStatuses = await getStatuses();
-        console.log("OrdersPage/handleOpenAssignDrDialog: Fetched freshStatuses for dialog. Count:", freshStatuses.length, JSON.stringify(freshStatuses.map(s => ({id: s.id, name: s.name}))));
+        console.log("OrdersPage/handleOpenAssignDrDialog: Fetched freshStatuses for dialog. Count:", freshStatuses.length, "IDs:", JSON.stringify(freshStatuses.map(s => s.id).join(', ')));
         
         const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
         if (rfdCheck) {
             console.log("OrdersPage/handleOpenAssignDrDialog: 'ready-for-design' status in freshStatuses:", JSON.stringify(rfdCheck));
         } else {
             console.error("OrdersPage/handleOpenAssignDrDialog: CRITICAL - 'ready-for-design' status (ID: 'ready-for-design') NOT FOUND in freshStatuses from getStatuses().");
+            toast({
+                title: "Configuration Error",
+                description: "The required system status 'Ready for Design' (ID: ready-for-design) is missing. Please ensure it is configured in Admin > Status Management. DR assignment is not possible.",
+                variant: "destructive",
+                duration: 10000,
+            });
+            setIsLoading(false);
+            return; // Stop here, do not open the dialog
         }
         
         setAllStatuses(freshStatuses); // Update the main page's status list as well
@@ -177,7 +193,8 @@ export default function OrdersPage() {
                 currentUser={currentUser}
                 availableStatuses={memoizedAvailableStatusesForDialog}
                 onOrderCreated={async () => {
-                await fetchOrderData();
+                  // Server action revalidates, but immediate client fetch can be good for responsiveness
+                  await fetchOrderData(); 
                 }}
             >
                 <Button
