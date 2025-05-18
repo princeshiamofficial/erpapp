@@ -19,7 +19,8 @@ import { SidebarNavigation } from '@/components/layout/SidebarNavigation';
 import { Button } from '@/components/ui/button';
 import { LogOut, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { Logo } from '@/components/layout/Logo';
+import Image from 'next/image'; // Added import for Image
+// import { Logo } from '@/components/layout/Logo'; // Logo SVG no longer used here for expanded view
 import { AccountSuspendedDialog } from '@/components/auth/AccountSuspendedDialog';
 
 export default function AuthenticatedLayout({
@@ -58,9 +59,15 @@ export default function AuthenticatedLayout({
         className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl"
       >
         <SidebarHeader className="p-4 flex items-center justify-between h-20 border-b border-sidebar-border/70">
-          <Link href="/dashboard" className="flex items-center space-x-2.5 text-primary hover:text-primary/80 transition-colors group-data-[collapsible=icon]:hidden">
-            <Logo className="h-9 w-9" />
-            {/* Future: Add Image component here for the provided logo */}
+          <Link href="/dashboard" className="flex items-center group-data-[collapsible=icon]:hidden">
+            <Image 
+              src="/images/color-hut-logo.png" 
+              alt="Color Hut Logo" 
+              width={127} // Aspect ratio ~3.96 (1059/267), so for height 32, width is ~127
+              height={32} 
+              priority 
+              className="object-contain"
+            />
           </Link>
           <div className="group-data-[collapsible=icon]:mx-auto">
              <SidebarTrigger className="hidden md:flex text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md p-1.5" />

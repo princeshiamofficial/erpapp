@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, LogIn, ShieldCheck, Eye, EyeOff } from 'lucide-react';
-import { Logo } from '@/components/layout/Logo';
+import Image from 'next/image'; // Added import for Image
+// import { Logo } from '@/components/layout/Logo'; // Logo SVG no longer used here
 
 export function LoginForm() {
   const [email, setEmail] = useState('');
@@ -32,11 +33,9 @@ export function LoginForm() {
     setIsLoading(true);
     const success = await login(email, password);
     if (!success) {
-      toast({
-        title: "Login Failed",
-        description: "Invalid email or password. Please try again.",
-        variant: "destructive",
-      });
+      // Toast is already handled by login function for specific errors (banned, invalid creds)
+      // This is a fallback, or if login returns false without specific toast
+      // Consider removing if login always toasts on failure.
     }
     // On success, AuthProvider handles redirect
     setIsLoading(false);
@@ -46,9 +45,17 @@ export function LoginForm() {
     <Card className="w-full max-w-md shadow-2xl bg-card/95 backdrop-blur-md border-border/30 dark:border-border/50 rounded-xl transform hover:scale-[1.01] transition-transform duration-300">
       <CardHeader className="text-center pt-10 pb-6">
         <div className="mx-auto mb-6">
-           <Logo className="h-16 w-16 text-primary drop-shadow-[0_3px_5px_hsl(var(--primary)/0.4)]" />
+           <Image 
+            src="/images/color-hut-logo.png" 
+            alt="Color Hut Logo" 
+            width={253} // Aspect ratio ~3.96 (1059/267), for height 64, width is ~253
+            height={64} 
+            priority 
+            className="object-contain"
+           />
         </div>
-        <CardTitle className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 dark:to-orange-300 pb-1">Color Hut</CardTitle>
+        {/* CardTitle and CardDescription can remain if the logo itself contains the "Color Hut" text and tagline */}
+        {/* <CardTitle className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 dark:to-orange-300 pb-1">Color Hut</CardTitle> */}
         <CardDescription className="text-muted-foreground text-md pt-1">Sign in to your workspace.</CardDescription>
       </CardHeader>
       <CardContent className="py-6 px-8">

@@ -5,7 +5,8 @@ import { getOrderById, incrementOrderViewCount } from '@/lib/order-service';
 import { getStatuses } from '@/lib/status-service';
 import { notFound } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Logo } from '@/components/layout/Logo';
+// import { Logo } from '@/components/layout/Logo'; // Logo SVG no longer used here
+import Image from 'next/image'; // Added import for Image
 import { Package } from 'lucide-react';
 
 interface PublicTrackingPageProps {
@@ -15,8 +16,6 @@ interface PublicTrackingPageProps {
 export default async function PublicTrackingPage({ params }: PublicTrackingPageProps) {
   const trackingId = params.trackingId;
   
-  // Increment view count when the page is accessed
-  // This is a server-side operation before rendering
   if (trackingId) {
     await incrementOrderViewCount(trackingId);
   }
@@ -33,11 +32,19 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-background to-secondary/30 py-6 sm:py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary">
        <header className="text-center mb-8 sm:mb-12">
-        <div className="inline-flex items-center space-x-2 sm:space-x-3 text-primary mb-2">
-            <Logo className="h-10 w-10 sm:h-12 sm:w-12 md:h-16 md:w-16" />
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 dark:to-orange-300">Color Hut</h1>
+        <div className="inline-block mb-2">
+            <Image 
+              src="/images/color-hut-logo.png" 
+              alt="Color Hut Logo" 
+              width={253} // Aspect ratio ~3.96 (1059/267), for height 64, width is ~253. Adjusted for visual balance.
+              height={64} 
+              priority 
+              className="object-contain mx-auto"
+            />
         </div>
-        <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground font-light">Seamless Order Tracking</p>
+        {/* The "Color Hut" text and tagline are part of the logo image, so h1 and p might be redundant or styled differently */}
+        {/* <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 dark:to-orange-300">Color Hut</h1> */}
+        {/* <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground font-light">Seamless Order Tracking</p> */}
       </header>
       
       <Suspense fallback={<TrackingPageSkeleton />}>
@@ -113,4 +120,3 @@ function TrackingPageSkeleton() {
     </div>
   );
 }
-
