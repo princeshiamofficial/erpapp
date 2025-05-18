@@ -11,6 +11,7 @@ export interface User {
   avatarUrl?: string | null; // Allow null
   monthlyOrderTarget?: number | null; // Allow null
   weeklyOrderTarget?: number | null; // Allow null
+  isBanned?: boolean; // New field for ban status
 }
 
 export interface CustomStatus {

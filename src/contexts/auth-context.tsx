@@ -4,7 +4,8 @@
 import type { User } from '@/types';
 import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import { getUserByEmail, seedInitialAdminUser, updateUserAvatarInFirestore, getUserById } from '@/lib/user-service'; // Import Firestore user service
+import { getUserByEmail, seedInitialAdminUser, updateUserAvatarInFirestore, getUserById } from '@/lib/user-service'; 
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   currentUser: User | null;
@@ -21,13 +22,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     const initializeAuth = async () => {
       console.log("AuthContext: Initializing auth...");
       try {
-        await seedInitialAdminUser(); // Ensures admin exists or is created in Firestore
-        console.log("AuthContext: Initial admin user seeding attempted.");
+        await seedInitialAdminUser(); // Ensures admin exists or is created/updated in Firestore
+        console.log("AuthContext: Initial admin user seeding/validation attempted.");
 
         const storedUserJson = localStorage.getItem('colorhut-user');
         if (storedUserJson) {
@@ -38,9 +40,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               console.log(`AuthContext: Validating stored user ID: ${storedUser.id} against Firestore.`);
               const firestoreUser = await getUserById(storedUser.id);
               if (firestoreUser) {
-                console.log("AuthContext: Stored user validated against Firestore. Setting current user.");
-                const { password, ...userToStore } = firestoreUser;
-                setCurrentUser(userToStore as User);
+                if (firestoreUser.isBanned) {
+                  console.log("AuthContext: Stored user is banned. Clearing localStorage and logging out.");
+                  localStorage.removeItem('colorhut-user');
+                  setCurrentUser(null);
+                } else {
+                  console.log("AuthContext: Stored user validated against Firestore and not banned. Setting current user.");
+                  const { password, ...userToStore } = firestoreUser;
+                  setCurrentUser(userToStore as User);
+                }
               } else {
                 console.log("AuthContext: Stored user NOT found in Firestore. Clearing localStorage.");
                 localStorage.removeItem('colorhut-user');
@@ -76,9 +84,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const userFromDb = await getUserByEmail(email);
     
     if (userFromDb) {
-      console.log(`AuthContext: User found in DB for email ${email}:`, userFromDb);
+      console.log(`AuthContext: User found in DB for email ${email}:`, { id: userFromDb.id, role: userFromDb.role, isBanned: userFromDb.isBanned });
       if (userFromDb.password === pass) {
-        console.log("AuthContext: Password matches. Login successful.");
+        if (userFromDb.isBanned) {
+          console.log("AuthContext: Login failed. User is banned.");
+          toast({
+            title: "Login Failed",
+            description: "Your account has been suspended. Please contact an administrator.",
+            variant: "destructive",
+            duration: 7000,
+          });
+          setIsLoading(false);
+          return false;
+        }
+        console.log("AuthContext: Password matches and user not banned. Login successful.");
         const { password, ...userToStore } = userFromDb;
         setCurrentUser(userToStore as User);
         localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
@@ -128,10 +147,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log(`AuthContext: Refreshing current user data for ID: ${currentUser.id}`);
       const firestoreUser = await getUserById(currentUser.id);
       if (firestoreUser) {
-        console.log("AuthContext: Fetched latest user data. Updating local state.");
-        const { password, ...userToStore } = firestoreUser;
-        setCurrentUser(userToStore as User);
-        localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
+        if (firestoreUser.isBanned) {
+          console.log("AuthContext: Current user has been banned. Logging out.");
+          logout(); // Force logout if current user gets banned
+        } else {
+          console.log("AuthContext: Fetched latest user data. Updating local state.");
+          const { password, ...userToStore } = firestoreUser;
+          setCurrentUser(userToStore as User);
+          localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
+        }
       } else {
         console.log("AuthContext: Current user not found in Firestore during refresh. Logging out.");
         logout();

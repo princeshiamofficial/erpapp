@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target, RefreshCw } from "lucide-react";
+import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target, RefreshCw, UserX, UserCheck, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole } from "@/types";
@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Logo } from '@/components/layout/Logo';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { 
   getUsers, 
   addUser, 
@@ -28,8 +29,10 @@ import {
   updateUserAvatarInFirestore, 
   updateUserTargetsInFirestore 
 } from '@/lib/user-service';
+import { toggleUserBanStatusAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 
 export default function UsersPage() {
   const { currentUser, refreshCurrentUser } = useAuth(); 
@@ -39,6 +42,8 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [userToToggleBan, setUserToToggleBan] = useState<User | null>(null);
+  const [isBanDialogValid, setIsBanDialogValid] = useState(false); // For controlling AlertDialog manually
 
   const fetchUsers = useCallback(async () => {
     setIsLoadingUsers(true);
@@ -65,7 +70,7 @@ export default function UsersPage() {
     const createdUser = await addUser(newUserData); 
     if (createdUser) {
       toast({ title: "User Added", description: `${newUserData.name} has been added. Default password is 'password'.`});
-      fetchUsers(); 
+      await fetchUsers(); 
       if (newUserData.email === currentUser?.email) { 
         await refreshCurrentUser(); 
       }
@@ -78,7 +83,7 @@ export default function UsersPage() {
     const success = await updateUserRoleInFirestore(userId, role);
     if (success) {
       toast({ title: "Role Updated", description: `User role has been updated.`});
-      fetchUsers();
+      await fetchUsers();
       if (userId === currentUser?.id) await refreshCurrentUser();
     } else {
       toast({ title: "Error", description: "Could not update user role.", variant: "destructive"});
@@ -89,7 +94,7 @@ export default function UsersPage() {
     const success = await deleteUserFromFirestore(userId);
     if (success) {
       toast({ title: "User Deleted", description: `User has been deleted.`});
-      fetchUsers();
+      await fetchUsers();
     } else {
       toast({ title: "Error", description: "Could not delete user.", variant: "destructive"});
     }
@@ -104,7 +109,7 @@ export default function UsersPage() {
   const handleUserAvatarSetByAdmin = async (userId: string, avatarUrl: string | null): Promise<boolean> => {
     const success = await updateUserAvatarInFirestore(userId, avatarUrl);
     if (success) {
-      fetchUsers(); 
+      await fetchUsers(); 
       if (userId === currentUser?.id) await refreshCurrentUser(); 
     }
     return success; 
@@ -113,11 +118,38 @@ export default function UsersPage() {
   const handleUserTargetsSetByAdmin = async (userId: string, monthlyTarget: number, weeklyTarget: number): Promise<boolean> => {
     const success = await updateUserTargetsInFirestore(userId, monthlyTarget, weeklyTarget);
     if (success) {
-      fetchUsers();
+      await fetchUsers();
        if (userId === currentUser?.id) await refreshCurrentUser();
     }
     return success; 
   };
+
+  const handleToggleBanStatus = async () => {
+    if (!userToToggleBan) return;
+    const currentBanStatus = userToToggleBan.isBanned || false;
+    const result = await toggleUserBanStatusAction(userToToggleBan.id, currentBanStatus);
+
+    if (result.success) {
+      toast({
+        title: `User ${result.newBanStatus ? 'Banned' : 'Unbanned'}`,
+        description: `${userToToggleBan.name} has been ${result.newBanStatus ? 'banned' : 'unbanned'}.`,
+      });
+      await fetchUsers(); // Re-fetch to update list
+    } else {
+      toast({
+        title: "Operation Failed",
+        description: result.error || `Could not ${currentBanStatus ? 'unban' : 'ban'} user.`,
+        variant: "destructive",
+      });
+    }
+    setUserToToggleBan(null); // Close dialog
+    setIsBanDialogValid(false);
+  };
+
+  const openBanDialog = (user: User) => {
+    setUserToToggleBan(user);
+    setIsBanDialogValid(true); // Open dialog
+  }
 
   const getInitials = (name: string) => {
     if (!name) return '??';
@@ -156,13 +188,10 @@ export default function UsersPage() {
     return false;
   };
 
-  // Helper to determine if an Admin can modify a target user (excluding role changes)
   const canAdminModifyTargetUser = (targetUser: User): boolean => {
     if (!currentUser) return false;
-    if (currentUser.role === 'SYSTEM_ADMIN') return true; // System Admin can modify anyone
+    if (currentUser.role === 'SYSTEM_ADMIN') return true; 
     if (currentUser.role === 'ADMIN') {
-      // Admin can modify themselves, or CRM/DR users.
-      // Admin cannot modify another Admin or a System Admin.
       if (targetUser.id === currentUser.id) return true;
       return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE';
     }
@@ -171,14 +200,19 @@ export default function UsersPage() {
   
   const canAdminDeleteTargetUser = (targetUser: User): boolean => {
     if (!currentUser) return false;
-    if (targetUser.id === currentUser.id) return false; // Cannot delete self
-    if (currentUser.role === 'SYSTEM_ADMIN') return true; // System Admin can delete anyone (except self implicitly)
+    if (targetUser.id === currentUser.id) return false; 
+    if (currentUser.role === 'SYSTEM_ADMIN') return true; 
     if (currentUser.role === 'ADMIN') {
-      // Admin can delete CRM/DR users.
-      // Admin cannot delete another Admin or a System Admin.
       return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE';
     }
     return false;
+  };
+
+  const canSystemAdminToggleBan = (targetUser: User): boolean => {
+    if (!currentUser || currentUser.role !== 'SYSTEM_ADMIN') return false;
+    if (targetUser.id === currentUser.id) return false; // Cannot ban self
+    if (targetUser.role === 'SYSTEM_ADMIN') return false; // Cannot ban other System Admins
+    return true;
   };
 
 
@@ -227,9 +261,10 @@ export default function UsersPage() {
                   <TableHead className="pl-6 w-[80px]">Avatar</TableHead>
                   <TableHead className="min-w-[150px]">Name</TableHead>
                   <TableHead className="min-w-[200px]">Email</TableHead>
-                  <TableHead className="min-w-[180px]">Role</TableHead>
+                  <TableHead className="min-w-[120px]">Role</TableHead>
+                  <TableHead className="min-w-[100px]">Status</TableHead>
                   <TableHead className="min-w-[150px]">Company</TableHead>
-                  <TableHead className="pr-6 text-right min-w-[240px] sm:min-w-[280px] xl:min-w-[320px]">Actions</TableHead>
+                  <TableHead className="pr-6 text-right min-w-[280px] sm:min-w-[320px] xl:min-w-[360px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -240,9 +275,10 @@ export default function UsersPage() {
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell className="pr-6 text-right space-x-1.5">
-                        {[...Array(4)].map((_, j) => <Skeleton key={j} className="h-9 w-9 inline-block rounded-md" />)}
+                        {[...Array(5)].map((_, j) => <Skeleton key={j} className="h-9 w-9 inline-block rounded-md" />)}
                       </TableCell>
                     </TableRow>
                   ))
@@ -268,8 +304,24 @@ export default function UsersPage() {
                         {user.role.replace(/_/g, ' ')}
                       </span>
                     </TableCell>
+                    <TableCell>
+                      <Badge variant={user.isBanned ? "destructive" : "default"} className={user.isBanned ? "bg-red-500/20 text-red-700 border-red-500/30" : "bg-green-500/20 text-green-700 border-green-500/30"}>
+                        {user.isBanned ? "Banned" : "Active"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-muted-foreground">{user.companyName || 'N/A'}</TableCell>
                     <TableCell className="pr-6 text-right space-x-1 sm:space-x-1.5 whitespace-nowrap">
+                      {canSystemAdminToggleBan(user) && (
+                        <Button 
+                          variant={user.isBanned ? "outline" : "destructive"} 
+                          size="icon" 
+                          title={user.isBanned ? "Unban User" : "Ban User"} 
+                          className="table-action-button h-9 w-9 sm:h-9 sm:w-9" 
+                          onClick={() => openBanDialog(user)}
+                        >
+                          {user.isBanned ? <UserCheck className="h-4 w-4 text-green-600" /> : <UserX className="h-4 w-4" />}
+                        </Button>
+                      )}
                       <SetUserAvatarDialog user={user} onAvatarChanged={handleUserAvatarSetByAdmin}>
                         <Button variant="outline" size="icon" title="Set Avatar" className="table-action-button h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminModifyTargetUser(user)}><UserCog className="h-4 w-4" /></Button>
                       </SetUserAvatarDialog>
@@ -292,7 +344,7 @@ export default function UsersPage() {
                 ))
                  ) : (
                     <TableRow>
-                        <TableCell colSpan={6} className="text-center py-12 h-[300px]">
+                        <TableCell colSpan={7} className="text-center py-12 h-[300px]">
                              <Image src="https://placehold.co/240x180.png" alt="No users" data-ai-hint="empty state users" width={180} height={135} className="mx-auto rounded-md opacity-60 mb-4" />
                             <p className="text-lg text-muted-foreground font-medium">
                               {searchTerm ? "No users match your search." : "No users found in database."}
@@ -308,6 +360,31 @@ export default function UsersPage() {
           </div>
         </CardContent>
       </Card>
+
+      {userToToggleBan && (
+        <AlertDialog open={isBanDialogValid} onOpenChange={(open) => { if(!open) { setUserToToggleBan(null); setIsBanDialogValid(false); }}}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className={`h-6 w-6 ${userToToggleBan.isBanned ? 'text-green-600' : 'text-destructive'}`} /> 
+                Are you sure?
+                </AlertDialogTitle>
+              <AlertDialogDescription>
+                You are about to {userToToggleBan.isBanned ? 'unban' : 'ban'} the user 
+                "<span className="font-semibold">{userToToggleBan.name}</span>". 
+                {userToToggleBan.isBanned ? ' They will be able to log in again.' : ' They will no longer be able to log in.'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => {setUserToToggleBan(null); setIsBanDialogValid(false);}}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleToggleBanStatus} className={userToToggleBan.isBanned ? "bg-green-600 hover:bg-green-700 text-white" : "bg-destructive hover:bg-destructive/90 text-destructive-foreground"}>
+                {userToToggleBan.isBanned ? "Yes, Unban User" : "Yes, Ban User"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
+
