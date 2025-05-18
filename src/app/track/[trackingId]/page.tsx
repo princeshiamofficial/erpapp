@@ -5,8 +5,7 @@ import { getOrderById, incrementOrderViewCount } from '@/lib/order-service';
 import { getStatuses } from '@/lib/status-service';
 import { notFound } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
-// import { Logo } from '@/components/layout/Logo'; // Logo SVG no longer used here
-import Image from 'next/image'; // Added import for Image
+import Image from 'next/image'; 
 import { Package } from 'lucide-react';
 
 interface PublicTrackingPageProps {
@@ -36,15 +35,12 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
             <Image 
               src="/images/color-hut-logo.png" 
               alt="Color Hut Logo" 
-              width={253} // Aspect ratio ~3.96 (1059/267), for height 64, width is ~253. Adjusted for visual balance.
+              width={253} 
               height={64} 
               priority 
               className="object-contain mx-auto"
             />
         </div>
-        {/* The "Color Hut" text and tagline are part of the logo image, so h1 and p might be redundant or styled differently */}
-        {/* <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 dark:to-orange-300">Color Hut</h1> */}
-        {/* <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground font-light">Seamless Order Tracking</p> */}
       </header>
       
       <Suspense fallback={<TrackingPageSkeleton />}>

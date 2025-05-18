@@ -19,8 +19,7 @@ import { SidebarNavigation } from '@/components/layout/SidebarNavigation';
 import { Button } from '@/components/ui/button';
 import { LogOut, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image'; // Added import for Image
-// import { Logo } from '@/components/layout/Logo'; // Logo SVG no longer used here for expanded view
+import Image from 'next/image'; 
 import { AccountSuspendedDialog } from '@/components/auth/AccountSuspendedDialog';
 
 export default function AuthenticatedLayout({
@@ -39,7 +38,6 @@ export default function AuthenticatedLayout({
   }, [currentUser, isLoading, router, isSuspendedDialogOpen]);
 
   // Show loader if still loading OR if there's no current user AND the suspension dialog isn't active.
-  // This ensures that if a user is immediately flagged for suspension on load, we don't show the loader indefinitely.
   if (isLoading || (!currentUser && !isSuspendedDialogOpen)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -48,10 +46,6 @@ export default function AuthenticatedLayout({
     );
   }
   
-  // If currentUser exists but isSuspendedDialogOpen is true, the dialog will show,
-  // and children should not be rendered.
-  // If currentUser becomes null and isSuspendedDialogOpen is true (e.g. deleted user), dialog still shows.
-
   return (
     <SidebarProvider defaultOpen={true}>
       <Sidebar 
@@ -63,7 +57,7 @@ export default function AuthenticatedLayout({
             <Image 
               src="/images/color-hut-logo.png" 
               alt="Color Hut Logo" 
-              width={127} // Aspect ratio ~3.96 (1059/267), so for height 32, width is ~127
+              width={127} 
               height={32} 
               priority 
               className="object-contain"
@@ -94,7 +88,6 @@ export default function AuthenticatedLayout({
       <SidebarInset>
         {currentUser && !isSuspendedDialogOpen && <AppHeader />} 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-secondary/30 dark:bg-background/50 min-h-[calc(100vh-4.5rem)] selection:bg-primary/20 selection:text-primary">
-          {/* Only render children if user is present AND suspension dialog is NOT open */}
           {currentUser && !isSuspendedDialogOpen ? children : null}
         </main>
       </SidebarInset>
