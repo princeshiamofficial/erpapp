@@ -52,7 +52,7 @@ export default function AuthenticatedLayout({
         collapsible="icon" 
         className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl"
       >
-        <SidebarHeader className="p-4 flex items-center justify-between h-20 border-b border-sidebar-border/70">
+        <SidebarHeader className="p-4 flex items-center justify-between h-20 border-b border-sidebar-border/70 bg-black text-white">
           <Link href="/dashboard" className="flex items-center group-data-[collapsible=icon]:hidden">
             <Image 
               src="https://i.ibb.co/mCy9P3gy/lgo-2-01.png" 
