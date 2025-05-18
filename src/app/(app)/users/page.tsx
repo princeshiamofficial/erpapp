@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target, RefreshCw, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon } from "lucide-react"; // Renamed Edit3 to EditInfoIcon
+import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target, RefreshCw, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole } from "@/types";
@@ -15,7 +15,7 @@ import { DeleteUserDialog } from '@/components/users/delete-user-dialog';
 import { ChangePasswordDialog } from '@/components/users/change-password-dialog';
 import { SetUserAvatarDialog } from '@/components/users/set-user-avatar-dialog';
 import { SetUserSalesTargetDialog } from '@/components/users/set-user-sales-target-dialog';
-import { EditUserInfoDialog } from '@/components/users/edit-user-info-dialog'; // New Dialog
+import { EditUserInfoDialog } from '@/components/users/edit-user-info-dialog';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -44,7 +44,7 @@ export default function UsersPage() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [userToToggleBan, setUserToToggleBan] = useState<User | null>(null);
-  const [isBanDialogValid, setIsBanDialogValid] = useState(false);
+  const [isBanDialogVisible, setIsBanDialogVisible] = useState(false); // Changed from isBanDialogValid
   
   const [userToEditInfo, setUserToEditInfo] = useState<User | null>(null);
   const [isEditInfoDialogOpen, setIsEditInfoDialogOpen] = useState(false);
@@ -140,8 +140,8 @@ export default function UsersPage() {
         description: `${userToToggleBan.name} has been ${result.newBanStatus ? 'banned' : 'unbanned'}.`,
       });
       await fetchUsers(); 
-      if (currentUser && userToToggleBan.id === currentUser.id && result.newBanStatus) {
-         // If current user bans themselves, context needs to handle this through polling
+      if (currentUser && userToToggleBan.id === currentUser.id && result.newBanStatus && typeof refreshCurrentUser === 'function') {
+         await refreshCurrentUser(); // Ensure user context reflects ban if they ban themselves
       }
     } else {
       toast({
@@ -151,21 +151,21 @@ export default function UsersPage() {
       });
     }
     setUserToToggleBan(null);
-    setIsBanDialogValid(false);
+    setIsBanDialogVisible(false);
   };
 
   const openBanDialog = (user: User) => {
     setUserToToggleBan(user);
-    setIsBanDialogValid(true);
+    setIsBanDialogVisible(true);
   }
 
   const handleUserInfoUpdated = async () => {
     await fetchUsers();
-    if (currentUser && userToEditInfo && userToEditInfo.id === currentUser.id) {
+    if (currentUser && userToEditInfo && userToEditInfo.id === currentUser.id && typeof refreshCurrentUser === 'function') {
         await refreshCurrentUser();
     }
-    setIsEditInfoDialogOpen(false); // Close dialog
-    setUserToEditInfo(null); // Clear selected user
+    setIsEditInfoDialogOpen(false); 
+    setUserToEditInfo(null); 
   };
 
 
@@ -250,13 +250,12 @@ export default function UsersPage() {
             Manage user accounts, roles, and permissions from Firestore.
           </p>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          {/* <Button variant="outline" size="lg" onClick={fetchUsers} disabled={isLoadingUsers} className="w-full sm:w-auto rounded-md shadow-md hover:shadow-lg transition-shadow">
-            <RefreshCw className={`mr-2 h-5 w-5 ${isLoadingUsers ? 'animate-spin' : ''}`} />
-            Refresh
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {/* <Button variant="outline" size="icon" onClick={fetchUsers} disabled={isLoadingUsers} className="h-10 w-10" title="Refresh Users">
+            <RefreshCw className={`h-5 w-5 ${isLoadingUsers ? 'animate-spin' : ''}`} />
           </Button> */}
           <AddUserDialog onUserAdded={handleUserAdded} currentUser={currentUser}>
-            <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow">
+            <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow h-10">
               <PlusCircle className="mr-2 h-5 w-5" />
               Add New User
             </Button>
@@ -289,7 +288,7 @@ export default function UsersPage() {
                   <TableHead className="min-w-[120px]">Role</TableHead>
                   {showBanStatusColumn && <TableHead className="min-w-[100px]">Status</TableHead>}
                   <TableHead className="min-w-[150px]">Company</TableHead>
-                  <TableHead className="pr-6 text-right min-w-[280px] sm:min-w-[320px] xl:min-w-[400px]">Actions</TableHead>
+                  <TableHead className="pr-6 text-right min-w-[200px] sm:min-w-[240px] xl:min-w-[280px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -303,7 +302,7 @@ export default function UsersPage() {
                       {showBanStatusColumn && <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>}
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell className="pr-6 text-right space-x-1.5">
-                        {[...Array(showBanStatusColumn ? 6 : 5)].map((_, j) => <Skeleton key={j} className="h-9 w-9 inline-block rounded-md" />)}
+                        {[...Array(currentUser?.role === 'SYSTEM_ADMIN' ? 6 : 5)].map((_, j) => <Skeleton key={j} className="h-9 w-9 inline-block rounded-md" />)}
                       </TableCell>
                     </TableRow>
                   ))
@@ -337,13 +336,13 @@ export default function UsersPage() {
                         </TableCell>
                     )}
                     <TableCell className="text-muted-foreground">{user.companyName || 'N/A'}</TableCell>
-                    <TableCell className="pr-6 text-right space-x-1 sm:space-x-1.5 whitespace-nowrap">
+                    <TableCell className="pr-6 text-right space-x-1.5 whitespace-nowrap">
                       {currentUser?.role === 'SYSTEM_ADMIN' && (
                         <Button 
                           variant="outline" 
                           size="icon" 
                           title="Edit User Info" 
-                          className="h-9 w-9 sm:h-9 sm:w-9" 
+                          className="h-9 w-9" 
                           onClick={() => { setUserToEditInfo(user); setIsEditInfoDialogOpen(true); }}
                           disabled={!canSystemAdminEditInfoOf(user)}
                         >
@@ -355,28 +354,28 @@ export default function UsersPage() {
                           variant={user.isBanned ? "outline" : "destructive"} 
                           size="icon" 
                           title={user.isBanned ? "Unban User" : "Ban User"} 
-                          className="h-9 w-9 sm:h-9 sm:w-9" 
+                          className="h-9 w-9" 
                           onClick={() => openBanDialog(user)}
                         >
                           {user.isBanned ? <UserCheck className="h-4 w-4 text-green-600" /> : <UserX className="h-4 w-4" />}
                         </Button>
                       )}
                       <SetUserAvatarDialog user={user} onAvatarChanged={handleUserAvatarSetByAdmin}>
-                        <Button variant="outline" size="icon" title="Set Avatar" className="h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminModifyTargetUser(user)}><UserCog className="h-4 w-4" /></Button>
+                        <Button variant="outline" size="icon" title="Set Avatar" className="h-9 w-9" disabled={!canAdminModifyTargetUser(user)}><UserCog className="h-4 w-4" /></Button>
                       </SetUserAvatarDialog>
                       <ChangePasswordDialog user={user} onPasswordChanged={handlePasswordChanged}>
-                        <Button variant="outline" size="icon" title="Change Password" className="h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminModifyTargetUser(user)}><KeyRound className="h-4 w-4" /></Button>
+                        <Button variant="outline" size="icon" title="Change Password" className="h-9 w-9" disabled={!canAdminModifyTargetUser(user)}><KeyRound className="h-4 w-4" /></Button>
                       </ChangePasswordDialog>
                       <EditUserRoleDialog user={user} currentUser={currentUser} onUserRoleUpdated={(updatedUser) => handleUserRoleUpdated(updatedUser.id, updatedUser.role)}>
-                        <Button variant="outline" size="icon" title="Edit Role" className="h-9 w-9 sm:h-9 sm:w-9" disabled={!canCurrentUserEditRoleOf(user)}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="outline" size="icon" title="Edit Role" className="h-9 w-9" disabled={!canCurrentUserEditRoleOf(user)}><Edit className="h-4 w-4" /></Button>
                       </EditUserRoleDialog>
                       {user.role === 'CRM' && (
                         <SetUserSalesTargetDialog user={user} onTargetsSet={handleUserTargetsSetByAdmin}>
-                            <Button variant="outline" size="icon" title="Set Sales Targets" className="h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminModifyTargetUser(user)}><Target className="h-4 w-4"/></Button>
+                            <Button variant="outline" size="icon" title="Set Sales Targets" className="h-9 w-9" disabled={!canAdminModifyTargetUser(user)}><Target className="h-4 w-4"/></Button>
                         </SetUserSalesTargetDialog>
                       )}
                       <DeleteUserDialog user={user} onUserDeleted={() => handleUserDeleted(user.id)}>
-                         <Button variant="destructive" size="icon" title="Delete User" className="h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminDeleteTargetUser(user)}><Trash2 className="h-4 w-4" /></Button>
+                         <Button variant="destructive" size="icon" title="Delete User" className="h-9 w-9" disabled={!canAdminDeleteTargetUser(user)}><Trash2 className="h-4 w-4" /></Button>
                       </DeleteUserDialog>
                     </TableCell>
                   </TableRow>
@@ -401,7 +400,7 @@ export default function UsersPage() {
       </Card>
 
       {userToToggleBan && (
-        <AlertDialog open={isBanDialogValid} onOpenChange={(open) => { if(!open) { setUserToToggleBan(null); setIsBanDialogValid(false); }}}>
+        <AlertDialog open={isBanDialogVisible} onOpenChange={(open) => { if(!open) { setUserToToggleBan(null); setIsBanDialogVisible(false); }}}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
@@ -415,7 +414,7 @@ export default function UsersPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => {setUserToToggleBan(null); setIsBanDialogValid(false);}}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel onClick={() => {setUserToToggleBan(null); setIsBanDialogVisible(false);}}>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleToggleBanStatus} className={userToToggleBan.isBanned ? "bg-green-600 hover:bg-green-700 text-white" : "bg-destructive hover:bg-destructive/90 text-destructive-foreground"}>
                 {userToToggleBan.isBanned ? "Yes, Unban User" : "Yes, Ban User"}
               </AlertDialogAction>
@@ -440,4 +439,3 @@ export default function UsersPage() {
     </div>
   );
 }
-
