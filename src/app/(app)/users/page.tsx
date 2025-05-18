@@ -183,8 +183,8 @@ export default function UsersPage() {
     if (currentUser && userToEditInfo && userToEditInfo.id === currentUser.id && typeof refreshCurrentUser === 'function') {
         await refreshCurrentUser();
     }
-    // setIsEditInfoDialogOpen(false); - This is handled by the dialog's onOpenChange
-    // setUserToEditInfo(null); 
+    setIsEditInfoDialogOpen(false); 
+    setUserToEditInfo(null); 
   };
 
 
@@ -228,9 +228,11 @@ export default function UsersPage() {
 
   const canAdminModifyTargetUser = useCallback((targetUser: User): boolean => {
     if (!currentUser) return false;
+    // SYSTEM_ADMIN can modify ADMIN, CRM, DESIGNER_REPRESENTATIVE (but not self or other SYSTEM_ADMIN via this dialog)
     if (currentUser.role === 'SYSTEM_ADMIN') {
       return targetUser.role !== 'SYSTEM_ADMIN' && targetUser.id !== currentUser.id;
     }
+    // ADMIN can modify self, CRM, DESIGNER_REPRESENTATIVE (but not other ADMIN or SYSTEM_ADMIN)
     if (currentUser.role === 'ADMIN') {
       if (targetUser.id === currentUser.id) return true; 
       return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE';
@@ -241,7 +243,9 @@ export default function UsersPage() {
   const canAdminDeleteTargetUser = useCallback((targetUser: User): boolean => {
     if (!currentUser) return false;
     if (targetUser.id === currentUser.id) return false; 
+    // SYSTEM_ADMIN can delete ADMIN, CRM, DESIGNER_REPRESENTATIVE (but not other SYSTEM_ADMIN)
     if (currentUser.role === 'SYSTEM_ADMIN') return targetUser.role !== 'SYSTEM_ADMIN'; 
+    // ADMIN can delete CRM, DESIGNER_REPRESENTATIVE (but not other ADMIN or SYSTEM_ADMIN)
     if (currentUser.role === 'ADMIN') {
       return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE';
     }
@@ -366,11 +370,11 @@ export default function UsersPage() {
                           <DropdownMenuGroup>
                             <DropdownMenuItem 
                               onSelect={() => { setUserToEditInfo(user); setIsEditInfoDialogOpen(true); }}
-                              disabled={!canAdminModifyTargetUser(user)} // Changed from canSystemAdminEditInfoOf
+                              disabled={!canAdminModifyTargetUser(user)}
                             >
                               <EditInfoIcon className="mr-2 h-4 w-4" /> Edit Info
                             </DropdownMenuItem>
-                            {currentUser?.role === 'SYSTEM_ADMIN' && ( // Ban/Unban remains SYSTEM_ADMIN only
+                            {currentUser?.role === 'SYSTEM_ADMIN' && (
                               <DropdownMenuItem 
                                 onSelect={() => { setUserToToggleBan(user); setIsBanDialogVisible(true); }}
                                 className={user.isBanned ? "text-green-600 focus:text-green-700" : "text-destructive focus:text-destructive"}
@@ -538,4 +542,3 @@ export default function UsersPage() {
     </div>
   );
 }
-
