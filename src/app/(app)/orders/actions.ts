@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { TrackingLink, User } from "@/types";
-import { addOrder, updateOrder, getOrderById } from "@/lib/order-service"; 
+import { addOrder, updateOrder, getOrderById, deleteOrder } from "@/lib/order-service";
 import { v4 as uuidv4 } from 'uuid';
 
 export async function createOrderAction(
@@ -35,10 +35,14 @@ export async function createOrderAction(
       crmUserName: currentUser.name,
       initialStatusId: data.initialStatusId,
     };
-    
+
     const createdOrder = await addOrder(newOrderData);
+    if (!createdOrder) {
+      console.error("createOrderAction: addOrder service returned null or undefined.");
+      return { error: "Failed to create order due to a service error." };
+    }
     revalidatePath("/(app)/orders");
-    revalidatePath("/(app)/dashboard"); // Revalidate dashboard for recent activity
+    revalidatePath("/(app)/dashboard");
     return createdOrder;
   } catch (error) {
     console.error("Error in createOrderAction:", error);
@@ -50,26 +54,35 @@ export async function assignDrToOrderAction(
   orderId: string,
   designerRepresentativeId: string,
   designerRepresentativeName: string,
-  actingUser: User, // Changed from crmUser for clarity
+  actingUser: User,
   readyForDesignStatusId: string
 ): Promise<TrackingLink | { error: string }> {
   if (!actingUser || !actingUser.id || !actingUser.name) {
+    console.error("assignDrToOrderAction: Acting user information is missing.", { actingUser });
     return { error: "Acting user information is missing." };
   }
   if (!readyForDesignStatusId) {
+    console.error("assignDrToOrderAction: Ready for Design status ID is required.");
     return { error: "Ready for Design status ID is required." };
+  }
+  if (readyForDesignStatusId !== 'ready-for-design') {
+    console.error("assignDrToOrderAction: Invalid readyForDesignStatusId received. Expected 'ready-for-design', got:", readyForDesignStatusId);
+    return { error: "Invalid target status ID for DR assignment. Configuration error." };
   }
 
   try {
     const currentOrder = await getOrderById(orderId);
     if (!currentOrder) {
+      console.error(`assignDrToOrderAction: Order ${orderId} not found.`);
       return { error: `Order ${orderId} not found.` };
     }
+    console.log("assignDrToOrderAction: Current order fetched:", JSON.stringify(currentOrder));
+
 
     const logEntry = {
       id: uuidv4(),
       timestamp: new Date().toISOString(),
-      status: readyForDesignStatusId, 
+      status: readyForDesignStatusId,
       changedByUserId: actingUser.id,
       changedByUserName: actingUser.name,
       notes: `Assigned to Designer: ${designerRepresentativeName} by ${actingUser.name}.`,
@@ -79,28 +92,48 @@ export async function assignDrToOrderAction(
       designerRepresentativeId,
       designerRepresentativeName,
       currentStatus: readyForDesignStatusId,
-      statusHistory: Array.isArray(currentOrder.statusHistory) 
-                      ? [...currentOrder.statusHistory, logEntry] 
-                      : [logEntry], // Safeguard for statusHistory
+      statusHistory: Array.isArray(currentOrder.statusHistory)
+                      ? [...currentOrder.statusHistory, logEntry]
+                      : [logEntry],
     };
+    console.log("assignDrToOrderAction: Data being sent to updateOrder service:", JSON.stringify(updatedOrderData));
+
 
     const success = await updateOrder(orderId, updatedOrderData);
     if (!success) {
+      console.error("assignDrToOrderAction: updateOrder service returned false for orderId:", orderId);
       return { error: "Failed to update order with DR assignment." };
     }
-    
+
     revalidatePath("/(app)/orders");
     revalidatePath(`/track/${orderId}`);
-    revalidatePath("/(app)/dashboard"); // Revalidate dashboard for recent activity
-    
+    revalidatePath("/(app)/dashboard");
+
     const updatedOrder = await getOrderById(orderId);
     if (!updatedOrder) {
+        console.error("assignDrToOrderAction: Failed to retrieve updated order after DR assignment for orderId:", orderId);
         return { error: "Failed to retrieve updated order after DR assignment."};
     }
+    console.log("assignDrToOrderAction: Successfully updated and re-fetched order:", JSON.stringify(updatedOrder));
     return updatedOrder;
 
   } catch (error) {
     console.error("Error in assignDrToOrderAction:", error);
     return { error: error instanceof Error ? error.message : "Failed to assign Designer Representative." };
+  }
+}
+
+export async function deleteOrderAction(orderId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await deleteOrder(orderId);
+    if (success) {
+      revalidatePath("/(app)/orders");
+      revalidatePath("/(app)/dashboard"); // Revalidate dashboard as order count might change
+      return { success: true };
+    }
+    return { success: false, error: "Failed to delete order from database." };
+  } catch (error) {
+    console.error("Error in deleteOrderAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred while deleting order." };
   }
 }

@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, RefreshCw, Loader2 } from "lucide-react";
+import { PlusCircle, Search, Eye, Users2, RefreshCw, Loader2, Trash2, AlertTriangle } from "lucide-react"; // Added Trash2, AlertTriangle
 import { useAuth } from "@/contexts/auth-context";
 import Image from "next/image";
 import Link from "next/link";
@@ -14,12 +14,22 @@ import type { TrackingLink, User, CustomStatus } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
-import { getStatuses, getContrastTextColor, getStatusById } from '@/lib/status-service';
+import { getStatuses, getContrastTextColor } from '@/lib/status-service';
 import { AssignDrDialog } from '@/components/orders/assign-dr-dialog';
 import { getOrders } from '@/lib/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
-import { createOrderAction, assignDrToOrderAction } from './actions';
+import { deleteOrderAction } from './actions'; // createOrderAction, assignDrToOrderAction are already imported
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"; // Added AlertDialog imports
 
 
 const formatDate = (dateString: string | undefined) => {
@@ -45,6 +55,10 @@ export default function OrdersPage() {
   const [isAssignDrDialogOpen, setIsAssignDrDialogOpen] = useState(false);
   const [statusesForDialog, setStatusesForDialog] = useState<CustomStatus[] | null>(null);
 
+  const [orderToDelete, setOrderToDelete] = useState<TrackingLink | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeletingOrder, setIsDeletingOrder] = useState(false);
+
 
   const fetchOrderData = useCallback(async () => {
     setIsLoading(true);
@@ -61,7 +75,7 @@ export default function OrdersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]); 
+  }, [toast]);
 
   useEffect(() => {
     setIsClient(true);
@@ -69,6 +83,10 @@ export default function OrdersPage() {
         fetchOrderData();
     }
   }, [currentUser, fetchOrderData]);
+
+  const memoizedAvailableStatusesForDialog = useMemo(() => {
+    return allStatuses.filter(s => s.isVisible !== false && (!s.isSystemStatus || s.name === "Order Submitted"));
+  }, [allStatuses]);
 
   const filteredOrders = useMemo(() => {
     let result = orders;
@@ -88,13 +106,13 @@ export default function OrdersPage() {
   }, [orders, searchTerm, currentUser]);
 
   const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
-  
+
   const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
     const foundStatus = allStatuses.find(s => s.id === statusId);
     if (foundStatus) {
       return { name: foundStatus.name, color: foundStatus.color, textColor: getContrastTextColor(foundStatus.color) };
     }
-    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' }; 
+    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' };
   }, [allStatuses]);
 
   useEffect(() => {
@@ -102,22 +120,14 @@ export default function OrdersPage() {
       const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
       const uniqueStatusIdsInFilteredOrders = new Set<string>();
       filteredOrders.forEach(order => uniqueStatusIdsInFilteredOrders.add(order.currentStatus));
-      
+
       uniqueStatusIdsInFilteredOrders.forEach(statusId => {
-        if (statusId) { // Ensure statusId is not undefined or null
+        if (statusId) {
           newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
         }
       });
       setOrderStatusDisplay(newDisplayInfoMap);
-    } else if (allStatuses.length === 0 && filteredOrders.length > 0) {
-      const fallbackMap: Record<string, { name: string; color: string; textColor: string }> = {};
-      filteredOrders.forEach(order => {
-         if (order.currentStatus && !fallbackMap[order.currentStatus]) {
-            fallbackMap[order.currentStatus] = { name: order.currentStatus, color: '#A1A1AA', textColor: '#FFFFFF' };
-         }
-      });
-      setOrderStatusDisplay(fallbackMap);
-    } else if (filteredOrders.length === 0) {
+    } else {
       setOrderStatusDisplay({});
     }
   }, [filteredOrders, allStatuses, getStatusDisplayInfo]);
@@ -125,17 +135,14 @@ export default function OrdersPage() {
 
   const canCreateOrder = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
   const canAssignDr = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
-
-  const memoizedAvailableStatusesForDialog = useMemo(() => {
-    return allStatuses.filter(s => !s.isSystemStatus || s.name === "Order Submitted");
-  }, [allStatuses]);
+  const canDeleteOrder = currentUser?.role === 'SYSTEM_ADMIN';
 
   const handleOpenAssignDrDialog = async (orderToAssign: TrackingLink) => {
-    setIsLoading(true); 
+    setIsLoading(true);
     try {
         const freshStatuses = await getStatuses();
         console.log("OrdersPage/handleOpenAssignDrDialog: Fetched freshStatuses for dialog. Count:", freshStatuses.length);
-        
+
         const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
         if (rfdCheck) {
             console.log("OrdersPage/handleOpenAssignDrDialog: 'ready-for-design' status in freshStatuses:", JSON.stringify(rfdCheck));
@@ -148,11 +155,11 @@ export default function OrdersPage() {
                 duration: 10000,
             });
             setIsLoading(false);
-            return; 
+            return;
         }
-        
-        setAllStatuses(freshStatuses); 
-        setStatusesForDialog(freshStatuses); 
+
+        setAllStatuses(freshStatuses); // Update the main page's status list as well
+        setStatusesForDialog(freshStatuses);
         setSelectedOrderForDrAssignment(orderToAssign);
         setIsAssignDrDialogOpen(true);
     } catch (error) {
@@ -161,14 +168,33 @@ export default function OrdersPage() {
     } finally {
         setIsLoading(false);
     }
-};
+  };
 
-  const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromAction: TrackingLink) => {
+ const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromAction: TrackingLink) => {
     toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
-    setOrders(prevOrders => 
+    // Optimistic update
+    setOrders(prevOrders =>
       prevOrders.map(o => o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o)
     );
+    // Optionally, re-fetch to ensure full consistency, but revalidatePath should handle it.
+    // await fetchOrderData();
   }, [toast]);
+
+  const handleDeleteOrder = async () => {
+    if (!orderToDelete || !canDeleteOrder) return;
+    setIsDeletingOrder(true);
+    const result = await deleteOrderAction(orderToDelete.id);
+    if (result.success) {
+      toast({ title: "Order Deleted", description: `Order ${orderToDelete.id} has been deleted successfully.` });
+      fetchOrderData(); // Re-fetch orders to update the list
+    } else {
+      toast({ title: "Deletion Failed", description: result.error || "Could not delete the order.", variant: "destructive" });
+    }
+    setIsDeletingOrder(false);
+    setIsDeleteDialogOpen(false);
+    setOrderToDelete(null);
+  };
+
 
   if (!currentUser) return (
     <div className="flex h-screen w-full items-center justify-center">
@@ -186,18 +212,23 @@ export default function OrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
+             {/* Refresh button is hidden as per previous request */}
+            {/* <Button variant="outline" onClick={fetchOrderData} disabled={isLoading} className="h-10">
+                <RefreshCw className={`mr-2 h-5 w-5 ${isLoading ? 'animate-spin':''}`} />
+                Refresh Orders
+            </Button> */}
             {canCreateOrder && (
             <CreateOrderDialog
                 currentUser={currentUser}
                 availableStatuses={memoizedAvailableStatusesForDialog}
                 onOrderCreated={async () => {
-                  await fetchOrderData(); 
+                  await fetchOrderData();
                 }}
             >
                 <Button
                 size="lg"
                 className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow font-semibold h-10"
-                disabled={isLoading || (isLoading && allStatuses.length === 0)}
+                disabled={isLoading || (allStatuses.length === 0)}
                 >
                 {(isLoading && allStatuses.length === 0) ? (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
@@ -256,6 +287,7 @@ export default function OrdersPage() {
                       <TableCell className="pr-6 text-right space-x-2">
                         <Skeleton className="h-9 w-9 inline-block rounded-md" />
                         <Skeleton className="h-9 w-9 inline-block rounded-md" />
+                         {canDeleteOrder && <Skeleton className="h-9 w-9 inline-block rounded-md" />}
                       </TableCell>
                     </TableRow>
                   ))
@@ -294,6 +326,19 @@ export default function OrdersPage() {
                               <Eye className="mr-1.5 h-4 w-4" /> View
                             </Button>
                           </Link>
+                          {canDeleteOrder && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="h-9 px-3"
+                              onClick={() => {
+                                setOrderToDelete(order);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="mr-1.5 h-4 w-4" /> Delete
+                            </Button>
+                          )}
                         </TableCell>
                       </TableRow>
                     );
@@ -316,7 +361,7 @@ export default function OrdersPage() {
                                     await fetchOrderData();
                                   }}
                                 >
-                                    <Button size="sm" className="mt-4" disabled={isLoading || (isLoading && allStatuses.length === 0)}>
+                                    <Button size="sm" className="mt-4" disabled={isLoading || (allStatuses.length === 0)}>
                                       {(isLoading && allStatuses.length === 0) ? (
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                       ) : (
@@ -342,7 +387,7 @@ export default function OrdersPage() {
             setIsAssignDrDialogOpen(open);
             if (!open) {
               setSelectedOrderForDrAssignment(null);
-              setStatusesForDialog(null); 
+              setStatusesForDialog(null);
             }
           }}
           order={selectedOrderForDrAssignment}
@@ -351,10 +396,32 @@ export default function OrdersPage() {
           onDrAssigned={handleDrAssignmentSuccess}
         />
       )}
+
+      {orderToDelete && (
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-6 w-6 text-destructive" /> Are you absolutely sure?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This action will permanently delete order "<span className="font-semibold">{orderToDelete.id}</span>".
+                This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setOrderToDelete(null)} disabled={isDeletingOrder}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteOrder}
+                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                disabled={isDeletingOrder}
+              >
+                {isDeletingOrder ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Deleting...</> : "Yes, delete order"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
-    
-
-    
-
