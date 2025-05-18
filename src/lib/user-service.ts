@@ -184,6 +184,32 @@ export const updateUserBanStatus = async (userId: string, isBanned: boolean): Pr
   }
 };
 
+// Update user's basic information (name, email, companyName)
+export const updateUserInfo = async (
+  userId: string,
+  updates: { name?: string; email?: string; companyName?: string | null }
+): Promise<boolean> => {
+  try {
+    const userDoc = doc(db, USERS_COLLECTION, userId);
+    const dataToUpdate: Record<string, any> = {};
+    if (updates.name !== undefined) dataToUpdate.name = updates.name;
+    if (updates.email !== undefined) dataToUpdate.email = updates.email;
+    if (updates.companyName !== undefined) dataToUpdate.companyName = updates.companyName === '' ? null : updates.companyName;
+
+
+    if (Object.keys(dataToUpdate).length === 0) {
+      return true; // No actual updates to make
+    }
+
+    await updateDoc(userDoc, dataToUpdate);
+    return true;
+  } catch (error) {
+    console.error(`Error updating user info for ${userId}:`, error);
+    return false;
+  }
+};
+
+
 // Helper to seed initial admin or ensure admin@colorhut.dev is SYSTEM_ADMIN
 export const seedInitialAdminUser = async () => {
   const adminEmail = "admin@colorhut.dev";
@@ -196,29 +222,26 @@ export const seedInitialAdminUser = async () => {
       await addUser({
         name: 'Default Admin',
         email: adminEmail,
-        role: 'SYSTEM_ADMIN', // Default to SYSTEM_ADMIN
+        role: 'SYSTEM_ADMIN', 
         companyName: 'Color Hut Inc.',
-        password: "password", // Set a default password
+        password: "password", 
         avatarUrl: null,
         monthlyOrderTarget: 0,
         weeklyOrderTarget: 0,
-        isBanned: false, // Ensure not banned by default
+        isBanned: false, 
       });
       console.log(`Default System Admin user (${adminEmail}) seeded into Firestore.`);
     } else {
-      // User exists, check and update role if necessary
       let updates: Partial<User> = {};
       if (existingAdmin.role !== 'SYSTEM_ADMIN') {
         updates.role = 'SYSTEM_ADMIN';
+        console.log(`Updating ${adminEmail} role to SYSTEM_ADMIN.`);
       }
-      if (existingAdmin.isBanned === undefined) { // Ensure isBanned field exists
+      if (existingAdmin.isBanned === undefined) { 
         updates.isBanned = false;
+         console.log(`Setting isBanned to false for ${adminEmail}.`);
       }
-      // You could also enforce a default password here if desired, but be cautious
-      // if (existingAdmin.password !== "password") {
-      //   updates.password = "password";
-      // }
-
+      
       if (Object.keys(updates).length > 0) {
         console.log(`User ${adminEmail} found. Applying updates:`, updates);
         const userDocRef = doc(db, USERS_COLLECTION, existingAdmin.id);

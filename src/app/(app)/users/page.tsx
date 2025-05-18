@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target, RefreshCw, UserX, UserCheck, AlertTriangle } from "lucide-react";
+import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target, RefreshCw, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon } from "lucide-react"; // Renamed Edit3 to EditInfoIcon
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole } from "@/types";
@@ -15,6 +15,7 @@ import { DeleteUserDialog } from '@/components/users/delete-user-dialog';
 import { ChangePasswordDialog } from '@/components/users/change-password-dialog';
 import { SetUserAvatarDialog } from '@/components/users/set-user-avatar-dialog';
 import { SetUserSalesTargetDialog } from '@/components/users/set-user-sales-target-dialog';
+import { EditUserInfoDialog } from '@/components/users/edit-user-info-dialog'; // New Dialog
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -22,14 +23,15 @@ import { Logo } from '@/components/layout/Logo';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { 
   getUsers, 
-  addUser, 
+  addUser as addUserToDb, 
   updateUserRoleInFirestore, 
   deleteUserFromFirestore, 
   updateUserPasswordInFirestore, 
   updateUserAvatarInFirestore, 
-  updateUserTargetsInFirestore 
+  updateUserTargetsInFirestore,
+  // updateUserInfo is now handled by a server action
 } from '@/lib/user-service';
-import { toggleUserBanStatusAction } from './actions';
+import { toggleUserBanStatusAction, updateUserInfoAction } from './actions'; // Imported updateUserInfoAction
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -44,6 +46,7 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [userToToggleBan, setUserToToggleBan] = useState<User | null>(null);
   const [isBanDialogValid, setIsBanDialogValid] = useState(false);
+  const [userToEditInfo, setUserToEditInfo] = useState<User | null>(null); // For EditUserInfoDialog
 
   const fetchUsers = useCallback(async () => {
     setIsLoadingUsers(true);
@@ -67,7 +70,7 @@ export default function UsersPage() {
   }, [currentUser, router, fetchUsers]);
 
   const handleUserAdded = async (newUserData: Omit<User, 'id'>) => {
-    const createdUser = await addUser(newUserData); 
+    const createdUser = await addUserToDb(newUserData); 
     if (createdUser) {
       toast({ title: "User Added", description: `${newUserData.name} has been added. Default password is 'password'.`});
       await fetchUsers(); 
@@ -137,8 +140,6 @@ export default function UsersPage() {
       await fetchUsers(); 
       if (userToToggleBan.id === currentUser?.id && result.newBanStatus) {
          // If current user bans themselves, context needs to handle this through polling
-         // For immediate effect, we might trigger context's refresh or a full logout.
-         // However, UI already prevents self-ban for SYSTEM_ADMIN
       }
     } else {
       toast({
@@ -155,6 +156,15 @@ export default function UsersPage() {
     setUserToToggleBan(user);
     setIsBanDialogValid(true);
   }
+
+  const handleUserInfoUpdated = async () => {
+    await fetchUsers();
+    // If the current user's info was updated, refresh context
+    if (userToEditInfo && userToEditInfo.id === currentUser?.id) {
+        await refreshCurrentUser();
+    }
+    setUserToEditInfo(null); // Close dialog via state
+  };
 
   const getInitials = (name: string) => {
     if (!name) return '??';
@@ -193,7 +203,7 @@ export default function UsersPage() {
     return false;
   };
 
-  const canAdminModifyTargetUser = (targetUser: User): boolean => {
+  const canAdminModifyTargetUser = (targetUser: User): boolean => { // Used for Avatar, Password, Targets
     if (!currentUser) return false;
     if (currentUser.role === 'SYSTEM_ADMIN') return true; 
     if (currentUser.role === 'ADMIN') {
@@ -201,6 +211,13 @@ export default function UsersPage() {
       return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE';
     }
     return false;
+  };
+
+  const canSystemAdminEditInfoOf = (targetUser: User): boolean => { // New for Edit Info (Name, Email, Company)
+    if (!currentUser || currentUser.role !== 'SYSTEM_ADMIN') return false;
+    // System Admin cannot edit another System Admin's info or their own info via this specific table button.
+    if (targetUser.role === 'SYSTEM_ADMIN' || targetUser.id === currentUser.id) return false;
+    return true;
   };
   
   const canAdminDeleteTargetUser = (targetUser: User): boolean => {
@@ -272,7 +289,7 @@ export default function UsersPage() {
                   <TableHead className="min-w-[120px]">Role</TableHead>
                   {showBanStatusColumn && <TableHead className="min-w-[100px]">Status</TableHead>}
                   <TableHead className="min-w-[150px]">Company</TableHead>
-                  <TableHead className="pr-6 text-right min-w-[280px] sm:min-w-[320px] xl:min-w-[360px]">Actions</TableHead>
+                  <TableHead className="pr-6 text-right min-w-[280px] sm:min-w-[320px] xl:min-w-[400px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -286,7 +303,7 @@ export default function UsersPage() {
                       {showBanStatusColumn && <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>}
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell className="pr-6 text-right space-x-1.5">
-                        {[...Array(showBanStatusColumn ? 5 : 4)].map((_, j) => <Skeleton key={j} className="h-9 w-9 inline-block rounded-md" />)}
+                        {[...Array(showBanStatusColumn ? 6 : 5)].map((_, j) => <Skeleton key={j} className="h-9 w-9 inline-block rounded-md" />)}
                       </TableCell>
                     </TableRow>
                   ))
@@ -321,6 +338,18 @@ export default function UsersPage() {
                     )}
                     <TableCell className="text-muted-foreground">{user.companyName || 'N/A'}</TableCell>
                     <TableCell className="pr-6 text-right space-x-1 sm:space-x-1.5 whitespace-nowrap">
+                      {currentUser?.role === 'SYSTEM_ADMIN' && (
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          title="Edit User Info" 
+                          className="h-9 w-9 sm:h-9 sm:w-9" 
+                          onClick={() => setUserToEditInfo(user)}
+                          disabled={!canSystemAdminEditInfoOf(user)}
+                        >
+                          <EditInfoIcon className="h-4 w-4" />
+                        </Button>
+                      )}
                       {canSystemAdminToggleBan(user) && (
                         <Button 
                           variant={user.isBanned ? "outline" : "destructive"} 
@@ -394,7 +423,15 @@ export default function UsersPage() {
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      {userToEditInfo && currentUser?.role === 'SYSTEM_ADMIN' && (
+        <EditUserInfoDialog
+          user={userToEditInfo}
+          onUserInfoUpdated={handleUserInfoUpdated}
+        >
+          {/* This dialog is opened programmatically, so no trigger child needed here */}
+        </EditUserInfoDialog>
+      )}
     </div>
   );
 }
-
