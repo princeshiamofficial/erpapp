@@ -135,6 +135,11 @@ export default function UsersPage() {
         description: `${userToToggleBan.name} has been ${result.newBanStatus ? 'banned' : 'unbanned'}.`,
       });
       await fetchUsers(); 
+      if (userToToggleBan.id === currentUser?.id && result.newBanStatus) {
+         // If current user bans themselves, context needs to handle this through polling
+         // For immediate effect, we might trigger context's refresh or a full logout.
+         // However, UI already prevents self-ban for SYSTEM_ADMIN
+      }
     } else {
       toast({
         title: "Operation Failed",
@@ -192,7 +197,7 @@ export default function UsersPage() {
     if (!currentUser) return false;
     if (currentUser.role === 'SYSTEM_ADMIN') return true; 
     if (currentUser.role === 'ADMIN') {
-      if (targetUser.id === currentUser.id) return true; // Admin can modify their own avatar/password
+      if (targetUser.id === currentUser.id) return true; 
       return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE';
     }
     return false;
@@ -227,10 +232,12 @@ export default function UsersPage() {
           </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
+          {/* Refresh button is now hidden 
           <Button variant="outline" size="lg" onClick={fetchUsers} disabled={isLoadingUsers} className="w-full sm:w-auto rounded-md shadow-md hover:shadow-lg transition-shadow">
             <RefreshCw className={`mr-2 h-5 w-5 ${isLoadingUsers ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
+          */}
           <AddUserDialog onUserAdded={handleUserAdded} currentUser={currentUser}>
             <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow">
               <PlusCircle className="mr-2 h-5 w-5" />
