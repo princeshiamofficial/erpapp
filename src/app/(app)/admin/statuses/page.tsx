@@ -12,6 +12,14 @@ import type { CustomStatus } from "@/types";
 import { getStatuses } from '@/lib/status-service'; // getStatuses to fetch
 import { addStatusAction, updateStatusAction, deleteStatusAction } from './actions'; // server actions
 import { useToast } from '@/hooks/use-toast';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle 
+} from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -331,3 +339,4 @@ export default function AdminStatusesPage() {
     </div>
   );
 }
+
