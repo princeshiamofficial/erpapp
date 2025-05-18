@@ -95,8 +95,7 @@ export default function OrdersPage() {
     if (!searchTerm) return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return result.filter(order =>
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || // Keep searching by customer name if desired
-      (order.companyName && order.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (order.companyName && order.companyName.toLowerCase().includes(searchTerm.toLowerCase())) || // Changed from customerName
       (order.phoneNumber && order.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (order.service && order.service.toLowerCase().includes(searchTerm.toLowerCase())) ||
       order.crmUserName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -115,23 +114,40 @@ export default function OrdersPage() {
   }, [allStatuses]);
 
   useEffect(() => {
-    if (allStatuses.length > 0 && filteredOrders.length > 0) {
-      const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
-      const uniqueStatusIdsInFilteredOrders = new Set<string>();
-      filteredOrders.forEach(order => uniqueStatusIdsInFilteredOrders.add(order.currentStatus));
+    if (allStatuses.length > 0) {
+      if (filteredOrders.length > 0) {
+        const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
+        const uniqueStatusIdsInFilteredOrders = new Set<string>();
+        filteredOrders.forEach(order => uniqueStatusIdsInFilteredOrders.add(order.currentStatus));
 
-      uniqueStatusIdsInFilteredOrders.forEach(statusId => {
-        if (statusId) {
-          newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
+        uniqueStatusIdsInFilteredOrders.forEach(statusId => {
+          if (statusId) {
+            newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
+          }
+        });
+        setOrderStatusDisplay(prevMap => {
+          if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(prevMap)) {
+            return newDisplayInfoMap;
+          }
+          return prevMap;
+        });
+      } else { // No filtered orders, but statuses exist
+        setOrderStatusDisplay(prevMap => {
+          if (Object.keys(prevMap).length > 0) {
+            return {};
+          }
+          return prevMap;
+        });
+      }
+    } else { // No statuses
+      setOrderStatusDisplay(prevMap => {
+        if (Object.keys(prevMap).length > 0) {
+          return {};
         }
+        return prevMap;
       });
-      setOrderStatusDisplay(newDisplayInfoMap);
-    } else if (allStatuses.length > 0 && filteredOrders.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
-      setOrderStatusDisplay({}); // Clear if no orders but display map is not empty
-    } else if (allStatuses.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
-       setOrderStatusDisplay({}); // Clear if no statuses but display map is not empty
     }
-  }, [filteredOrders, allStatuses, getStatusDisplayInfo, orderStatusDisplay]);
+  }, [filteredOrders, allStatuses, getStatusDisplayInfo]);
 
 
   const canCreateOrder = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
@@ -139,7 +155,7 @@ export default function OrdersPage() {
   const canDeleteOrder = currentUser?.role === 'SYSTEM_ADMIN';
 
   const handleOpenAssignDrDialog = async (orderToAssign: TrackingLink) => {
-    setIsLoading(true); // Can use a specific loading state for dialog prep if needed
+    setIsLoading(true); 
     try {
         console.log("OrdersPage/handleOpenAssignDrDialog: Opening for order:", orderToAssign.id);
         const freshStatuses = await getStatuses();
@@ -177,7 +193,7 @@ export default function OrdersPage() {
     setOrders(prevOrders =>
       prevOrders.map(o => o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o)
     );
-    // await fetchOrderData(); // Re-fetch to ensure full consistency - can be re-enabled if optimistic update is not enough
+    // await fetchOrderData(); // Re-fetch to ensure full consistency
   }, [toast]);
 
   const handleDeleteOrder = async () => {
@@ -186,7 +202,7 @@ export default function OrdersPage() {
     const result = await deleteOrderAction(orderToDelete.id);
     if (result.success) {
       toast({ title: "Order Deleted", description: `Order ${orderToDelete.id} has been deleted successfully.` });
-      fetchOrderData(); 
+      await fetchOrderData(); 
     } else {
       toast({ title: "Deletion Failed", description: result.error || "Could not delete the order.", variant: "destructive" });
     }
@@ -212,11 +228,9 @@ export default function OrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-            {/* Refresh button hidden by user request
-            <Button variant="outline" size="icon" onClick={fetchOrderData} disabled={isLoading} className="h-10 w-10" title="Refresh Orders">
+            {/* <Button variant="outline" size="icon" onClick={fetchOrderData} disabled={isLoading} className="h-10 w-10" title="Refresh Orders">
                 <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin':''}`} />
-            </Button> 
-            */}
+            </Button>  */}
             {canCreateOrder && (
             <CreateOrderDialog
                 currentUser={currentUser}
@@ -425,3 +439,4 @@ export default function OrdersPage() {
     </div>
   );
 }
+

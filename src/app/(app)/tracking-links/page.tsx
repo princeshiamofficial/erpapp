@@ -13,7 +13,7 @@ import type { TrackingLink, User, CustomStatus } from '@/types';
 import { EditTrackingLinkDialog } from '@/components/tracking-links/edit-tracking-link-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getOrders } from '@/lib/order-service'; 
-import { getContrastTextColor, getStatuses } from '@/lib/status-service'; // Removed getStatusById as getStatusDisplayInfo will use allStatuses
+import { getContrastTextColor, getStatuses } from '@/lib/status-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast'; 
@@ -102,8 +102,7 @@ export default function TrackingLinksPage() {
     if (!searchTerm) return trackingLinks;
     return trackingLinks.filter(link => 
       link.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      link.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || // Keep searching by customer name
-      (link.companyName && link.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (link.companyName && link.companyName.toLowerCase().includes(searchTerm.toLowerCase())) || // Changed from customerName
       (link.phoneNumber && link.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (link.service && link.service.toLowerCase().includes(searchTerm.toLowerCase())) ||
       link.crmUserName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -114,21 +113,38 @@ export default function TrackingLinksPage() {
   const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
 
   useEffect(() => {
-    if (allStatuses.length > 0 && filteredTrackingLinks.length > 0) {
-      const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
-      const uniqueStatusIds = new Set<string>();
-      filteredTrackingLinks.forEach(link => uniqueStatusIds.add(link.currentStatus));
-      
-      uniqueStatusIds.forEach(statusId => {
-        newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
+    if (allStatuses.length > 0) {
+      if (filteredTrackingLinks.length > 0) {
+        const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
+        const uniqueStatusIds = new Set<string>();
+        filteredTrackingLinks.forEach(link => uniqueStatusIds.add(link.currentStatus));
+        
+        uniqueStatusIds.forEach(statusId => {
+          newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
+        });
+        setOrderStatusDisplay(prevMap => {
+          if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(prevMap)) {
+            return newDisplayInfoMap;
+          }
+          return prevMap;
+        });
+      } else { // No filtered links, but statuses exist
+        setOrderStatusDisplay(prevMap => {
+          if (Object.keys(prevMap).length > 0) {
+            return {};
+          }
+          return prevMap;
+        });
+      }
+    } else { // No statuses
+      setOrderStatusDisplay(prevMap => {
+        if (Object.keys(prevMap).length > 0) {
+          return {};
+        }
+        return prevMap;
       });
-      setOrderStatusDisplay(newDisplayInfoMap);
-    } else if (allStatuses.length > 0 && filteredTrackingLinks.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
-       setOrderStatusDisplay({}); 
-    } else if (allStatuses.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
-       setOrderStatusDisplay({});
     }
-  }, [filteredTrackingLinks, allStatuses, getStatusDisplayInfo, orderStatusDisplay]);
+  }, [filteredTrackingLinks, allStatuses, getStatusDisplayInfo]);
 
 
   if (!currentUser) return (
