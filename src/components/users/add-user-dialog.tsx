@@ -68,12 +68,17 @@ export function AddUserDialog({ onUserAdded, currentUser, children }: AddUserDia
 
   const getAssignableRoles = (): UserRole[] => {
     if (currentUser.role === 'SYSTEM_ADMIN') {
-      return ALL_USER_ROLES;
+      return ALL_USER_ROLES; // System admin can assign any role
     }
     if (currentUser.role === 'ADMIN') {
-      return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
+      // Regular admin can assign ADMIN, CRM, or DESIGNER_REPRESENTATIVE.
+      // Crucially, they CANNOT assign or create a SYSTEM_ADMIN.
+      return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE']; 
     }
-    return [];
+    // Other roles (CRM, DR) cannot add new users through this dialog.
+    // This function should ideally only be called if the currentUser is Admin/System Admin,
+    // as the dialog trigger button itself is likely hidden for other roles.
+    return []; 
   };
   const assignableRoles = getAssignableRoles();
 
@@ -300,3 +305,4 @@ export function AddUserDialog({ onUserAdded, currentUser, children }: AddUserDia
     </Dialog>
   );
 }
+
