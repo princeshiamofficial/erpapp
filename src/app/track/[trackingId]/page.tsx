@@ -30,7 +30,7 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/20 via-background to-secondary/30 py-6 sm:py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary">
-       <header className="text-center mb-8 sm:mb-12">
+       <header className="text-center mb-8 sm:mb-12 bg-black"> {/* Added bg-black here */}
         <div className="inline-block mb-2">
             <Image 
               src="https://i.ibb.co/mCy9P3gy/lgo-2-01.png" 
