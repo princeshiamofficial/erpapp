@@ -11,8 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 
 interface EditUserRoleDialogProps {
   user: User;
-  currentUser: User;
-  onUserRoleUpdated: (updatedUser: {id: string, role: UserRole}) => Promise<void>; // Changed signature
+  currentUser: User; // The currently logged-in user performing the action
+  onUserRoleUpdated: (updatedUser: {id: string, role: UserRole}) => Promise<void>;
   children: React.ReactNode;
 }
 
@@ -30,28 +30,42 @@ export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, child
     }
   }, [user, isOpen]);
 
+  // Determines if the currentUser has permission to change the target 'user's role.
   const canChangeRole = () => {
     if (!currentUser) return false;
-    if (currentUser.role === 'SYSTEM_ADMIN') return true;
+    
+    // System Admin can change any user's role.
+    if (currentUser.role === 'SYSTEM_ADMIN') return true; 
+    
     if (currentUser.role === 'ADMIN') {
-      if (currentUser.id === user.id) return false; // Admin cannot change their own role
-      if (user.role === 'ADMIN' || user.role === 'SYSTEM_ADMIN') return false; // Admin cannot change other Admins or System Admins
-      return true;
+      // Admin cannot change their own role.
+      if (currentUser.id === user.id) return false; 
+      // Admin cannot change other Admins or System Admins.
+      if (user.role === 'ADMIN' || user.role === 'SYSTEM_ADMIN') return false; 
+      // Admin can change CRM or DR roles.
+      return true; 
     }
+    // Other roles (CRM, DR) cannot change roles.
     return false;
   };
 
   const isRoleChangeAllowed = canChangeRole();
 
+  // Determines which roles are available in the dropdown for the currentUser to assign.
   const getAvailableRolesForSelection = (): UserRole[] => {
-    if (currentUser.role === 'SYSTEM_ADMIN') return ALL_USER_ROLES;
+    // System Admin can assign any role.
+    if (currentUser.role === 'SYSTEM_ADMIN') return ALL_USER_ROLES; 
+    
     if (currentUser.role === 'ADMIN') {
+      // If the user being edited is an Admin or System Admin, or if the Admin is editing themselves,
+      // effectively, no change is allowed by an Admin, so only show the current role.
       if (user.role === 'ADMIN' || user.role === 'SYSTEM_ADMIN' || user.id === currentUser.id) {
-        return [user.role]; 
+        return [user.role];
       }
-      // Admins can assign/change to ADMIN, CRM, DESIGNER_REPRESENTATIVE for non-admin/sysadmin users
+      // An Admin can change a CRM/DR to ADMIN, CRM, or DESIGNER_REPRESENTATIVE.
       return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
     }
+    // For other current user roles (CRM, DR), or if no specific permissions, show only current role of target user.
     return [user.role]; 
   };
 
