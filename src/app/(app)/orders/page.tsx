@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2 } from "lucide-react";
+import { PlusCircle, Search, Eye, Users2, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import Image from "next/image";
 import Link from "next/link";
@@ -64,7 +64,13 @@ export default function OrdersPage() {
   }, [fetchOrderData]);
   
   const getStatusDisplayInfo = useCallback(async (statusId: string): Promise<{ name: string; color: string; textColor: string }> => {
-    const status = allStatuses.find(s => s.id === statusId) || await getStatusById(statusId); // Fallback to direct fetch if not in allStatuses
+    // Use allStatuses if already populated, otherwise fetch directly
+    const foundStatus = allStatuses.find(s => s.id === statusId);
+    if (foundStatus) {
+      return { name: foundStatus.name, color: foundStatus.color, textColor: getContrastTextColor(foundStatus.color) };
+    }
+    // Fallback to direct fetch if not in allStatuses (e.g., initial load or rare case)
+    const status = await getStatusById(statusId); 
     if (status) {
       return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
     }
@@ -108,10 +114,10 @@ export default function OrdersPage() {
         setOrderStatusDisplay(prev => ({ ...prev, ...displayInfoMap }));
       }
     };
-    if (filteredOrders.length > 0 && allStatuses.length > 0) {
+    if (filteredOrders.length > 0 && allStatuses.length > 0) { // Ensure allStatuses is populated before fetching
       fetchAllDisplayInfo();
     }
-  }, [filteredOrders, getStatusDisplayInfo, allStatuses, orderStatusDisplay]); // Added orderStatusDisplay to deps
+  }, [filteredOrders, getStatusDisplayInfo, allStatuses, orderStatusDisplay]); 
   
   const memoizedAvailableStatusesForDialog = useMemo(() => {
     return allStatuses.filter(s => !s.isSystemStatus || s.name === "Idea Submitted");
@@ -124,7 +130,7 @@ export default function OrdersPage() {
   );
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-6 p-1 sm:p-0">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
         <div>
           <h1 className="page-title">Order Management</h1>
@@ -137,8 +143,7 @@ export default function OrdersPage() {
             currentUser={currentUser} 
             availableStatuses={memoizedAvailableStatusesForDialog} 
             onOrderCreated={() => {
-              // Server action handles revalidation. We might just want to close dialog.
-              // fetchOrderData(); // This might be redundant if revalidatePath works as expected.
+              // Server action handles revalidation. fetchOrderData() will be called by revalidation or manual refresh.
             }}
           >
             <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow font-semibold">
@@ -152,18 +157,23 @@ export default function OrdersPage() {
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
+            <div className="flex-grow">
               <CardTitle className="text-card-foreground text-xl">Order List</CardTitle>
               <CardDescription className="text-muted-foreground text-sm mt-0.5">{currentUser.role === 'CRM' ? "Showing orders assigned to you." : "Showing all orders."}</CardDescription>
             </div>
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Search orders..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-background h-10 rounded-md w-full"
-              />
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search orders..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-background h-10 rounded-md w-full"
+                />
+              </div>
+              <Button variant="outline" size="icon" onClick={fetchOrderData} disabled={isLoading} title="Refresh Data" className="h-10 w-10">
+                <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -192,8 +202,8 @@ export default function OrdersPage() {
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                       <TableCell className="pr-6 text-right space-x-2">
-                        <Skeleton className="h-8 w-8 inline-block rounded" />
-                        <Skeleton className="h-8 w-8 inline-block rounded" />
+                        <Skeleton className="h-9 w-9 inline-block rounded-md" />
+                        <Skeleton className="h-9 w-9 inline-block rounded-md" />
                       </TableCell>
                     </TableRow>
                   ))
