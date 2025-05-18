@@ -13,6 +13,7 @@ import {
 import type { ServiceModelItem, ServiceLaminationItem } from "@/types";
 
 const SERVICE_MANAGEMENT_PATH = "/(app)/admin/service-management";
+const MODEL_MANAGEMENT_PATH = "/(app)/admin/model-management";
 
 // Model Actions
 export async function addModelAction(name: string): Promise<{ success: boolean; model?: ServiceModelItem; error?: string }> {
@@ -20,6 +21,7 @@ export async function addModelAction(name: string): Promise<{ success: boolean; 
     const newModel = await addModel(name);
     if (newModel) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(MODEL_MANAGEMENT_PATH);
       return { success: true, model: newModel };
     }
     return { success: false, error: "Failed to add model to database." };
@@ -34,6 +36,7 @@ export async function updateModelAction(id: string, name: string): Promise<{ suc
     const success = await updateModel(id, name);
     if (success) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(MODEL_MANAGEMENT_PATH);
       return { success: true };
     }
     return { success: false, error: "Failed to update model in database." };
@@ -48,6 +51,7 @@ export async function deleteModelAction(id: string): Promise<{ success: boolean;
     const success = await deleteModel(id);
     if (success) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(MODEL_MANAGEMENT_PATH);
       return { success: true };
     }
     return { success: false, error: "Failed to delete model from database." };
@@ -99,3 +103,5 @@ export async function deleteLaminationAction(id: string): Promise<{ success: boo
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
+    
