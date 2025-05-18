@@ -38,11 +38,13 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setService('');
     
     if (availableStatuses.length > 0) {
-      const orderSubmittedStatus = availableStatuses.find(s => s.name === "Order Submitted"); // MODIFIED
+      const orderSubmittedStatus = availableStatuses.find(s => s.name === "Order Submitted");
       if (orderSubmittedStatus) {
         setInitialStatusId(orderSubmittedStatus.id);
-      } else {
+      } else if (availableStatuses[0]) { // Check if availableStatuses[0] exists
         setInitialStatusId(availableStatuses[0].id); 
+      } else {
+        setInitialStatusId(''); // Fallback if somehow availableStatuses[0] is undefined
       }
     } else {
       setInitialStatusId(''); 
@@ -51,17 +53,17 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   
   useEffect(() => {
     if (isOpen) {
-      if (availableStatuses.length > 0) {
-        const currentSelectionIsValid = availableStatuses.some(status => status.id === initialStatusId);
-        if (!initialStatusId || !currentSelectionIsValid) {
-          const orderSubmittedStatus = availableStatuses.find(s => s.name === "Order Submitted"); // MODIFIED
-          if (orderSubmittedStatus) {
-            setInitialStatusId(orderSubmittedStatus.id);
-          } else {
-            setInitialStatusId(availableStatuses[0].id);
-          }
+      // Only set default if initialStatusId is not already a valid option or if availableStatuses just loaded
+      const currentSelectionIsValid = availableStatuses.some(status => status.id === initialStatusId);
+      
+      if (availableStatuses.length > 0 && (!initialStatusId || !currentSelectionIsValid)) {
+        const orderSubmittedStatus = availableStatuses.find(s => s.name === "Order Submitted");
+        if (orderSubmittedStatus) {
+          setInitialStatusId(orderSubmittedStatus.id);
+        } else if (availableStatuses[0]) { // Check if availableStatuses[0] exists
+          setInitialStatusId(availableStatuses[0].id);
         }
-      } else {
+      } else if (availableStatuses.length === 0) {
         setInitialStatusId('');
       }
     }
@@ -158,7 +160,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   {availableStatuses.map(status => (
                     <SelectItem key={status.id} value={status.id}>{status.name}</SelectItem>
                   ))}
-                  {availableStatuses.length === 0 && <SelectItem value="" disabled>No statuses available</SelectItem>}
+                  {/* Removed problematic SelectItem with empty value */}
                 </SelectContent>
               </Select>
                {availableStatuses.length === 0 && <p className="text-xs text-muted-foreground mt-1">Statuses are loading or unavailable. Please wait or check admin settings.</p>}
