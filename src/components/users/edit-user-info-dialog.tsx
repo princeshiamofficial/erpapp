@@ -10,7 +10,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,11 +21,11 @@ import { Edit3 } from 'lucide-react';
 interface EditUserInfoDialogProps {
   user: User;
   onUserInfoUpdated: () => void;
-  children: React.ReactNode;
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
 }
 
-export function EditUserInfoDialog({ user, onUserInfoUpdated, children }: EditUserInfoDialogProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChange }: EditUserInfoDialogProps) {
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
   const [companyName, setCompanyName] = useState(user.companyName || '');
@@ -34,7 +33,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, children }: EditUs
   const { toast } = useToast();
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && user) {
       setName(user.name);
       setEmail(user.email);
       setCompanyName(user.companyName || '');
@@ -56,7 +55,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, children }: EditUs
     const updates = {
       name: name.trim(),
       email: email.trim(),
-      companyName: companyName.trim() || null, // Send null if empty
+      companyName: companyName.trim() || null,
     };
 
     const result = await updateUserInfoAction(user.id, updates);
@@ -68,7 +67,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, children }: EditUs
         description: `${user.name}'s information has been updated.`,
       });
       onUserInfoUpdated();
-      setIsOpen(false);
+      onOpenChange(false); // Close dialog on success
     } else {
       toast({
         title: "Update Failed",
@@ -79,17 +78,14 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, children }: EditUs
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <Edit3 className="mr-2 h-5 w-5 text-primary" /> Edit User Information
           </DialogTitle>
           <DialogDescription>
-            Update details for {user.name} ({user.email}).
+            Update details for {user?.name} ({user?.email}).
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -126,7 +122,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, children }: EditUs
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isLoading}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>

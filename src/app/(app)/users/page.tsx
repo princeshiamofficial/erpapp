@@ -29,9 +29,8 @@ import {
   updateUserPasswordInFirestore, 
   updateUserAvatarInFirestore, 
   updateUserTargetsInFirestore,
-  // updateUserInfo is now handled by a server action
 } from '@/lib/user-service';
-import { toggleUserBanStatusAction, updateUserInfoAction } from './actions'; // Imported updateUserInfoAction
+import { toggleUserBanStatusAction, updateUserInfoAction } from './actions'; 
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -46,7 +45,10 @@ export default function UsersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [userToToggleBan, setUserToToggleBan] = useState<User | null>(null);
   const [isBanDialogValid, setIsBanDialogValid] = useState(false);
-  const [userToEditInfo, setUserToEditInfo] = useState<User | null>(null); // For EditUserInfoDialog
+  
+  const [userToEditInfo, setUserToEditInfo] = useState<User | null>(null);
+  const [isEditInfoDialogOpen, setIsEditInfoDialogOpen] = useState(false);
+
 
   const fetchUsers = useCallback(async () => {
     setIsLoadingUsers(true);
@@ -74,7 +76,7 @@ export default function UsersPage() {
     if (createdUser) {
       toast({ title: "User Added", description: `${newUserData.name} has been added. Default password is 'password'.`});
       await fetchUsers(); 
-      if (newUserData.email === currentUser?.email) { 
+      if (currentUser && newUserData.email === currentUser.email) { 
         await refreshCurrentUser(); 
       }
     } else {
@@ -87,7 +89,7 @@ export default function UsersPage() {
     if (success) {
       toast({ title: "Role Updated", description: `User role has been updated.`});
       await fetchUsers();
-      if (userId === currentUser?.id) await refreshCurrentUser();
+      if (currentUser && userId === currentUser.id) await refreshCurrentUser();
     } else {
       toast({ title: "Error", description: "Could not update user role.", variant: "destructive"});
     }
@@ -105,7 +107,7 @@ export default function UsersPage() {
 
   const handlePasswordChanged = async (userId: string, newPassword: string): Promise<boolean> => {
     const success = await updateUserPasswordInFirestore(userId, newPassword);
-    if (success && userId === currentUser?.id) await refreshCurrentUser(); 
+    if (currentUser && success && userId === currentUser.id) await refreshCurrentUser(); 
     return success; 
   };
 
@@ -113,7 +115,7 @@ export default function UsersPage() {
     const success = await updateUserAvatarInFirestore(userId, avatarUrl);
     if (success) {
       await fetchUsers(); 
-      if (userId === currentUser?.id) await refreshCurrentUser(); 
+      if (currentUser && userId === currentUser.id) await refreshCurrentUser(); 
     }
     return success; 
   };
@@ -122,7 +124,7 @@ export default function UsersPage() {
     const success = await updateUserTargetsInFirestore(userId, monthlyTarget, weeklyTarget);
     if (success) {
       await fetchUsers();
-       if (userId === currentUser?.id) await refreshCurrentUser();
+       if (currentUser && userId === currentUser.id) await refreshCurrentUser();
     }
     return success; 
   };
@@ -138,7 +140,7 @@ export default function UsersPage() {
         description: `${userToToggleBan.name} has been ${result.newBanStatus ? 'banned' : 'unbanned'}.`,
       });
       await fetchUsers(); 
-      if (userToToggleBan.id === currentUser?.id && result.newBanStatus) {
+      if (currentUser && userToToggleBan.id === currentUser.id && result.newBanStatus) {
          // If current user bans themselves, context needs to handle this through polling
       }
     } else {
@@ -159,12 +161,13 @@ export default function UsersPage() {
 
   const handleUserInfoUpdated = async () => {
     await fetchUsers();
-    // If the current user's info was updated, refresh context
-    if (userToEditInfo && userToEditInfo.id === currentUser?.id) {
+    if (currentUser && userToEditInfo && userToEditInfo.id === currentUser.id) {
         await refreshCurrentUser();
     }
-    setUserToEditInfo(null); // Close dialog via state
+    setIsEditInfoDialogOpen(false); // Close dialog
+    setUserToEditInfo(null); // Clear selected user
   };
+
 
   const getInitials = (name: string) => {
     if (!name) return '??';
@@ -203,7 +206,7 @@ export default function UsersPage() {
     return false;
   };
 
-  const canAdminModifyTargetUser = (targetUser: User): boolean => { // Used for Avatar, Password, Targets
+  const canAdminModifyTargetUser = (targetUser: User): boolean => {
     if (!currentUser) return false;
     if (currentUser.role === 'SYSTEM_ADMIN') return true; 
     if (currentUser.role === 'ADMIN') {
@@ -213,9 +216,8 @@ export default function UsersPage() {
     return false;
   };
 
-  const canSystemAdminEditInfoOf = (targetUser: User): boolean => { // New for Edit Info (Name, Email, Company)
+  const canSystemAdminEditInfoOf = (targetUser: User): boolean => {
     if (!currentUser || currentUser.role !== 'SYSTEM_ADMIN') return false;
-    // System Admin cannot edit another System Admin's info or their own info via this specific table button.
     if (targetUser.role === 'SYSTEM_ADMIN' || targetUser.id === currentUser.id) return false;
     return true;
   };
@@ -249,12 +251,10 @@ export default function UsersPage() {
           </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
-          {/* Refresh button is now hidden 
-          <Button variant="outline" size="lg" onClick={fetchUsers} disabled={isLoadingUsers} className="w-full sm:w-auto rounded-md shadow-md hover:shadow-lg transition-shadow">
+          {/* <Button variant="outline" size="lg" onClick={fetchUsers} disabled={isLoadingUsers} className="w-full sm:w-auto rounded-md shadow-md hover:shadow-lg transition-shadow">
             <RefreshCw className={`mr-2 h-5 w-5 ${isLoadingUsers ? 'animate-spin' : ''}`} />
             Refresh
-          </Button>
-          */}
+          </Button> */}
           <AddUserDialog onUserAdded={handleUserAdded} currentUser={currentUser}>
             <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow">
               <PlusCircle className="mr-2 h-5 w-5" />
@@ -344,7 +344,7 @@ export default function UsersPage() {
                           size="icon" 
                           title="Edit User Info" 
                           className="h-9 w-9 sm:h-9 sm:w-9" 
-                          onClick={() => setUserToEditInfo(user)}
+                          onClick={() => { setUserToEditInfo(user); setIsEditInfoDialogOpen(true); }}
                           disabled={!canSystemAdminEditInfoOf(user)}
                         >
                           <EditInfoIcon className="h-4 w-4" />
@@ -424,14 +424,20 @@ export default function UsersPage() {
         </AlertDialog>
       )}
 
-      {userToEditInfo && currentUser?.role === 'SYSTEM_ADMIN' && (
+      {isEditInfoDialogOpen && userToEditInfo && currentUser?.role === 'SYSTEM_ADMIN' && (
         <EditUserInfoDialog
           user={userToEditInfo}
           onUserInfoUpdated={handleUserInfoUpdated}
-        >
-          {/* This dialog is opened programmatically, so no trigger child needed here */}
-        </EditUserInfoDialog>
+          isOpen={isEditInfoDialogOpen}
+          onOpenChange={(open) => {
+            setIsEditInfoDialogOpen(open);
+            if (!open) {
+              setUserToEditInfo(null); 
+            }
+          }}
+        />
       )}
     </div>
   );
 }
+
