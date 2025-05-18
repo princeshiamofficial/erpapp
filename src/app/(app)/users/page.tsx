@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Logo } from '@/components/layout/Logo';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { 
   getUsers, 
   addUser, 
@@ -43,7 +43,7 @@ export default function UsersPage() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [userToToggleBan, setUserToToggleBan] = useState<User | null>(null);
-  const [isBanDialogValid, setIsBanDialogValid] = useState(false); // For controlling AlertDialog manually
+  const [isBanDialogValid, setIsBanDialogValid] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     setIsLoadingUsers(true);
@@ -134,7 +134,7 @@ export default function UsersPage() {
         title: `User ${result.newBanStatus ? 'Banned' : 'Unbanned'}`,
         description: `${userToToggleBan.name} has been ${result.newBanStatus ? 'banned' : 'unbanned'}.`,
       });
-      await fetchUsers(); // Re-fetch to update list
+      await fetchUsers(); 
     } else {
       toast({
         title: "Operation Failed",
@@ -142,13 +142,13 @@ export default function UsersPage() {
         variant: "destructive",
       });
     }
-    setUserToToggleBan(null); // Close dialog
+    setUserToToggleBan(null);
     setIsBanDialogValid(false);
   };
 
   const openBanDialog = (user: User) => {
     setUserToToggleBan(user);
-    setIsBanDialogValid(true); // Open dialog
+    setIsBanDialogValid(true);
   }
 
   const getInitials = (name: string) => {
@@ -192,7 +192,7 @@ export default function UsersPage() {
     if (!currentUser) return false;
     if (currentUser.role === 'SYSTEM_ADMIN') return true; 
     if (currentUser.role === 'ADMIN') {
-      if (targetUser.id === currentUser.id) return true;
+      if (targetUser.id === currentUser.id) return true; // Admin can modify their own avatar/password
       return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE';
     }
     return false;
@@ -210,11 +210,12 @@ export default function UsersPage() {
 
   const canSystemAdminToggleBan = (targetUser: User): boolean => {
     if (!currentUser || currentUser.role !== 'SYSTEM_ADMIN') return false;
-    if (targetUser.id === currentUser.id) return false; // Cannot ban self
-    if (targetUser.role === 'SYSTEM_ADMIN') return false; // Cannot ban other System Admins
+    if (targetUser.id === currentUser.id) return false; 
+    if (targetUser.role === 'SYSTEM_ADMIN') return false;
     return true;
   };
 
+  const showBanStatusColumn = currentUser?.role === 'SYSTEM_ADMIN';
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -225,7 +226,7 @@ export default function UsersPage() {
             Manage user accounts, roles, and permissions from Firestore.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           <Button variant="outline" size="lg" onClick={fetchUsers} disabled={isLoadingUsers} className="w-full sm:w-auto rounded-md shadow-md hover:shadow-lg transition-shadow">
             <RefreshCw className={`mr-2 h-5 w-5 ${isLoadingUsers ? 'animate-spin' : ''}`} />
             Refresh
@@ -262,7 +263,7 @@ export default function UsersPage() {
                   <TableHead className="min-w-[150px]">Name</TableHead>
                   <TableHead className="min-w-[200px]">Email</TableHead>
                   <TableHead className="min-w-[120px]">Role</TableHead>
-                  <TableHead className="min-w-[100px]">Status</TableHead>
+                  {showBanStatusColumn && <TableHead className="min-w-[100px]">Status</TableHead>}
                   <TableHead className="min-w-[150px]">Company</TableHead>
                   <TableHead className="pr-6 text-right min-w-[280px] sm:min-w-[320px] xl:min-w-[360px]">Actions</TableHead>
                 </TableRow>
@@ -275,10 +276,10 @@ export default function UsersPage() {
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                      {showBanStatusColumn && <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>}
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell className="pr-6 text-right space-x-1.5">
-                        {[...Array(5)].map((_, j) => <Skeleton key={j} className="h-9 w-9 inline-block rounded-md" />)}
+                        {[...Array(showBanStatusColumn ? 5 : 4)].map((_, j) => <Skeleton key={j} className="h-9 w-9 inline-block rounded-md" />)}
                       </TableCell>
                     </TableRow>
                   ))
@@ -304,11 +305,13 @@ export default function UsersPage() {
                         {user.role.replace(/_/g, ' ')}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      <Badge variant={user.isBanned ? "destructive" : "default"} className={user.isBanned ? "bg-red-500/20 text-red-700 border-red-500/30" : "bg-green-500/20 text-green-700 border-green-500/30"}>
-                        {user.isBanned ? "Banned" : "Active"}
-                      </Badge>
-                    </TableCell>
+                    {showBanStatusColumn && (
+                        <TableCell>
+                        <Badge variant={user.isBanned ? "destructive" : "default"} className={user.isBanned ? "bg-red-500/20 text-red-700 border-red-500/30" : "bg-green-500/20 text-green-700 border-green-500/30"}>
+                            {user.isBanned ? "Banned" : "Active"}
+                        </Badge>
+                        </TableCell>
+                    )}
                     <TableCell className="text-muted-foreground">{user.companyName || 'N/A'}</TableCell>
                     <TableCell className="pr-6 text-right space-x-1 sm:space-x-1.5 whitespace-nowrap">
                       {canSystemAdminToggleBan(user) && (
@@ -316,35 +319,35 @@ export default function UsersPage() {
                           variant={user.isBanned ? "outline" : "destructive"} 
                           size="icon" 
                           title={user.isBanned ? "Unban User" : "Ban User"} 
-                          className="table-action-button h-9 w-9 sm:h-9 sm:w-9" 
+                          className="h-9 w-9 sm:h-9 sm:w-9" 
                           onClick={() => openBanDialog(user)}
                         >
                           {user.isBanned ? <UserCheck className="h-4 w-4 text-green-600" /> : <UserX className="h-4 w-4" />}
                         </Button>
                       )}
                       <SetUserAvatarDialog user={user} onAvatarChanged={handleUserAvatarSetByAdmin}>
-                        <Button variant="outline" size="icon" title="Set Avatar" className="table-action-button h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminModifyTargetUser(user)}><UserCog className="h-4 w-4" /></Button>
+                        <Button variant="outline" size="icon" title="Set Avatar" className="h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminModifyTargetUser(user)}><UserCog className="h-4 w-4" /></Button>
                       </SetUserAvatarDialog>
                       <ChangePasswordDialog user={user} onPasswordChanged={handlePasswordChanged}>
-                        <Button variant="outline" size="icon" title="Change Password" className="table-action-button h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminModifyTargetUser(user)}><KeyRound className="h-4 w-4" /></Button>
+                        <Button variant="outline" size="icon" title="Change Password" className="h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminModifyTargetUser(user)}><KeyRound className="h-4 w-4" /></Button>
                       </ChangePasswordDialog>
                       <EditUserRoleDialog user={user} currentUser={currentUser} onUserRoleUpdated={(updatedUser) => handleUserRoleUpdated(updatedUser.id, updatedUser.role)}>
-                        <Button variant="outline" size="icon" title="Edit Role" className="table-action-button h-9 w-9 sm:h-9 sm:w-9" disabled={!canCurrentUserEditRoleOf(user)}><Edit className="h-4 w-4" /></Button>
+                        <Button variant="outline" size="icon" title="Edit Role" className="h-9 w-9 sm:h-9 sm:w-9" disabled={!canCurrentUserEditRoleOf(user)}><Edit className="h-4 w-4" /></Button>
                       </EditUserRoleDialog>
                       {user.role === 'CRM' && (
                         <SetUserSalesTargetDialog user={user} onTargetsSet={handleUserTargetsSetByAdmin}>
-                            <Button variant="outline" size="icon" title="Set Sales Targets" className="table-action-button h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminModifyTargetUser(user)}><Target className="h-4 w-4"/></Button>
+                            <Button variant="outline" size="icon" title="Set Sales Targets" className="h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminModifyTargetUser(user)}><Target className="h-4 w-4"/></Button>
                         </SetUserSalesTargetDialog>
                       )}
                       <DeleteUserDialog user={user} onUserDeleted={() => handleUserDeleted(user.id)}>
-                         <Button variant="destructive" size="icon" title="Delete User" className="table-action-button h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminDeleteTargetUser(user)}><Trash2 className="h-4 w-4" /></Button>
+                         <Button variant="destructive" size="icon" title="Delete User" className="h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminDeleteTargetUser(user)}><Trash2 className="h-4 w-4" /></Button>
                       </DeleteUserDialog>
                     </TableCell>
                   </TableRow>
                 ))
                  ) : (
                     <TableRow>
-                        <TableCell colSpan={7} className="text-center py-12 h-[300px]">
+                        <TableCell colSpan={showBanStatusColumn ? 7 : 6} className="text-center py-12 h-[300px]">
                              <Image src="https://placehold.co/240x180.png" alt="No users" data-ai-hint="empty state users" width={180} height={135} className="mx-auto rounded-md opacity-60 mb-4" />
                             <p className="text-lg text-muted-foreground font-medium">
                               {searchTerm ? "No users match your search." : "No users found in database."}
