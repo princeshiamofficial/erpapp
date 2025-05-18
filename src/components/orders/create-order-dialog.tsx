@@ -9,13 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { User, CustomStatus } from "@/types";
 import { useToast } from '@/hooks/use-toast';
-import { createOrderAction } from '@/app/(app)/orders/actions'; 
+import { createOrderAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface CreateOrderDialogProps {
   currentUser: User;
-  availableStatuses: CustomStatus[]; 
-  onOrderCreated: () => void; 
+  availableStatuses: CustomStatus[];
+  onOrderCreated: () => void;
   children: React.ReactNode;
 }
 
@@ -36,39 +36,28 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setAddress('');
     setPhoneNumber('');
     setService('');
-    
-    if (availableStatuses.length > 0) {
-      const orderSubmittedStatus = availableStatuses.find(s => s.name === "Order Submitted");
-      if (orderSubmittedStatus) {
-        setInitialStatusId(orderSubmittedStatus.id);
-      } else if (availableStatuses[0]) { // Check if availableStatuses[0] exists
-        setInitialStatusId(availableStatuses[0].id); 
-      } else {
-        setInitialStatusId(''); // Fallback if somehow availableStatuses[0] is undefined
-      }
-    } else {
-      setInitialStatusId(''); 
-    }
+    setInitialStatusId(''); // Always reset to empty to allow useEffect to set default
   };
-  
+
   useEffect(() => {
     if (isOpen) {
-      // Only set default if initialStatusId is not already a valid option or if availableStatuses just loaded
-      const currentSelectionIsValid = availableStatuses.some(status => status.id === initialStatusId);
-      
-      if (availableStatuses.length > 0 && (!initialStatusId || !currentSelectionIsValid)) {
-        const orderSubmittedStatus = availableStatuses.find(s => s.name === "Order Submitted");
-        if (orderSubmittedStatus) {
-          setInitialStatusId(orderSubmittedStatus.id);
-        } else if (availableStatuses[0]) { // Check if availableStatuses[0] exists
-          setInitialStatusId(availableStatuses[0].id);
+      if (availableStatuses.length > 0) {
+        const isCurrentStatusInAvailableList = availableStatuses.some(s => s.id === initialStatusId);
+        // Set a default if no status is selected, or if the selected one is no longer valid
+        if (!initialStatusId || !isCurrentStatusInAvailableList) {
+          const orderSubmittedStatus = availableStatuses.find(s => s.name === "Order Submitted");
+          if (orderSubmittedStatus) {
+            setInitialStatusId(orderSubmittedStatus.id);
+          } else if (availableStatuses[0]) { // Fallback to the first available status
+            setInitialStatusId(availableStatuses[0].id);
+          }
         }
-      } else if (availableStatuses.length === 0) {
+      } else {
+        // No statuses available (yet), ensure initialStatusId is cleared
         setInitialStatusId('');
       }
     }
-  }, [isOpen, availableStatuses, initialStatusId]);
-
+  }, [isOpen, availableStatuses, initialStatusId]); // initialStatusId is needed to re-validate if it's changed externally or becomes invalid
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,10 +69,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       });
       return;
     }
-    if (availableStatuses.length === 0) {
+    if (availableStatuses.length === 0 && !initialStatusId) { // Check specifically if no status could be chosen
       toast({
         title: "Status Error",
-        description: "No order statuses are available. Cannot create order.",
+        description: "No order statuses are available or selected. Cannot create order.",
         variant: "destructive",
       });
       return;
@@ -112,8 +101,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         title: "Order Created",
         description: `Order ${result.id} for ${customerName} has been created.`,
       });
-      onOrderCreated(); 
-      setIsOpen(false);
+      onOrderCreated();
+      setIsOpen(false); // This will trigger resetForm via onOpenChange
     }
     setIsSubmitting(false);
   };
@@ -160,7 +149,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   {availableStatuses.map(status => (
                     <SelectItem key={status.id} value={status.id}>{status.name}</SelectItem>
                   ))}
-                  {/* Removed problematic SelectItem with empty value */}
                 </SelectContent>
               </Select>
                {availableStatuses.length === 0 && <p className="text-xs text-muted-foreground mt-1">Statuses are loading or unavailable. Please wait or check admin settings.</p>}
@@ -168,7 +156,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
           </div>
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => { setIsOpen(false); }} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting || !initialStatusId || availableStatuses.length === 0}>
+            <Button type="submit" disabled={isSubmitting || !initialStatusId || (availableStatuses.length === 0 && !initialStatusId) }>
               {isSubmitting ? "Creating..." : "Create Order"}
             </Button>
           </DialogFooter>
