@@ -14,11 +14,12 @@ import type { TrackingLink, User, CustomStatus } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
-import { getStatusById, getContrastTextColor, getStatuses } from '@/lib/status-service';
+import { getContrastTextColor, getStatuses } from '@/lib/status-service';
 import { AssignDrDialog } from '@/components/orders/assign-dr-dialog';
 import { getOrders } from '@/lib/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createOrderAction, assignDrToOrderAction } from './actions';
+import { useToast } from '@/hooks/use-toast';
 
 
 const formatDate = (dateString: string | undefined) => {
@@ -33,6 +34,7 @@ const formatDate = (dateString: string | undefined) => {
 
 export default function OrdersPage() {
   const { currentUser } = useAuth();
+  const { toast } = useToast();
   const [orders, setOrders] = useState<TrackingLink[]>([]);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,6 +43,8 @@ export default function OrdersPage() {
 
   const [selectedOrderForDrAssignment, setSelectedOrderForDrAssignment] = useState<TrackingLink | null>(null);
   const [isAssignDrDialogOpen, setIsAssignDrDialogOpen] = useState(false);
+  const [statusesForDialog, setStatusesForDialog] = useState<CustomStatus[] | null>(null);
+
 
   const fetchOrderData = useCallback(async () => {
     setIsLoading(true);
@@ -53,11 +57,11 @@ export default function OrdersPage() {
       setAllStatuses(fetchedStatuses);
     } catch (error) {
       console.error("Failed to fetch orders or statuses:", error);
-      // Potentially set an error state here to show in UI
+      toast({ title: "Error", description: "Could not load order data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
-  }, []); 
+  }, [toast]); 
 
   useEffect(() => {
     setIsClient(true);
@@ -90,22 +94,21 @@ export default function OrdersPage() {
     if (foundStatus) {
       return { name: foundStatus.name, color: foundStatus.color, textColor: getContrastTextColor(foundStatus.color) };
     }
-    // Fallback for statuses not yet loaded or found - should be rare if allStatuses is comprehensive
     return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' }; 
   }, [allStatuses]);
 
   useEffect(() => {
     if (allStatuses.length > 0 && filteredOrders.length > 0) {
       const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
-      const uniqueStatusIds = new Set<string>();
-      filteredOrders.forEach(order => uniqueStatusIds.add(order.currentStatus));
-
-      uniqueStatusIds.forEach(statusId => {
+      const uniqueStatusIdsInFilteredOrders = new Set<string>();
+      filteredOrders.forEach(order => uniqueStatusIdsInFilteredOrders.add(order.currentStatus));
+      
+      uniqueStatusIdsInFilteredOrders.forEach(statusId => {
         newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
       });
       setOrderStatusDisplay(newDisplayInfoMap);
     } else if (allStatuses.length === 0 && filteredOrders.length === 0) {
-      setOrderStatusDisplay({}); // Clear if no orders/statuses
+      setOrderStatusDisplay({});
     }
   }, [filteredOrders, allStatuses, getStatusDisplayInfo]);
 
@@ -117,10 +120,38 @@ export default function OrdersPage() {
     return allStatuses.filter(s => !s.isSystemStatus || s.name === "Order Submitted");
   }, [allStatuses]);
 
-  const handleDrAssignmentSuccess = useCallback(async () => {
-    setIsAssignDrDialogOpen(false);
-    await fetchOrderData();
-  }, [fetchOrderData]);
+  const handleOpenAssignDrDialog = async (orderToAssign: TrackingLink) => {
+    setIsLoading(true); // Indicate loading while preparing dialog
+    try {
+        const freshStatuses = await getStatuses();
+        console.log("OrdersPage/handleOpenAssignDrDialog: Fetched freshStatuses for dialog. Count:", freshStatuses.length, JSON.stringify(freshStatuses.map(s => ({id: s.id, name: s.name}))));
+        
+        const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
+        if (rfdCheck) {
+            console.log("OrdersPage/handleOpenAssignDrDialog: 'ready-for-design' status in freshStatuses:", JSON.stringify(rfdCheck));
+        } else {
+            console.error("OrdersPage/handleOpenAssignDrDialog: CRITICAL - 'ready-for-design' status (ID: 'ready-for-design') NOT FOUND in freshStatuses from getStatuses().");
+        }
+        
+        setAllStatuses(freshStatuses); // Update the main page's status list as well
+        setStatusesForDialog(freshStatuses); // Set the specific statuses for the dialog
+        setSelectedOrderForDrAssignment(orderToAssign);
+        setIsAssignDrDialogOpen(true);
+    } catch (error) {
+        console.error("Error preparing assign DR dialog:", error);
+        toast({ title: "Error", description: "Could not prepare DR assignment dialog. Check console.", variant: "destructive" });
+    } finally {
+        setIsLoading(false);
+    }
+};
+
+  const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromAction: TrackingLink) => {
+    toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
+    setOrders(prevOrders => 
+      prevOrders.map(o => o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o)
+    );
+    // await fetchOrderData(); // Re-fetch all data to ensure consistency, or rely on optimistic update + revalidatePath
+  }, [toast]);
 
   if (!currentUser) return (
     <div className="flex h-screen w-full items-center justify-center">
@@ -137,28 +168,33 @@ export default function OrdersPage() {
             View, track, and manage all customer orders.
           </p>
         </div>
-        {canCreateOrder && (
-          <CreateOrderDialog
-            currentUser={currentUser}
-            availableStatuses={memoizedAvailableStatusesForDialog}
-            onOrderCreated={async () => {
-              await fetchOrderData();
-            }}
-          >
-            <Button
-              size="lg"
-              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow font-semibold"
-              disabled={isLoading || (isLoading && allStatuses.length === 0)}
-            >
-              {(isLoading && allStatuses.length === 0) ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <PlusCircle className="mr-2 h-5 w-5" />
-              )}
-              {(isLoading && allStatuses.length === 0) ? "Loading Data..." : "Create New Order"}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button variant="outline" onClick={fetchOrderData} disabled={isLoading} className="h-10">
+                 <RefreshCw className={`mr-2 h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} /> Refresh Orders
             </Button>
-          </CreateOrderDialog>
-        )}
+            {canCreateOrder && (
+            <CreateOrderDialog
+                currentUser={currentUser}
+                availableStatuses={memoizedAvailableStatusesForDialog}
+                onOrderCreated={async () => {
+                await fetchOrderData();
+                }}
+            >
+                <Button
+                size="lg"
+                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow font-semibold h-10"
+                disabled={isLoading || (isLoading && allStatuses.length === 0)}
+                >
+                {(isLoading && allStatuses.length === 0) ? (
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                    <PlusCircle className="mr-2 h-5 w-5" />
+                )}
+                {(isLoading && allStatuses.length === 0) ? "Loading Data..." : "Create New Order"}
+                </Button>
+            </CreateOrderDialog>
+            )}
+        </div>
       </div>
 
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
@@ -168,11 +204,7 @@ export default function OrdersPage() {
               <CardTitle className="text-card-foreground text-xl">Order List</CardTitle>
               <CardDescription className="text-muted-foreground text-sm mt-0.5">{currentUser.role === 'CRM' ? "Showing orders assigned to you." : "Showing all orders."}</CardDescription>
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-               <Button variant="outline" size="icon" onClick={fetchOrderData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
-                 <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
-               </Button>
-              <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs">
+            <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search orders..."
@@ -180,7 +212,6 @@ export default function OrdersPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 bg-background h-10 rounded-md w-full"
                 />
-              </div>
             </div>
           </div>
         </CardHeader>
@@ -239,7 +270,7 @@ export default function OrdersPage() {
                               variant="outline"
                               size="sm"
                               className="h-9 px-3"
-                              onClick={() => { setSelectedOrderForDrAssignment(order); setIsAssignDrDialogOpen(true); }}
+                              onClick={() => handleOpenAssignDrDialog(order)}
                             >
                               <Users2 className="mr-1.5 h-4 w-4" /> {order.designerRepresentativeId ? "Re-assign DR" : "Assign DR"}
                             </Button>
@@ -290,13 +321,19 @@ export default function OrdersPage() {
         </CardContent>
       </Card>
 
-      {selectedOrderForDrAssignment && currentUser && allStatuses.length > 0 && (
+      {statusesForDialog && selectedOrderForDrAssignment && currentUser && (
         <AssignDrDialog
           isOpen={isAssignDrDialogOpen}
-          onOpenChange={setIsAssignDrDialogOpen}
+          onOpenChange={(open) => {
+            setIsAssignDrDialogOpen(open);
+            if (!open) {
+              setSelectedOrderForDrAssignment(null);
+              setStatusesForDialog(null); // Clear statuses for dialog when it closes
+            }
+          }}
           order={selectedOrderForDrAssignment}
           currentUser={currentUser}
-          allStatuses={allStatuses}
+          allStatuses={statusesForDialog}
           onDrAssigned={handleDrAssignmentSuccess}
         />
       )}
@@ -305,3 +342,4 @@ export default function OrdersPage() {
 }
     
 
+    
