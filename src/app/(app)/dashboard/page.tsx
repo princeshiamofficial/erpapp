@@ -69,7 +69,7 @@ const getProgressColorClass = (percentage: number): string => {
 };
 
 const MAX_RECENT_ACTIVITIES_DISPLAY = 15;
-const ORDERS_TO_SCAN_FOR_ACTIVITY = 10;
+const ORDERS_TO_SCAN_FOR_ACTIVITY = 10; // Consider how many orders to scan for generating recent activity
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
@@ -84,8 +84,8 @@ export default function DashboardPage() {
   const [isLoadingActiveOrders, setIsLoadingActiveOrders] = useState(true);
   const [activeOrdersPercentageChange, setActiveOrdersPercentageChange] = useState<number | null>(null);
   
-  const [monthlyOrdersCreatedCount, setMonthlyOrdersCreatedCount] = useState<number | null>(null);
-  const [isLoadingMonthlyOrdersCreated, setIsLoadingMonthlyOrdersCreated] = useState(true);
+  const [monthlyDeliveriesCount, setMonthlyDeliveriesCount] = useState<number | null>(null);
+  const [isLoadingMonthlyDeliveries, setIsLoadingMonthlyDeliveries] = useState(true);
 
 
   const [weeklyDeliveriesCount, setWeeklyDeliveriesCount] = useState<number | null>(null);
@@ -121,7 +121,7 @@ export default function DashboardPage() {
     setIsLoadingActivities(true);
     setIsLoadingActiveOrders(true);
     setActiveOrdersPercentageChange(null);
-    setIsLoadingMonthlyOrdersCreated(true);
+    setIsLoadingMonthlyDeliveries(true);
     setIsLoadingWeeklyDeliveries(true);
 
     try {
@@ -161,6 +161,8 @@ export default function DashboardPage() {
             timestamp: log.timestamp,
           });
 
+          // Infer DR assignment from log notes or status change
+          // This relies on specific wording in log notes or specific status transition
           if (!drAssignedForThisOrder && order.designerRepresentativeName && log.notes?.toLowerCase().includes(`assigned to designer: ${order.designerRepresentativeName.toLowerCase()}`)) {
             activities.push({
               id: `dr-assigned-${order.id}-${log.id}`,
@@ -175,6 +177,7 @@ export default function DashboardPage() {
           }
         }
 
+        // Fallback if DR assigned but not explicitly logged in the preferred way
         if (!drAssignedForThisOrder && order.designerRepresentativeName) {
             // Try to find a "Ready for Design" status log, assuming DR is assigned around that time.
             const readyForDesignLog = order.statusHistory.find(log => statusMap.get(log.status)?.toLowerCase() === 'ready for design');
@@ -190,6 +193,7 @@ export default function DashboardPage() {
         }
 
         for (const comment of order.comments) {
+          // Filter out internal comments if current user is not admin/system_admin or involved in order
           if (comment.isInternal && currentUser?.role !== 'ADMIN' && currentUser?.role !== 'SYSTEM_ADMIN' && currentUser?.id !== order.crmUserId && currentUser?.id !== order.designerRepresentativeId) {
             continue;
           }
@@ -230,14 +234,16 @@ export default function DashboardPage() {
       if (deliveredStatusId || cancelledStatusId) {
           fetchedOrders.forEach(order => {
               if (currentUser.role === 'CRM' && order.crmUserId !== currentUser.id) {
-                  return; 
+                  return; // Skip if CRM user and order is not theirs
               }
 
               const orderCreatedAt = new Date(order.createdAt);
+              // Only consider orders created before the current month for the "start of month" count
               if (orderCreatedAt < startOfCurrentMonth) { 
                   let lastKnownStatusBeforeThisMonth = '';
                   let mostRecentLogTimestamp = new Date(0); 
 
+                  // Find the last status of the order *before* the current month started
                   order.statusHistory.forEach(log => {
                       const logTimestamp = new Date(log.timestamp);
                       if (logTimestamp < startOfCurrentMonth) {
@@ -248,11 +254,13 @@ export default function DashboardPage() {
                       }
                   });
                   
+                  // If a status was found before this month, check if it was active
                   if (lastKnownStatusBeforeThisMonth) {
                       if (lastKnownStatusBeforeThisMonth !== deliveredStatusId && lastKnownStatusBeforeThisMonth !== cancelledStatusId) {
                           activeOrdersAtStartOfMonthCount++;
                       }
-                  } else { 
+                  } else { // If no status history before this month, but order was created before this month
+                         // Check its initial status (which is the first log entry)
                          const initialStatusWasTerminal = order.statusHistory[0]?.status === deliveredStatusId || order.statusHistory[0]?.status === cancelledStatusId;
                          if (!initialStatusWasTerminal) {
                             activeOrdersAtStartOfMonthCount++;
@@ -264,40 +272,36 @@ export default function DashboardPage() {
       
       if (activeOrdersAtStartOfMonthCount > 0) {
           setActiveOrdersPercentageChange(((ordersForActiveCount.length - activeOrdersAtStartOfMonthCount) / activeOrdersAtStartOfMonthCount) * 100);
-      } else if (ordersForActiveCount.length > 0) { 
-          setActiveOrdersPercentageChange(100); 
-      } else { 
-          setActiveOrdersPercentageChange(0); 
+      } else if (ordersForActiveCount.length > 0) { // No active orders at start of month, but some now
+          setActiveOrdersPercentageChange(100); // Or handle as "New" or infinite %
+      } else { // No active orders then, no active orders now
+          setActiveOrdersPercentageChange(0); // Or handle as "N/A"
       }
 
 
-      // Calculate Monthly Orders Created & Weekly Deliveries
+      // Calculate Monthly Deliveries & Weekly Deliveries
       if (deliveredStatusId) {
         const monthStart = startOfMonth(now);
         const monthEnd = endOfMonth(now);
-        const weekStart = startOfWeek(now, { weekStartsOn: 1 }); 
+        const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday as start of the week
         const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
         
-        let ordersCreatedThisMonth = 0;
+        let deliveriesThisMonth = 0;
         let deliveriesThisWeek = 0;
         let crmMonthCompleted = 0;
         let crmWeekCompleted = 0;
 
         fetchedOrders.forEach(order => {
-          const isOrderCreatedThisMonth = isWithinInterval(parseISO(order.createdAt), { start: monthStart, end: monthEnd });
-          const isOrderDeliveredThisWeek = order.statusHistory.some(
-            log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: weekStart, end: weekEnd })
-          );
           const isOrderDeliveredThisMonth = order.statusHistory.some(
             log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: monthStart, end: monthEnd })
           );
+          const isOrderDeliveredThisWeek = order.statusHistory.some(
+            log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: weekStart, end: weekEnd })
+          );
 
-
-          if (isOrderCreatedThisMonth) {
-            ordersCreatedThisMonth++;
-          }
 
           if (isOrderDeliveredThisMonth) {
+            deliveriesThisMonth++;
             if (currentUser.role === 'CRM' && order.crmUserId === currentUser.id) {
               crmMonthCompleted++;
             }
@@ -309,13 +313,13 @@ export default function DashboardPage() {
             }
           }
         });
-        setMonthlyOrdersCreatedCount(ordersCreatedThisMonth);
+        setMonthlyDeliveriesCount(deliveriesThisMonth);
         setWeeklyDeliveriesCount(deliveriesThisWeek);
         setCrmMonthlyOrdersCompleted(crmMonthCompleted);
         setCrmWeeklyOrdersCompleted(crmWeekCompleted);
 
       } else {
-        setMonthlyOrdersCreatedCount(0); 
+        setMonthlyDeliveriesCount(0); 
         setWeeklyDeliveriesCount(0);
         setCrmMonthlyOrdersCompleted(0);
         setCrmWeeklyOrdersCompleted(0);
@@ -327,14 +331,14 @@ export default function DashboardPage() {
       toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive" });
       setActiveOrdersCount(0); 
       setActiveOrdersPercentageChange(0);
-      setMonthlyOrdersCreatedCount(0);
+      setMonthlyDeliveriesCount(0);
       setWeeklyDeliveriesCount(0);
       setCrmMonthlyOrdersCompleted(0);
       setCrmWeeklyOrdersCompleted(0);
     } finally {
       setIsLoadingActivities(false);
       setIsLoadingActiveOrders(false);
-      setIsLoadingMonthlyOrdersCreated(false);
+      setIsLoadingMonthlyDeliveries(false);
       setIsLoadingWeeklyDeliveries(false);
     }
   }, [currentUser, toast]);
@@ -354,7 +358,6 @@ export default function DashboardPage() {
   const handleSetGlobalMonthlyOrderTarget = async (newTarget: number) => {
     const result = await setGlobalTargetAction('monthly', newTarget);
     if (result.success) {
-      // Toast moved to here from dialog for better feedback on actual save
       toast({ title: "Global Monthly Target Updated", description: `Global monthly order target set to ${newTarget} orders.`, });
       await fetchGlobalTargets(); 
     } else {
@@ -417,14 +420,14 @@ export default function DashboardPage() {
   if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
     summaryCards.push(
       {
-        title: "Monthly Orders Created",
-        value: isLoadingMonthlyOrdersCreated || monthlyOrdersCreatedCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : monthlyOrdersCreatedCount.toString(),
-        icon: Package, // Changed from PackageCheck to general Package for "created"
+        title: "Monthly Deliveries",
+        value: isLoadingMonthlyDeliveries || monthlyDeliveriesCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : monthlyDeliveriesCount.toString(),
+        icon: PackageCheck,
         changeText: "This month",
-        dataAiHint: "calendar orders",
+        dataAiHint: "calendar checkmark",
         type: "info" as const,
         trend: "neutral" as "up" | "down" | "neutral",
-        href: "/orders/monthly", // Link to new monthly orders created page
+        href: "/deliveries/monthly", 
       },
       {
         title: "Weekly Deliveries",
