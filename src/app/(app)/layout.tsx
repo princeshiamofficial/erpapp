@@ -60,7 +60,7 @@ export default function AuthenticatedLayout({
         <SidebarHeader className="p-4 flex items-center justify-between h-20 border-b border-sidebar-border/70">
           <Link href="/dashboard" className="flex items-center space-x-2.5 text-primary hover:text-primary/80 transition-colors group-data-[collapsible=icon]:hidden">
             <Logo className="h-9 w-9" />
-            <span className="font-extrabold text-3xl tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400 dark:to-orange-300">Color Hut</span>
+            {/* Future: Add Image component here for the provided logo */}
           </Link>
           <div className="group-data-[collapsible=icon]:mx-auto">
              <SidebarTrigger className="hidden md:flex text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md p-1.5" />
