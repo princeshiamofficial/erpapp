@@ -1,21 +1,30 @@
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, orderBy, writeBatch, runTransaction } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, orderBy, writeBatch, runTransaction, limit } from 'firebase/firestore';
 import type { TrackingLink, Comment, OrderLogEntry, CustomStatus } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getStatuses } from './status-service';
 
 const ORDERS_COLLECTION = 'orders';
 
+const generateShortId = (length = 6) => {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+};
+
 const seedInitialOrders = async (): Promise<TrackingLink[]> => {
   const statuses: CustomStatus[] = await getStatuses();
 
-  const ideaSubmittedStatus = statuses.find(s => s.name === 'Idea Submitted');
+  const orderSubmittedStatus = statuses.find(s => s.name === 'Order Submitted'); // MODIFIED
   const inProductionStatus = statuses.find(s => s.name === 'In Production');
   const pendingApprovalStatus = statuses.find(s => s.name === 'Pending Client Approval');
   const readyForDesignStatus = statuses.find(s => s.name === 'Ready for Design');
 
-  if (!ideaSubmittedStatus || !inProductionStatus || !pendingApprovalStatus || !readyForDesignStatus) {
+  if (!orderSubmittedStatus || !inProductionStatus || !pendingApprovalStatus || !readyForDesignStatus) {
     console.error("Default statuses not found, cannot seed initial orders properly.");
     return [];
   }
@@ -34,7 +43,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       address: "123 Tech Ave, Silicon Valley, CA 94001",
       phoneNumber: "555-0101",
       service: "Custom Software Development",
-      crmUserId: "SysAdmin-001", // Assuming SysAdmin-001 is the seeded admin
+      crmUserId: "SysAdmin-001", 
       crmUserName: "Default Admin",
       isPublic: true,
       designerRepresentativeId: null,
@@ -58,7 +67,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
   const createdOrders: TrackingLink[] = [];
   const batch = writeBatch(db);
 
-  const firstOrderId = "S1A2M3"; // Short ID
+  const firstOrderId = "S1A2M3"; 
   const firstOrderBaseData = initialOrdersData[0];
   const firstOrder: TrackingLink = {
     ...firstOrderBaseData,
@@ -66,7 +75,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
     currentStatus: inProductionStatus.id,
     statusHistory: [
-      { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: ideaSubmittedStatus.id, changedByUserId: firstOrderBaseData.crmUserId, changedByUserName: firstOrderBaseData.crmUserName, notes: "Order created, requirements gathered." },
+      { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: orderSubmittedStatus.id, changedByUserId: firstOrderBaseData.crmUserId, changedByUserName: firstOrderBaseData.crmUserName, notes: "Order created, requirements gathered." },
       { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: inProductionStatus.id, changedByUserId: firstOrderBaseData.crmUserId, changedByUserName: firstOrderBaseData.crmUserName, notes: "Production has commenced." }
     ],
     comments: [
@@ -82,7 +91,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
   batch.set(firstDocRef, firstOrder);
   createdOrders.push(firstOrder);
 
-  const secondOrderId = "P4L5E6"; // Short ID
+  const secondOrderId = "P4L5E6"; 
   const secondOrderBaseData = initialOrdersData[1];
   const secondOrder: TrackingLink = {
     ...secondOrderBaseData,
@@ -90,7 +99,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     currentStatus: pendingApprovalStatus.id,
     statusHistory: [
-      { id: uuidv4(), timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), status: ideaSubmittedStatus.id, changedByUserId: secondOrderBaseData.crmUserId, changedByUserName: secondOrderBaseData.crmUserName, notes: "New landscaping project initiated." },
+      { id: uuidv4(), timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), status: orderSubmittedStatus.id, changedByUserId: secondOrderBaseData.crmUserId, changedByUserName: secondOrderBaseData.crmUserName, notes: "New landscaping project initiated." },
       { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: readyForDesignStatus.id, changedByUserId: secondOrderBaseData.crmUserId, changedByUserName: secondOrderBaseData.crmUserName, notes: "Order ready for design team." },
       { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: pendingApprovalStatus.id, changedByUserId: secondOrderBaseData.designerRepresentativeId || "DR-001", changedByUserName: secondOrderBaseData.designerRepresentativeName || "Carol DesignerRep", notes: "Initial designs submitted for client approval." }
     ],
@@ -110,7 +119,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     console.log('Initial orders seeded in Firestore with short IDs and viewCount.');
   } catch (error) {
     console.error("Error seeding initial orders:", error);
-    return []; // Return empty if seeding fails
+    return []; 
   }
   return createdOrders;
 };
@@ -120,6 +129,10 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
   const q = query(ordersCol, orderBy("createdAt", "desc"));
   try {
     const snapshot = await getDocs(q);
+     if (snapshot.empty) {
+      console.log("No orders found in Firestore, attempting to seed initial orders.");
+      return await seedInitialOrders();
+    }
     return snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as TrackingLink));
   } catch (error) {
     console.error("Error fetching orders:", error);
@@ -128,6 +141,7 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
 };
 
 export const getOrderById = async (id: string): Promise<TrackingLink | undefined> => {
+  if (!id) return undefined;
   try {
     const docRef = doc(db, ORDERS_COLLECTION, id);
     const docSnap = await getDoc(docRef);
@@ -140,15 +154,6 @@ export const getOrderById = async (id: string): Promise<TrackingLink | undefined
     console.error("Error fetching order by ID:", error);
     return undefined;
   }
-};
-
-const generateShortId = (length = 6) => {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-  return result;
 };
 
 export const addOrder = async (orderData: {
@@ -166,13 +171,12 @@ export const addOrder = async (orderData: {
   let idExists = true;
 
   try {
-    // Basic collision check (highly unlikely for 6 random chars, but good practice)
     while (idExists) {
       const existingDoc = await getDoc(doc(db, ORDERS_COLLECTION, orderId));
       if (!existingDoc.exists()) {
         idExists = false;
       } else {
-        orderId = generateShortId(); // Regenerate if collision
+        orderId = generateShortId();
       }
     }
 
@@ -223,7 +227,7 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
         if (value !== undefined) {
           sanitizedUpdates[key] = value;
         } else {
-          sanitizedUpdates[key] = null; // Ensure undefined becomes null for Firestore
+          sanitizedUpdates[key] = null; 
         }
       }
     }
@@ -237,33 +241,33 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
 
 export const addCommentToOrder = async (orderId: string, commentData: Omit<Comment, 'id' | 'timestamp'>): Promise<TrackingLink | undefined> => {
   try {
-    const order = await getOrderById(orderId);
-    if (!order) {
-      throw new Error(`Order ${orderId} not found.`);
-    }
+    const orderRef = doc(db, ORDERS_COLLECTION, orderId);
+    
+    // Transaction to get current order and update it
+    return await runTransaction(db, async (transaction) => {
+      const orderDoc = await transaction.get(orderRef);
+      if (!orderDoc.exists()) {
+        throw new Error(`Order ${orderId} not found.`);
+      }
+      
+      const order = { ...orderDoc.data(), id: orderDoc.id } as TrackingLink;
 
-    const newComment: Comment = {
-      id: uuidv4(),
-      timestamp: new Date().toISOString(),
-      userName: commentData.userName,
-      text: commentData.text,
-      isInternal: commentData.isInternal,
-    };
-    // Only include userId if it's provided and not undefined
-    if (commentData.userId !== undefined) {
-      newComment.userId = commentData.userId;
-    }
+      const newComment: Comment = {
+        id: uuidv4(),
+        timestamp: new Date().toISOString(),
+        userName: commentData.userName,
+        text: commentData.text,
+        isInternal: commentData.isInternal,
+      };
+      if (commentData.userId !== undefined) {
+        newComment.userId = commentData.userId;
+      }
 
-
-    const updatedComments = [...order.comments, newComment];
-
-    const success = await updateOrder(orderId, { comments: updatedComments });
-    if (!success) {
-      console.error(`Failed to update comments for order ${orderId} via updateOrder.`);
-      return undefined;
-    }
-
-    return { ...order, comments: updatedComments };
+      const updatedComments = [...(order.comments || []), newComment];
+      transaction.update(orderRef, { comments: updatedComments });
+      
+      return { ...order, comments: updatedComments };
+    });
 
   } catch (error) {
     console.error(`Error adding comment to order ${orderId}:`, error);
@@ -277,8 +281,6 @@ export const incrementOrderViewCount = async (orderId: string): Promise<boolean>
     await runTransaction(db, async (transaction) => {
       const orderDoc = await transaction.get(orderRef);
       if (!orderDoc.exists()) {
-        // Not throwing an error here, as it might be acceptable for a view count to fail silently
-        // if the order is deleted right as it's being viewed.
         console.warn(`Order ${orderId} not found for incrementing view count.`);
         return;
       }

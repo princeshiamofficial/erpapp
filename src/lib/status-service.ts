@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 const STATUSES_COLLECTION = 'customOrderStatuses';
 
 const defaultStatusesData: Omit<CustomStatus, 'id' | 'isSystemStatus'>[] = [
-  { name: 'Idea Submitted', color: '#8B5CF6' }, // Purple
+  { name: 'Order Submitted', color: '#8B5CF6' }, // Purple // MODIFIED
   { name: 'Design in Progress', color: '#3B82F6' }, // Blue
   { name: 'Pending Client Approval', color: '#F59E0B' }, // Amber
   { name: 'Changes Requested', color: '#EF4444' }, // Red
@@ -51,6 +51,10 @@ export const getStatuses = async (): Promise<CustomStatus[]> => {
   const statusesCol = collection(db, STATUSES_COLLECTION);
   try {
     const snapshot = await getDocs(statusesCol);
+    if (snapshot.empty) {
+      console.log("No statuses found in Firestore, attempting to seed default statuses.");
+      return await seedDefaultStatuses();
+    }
     const statuses = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as CustomStatus));
     return statuses.sort((a, b) => {
       if (a.isSystemStatus && !b.isSystemStatus) return -1;
@@ -156,11 +160,12 @@ export const deleteStatus = async (id: string): Promise<boolean> => {
 };
 
 export const getContrastTextColor = (hexColor: string): string => {
-  if (!hexColor || hexColor.length < 4) return '#000000'; // Handle invalid or short hex
+  if (!hexColor || typeof hexColor !== 'string' || hexColor.length < 4) return '#000000'; // Handle invalid or short hex
   try {
     const r = parseInt(hexColor.slice(1, 3), 16);
     const g = parseInt(hexColor.slice(3, 5), 16);
     const b = parseInt(hexColor.slice(5, 7), 16);
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return '#000000'; // Handle parsing errors
     const yiq = (r * 299 + g * 587 + b * 114) / 1000;
     return yiq >= 128 ? '#000000' : '#FFFFFF';
   } catch (e) {
