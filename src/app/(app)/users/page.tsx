@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target, RefreshCw, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon } from "lucide-react";
+import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, Settings as SettingsIcon, MoreVertical } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole } from "@/types";
@@ -21,6 +21,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Logo } from '@/components/layout/Logo';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuGroup,
+} from "@/components/ui/dropdown-menu";
 import { 
   getUsers, 
   addUser as addUserToDb, 
@@ -43,11 +52,27 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
   const [userToToggleBan, setUserToToggleBan] = useState<User | null>(null);
-  const [isBanDialogVisible, setIsBanDialogVisible] = useState(false); // Changed from isBanDialogValid
+  const [isBanDialogVisible, setIsBanDialogVisible] = useState(false);
   
   const [userToEditInfo, setUserToEditInfo] = useState<User | null>(null);
   const [isEditInfoDialogOpen, setIsEditInfoDialogOpen] = useState(false);
+
+  const [userToEditRole, setUserToEditRole] = useState<User | null>(null);
+  const [isEditRoleDialogOpen, setIsEditRoleDialogOpen] = useState(false);
+
+  const [userToChangePassword, setUserToChangePassword] = useState<User | null>(null);
+  const [isChangePasswordDialogOpen, setIsChangePasswordDialogOpen] = useState(false);
+  
+  const [userToSetAvatar, setUserToSetAvatar] = useState<User | null>(null);
+  const [isSetAvatarDialogOpen, setIsSetAvatarDialogOpen] = useState(false);
+
+  const [userToSetTargets, setUserToSetTargets] = useState<User | null>(null);
+  const [isSetTargetsDialogOpen, setIsSetTargetsDialogOpen] = useState(false);
+
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [isDeleteUserDialogOpen, setIsDeleteUserDialogOpen] = useState(false);
 
 
   const fetchUsers = useCallback(async () => {
@@ -93,6 +118,7 @@ export default function UsersPage() {
     } else {
       toast({ title: "Error", description: "Could not update user role.", variant: "destructive"});
     }
+    setIsEditRoleDialogOpen(false);
   };
 
   const handleUserDeleted = async (userId: string) => {
@@ -103,11 +129,13 @@ export default function UsersPage() {
     } else {
       toast({ title: "Error", description: "Could not delete user.", variant: "destructive"});
     }
+    setIsDeleteUserDialogOpen(false);
   };
 
   const handlePasswordChanged = async (userId: string, newPassword: string): Promise<boolean> => {
     const success = await updateUserPasswordInFirestore(userId, newPassword);
     if (currentUser && success && userId === currentUser.id) await refreshCurrentUser(); 
+    if (success) setIsChangePasswordDialogOpen(false);
     return success; 
   };
 
@@ -116,6 +144,7 @@ export default function UsersPage() {
     if (success) {
       await fetchUsers(); 
       if (currentUser && userId === currentUser.id) await refreshCurrentUser(); 
+      setIsSetAvatarDialogOpen(false);
     }
     return success; 
   };
@@ -125,6 +154,7 @@ export default function UsersPage() {
     if (success) {
       await fetchUsers();
        if (currentUser && userId === currentUser.id) await refreshCurrentUser();
+       setIsSetTargetsDialogOpen(false);
     }
     return success; 
   };
@@ -141,7 +171,7 @@ export default function UsersPage() {
       });
       await fetchUsers(); 
       if (currentUser && userToToggleBan.id === currentUser.id && result.newBanStatus && typeof refreshCurrentUser === 'function') {
-         await refreshCurrentUser(); // Ensure user context reflects ban if they ban themselves
+         await refreshCurrentUser(); 
       }
     } else {
       toast({
@@ -153,11 +183,6 @@ export default function UsersPage() {
     setUserToToggleBan(null);
     setIsBanDialogVisible(false);
   };
-
-  const openBanDialog = (user: User) => {
-    setUserToToggleBan(user);
-    setIsBanDialogVisible(true);
-  }
 
   const handleUserInfoUpdated = async () => {
     await fetchUsers();
@@ -288,7 +313,7 @@ export default function UsersPage() {
                   <TableHead className="min-w-[120px]">Role</TableHead>
                   {showBanStatusColumn && <TableHead className="min-w-[100px]">Status</TableHead>}
                   <TableHead className="min-w-[150px]">Company</TableHead>
-                  <TableHead className="pr-6 text-right min-w-[200px] sm:min-w-[240px] xl:min-w-[280px]">Actions</TableHead>
+                  <TableHead className="pr-6 text-right min-w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -302,7 +327,7 @@ export default function UsersPage() {
                       {showBanStatusColumn && <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>}
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell className="pr-6 text-right space-x-1.5">
-                        {[...Array(currentUser?.role === 'SYSTEM_ADMIN' ? 6 : 5)].map((_, j) => <Skeleton key={j} className="h-9 w-9 inline-block rounded-md" />)}
+                        <Skeleton className="h-9 w-9 inline-block rounded-md" />
                       </TableCell>
                     </TableRow>
                   ))
@@ -336,47 +361,71 @@ export default function UsersPage() {
                         </TableCell>
                     )}
                     <TableCell className="text-muted-foreground">{user.companyName || 'N/A'}</TableCell>
-                    <TableCell className="pr-6 text-right space-x-1.5 whitespace-nowrap">
-                      {currentUser?.role === 'SYSTEM_ADMIN' && (
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          title="Edit User Info" 
-                          className="h-9 w-9" 
-                          onClick={() => { setUserToEditInfo(user); setIsEditInfoDialogOpen(true); }}
-                          disabled={!canSystemAdminEditInfoOf(user)}
-                        >
-                          <EditInfoIcon className="h-4 w-4" />
-                        </Button>
-                      )}
-                      {canSystemAdminToggleBan(user) && (
-                        <Button 
-                          variant={user.isBanned ? "outline" : "destructive"} 
-                          size="icon" 
-                          title={user.isBanned ? "Unban User" : "Ban User"} 
-                          className="h-9 w-9" 
-                          onClick={() => openBanDialog(user)}
-                        >
-                          {user.isBanned ? <UserCheck className="h-4 w-4 text-green-600" /> : <UserX className="h-4 w-4" />}
-                        </Button>
-                      )}
-                      <SetUserAvatarDialog user={user} onAvatarChanged={handleUserAvatarSetByAdmin}>
-                        <Button variant="outline" size="icon" title="Set Avatar" className="h-9 w-9" disabled={!canAdminModifyTargetUser(user)}><UserCog className="h-4 w-4" /></Button>
-                      </SetUserAvatarDialog>
-                      <ChangePasswordDialog user={user} onPasswordChanged={handlePasswordChanged}>
-                        <Button variant="outline" size="icon" title="Change Password" className="h-9 w-9" disabled={!canAdminModifyTargetUser(user)}><KeyRound className="h-4 w-4" /></Button>
-                      </ChangePasswordDialog>
-                      <EditUserRoleDialog user={user} currentUser={currentUser} onUserRoleUpdated={(updatedUser) => handleUserRoleUpdated(updatedUser.id, updatedUser.role)}>
-                        <Button variant="outline" size="icon" title="Edit Role" className="h-9 w-9" disabled={!canCurrentUserEditRoleOf(user)}><Edit className="h-4 w-4" /></Button>
-                      </EditUserRoleDialog>
-                      {user.role === 'CRM' && (
-                        <SetUserSalesTargetDialog user={user} onTargetsSet={handleUserTargetsSetByAdmin}>
-                            <Button variant="outline" size="icon" title="Set Sales Targets" className="h-9 w-9" disabled={!canAdminModifyTargetUser(user)}><Target className="h-4 w-4"/></Button>
-                        </SetUserSalesTargetDialog>
-                      )}
-                      <DeleteUserDialog user={user} onUserDeleted={() => handleUserDeleted(user.id)}>
-                         <Button variant="destructive" size="icon" title="Delete User" className="h-9 w-9" disabled={!canAdminDeleteTargetUser(user)}><Trash2 className="h-4 w-4" /></Button>
-                      </DeleteUserDialog>
+                    <TableCell className="pr-6 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-9 w-9" title="User Actions">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions for {user.name}</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuGroup>
+                            {currentUser?.role === 'SYSTEM_ADMIN' && (
+                              <DropdownMenuItem 
+                                onSelect={() => { setUserToEditInfo(user); setIsEditInfoDialogOpen(true); }}
+                                disabled={!canSystemAdminEditInfoOf(user)}
+                              >
+                                <EditInfoIcon className="mr-2 h-4 w-4" /> Edit Info
+                              </DropdownMenuItem>
+                            )}
+                            {canSystemAdminToggleBan(user) && (
+                              <DropdownMenuItem 
+                                onSelect={() => { setUserToToggleBan(user); setIsBanDialogVisible(true); }}
+                                className={user.isBanned ? "text-green-600 focus:text-green-700" : "text-destructive focus:text-destructive"}
+                              >
+                                {user.isBanned ? <UserCheck className="mr-2 h-4 w-4" /> : <UserX className="mr-2 h-4 w-4" />}
+                                {user.isBanned ? "Unban User" : "Ban User"}
+                              </DropdownMenuItem>
+                            )}
+                             <DropdownMenuItem 
+                                onSelect={() => { setUserToSetAvatar(user); setIsSetAvatarDialogOpen(true); }}
+                                disabled={!canAdminModifyTargetUser(user)}
+                              >
+                                <UserCog className="mr-2 h-4 w-4" /> Set Avatar
+                              </DropdownMenuItem>
+                             <DropdownMenuItem 
+                                onSelect={() => { setUserToChangePassword(user); setIsChangePasswordDialogOpen(true);}}
+                                disabled={!canAdminModifyTargetUser(user)}
+                              >
+                                <KeyRound className="mr-2 h-4 w-4" /> Change Password
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onSelect={() => { setUserToEditRole(user); setIsEditRoleDialogOpen(true);}}
+                                disabled={!canCurrentUserEditRoleOf(user)}
+                              >
+                                <Edit className="mr-2 h-4 w-4" /> Edit Role
+                              </DropdownMenuItem>
+                            {user.role === 'CRM' && (
+                               <DropdownMenuItem 
+                                onSelect={() => { setUserToSetTargets(user); setIsSetTargetsDialogOpen(true);}}
+                                disabled={!canAdminModifyTargetUser(user)}
+                              >
+                                <Target className="mr-2 h-4 w-4" /> Set Sales Targets
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuGroup>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onSelect={() => { setUserToDelete(user); setIsDeleteUserDialogOpen(true);}}
+                            disabled={!canAdminDeleteTargetUser(user)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete User
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
@@ -398,6 +447,19 @@ export default function UsersPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Dialogs for User Actions */}
+      {isEditInfoDialogOpen && userToEditInfo && currentUser?.role === 'SYSTEM_ADMIN' && (
+        <EditUserInfoDialog
+          user={userToEditInfo}
+          onUserInfoUpdated={handleUserInfoUpdated}
+          isOpen={isEditInfoDialogOpen}
+          onOpenChange={(open) => {
+            setIsEditInfoDialogOpen(open);
+            if (!open) setUserToEditInfo(null); 
+          }}
+        />
+      )}
 
       {userToToggleBan && (
         <AlertDialog open={isBanDialogVisible} onOpenChange={(open) => { if(!open) { setUserToToggleBan(null); setIsBanDialogVisible(false); }}}>
@@ -423,16 +485,63 @@ export default function UsersPage() {
         </AlertDialog>
       )}
 
-      {isEditInfoDialogOpen && userToEditInfo && currentUser?.role === 'SYSTEM_ADMIN' && (
-        <EditUserInfoDialog
-          user={userToEditInfo}
-          onUserInfoUpdated={handleUserInfoUpdated}
-          isOpen={isEditInfoDialogOpen}
+      {isSetAvatarDialogOpen && userToSetAvatar && (
+        <SetUserAvatarDialog 
+          user={userToSetAvatar} 
+          onAvatarChanged={handleUserAvatarSetByAdmin}
+          isOpen={isSetAvatarDialogOpen}
           onOpenChange={(open) => {
-            setIsEditInfoDialogOpen(open);
-            if (!open) {
-              setUserToEditInfo(null); 
-            }
+            setIsSetAvatarDialogOpen(open);
+            if (!open) setUserToSetAvatar(null);
+          }}
+        />
+      )}
+
+      {isChangePasswordDialogOpen && userToChangePassword && (
+        <ChangePasswordDialog 
+          user={userToChangePassword} 
+          onPasswordChanged={handlePasswordChanged}
+          isOpen={isChangePasswordDialogOpen}
+          onOpenChange={(open) => {
+            setIsChangePasswordDialogOpen(open);
+            if (!open) setUserToChangePassword(null);
+          }}
+        />
+      )}
+      
+      {isEditRoleDialogOpen && userToEditRole && currentUser && (
+        <EditUserRoleDialog 
+          user={userToEditRole} 
+          currentUser={currentUser} 
+          onUserRoleUpdated={(updatedUser) => handleUserRoleUpdated(updatedUser.id, updatedUser.role)}
+          isOpen={isEditRoleDialogOpen}
+          onOpenChange={(open) => {
+            setIsEditRoleDialogOpen(open);
+            if (!open) setUserToEditRole(null);
+          }}
+        />
+      )}
+
+      {isSetTargetsDialogOpen && userToSetTargets && userToSetTargets.role === 'CRM' && (
+         <SetUserSalesTargetDialog 
+            user={userToSetTargets} 
+            onTargetsSet={handleUserTargetsSetByAdmin}
+            isOpen={isSetTargetsDialogOpen}
+            onOpenChange={(open) => {
+              setIsSetTargetsDialogOpen(open);
+              if (!open) setUserToSetTargets(null);
+            }}
+          />
+      )}
+
+      {isDeleteUserDialogOpen && userToDelete && (
+        <DeleteUserDialog 
+          user={userToDelete} 
+          onUserDeleted={() => handleUserDeleted(userToDelete.id)}
+          isOpen={isDeleteUserDialogOpen}
+          onOpenChange={(open) => {
+            setIsDeleteUserDialogOpen(open);
+            if (!open) setUserToDelete(null);
           }}
         />
       )}
