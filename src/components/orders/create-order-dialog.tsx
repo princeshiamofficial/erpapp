@@ -27,7 +27,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [companyName, setCompanyName] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  // const [service, setService] = useState(''); // Replaced by new fields
   const [model, setModel] = useState<string>('');
   const [quantity, setQuantity] = useState<string>('');
   const [lamination, setLamination] = useState<string>('');
@@ -39,7 +38,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setCompanyName('');
     setAddress('');
     setPhoneNumber('');
-    // setService(''); // Replaced
     setModel('');
     setQuantity('');
     setLamination('');
@@ -51,7 +49,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       if (availableStatuses.length > 0) {
         const isCurrentStatusInAvailableList = availableStatuses.some(s => s.id === initialStatusId);
         if (!initialStatusId || !isCurrentStatusInAvailableList) {
-          const orderSubmittedStatus = availableStatuses.find(s => s.id === "order-submitted"); // Use ID
+          const orderSubmittedStatus = availableStatuses.find(s => s.id === "order-submitted");
           if (orderSubmittedStatus) {
             setInitialStatusId(orderSubmittedStatus.id);
           } else if (availableStatuses[0]) { 
@@ -95,17 +93,16 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setIsSubmitting(true);
 
     const orderData = {
-      customerName: companyName, 
       companyName,
       address,
       phoneNumber: phoneNumber || undefined,
-      // service: service || undefined, // Replaced
       model: model || undefined,
       quantity: parsedQuantity,
       lamination: lamination || undefined,
       initialStatusId,
     };
 
+    // In createOrderAction, customerName will be set to companyName for now
     const result = await createOrderAction(orderData, currentUser);
 
     if ('error' in result) {
@@ -164,23 +161,25 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               </Select>
             </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="quantity">Quantity</Label>
-              <Input id="quantity" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="e.g., 100 (Optional)" min="1" />
-            </div>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="space-y-1 flex-1">
+                <Label htmlFor="quantity">Quantity</Label>
+                <Input id="quantity" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="e.g., 100 (Optional)" min="1" />
+              </div>
 
-            <div className="space-y-1">
-              <Label htmlFor="lamination">Lamination</Label>
-              <Select value={lamination} onValueChange={setLamination}>
-                <SelectTrigger id="lamination">
-                  <SelectValue placeholder="Select lamination (Optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {laminationOptions.map(option => (
-                    <SelectItem key={option} value={option}>{option}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-1 flex-1">
+                <Label htmlFor="lamination">Lamination</Label>
+                <Select value={lamination} onValueChange={setLamination}>
+                  <SelectTrigger id="lamination">
+                    <SelectValue placeholder="Select lamination (Optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {laminationOptions.map(option => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-1">
