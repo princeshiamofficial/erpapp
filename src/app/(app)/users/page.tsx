@@ -32,7 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function UsersPage() {
-  const { currentUser, refreshCurrentUser } = useAuth(); // Added refreshCurrentUser
+  const { currentUser, refreshCurrentUser } = useAuth(); 
   const router = useRouter();
   const { toast } = useToast();
   
@@ -62,12 +62,15 @@ export default function UsersPage() {
   }, [currentUser, router, fetchUsers]);
 
   const handleUserAdded = async (newUserData: Omit<User, 'id'>) => {
-    // The addUser service function now returns the full User object with ID
-    await addUser(newUserData); 
-    toast({ title: "User Added", description: `${newUserData.name} has been added. Default password is 'password'.`});
-    fetchUsers(); // Refresh list
-    if (newUserData.email === currentUser?.email) { // If admin added themselves (e.g. during setup)
-      await refreshCurrentUser(); // Refresh context if current user was potentially added/updated
+    const createdUser = await addUser(newUserData); 
+    if (createdUser) {
+      toast({ title: "User Added", description: `${newUserData.name} has been added. Default password is 'password'.`});
+      fetchUsers(); 
+      if (newUserData.email === currentUser?.email) { 
+        await refreshCurrentUser(); 
+      }
+    } else {
+       toast({ title: "Error", description: "Could not add user. Email might be in use or database error.", variant: "destructive"});
     }
   };
 
@@ -94,18 +97,17 @@ export default function UsersPage() {
 
   const handlePasswordChanged = async (userId: string, newPassword: string): Promise<boolean> => {
     const success = await updateUserPasswordInFirestore(userId, newPassword);
-    // Toast is handled in dialog or here if preferred
-    if (success && userId === currentUser?.id) await refreshCurrentUser(); // If admin changes own password
-    return success; // Let dialog handle toast
+    if (success && userId === currentUser?.id) await refreshCurrentUser(); 
+    return success; 
   };
 
   const handleUserAvatarSetByAdmin = async (userId: string, avatarUrl: string | null): Promise<boolean> => {
     const success = await updateUserAvatarInFirestore(userId, avatarUrl);
     if (success) {
-      fetchUsers(); // Refresh list to show new avatar
-      if (userId === currentUser?.id) await refreshCurrentUser(); // If admin updates own avatar
+      fetchUsers(); 
+      if (userId === currentUser?.id) await refreshCurrentUser(); 
     }
-    return success; // Let dialog handle toast
+    return success; 
   };
   
   const handleUserTargetsSetByAdmin = async (userId: string, monthlyTarget: number, weeklyTarget: number): Promise<boolean> => {
@@ -114,7 +116,7 @@ export default function UsersPage() {
       fetchUsers();
        if (userId === currentUser?.id) await refreshCurrentUser();
     }
-    return success; // Let dialog handle toast
+    return success; 
   };
 
   const getInitials = (name: string) => {
@@ -153,6 +155,32 @@ export default function UsersPage() {
     }
     return false;
   };
+
+  // Helper to determine if an Admin can modify a target user (excluding role changes)
+  const canAdminModifyTargetUser = (targetUser: User): boolean => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'SYSTEM_ADMIN') return true; // System Admin can modify anyone
+    if (currentUser.role === 'ADMIN') {
+      // Admin can modify themselves, or CRM/DR users.
+      // Admin cannot modify another Admin or a System Admin.
+      if (targetUser.id === currentUser.id) return true;
+      return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE';
+    }
+    return false;
+  };
+  
+  const canAdminDeleteTargetUser = (targetUser: User): boolean => {
+    if (!currentUser) return false;
+    if (targetUser.id === currentUser.id) return false; // Cannot delete self
+    if (currentUser.role === 'SYSTEM_ADMIN') return true; // System Admin can delete anyone (except self implicitly)
+    if (currentUser.role === 'ADMIN') {
+      // Admin can delete CRM/DR users.
+      // Admin cannot delete another Admin or a System Admin.
+      return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE';
+    }
+    return false;
+  };
+
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -243,24 +271,22 @@ export default function UsersPage() {
                     <TableCell className="text-muted-foreground">{user.companyName || 'N/A'}</TableCell>
                     <TableCell className="pr-6 text-right space-x-1 sm:space-x-1.5 whitespace-nowrap">
                       <SetUserAvatarDialog user={user} onAvatarChanged={handleUserAvatarSetByAdmin}>
-                        <Button variant="outline" size="icon" title="Set Avatar" className="table-action-button h-9 w-9 sm:h-9 sm:w-9"><UserCog className="h-4 w-4" /></Button>
+                        <Button variant="outline" size="icon" title="Set Avatar" className="table-action-button h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminModifyTargetUser(user)}><UserCog className="h-4 w-4" /></Button>
                       </SetUserAvatarDialog>
                       <ChangePasswordDialog user={user} onPasswordChanged={handlePasswordChanged}>
-                        <Button variant="outline" size="icon" title="Change Password" className="table-action-button h-9 w-9 sm:h-9 sm:w-9"><KeyRound className="h-4 w-4" /></Button>
+                        <Button variant="outline" size="icon" title="Change Password" className="table-action-button h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminModifyTargetUser(user)}><KeyRound className="h-4 w-4" /></Button>
                       </ChangePasswordDialog>
                       <EditUserRoleDialog user={user} currentUser={currentUser} onUserRoleUpdated={(updatedUser) => handleUserRoleUpdated(updatedUser.id, updatedUser.role)}>
                         <Button variant="outline" size="icon" title="Edit Role" className="table-action-button h-9 w-9 sm:h-9 sm:w-9" disabled={!canCurrentUserEditRoleOf(user)}><Edit className="h-4 w-4" /></Button>
                       </EditUserRoleDialog>
                       {user.role === 'CRM' && (
                         <SetUserSalesTargetDialog user={user} onTargetsSet={handleUserTargetsSetByAdmin}>
-                            <Button variant="outline" size="icon" title="Set Sales Targets" className="table-action-button h-9 w-9 sm:h-9 sm:w-9"><Target className="h-4 w-4"/></Button>
+                            <Button variant="outline" size="icon" title="Set Sales Targets" className="table-action-button h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminModifyTargetUser(user)}><Target className="h-4 w-4"/></Button>
                         </SetUserSalesTargetDialog>
                       )}
-                      {currentUser.id !== user.id && !(user.role === 'SYSTEM_ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') && ( // Prevent deleting self or SysAdmin by non-SysAdmin
-                        <DeleteUserDialog user={user} onUserDeleted={() => handleUserDeleted(user.id)}>
-                           <Button variant="destructive" size="icon" title="Delete User" className="table-action-button h-9 w-9 sm:h-9 sm:w-9"><Trash2 className="h-4 w-4" /></Button>
-                        </DeleteUserDialog>
-                      )}
+                      <DeleteUserDialog user={user} onUserDeleted={() => handleUserDeleted(user.id)}>
+                         <Button variant="destructive" size="icon" title="Delete User" className="table-action-button h-9 w-9 sm:h-9 sm:w-9" disabled={!canAdminDeleteTargetUser(user)}><Trash2 className="h-4 w-4" /></Button>
+                      </DeleteUserDialog>
                     </TableCell>
                   </TableRow>
                 ))
