@@ -1,5 +1,5 @@
 
-"use client"; // If it needs to be a client component, otherwise remove
+"use client";
 
 import React from 'react';
 import { cn } from '@/lib/utils';
@@ -19,6 +19,7 @@ export function Logo({ className, ...props }: LogoProps) {
       className={cn("text-primary drop-shadow-[0_2px_3px_hsl(var(--primary)/0.5)]", className)}
       {...props}
     >
+      {/* SVG paths for the logo */}
       <path
         d="M12 2L2 7V17L12 22L22 17V7L12 2Z"
         stroke="currentColor"
