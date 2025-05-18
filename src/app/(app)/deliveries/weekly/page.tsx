@@ -153,7 +153,7 @@ export default function WeeklyDeliveriesPage() {
                             {order.id}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-card-foreground">{order.companyName} <br/><small className="text-muted-foreground">{order.customerName}</small></TableCell>
+                        <TableCell className="text-card-foreground">{order.companyName}</TableCell>
                         <TableCell>
                           <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
                             {statusInfo.name}
@@ -187,3 +187,5 @@ export default function WeeklyDeliveriesPage() {
     </div>
   );
 }
+
+    

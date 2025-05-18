@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send, MessageSquare, Package, UserCircle, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, UserCheck, Layers, Tag } from "lucide-react";
+import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, UserCheck, Layers, Tag } from "lucide-react";
 import Image from "next/image";
 import type { Comment, CustomStatus, TrackingLink } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -131,14 +131,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
                 </div>
                 <div>
                   <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Company</span> {order.companyName}
-                </div>
-              </div>
-              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
-                 <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                    <UserCircle className="h-5 w-5 text-primary" />
-                 </div>
-                <div>
-                  <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Contact Person</span> {order.customerName}
                 </div>
               </div>
                <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all md:col-span-2">

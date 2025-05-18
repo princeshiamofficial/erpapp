@@ -86,10 +86,8 @@ export default function TrackingLinksPage() {
       console.error('Failed to copy: ', err);
       let description = "Could not copy the link. Please try copying manually.";
       if (err instanceof Error) {
-        if (err.name === 'NotAllowedError') {
-          description = "Clipboard access was denied. Please check your browser permissions or copy manually.";
-        } else if (err.message.toLowerCase().includes("permissions policy")) {
-          description = "Clipboard access is restricted by the current page's permissions policy. Please try copying manually.";
+        if (err.name === 'NotAllowedError' || err.message.toLowerCase().includes("permissions policy")) {
+          description = "Clipboard access was denied or restricted by a permissions policy. Please check your browser settings or try copying manually.";
         } else if (err.message.includes("Clipboard API not available") || (typeof window !== 'undefined' && !window.isSecureContext)) {
            description = "Copying to clipboard requires a secure connection (HTTPS) or is not supported by your browser. Please copy manually.";
         }
@@ -102,9 +100,8 @@ export default function TrackingLinksPage() {
     if (!searchTerm) return trackingLinks;
     return trackingLinks.filter(link => 
       link.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (link.companyName && link.companyName.toLowerCase().includes(searchTerm.toLowerCase())) || // Changed from customerName
+      (link.companyName && link.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (link.phoneNumber && link.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (link.service && link.service.toLowerCase().includes(searchTerm.toLowerCase())) ||
       link.crmUserName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (link.designerRepresentativeName && link.designerRepresentativeName.toLowerCase().includes(searchTerm.toLowerCase()))
     );
@@ -128,7 +125,7 @@ export default function TrackingLinksPage() {
           }
           return prevMap;
         });
-      } else { // No filtered links, but statuses exist
+      } else { 
         setOrderStatusDisplay(prevMap => {
           if (Object.keys(prevMap).length > 0) {
             return {};
@@ -136,7 +133,7 @@ export default function TrackingLinksPage() {
           return prevMap;
         });
       }
-    } else { // No statuses
+    } else { 
       setOrderStatusDisplay(prevMap => {
         if (Object.keys(prevMap).length > 0) {
           return {};
@@ -230,7 +227,7 @@ export default function TrackingLinksPage() {
                             {link.id}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-card-foreground">{link.companyName} <br/><small className="text-muted-foreground">{link.customerName}</small></TableCell>
+                        <TableCell className="text-card-foreground">{link.companyName}</TableCell>
                         <TableCell>
                           <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border ${link.isPublic ? 'bg-green-500/20 text-green-700 border-green-500/30 dark:bg-green-500/10 dark:text-green-300 dark:border-green-500/20' : 'bg-red-500/20 text-red-700 border-red-500/30 dark:bg-red-500/10 dark:text-red-300 dark:border-red-500/20'}`}>
                             {link.isPublic ? 'Public' : 'Private'}
@@ -297,4 +294,5 @@ export default function TrackingLinksPage() {
     </div>
   );
 }
+
     

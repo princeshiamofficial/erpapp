@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
+import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, AlertTriangle, MoreVertical, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import Image from "next/image";
 import Link from "next/link";
@@ -13,11 +13,11 @@ import { CreateOrderDialog } from '@/components/orders/create-order-dialog';
 import type { TrackingLink, User, CustomStatus } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { getStatuses, getContrastTextColor } from '@/lib/status-service';
+import { getStatuses, getContrastTextColor, getStatusById } from '@/lib/status-service';
 import { AssignDrDialog } from '@/components/orders/assign-dr-dialog';
 import { getOrders } from '@/lib/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
-import { deleteOrderAction } from './actions';
+import { createOrderAction, assignDrToOrderAction, deleteOrderAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -103,13 +103,13 @@ export default function OrdersPage() {
   }, [orders, searchTerm, currentUser]);
 
   const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
-
+  
   const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
-    const foundStatus = allStatuses.find(s => s.id === statusId);
-    if (foundStatus) {
-      return { name: foundStatus.name, color: foundStatus.color, textColor: getContrastTextColor(foundStatus.color) };
+    const status = allStatuses.find(s => s.id === statusId);
+    if (status) {
+      return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
     }
-    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' };
+    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' }; 
   }, [allStatuses]);
 
   useEffect(() => {
@@ -122,15 +122,15 @@ export default function OrdersPage() {
             newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
         });
         
-        // Only update if the new map is actually different to prevent loops
-        if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(orderStatusDisplay)) {
-            setOrderStatusDisplay(newDisplayInfoMap);
-        }
+        setOrderStatusDisplay(prevMap => {
+            if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(prevMap)) {
+                return newDisplayInfoMap;
+            }
+            return prevMap;
+        });
     } else if (allStatuses.length > 0 && filteredOrders.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
-        // If orders are filtered out, clear the display map if it's not already empty
         setOrderStatusDisplay({});
     } else if (allStatuses.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
-        // If statuses themselves are not loaded, clear the display map
         setOrderStatusDisplay({});
     }
   }, [filteredOrders, allStatuses, getStatusDisplayInfo, orderStatusDisplay]);
@@ -141,15 +141,13 @@ export default function OrdersPage() {
   const canDeleteOrder = currentUser?.role === 'SYSTEM_ADMIN';
 
   const handleOpenAssignDrDialog = async (orderToAssign: TrackingLink) => {
-    setIsLoading(true); 
+    setIsLoading(true); // Consider a more specific loading state if needed
     try {
         console.log("OrdersPage/handleOpenAssignDrDialog: Opening for order:", orderToAssign.id);
         const freshStatuses = await getStatuses();
         const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
         
-        if (rfdCheck) {
-            console.log("OrdersPage/handleOpenAssignDrDialog: 'ready-for-design' status in freshStatuses:", JSON.stringify(rfdCheck));
-        } else {
+        if (!rfdCheck) {
             console.error("OrdersPage/handleOpenAssignDrDialog: CRITICAL - 'ready-for-design' status (ID: 'ready-for-design') NOT FOUND in freshStatuses from getStatuses().");
             toast({
                 title: "Configuration Error",
@@ -158,10 +156,11 @@ export default function OrdersPage() {
                 duration: 10000,
             });
             setIsLoading(false);
-            return; // Prevent opening dialog if critical status is missing
+            return; 
         }
+        console.log("OrdersPage/handleOpenAssignDrDialog: 'ready-for-design' status in freshStatuses:", JSON.stringify(rfdCheck));
 
-        setAllStatuses(freshStatuses); // Update the main page's status list
+        setAllStatuses(freshStatuses); // Update the main page's status list as well
         setStatusesForDialog(freshStatuses); // Pass fresh statuses to dialog
         setSelectedOrderForDrAssignment(orderToAssign);
         setIsAssignDrDialogOpen(true);
@@ -173,14 +172,15 @@ export default function OrdersPage() {
     }
   };
 
- const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromAction: TrackingLink) => {
-    toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
-    setOrders(prevOrders =>
-      prevOrders.map(o => o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o)
-    );
-    // Optionally re-fetch for full consistency, though optimistic update should be good.
-    // await fetchOrderData(); 
+  const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromAction: TrackingLink) => {
+      setOrders(prevOrders =>
+        prevOrders.map(o => (o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o))
+      );
+      toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
+      // Optionally, re-fetch all data for absolute consistency, though optimistic update + revalidatePath should be good
+      // await fetchOrderData(); 
   }, [toast]);
+
 
   const handleDeleteOrder = async () => {
     if (!orderToDelete || !canDeleteOrder) return;
@@ -214,6 +214,10 @@ export default function OrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
+            {/* <Button variant="outline" className="h-10" onClick={fetchOrderData} disabled={isLoading}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                Refresh Orders
+            </Button> */}
             {canCreateOrder && (
             <CreateOrderDialog
                 currentUser={currentUser}
@@ -298,7 +302,7 @@ export default function OrdersPage() {
                             {order.id}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-card-foreground">{order.companyName} <br/><small className="text-muted-foreground">{order.customerName}</small></TableCell>
+                        <TableCell className="text-card-foreground">{order.companyName}</TableCell>
                         <TableCell>
                           <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
                             {statusInfo.name}
@@ -422,6 +426,5 @@ export default function OrdersPage() {
     </div>
   );
 }
-
 
     
