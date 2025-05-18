@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, RefreshCw } from "lucide-react";
+import { PlusCircle, Search, Eye, Users2, RefreshCw, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import Image from "next/image";
 import Link from "next/link";
@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
 import { getStatusById, getContrastTextColor, getStatuses } from '@/lib/status-service';
 import { AssignDrDialog } from '@/components/orders/assign-dr-dialog';
-import { getOrders } from '@/lib/order-service'; 
+import { getOrders } from '@/lib/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createOrderAction, assignDrToOrderAction } from './actions';
 
@@ -41,37 +41,66 @@ export default function OrdersPage() {
 
   const [selectedOrderForDrAssignment, setSelectedOrderForDrAssignment] = useState<TrackingLink | null>(null);
   const [isAssignDrDialogOpen, setIsAssignDrDialogOpen] = useState(false);
-  
+
   const fetchOrderData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const fetchedOrders = await getOrders();
-      const fetchedStatuses = await getStatuses();
+      const [fetchedOrders, fetchedStatuses] = await Promise.all([
+        getOrders(),
+        getStatuses()
+      ]);
       setOrders(fetchedOrders);
       setAllStatuses(fetchedStatuses);
     } catch (error) {
       console.error("Failed to fetch orders or statuses:", error);
+      // Potentially set an error state here to show in UI
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, []); 
 
   useEffect(() => {
     setIsClient(true);
-    if (currentUser) { 
+    if (currentUser) {
         fetchOrderData();
     }
-  }, [fetchOrderData, currentUser]); 
-  
+  }, [currentUser, fetchOrderData]);
+
+  const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
+
+  useEffect(() => {
+    const fetchAllDisplayInfo = async () => {
+      const displayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
+      const statusPromises: Promise<void>[] = [];
+
+      for (const order of filteredOrders) {
+        if (!orderStatusDisplay[order.currentStatus]) {
+          statusPromises.push(
+            getStatusDisplayInfo(order.currentStatus).then(info => {
+              displayInfoMap[order.currentStatus] = info;
+            })
+          );
+        }
+      }
+      await Promise.all(statusPromises);
+      if (Object.keys(displayInfoMap).length > 0) {
+        setOrderStatusDisplay(prev => ({ ...prev, ...displayInfoMap }));
+      }
+    };
+
+    if (filteredOrders.length > 0 && allStatuses.length > 0) {
+      fetchAllDisplayInfo();
+    }
+  }, [filteredOrders, allStatuses, orderStatusDisplay]); // Added orderStatusDisplay to dependencies
+
   const getStatusDisplayInfo = useCallback(async (statusId: string): Promise<{ name: string; color: string; textColor: string }> => {
     const foundStatus = allStatuses.find(s => s.id === statusId);
     if (foundStatus) {
       return { name: foundStatus.name, color: foundStatus.color, textColor: getContrastTextColor(foundStatus.color) };
     }
-    // Fallback to fetching from service if not found in local allStatuses (e.g., during initial load or if cache is stale)
-    const status = await getStatusById(statusId); 
-    if (status) {
-      return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
+    const statusFromDb = await getStatusById(statusId);
+    if (statusFromDb) {
+      return { name: statusFromDb.name, color: statusFromDb.color, textColor: getContrastTextColor(statusFromDb.color) };
     }
     return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' }; // Default fallback
   }, [allStatuses]);
@@ -83,11 +112,11 @@ export default function OrdersPage() {
 
   const filteredOrders = useMemo(() => {
     let result = orders;
-    if (currentUser?.role === 'CRM') { 
+    if (currentUser?.role === 'CRM') {
       result = result.filter(order => order.crmUserId === currentUser.id);
     }
     if (!searchTerm) return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return result.filter(order => 
+    return result.filter(order =>
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (order.companyName && order.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -98,40 +127,19 @@ export default function OrdersPage() {
     ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [orders, searchTerm, currentUser]);
 
-  const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
 
-  useEffect(() => {
-    const fetchAllDisplayInfo = async () => {
-      const displayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
-      for (const order of filteredOrders) {
-        if (!orderStatusDisplay[order.currentStatus]) { 
-          displayInfoMap[order.currentStatus] = await getStatusDisplayInfo(order.currentStatus);
-        }
-      }
-      if (Object.keys(displayInfoMap).length > 0) { 
-        setOrderStatusDisplay(prev => ({ ...prev, ...displayInfoMap }));
-      }
-    };
-    if (filteredOrders.length > 0 && allStatuses.length > 0) { 
-      fetchAllDisplayInfo();
-    }
-  }, [filteredOrders, getStatusDisplayInfo, allStatuses, orderStatusDisplay]); 
-  
   const memoizedAvailableStatusesForDialog = useMemo(() => {
-    // For "Create Order", users typically select from non-system statuses or specific initial ones
-    // The "Idea Submitted" is a good default initial non-system status, if it exists.
-    // Or generally, allow any non-system status.
-    return allStatuses.filter(s => !s.isSystemStatus || s.name === "Idea Submitted");
+    return allStatuses.filter(s => !s.isSystemStatus || s.name === "Order Submitted");
   }, [allStatuses]);
 
-  const handleDrAssignmentSuccess = async () => {
+  const handleDrAssignmentSuccess = useCallback(async () => {
     setIsAssignDrDialogOpen(false);
     await fetchOrderData();
-  };
+  }, [fetchOrderData]);
 
   if (!currentUser) return (
     <div className="flex h-screen w-full items-center justify-center">
-      <p>Loading user data...</p>
+      <Loader2 className="h-12 w-12 animate-spin text-primary" />
     </div>
   );
 
@@ -145,16 +153,24 @@ export default function OrdersPage() {
           </p>
         </div>
         {canCreateOrder && (
-          <CreateOrderDialog 
-            currentUser={currentUser} 
-            availableStatuses={memoizedAvailableStatusesForDialog} 
+          <CreateOrderDialog
+            currentUser={currentUser}
+            availableStatuses={memoizedAvailableStatusesForDialog}
             onOrderCreated={async () => {
               await fetchOrderData();
             }}
           >
-            <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow font-semibold">
-              <PlusCircle className="mr-2 h-5 w-5" />
-              Create New Order
+            <Button
+              size="lg"
+              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow font-semibold"
+              disabled={isLoading}
+            >
+              {isLoading && allStatuses.length === 0 ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : (
+                <PlusCircle className="mr-2 h-5 w-5" />
+              )}
+              {isLoading && allStatuses.length === 0 ? "Loading Data..." : "Create New Order"}
             </Button>
           </CreateOrderDialog>
         )}
@@ -170,14 +186,13 @@ export default function OrdersPage() {
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
+                <Input
                   placeholder="Search orders..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 bg-background h-10 rounded-md w-full"
                 />
               </div>
-              {/* Refresh button removed as per request */}
             </div>
           </div>
         </CardHeader>
@@ -232,9 +247,9 @@ export default function OrdersPage() {
                         <TableCell className="text-muted-foreground">{isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-20" />}</TableCell>
                         <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
                           {canAssignDr && (
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
+                            <Button
+                              variant="outline"
+                              size="sm"
                               className="h-9 px-3"
                               onClick={() => { setSelectedOrderForDrAssignment(order); setIsAssignDrDialogOpen(true); }}
                             >
@@ -261,15 +276,20 @@ export default function OrdersPage() {
                                 {searchTerm ? "Try a different search term." : (canCreateOrder ? "Start by creating a new one!" : "Check back later for updates.")}
                             </p>
                              {canCreateOrder && !searchTerm && (
-                                <CreateOrderDialog 
-                                  currentUser={currentUser} 
+                                <CreateOrderDialog
+                                  currentUser={currentUser}
                                   availableStatuses={memoizedAvailableStatusesForDialog}
                                   onOrderCreated={async () => {
                                     await fetchOrderData();
                                   }}
                                 >
-                                    <Button size="sm" className="mt-4">
-                                        <PlusCircle className="mr-2 h-4 w-4" /> Create Order
+                                    <Button size="sm" className="mt-4" disabled={isLoading}>
+                                      {isLoading && allStatuses.length === 0 ? (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      ) : (
+                                        <PlusCircle className="mr-2 h-4 w-4" />
+                                      )}
+                                      {isLoading && allStatuses.length === 0 ? "Loading Data..." : "Create Order"}
                                     </Button>
                                 </CreateOrderDialog>
                              )}
@@ -295,3 +315,5 @@ export default function OrdersPage() {
     </div>
   );
 }
+
+    
