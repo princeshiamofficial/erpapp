@@ -55,7 +55,7 @@ export default function AuthenticatedLayout({
         <SidebarHeader className="p-4 flex items-center justify-between h-20 border-b border-sidebar-border/70">
           <Link href="/dashboard" className="flex items-center group-data-[collapsible=icon]:hidden">
             <Image 
-              src="/images/color-hut-logo.png" 
+              src="https://i.ibb.co/mCy9P3gy/lgo-2-01.png" 
               alt="Color Hut Logo" 
               width={127} 
               height={32} 

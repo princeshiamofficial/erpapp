@@ -33,7 +33,7 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
        <header className="text-center mb-8 sm:mb-12">
         <div className="inline-block mb-2">
             <Image 
-              src="/images/color-hut-logo.png" 
+              src="https://i.ibb.co/mCy9P3gy/lgo-2-01.png" 
               alt="Color Hut Logo" 
               width={253} 
               height={64} 
