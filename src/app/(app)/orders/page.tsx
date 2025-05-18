@@ -68,48 +68,6 @@ export default function OrdersPage() {
 
   const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
 
-  useEffect(() => {
-    const fetchAllDisplayInfo = async () => {
-      const displayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
-      const statusPromises: Promise<void>[] = [];
-
-      for (const order of filteredOrders) {
-        if (!orderStatusDisplay[order.currentStatus]) {
-          statusPromises.push(
-            getStatusDisplayInfo(order.currentStatus).then(info => {
-              displayInfoMap[order.currentStatus] = info;
-            })
-          );
-        }
-      }
-      await Promise.all(statusPromises);
-      if (Object.keys(displayInfoMap).length > 0) {
-        setOrderStatusDisplay(prev => ({ ...prev, ...displayInfoMap }));
-      }
-    };
-
-    if (filteredOrders.length > 0 && allStatuses.length > 0) {
-      fetchAllDisplayInfo();
-    }
-  }, [filteredOrders, allStatuses, orderStatusDisplay]); // Added orderStatusDisplay to dependencies
-
-  const getStatusDisplayInfo = useCallback(async (statusId: string): Promise<{ name: string; color: string; textColor: string }> => {
-    const foundStatus = allStatuses.find(s => s.id === statusId);
-    if (foundStatus) {
-      return { name: foundStatus.name, color: foundStatus.color, textColor: getContrastTextColor(foundStatus.color) };
-    }
-    const statusFromDb = await getStatusById(statusId);
-    if (statusFromDb) {
-      return { name: statusFromDb.name, color: statusFromDb.color, textColor: getContrastTextColor(statusFromDb.color) };
-    }
-    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' }; // Default fallback
-  }, [allStatuses]);
-
-
-  const canCreateOrder = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
-  const canAssignDr = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
-
-
   const filteredOrders = useMemo(() => {
     let result = orders;
     if (currentUser?.role === 'CRM') {
@@ -127,6 +85,51 @@ export default function OrdersPage() {
     ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [orders, searchTerm, currentUser]);
 
+  useEffect(() => {
+    const fetchAllDisplayInfo = async () => {
+      const displayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
+      const statusPromises: Promise<void>[] = [];
+
+      for (const order of filteredOrders) { // filteredOrders is now defined before this useEffect
+        if (!orderStatusDisplay[order.currentStatus]) {
+          statusPromises.push(
+            getStatusDisplayInfo(order.currentStatus).then(info => {
+              if (info) { // Ensure info is not undefined before setting
+                displayInfoMap[order.currentStatus] = info;
+              }
+            })
+          );
+        }
+      }
+      await Promise.all(statusPromises);
+      if (Object.keys(displayInfoMap).length > 0) {
+        setOrderStatusDisplay(prev => ({ ...prev, ...displayInfoMap }));
+      }
+    };
+
+    if (filteredOrders.length > 0 && allStatuses.length > 0) {
+      fetchAllDisplayInfo();
+    }
+  }, [filteredOrders, allStatuses, orderStatusDisplay]); 
+
+  const getStatusDisplayInfo = useCallback(async (statusId: string): Promise<{ name: string; color: string; textColor: string } | undefined> => {
+    const foundStatus = allStatuses.find(s => s.id === statusId);
+    if (foundStatus) {
+      return { name: foundStatus.name, color: foundStatus.color, textColor: getContrastTextColor(foundStatus.color) };
+    }
+    // Fallback to fetching from DB only if not found in the pre-fetched allStatuses
+    // This reduces redundant DB calls if allStatuses is comprehensive
+    const statusFromDb = await getStatusById(statusId);
+    if (statusFromDb) {
+      return { name: statusFromDb.name, color: statusFromDb.color, textColor: getContrastTextColor(statusFromDb.color) };
+    }
+    // Return undefined instead of a default fallback to avoid adding incorrect entries to orderStatusDisplay
+    return undefined; 
+  }, [allStatuses]);
+
+
+  const canCreateOrder = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
+  const canAssignDr = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
 
   const memoizedAvailableStatusesForDialog = useMemo(() => {
     return allStatuses.filter(s => !s.isSystemStatus || s.name === "Order Submitted");
@@ -163,14 +166,14 @@ export default function OrdersPage() {
             <Button
               size="lg"
               className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow font-semibold"
-              disabled={isLoading}
+              disabled={isLoading || (isLoading && allStatuses.length === 0)} // Updated disabled condition
             >
-              {isLoading && allStatuses.length === 0 ? (
+              {(isLoading && allStatuses.length === 0) ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               ) : (
                 <PlusCircle className="mr-2 h-5 w-5" />
               )}
-              {isLoading && allStatuses.length === 0 ? "Loading Data..." : "Create New Order"}
+              {(isLoading && allStatuses.length === 0) ? "Loading Data..." : "Create New Order"}
             </Button>
           </CreateOrderDialog>
         )}
@@ -283,13 +286,13 @@ export default function OrdersPage() {
                                     await fetchOrderData();
                                   }}
                                 >
-                                    <Button size="sm" className="mt-4" disabled={isLoading}>
-                                      {isLoading && allStatuses.length === 0 ? (
+                                    <Button size="sm" className="mt-4" disabled={isLoading || (isLoading && allStatuses.length === 0)}>
+                                      {(isLoading && allStatuses.length === 0) ? (
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                       ) : (
                                         <PlusCircle className="mr-2 h-4 w-4" />
                                       )}
-                                      {isLoading && allStatuses.length === 0 ? "Loading Data..." : "Create Order"}
+                                      {(isLoading && allStatuses.length === 0) ? "Loading Data..." : "Create Order"}
                                     </Button>
                                 </CreateOrderDialog>
                              )}
@@ -315,5 +318,4 @@ export default function OrdersPage() {
     </div>
   );
 }
-
     
