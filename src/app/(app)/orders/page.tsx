@@ -14,7 +14,7 @@ import type { TrackingLink, User, CustomStatus } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { cn } from "@/lib/utils";
-import { getStatuses, getContrastTextColor } from '@/lib/status-service';
+import { getStatuses, getContrastTextColor, getStatusById } from '@/lib/status-service';
 import { AssignDrDialog } from '@/components/orders/assign-dr-dialog';
 import { getOrders } from '@/lib/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -104,13 +104,15 @@ export default function OrdersPage() {
       filteredOrders.forEach(order => uniqueStatusIdsInFilteredOrders.add(order.currentStatus));
       
       uniqueStatusIdsInFilteredOrders.forEach(statusId => {
-        newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
+        if (statusId) { // Ensure statusId is not undefined or null
+          newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
+        }
       });
       setOrderStatusDisplay(newDisplayInfoMap);
-    } else if (allStatuses.length === 0 && filteredOrders.length > 0) { // No statuses but orders exist (unlikely if seeding works)
+    } else if (allStatuses.length === 0 && filteredOrders.length > 0) {
       const fallbackMap: Record<string, { name: string; color: string; textColor: string }> = {};
       filteredOrders.forEach(order => {
-         if (!fallbackMap[order.currentStatus]) {
+         if (order.currentStatus && !fallbackMap[order.currentStatus]) {
             fallbackMap[order.currentStatus] = { name: order.currentStatus, color: '#A1A1AA', textColor: '#FFFFFF' };
          }
       });
@@ -129,10 +131,10 @@ export default function OrdersPage() {
   }, [allStatuses]);
 
   const handleOpenAssignDrDialog = async (orderToAssign: TrackingLink) => {
-    setIsLoading(true); // Indicate loading while preparing dialog
+    setIsLoading(true); 
     try {
         const freshStatuses = await getStatuses();
-        console.log("OrdersPage/handleOpenAssignDrDialog: Fetched freshStatuses for dialog. Count:", freshStatuses.length, "IDs:", JSON.stringify(freshStatuses.map(s => s.id).join(', ')));
+        console.log("OrdersPage/handleOpenAssignDrDialog: Fetched freshStatuses for dialog. Count:", freshStatuses.length);
         
         const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
         if (rfdCheck) {
@@ -146,11 +148,11 @@ export default function OrdersPage() {
                 duration: 10000,
             });
             setIsLoading(false);
-            return; // Stop here, do not open the dialog
+            return; 
         }
         
-        setAllStatuses(freshStatuses); // Update the main page's status list as well
-        setStatusesForDialog(freshStatuses); // Set the specific statuses for the dialog
+        setAllStatuses(freshStatuses); 
+        setStatusesForDialog(freshStatuses); 
         setSelectedOrderForDrAssignment(orderToAssign);
         setIsAssignDrDialogOpen(true);
     } catch (error) {
@@ -166,7 +168,6 @@ export default function OrdersPage() {
     setOrders(prevOrders => 
       prevOrders.map(o => o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o)
     );
-    // await fetchOrderData(); // Re-fetch all data to ensure consistency, or rely on optimistic update + revalidatePath
   }, [toast]);
 
   if (!currentUser) return (
@@ -185,15 +186,11 @@ export default function OrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button variant="outline" onClick={fetchOrderData} disabled={isLoading} className="h-10">
-                 <RefreshCw className={`mr-2 h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} /> Refresh Orders
-            </Button>
             {canCreateOrder && (
             <CreateOrderDialog
                 currentUser={currentUser}
                 availableStatuses={memoizedAvailableStatusesForDialog}
                 onOrderCreated={async () => {
-                  // Server action revalidates, but immediate client fetch can be good for responsiveness
                   await fetchOrderData(); 
                 }}
             >
@@ -345,7 +342,7 @@ export default function OrdersPage() {
             setIsAssignDrDialogOpen(open);
             if (!open) {
               setSelectedOrderForDrAssignment(null);
-              setStatusesForDialog(null); // Clear statuses for dialog when it closes
+              setStatusesForDialog(null); 
             }
           }}
           order={selectedOrderForDrAssignment}
@@ -360,3 +357,4 @@ export default function OrdersPage() {
     
 
     
+
