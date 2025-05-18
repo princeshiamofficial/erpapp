@@ -12,7 +12,6 @@ const ORDER_SUBMITTED_ID = 'order-submitted';
 const IN_PRODUCTION_ID = 'in-production';
 const PENDING_CLIENT_APPROVAL_ID = 'pending-client-approval';
 
-
 const seedInitialOrders = async (): Promise<TrackingLink[]> => {
   const statuses: CustomStatus[] = await getStatuses();
 
@@ -33,17 +32,16 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     return [];
   }
   
-  // Ensure all found statuses are not undefined before proceeding
   if (!orderSubmittedStatus || !inProductionStatus || !pendingApprovalStatus || !readyForDesignStatus) {
     console.error("One or more critical status objects are undefined even after attempting to find them by ID. Aborting seedInitialOrders.");
     return [];
   }
 
-  type SeedOrderBase = Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments' | 'currentStatus' | 'viewCount' | 'service'> & {
+  type SeedOrderBase = Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments' | 'currentStatus' | 'viewCount' | 'service' | 'model' | 'quantity' | 'lamination'> & {
     phoneNumber?: string;
-    model?: string;
-    quantity?: number;
-    lamination?: string;
+    model: string; 
+    quantity: number; 
+    lamination: string; 
     designerRepresentativeId?: string | null;
     designerRepresentativeName?: string | null;
   };
@@ -54,10 +52,10 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       companyName: "Tech Solutions Inc.",
       address: "123 Tech Ave, Silicon Valley, CA 94001",
       phoneNumber: "555-0101",
-      model: "Premium Matte",
-      quantity: 500,
-      lamination: "Soft Touch",
-      crmUserId: "SysAdmin-001", // Assuming a SysAdmin creates these for demo
+      model: "Premium Matte", // Default value
+      quantity: 500, // Default value
+      lamination: "Soft Touch", // Default value
+      crmUserId: "SysAdmin-001",
       crmUserName: "Default Admin",
       isPublic: true,
       designerRepresentativeId: null,
@@ -68,9 +66,9 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       companyName: "GreenScape Ltd.",
       address: "456 Green Rd, Meadowville, TX 75001",
       phoneNumber: "555-0102",
-      model: "Eco-Friendly Recycled",
-      quantity: 1000,
-      lamination: "None",
+      model: "Eco-Friendly Recycled", // Default value
+      quantity: 1000, // Default value
+      lamination: "None", // Default value
       crmUserId: "SysAdmin-001",
       crmUserName: "Default Admin",
       isPublic: false,
@@ -99,11 +97,11 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     comments: [
       { id: uuidv4(), userName: "Tech Solutions Inc. (Client)", text: "Looking forward to the first demo!", timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), isInternal: false }
     ],
-    service: null, // explicitly setting old field to null
+    service: null, 
     phoneNumber: firstOrderBaseData.phoneNumber || null,
-    model: firstOrderBaseData.model || null,
-    quantity: firstOrderBaseData.quantity || null,
-    lamination: firstOrderBaseData.lamination || null,
+    model: firstOrderBaseData.model,
+    quantity: firstOrderBaseData.quantity,
+    lamination: firstOrderBaseData.lamination,
     designerRepresentativeId: firstOrderBaseData.designerRepresentativeId || null,
     designerRepresentativeName: firstOrderBaseData.designerRepresentativeName || null,
     viewCount: 0,
@@ -127,11 +125,11 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       { id: uuidv4(), timestamp: dateOneDayAgo.toISOString(), status: pendingApprovalStatus.id, changedByUserId: "DR-001", changedByUserName: "Carol DesignerRep", notes: "Initial designs submitted for client approval." }
     ],
     comments: [],
-    service: null, // explicitly setting old field to null
+    service: null, 
     phoneNumber: secondOrderBaseData.phoneNumber || null,
-    model: secondOrderBaseData.model || null,
-    quantity: secondOrderBaseData.quantity || null,
-    lamination: secondOrderBaseData.lamination || null,
+    model: secondOrderBaseData.model,
+    quantity: secondOrderBaseData.quantity,
+    lamination: secondOrderBaseData.lamination,
     designerRepresentativeId: "DR-001",
     designerRepresentativeName: "Carol DesignerRep",
     viewCount: 0,
@@ -187,10 +185,9 @@ export const addOrder = async (orderData: {
   companyName: string;
   address: string;
   phoneNumber?: string;
-  // service?: string; // Replaced
-  model?: string;
-  quantity?: number;
-  lamination?: string;
+  model: string; 
+  quantity: number; 
+  lamination: string; 
   initialStatusId: string;
   crmUserId: string;
   crmUserName: string
@@ -242,10 +239,10 @@ export const addOrder = async (orderData: {
       companyName: orderData.companyName,
       address: orderData.address,
       phoneNumber: orderData.phoneNumber || null,
-      service: null, // Old field, explicitly set to null
-      model: orderData.model || null,
-      quantity: orderData.quantity || null,
-      lamination: orderData.lamination || null,
+      service: null, 
+      model: orderData.model,
+      quantity: orderData.quantity,
+      lamination: orderData.lamination,
       crmUserId: orderData.crmUserId,
       crmUserName: orderData.crmUserName,
       createdAt: transactionTime,
@@ -275,9 +272,12 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     for (const key in updates) {
       if (Object.prototype.hasOwnProperty.call(updates, key)) {
         const value = updates[key as keyof TrackingLink];
-        // Ensure undefined values are converted to null for Firestore compatibility
         sanitizedUpdates[key] = value === undefined ? null : value;
       }
+    }
+    if (Object.keys(sanitizedUpdates).length === 0) {
+      console.log(`No updates to apply for order ${id}.`);
+      return true; // No changes needed, consider it a success
     }
     await updateDoc(orderDoc, sanitizedUpdates);
     return true;
@@ -317,13 +317,8 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
         userName: commentData.userName,
         text: commentData.text,
         isInternal: commentData.isInternal,
+        ...(commentData.userId && { userId: commentData.userId }), // Conditionally add userId
       };
-
-      // Only include userId if it's actually provided and not undefined/null
-      if (commentData.userId) {
-        newComment.userId = commentData.userId;
-      }
-
 
       const updatedComments = [...(order.comments || []), newComment];
       transaction.update(orderRef, { comments: updatedComments });
@@ -359,3 +354,4 @@ export const incrementOrderViewCount = async (orderId: string): Promise<boolean>
     return false;
   }
 };
+

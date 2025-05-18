@@ -150,30 +150,24 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
                   </div>
                 </div>
               )}
-              {order.model && (
-                <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
-                  <Layers className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
-                  <div>
-                    <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Model</span> {order.model}
-                  </div>
+              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
+                <Layers className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
+                <div>
+                  <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Model</span> {order.model}
                 </div>
-              )}
-              {order.quantity && (
-                <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
-                  <Tag className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
-                  <div>
-                    <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Quantity</span> {order.quantity}
-                  </div>
+              </div>
+              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
+                <Tag className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
+                <div>
+                  <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Quantity</span> {order.quantity}
                 </div>
-              )}
-              {order.lamination && (
-                <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
-                  <Star className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
-                  <div>
-                    <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Lamination</span> {order.lamination}
-                  </div>
+              </div>
+              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
+                <Star className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
+                <div>
+                  <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Lamination</span> {order.lamination}
                 </div>
-              )}
+              </div>
                <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
                   <CalendarDays className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
                   <div>
@@ -293,3 +287,4 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
     </main>
   );
 }
+

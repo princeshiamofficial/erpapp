@@ -38,9 +38,9 @@ export interface TrackingLink {
   address: string;
   phoneNumber?: string | null; // Allow null
   service?: string | null; // Allow null - Will be phased out by new fields
-  model?: string | null; // New field
-  quantity?: number | null; // New field
-  lamination?: string | null; // New field
+  model: string; // Was: model?: string | null;
+  quantity: number; // Was: quantity?: number | null;
+  lamination: string; // Was: lamination?: string | null;
   crmUserId: string;
   crmUserName: string;
   designerRepresentativeId?: string | null; // Allow null

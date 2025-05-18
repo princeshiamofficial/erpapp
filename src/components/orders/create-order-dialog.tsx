@@ -64,16 +64,16 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!companyName || !address || !initialStatusId) {
+    if (!companyName || !address || !initialStatusId || !model || !quantity || !lamination) {
       toast({
         title: "Validation Error",
-        description: "Company name, address, and initial status are required.",
+        description: "Company name, address, model, quantity, lamination, and initial status are required.",
         variant: "destructive",
       });
       return;
     }
-    const parsedQuantity = quantity ? parseInt(quantity, 10) : undefined;
-    if (quantity && (isNaN(parsedQuantity) || parsedQuantity < 1)) {
+    const parsedQuantity = parseInt(quantity, 10);
+    if (isNaN(parsedQuantity) || parsedQuantity < 1) {
         toast({
             title: "Validation Error",
             description: "Quantity must be a positive number.",
@@ -96,13 +96,12 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       companyName,
       address,
       phoneNumber: phoneNumber || undefined,
-      model: model || undefined,
+      model,
       quantity: parsedQuantity,
-      lamination: lamination || undefined,
+      lamination,
       initialStatusId,
     };
 
-    // In createOrderAction, customerName will be set to companyName for now
     const result = await createOrderAction(orderData, currentUser);
 
     if ('error' in result) {
@@ -127,7 +126,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg md:max-w-xl"> {/* Increased max-width for more space */}
+      <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl"> {/* Increased max-width for more space */}
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
           <DialogDescription>Enter company and order details.</DialogDescription>
@@ -150,9 +149,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="space-y-1 flex-1">
                 <Label htmlFor="model">Model</Label>
-                <Select value={model} onValueChange={setModel}>
+                <Select value={model} onValueChange={setModel} >
                   <SelectTrigger id="model">
-                    <SelectValue placeholder="Select model (Optional)" />
+                    <SelectValue placeholder="Select model" />
                   </SelectTrigger>
                   <SelectContent>
                     {modelOptions.map(option => (
@@ -164,14 +163,14 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
               <div className="space-y-1 flex-1">
                 <Label htmlFor="quantity">Quantity</Label>
-                <Input id="quantity" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="e.g., 100 (Optional)" min="1" />
+                <Input id="quantity" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="e.g., 100" min="1" required />
               </div>
 
               <div className="space-y-1 flex-1">
                 <Label htmlFor="lamination">Lamination</Label>
                 <Select value={lamination} onValueChange={setLamination}>
                   <SelectTrigger id="lamination">
-                    <SelectValue placeholder="Select lamination (Optional)" />
+                    <SelectValue placeholder="Select lamination" />
                   </SelectTrigger>
                   <SelectContent>
                     {laminationOptions.map(option => (
@@ -208,3 +207,4 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
+

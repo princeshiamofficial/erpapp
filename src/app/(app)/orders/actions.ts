@@ -11,10 +11,9 @@ export async function createOrderAction(
     companyName: string;
     address: string;
     phoneNumber?: string;
-    // service?: string; // Replaced
-    model?: string;
-    quantity?: number;
-    lamination?: string;
+    model: string; // No longer optional
+    quantity: number; // No longer optional
+    lamination: string; // No longer optional
     initialStatusId: string;
   },
   currentUser: User
@@ -25,6 +24,9 @@ export async function createOrderAction(
   if (!data.initialStatusId) {
     return { error: "Initial status ID is required." };
   }
+  if (!data.model || !data.quantity || !data.lamination) {
+    return { error: "Model, quantity, and lamination are required."}
+  }
 
   try {
     const newOrderData = {
@@ -32,7 +34,6 @@ export async function createOrderAction(
       companyName: data.companyName,
       address: data.address,
       phoneNumber: data.phoneNumber,
-      // service: data.service, // Replaced
       model: data.model,
       quantity: data.quantity,
       lamination: data.lamination,
@@ -142,3 +143,4 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred while deleting order." };
   }
 }
+
