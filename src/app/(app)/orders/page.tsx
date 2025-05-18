@@ -58,21 +58,22 @@ export default function OrdersPage() {
 
   useEffect(() => {
     setIsClient(true);
-    if (currentUser) { // Ensure currentUser is loaded before fetching
+    if (currentUser) { 
         fetchOrderData();
     }
-  }, [fetchOrderData, currentUser]); // Add currentUser as a dependency
+  }, [fetchOrderData, currentUser]); 
   
   const getStatusDisplayInfo = useCallback(async (statusId: string): Promise<{ name: string; color: string; textColor: string }> => {
     const foundStatus = allStatuses.find(s => s.id === statusId);
     if (foundStatus) {
       return { name: foundStatus.name, color: foundStatus.color, textColor: getContrastTextColor(foundStatus.color) };
     }
+    // Fallback to fetching from service if not found in local allStatuses (e.g., during initial load or if cache is stale)
     const status = await getStatusById(statusId); 
     if (status) {
       return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
     }
-    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' }; 
+    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' }; // Default fallback
   }, [allStatuses]);
 
 
@@ -117,14 +118,14 @@ export default function OrdersPage() {
   }, [filteredOrders, getStatusDisplayInfo, allStatuses, orderStatusDisplay]); 
   
   const memoizedAvailableStatusesForDialog = useMemo(() => {
+    // For "Create Order", users typically select from non-system statuses or specific initial ones
+    // The "Idea Submitted" is a good default initial non-system status, if it exists.
+    // Or generally, allow any non-system status.
     return allStatuses.filter(s => !s.isSystemStatus || s.name === "Idea Submitted");
   }, [allStatuses]);
 
   const handleDrAssignmentSuccess = async () => {
     setIsAssignDrDialogOpen(false);
-    // Explicitly re-fetch data after assignment to ensure UI updates.
-    // Server action's revalidatePath should also help, but this provides
-    // a more immediate client-side refresh trigger.
     await fetchOrderData();
   };
 
@@ -148,7 +149,6 @@ export default function OrdersPage() {
             currentUser={currentUser} 
             availableStatuses={memoizedAvailableStatusesForDialog} 
             onOrderCreated={async () => {
-              // Server action handles revalidation, explicit re-fetch for immediate UI update
               await fetchOrderData();
             }}
           >
@@ -177,9 +177,7 @@ export default function OrdersPage() {
                   className="pl-10 bg-background h-10 rounded-md w-full"
                 />
               </div>
-              <Button variant="outline" size="icon" onClick={fetchOrderData} disabled={isLoading} title="Refresh Data" className="h-10 w-10">
-                <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
-              </Button>
+              {/* Refresh button removed as per request */}
             </div>
           </div>
         </CardHeader>
