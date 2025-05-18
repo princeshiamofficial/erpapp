@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, UserCheck, Layers, Tag } from "lucide-react";
+import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, UserCheck, Layers } from "lucide-react";
 import Image from "next/image";
 import type { Comment, CustomStatus, TrackingLink } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -125,15 +125,33 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
           <div>
             <h3 className="text-xl font-semibold mb-4 sm:mb-5 text-foreground">Order Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-4 sm:gap-y-5 text-sm sm:text-base">
-              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
-                <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                    <Building className="h-5 w-5 text-primary " />
-                </div>
-                <div>
-                  <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Company</span> {order.companyName}
+              {/* Wrapper for Company and Phone */}
+              <div className="md:col-span-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-4 md:gap-y-0">
+                  {/* Company Detail Item */}
+                  <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
+                    <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                        <Building className="h-5 w-5 text-primary " />
+                    </div>
+                    <div>
+                      <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Company</span> {order.companyName}
+                    </div>
+                  </div>
+                  
+                  {/* Phone Detail Item */}
+                  <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
+                    <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                        <Phone className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Phone</span> {order.phoneNumber}
+                    </div>
+                  </div>
                 </div>
               </div>
-               <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all md:col-span-2">
+              
+              {/* Address Detail Item (md:col-span-2 removed from here as it's now a direct child of the main grid) */}
+              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
                 <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
                     <MapPin className="h-5 w-5 text-primary" />
                 </div>
@@ -142,15 +160,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
                 </div>
               </div>
               
-              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
-                <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                    <Phone className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Phone</span> {order.phoneNumber}
-                </div>
-              </div>
-              
+              {/* Service Details Item */}
               <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
                  <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
                     <Layers className="h-5 w-5 text-primary" />
@@ -160,6 +170,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
                 </div>
               </div>
 
+               {/* Order Placed Item */}
                <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
                   <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
                     <CalendarDays className="h-5 w-5 text-primary" />
@@ -168,6 +179,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
                     <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Order Placed</span> {isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-32" />}
                   </div>
                 </div>
+
+                {/* Assigned Designer Item */}
                 {order.designerRepresentativeName && (
                     <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
                         <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
@@ -283,5 +296,3 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
     </main>
   );
 }
-
-    
