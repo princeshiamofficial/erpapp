@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks, Edit, PackageCheck, Truck, TrendingDown, Minus, RefreshCw } from 'lucide-react';
-import { formatDistanceToNow, startOfMonth, endOfMonth, isWithinInterval, startOfWeek, endOfWeek } from 'date-fns';
+import { formatDistanceToNow, startOfMonth, endOfMonth, isWithinInterval, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
 import { Progress } from '@/components/ui/progress';
@@ -266,13 +266,13 @@ export default function DashboardPage() {
 
         fetchedOrders.forEach(order => {
           const deliveredLogMonth = order.statusHistory.find(
-            log => log.status === deliveredStatusId && isWithinInterval(new Date(log.timestamp), { start: monthStart, end: monthEnd })
+            log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: monthStart, end: monthEnd })
           );
           if (deliveredLogMonth) {
             deliveriesThisMonth++;
           }
           const deliveredLogWeek = order.statusHistory.find(
-            log => log.status === deliveredStatusId && isWithinInterval(new Date(log.timestamp), { start: weekStart, end: weekEnd })
+            log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: weekStart, end: weekEnd })
           );
           if (deliveredLogWeek) {
             deliveriesThisWeek++;
@@ -388,6 +388,7 @@ export default function DashboardPage() {
         dataAiHint: "delivery truck calendar",
         type: "info" as const,
         trend: "neutral" as "up" | "down" | "neutral",
+        href: "/deliveries/monthly", // Added href for navigation
       },
       {
         title: "Weekly Deliveries",
@@ -397,6 +398,7 @@ export default function DashboardPage() {
         dataAiHint: "delivery van calendar",
         type: "info" as const,
         trend: "neutral" as "up" | "down" | "neutral",
+        // href: "/deliveries/weekly", // Future: Add link if weekly page is created
       }
     );
   } else if (currentUser.role === 'CRM') {
@@ -474,10 +476,9 @@ export default function DashboardPage() {
             progressColorClass = getProgressColorClass(progressPercentage);
           }
 
-          return (
+          const cardInnerContent = (
             <Card
-              key={card.title}
-              className="shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out border bg-card relative flex flex-col group hover:scale-[1.02] rounded-xl overflow-hidden border-border/30"
+              className="shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out border bg-card relative flex flex-col group hover:scale-[1.02] rounded-xl overflow-hidden border-border/30 h-full"
             >
               <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pt-4 sm:pt-5 px-4 sm:px-5">
                 <CardTitle className="text-md sm:text-lg font-semibold text-card-foreground">{card.title}</CardTitle>
@@ -539,6 +540,16 @@ export default function DashboardPage() {
               </CardContent>
             </Card>
           );
+          
+          if (card.href && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) {
+            return (
+              <Link href={card.href} key={card.title} className="block hover:no-underline focus:outline-none focus:ring-2 focus:ring-primary rounded-xl h-full">
+                {cardInnerContent}
+              </Link>
+            );
+          }
+          return <div key={card.title} className="h-full">{cardInnerContent}</div>;
+
         })}
       </div>
 
@@ -634,4 +645,5 @@ export default function DashboardPage() {
     
 
     
+
 
