@@ -5,15 +5,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Palette, AlertTriangle } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Palette, AlertTriangle, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { CustomStatus } from "@/types";
-import { getStatuses, addStatus, updateStatus, deleteStatus } from '@/lib/status-service';
+import { getStatuses } from '@/lib/status-service'; // getStatuses to fetch
+import { addStatusAction, updateStatusAction, deleteStatusAction } from './actions'; // server actions
 import { useToast } from '@/hooks/use-toast';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 
 export default function AdminStatusesPage() {
   const { currentUser } = useAuth();
@@ -29,7 +31,8 @@ export default function AdminStatusesPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const [newStatusName, setNewStatusName] = useState('');
-  const [newStatusColor, setNewStatusColor] = useState('#0EA5E9'); // Default to Sky Blue
+  const [newStatusColor, setNewStatusColor] = useState('#0EA5E9'); 
+  const [newStatusIsVisible, setNewStatusIsVisible] = useState(true);
 
   const [editingStatus, setEditingStatus] = useState<CustomStatus | null>(null);
   const [statusToDelete, setStatusToDelete] = useState<CustomStatus | null>(null);
@@ -63,47 +66,50 @@ export default function AdminStatusesPage() {
       return;
     }
     setIsSubmitting(true);
-    try {
-      await addStatus(newStatusName, newStatusColor);
-      toast({ title: "Success", description: `Status "${newStatusName}" added.` });
+    const result = await addStatusAction(newStatusName, newStatusColor, newStatusIsVisible);
+    if (result.success && result.status) {
+      toast({ title: "Success", description: `Status "${result.status.name}" added.` });
       setIsAddDialogOpen(false);
       setNewStatusName('');
       setNewStatusColor('#0EA5E9');
-      fetchStatuses(); // Refresh list
-    } catch (error) {
-      console.error("Error adding status:", error);
-      toast({ title: "Error", description: (error instanceof Error ? error.message : "Could not add status."), variant: "destructive" });
-    } finally {
-      setIsSubmitting(false);
+      setNewStatusIsVisible(true);
+      await fetchStatuses(); 
+    } else {
+      toast({ title: "Error", description: result.error || "Could not add status.", variant: "destructive" });
     }
+    setIsSubmitting(false);
   };
 
   const openEditDialog = (status: CustomStatus) => {
     setEditingStatus(status);
     setNewStatusName(status.name);
     setNewStatusColor(status.color);
+    setNewStatusIsVisible(status.isVisible !== false); // Default to true if undefined
     setIsEditDialogOpen(true);
   };
 
   const handleEditStatus = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) {
+        toast({ title: "Authentication Error", description: "User not authenticated.", variant: "destructive" });
+        return;
+    }
     if (!editingStatus || !newStatusName.trim() || !newStatusColor.trim()) {
       toast({ title: "Validation Error", description: "Status name and color are required.", variant: "destructive" });
       return;
     }
     setIsSubmitting(true);
-    try {
-      await updateStatus(editingStatus.id, newStatusName, newStatusColor);
+    // Pass currentUser.role to the action
+    const result = await updateStatusAction(editingStatus.id, newStatusName, newStatusColor, newStatusIsVisible, currentUser.role);
+    if (result.success) {
       toast({ title: "Success", description: `Status "${editingStatus.name}" updated.` });
       setIsEditDialogOpen(false);
       setEditingStatus(null);
-      fetchStatuses(); // Refresh list
-    } catch (error) {
-      console.error("Error updating status:", error);
-      toast({ title: "Error", description: (error instanceof Error ? error.message : "Could not update status."), variant: "destructive" });
-    } finally {
-      setIsSubmitting(false);
+      await fetchStatuses(); 
+    } else {
+      toast({ title: "Error updating status", description: result.error || "Could not update status.", variant: "destructive" });
     }
+    setIsSubmitting(false);
   };
   
   const openDeleteDialog = (status: CustomStatus) => {
@@ -118,18 +124,16 @@ export default function AdminStatusesPage() {
   const handleDeleteStatus = async () => {
     if (!statusToDelete) return;
     setIsSubmitting(true);
-    try {
-      await deleteStatus(statusToDelete.id);
+    const result = await deleteStatusAction(statusToDelete.id);
+    if (result.success) {
       toast({ title: "Success", description: `Status "${statusToDelete.name}" deleted.` });
       setIsDeleteDialogOpen(false);
       setStatusToDelete(null);
-      fetchStatuses(); // Refresh list
-    } catch (error) {
-      console.error("Error deleting status:", error);
-      toast({ title: "Error", description: (error instanceof Error ? error.message : "Could not delete status."), variant: "destructive" });
-    } finally {
-      setIsSubmitting(false);
+      await fetchStatuses(); 
+    } else {
+      toast({ title: "Error", description: result.error || "Could not delete status.", variant: "destructive" });
     }
+    setIsSubmitting(false);
   };
 
 
@@ -154,17 +158,22 @@ export default function AdminStatusesPage() {
             Define and manage custom order statuses for your workflow.
           </p>
         </div>
-        <Button size="lg" onClick={() => setIsAddDialogOpen(true)} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow">
-          <PlusCircle className="mr-2 h-5 w-5" />
-          Add New Status
-        </Button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button variant="outline" size="icon" onClick={fetchStatuses} disabled={isLoading} className="h-10 w-10" title="Refresh Statuses">
+            <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button size="lg" onClick={() => setIsAddDialogOpen(true)} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow h-10">
+            <PlusCircle className="mr-2 h-5 w-5" />
+            Add New Status
+          </Button>
+        </div>
       </div>
 
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl">Current Statuses</CardTitle>
           <CardDescription className="text-muted-foreground text-sm mt-0.5">
-            View, edit, or delete custom order statuses. System statuses can have their color changed but cannot be renamed or deleted.
+            View, edit, or delete custom order statuses. System statuses cannot be deleted. Only System Admins can change system status names.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -198,6 +207,11 @@ export default function AdminStatusesPage() {
                     {status.isSystemStatus && (
                       <span className="text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded-sm border border-border">System</span>
                     )}
+                    {status.isVisible !== false ? (
+                        <Eye className="h-4 w-4 text-green-500" title="Visible in dropdowns"/>
+                    ) : (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" title="Hidden in dropdowns" />
+                    )}
                   </div>
                   <div className="flex items-center gap-2 self-end sm:self-center">
                     <Button variant="outline" size="icon" onClick={() => openEditDialog(status)} title="Edit Status" className="h-9 w-9">
@@ -226,17 +240,21 @@ export default function AdminStatusesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Add New Order Status</DialogTitle>
-            <DialogDescription>Define a name and choose a color for the new status.</DialogDescription>
+            <DialogDescription>Define a name, choose a color, and set visibility for the new status.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddStatus} className="space-y-4 py-2">
             <div>
               <Label htmlFor="newStatusName">Status Name</Label>
-              <Input id="newStatusName" value={newStatusName} onChange={(e) => setNewStatusName(e.target.value)} required />
+              <Input id="newStatusName" value={newStatusName} onChange={(e) => setNewStatusName(e.target.value)} required disabled={isSubmitting} />
             </div>
             <div className="flex items-center gap-4">
               <Label htmlFor="newStatusColor">Status Color</Label>
-              <Input id="newStatusColor" type="color" value={newStatusColor} onChange={(e) => setNewStatusColor(e.target.value)} className="w-20 h-10 p-1" required />
+              <Input id="newStatusColor" type="color" value={newStatusColor} onChange={(e) => setNewStatusColor(e.target.value)} className="w-20 h-10 p-1" required disabled={isSubmitting} />
               <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: newStatusColor }} />
+            </div>
+             <div className="flex items-center space-x-2">
+              <Switch id="newStatusIsVisible" checked={newStatusIsVisible} onCheckedChange={setNewStatusIsVisible} disabled={isSubmitting} />
+              <Label htmlFor="newStatusIsVisible">Visible in dropdowns</Label>
             </div>
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
@@ -247,12 +265,12 @@ export default function AdminStatusesPage() {
       </Dialog>
 
       {/* Edit Status Dialog */}
-      {editingStatus && (
+      {editingStatus && currentUser && (
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Edit Order Status: {editingStatus.name}</DialogTitle>
-              <DialogDescription>Update the name and color for this status.</DialogDescription>
+              <DialogDescription>Update the name, color, and visibility for this status.</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleEditStatus} className="space-y-4 py-2">
               <div>
@@ -262,14 +280,21 @@ export default function AdminStatusesPage() {
                     value={newStatusName} 
                     onChange={(e) => setNewStatusName(e.target.value)} 
                     required 
-                    disabled={editingStatus.isSystemStatus}
+                    disabled={isSubmitting || (editingStatus.isSystemStatus && currentUser.role !== 'SYSTEM_ADMIN')}
                 />
-                 {editingStatus.isSystemStatus && <p className="text-xs text-muted-foreground mt-1">System status names cannot be changed.</p>}
+                 {editingStatus.isSystemStatus && currentUser.role !== 'SYSTEM_ADMIN' && 
+                    <p className="text-xs text-muted-foreground mt-1">System status names can only be changed by a System Administrator.</p>}
+                 {editingStatus.isSystemStatus && currentUser.role === 'SYSTEM_ADMIN' &&
+                    <p className="text-xs text-muted-foreground mt-1">Note: You are editing a system status name. Ensure system integrity.</p>}
               </div>
               <div className="flex items-center gap-4">
                 <Label htmlFor="editStatusColor">Status Color</Label>
-                <Input id="editStatusColor" type="color" value={newStatusColor} onChange={(e) => setNewStatusColor(e.target.value)} className="w-20 h-10 p-1" required />
+                <Input id="editStatusColor" type="color" value={newStatusColor} onChange={(e) => setNewStatusColor(e.target.value)} className="w-20 h-10 p-1" required disabled={isSubmitting} />
                 <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: newStatusColor }} />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch id="editStatusIsVisible" checked={newStatusIsVisible} onCheckedChange={setNewStatusIsVisible} disabled={isSubmitting}/>
+                <Label htmlFor="editStatusIsVisible">Visible in dropdowns</Label>
               </div>
               <DialogFooter className="pt-4">
                 <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>

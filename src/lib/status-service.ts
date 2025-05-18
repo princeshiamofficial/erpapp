@@ -1,13 +1,13 @@
 
 import { db } from './firebase';
-import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, getDoc, query, where, writeBatch, setDoc } from 'firebase/firestore';
-import type { CustomStatus } from '@/types';
+import { collection, getDocs, doc, updateDoc, getDoc, query, where, writeBatch, setDoc } from 'firebase/firestore';
+import type { CustomStatus, UserRole } from '@/types'; // Added UserRole
 import { v4 as uuidv4 } from 'uuid';
 
 const STATUSES_COLLECTION = 'customOrderStatuses';
-const READY_FOR_DESIGN_STATUS_ID = 'ready-for-design';
+export const READY_FOR_DESIGN_STATUS_ID = 'ready-for-design'; // Export if needed elsewhere
 
-const defaultStatusesData: Omit<CustomStatus, 'id' | 'isSystemStatus'>[] = [
+const defaultStatusesData: Omit<CustomStatus, 'id' | 'isSystemStatus' | 'isVisible'>[] = [
   { name: 'Order Submitted', color: '#8B5CF6' },
   { name: 'Design in Progress', color: '#3B82F6' },
   { name: 'Pending Client Approval', color: '#F59E0B' },
@@ -33,6 +33,7 @@ export const seedDefaultStatuses = async (): Promise<CustomStatus[]> => {
       ...statusData,
       id,
       isSystemStatus: true,
+      isVisible: true,
     };
     const docRef = doc(statusesRef, id);
     batch.set(docRef, newStatus);
@@ -57,9 +58,8 @@ export const getStatuses = async (): Promise<CustomStatus[]> => {
       console.log("No statuses found in Firestore, attempting to seed default statuses.");
       statuses = await seedDefaultStatuses();
     } else {
-      statuses = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as CustomStatus));
+      statuses = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data(), isVisible: docSnap.data().isVisible !== false } as CustomStatus));
       
-      // Ensure all default system statuses exist
       const batch = writeBatch(db);
       let newStatusesAddedToBatch = false;
 
@@ -72,13 +72,35 @@ export const getStatuses = async (): Promise<CustomStatus[]> => {
             name: defaultStatusData.name,
             color: defaultStatusData.color,
             isSystemStatus: true,
+            isVisible: true,
           };
           const docRef = doc(db, STATUSES_COLLECTION, expectedId);
           batch.set(docRef, newSystemStatus);
-          statuses.push(newSystemStatus); // Add to the list we're working with
+          statuses.push(newSystemStatus);
           newStatusesAddedToBatch = true;
         }
       }
+      
+      // Special check for 'ready-for-design' because it's critical
+      const readyForDesignExists = statuses.some(s => s.id === READY_FOR_DESIGN_STATUS_ID);
+      if (!readyForDesignExists) {
+          console.warn(`getStatuses: CRITICAL system status with ID '${READY_FOR_DESIGN_STATUS_ID}' was missing. Attempting to re-create it.`);
+          const rfdDefaultData = defaultStatusesData.find(s => s.name === 'Ready for Design');
+          if (rfdDefaultData) {
+            const newRfdStatus: CustomStatus = {
+              id: READY_FOR_DESIGN_STATUS_ID,
+              name: rfdDefaultData.name,
+              color: rfdDefaultData.color,
+              isSystemStatus: true,
+              isVisible: true,
+            };
+            const docRef = doc(db, STATUSES_COLLECTION, READY_FOR_DESIGN_STATUS_ID);
+            batch.set(docRef, newRfdStatus);
+            statuses.push(newRfdStatus);
+            newStatusesAddedToBatch = true;
+          }
+      }
+
 
       if (newStatusesAddedToBatch) {
         try {
@@ -86,6 +108,7 @@ export const getStatuses = async (): Promise<CustomStatus[]> => {
           console.log('getStatuses: Missing default system statuses were re-seeded.');
         } catch (commitError) {
           console.error('getStatuses: Error committing batch for re-seeding missing system statuses:', commitError);
+          // If re-seeding fails, we might still want to return what we have, though it might be incomplete.
         }
       }
     }
@@ -107,7 +130,7 @@ export const getStatusById = async (id: string): Promise<CustomStatus | undefine
     const docRef = doc(db, STATUSES_COLLECTION, id);
     const docSnap = await getDoc(docRef);
     if (docSnap.exists()) {
-      return { id: docSnap.id, ...docSnap.data() } as CustomStatus;
+      return { id: docSnap.id, ...docSnap.data(), isVisible: docSnap.data().isVisible !== false } as CustomStatus;
     }
     console.warn(`Status with ID "${id}" not found in Firestore.`);
     return undefined;
@@ -138,7 +161,7 @@ export const getStatusName = async (id: string): Promise<string | null> => {
   }
 };
 
-export const addStatus = async (name: string, color: string): Promise<CustomStatus | null> => {
+export const addStatus = async (name: string, color: string, isVisible: boolean): Promise<CustomStatus | null> => {
   try {
     const statusesCol = collection(db, STATUSES_COLLECTION);
     const q = query(statusesCol, where("name", "==", name));
@@ -152,7 +175,8 @@ export const addStatus = async (name: string, color: string): Promise<CustomStat
       id: newStatusId,
       name,
       color,
-      isSystemStatus: false
+      isSystemStatus: false,
+      isVisible,
     };
 
     const docRef = doc(db, STATUSES_COLLECTION, newStatusId);
@@ -167,8 +191,8 @@ export const addStatus = async (name: string, color: string): Promise<CustomStat
   }
 };
 
-export const updateStatus = async (id: string, name: string, color: string): Promise<boolean> => {
-  console.log(`status-service/updateStatus: Attempting to update status. ID: '${id}', New Name: '${name}', New Color: '${color}'`);
+export async function updateStatus(id: string, name: string, color: string, isVisible: boolean, actingUserRole?: UserRole): Promise<boolean> {
+  console.log(`status-service/updateStatus: Attempting to update status. ID: '${id}', New Name: '${name}', New Color: '${color}', New Visibility: ${isVisible}, Acting Role: ${actingUserRole}`);
   try {
     const statusDocRef = doc(db, STATUSES_COLLECTION, id);
     const statusSnapshot = await getDoc(statusDocRef);
@@ -183,19 +207,25 @@ export const updateStatus = async (id: string, name: string, color: string): Pro
     const updates: Partial<CustomStatus> = {};
     let changed = false;
     
-    // Allow changing name even for system statuses, but isSystemStatus itself is protected.
-    // UI layer in AdminStatusesPage handles disabling input for system status name changes.
     if (name !== existingStatus.name) {
-        updates.name = name;
-        changed = true;
+      if (existingStatus.isSystemStatus && actingUserRole !== 'SYSTEM_ADMIN') {
+        console.warn(`status-service/updateStatus: Attempt to change name of system status ID '${id}' by non-SYSTEM_ADMIN role '${actingUserRole}' denied.`);
+        throw new Error("System status names can only be changed by a System Administrator.");
+      }
+      updates.name = name;
+      changed = true;
     }
     if (color !== existingStatus.color) {
         updates.color = color;
         changed = true;
     }
+    if (isVisible !== (existingStatus.isVisible !== false)) { // existingStatus.isVisible could be undefined, treat as true
+        updates.isVisible = isVisible;
+        changed = true;
+    }
     
     if (!changed) {
-        console.log('status-service/updateStatus: No actual changes to name or color. Skipping update.');
+        console.log('status-service/updateStatus: No actual changes to name, color, or visibility. Skipping update.');
         return true;
     }
 
@@ -205,7 +235,7 @@ export const updateStatus = async (id: string, name: string, color: string): Pro
     return true;
   } catch (error) {
     console.error(`status-service/updateStatus: Error updating status ID '${id}':`, error);
-    if (error instanceof Error) throw error;
+    if (error instanceof Error) throw error; // Re-throw to be caught by server action
     return false;
   }
 };
@@ -260,6 +290,3 @@ export const getContrastTextColor = (hexColor: string): string => {
     return '#000000';
   }
 };
-
-// Export the constant for use in other services
-export { READY_FOR_DESIGN_STATUS_ID };
