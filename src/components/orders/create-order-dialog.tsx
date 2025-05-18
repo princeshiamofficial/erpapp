@@ -21,7 +21,6 @@ interface CreateOrderDialogProps {
 
 export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children }: CreateOrderDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [customerName, setCustomerName] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -31,7 +30,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const { toast } = useToast();
 
   const resetForm = () => {
-    setCustomerName('');
     setCompanyName('');
     setAddress('');
     setPhoneNumber('');
@@ -59,10 +57,11 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customerName || !companyName || !address || !initialStatusId) {
+    // Customer name is no longer required
+    if (!companyName || !address || !initialStatusId) {
       toast({
         title: "Validation Error",
-        description: "Customer name, company name, address, and initial status are required.",
+        description: "Company name, address, and initial status are required.",
         variant: "destructive",
       });
       return;
@@ -78,7 +77,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setIsSubmitting(true);
 
     const orderData = {
-      customerName,
+      customerName: companyName, // Using companyName also as customerName for now or making it optional in backend
       companyName,
       address,
       phoneNumber: phoneNumber || undefined,
@@ -97,7 +96,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     } else {
       toast({
         title: "Order Created",
-        description: `Order ${result.id} for ${companyName} has been created.`, // Use companyName
+        description: `Order ${result.id} for ${companyName} has been created.`,
       });
       onOrderCreated();
       setIsOpen(false); 
@@ -113,7 +112,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
-          <DialogDescription>Enter company, contact, and order details.</DialogDescription>
+          <DialogDescription>Enter company and order details.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -121,10 +120,12 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               <Label htmlFor="companyName">Company Name</Label>
               <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required />
             </div>
+            {/* Removed Contact Person Name Field
             <div className="space-y-1">
               <Label htmlFor="customerName">Contact Person Name</Label>
               <Input id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} required />
             </div>
+            */}
             <div className="space-y-1">
               <Label htmlFor="address">Address</Label>
               <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required />

@@ -8,7 +8,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export async function createOrderAction(
   data: {
-    customerName: string;
+    // customerName is now derived from companyName or made optional in the data model
     companyName: string;
     address: string;
     phoneNumber?: string;
@@ -26,7 +26,7 @@ export async function createOrderAction(
 
   try {
     const newOrderData = {
-      customerName: data.customerName,
+      customerName: data.companyName, // Using company name as customer name for now. Consider making customerName truly optional if needed.
       companyName: data.companyName,
       address: data.address,
       phoneNumber: data.phoneNumber,
