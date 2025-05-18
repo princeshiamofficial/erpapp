@@ -20,23 +20,26 @@ import { Button } from '@/components/ui/button';
 import { LogOut, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { Logo } from '@/components/layout/Logo';
-import { AccountSuspendedDialog } from '@/components/auth/AccountSuspendedDialog'; // New import
+import { AccountSuspendedDialog } from '@/components/auth/AccountSuspendedDialog';
 
 export default function AuthenticatedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { currentUser, isLoading, logout, isSuspendedDialogOpen } = useAuth(); // Added isSuspendedDialogOpen
+  const { currentUser, isLoading, logout, isSuspendedDialogOpen } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !currentUser && !isSuspendedDialogOpen) { // Don't redirect if suspended dialog is about to open
+    // If not loading, no user, and suspension dialog isn't active/about to be active, redirect to login.
+    if (!isLoading && !currentUser && !isSuspendedDialogOpen) {
       router.replace('/login');
     }
   }, [currentUser, isLoading, router, isSuspendedDialogOpen]);
 
-  if (isLoading || (!currentUser && !isSuspendedDialogOpen)) { // Also don't show loader if suspension dialog is active
+  // Show loader if still loading OR if there's no current user AND the suspension dialog isn't active.
+  // This ensures that if a user is immediately flagged for suspension on load, we don't show the loader indefinitely.
+  if (isLoading || (!currentUser && !isSuspendedDialogOpen)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />
@@ -44,9 +47,9 @@ export default function AuthenticatedLayout({
     );
   }
   
-  // If isSuspendedDialogOpen is true, but currentUser is still briefly set,
-  // the dialog will take over. If currentUser is null and dialog is true,
-  // we still want to show the dialog before full redirect.
+  // If currentUser exists but isSuspendedDialogOpen is true, the dialog will show,
+  // and children should not be rendered.
+  // If currentUser becomes null and isSuspendedDialogOpen is true (e.g. deleted user), dialog still shows.
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -74,7 +77,7 @@ export default function AuthenticatedLayout({
             className="w-full justify-start text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 rounded-md text-sm py-2.5 px-3" 
             onClick={logout} 
             title="Logout"
-            disabled={isSuspendedDialogOpen} // Disable manual logout if suspended dialog is active
+            disabled={isSuspendedDialogOpen} 
           >
             <LogOut className="mr-3 h-5 w-5 shrink-0 group-data-[collapsible=icon]:mr-0" />
             <span className="truncate group-data-[collapsible=icon]:hidden font-medium">Logout</span>
@@ -82,14 +85,13 @@ export default function AuthenticatedLayout({
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        {currentUser && <AppHeader />} 
+        {currentUser && !isSuspendedDialogOpen && <AppHeader />} 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-secondary/30 dark:bg-background/50 min-h-[calc(100vh-4.5rem)] selection:bg-primary/20 selection:text-primary">
-          {currentUser || isSuspendedDialogOpen ? children : null} 
-          {/* Show children if user exists OR if dialog needs to be shown over a blank page */}
+          {/* Only render children if user is present AND suspension dialog is NOT open */}
+          {currentUser && !isSuspendedDialogOpen ? children : null}
         </main>
       </SidebarInset>
       
-      {/* Account Suspended Dialog */}
       <AccountSuspendedDialog 
         isOpen={isSuspendedDialogOpen} 
         onConfirmLogout={logout} 
