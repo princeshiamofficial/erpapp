@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { TrackingLink, User } from "@/types";
-import { addOrder, updateOrder, getOrderById } from "@/lib/order-service"; // Use new Firestore service
+import { addOrder, updateOrder, getOrderById } from "@/lib/order-service"; 
 import { v4 as uuidv4 } from 'uuid';
 
 export async function createOrderAction(
@@ -13,7 +13,7 @@ export async function createOrderAction(
     address: string;
     phoneNumber?: string;
     service?: string;
-    initialStatusId: string; // Ensure this is the ID of a CustomStatus
+    initialStatusId: string;
   },
   currentUser: User
 ): Promise<TrackingLink | { error: string }> {
@@ -38,6 +38,7 @@ export async function createOrderAction(
     
     const createdOrder = await addOrder(newOrderData);
     revalidatePath("/(app)/orders");
+    revalidatePath("/(app)/dashboard"); // Revalidate dashboard for recent activity
     return createdOrder;
   } catch (error) {
     console.error("Error in createOrderAction:", error);
@@ -49,11 +50,11 @@ export async function assignDrToOrderAction(
   orderId: string,
   designerRepresentativeId: string,
   designerRepresentativeName: string,
-  crmUser: User,
+  actingUser: User, // Changed from crmUser for clarity
   readyForDesignStatusId: string
 ): Promise<TrackingLink | { error: string }> {
-  if (!crmUser || !crmUser.id || !crmUser.name) {
-    return { error: "CRM user information is missing." };
+  if (!actingUser || !actingUser.id || !actingUser.name) {
+    return { error: "Acting user information is missing." };
   }
   if (!readyForDesignStatusId) {
     return { error: "Ready for Design status ID is required." };
@@ -68,17 +69,19 @@ export async function assignDrToOrderAction(
     const logEntry = {
       id: uuidv4(),
       timestamp: new Date().toISOString(),
-      status: readyForDesignStatusId, // Use the ID of 'Ready for Design'
-      changedByUserId: crmUser.id,
-      changedByUserName: crmUser.name,
-      notes: `Assigned to Designer: ${designerRepresentativeName} by ${crmUser.name}.`,
+      status: readyForDesignStatusId, 
+      changedByUserId: actingUser.id,
+      changedByUserName: actingUser.name,
+      notes: `Assigned to Designer: ${designerRepresentativeName} by ${actingUser.name}.`,
     };
 
     const updatedOrderData: Partial<TrackingLink> = {
       designerRepresentativeId,
       designerRepresentativeName,
       currentStatus: readyForDesignStatusId,
-      statusHistory: [...currentOrder.statusHistory, logEntry],
+      statusHistory: Array.isArray(currentOrder.statusHistory) 
+                      ? [...currentOrder.statusHistory, logEntry] 
+                      : [logEntry], // Safeguard for statusHistory
     };
 
     const success = await updateOrder(orderId, updatedOrderData);
@@ -87,9 +90,9 @@ export async function assignDrToOrderAction(
     }
     
     revalidatePath("/(app)/orders");
-    revalidatePath(`/track/${orderId}`); 
+    revalidatePath(`/track/${orderId}`);
+    revalidatePath("/(app)/dashboard"); // Revalidate dashboard for recent activity
     
-    // Fetch the updated order to return it
     const updatedOrder = await getOrderById(orderId);
     if (!updatedOrder) {
         return { error: "Failed to retrieve updated order after DR assignment."};

@@ -39,7 +39,6 @@ export default function OrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
 
-  // State for Assign DR Dialog
   const [selectedOrderForDrAssignment, setSelectedOrderForDrAssignment] = useState<TrackingLink | null>(null);
   const [isAssignDrDialogOpen, setIsAssignDrDialogOpen] = useState(false);
   
@@ -52,7 +51,6 @@ export default function OrdersPage() {
       setAllStatuses(fetchedStatuses);
     } catch (error) {
       console.error("Failed to fetch orders or statuses:", error);
-      // Add toast notification here if desired
     } finally {
       setIsLoading(false);
     }
@@ -60,21 +58,21 @@ export default function OrdersPage() {
 
   useEffect(() => {
     setIsClient(true);
-    fetchOrderData();
-  }, [fetchOrderData]);
+    if (currentUser) { // Ensure currentUser is loaded before fetching
+        fetchOrderData();
+    }
+  }, [fetchOrderData, currentUser]); // Add currentUser as a dependency
   
   const getStatusDisplayInfo = useCallback(async (statusId: string): Promise<{ name: string; color: string; textColor: string }> => {
-    // Use allStatuses if already populated, otherwise fetch directly
     const foundStatus = allStatuses.find(s => s.id === statusId);
     if (foundStatus) {
       return { name: foundStatus.name, color: foundStatus.color, textColor: getContrastTextColor(foundStatus.color) };
     }
-    // Fallback to direct fetch if not in allStatuses (e.g., initial load or rare case)
     const status = await getStatusById(statusId); 
     if (status) {
       return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
     }
-    return { name: statusId, color: '#ccc', textColor: '#000' }; // Fallback for unknown status
+    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' }; 
   }, [allStatuses]);
 
 
@@ -87,34 +85,33 @@ export default function OrdersPage() {
     if (currentUser?.role === 'CRM') { 
       result = result.filter(order => order.crmUserId === currentUser.id);
     }
-    if (!searchTerm) return result;
+    if (!searchTerm) return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return result.filter(order => 
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (order.companyName && order.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (order.phoneNumber && order.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (order.service && order.service.toLowerCase().includes(searchTerm.toLowerCase())) ||
       order.crmUserName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (order.designerRepresentativeName && order.designerRepresentativeName.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [orders, searchTerm, currentUser]);
 
-  // Memoized status display info to avoid re-fetching in map
   const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
 
   useEffect(() => {
     const fetchAllDisplayInfo = async () => {
       const displayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
       for (const order of filteredOrders) {
-        if (!orderStatusDisplay[order.currentStatus]) { // Only fetch if not already cached
+        if (!orderStatusDisplay[order.currentStatus]) { 
           displayInfoMap[order.currentStatus] = await getStatusDisplayInfo(order.currentStatus);
         }
       }
-      if (Object.keys(displayInfoMap).length > 0) { // Only update state if there are new entries
+      if (Object.keys(displayInfoMap).length > 0) { 
         setOrderStatusDisplay(prev => ({ ...prev, ...displayInfoMap }));
       }
     };
-    if (filteredOrders.length > 0 && allStatuses.length > 0) { // Ensure allStatuses is populated before fetching
+    if (filteredOrders.length > 0 && allStatuses.length > 0) { 
       fetchAllDisplayInfo();
     }
   }, [filteredOrders, getStatusDisplayInfo, allStatuses, orderStatusDisplay]); 
@@ -122,6 +119,14 @@ export default function OrdersPage() {
   const memoizedAvailableStatusesForDialog = useMemo(() => {
     return allStatuses.filter(s => !s.isSystemStatus || s.name === "Idea Submitted");
   }, [allStatuses]);
+
+  const handleDrAssignmentSuccess = async () => {
+    setIsAssignDrDialogOpen(false);
+    // Explicitly re-fetch data after assignment to ensure UI updates.
+    // Server action's revalidatePath should also help, but this provides
+    // a more immediate client-side refresh trigger.
+    await fetchOrderData();
+  };
 
   if (!currentUser) return (
     <div className="flex h-screen w-full items-center justify-center">
@@ -142,8 +147,9 @@ export default function OrdersPage() {
           <CreateOrderDialog 
             currentUser={currentUser} 
             availableStatuses={memoizedAvailableStatusesForDialog} 
-            onOrderCreated={() => {
-              // Server action handles revalidation. fetchOrderData() will be called by revalidation or manual refresh.
+            onOrderCreated={async () => {
+              // Server action handles revalidation, explicit re-fetch for immediate UI update
+              await fetchOrderData();
             }}
           >
             <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow font-semibold">
@@ -209,7 +215,7 @@ export default function OrdersPage() {
                   ))
                 ) : filteredOrders.length > 0 ? (
                   filteredOrders.map((order) => {
-                    const statusInfo = orderStatusDisplay[order.currentStatus] || { name: order.currentStatus, color: '#ccc', textColor: '#000' };
+                    const statusInfo = orderStatusDisplay[order.currentStatus] || { name: order.currentStatus, color: '#A1A1AA', textColor: '#FFFFFF' };
                     return (
                       <TableRow key={order.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="pl-6">
@@ -260,8 +266,8 @@ export default function OrdersPage() {
                                 <CreateOrderDialog 
                                   currentUser={currentUser} 
                                   availableStatuses={memoizedAvailableStatusesForDialog}
-                                  onOrderCreated={() => {
-                                    // Server action handles revalidation.
+                                  onOrderCreated={async () => {
+                                    await fetchOrderData();
                                   }}
                                 >
                                     <Button size="sm" className="mt-4">
@@ -285,11 +291,7 @@ export default function OrdersPage() {
           order={selectedOrderForDrAssignment}
           currentUser={currentUser}
           allStatuses={allStatuses}
-          onDrAssigned={() => {
-            setIsAssignDrDialogOpen(false);
-            // Server action handles revalidation
-            // fetchOrderData(); // This might be redundant
-          }}
+          onDrAssigned={handleDrAssignmentSuccess}
         />
       )}
     </div>
