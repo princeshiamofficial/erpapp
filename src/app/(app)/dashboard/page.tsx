@@ -374,6 +374,7 @@ export default function DashboardPage() {
       icon: Package,
       dataAiHint: "delivery boxes",
       type: "info" as const,
+      href: "/active-orders",
       trend: "neutral" as "up" | "down" | "neutral", // Default to neutral until calculation
       changeText: isLoadingActiveOrders || activeOrdersPercentageChange === null ? <Skeleton className="h-4 w-24" /> : ''
   };
@@ -564,8 +565,8 @@ export default function DashboardPage() {
             </Card>
           );
           
-          // Wrap card with Link if href is present and user is Admin/System Admin
-          if (card.href && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) {
+          // Wrap card with Link if href is present
+          if (card.href) {
             return (
               <Link href={card.href} key={card.title} className="block hover:no-underline focus:outline-none focus:ring-2 focus:ring-primary rounded-xl h-full">
                 {cardInnerContent}
@@ -671,6 +672,7 @@ export default function DashboardPage() {
     
 
     
+
 
 
 
