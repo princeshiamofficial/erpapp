@@ -7,13 +7,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { ArrowLeft, Eye, Truck } from 'lucide-react';
+import { ArrowLeft, Eye, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { TrackingLink, CustomStatus } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { getStatuses, getContrastTextColor } from '@/lib/status-service';
 import { useToast } from '@/hooks/use-toast';
-import { startOfWeek, endOfWeek, isWithinInterval, parseISO, format as formatDateFns } from 'date-fns';
+import { startOfMonth, endOfMonth, isWithinInterval, parseISO, format as formatDateFns } from 'date-fns';
 
 const formatDateForDisplay = (dateString: string | undefined) => {
   if (!dateString) return "N/A";
@@ -24,21 +24,17 @@ const formatDateForDisplay = (dateString: string | undefined) => {
   }
 };
 
-export default function WeeklyDeliveriesPage() {
+export default function MonthlyOrdersPage() {
   const { toast } = useToast();
-  const [deliveredOrders, setDeliveredOrders] = useState<TrackingLink[]>([]);
+  const [monthlyOrders, setMonthlyOrders] = useState<TrackingLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
-  const [deliveredStatusId, setDeliveredStatusId] = useState<string | undefined>(undefined);
-  const [currentWeekRange, setCurrentWeekRange] = useState('');
+  const [currentMonthName, setCurrentMonthName] = useState('');
 
-  const fetchWeeklyDeliveries = useCallback(async () => {
+  const fetchMonthlyOrders = useCallback(async () => {
     setIsLoading(true);
     const now = new Date();
-    const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday as start of the week
-    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
-    setCurrentWeekRange(`${formatDateFns(weekStart, 'MMM d')} - ${formatDateFns(weekEnd, 'MMM d, yyyy')}`);
-
+    setCurrentMonthName(formatDateFns(now, 'MMMM yyyy'));
     try {
       const [fetchedOrders, fetchedStatuses] = await Promise.all([
         getOrders(),
@@ -46,41 +42,27 @@ export default function WeeklyDeliveriesPage() {
       ]);
       setAllStatuses(fetchedStatuses);
 
-      const delivStatus = fetchedStatuses.find(s => s.name.toLowerCase() === 'delivered');
-      if (!delivStatus) {
-        toast({ title: "Configuration Error", description: "'Delivered' status not found. Please ensure it's configured.", variant: "destructive" });
-        setIsLoading(false);
-        setDeliveredOrders([]);
-        return;
-      }
-      setDeliveredStatusId(delivStatus.id);
+      const monthStart = startOfMonth(now);
+      const monthEnd = endOfMonth(now);
 
-      const weeklyDelivered = fetchedOrders.filter(order => {
-        return order.statusHistory.some(log =>
-          log.status === delivStatus.id && isWithinInterval(parseISO(log.timestamp), { start: weekStart, end: weekEnd })
-        );
+      const filteredMonthlyOrders = fetchedOrders.filter(order => {
+        return isWithinInterval(parseISO(order.createdAt), { start: monthStart, end: monthEnd });
       });
       
-      setDeliveredOrders(weeklyDelivered.sort((a, b) => {
-          const aDeliveryLog = a.statusHistory.find(l => l.status === delivStatus.id);
-          const bDeliveryLog = b.statusHistory.find(l => l.status === delivStatus.id);
-          if (!aDeliveryLog || !bDeliveryLog) return 0; 
-          return new Date(bDeliveryLog.timestamp).getTime() - new Date(aDeliveryLog.timestamp).getTime();
-        })
-      );
+      setMonthlyOrders(filteredMonthlyOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
 
     } catch (error) {
-      console.error("Failed to fetch weekly deliveries:", error);
-      toast({ title: "Error", description: "Could not load weekly deliveries.", variant: "destructive" });
-      setDeliveredOrders([]);
+      console.error("Failed to fetch monthly orders:", error);
+      toast({ title: "Error", description: "Could not load monthly orders.", variant: "destructive" });
+      setMonthlyOrders([]);
     } finally {
       setIsLoading(false);
     }
   }, [toast]);
 
   useEffect(() => {
-    fetchWeeklyDeliveries();
-  }, [fetchWeeklyDeliveries]);
+    fetchMonthlyOrders();
+  }, [fetchMonthlyOrders]);
 
   const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
     const status = allStatuses.find(s => s.id === statusId);
@@ -94,11 +76,11 @@ export default function WeeklyDeliveriesPage() {
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
         <div className="flex items-center gap-3">
-          <Truck className="h-8 w-8 text-primary flex-shrink-0" />
+          <Package className="h-8 w-8 text-primary flex-shrink-0" />
           <div>
-            <h1 className="page-title">Weekly Deliveries</h1>
+            <h1 className="page-title">Monthly Orders Created</h1>
             <p className="page-description">
-              Orders delivered this week ({currentWeekRange || "current week"}).
+              Orders created in {currentMonthName || "the current month"}.
             </p>
           </div>
         </div>
@@ -112,9 +94,9 @@ export default function WeeklyDeliveriesPage() {
 
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
-          <CardTitle className="text-card-foreground text-xl">Delivered Orders (This Week)</CardTitle>
+          <CardTitle className="text-card-foreground text-xl">Orders Created ({currentMonthName})</CardTitle>
           <CardDescription className="text-muted-foreground text-sm mt-0.5">
-            List of all orders marked as 'Delivered' within {currentWeekRange || "the current week"}.
+            List of all orders created within {currentMonthName || "the current month"}.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -125,8 +107,9 @@ export default function WeeklyDeliveriesPage() {
                   <TableHead className="pl-6">Order ID</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Current Status</TableHead>
-                  <TableHead>Delivered On</TableHead>
+                  <TableHead>Created On</TableHead>
                   <TableHead>CRM Contact</TableHead>
+                  <TableHead>Assigned DR</TableHead>
                   <TableHead className="pr-6 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -139,13 +122,13 @@ export default function WeeklyDeliveriesPage() {
                       <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell className="pr-6 text-right"><Skeleton className="h-9 w-9 inline-block rounded-md" /></TableCell>
                     </TableRow>
                   ))
-                ) : deliveredOrders.length > 0 ? (
-                  deliveredOrders.map((order) => {
+                ) : monthlyOrders.length > 0 ? (
+                  monthlyOrders.map((order) => {
                     const statusInfo = getStatusDisplayInfo(order.currentStatus);
-                    const deliveryLog = order.statusHistory.find(log => log.status === deliveredStatusId);
                     return (
                       <TableRow key={order.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="pl-6">
@@ -159,8 +142,9 @@ export default function WeeklyDeliveriesPage() {
                             {statusInfo.name}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{deliveryLog ? formatDateForDisplay(deliveryLog.timestamp) : 'N/A'}</TableCell>
+                        <TableCell className="text-muted-foreground">{formatDateForDisplay(order.createdAt)}</TableCell>
                         <TableCell className="text-card-foreground">{order.crmUserName}</TableCell>
+                        <TableCell className="text-card-foreground">{order.designerRepresentativeName || "N/A"}</TableCell>
                         <TableCell className="pr-6 text-right">
                           <Link href={`/track/${order.id}`} passHref>
                             <Button variant="outline" size="sm" className="h-9 px-3">
@@ -173,9 +157,9 @@ export default function WeeklyDeliveriesPage() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 h-[300px]">
-                      <Truck className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
-                      <p className="text-lg text-muted-foreground font-medium">No orders delivered this week.</p>
+                    <TableCell colSpan={7} className="text-center py-12 h-[300px]">
+                      <Package className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
+                      <p className="text-lg text-muted-foreground font-medium">No orders created this month.</p>
                     </TableCell>
                   </TableRow>
                 )}

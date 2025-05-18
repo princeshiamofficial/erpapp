@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, RefreshCw, Loader2, Trash2, AlertTriangle } from "lucide-react"; // Added Trash2, AlertTriangle
+import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, AlertTriangle, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import Image from "next/image";
 import Link from "next/link";
@@ -13,12 +13,11 @@ import { CreateOrderDialog } from '@/components/orders/create-order-dialog';
 import type { TrackingLink, User, CustomStatus } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { cn } from "@/lib/utils";
 import { getStatuses, getContrastTextColor } from '@/lib/status-service';
 import { AssignDrDialog } from '@/components/orders/assign-dr-dialog';
 import { getOrders } from '@/lib/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
-import { deleteOrderAction } from './actions'; // createOrderAction, assignDrToOrderAction are already imported
+import { deleteOrderAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -29,7 +28,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"; // Added AlertDialog imports
+} from "@/components/ui/alert-dialog";
 
 
 const formatDate = (dateString: string | undefined) => {
@@ -96,7 +95,7 @@ export default function OrdersPage() {
     if (!searchTerm) return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return result.filter(order =>
       order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) || // Keep searching by customer name if desired
       (order.companyName && order.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (order.phoneNumber && order.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
       (order.service && order.service.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -127,10 +126,12 @@ export default function OrdersPage() {
         }
       });
       setOrderStatusDisplay(newDisplayInfoMap);
-    } else {
-      setOrderStatusDisplay({});
+    } else if (allStatuses.length > 0 && filteredOrders.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
+      setOrderStatusDisplay({}); // Clear if no orders but display map is not empty
+    } else if (allStatuses.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
+       setOrderStatusDisplay({}); // Clear if no statuses but display map is not empty
     }
-  }, [filteredOrders, allStatuses, getStatusDisplayInfo]);
+  }, [filteredOrders, allStatuses, getStatusDisplayInfo, orderStatusDisplay]);
 
 
   const canCreateOrder = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
@@ -138,10 +139,11 @@ export default function OrdersPage() {
   const canDeleteOrder = currentUser?.role === 'SYSTEM_ADMIN';
 
   const handleOpenAssignDrDialog = async (orderToAssign: TrackingLink) => {
-    setIsLoading(true);
+    setIsLoading(true); // Can use a specific loading state for dialog prep if needed
     try {
+        console.log("OrdersPage/handleOpenAssignDrDialog: Opening for order:", orderToAssign.id);
         const freshStatuses = await getStatuses();
-        console.log("OrdersPage/handleOpenAssignDrDialog: Fetched freshStatuses for dialog. Count:", freshStatuses.length);
+        console.log("OrdersPage/handleOpenAssignDrDialog: Fetched freshStatuses for dialog. Count:", freshStatuses.length, "IDs:", freshStatuses.map(s => s.id).join(', '));
 
         const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
         if (rfdCheck) {
@@ -158,7 +160,7 @@ export default function OrdersPage() {
             return;
         }
 
-        setAllStatuses(freshStatuses); // Update the main page's status list as well
+        setAllStatuses(freshStatuses); 
         setStatusesForDialog(freshStatuses);
         setSelectedOrderForDrAssignment(orderToAssign);
         setIsAssignDrDialogOpen(true);
@@ -172,12 +174,10 @@ export default function OrdersPage() {
 
  const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromAction: TrackingLink) => {
     toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
-    // Optimistic update
     setOrders(prevOrders =>
       prevOrders.map(o => o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o)
     );
-    // Optionally, re-fetch to ensure full consistency, but revalidatePath should handle it.
-    // await fetchOrderData();
+    // await fetchOrderData(); // Re-fetch to ensure full consistency - can be re-enabled if optimistic update is not enough
   }, [toast]);
 
   const handleDeleteOrder = async () => {
@@ -186,7 +186,7 @@ export default function OrdersPage() {
     const result = await deleteOrderAction(orderToDelete.id);
     if (result.success) {
       toast({ title: "Order Deleted", description: `Order ${orderToDelete.id} has been deleted successfully.` });
-      fetchOrderData(); // Re-fetch orders to update the list
+      fetchOrderData(); 
     } else {
       toast({ title: "Deletion Failed", description: result.error || "Could not delete the order.", variant: "destructive" });
     }
@@ -212,11 +212,11 @@ export default function OrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-             {/* Refresh button is hidden as per previous request */}
-            {/* <Button variant="outline" onClick={fetchOrderData} disabled={isLoading} className="h-10">
-                <RefreshCw className={`mr-2 h-5 w-5 ${isLoading ? 'animate-spin':''}`} />
-                Refresh Orders
-            </Button> */}
+            {/* Refresh button hidden by user request
+            <Button variant="outline" size="icon" onClick={fetchOrderData} disabled={isLoading} className="h-10 w-10" title="Refresh Orders">
+                <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin':''}`} />
+            </Button> 
+            */}
             {canCreateOrder && (
             <CreateOrderDialog
                 currentUser={currentUser}
@@ -266,7 +266,7 @@ export default function OrdersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-6">Order ID</TableHead>
-                  <TableHead>Customer</TableHead>
+                  <TableHead>Company</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>CRM Contact</TableHead>
                   <TableHead>Assigned DR</TableHead>
@@ -301,7 +301,7 @@ export default function OrdersPage() {
                             {order.id}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-card-foreground">{order.customerName} <br/><small className="text-muted-foreground">{order.companyName}</small></TableCell>
+                        <TableCell className="text-card-foreground">{order.companyName} <br/><small className="text-muted-foreground">{order.customerName}</small></TableCell>
                         <TableCell>
                           <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
                             {statusInfo.name}
@@ -346,7 +346,7 @@ export default function OrdersPage() {
                 ) : (
                     <TableRow>
                         <TableCell colSpan={7} className="text-center py-12 h-[300px]">
-                            <Image src="https://placehold.co/240x180.png" alt="No orders" data-ai-hint="empty state document" width={180} height={135} className="mx-auto rounded-md opacity-60 mb-4" />
+                            <Image src="https://placehold.co/180x135.png" alt="No orders" data-ai-hint="empty document" width={180} height={135} className="mx-auto rounded-md opacity-60 mb-4" />
                             <p className="text-lg text-muted-foreground font-medium">
                               {searchTerm ? "No orders match your search." : "No orders found."}
                             </p>

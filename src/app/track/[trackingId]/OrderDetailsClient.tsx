@@ -72,7 +72,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
     }
     setIsSubmittingComment(true);
     const result = await submitCommentAction(order.id, {
-        userName: `${order.customerName} (Client)`, 
+        userName: `${order.companyName} (Client)`, // Use company name
         text: newComment,
         isInternal: false, 
     });
@@ -100,7 +100,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
             <div>
               <CardTitle className="text-2xl sm:text-3xl md:text-4xl font-semibold text-card-foreground">Order ID: <span className="text-primary font-bold">{order.id}</span></CardTitle>
               <CardDescription className="text-md text-muted-foreground mt-1 sm:mt-1.5">
-                Tracking information for {order.customerName}
+                Tracking information for {order.companyName}
               </CardDescription>
             </div>
           </div>
@@ -125,15 +125,15 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
             <h3 className="text-xl font-semibold mb-4 sm:mb-5 text-foreground">Order Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-4 sm:gap-y-5 text-sm sm:text-base">
               <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
-                <UserCircle className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
-                <div>
-                  <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Customer</span> {order.customerName}
-                </div>
-              </div>
-              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
                 <Building className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
                 <div>
                   <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Company</span> {order.companyName}
+                </div>
+              </div>
+              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
+                <UserCircle className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
+                <div>
+                  <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Contact Person</span> {order.customerName}
                 </div>
               </div>
                <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 md:col-span-2">
@@ -238,7 +238,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
             ))}
             {publicComments.length === 0 && (
                 <div className="text-center py-8 sm:py-10">
-                  <Image src="https://placehold.co/200x150.png?text=No+Comments" alt="No comments yet" data-ai-hint="empty message" width={150} height={112} className="mx-auto rounded-lg opacity-50 shadow-sm" />
+                  <Image src="https://placehold.co/150x112.png" alt="No comments yet" data-ai-hint="empty message" width={150} height={112} className="mx-auto rounded-lg opacity-50 shadow-sm" />
                   <p className="mt-4 sm:mt-5 text-muted-foreground text-md sm:text-lg">No public comments yet.</p>
                   <p className="text-xs sm:text-sm text-muted-foreground">Be the first to add one using the form below!</p>
                 </div>
@@ -277,7 +277,3 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
     </main>
   );
 }
-
-    
-
-    

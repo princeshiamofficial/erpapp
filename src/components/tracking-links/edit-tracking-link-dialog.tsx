@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react'; // Added useMemo
+import React, { useState, useEffect, useMemo } from 'react'; 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -96,7 +96,7 @@ export function EditTrackingLinkDialog({
       <DialogContent className="sm:max-w-lg p-6">
         <DialogHeader>
           <DialogTitle>Edit Tracking Link: {trackingLink.id}</DialogTitle>
-          <DialogDescription>Order for: {trackingLink.customerName} ({trackingLink.companyName})</DialogDescription>
+          <DialogDescription>Order for: {trackingLink.companyName} (Contact: {trackingLink.customerName || 'N/A'})</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -165,4 +165,3 @@ export function EditTrackingLinkDialog({
     </Dialog>
   );
 }
-

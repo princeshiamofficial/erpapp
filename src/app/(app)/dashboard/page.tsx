@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks, Edit, PackageCheck, Truck, TrendingDown, Minus, RefreshCw } from 'lucide-react';
+import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks, Edit, PackageCheck, Truck, TrendingDown, Minus, RefreshCw, Loader2 } from 'lucide-react';
 import { formatDistanceToNow, startOfMonth, endOfMonth, isWithinInterval, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
@@ -59,9 +59,6 @@ const DEFAULT_GLOBAL_TARGETS_STATE: GlobalSalesTargets = {
   globalWeeklyOrderTarget: 0,
 };
 
-// These will be replaced by actual calculations
-// let MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM = 0;
-// let MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 0;
 
 const getProgressColorClass = (percentage: number): string => {
   if (percentage < 0) percentage = 0;
@@ -87,8 +84,9 @@ export default function DashboardPage() {
   const [isLoadingActiveOrders, setIsLoadingActiveOrders] = useState(true);
   const [activeOrdersPercentageChange, setActiveOrdersPercentageChange] = useState<number | null>(null);
   
-  const [monthlyDeliveriesCount, setMonthlyDeliveriesCount] = useState<number | null>(null);
-  const [isLoadingMonthlyDeliveries, setIsLoadingMonthlyDeliveries] = useState(true);
+  const [monthlyOrdersCreatedCount, setMonthlyOrdersCreatedCount] = useState<number | null>(null);
+  const [isLoadingMonthlyOrdersCreated, setIsLoadingMonthlyOrdersCreated] = useState(true);
+
 
   const [weeklyDeliveriesCount, setWeeklyDeliveriesCount] = useState<number | null>(null);
   const [isLoadingWeeklyDeliveries, setIsLoadingWeeklyDeliveries] = useState(true);
@@ -123,7 +121,7 @@ export default function DashboardPage() {
     setIsLoadingActivities(true);
     setIsLoadingActiveOrders(true);
     setActiveOrdersPercentageChange(null);
-    setIsLoadingMonthlyDeliveries(true);
+    setIsLoadingMonthlyOrdersCreated(true);
     setIsLoadingWeeklyDeliveries(true);
 
     try {
@@ -145,7 +143,7 @@ export default function DashboardPage() {
           type: 'order_created',
           orderId: order.id,
           title: `New Order: ${order.id}`,
-          details: `For ${order.customerName}`,
+          details: `For ${order.companyName}`,
           userName: order.crmUserName,
           timestamp: order.createdAt,
         });
@@ -178,6 +176,7 @@ export default function DashboardPage() {
         }
 
         if (!drAssignedForThisOrder && order.designerRepresentativeName) {
+            // Try to find a "Ready for Design" status log, assuming DR is assigned around that time.
             const readyForDesignLog = order.statusHistory.find(log => statusMap.get(log.status)?.toLowerCase() === 'ready for design');
             activities.push({
               id: `dr-assigned-${order.id}-fallback`,
@@ -185,8 +184,8 @@ export default function DashboardPage() {
               orderId: order.id,
               title: `Designer Assigned: ${order.id}`,
               details: `${order.designerRepresentativeName} assigned.`,
-              userName: readyForDesignLog?.changedByUserName || order.crmUserName, 
-              timestamp: readyForDesignLog?.timestamp || order.createdAt, 
+              userName: readyForDesignLog?.changedByUserName || order.crmUserName, // Fallback to CRM user if no specific log
+              timestamp: readyForDesignLog?.timestamp || order.createdAt, // Fallback to order creation time
             });
         }
 
@@ -231,7 +230,7 @@ export default function DashboardPage() {
       if (deliveredStatusId || cancelledStatusId) {
           fetchedOrders.forEach(order => {
               if (currentUser.role === 'CRM' && order.crmUserId !== currentUser.id) {
-                  return; // Skip if CRM and order doesn't belong to them
+                  return; 
               }
 
               const orderCreatedAt = new Date(order.createdAt);
@@ -272,29 +271,33 @@ export default function DashboardPage() {
       }
 
 
-      // Calculate Monthly and Weekly Deliveries (System-wide for Admins, CRM-specific for CRMs)
-      // Calculate CRM-specific monthly and weekly completed orders
+      // Calculate Monthly Orders Created & Weekly Deliveries
       if (deliveredStatusId) {
         const monthStart = startOfMonth(now);
         const monthEnd = endOfMonth(now);
         const weekStart = startOfWeek(now, { weekStartsOn: 1 }); 
         const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
         
-        let deliveriesThisMonth = 0;
+        let ordersCreatedThisMonth = 0;
         let deliveriesThisWeek = 0;
         let crmMonthCompleted = 0;
         let crmWeekCompleted = 0;
 
         fetchedOrders.forEach(order => {
-          const isOrderDeliveredThisMonth = order.statusHistory.some(
-            log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: monthStart, end: monthEnd })
-          );
+          const isOrderCreatedThisMonth = isWithinInterval(parseISO(order.createdAt), { start: monthStart, end: monthEnd });
           const isOrderDeliveredThisWeek = order.statusHistory.some(
             log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: weekStart, end: weekEnd })
           );
+          const isOrderDeliveredThisMonth = order.statusHistory.some(
+            log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: monthStart, end: monthEnd })
+          );
+
+
+          if (isOrderCreatedThisMonth) {
+            ordersCreatedThisMonth++;
+          }
 
           if (isOrderDeliveredThisMonth) {
-            deliveriesThisMonth++;
             if (currentUser.role === 'CRM' && order.crmUserId === currentUser.id) {
               crmMonthCompleted++;
             }
@@ -306,13 +309,13 @@ export default function DashboardPage() {
             }
           }
         });
-        setMonthlyDeliveriesCount(deliveriesThisMonth);
+        setMonthlyOrdersCreatedCount(ordersCreatedThisMonth);
         setWeeklyDeliveriesCount(deliveriesThisWeek);
         setCrmMonthlyOrdersCompleted(crmMonthCompleted);
         setCrmWeeklyOrdersCompleted(crmWeekCompleted);
 
       } else {
-        setMonthlyDeliveriesCount(0); 
+        setMonthlyOrdersCreatedCount(0); 
         setWeeklyDeliveriesCount(0);
         setCrmMonthlyOrdersCompleted(0);
         setCrmWeeklyOrdersCompleted(0);
@@ -324,14 +327,14 @@ export default function DashboardPage() {
       toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive" });
       setActiveOrdersCount(0); 
       setActiveOrdersPercentageChange(0);
-      setMonthlyDeliveriesCount(0);
+      setMonthlyOrdersCreatedCount(0);
       setWeeklyDeliveriesCount(0);
       setCrmMonthlyOrdersCompleted(0);
       setCrmWeeklyOrdersCompleted(0);
     } finally {
       setIsLoadingActivities(false);
       setIsLoadingActiveOrders(false);
-      setIsLoadingMonthlyDeliveries(false);
+      setIsLoadingMonthlyOrdersCreated(false);
       setIsLoadingWeeklyDeliveries(false);
     }
   }, [currentUser, toast]);
@@ -351,7 +354,8 @@ export default function DashboardPage() {
   const handleSetGlobalMonthlyOrderTarget = async (newTarget: number) => {
     const result = await setGlobalTargetAction('monthly', newTarget);
     if (result.success) {
-      toast({ title: "Success", description: `Global monthly target updated to ${newTarget}.` });
+      // Toast moved to here from dialog for better feedback on actual save
+      toast({ title: "Global Monthly Target Updated", description: `Global monthly order target set to ${newTarget} orders.`, });
       await fetchGlobalTargets(); 
     } else {
       toast({ title: "Error", description: result.error || "Could not update global monthly target.", variant: "destructive" });
@@ -362,7 +366,7 @@ export default function DashboardPage() {
   const handleSetGlobalWeeklyOrderTarget = async (newTarget: number) => {
     const result = await setGlobalTargetAction('weekly', newTarget);
      if (result.success) {
-      toast({ title: "Success", description: `Global weekly target updated to ${newTarget}.` });
+      toast({ title: "Global Weekly Target Updated", description: `Global weekly order target set to ${newTarget} orders.`, });
       await fetchGlobalTargets(); 
     } else {
       toast({ title: "Error", description: result.error || "Could not update global weekly target.", variant: "destructive" });
@@ -413,14 +417,14 @@ export default function DashboardPage() {
   if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
     summaryCards.push(
       {
-        title: "Monthly Deliveries",
-        value: isLoadingMonthlyDeliveries || monthlyDeliveriesCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : monthlyDeliveriesCount.toString(),
-        icon: PackageCheck,
+        title: "Monthly Orders Created",
+        value: isLoadingMonthlyOrdersCreated || monthlyOrdersCreatedCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : monthlyOrdersCreatedCount.toString(),
+        icon: Package, // Changed from PackageCheck to general Package for "created"
         changeText: "This month",
-        dataAiHint: "delivery truck calendar",
+        dataAiHint: "calendar orders",
         type: "info" as const,
         trend: "neutral" as "up" | "down" | "neutral",
-        href: "/deliveries/monthly",
+        href: "/orders/monthly", // Link to new monthly orders created page
       },
       {
         title: "Weekly Deliveries",
@@ -483,15 +487,15 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8 p-1 sm:p-0">
-      <Card className="shadow-2xl bg-gradient-to-br from-primary/80 via-primary to-orange-600 dark:from-primary/70 dark:via-primary dark:to-orange-500 border-none text-primary-foreground rounded-xl overflow-hidden transform hover:shadow-primary/20 transition-shadow duration-300">
+      <Card className="shadow-2xl bg-gradient-to-br from-primary/90 via-primary to-orange-500 dark:from-primary/80 dark:via-primary dark:to-orange-400 border-none text-primary-foreground rounded-xl overflow-hidden transform hover:shadow-primary/30 transition-shadow duration-300">
         <CardHeader className="pb-4 p-6 sm:p-8">
           <CardTitle className="text-3xl sm:text-4xl font-bold">Welcome, {currentUser.name.split(' ')[0]}!</CardTitle>
-          <CardDescription className="text-md sm:text-lg text-primary-foreground/80">
+          <CardDescription className="text-md sm:text-lg text-primary-foreground/90">
             You are logged in as <span className="font-semibold text-white">{currentUser.role.replace(/_/g, ' ')}</span>. Here's your workspace overview.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6 sm:p-8 pt-0">
-          <p className="text-primary-foreground/90 max-w-3xl text-sm sm:text-md">This is your central hub for managing orders and tracking progress. Use the sidebar to navigate and stay on top of your tasks and key metrics.</p>
+          <p className="text-primary-foreground/95 max-w-3xl text-sm sm:text-md">This is your central hub for managing orders and tracking progress. Use the sidebar to navigate and stay on top of your tasks and key metrics.</p>
         </CardContent>
       </Card>
 
@@ -611,7 +615,7 @@ export default function DashboardPage() {
               <CardTitle className="text-lg sm:text-xl font-semibold text-foreground">Recent Activity</CardTitle>
               <CardDescription className="text-muted-foreground text-xs sm:text-sm">Latest order updates and comments.</CardDescription>
             </div>
-            <Button variant="ghost" size="icon" onClick={fetchDashboardData} className="text-muted-foreground hover:text-primary h-8 w-8 sm:h-9 sm:w-9" title="Refresh Activity">
+            <Button variant="ghost" size="icon" onClick={fetchDashboardData} className="text-muted-foreground hover:text-primary h-8 w-8 sm:h-9 sm:w-9" title="Refresh Activity" disabled={isLoadingActivities}>
                 <RefreshCw className={`h-4 w-4 sm:h-5 sm:w-5 ${isLoadingActivities ? 'animate-spin': ''}`} />
             </Button>
           </CardHeader>
@@ -673,12 +677,3 @@ export default function DashboardPage() {
   );
 }
     
-
-    
-
-    
-
-
-
-
-

@@ -36,28 +36,26 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setAddress('');
     setPhoneNumber('');
     setService('');
-    setInitialStatusId(''); // Always reset to empty to allow useEffect to set default
+    setInitialStatusId(''); 
   };
 
   useEffect(() => {
     if (isOpen) {
       if (availableStatuses.length > 0) {
         const isCurrentStatusInAvailableList = availableStatuses.some(s => s.id === initialStatusId);
-        // Set a default if no status is selected, or if the selected one is no longer valid
         if (!initialStatusId || !isCurrentStatusInAvailableList) {
           const orderSubmittedStatus = availableStatuses.find(s => s.name === "Order Submitted");
           if (orderSubmittedStatus) {
             setInitialStatusId(orderSubmittedStatus.id);
-          } else if (availableStatuses[0]) { // Fallback to the first available status
+          } else if (availableStatuses[0]) { 
             setInitialStatusId(availableStatuses[0].id);
           }
         }
       } else {
-        // No statuses available (yet), ensure initialStatusId is cleared
         setInitialStatusId('');
       }
     }
-  }, [isOpen, availableStatuses, initialStatusId]); // initialStatusId is needed to re-validate if it's changed externally or becomes invalid
+  }, [isOpen, availableStatuses, initialStatusId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +67,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       });
       return;
     }
-    if (availableStatuses.length === 0 && !initialStatusId) { // Check specifically if no status could be chosen
+    if (availableStatuses.length === 0 && !initialStatusId) { 
       toast({
         title: "Status Error",
         description: "No order statuses are available or selected. Cannot create order.",
@@ -99,10 +97,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     } else {
       toast({
         title: "Order Created",
-        description: `Order ${result.id} for ${customerName} has been created.`,
+        description: `Order ${result.id} for ${companyName} has been created.`, // Use companyName
       });
       onOrderCreated();
-      setIsOpen(false); // This will trigger resetForm via onOpenChange
+      setIsOpen(false); 
     }
     setIsSubmitting(false);
   };
@@ -115,17 +113,17 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
-          <DialogDescription>Enter customer and order details.</DialogDescription>
+          <DialogDescription>Enter company, contact, and order details.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="space-y-1">
-              <Label htmlFor="customerName">Customer Name</Label>
-              <Input id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} required />
-            </div>
-            <div className="space-y-1">
               <Label htmlFor="companyName">Company Name</Label>
               <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="customerName">Contact Person Name</Label>
+              <Input id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} required />
             </div>
             <div className="space-y-1">
               <Label htmlFor="address">Address</Label>

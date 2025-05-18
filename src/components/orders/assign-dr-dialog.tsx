@@ -17,7 +17,7 @@ interface AssignDrDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   order: TrackingLink;
   currentUser: User;
-  allStatuses: CustomStatus[]; // This list is now ensured to be fresh by OrdersPage
+  allStatuses: CustomStatus[]; 
   onDrAssigned: (updatedOrder: TrackingLink) => void;
 }
 
@@ -46,12 +46,12 @@ export function AssignDrDialog({ isOpen, onOpenChange, order, currentUser, allSt
           console.error(`AssignDrDialog: CRITICAL - Status with ID '${TARGET_READY_FOR_DESIGN_STATUS_ID}' NOT FOUND in allStatuses prop. AllStatuses:`, JSON.stringify(allStatuses.map(s=>({id: s.id, name: s.name}))));
           toast({
               title: "Configuration Alert!",
-              description: `The required system status 'Ready for Design' (ID: ${TARGET_READY_FOR_DESIGN_STATUS_ID}) is missing or not configured correctly. Please contact an administrator. Assignment is not possible.`,
+              description: `The required system status '${TARGET_READY_FOR_DESIGN_STATUS_ID}' (typically 'Ready for Design') is missing or not configured correctly. Please contact an administrator. Assignment is not possible.`,
               variant: "destructive",
               duration: 15000, 
           });
       } else {
-        console.log("AssignDrDialog: Found 'Ready for Design' status object (ID: 'ready-for-design'):", JSON.stringify(foundStatus));
+        console.log("AssignDrDialog: Found target status object (ID: 'ready-for-design'):", JSON.stringify(foundStatus));
       }
       setReadyForDesignStatus(foundStatus);
 
@@ -116,7 +116,7 @@ export function AssignDrDialog({ isOpen, onOpenChange, order, currentUser, allSt
         <DialogHeader>
           <DialogTitle>Assign Designer Representative</DialogTitle>
           <DialogDescription>
-            Assign order <span className="font-semibold">{order.id}</span> for <span className="font-semibold">{order.customerName}</span> to a Designer Representative.
+            Assign order <span className="font-semibold">{order.id}</span> for <span className="font-semibold">{order.companyName}</span> to a Designer Representative.
             The order status will be set to: <span className="font-semibold">{currentReadyForDesignStatusName}</span>.
           </DialogDescription>
         </DialogHeader>
@@ -126,7 +126,7 @@ export function AssignDrDialog({ isOpen, onOpenChange, order, currentUser, allSt
                 <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
                 <div>
                     <p className="font-semibold">Configuration Alert!</p>
-                    <p>The system status identified by ID <code className="font-mono bg-destructive/20 px-1 py-0.5 rounded text-xs">{TARGET_READY_FOR_DESIGN_STATUS_ID}</code> (typically named 'Ready for Design') is missing or not configured correctly. DR assignment is not possible until this is resolved by an administrator.</p>
+                    <p>The system status identified by ID <code className="font-mono bg-destructive/20 px-1 py-0.5 rounded text-xs">{TARGET_READY_FOR_DESIGN_STATUS_ID}</code> (typically 'Ready for Design') is missing or not configured correctly. DR assignment is not possible until this is resolved by an administrator.</p>
                 </div>
             </div>
         )}
@@ -168,4 +168,3 @@ export function AssignDrDialog({ isOpen, onOpenChange, order, currentUser, allSt
     </Dialog>
   );
 }
-

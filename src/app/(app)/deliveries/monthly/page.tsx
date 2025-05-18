@@ -125,7 +125,7 @@ export default function MonthlyDeliveriesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-6">Order ID</TableHead>
-                  <TableHead>Customer</TableHead>
+                  <TableHead>Company</TableHead>
                   <TableHead>Current Status</TableHead>
                   <TableHead>Delivered On</TableHead>
                   <TableHead>CRM Contact</TableHead>
@@ -155,7 +155,7 @@ export default function MonthlyDeliveriesPage() {
                             {order.id}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-card-foreground">{order.customerName}</TableCell>
+                        <TableCell className="text-card-foreground">{order.companyName} <br/><small className="text-muted-foreground">{order.customerName}</small></TableCell>
                         <TableCell>
                           <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
                             {statusInfo.name}
