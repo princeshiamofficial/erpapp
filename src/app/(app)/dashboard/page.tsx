@@ -59,8 +59,9 @@ const DEFAULT_GLOBAL_TARGETS_STATE: GlobalSalesTargets = {
   globalWeeklyOrderTarget: 0,
 };
 
-const MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM = 0;
-const MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 0;
+// These will be replaced by actual calculations
+// let MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM = 0;
+// let MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM = 0;
 
 const getProgressColorClass = (percentage: number): string => {
   if (percentage < 0) percentage = 0;
@@ -92,11 +93,14 @@ export default function DashboardPage() {
   const [weeklyDeliveriesCount, setWeeklyDeliveriesCount] = useState<number | null>(null);
   const [isLoadingWeeklyDeliveries, setIsLoadingWeeklyDeliveries] = useState(true);
 
-
   const [globalTargets, setGlobalTargets] = useState<GlobalSalesTargets>(DEFAULT_GLOBAL_TARGETS_STATE);
 
   const [isSetGlobalMonthlyTargetDialogOpen, setIsSetGlobalMonthlyTargetDialogOpen] = useState(false);
   const [isSetGlobalWeeklyTargetDialogOpen, setIsSetGlobalWeeklyTargetDialogOpen] = useState(false);
+
+  const [crmMonthlyOrdersCompleted, setCrmMonthlyOrdersCompleted] = useState(0);
+  const [crmWeeklyOrdersCompleted, setCrmWeeklyOrdersCompleted] = useState(0);
+
 
   const fetchGlobalTargets = useCallback(async () => {
     setIsLoadingGlobalTargets(true);
@@ -114,6 +118,8 @@ export default function DashboardPage() {
 
 
   const fetchDashboardData = useCallback(async () => {
+    if (!currentUser) return;
+
     setIsLoadingActivities(true);
     setIsLoadingActiveOrders(true);
     setActiveOrdersPercentageChange(null);
@@ -172,8 +178,6 @@ export default function DashboardPage() {
         }
 
         if (!drAssignedForThisOrder && order.designerRepresentativeName) {
-            // Fallback to create DR assigned activity if not found in detailed log notes
-            // (e.g. if notes structure changed or DR was assigned via a different process)
             const readyForDesignLog = order.statusHistory.find(log => statusMap.get(log.status)?.toLowerCase() === 'ready for design');
             activities.push({
               id: `dr-assigned-${order.id}-fallback`,
@@ -181,13 +185,12 @@ export default function DashboardPage() {
               orderId: order.id,
               title: `Designer Assigned: ${order.id}`,
               details: `${order.designerRepresentativeName} assigned.`,
-              userName: readyForDesignLog?.changedByUserName || order.crmUserName, // Best guess for who assigned
-              timestamp: readyForDesignLog?.timestamp || order.createdAt, // Best guess for timestamp
+              userName: readyForDesignLog?.changedByUserName || order.crmUserName, 
+              timestamp: readyForDesignLog?.timestamp || order.createdAt, 
             });
         }
 
         for (const comment of order.comments) {
-          // Filter out internal comments unless current user is an admin or part of the order
           if (comment.isInternal && currentUser?.role !== 'ADMIN' && currentUser?.role !== 'SYSTEM_ADMIN' && currentUser?.id !== order.crmUserId && currentUser?.id !== order.designerRepresentativeId) {
             continue;
           }
@@ -210,25 +213,31 @@ export default function DashboardPage() {
       const deliveredStatusId = allStatuses.find(s => s.name.toLowerCase() === 'delivered')?.id;
       const cancelledStatusId = allStatuses.find(s => s.name.toLowerCase() === 'cancelled')?.id;
       
-      const currentActiveOrders = fetchedOrders.filter(order => {
+      let currentActiveOrdersAll = fetchedOrders.filter(order => {
         return order.currentStatus !== deliveredStatusId && order.currentStatus !== cancelledStatusId;
       });
-      setActiveOrdersCount(currentActiveOrders.length);
+
+      let ordersForActiveCount = currentActiveOrdersAll;
+      if (currentUser.role === 'CRM') {
+        ordersForActiveCount = currentActiveOrdersAll.filter(order => order.crmUserId === currentUser.id);
+      }
+      setActiveOrdersCount(ordersForActiveCount.length);
 
       // Calculate Active Orders Percentage Change (Month over Month)
       const now = new Date();
       const startOfCurrentMonth = startOfMonth(now);
-      // const startOfPreviousMonth = startOfMonth(addMonths(now, -1));
-      // const endOfPreviousMonth = endOfMonth(addMonths(now, -1));
       let activeOrdersAtStartOfMonthCount = 0;
 
-      if (deliveredStatusId || cancelledStatusId) { // Only proceed if terminal statuses are defined
+      if (deliveredStatusId || cancelledStatusId) {
           fetchedOrders.forEach(order => {
+              if (currentUser.role === 'CRM' && order.crmUserId !== currentUser.id) {
+                  return; // Skip if CRM and order doesn't belong to them
+              }
+
               const orderCreatedAt = new Date(order.createdAt);
-              if (orderCreatedAt < startOfCurrentMonth) { // Order existed before this month
-                  // Find the last status of the order *before* the start of the current month
+              if (orderCreatedAt < startOfCurrentMonth) { 
                   let lastKnownStatusBeforeThisMonth = '';
-                  let mostRecentLogTimestamp = new Date(0); // Initialize to a very old date
+                  let mostRecentLogTimestamp = new Date(0); 
 
                   order.statusHistory.forEach(log => {
                       const logTimestamp = new Date(log.timestamp);
@@ -240,13 +249,11 @@ export default function DashboardPage() {
                       }
                   });
                   
-                  // If a status log exists before this month, check if it was active
                   if (lastKnownStatusBeforeThisMonth) {
                       if (lastKnownStatusBeforeThisMonth !== deliveredStatusId && lastKnownStatusBeforeThisMonth !== cancelledStatusId) {
                           activeOrdersAtStartOfMonthCount++;
                       }
-                  } else { // No status logs before this month, but order was created before this month
-                         // Check if initial status was terminal (unlikely for old orders, but good practice)
+                  } else { 
                          const initialStatusWasTerminal = order.statusHistory[0]?.status === deliveredStatusId || order.statusHistory[0]?.status === cancelledStatusId;
                          if (!initialStatusWasTerminal) {
                             activeOrdersAtStartOfMonthCount++;
@@ -257,55 +264,70 @@ export default function DashboardPage() {
       }
       
       if (activeOrdersAtStartOfMonthCount > 0) {
-          setActiveOrdersPercentageChange(((currentActiveOrders.length - activeOrdersAtStartOfMonthCount) / activeOrdersAtStartOfMonthCount) * 100);
-      } else if (currentActiveOrders.length > 0) { // No active orders at start of month, but active orders now
-          setActiveOrdersPercentageChange(100); // Infinite increase, show as 100%
-      } else { // No active orders at start and no active orders now
+          setActiveOrdersPercentageChange(((ordersForActiveCount.length - activeOrdersAtStartOfMonthCount) / activeOrdersAtStartOfMonthCount) * 100);
+      } else if (ordersForActiveCount.length > 0) { 
+          setActiveOrdersPercentageChange(100); 
+      } else { 
           setActiveOrdersPercentageChange(0); 
       }
 
 
-      // Calculate Monthly and Weekly Deliveries
+      // Calculate Monthly and Weekly Deliveries (System-wide for Admins, CRM-specific for CRMs)
+      // Calculate CRM-specific monthly and weekly completed orders
       if (deliveredStatusId) {
         const monthStart = startOfMonth(now);
         const monthEnd = endOfMonth(now);
-        const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday as start of the week
+        const weekStart = startOfWeek(now, { weekStartsOn: 1 }); 
         const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
         
         let deliveriesThisMonth = 0;
         let deliveriesThisWeek = 0;
+        let crmMonthCompleted = 0;
+        let crmWeekCompleted = 0;
 
         fetchedOrders.forEach(order => {
-          // Check if order was delivered this month
-          const deliveredLogMonth = order.statusHistory.find(
+          const isOrderDeliveredThisMonth = order.statusHistory.some(
             log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: monthStart, end: monthEnd })
           );
-          if (deliveredLogMonth) {
-            deliveriesThisMonth++;
-          }
-          // Check if order was delivered this week
-          const deliveredLogWeek = order.statusHistory.find(
+          const isOrderDeliveredThisWeek = order.statusHistory.some(
             log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: weekStart, end: weekEnd })
           );
-          if (deliveredLogWeek) {
+
+          if (isOrderDeliveredThisMonth) {
+            deliveriesThisMonth++;
+            if (currentUser.role === 'CRM' && order.crmUserId === currentUser.id) {
+              crmMonthCompleted++;
+            }
+          }
+          if (isOrderDeliveredThisWeek) {
             deliveriesThisWeek++;
+            if (currentUser.role === 'CRM' && order.crmUserId === currentUser.id) {
+              crmWeekCompleted++;
+            }
           }
         });
         setMonthlyDeliveriesCount(deliveriesThisMonth);
         setWeeklyDeliveriesCount(deliveriesThisWeek);
+        setCrmMonthlyOrdersCompleted(crmMonthCompleted);
+        setCrmWeeklyOrdersCompleted(crmWeekCompleted);
+
       } else {
-        setMonthlyDeliveriesCount(0); // If 'Delivered' status doesn't exist
+        setMonthlyDeliveriesCount(0); 
         setWeeklyDeliveriesCount(0);
+        setCrmMonthlyOrdersCompleted(0);
+        setCrmWeeklyOrdersCompleted(0);
       }
 
 
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
       toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive" });
-      setActiveOrdersCount(0); // Reset counts on error
+      setActiveOrdersCount(0); 
       setActiveOrdersPercentageChange(0);
       setMonthlyDeliveriesCount(0);
       setWeeklyDeliveriesCount(0);
+      setCrmMonthlyOrdersCompleted(0);
+      setCrmWeeklyOrdersCompleted(0);
     } finally {
       setIsLoadingActivities(false);
       setIsLoadingActiveOrders(false);
@@ -317,7 +339,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     setIsClient(true);
-    fetchGlobalTargets(); // Fetch global targets for everyone
+    fetchGlobalTargets(); 
     if (currentUser) {
         fetchDashboardData();
     }
@@ -326,16 +348,11 @@ export default function DashboardPage() {
   const crmEffectiveMonthlyTarget = currentUser?.role === 'CRM' ? (currentUser.monthlyOrderTarget ?? globalTargets.globalMonthlyOrderTarget) : globalTargets.globalMonthlyOrderTarget;
   const crmEffectiveWeeklyTarget = currentUser?.role === 'CRM' ? (currentUser.weeklyOrderTarget ?? globalTargets.globalWeeklyOrderTarget) : globalTargets.globalWeeklyOrderTarget;
 
-  // TODO: Replace these MOCK values with actual calculations based on fetched orders
-  const crmMonthlyOrdersCompleted = currentUser?.role === 'CRM' ? MOCK_CURRENT_MONTHLY_ORDERS_COMPLETED_FOR_CRM : 0;
-  const crmWeeklyOrdersCompleted = currentUser?.role === 'CRM' ? MOCK_CURRENT_WEEKLY_ORDERS_COMPLETED_FOR_CRM : 0;
-
-
   const handleSetGlobalMonthlyOrderTarget = async (newTarget: number) => {
     const result = await setGlobalTargetAction('monthly', newTarget);
     if (result.success) {
       toast({ title: "Success", description: `Global monthly target updated to ${newTarget}.` });
-      await fetchGlobalTargets(); // Re-fetch global targets to update the UI
+      await fetchGlobalTargets(); 
     } else {
       toast({ title: "Error", description: result.error || "Could not update global monthly target.", variant: "destructive" });
     }
@@ -346,14 +363,13 @@ export default function DashboardPage() {
     const result = await setGlobalTargetAction('weekly', newTarget);
      if (result.success) {
       toast({ title: "Success", description: `Global weekly target updated to ${newTarget}.` });
-      await fetchGlobalTargets(); // Re-fetch global targets
+      await fetchGlobalTargets(); 
     } else {
       toast({ title: "Error", description: result.error || "Could not update global weekly target.", variant: "destructive" });
     }
     setIsSetGlobalWeeklyTargetDialogOpen(false);
   };
 
-  // Skeleton UI while loading
   if (!currentUser) {
     return (
       <div className="space-y-8 p-4 sm:p-6 lg:p-8">
@@ -366,16 +382,16 @@ export default function DashboardPage() {
     );
   }
 
-  // Define summary cards based on user role
   let summaryCards: any[] = [];
+  
   let activeOrderCardData: any = {
-      title: "Active Orders",
+      title: currentUser.role === 'CRM' ? "Your Active Orders" : "Active Orders",
       value: isLoadingActiveOrders || activeOrdersCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : activeOrdersCount.toString(),
       icon: Package,
       dataAiHint: "delivery boxes",
       type: "info" as const,
       href: "/active-orders",
-      trend: "neutral" as "up" | "down" | "neutral", // Default to neutral until calculation
+      trend: "neutral" as "up" | "down" | "neutral", 
       changeText: isLoadingActiveOrders || activeOrdersPercentageChange === null ? <Skeleton className="h-4 w-24" /> : ''
   };
 
@@ -391,7 +407,6 @@ export default function DashboardPage() {
           activeOrderCardData.changeText = `0% change this month`;
       }
   }
-
   summaryCards.push(activeOrderCardData);
 
 
@@ -419,24 +434,23 @@ export default function DashboardPage() {
       }
     );
   } else if (currentUser.role === 'CRM') {
-    // CRM-specific cards (Order Targets)
     summaryCards.push(
       {
         title: "Your Monthly Orders",
-        value: `${crmMonthlyOrdersCompleted} / ${crmEffectiveMonthlyTarget} Orders`, // Placeholder data
+        value: `${crmMonthlyOrdersCompleted} / ${crmEffectiveMonthlyTarget} Orders`, 
         icon: CalendarDays,
-        currentCompleted: crmMonthlyOrdersCompleted, // For progress bar
-        targetValue: crmEffectiveMonthlyTarget,       // For progress bar
+        currentCompleted: crmMonthlyOrdersCompleted, 
+        targetValue: crmEffectiveMonthlyTarget,       
         dataAiHint: "monthly calendar checklist",
         type: "progress" as const,
         isLoadingTargetValue: isLoadingGlobalTargets && currentUser.monthlyOrderTarget === undefined,
       },
       {
         title: "Your Weekly Orders",
-        value: `${crmWeeklyOrdersCompleted} / ${crmEffectiveWeeklyTarget} Orders`, // Placeholder data
+        value: `${crmWeeklyOrdersCompleted} / ${crmEffectiveWeeklyTarget} Orders`, 
         icon: CalendarClock,
-        currentCompleted: crmWeeklyOrdersCompleted, // For progress bar
-        targetValue: crmEffectiveWeeklyTarget,       // For progress bar
+        currentCompleted: crmWeeklyOrdersCompleted, 
+        targetValue: crmEffectiveWeeklyTarget,       
         dataAiHint: "weekly calendar tasks",
         type: "progress" as const,
         isLoadingTargetValue: isLoadingGlobalTargets && currentUser.weeklyOrderTarget === undefined,
@@ -444,7 +458,6 @@ export default function DashboardPage() {
     );
   }
 
-  // Add Global Target cards for Admin/System Admin
   if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
     summaryCards.push(
         {
@@ -470,7 +483,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 sm:space-y-8 p-1 sm:p-0">
-      {/* Welcome Card */}
       <Card className="shadow-2xl bg-gradient-to-br from-primary/80 via-primary to-orange-600 dark:from-primary/70 dark:via-primary dark:to-orange-500 border-none text-primary-foreground rounded-xl overflow-hidden transform hover:shadow-primary/20 transition-shadow duration-300">
         <CardHeader className="pb-4 p-6 sm:p-8">
           <CardTitle className="text-3xl sm:text-4xl font-bold">Welcome, {currentUser.name.split(' ')[0]}!</CardTitle>
@@ -483,12 +495,10 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Summary Cards Grid */}
       <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
         {summaryCards.map((card) => {
           let progressPercentage = 0;
           let progressColorClass = '';
-          // Determine targetValue and currentCompleted for progress cards
           const targetValue = card.type === 'progress' ? card.targetValue : (card.type === 'target' ? (card.actionType === 'global_weekly' ? globalTargets.globalWeeklyOrderTarget : globalTargets.globalMonthlyOrderTarget) : undefined);
           const currentCompleted = card.type === 'progress' ? card.currentCompleted : undefined;
 
@@ -527,7 +537,6 @@ export default function DashboardPage() {
                   ) : (
                     <div className="text-3xl sm:text-4xl font-bold text-card-foreground">{card.value}</div>
                   )}
-                  {/* Trend/Info Text */}
                   {card.type === 'info' && card.changeText && (
                     <div className={`text-xs sm:text-sm flex items-center mt-1 ${
                       card.trend === 'up' ? 'text-green-600 dark:text-green-400' :
@@ -536,7 +545,7 @@ export default function DashboardPage() {
                     }`}>
                       {card.trend === 'up' && <TrendingUp className="h-4 w-4 mr-1"/>}
                       {card.trend === 'down' && <TrendingDown className="h-4 w-4 mr-1"/>}
-                      {card.trend === 'neutral' && card.title !== "Active Orders" && card.changeText !== "0% change this month" && <Minus className="h-4 w-4 mr-1"/> }
+                      {card.trend === 'neutral' && card.title !== "Active Orders" && card.title !== "Your Active Orders" && card.changeText !== "0% change this month" && <Minus className="h-4 w-4 mr-1"/> }
                       {card.changeText}
                     </div>
                   )}
@@ -546,7 +555,6 @@ export default function DashboardPage() {
                      </p>
                    )}
                 </div>
-                {/* Edit Global Target Button */}
                 {(card.type === 'target' && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) && (
                   <Button
                     variant="outline"
@@ -565,7 +573,6 @@ export default function DashboardPage() {
             </Card>
           );
           
-          // Wrap card with Link if href is present
           if (card.href) {
             return (
               <Link href={card.href} key={card.title} className="block hover:no-underline focus:outline-none focus:ring-2 focus:ring-primary rounded-xl h-full">
@@ -578,7 +585,6 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {/* Dialogs for Setting Global Targets (Only for Admin/System Admin) */}
       {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && isClient && (
         <>
           <SetSalesTargetDialog
@@ -598,7 +604,6 @@ export default function DashboardPage() {
         </>
       )}
 
-      {/* Recent Activity Card */}
       <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
         <Card className="shadow-lg bg-card h-[350px] sm:h-[400px] transition-shadow duration-300 ease-in-out hover:shadow-xl rounded-xl border-border/30">
           <CardHeader className="border-b border-border/50 py-3 sm:py-4 px-4 sm:px-6 flex flex-row items-center justify-between">
@@ -672,6 +677,7 @@ export default function DashboardPage() {
     
 
     
+
 
 
 
