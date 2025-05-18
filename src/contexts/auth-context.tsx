@@ -41,30 +41,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const firestoreUser = await getUserById(currentUser.id);
         if (firestoreUser) {
           if (firestoreUser.isBanned) {
-            console.log("AuthContext: Current user has been banned. Showing suspension dialog.");
+            console.log("AuthContext: Current user has been banned during session. Showing suspension dialog.");
             setIsSuspendedDialogOpen(true); // Trigger dialog, logout will be handled by dialog
+            // Do not clear currentUser here; dialog needs it to know who is being suspended
           } else {
-            console.log("AuthContext: Fetched latest user data (not banned). Updating local state.");
+            // User is not banned, update local state if different
             const { password, ...userToStore } = firestoreUser;
-            setCurrentUser(userToStore as User);
-            localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
+            if (JSON.stringify(currentUser) !== JSON.stringify(userToStore)) {
+              console.log("AuthContext: Fetched latest user data (not banned). Updating local state.");
+              setCurrentUser(userToStore as User);
+              localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
+            }
             if (isSuspendedDialogOpen) { // If dialog was open but user is no longer banned
               setIsSuspendedDialogOpen(false);
             }
           }
         } else {
-          console.log("AuthContext: Current user not found in Firestore during refresh. Showing suspension dialog to force logout.");
+          console.log("AuthContext: Current user not found in Firestore during refresh (e.g., deleted). Showing suspension dialog to force logout.");
           setIsSuspendedDialogOpen(true); // User deleted, trigger dialog then logout
         }
       } catch (error) {
         console.error("AuthContext: Error refreshing current user data:", error);
-        // Optionally, could trigger logout here too if refresh consistently fails
+        // Potentially trigger logout if refresh fails consistently
         // setIsSuspendedDialogOpen(true); 
       }
-    } else {
-      // console.log("AuthContext: refreshCurrentUser - No current user to refresh.");
     }
-  }, [currentUser?.id, isSuspendedDialogOpen]);
+  }, [currentUser, isSuspendedDialogOpen, logout]); // Added logout as a dependency for safety, though it's stable
 
 
   useEffect(() => {
@@ -72,7 +74,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       console.log("AuthContext: Initializing auth...");
       try {
         await seedInitialAdminUser();
-        console.log("AuthContext: Initial admin user seeding/validation attempted.");
+        console.log("AuthContext: Initial admin user seeding/validation complete.");
 
         const storedUserJson = localStorage.getItem('colorhut-user');
         if (storedUserJson) {
@@ -84,10 +86,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               const firestoreUser = await getUserById(storedUser.id);
               if (firestoreUser) {
                 if (firestoreUser.isBanned) {
-                  console.log("AuthContext: Stored user is banned. Clearing localStorage and will not set as current user.");
+                  console.log("AuthContext: Stored user is banned. Clearing localStorage. User must log in again (and will be blocked).");
                   localStorage.removeItem('colorhut-user');
-                  // Do not set currentUser, let login proceed if they try again
-                  // No need to show dialog here as it's on initial load, they just won't be logged in.
+                  // Do not set currentUser, they need to re-attempt login and be blocked there
                 } else {
                   console.log("AuthContext: Stored user validated against Firestore and not banned. Setting current user.");
                   const { password, ...userToStore } = firestoreUser;
@@ -117,17 +118,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     initializeAuth();
-  }, []); // Run once on mount
+  }, []); 
 
   useEffect(() => {
     let intervalId: NodeJS.Timeout | undefined;
     if (currentUser && currentUser.id && !isSuspendedDialogOpen) {
       const CHECK_INTERVAL = 1 * 60 * 1000; // Check every 1 minute
       console.log(`AuthContext: Starting polling for user ${currentUser.id} status. Interval: ${CHECK_INTERVAL}ms`);
-      // refreshCurrentUser(); // Optional: initial check immediately after login or if dialog closes
       intervalId = setInterval(refreshCurrentUser, CHECK_INTERVAL);
-    } else {
-      // console.log("AuthContext: Polling not started or stopped.");
     }
     return () => {
       if (intervalId) {
@@ -135,7 +133,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         clearInterval(intervalId);
       }
     };
-  }, [currentUser?.id, refreshCurrentUser, isSuspendedDialogOpen]);
+  }, [currentUser, refreshCurrentUser, isSuspendedDialogOpen]);
 
 
   const login = async (email: string, pass: string): Promise<boolean> => {
@@ -156,7 +154,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               duration: 7000,
             });
             setIsLoading(false);
-            return false;
+            return false; // Explicitly return false here
           }
           console.log("AuthContext: Password matches and user not banned. Login successful.");
           const { password, ...userToStore } = userFromDb;
@@ -166,7 +164,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setIsLoading(false);
           return true;
         } else {
-          console.log("AuthContext: Password does NOT match.");
+          console.log("AuthContext: Password does NOT match for user:", email);
         }
       } else {
         console.log(`AuthContext: User NOT found in DB for email ${email}.`);
@@ -174,7 +172,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       console.error("AuthContext: Error during login process:", error);
     }
-    
+    // If login fails for any reason other than an explicit banned user return above
+    toast({
+        title: "Login Failed",
+        description: "Invalid email or password. Please try again.",
+        variant: "destructive",
+    });
     setIsLoading(false);
     return false;
   };
