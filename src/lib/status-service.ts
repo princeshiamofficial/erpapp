@@ -5,6 +5,7 @@ import type { CustomStatus } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
 const STATUSES_COLLECTION = 'customOrderStatuses';
+const READY_FOR_DESIGN_STATUS_ID = 'ready-for-design';
 
 const defaultStatusesData: Omit<CustomStatus, 'id' | 'isSystemStatus'>[] = [
   { name: 'Order Submitted', color: '#8B5CF6' },
@@ -12,7 +13,7 @@ const defaultStatusesData: Omit<CustomStatus, 'id' | 'isSystemStatus'>[] = [
   { name: 'Pending Client Approval', color: '#F59E0B' },
   { name: 'Changes Requested', color: '#EF4444' },
   { name: 'Approved for Production', color: '#10B981' },
-  { name: 'Ready for Design', color: '#14B8A6' },
+  { name: 'Ready for Design', color: '#14B8A6' }, // This corresponds to READY_FOR_DESIGN_STATUS_ID
   { name: 'In Production', color: '#0EA5E9' },
   { name: 'Quality Check', color: '#F97316' },
   { name: 'Shipped', color: '#22C55E' },
@@ -21,11 +22,6 @@ const defaultStatusesData: Omit<CustomStatus, 'id' | 'isSystemStatus'>[] = [
   { name: 'On Hold', color: '#A1A1AA' },
 ];
 
-/**
- * Seeds the Firestore database with default custom order statuses if they don't already exist.
- * This function is suitable for server-side execution (e.g., during deployment scripts or initial setup).
- * @returns {Promise<CustomStatus[]>} A promise that resolves with an array of the seeded statuses.
- */
 export const seedDefaultStatuses = async (): Promise<CustomStatus[]> => {
   const statusesRef = collection(db, STATUSES_COLLECTION);
   const batch = writeBatch(db);
@@ -52,20 +48,52 @@ export const seedDefaultStatuses = async (): Promise<CustomStatus[]> => {
   }
 };
 
-/**
- * Fetches all custom order statuses from Firestore.
- * This function is suitable for server-side execution (e.g., in Server Components or API routes).
- * @returns {Promise<CustomStatus[]>} A promise that resolves with an array of custom statuses.
- */
 export const getStatuses = async (): Promise<CustomStatus[]> => {
   const statusesCol = collection(db, STATUSES_COLLECTION);
+  let statuses: CustomStatus[] = [];
   try {
     const snapshot = await getDocs(statusesCol);
     if (snapshot.empty) {
       console.log("No statuses found in Firestore, attempting to seed default statuses.");
-      return await seedDefaultStatuses();
+      statuses = await seedDefaultStatuses();
+    } else {
+      statuses = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as CustomStatus));
     }
-    const statuses = snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as CustomStatus));
+
+    // Ensure 'ready-for-design' status exists, create it if missing (resilience measure)
+    let rfdStatus = statuses.find(s => s.id === READY_FOR_DESIGN_STATUS_ID);
+    if (!rfdStatus) {
+      console.warn(`getStatuses: Critical status '${READY_FOR_DESIGN_STATUS_ID}' not found in fetched list. Attempting to verify/re-create.`);
+      const rfdDocRef = doc(db, STATUSES_COLLECTION, READY_FOR_DESIGN_STATUS_ID);
+      const rfdDocSnap = await getDoc(rfdDocRef);
+      if (!rfdDocSnap.exists()) {
+        console.log(`getStatuses: Document for '${READY_FOR_DESIGN_STATUS_ID}' does not exist. Re-creating it.`);
+        const readyForDesignDefaultData = defaultStatusesData.find(d => d.name === 'Ready for Design');
+        if (readyForDesignDefaultData) {
+          const newRfdStatus: CustomStatus = {
+            id: READY_FOR_DESIGN_STATUS_ID,
+            name: readyForDesignDefaultData.name,
+            color: readyForDesignDefaultData.color,
+            isSystemStatus: true,
+          };
+          await setDoc(rfdDocRef, newRfdStatus);
+          statuses.push(newRfdStatus); // Add to current list
+          console.log(`getStatuses: Successfully re-created status '${READY_FOR_DESIGN_STATUS_ID}'.`);
+        } else {
+          console.error(`getStatuses: Could not find default data for 'Ready for Design' to re-create it.`);
+        }
+      } else {
+         // Document exists but wasn't in the initial getDocs snapshot - unusual, but add it.
+        console.log(`getStatuses: Document for '${READY_FOR_DESIGN_STATUS_ID}' found by direct get. Adding to list.`);
+        const existingRfdData = {id: rfdDocSnap.id, ...rfdDocSnap.data()} as CustomStatus;
+        // Avoid duplicates if it was somehow missed by getDocs but present
+        if(!statuses.some(s => s.id === existingRfdData.id)) {
+            statuses.push(existingRfdData);
+        }
+      }
+    }
+    
+    console.log("getStatuses: Returning status IDs:", statuses.map(s => s.id).join(', '));
     return statuses.sort((a, b) => {
       if (a.isSystemStatus && !b.isSystemStatus) return -1;
       if (!a.isSystemStatus && b.isSystemStatus) return 1;
@@ -77,12 +105,6 @@ export const getStatuses = async (): Promise<CustomStatus[]> => {
   }
 };
 
-/**
- * Fetches a single custom order status by its ID from Firestore.
- * This function is suitable for server-side execution.
- * @param {string} id - The ID of the status to fetch.
- * @returns {Promise<CustomStatus | undefined>} A promise that resolves with the status object or undefined if not found or on error.
- */
 export const getStatusById = async (id: string): Promise<CustomStatus | undefined> => {
   if (!id) return undefined;
   try {
@@ -99,11 +121,6 @@ export const getStatusById = async (id: string): Promise<CustomStatus | undefine
   }
 };
 
-/**
- * Fetches all custom order status names from Firestore.
- * This function is suitable for server-side execution.
- * @returns {Promise<string[]>} A promise that resolves with an array of status names.
- */
 export const getAllStatusNames = async (): Promise<string[]> => {
   try {
     const statuses = await getStatuses();
@@ -114,12 +131,6 @@ export const getAllStatusNames = async (): Promise<string[]> => {
   }
 };
 
-/**
- * Fetches the name of a single custom order status by its ID from Firestore.
- * This function is suitable for server-side execution.
- * @param {string} id - The ID of the status.
- * @returns {Promise<string | null>} A promise that resolves with the status name or null if not found or on error.
- */
 export const getStatusName = async (id: string): Promise<string | null> => {
   if (!id) return null;
   try {
@@ -131,14 +142,6 @@ export const getStatusName = async (id: string): Promise<string | null> => {
   }
 };
 
-
-/**
- * Adds a new custom order status to Firestore.
- * Suitable for server-side execution (e.g., via Server Actions).
- * @param {string} name - The name of the new status.
- * @param {string} color - The color for the new status.
- * @returns {Promise<CustomStatus | null>} A promise that resolves with the new status object or null on error.
- */
 export const addStatus = async (name: string, color: string): Promise<CustomStatus | null> => {
   try {
     const statusesCol = collection(db, STATUSES_COLLECTION);
@@ -168,55 +171,46 @@ export const addStatus = async (name: string, color: string): Promise<CustomStat
   }
 };
 
-/**
- * Updates an existing custom order status in Firestore.
- * Suitable for server-side execution.
- * @param {string} id - The ID of the status to update.
- * @param {string} name - The new name for the status (only if not a system status).
- * @param {string} color - The new color for the status.
- * @returns {Promise<boolean>} A promise that resolves with true on success, false on failure.
- */
 export const updateStatus = async (id: string, name: string, color: string): Promise<boolean> => {
+  console.log(`status-service/updateStatus: Attempting to update status. ID: '${id}', New Name: '${name}', New Color: '${color}'`);
   try {
     const statusDocRef = doc(db, STATUSES_COLLECTION, id);
     const statusSnapshot = await getDoc(statusDocRef);
-    if (!statusSnapshot.exists()) {
-        throw new Error(`Status with ID "${id}" not found for update.`);
-    }
-    const existingStatus = statusSnapshot.data() as CustomStatus;
 
-    const updates: Partial<CustomStatus> = { color }; // Color can always be updated
-    if (!existingStatus.isSystemStatus) {
-      // Only allow name update for non-system statuses
-      if (name !== existingStatus.name) {
-        // Check if the new name already exists (excluding the current document)
-        const q = query(collection(db, STATUSES_COLLECTION), where("name", "==", name));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty && querySnapshot.docs.some(doc => doc.id !== id)) {
-          throw new Error(`Another status with the name "${name}" already exists.`);
-        }
-        updates.name = name;
-      }
-    } else if (name !== existingStatus.name) {
-        // If it's a system status and name is attempted to be changed, prevent
-        console.warn(`Attempted to change name of system status ${id}. Only color can be updated.`);
-        // No error thrown here, just won't update the name
+    if (!statusSnapshot.exists()) {
+      console.error(`status-service/updateStatus: Status with ID "${id}" not found for update.`);
+      throw new Error(`Status with ID "${id}" not found for update.`);
     }
+    const existingStatus = { id: statusSnapshot.id, ...statusSnapshot.data() } as CustomStatus;
+    console.log('status-service/updateStatus: Existing status data:', JSON.stringify(existingStatus));
+
+    const updates: Partial<CustomStatus> = {};
+    let changed = false;
+    if (color !== existingStatus.color) {
+        updates.color = color;
+        changed = true;
+    }
+    if (name !== existingStatus.name) {
+        updates.name = name;
+        changed = true;
+    }
+    
+    if (!changed) {
+        console.log('status-service/updateStatus: No actual changes to name or color. Skipping update.');
+        return true;
+    }
+
+    console.log('status-service/updateStatus: Applying updates to Firestore:', JSON.stringify(updates), 'to document ID:', id);
     await updateDoc(statusDocRef, updates);
+    console.log('status-service/updateStatus: Update successful for ID:', id);
     return true;
   } catch (error) {
-    console.error("Error updating status in Firestore:", error);
-    if (error instanceof Error) throw error; // Re-throw specific errors for Server Action to catch
+    console.error(`status-service/updateStatus: Error updating status ID '${id}':`, error);
+    if (error instanceof Error) throw error;
     return false;
   }
 };
 
-/**
- * Deletes a custom order status from Firestore.
- * Suitable for server-side execution.
- * @param {string} id - The ID of the status to delete.
- * @returns {Promise<boolean>} A promise that resolves with true on success, false on failure.
- */
 export const deleteStatus = async (id: string): Promise<boolean> => {
   try {
     const statusDocRef = doc(db, STATUSES_COLLECTION, id);
@@ -232,30 +226,26 @@ export const deleteStatus = async (id: string): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error("Error deleting status from Firestore:", error);
-    if (error instanceof Error) throw error; // Re-throw specific errors for Server Action to catch
+    if (error instanceof Error) throw error;
     return false;
   }
 };
 
-/**
- * Calculates a contrasting text color (black or white) for a given background hex color.
- * @param {string} hexColor - The background color in hex format (e.g., "#RRGGBB").
- * @returns {string} "#000000" (black) or "#FFFFFF" (white).
- */
 export const getContrastTextColor = (hexColor: string): string => {
-  if (!hexColor || typeof hexColor !== 'string' || hexColor.length < 4) return '#000000';
   try {
+    if (!hexColor || typeof hexColor !== 'string' || hexColor.length < 4) return '#000000';
+    
     let rStr = '0', gStr = '0', bStr = '0';
-    if (hexColor.length === 4) { // Short hex #RGB
+    if (hexColor.length === 4) { 
       rStr = hexColor[1] + hexColor[1];
       gStr = hexColor[2] + hexColor[2];
       bStr = hexColor[3] + hexColor[3];
-    } else if (hexColor.length === 7) { // Full hex #RRGGBB
+    } else if (hexColor.length === 7) { 
       rStr = hexColor.slice(1, 3);
       gStr = hexColor.slice(3, 5);
       bStr = hexColor.slice(5, 7);
     } else {
-        return '#000000'; // Invalid length
+        return '#000000'; 
     }
     
     const r = parseInt(rStr, 16);
@@ -264,7 +254,6 @@ export const getContrastTextColor = (hexColor: string): string => {
 
     if (isNaN(r) || isNaN(g) || isNaN(b)) return '#000000';
     
-    // Formula for perceived brightness (YIQ)
     const yiq = (r * 299 + g * 587 + b * 114) / 1000;
     return yiq >= 128 ? '#000000' : '#FFFFFF';
   } catch (e) {
