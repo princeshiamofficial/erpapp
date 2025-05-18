@@ -114,7 +114,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     } else {
       toast({
         title: "Order Created",
-        description: `Order ${result.id} for ${companyName} has been created.`,
+        description: `Order ${result.id} for ${result.companyName} has been created.`,
       });
       onOrderCreated();
       setIsOpen(false); 
@@ -127,7 +127,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg md:max-w-xl"> {/* Increased max-width for more space */}
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
           <DialogDescription>Enter company and order details.</DialogDescription>
@@ -147,21 +147,21 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               <Input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="Optional" />
             </div>
             
-            <div className="space-y-1">
-              <Label htmlFor="model">Model</Label>
-              <Select value={model} onValueChange={setModel}>
-                <SelectTrigger id="model">
-                  <SelectValue placeholder="Select model (Optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {modelOptions.map(option => (
-                    <SelectItem key={option} value={option}>{option}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="flex flex-col sm:flex-row gap-4">
+              <div className="space-y-1 flex-1">
+                <Label htmlFor="model">Model</Label>
+                <Select value={model} onValueChange={setModel}>
+                  <SelectTrigger id="model">
+                    <SelectValue placeholder="Select model (Optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {modelOptions.map(option => (
+                      <SelectItem key={option} value={option}>{option}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-1 flex-1">
                 <Label htmlFor="quantity">Quantity</Label>
                 <Input id="quantity" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="e.g., 100 (Optional)" min="1" />
