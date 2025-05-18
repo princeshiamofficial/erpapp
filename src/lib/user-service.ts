@@ -2,7 +2,7 @@
 'use server'; // Potentially for some functions if called directly from Server Components/Actions
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc, query, where, orderBy, runTransaction } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, where, orderBy, runTransaction } from 'firebase/firestore';
 import type { User, UserRole } from '@/types';
 
 const USERS_COLLECTION = 'users';
@@ -19,7 +19,7 @@ const getRolePrefix = (role: UserRole): string => {
       return 'SysAdmin-';
     default:
       // Fallback, though all roles should be covered
-      return 'User-'; 
+      return 'User-';
   }
 };
 
@@ -31,7 +31,7 @@ export const addUser = async (userData: Omit<User, 'id'>): Promise<User> => {
   // Query for users with the same role prefix to determine the next sequential number
   const q = query(usersCol, where('id', '>=', rolePrefix), where('id', '<', rolePrefix + '\uffff'), orderBy('id', 'desc'));
   const roleUsersSnapshot = await getDocs(q);
-  
+
   let maxUserNumber = 0;
   roleUsersSnapshot.forEach(docSnap => {
     const docId = docSnap.id;
@@ -131,9 +131,9 @@ export const updateUserAvatarInFirestore = async (userId: string, avatarUrl: str
 export const updateUserTargetsInFirestore = async (userId: string, monthlyTarget: number | null, weeklyTarget: number | null): Promise<boolean> => {
   try {
     const userDoc = doc(db, USERS_COLLECTION, userId);
-    await updateDoc(userDoc, { 
-      monthlyOrderTarget: monthlyTarget === undefined ? null : monthlyTarget, 
-      weeklyOrderTarget: weeklyTarget === undefined ? null : weeklyTarget 
+    await updateDoc(userDoc, {
+      monthlyOrderTarget: monthlyTarget === undefined ? null : monthlyTarget,
+      weeklyOrderTarget: weeklyTarget === undefined ? null : weeklyTarget
     });
     return true;
   } catch (error) {
@@ -154,30 +154,41 @@ export const deleteUserFromFirestore = async (userId: string): Promise<boolean> 
   }
 };
 
-// Helper to seed initial admin if users collection is empty
+// Helper to seed initial admin or ensure admin@colorhut.dev is SYSTEM_ADMIN
 export const seedInitialAdminUser = async () => {
   const usersRef = collection(db, USERS_COLLECTION);
-  const q = query(usersRef, where("email", "==", "admin@colorhut.dev"));
-  
+  const adminEmail = "admin@colorhut.dev";
+  const q = query(usersRef, where("email", "==", adminEmail));
+
   try {
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
-      console.log("No admin user found, seeding initial admin...");
-      // The addUser function will now assign an ID like 'Admin-001' or 'SysAdmin-001' based on role
-      await addUser({ 
-        name: 'Default Admin', 
-        email: 'admin@colorhut.dev', 
-        role: 'SYSTEM_ADMIN', // Defaulting to SYSTEM_ADMIN for initial setup power
-        companyName: 'Color Hut Inc.', 
-        password: "password", 
-        avatarUrl: null, 
-        monthlyOrderTarget: 0, 
-        weeklyOrderTarget: 0 
+      console.log(`No user found with email ${adminEmail}, seeding initial System Admin...`);
+      await addUser({
+        name: 'Default Admin',
+        email: adminEmail,
+        role: 'SYSTEM_ADMIN',
+        companyName: 'Color Hut Inc.',
+        password: "password",
+        avatarUrl: null,
+        monthlyOrderTarget: 0,
+        weeklyOrderTarget: 0
       });
-      console.log("Default Admin user (SYSTEM_ADMIN) seeded into Firestore with role-specific ID.");
+      console.log(`Default System Admin user (${adminEmail}) seeded into Firestore.`);
+    } else {
+      // User exists, check and update role if necessary
+      const userDoc = snapshot.docs[0];
+      const userData = userDoc.data() as User;
+      if (userData.role !== 'SYSTEM_ADMIN') {
+        console.log(`User ${adminEmail} found with role ${userData.role}. Updating to SYSTEM_ADMIN.`);
+        const userDocRef = doc(db, USERS_COLLECTION, userDoc.id);
+        await updateDoc(userDocRef, { role: 'SYSTEM_ADMIN' });
+        console.log(`User ${adminEmail} role updated to SYSTEM_ADMIN.`);
+      } else {
+        console.log(`User ${adminEmail} already exists with SYSTEM_ADMIN role.`);
+      }
     }
   } catch (error) {
-    console.error("Error checking or seeding admin user:", error);
+    console.error("Error checking or seeding/updating admin user:", error);
   }
 };
-
