@@ -37,11 +37,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     return [];
   }
 
-  type SeedOrderBase = Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments' | 'currentStatus' | 'viewCount' | 'service' | 'model' | 'quantity' | 'lamination'> & {
-    phoneNumber?: string;
-    model: string; 
-    quantity: number; 
-    lamination: string; 
+  type SeedOrderBase = Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments' | 'currentStatus' | 'viewCount' | 'service'> & {
     designerRepresentativeId?: string | null;
     designerRepresentativeName?: string | null;
   };
@@ -52,9 +48,9 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       companyName: "Tech Solutions Inc.",
       address: "123 Tech Ave, Silicon Valley, CA 94001",
       phoneNumber: "555-0101",
-      model: "Premium Matte", // Default value
-      quantity: 500, // Default value
-      lamination: "Soft Touch", // Default value
+      model: "Premium Matte",
+      quantity: 500,
+      lamination: "Soft Touch",
       crmUserId: "SysAdmin-001",
       crmUserName: "Default Admin",
       isPublic: true,
@@ -66,9 +62,9 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       companyName: "GreenScape Ltd.",
       address: "456 Green Rd, Meadowville, TX 75001",
       phoneNumber: "555-0102",
-      model: "Eco-Friendly Recycled", // Default value
-      quantity: 1000, // Default value
-      lamination: "None", // Default value
+      model: "Eco-Friendly Recycled",
+      quantity: 1000,
+      lamination: "None",
       crmUserId: "SysAdmin-001",
       crmUserName: "Default Admin",
       isPublic: false,
@@ -98,7 +94,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       { id: uuidv4(), userName: "Tech Solutions Inc. (Client)", text: "Looking forward to the first demo!", timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), isInternal: false }
     ],
     service: null, 
-    phoneNumber: firstOrderBaseData.phoneNumber || null,
+    phoneNumber: firstOrderBaseData.phoneNumber,
     model: firstOrderBaseData.model,
     quantity: firstOrderBaseData.quantity,
     lamination: firstOrderBaseData.lamination,
@@ -126,7 +122,7 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     ],
     comments: [],
     service: null, 
-    phoneNumber: secondOrderBaseData.phoneNumber || null,
+    phoneNumber: secondOrderBaseData.phoneNumber,
     model: secondOrderBaseData.model,
     quantity: secondOrderBaseData.quantity,
     lamination: secondOrderBaseData.lamination,
@@ -184,7 +180,7 @@ export const addOrder = async (orderData: {
   customerName: string;
   companyName: string;
   address: string;
-  phoneNumber?: string;
+  phoneNumber: string; 
   model: string; 
   quantity: number; 
   lamination: string; 
@@ -238,7 +234,7 @@ export const addOrder = async (orderData: {
       customerName: orderData.customerName,
       companyName: orderData.companyName,
       address: orderData.address,
-      phoneNumber: orderData.phoneNumber || null,
+      phoneNumber: orderData.phoneNumber,
       service: null, 
       model: orderData.model,
       quantity: orderData.quantity,
@@ -277,7 +273,7 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     }
     if (Object.keys(sanitizedUpdates).length === 0) {
       console.log(`No updates to apply for order ${id}.`);
-      return true; // No changes needed, consider it a success
+      return true; 
     }
     await updateDoc(orderDoc, sanitizedUpdates);
     return true;
@@ -317,7 +313,8 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
         userName: commentData.userName,
         text: commentData.text,
         isInternal: commentData.isInternal,
-        ...(commentData.userId && { userId: commentData.userId }), // Conditionally add userId
+        // Conditionally add userId only if it's provided and not undefined
+        ...(commentData.userId !== undefined && { userId: commentData.userId }),
       };
 
       const updatedComments = [...(order.comments || []), newComment];
@@ -349,9 +346,9 @@ export const incrementOrderViewCount = async (orderId: string): Promise<boolean>
       transaction.update(orderRef, { viewCount: currentViewCount + 1 });
     });
     return true;
-  } catch (error) {
+  } catch (error)  {
     console.error(`Error incrementing view count for order ${orderId}:`, error);
     return false;
   }
 };
-
+    

@@ -64,10 +64,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!companyName || !address || !initialStatusId || !model || !quantity || !lamination) {
+    if (!companyName || !address || !phoneNumber || !model || !quantity || !lamination || !initialStatusId) {
       toast({
         title: "Validation Error",
-        description: "Company name, address, model, quantity, lamination, and initial status are required.",
+        description: "Company name, address, phone number, model, quantity, lamination, and initial status are required.",
         variant: "destructive",
       });
       return;
@@ -95,7 +95,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     const orderData = {
       companyName,
       address,
-      phoneNumber: phoneNumber || undefined,
+      phoneNumber,
       model,
       quantity: parsedQuantity,
       lamination,
@@ -126,7 +126,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl"> {/* Increased max-width for more space */}
+      <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
           <DialogDescription>Enter company and order details.</DialogDescription>
@@ -143,13 +143,13 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             </div>
             <div className="space-y-1">
               <Label htmlFor="phoneNumber">Phone Number</Label>
-              <Input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="Optional" />
+              <Input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
             </div>
             
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="space-y-1 flex-1">
                 <Label htmlFor="model">Model</Label>
-                <Select value={model} onValueChange={setModel} >
+                <Select value={model} onValueChange={setModel} required>
                   <SelectTrigger id="model">
                     <SelectValue placeholder="Select model" />
                   </SelectTrigger>
@@ -168,7 +168,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
               <div className="space-y-1 flex-1">
                 <Label htmlFor="lamination">Lamination</Label>
-                <Select value={lamination} onValueChange={setLamination}>
+                <Select value={lamination} onValueChange={setLamination} required>
                   <SelectTrigger id="lamination">
                     <SelectValue placeholder="Select lamination" />
                   </SelectTrigger>
@@ -208,3 +208,4 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   );
 }
 
+    

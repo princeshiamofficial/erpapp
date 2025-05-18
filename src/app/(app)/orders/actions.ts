@@ -10,10 +10,10 @@ export async function createOrderAction(
   data: {
     companyName: string;
     address: string;
-    phoneNumber?: string;
-    model: string; // No longer optional
-    quantity: number; // No longer optional
-    lamination: string; // No longer optional
+    phoneNumber: string; 
+    model: string; 
+    quantity: number; 
+    lamination: string; 
     initialStatusId: string;
   },
   currentUser: User
@@ -24,8 +24,8 @@ export async function createOrderAction(
   if (!data.initialStatusId) {
     return { error: "Initial status ID is required." };
   }
-  if (!data.model || !data.quantity || !data.lamination) {
-    return { error: "Model, quantity, and lamination are required."}
+  if (!data.model || !data.quantity || !data.lamination || !data.phoneNumber) {
+    return { error: "Model, quantity, lamination, and phone number are required."}
   }
 
   try {
@@ -144,3 +144,4 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
   }
 }
 
+    

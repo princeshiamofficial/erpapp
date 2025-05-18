@@ -142,14 +142,14 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
                   <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Address</span> {order.address}
                 </div>
               </div>
-              {order.phoneNumber && (
-                <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
-                  <Phone className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
-                  <div>
-                    <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Phone</span> {order.phoneNumber}
-                  </div>
+              
+              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
+                <Phone className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
+                <div>
+                  <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Phone</span> {order.phoneNumber}
                 </div>
-              )}
+              </div>
+              
               <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
                 <Layers className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
                 <div>
@@ -288,3 +288,4 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
   );
 }
 
+    

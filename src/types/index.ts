@@ -36,11 +36,11 @@ export interface TrackingLink {
   customerName: string; // This is now effectively the contact person name
   companyName: string;
   address: string;
-  phoneNumber?: string | null; // Allow null
+  phoneNumber: string; 
   service?: string | null; // Allow null - Will be phased out by new fields
-  model: string; // Was: model?: string | null;
-  quantity: number; // Was: quantity?: number | null;
-  lamination: string; // Was: lamination?: string | null;
+  model: string; 
+  quantity: number; 
+  lamination: string; 
   crmUserId: string;
   crmUserName: string;
   designerRepresentativeId?: string | null; // Allow null
