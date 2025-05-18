@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback, FormEvent } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send, MessageSquare, Package, UserCircle, CalendarDays, Clock, CheckCircle, Info, Phone, Briefcase, Building, MapPin, UserCheck } from "lucide-react";
+import { Send, MessageSquare, Package, UserCircle, CalendarDays, Clock, CheckCircle, Info, Phone, Briefcase, Building, MapPin, UserCheck, Layers, Star, Tag } from "lucide-react";
 import Image from "next/image";
 import type { Comment, CustomStatus, TrackingLink } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -72,7 +72,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
     }
     setIsSubmittingComment(true);
     const result = await submitCommentAction(order.id, {
-        userName: `${order.companyName} (Client)`, // Use company name
+        userName: `${order.companyName} (Client)`, 
         text: newComment,
         isInternal: false, 
     });
@@ -150,11 +150,27 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
                   </div>
                 </div>
               )}
-              {order.service && (
+              {order.model && (
                 <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
-                  <Briefcase className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
+                  <Layers className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
                   <div>
-                    <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Service</span> {order.service}
+                    <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Model</span> {order.model}
+                  </div>
+                </div>
+              )}
+              {order.quantity && (
+                <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
+                  <Tag className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
+                  <div>
+                    <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Quantity</span> {order.quantity}
+                  </div>
+                </div>
+              )}
+              {order.lamination && (
+                <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
+                  <Star className="h-5 w-5 sm:h-6 sm:w-6 mt-0.5 text-primary flex-shrink-0" />
+                  <div>
+                    <span className="font-medium text-foreground block text-xs sm:text-sm text-muted-foreground">Lamination</span> {order.lamination}
                   </div>
                 </div>
               )}

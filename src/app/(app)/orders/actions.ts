@@ -8,11 +8,13 @@ import { v4 as uuidv4 } from 'uuid';
 
 export async function createOrderAction(
   data: {
-    // customerName is now derived from companyName or made optional in the data model
     companyName: string;
     address: string;
     phoneNumber?: string;
-    service?: string;
+    // service?: string; // Replaced
+    model?: string;
+    quantity?: number;
+    lamination?: string;
     initialStatusId: string;
   },
   currentUser: User
@@ -26,11 +28,14 @@ export async function createOrderAction(
 
   try {
     const newOrderData = {
-      customerName: data.companyName, // Using company name as customer name for now. Consider making customerName truly optional if needed.
+      customerName: data.companyName, 
       companyName: data.companyName,
       address: data.address,
       phoneNumber: data.phoneNumber,
-      service: data.service,
+      // service: data.service, // Replaced
+      model: data.model,
+      quantity: data.quantity,
+      lamination: data.lamination,
       crmUserId: currentUser.id,
       crmUserName: currentUser.name,
       initialStatusId: data.initialStatusId,
@@ -65,7 +70,7 @@ export async function assignDrToOrderAction(
     console.error("assignDrToOrderAction: Ready for Design status ID is required.");
     return { error: "Ready for Design status ID is required." };
   }
-  if (readyForDesignStatusId !== 'ready-for-design') {
+   if (readyForDesignStatusId !== 'ready-for-design') {
     console.error("assignDrToOrderAction: Invalid readyForDesignStatusId received. Expected 'ready-for-design', got:", readyForDesignStatusId);
     return { error: "Invalid target status ID for DR assignment. Configuration error." };
   }

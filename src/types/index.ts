@@ -19,6 +19,7 @@ export interface CustomStatus {
   name: string;
   color: string;
   isSystemStatus?: boolean; 
+  isVisible?: boolean;
 }
 
 export interface OrderLogEntry {
@@ -32,11 +33,14 @@ export interface OrderLogEntry {
 
 export interface TrackingLink {
   id: string; 
-  customerName: string;
+  customerName: string; // This is now effectively the contact person name
   companyName: string;
   address: string;
   phoneNumber?: string | null; // Allow null
-  service?: string | null; // Allow null
+  service?: string | null; // Allow null - Will be phased out by new fields
+  model?: string | null; // New field
+  quantity?: number | null; // New field
+  lamination?: string | null; // New field
   crmUserId: string;
   crmUserName: string;
   designerRepresentativeId?: string | null; // Allow null

@@ -19,12 +19,18 @@ interface CreateOrderDialogProps {
   children: React.ReactNode;
 }
 
+const modelOptions = ["Standard Gloss", "Premium Matte", "Eco-Friendly Recycled", "Luxury Silk"];
+const laminationOptions = ["None", "Glossy", "Matte", "Soft Touch", "Anti-Scuff Matte"];
+
 export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children }: CreateOrderDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [companyName, setCompanyName] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [service, setService] = useState('');
+  // const [service, setService] = useState(''); // Replaced by new fields
+  const [model, setModel] = useState<string>('');
+  const [quantity, setQuantity] = useState<string>('');
+  const [lamination, setLamination] = useState<string>('');
   const [initialStatusId, setInitialStatusId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -33,7 +39,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setCompanyName('');
     setAddress('');
     setPhoneNumber('');
-    setService('');
+    // setService(''); // Replaced
+    setModel('');
+    setQuantity('');
+    setLamination('');
     setInitialStatusId(''); 
   };
 
@@ -42,7 +51,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       if (availableStatuses.length > 0) {
         const isCurrentStatusInAvailableList = availableStatuses.some(s => s.id === initialStatusId);
         if (!initialStatusId || !isCurrentStatusInAvailableList) {
-          const orderSubmittedStatus = availableStatuses.find(s => s.name === "Order Submitted");
+          const orderSubmittedStatus = availableStatuses.find(s => s.id === "order-submitted"); // Use ID
           if (orderSubmittedStatus) {
             setInitialStatusId(orderSubmittedStatus.id);
           } else if (availableStatuses[0]) { 
@@ -57,7 +66,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Customer name is no longer required
     if (!companyName || !address || !initialStatusId) {
       toast({
         title: "Validation Error",
@@ -66,6 +74,16 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       });
       return;
     }
+    const parsedQuantity = quantity ? parseInt(quantity, 10) : undefined;
+    if (quantity && (isNaN(parsedQuantity) || parsedQuantity < 1)) {
+        toast({
+            title: "Validation Error",
+            description: "Quantity must be a positive number.",
+            variant: "destructive",
+        });
+        return;
+    }
+
     if (availableStatuses.length === 0 && !initialStatusId) { 
       toast({
         title: "Status Error",
@@ -77,11 +95,14 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setIsSubmitting(true);
 
     const orderData = {
-      customerName: companyName, // Using companyName also as customerName for now or making it optional in backend
+      customerName: companyName, 
       companyName,
       address,
       phoneNumber: phoneNumber || undefined,
-      service: service || undefined,
+      // service: service || undefined, // Replaced
+      model: model || undefined,
+      quantity: parsedQuantity,
+      lamination: lamination || undefined,
       initialStatusId,
     };
 
@@ -120,12 +141,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               <Label htmlFor="companyName">Company Name</Label>
               <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required />
             </div>
-            {/* Removed Contact Person Name Field
-            <div className="space-y-1">
-              <Label htmlFor="customerName">Contact Person Name</Label>
-              <Input id="customerName" value={customerName} onChange={(e) => setCustomerName(e.target.value)} required />
-            </div>
-            */}
             <div className="space-y-1">
               <Label htmlFor="address">Address</Label>
               <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required />
@@ -134,10 +149,40 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               <Label htmlFor="phoneNumber">Phone Number</Label>
               <Input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} placeholder="Optional" />
             </div>
+            
             <div className="space-y-1">
-              <Label htmlFor="service">Service</Label>
-              <Input id="service" value={service} onChange={(e) => setService(e.target.value)} placeholder="e.g., Custom Design, Printing (Optional)" />
+              <Label htmlFor="model">Model</Label>
+              <Select value={model} onValueChange={setModel}>
+                <SelectTrigger id="model">
+                  <SelectValue placeholder="Select model (Optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {modelOptions.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="quantity">Quantity</Label>
+              <Input id="quantity" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="e.g., 100 (Optional)" min="1" />
+            </div>
+
+            <div className="space-y-1">
+              <Label htmlFor="lamination">Lamination</Label>
+              <Select value={lamination} onValueChange={setLamination}>
+                <SelectTrigger id="lamination">
+                  <SelectValue placeholder="Select lamination (Optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {laminationOptions.map(option => (
+                    <SelectItem key={option} value={option}>{option}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-1">
               <Label htmlFor="initialStatus">Initial Status</Label>
               <Select value={initialStatusId} onValueChange={setInitialStatusId} required>

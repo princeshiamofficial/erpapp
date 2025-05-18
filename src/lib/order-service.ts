@@ -39,9 +39,11 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     return [];
   }
 
-  type SeedOrderBase = Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments' | 'currentStatus' | 'viewCount'> & {
+  type SeedOrderBase = Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments' | 'currentStatus' | 'viewCount' | 'service'> & {
     phoneNumber?: string;
-    service?: string;
+    model?: string;
+    quantity?: number;
+    lamination?: string;
     designerRepresentativeId?: string | null;
     designerRepresentativeName?: string | null;
   };
@@ -52,8 +54,10 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       companyName: "Tech Solutions Inc.",
       address: "123 Tech Ave, Silicon Valley, CA 94001",
       phoneNumber: "555-0101",
-      service: "Custom Software Development",
-      crmUserId: "SysAdmin-001",
+      model: "Premium Matte",
+      quantity: 500,
+      lamination: "Soft Touch",
+      crmUserId: "SysAdmin-001", // Assuming a SysAdmin creates these for demo
       crmUserName: "Default Admin",
       isPublic: true,
       designerRepresentativeId: null,
@@ -64,7 +68,9 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       companyName: "GreenScape Ltd.",
       address: "456 Green Rd, Meadowville, TX 75001",
       phoneNumber: "555-0102",
-      service: "Landscaping Design Package",
+      model: "Eco-Friendly Recycled",
+      quantity: 1000,
+      lamination: "None",
       crmUserId: "SysAdmin-001",
       crmUserName: "Default Admin",
       isPublic: false,
@@ -93,8 +99,11 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     comments: [
       { id: uuidv4(), userName: "Tech Solutions Inc. (Client)", text: "Looking forward to the first demo!", timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), isInternal: false }
     ],
+    service: null, // explicitly setting old field to null
     phoneNumber: firstOrderBaseData.phoneNumber || null,
-    service: firstOrderBaseData.service || null,
+    model: firstOrderBaseData.model || null,
+    quantity: firstOrderBaseData.quantity || null,
+    lamination: firstOrderBaseData.lamination || null,
     designerRepresentativeId: firstOrderBaseData.designerRepresentativeId || null,
     designerRepresentativeName: firstOrderBaseData.designerRepresentativeName || null,
     viewCount: 0,
@@ -118,8 +127,11 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       { id: uuidv4(), timestamp: dateOneDayAgo.toISOString(), status: pendingApprovalStatus.id, changedByUserId: "DR-001", changedByUserName: "Carol DesignerRep", notes: "Initial designs submitted for client approval." }
     ],
     comments: [],
+    service: null, // explicitly setting old field to null
     phoneNumber: secondOrderBaseData.phoneNumber || null,
-    service: secondOrderBaseData.service || null,
+    model: secondOrderBaseData.model || null,
+    quantity: secondOrderBaseData.quantity || null,
+    lamination: secondOrderBaseData.lamination || null,
     designerRepresentativeId: "DR-001",
     designerRepresentativeName: "Carol DesignerRep",
     viewCount: 0,
@@ -175,7 +187,10 @@ export const addOrder = async (orderData: {
   companyName: string;
   address: string;
   phoneNumber?: string;
-  service?: string;
+  // service?: string; // Replaced
+  model?: string;
+  quantity?: number;
+  lamination?: string;
   initialStatusId: string;
   crmUserId: string;
   crmUserName: string
@@ -227,7 +242,10 @@ export const addOrder = async (orderData: {
       companyName: orderData.companyName,
       address: orderData.address,
       phoneNumber: orderData.phoneNumber || null,
-      service: orderData.service || null,
+      service: null, // Old field, explicitly set to null
+      model: orderData.model || null,
+      quantity: orderData.quantity || null,
+      lamination: orderData.lamination || null,
       crmUserId: orderData.crmUserId,
       crmUserName: orderData.crmUserName,
       createdAt: transactionTime,
@@ -257,6 +275,7 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     for (const key in updates) {
       if (Object.prototype.hasOwnProperty.call(updates, key)) {
         const value = updates[key as keyof TrackingLink];
+        // Ensure undefined values are converted to null for Firestore compatibility
         sanitizedUpdates[key] = value === undefined ? null : value;
       }
     }
@@ -300,7 +319,8 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
         isInternal: commentData.isInternal,
       };
 
-      if (commentData.userId !== undefined && commentData.userId !== null) {
+      // Only include userId if it's actually provided and not undefined/null
+      if (commentData.userId) {
         newComment.userId = commentData.userId;
       }
 
