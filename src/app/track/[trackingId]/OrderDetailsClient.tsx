@@ -12,7 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Label } from '@/components/ui/label';
 import { getContrastTextColor } from '@/lib/status-service';
-import { submitCommentAction, submitClientReplyAction, toggleOrderCommentReactionAction } from './actions';
+import { submitCommentAction, submitClientReplyAction, toggleOrderCommentReactionAction, submitReplyAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/auth-context'; 
@@ -125,7 +125,23 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
       return;
     }
     setIsSubmittingReply(true);
-    const result = await submitClientReplyAction(order.id, parentCommentId, currentReplyText, currentUser);
+    let result;
+
+    if (currentUser) { // Authenticated user is replying
+      result = await submitReplyAction(
+        order.id,
+        parentCommentId,
+        currentReplyText,
+        false, // isInternal: public replies are not internal
+        currentUser
+      );
+    } else { // Unauthenticated client is replying
+      result = await submitClientReplyAction(
+        order.id,
+        parentCommentId,
+        currentReplyText
+      );
+    }
     setIsSubmittingReply(false);
 
     if ('error' in result) {
@@ -197,17 +213,17 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
 
 
   const renderComment = (comment: Comment, isReply = false, parentCommentId?: string) => {
-    if (comment.isInternal && !currentUser) return null; // Hide internal comments from clients
-    if (comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role)) return null; // Hide from clients even if some user type is logged in
+    if (comment.isInternal && !currentUser) return null; 
+    if (comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role)) return null;
 
     const reactorId = getReactorId();
     const hasLiked = reactorId && comment.likes?.reactedBy.includes(reactorId);
 
     return (
-      <div key={comment.id} className={`flex space-x-3 ${isReply ? 'ml-8 sm:ml-10' : ''}`}>
-        <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border border-border/50 flex-shrink-0 mt-1 shadow-sm">
+      <div key={comment.id} className={`flex space-x-2.5 sm:space-x-3 ${isReply ? 'ml-8 sm:ml-12' : ''}`}>
+        <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border-2 border-primary/30 shadow-sm flex-shrink-0 mt-1">
           <AvatarImage src={`https://placehold.co/36x36.png?text=${comment.userName.slice(0,2).toUpperCase()}`} alt={comment.userName} data-ai-hint="user avatar"/>
-          <AvatarFallback className="bg-muted text-xs font-semibold">{comment.userName.slice(0,2).toUpperCase()}</AvatarFallback>
+          <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{comment.userName.slice(0,2).toUpperCase()}</AvatarFallback>
         </Avatar>
         <div className="flex-1">
           <div className="bg-muted px-3.5 py-2.5 rounded-xl shadow-sm border border-border/20">
@@ -225,27 +241,29 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => handleToggleLike(comment.id, isReply, parentCommentId)}
-              className={`text-xs font-medium transition-colors ${hasLiked ? 'text-primary hover:text-primary/80' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`text-xs font-medium px-1.5 py-0.5 rounded-sm transition-colors ${hasLiked ? 'text-primary bg-primary/10 hover:bg-primary/20 font-medium' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}`}
               title={hasLiked ? "Unlike" : "Like"}
               disabled={!reactorId}
             >
               Like
             </motion.button>
-            <span className="text-muted-foreground">&middot;</span>
             {!isReply && (
+              <>
+              <span className="text-muted-foreground">&middot;</span>
               <button
                 onClick={() => {
                   setReplyingToCommentId(replyingToCommentId === comment.id ? null : comment.id);
                   setCurrentReplyText('');
                 }}
-                className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                className="text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 px-1.5 py-0.5 rounded-sm transition-colors"
               >
                 Reply
               </button>
+              </>
             )}
             <span className="text-muted-foreground">&middot;</span>
             <span className="text-xs text-muted-foreground" title={formatDate(comment.timestamp)}>
-              {isClient ? formatDate(comment.timestamp, true) : <Skeleton className="h-3 w-10 inline-block" />}
+              {isClient ? formatDistanceToNowStrict(new Date(comment.timestamp), { addSuffix: true }) : <Skeleton className="h-3 w-10 inline-block" />}
             </span>
             {comment.likes && comment.likes.count > 0 && (
               <>
@@ -269,14 +287,14 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
                   placeholder={`Write a reply to ${comment.userName}...`} 
                   value={currentReplyText}
                   onChange={(e) => setCurrentReplyText(e.target.value)}
-                  className="min-h-[60px] text-sm bg-background border-border/50 focus:border-primary rounded-lg shadow-sm p-2.5"
+                  className="min-h-[60px] text-sm bg-background/70 border-border/50 focus:border-primary rounded-lg shadow-inner p-2.5"
                   disabled={isSubmittingReply}
                   rows={2}
                 />
                 <div className="flex justify-end mt-1.5">
-                  <Button type="button" variant="ghost" size="sm" className="text-xs h-7 px-2.5 mr-1.5" onClick={() => setReplyingToCommentId(null)} disabled={isSubmittingReply}>Cancel</Button>
-                  <Button type="submit" size="sm" disabled={isSubmittingReply || !currentReplyText.trim()} className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-7 px-3">
-                    {isSubmittingReply ? "Sending..." : "Send"}
+                  <Button type="button" variant="ghost" size="sm" className="text-xs h-7 px-2.5 mr-1.5 text-muted-foreground hover:text-foreground" onClick={() => setReplyingToCommentId(null)} disabled={isSubmittingReply}>Cancel</Button>
+                  <Button type="submit" size="sm" disabled={isSubmittingReply || !currentReplyText.trim()} className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-7 px-3 rounded-md">
+                    {isSubmittingReply ? "Sending..." : "Send Reply"}
                   </Button>
                 </div>
               </div>
@@ -295,7 +313,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
   };
 
 
-  const publicCommentsAndReplies = order.comments.reduce((acc, comment) => {
+  const publicCommentsAndRepliesCount = order.comments.reduce((acc, comment) => {
     if (!(comment.isInternal && !currentUser) && !(comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role))) {
       acc++; // Count parent comment
       if (comment.replies) {
@@ -440,7 +458,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
         <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
           <div className="flex items-center space-x-3 sm:space-x-4">
             <MessageSquare className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" />
-            <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Comments & Updates ({publicCommentsAndReplies})</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Comments & Updates ({publicCommentsAndRepliesCount})</CardTitle>
           </div>
           <CardDescription className="text-muted-foreground mt-1 ml-[44px] sm:ml-[56px]">Share updates or ask questions about this order.</CardDescription>
         </CardHeader>
@@ -449,7 +467,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
              {order.comments
               .filter(comment => !(comment.isInternal && !currentUser) && !(comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role)))
               .map((comment) => renderComment(comment))}
-            {publicCommentsAndReplies === 0 && (
+            {publicCommentsAndRepliesCount === 0 && (
                 <div className="text-center py-8 sm:py-10">
                   <Image src="https://placehold.co/150x112.png" alt="No comments yet" data-ai-hint="empty message" width={150} height={112} className="mx-auto rounded-lg opacity-50 shadow-sm" />
                   <p className="mt-4 sm:mt-5 text-muted-foreground text-md sm:text-lg">No public comments yet.</p>
@@ -459,15 +477,15 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
           </div>
           <Separator className="my-6 sm:my-8 bg-border/30" />
           <form onSubmit={handleCommentSubmit} className="flex items-start space-x-3">
-            <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border border-border/50 flex-shrink-0 mt-0.5 shadow-sm">
+            <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/30 shadow-sm flex-shrink-0 mt-0.5">
                <AvatarImage src={currentUser ? `https://placehold.co/40x40.png?text=${currentUser.name.slice(0,2).toUpperCase()}` : `https://placehold.co/40x40.png?text=CL`} alt="Your avatar" data-ai-hint="user avatar"/>
-               <AvatarFallback className="bg-muted text-sm font-semibold">{currentUser ? currentUser.name.slice(0,2).toUpperCase() : "CL"}</AvatarFallback>
+               <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{currentUser ? currentUser.name.slice(0,2).toUpperCase() : "CL"}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <Textarea 
                   id="comment" 
                   placeholder="Write a public comment..." 
-                  className="min-h-[80px] sm:min-h-[100px] text-sm sm:text-base mb-2.5 p-3 bg-background border-border/70 rounded-lg shadow-sm focus:border-primary focus:ring-1 focus:ring-primary" 
+                  className="min-h-[80px] sm:min-h-[100px] text-sm sm:text-base mb-2.5 p-3 bg-background/70 border-border/70 rounded-lg shadow-inner focus:border-primary focus:ring-1 focus:ring-primary" 
                   value={newComment}
                   onChange={(e) => setNewComment(e.target.value)}
                   disabled={isSubmittingComment}

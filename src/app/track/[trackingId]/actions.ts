@@ -3,16 +3,16 @@
 
 import { revalidatePath } from "next/cache";
 import type { Comment, TrackingLink, User, UserRole } from "@/types";
-import { addCommentToOrder, addReplyToComment, toggleReaction } from "@/lib/order-service"; // Use new Firestore service
+import { addCommentToOrder, addReplyToComment, toggleReaction } from "@/lib/order-service"; 
 
 // For top-level comments from the main form (typically by client or general update)
 export async function submitCommentAction(
   orderId: string,
   commentData: {
-    userName: string; // e.g., "CompanyName (Client)"
+    userName: string; 
     text: string;
     isInternal: boolean;
-    userId?: string; // Optional, if a registered user uses the main form
+    userId?: string; 
     userRole?: UserRole | 'Client';
   }
 ): Promise<TrackingLink | { error: string }> {
@@ -46,26 +46,28 @@ export async function submitCommentAction(
   }
 }
 
-// For replies submitted by registered users or clients
-export async function submitClientReplyAction(
+// For replies submitted by authenticated users
+export async function submitReplyAction(
   orderId: string,
   parentCommentId: string,
   replyText: string,
-  // clientName is removed as userName will be "Client" for this action
-  // isInternal is always false for client replies
-  actingUser?: User | null // Optional User object if logged in user is replying
+  isInternal: boolean,
+  actingUser: User 
 ): Promise<TrackingLink | { error: string }> {
   if (!replyText.trim()) {
     return { error: "Reply text cannot be empty." };
   }
+  if (!actingUser || !actingUser.id || !actingUser.name || !actingUser.role) {
+    return { error: "Authenticated user information is missing for reply."};
+  }
 
   try {
     const replyDataForService: Omit<Comment, 'id' | 'timestamp' | 'replies' | 'likes'> = {
-      userName: actingUser ? actingUser.name : "Client",
-      userRole: actingUser ? actingUser.role : 'Client',
+      userName: actingUser.name,
+      userRole: actingUser.role,
       text: replyText,
-      isInternal: false, // Client replies are never internal
-      ...(actingUser && { userId: actingUser.id }),
+      isInternal: isInternal,
+      userId: actingUser.id,
     };
 
     const updatedOrder = await addReplyToComment(orderId, parentCommentId, replyDataForService);
@@ -77,8 +79,42 @@ export async function submitClientReplyAction(
     revalidatePath(`/track/${orderId}`); 
     return updatedOrder;
   } catch (error) {
-    console.error("Error in submitClientReplyAction:", error);
+    console.error("Error in submitReplyAction (authenticated):", error);
     return { error: error instanceof Error ? error.message : "Failed to submit reply." };
+  }
+}
+
+
+// For replies submitted by unauthenticated clients
+export async function submitClientReplyAction(
+  orderId: string,
+  parentCommentId: string,
+  replyText: string
+  // clientName parameter can be added here if you want clients to provide a name
+): Promise<TrackingLink | { error: string }> {
+  if (!replyText.trim()) {
+    return { error: "Reply text cannot be empty." };
+  }
+
+  try {
+    const replyDataForService: Omit<Comment, 'id' | 'timestamp' | 'replies' | 'likes'> = {
+      userName: "Client", // Or use clientName if you add an input for it
+      userRole: 'Client',
+      text: replyText,
+      isInternal: false, 
+    };
+
+    const updatedOrder = await addReplyToComment(orderId, parentCommentId, replyDataForService);
+
+    if (!updatedOrder) {
+      return { error: "Failed to add client reply to comment." };
+    }
+
+    revalidatePath(`/track/${orderId}`); 
+    return updatedOrder;
+  } catch (error) {
+    console.error("Error in submitClientReplyAction:", error);
+    return { error: error instanceof Error ? error.message : "Failed to submit client reply." };
   }
 }
 
@@ -88,8 +124,8 @@ export async function toggleOrderCommentReactionAction(
   targetCommentId: string,
   isReply: boolean,
   parentCommentIdIfReply: string | undefined,
-  reactorId: string, // This will be currentUser.id or a client-generated ID
-  reactionType: 'like' // For now, only 'like'
+  reactorId: string, 
+  reactionType: 'like' 
 ): Promise<TrackingLink | { error: string }> {
   if (!reactorId) {
     return { error: "Reactor ID is missing." };
@@ -119,3 +155,4 @@ export async function toggleOrderCommentReactionAction(
     return { error: error instanceof Error ? error.message : "Failed to toggle reaction." };
   }
 }
+
