@@ -55,7 +55,7 @@ export default function AuthenticatedLayout({
         <SidebarHeader className="p-4 flex items-center justify-between h-20 border-b border-sidebar-border/70 bg-black text-white">
           <Link href="/dashboard" className="flex items-center group-data-[collapsible=icon]:hidden">
             <Image 
-              src="https://i.ibb.co/mCy9P3gy/lgo-2-01.png" 
+              src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" 
               alt="Color Hut Logo" 
               width={160} 
               height={40} 
@@ -87,7 +87,7 @@ export default function AuthenticatedLayout({
       </Sidebar>
       <SidebarInset>
         {currentUser && !isSuspendedDialogOpen && <AppHeader />} 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-secondary/30 dark:bg-background/50 min-h-[calc(100vh-4.5rem)] selection:bg-primary/20 selection:text-primary">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-background min-h-[calc(100vh-4.5rem)] selection:bg-primary/20 selection:text-primary">
           {currentUser && !isSuspendedDialogOpen ? children : null}
         </main>
       </SidebarInset>
@@ -99,3 +99,4 @@ export default function AuthenticatedLayout({
     </SidebarProvider>
   );
 }
+
