@@ -10,29 +10,27 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { User } from "@/types";
-import { useToast } from '@/hooks/use-toast';
 import { Target } from 'lucide-react';
 
 interface SetUserSalesTargetDialogProps {
   user: User;
   onTargetsSet: (userId: string, monthlyTarget: number, weeklyTarget: number) => Promise<boolean>;
-  children: React.ReactNode;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function SetUserSalesTargetDialog({ user, onTargetsSet, children }: SetUserSalesTargetDialogProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [monthlyTarget, setMonthlyTarget] = useState<string>((user.monthlyOrderTarget || 0).toString());
-  const [weeklyTarget, setWeeklyTarget] = useState<string>((user.weeklyOrderTarget || 0).toString());
+export function SetUserSalesTargetDialog({ user, onTargetsSet, isOpen, onOpenChange }: SetUserSalesTargetDialogProps) {
+  const [monthlyTarget, setMonthlyTarget] = useState<string>('');
+  const [weeklyTarget, setWeeklyTarget] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  // Toast is handled by UsersPage
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && user) {
       setMonthlyTarget((user.monthlyOrderTarget || 0).toString());
       setWeeklyTarget((user.weeklyOrderTarget || 0).toString());
     }
@@ -44,38 +42,19 @@ export function SetUserSalesTargetDialog({ user, onTargetsSet, children }: SetUs
     const weekly = parseInt(weeklyTarget, 10);
 
     if (isNaN(monthly) || monthly < 0 || isNaN(weekly) || weekly < 0) {
-      toast({
-        title: "Invalid Target",
-        description: "Please enter valid positive numbers for both monthly and weekly target quantities.",
-        variant: "destructive",
-      });
+      alert("Please enter valid positive numbers for both monthly and weekly targets.");
       return;
     }
 
     setIsLoading(true);
-    const success = await onTargetsSet(user.id, monthly, weekly);
+    await onTargetsSet(user.id, monthly, weekly); // Parent (UsersPage) handles outcome
     setIsLoading(false);
-
-    if (success) {
-      toast({
-        title: "Sales Targets Updated",
-        description: `Sales targets for ${user.name} have been updated.`,
-      });
-      setIsOpen(false);
-    } else {
-      toast({
-        title: "Update Failed",
-        description: "Could not update sales targets. Please try again.",
-        variant: "destructive",
-      });
-    }
+    // Parent (UsersPage) will close the dialog on success
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      {/* DialogTrigger is handled by parent controlling isOpen */}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center">
@@ -117,7 +96,7 @@ export function SetUserSalesTargetDialog({ user, onTargetsSet, children }: SetUs
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isLoading}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>

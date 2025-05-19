@@ -13,15 +13,16 @@ import Image from 'next/image';
 import { UserCircle, UploadCloud, XCircle, Eye, EyeOff } from 'lucide-react';
 
 interface AddUserDialogProps {
-  onUserAdded: (newUser: Omit<User, 'id'>) => Promise<void>; 
+  onUserAdded: (newUser: Omit<User, 'id'> & { password?: string }) => Promise<void>;
   currentUser: User; 
-  children: React.ReactNode;
+  children?: React.ReactNode; // Made optional for programmatic control
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"];
 
-export function AddUserDialog({ onUserAdded, currentUser, children }: AddUserDialogProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function AddUserDialog({ onUserAdded, currentUser, children, isOpen, onOpenChange }: AddUserDialogProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -34,21 +35,26 @@ export function AddUserDialog({ onUserAdded, currentUser, children }: AddUserDia
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
+  const resetForm = useCallback(() => {
+    setName('');
+    setEmail('');
+    setCompanyName('');
+    setRole(undefined);
+    setPassword('password');
+    setShowPassword(false);
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, []);
+
+
   useEffect(() => {
     if (!isOpen) {
-      setName('');
-      setEmail('');
-      setCompanyName('');
-      setRole(undefined);
-      setPassword('password');
-      setShowPassword(false);
-      setSelectedFile(null);
-      setPreviewUrl(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      resetForm();
     }
-  }, [isOpen]);
+  }, [isOpen, resetForm]);
   
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -68,16 +74,12 @@ export function AddUserDialog({ onUserAdded, currentUser, children }: AddUserDia
 
   const getAssignableRoles = (): UserRole[] => {
     if (currentUser.role === 'SYSTEM_ADMIN') {
-      return ALL_USER_ROLES; // System admin can assign any role
+      return ALL_USER_ROLES;
     }
     if (currentUser.role === 'ADMIN') {
-      // Regular admin can assign ADMIN, CRM, or DESIGNER_REPRESENTATIVE.
-      // Crucially, they CANNOT assign or create a SYSTEM_ADMIN.
+      // Regular admin CANNOT assign SYSTEM_ADMIN.
       return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE']; 
     }
-    // Other roles (CRM, DR) cannot add new users through this dialog.
-    // This function should ideally only be called if the currentUser is Admin/System Admin,
-    // as the dialog trigger button itself is likely hidden for other roles.
     return []; 
   };
   const assignableRoles = getAssignableRoles();
@@ -155,7 +157,7 @@ export function AddUserDialog({ onUserAdded, currentUser, children }: AddUserDia
       }
     }
 
-    const newUser: Omit<User, 'id'> = { 
+    const newUser: Omit<User, 'id'> & { password?: string } = { 
       name,
       email,
       role,
@@ -168,24 +170,18 @@ export function AddUserDialog({ onUserAdded, currentUser, children }: AddUserDia
 
     try {
       await onUserAdded(newUser);
-      setIsOpen(false);
+      // The parent (UsersPage) will handle toast and closing.
     } catch (error) {
-      console.error("Error adding user:", error);
-      toast({
-        title: "Error",
-        description: "Could not add user. It's possible the email is already in use or there was a database issue.",
-        variant: "destructive"
-      });
+      // Error handling is primarily in UsersPage's handleUserAdded
+      console.error("Error in AddUserDialog handleSubmit during onUserAdded:", error);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
@@ -295,7 +291,7 @@ export function AddUserDialog({ onUserAdded, currentUser, children }: AddUserDia
 
           </div>
           <DialogFooter className="pt-4 border-t border-border/30">
-            <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting}>
               {isSubmitting ? "Adding User..." : "Add User"}
             </Button>

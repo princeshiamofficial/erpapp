@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, Settings as SettingsIcon, MoreVertical, RefreshCw } from "lucide-react";
+import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole } from "@/types";
@@ -41,6 +41,8 @@ import { toggleUserBanStatusAction, updateUserInfoAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+
 
 export default function UsersPage() {
   const { currentUser, refreshCurrentUser } = useAuth(); 
@@ -51,6 +53,8 @@ export default function UsersPage() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+
   const [userToToggleBan, setUserToToggleBan] = useState<User | null>(null);
   const [isBanDialogVisible, setIsBanDialogVisible] = useState(false);
   
@@ -102,6 +106,7 @@ export default function UsersPage() {
       if (currentUser && newUserData.email === currentUser.email && typeof refreshCurrentUser === 'function') { 
         await refreshCurrentUser(); 
       }
+      setIsAddUserDialogOpen(false); // Close dialog on success
     } else {
        toast({ title: "Error", description: "Could not add user. Email might be in use or database error.", variant: "destructive"});
     }
@@ -113,6 +118,8 @@ export default function UsersPage() {
       toast({ title: "Role Updated", description: `User role has been updated.`});
       await fetchUsers();
       if (currentUser && userId === currentUser.id && typeof refreshCurrentUser === 'function') await refreshCurrentUser();
+      setIsEditRoleDialogOpen(false);
+      setUserToEditRole(null);
     } else {
       toast({ title: "Error", description: "Could not update user role.", variant: "destructive"});
     }
@@ -123,6 +130,8 @@ export default function UsersPage() {
     if (success) {
       toast({ title: "User Deleted", description: `User has been deleted.`});
       await fetchUsers();
+      setIsDeleteUserDialogOpen(false);
+      setUserToDelete(null);
     } else {
       toast({ title: "Error", description: "Could not delete user.", variant: "destructive"});
     }
@@ -130,15 +139,30 @@ export default function UsersPage() {
 
   const handlePasswordChanged = async (userId: string, newPassword: string): Promise<boolean> => {
     const success = await updateUserPasswordInFirestore(userId, newPassword);
-    if (currentUser && success && userId === currentUser.id && typeof refreshCurrentUser === 'function') await refreshCurrentUser(); 
-    return success; 
+    if (success) {
+        toast({ title: "Password Updated", description: `Password for user has been updated successfully.` });
+        await fetchUsers();
+        if (currentUser && userId === currentUser.id && typeof refreshCurrentUser === 'function') {
+            await refreshCurrentUser();
+        }
+        setIsChangePasswordDialogOpen(false);
+        setUserToChangePassword(null);
+    } else {
+        toast({ title: "Update Failed", description: "Could not update the password. Please try again.", variant: "destructive" });
+    }
+    return success;
   };
 
   const handleUserAvatarSetByAdmin = async (userId: string, avatarUrl: string | null): Promise<boolean> => {
     const success = await updateUserAvatarInFirestore(userId, avatarUrl);
     if (success) {
+      toast({ title: "Avatar Updated", description: "User's avatar has been set." });
       await fetchUsers(); 
       if (currentUser && userId === currentUser.id && typeof refreshCurrentUser === 'function') await refreshCurrentUser(); 
+      setIsSetAvatarDialogOpen(false);
+      setUserToSetAvatar(null);
+    } else {
+      toast({ title: "Avatar Update Failed", description: "Could not set user avatar.", variant: "destructive" });
     }
     return success; 
   };
@@ -146,8 +170,13 @@ export default function UsersPage() {
   const handleUserTargetsSetByAdmin = async (userId: string, monthlyTarget: number, weeklyTarget: number): Promise<boolean> => {
     const success = await updateUserTargetsInFirestore(userId, monthlyTarget, weeklyTarget);
     if (success) {
+      toast({ title: "Sales Targets Updated", description: "User's sales targets have been set." });
       await fetchUsers();
        if (currentUser && userId === currentUser.id && typeof refreshCurrentUser === 'function') await refreshCurrentUser();
+       setIsSetTargetsDialogOpen(false);
+       setUserToSetTargets(null);
+    } else {
+      toast({ title: "Target Update Failed", description: "Could not set user sales targets.", variant: "destructive" });
     }
     return success; 
   };
@@ -173,11 +202,12 @@ export default function UsersPage() {
         variant: "destructive",
       });
     }
-    setUserToToggleBan(null);
     setIsBanDialogVisible(false);
+    setUserToToggleBan(null);
   };
 
-  const handleUserInfoUpdated = async () => {
+  const handleUserInfoUpdated = async () => { // This function is called by EditUserInfoDialog's onUserInfoUpdated
+    toast({ title: "User Info Updated", description: "User's information has been updated." });
     await fetchUsers();
     if (currentUser && userToEditInfo && userToEditInfo.id === currentUser.id && typeof refreshCurrentUser === 'function') {
         await refreshCurrentUser();
@@ -252,7 +282,6 @@ export default function UsersPage() {
     );
   }
   
-  // Permission helper functions
   const canCurrentUserEditRoleOf = useCallback((targetUser: User): boolean => {
     if (!currentUser) return false;
     if (currentUser.role === 'SYSTEM_ADMIN') return true; 
@@ -264,11 +293,9 @@ export default function UsersPage() {
 
   const canAdminModifyTargetUser = useCallback((targetUser: User): boolean => {
     if (!currentUser) return false;
-    // SYSTEM_ADMIN can modify ADMIN, CRM, DESIGNER_REPRESENTATIVE (but not self or other SYSTEM_ADMIN via this dialog)
     if (currentUser.role === 'SYSTEM_ADMIN') {
       return targetUser.role !== 'SYSTEM_ADMIN' && targetUser.id !== currentUser.id;
     }
-    // ADMIN can modify self, CRM, DESIGNER_REPRESENTATIVE (but not other ADMIN or SYSTEM_ADMIN)
     if (currentUser.role === 'ADMIN') {
       if (targetUser.id === currentUser.id) return true; 
       return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE';
@@ -279,9 +306,7 @@ export default function UsersPage() {
   const canAdminDeleteTargetUser = useCallback((targetUser: User): boolean => {
     if (!currentUser) return false;
     if (targetUser.id === currentUser.id) return false; 
-    // SYSTEM_ADMIN can delete ADMIN, CRM, DESIGNER_REPRESENTATIVE (but not other SYSTEM_ADMIN)
     if (currentUser.role === 'SYSTEM_ADMIN') return targetUser.role !== 'SYSTEM_ADMIN'; 
-    // ADMIN can delete CRM, DESIGNER_REPRESENTATIVE (but not other ADMIN or SYSTEM_ADMIN)
     if (currentUser.role === 'ADMIN') {
       return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE';
     }
@@ -307,13 +332,13 @@ export default function UsersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          {/* 
-          <Button variant="outline" size="icon" onClick={fetchUsers} disabled={isLoadingUsers} className="h-10 w-10" title="Refresh Users">
-            <RefreshCw className={`h-5 w-5 ${isLoadingUsers ? 'animate-spin' : ''}`} />
-          </Button> 
-          */}
-          <AddUserDialog onUserAdded={handleUserAdded} currentUser={currentUser}>
-            <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow h-10">
+          <AddUserDialog 
+            onUserAdded={handleUserAdded} 
+            currentUser={currentUser}
+            isOpen={isAddUserDialogOpen}
+            onOpenChange={setIsAddUserDialogOpen}
+          >
+            <Button size="lg" onClick={() => setIsAddUserDialogOpen(true)} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow h-10">
               <PlusCircle className="mr-2 h-5 w-5" />
               Add New User
             </Button>
@@ -408,13 +433,14 @@ export default function UsersPage() {
                             <DropdownMenuItem 
                               onSelect={() => { setUserToEditInfo(user); setIsEditInfoDialogOpen(true); }}
                               disabled={!canAdminModifyTargetUser(user)}
+                              className="cursor-pointer"
                             >
                               <EditInfoIcon className="mr-2 h-4 w-4" /> Edit Info
                             </DropdownMenuItem>
                             {currentUser?.role === 'SYSTEM_ADMIN' && (
                               <DropdownMenuItem 
                                 onSelect={() => { setUserToToggleBan(user); setIsBanDialogVisible(true); }}
-                                className={user.isBanned ? "text-green-600 focus:text-green-700" : "text-destructive focus:text-destructive"}
+                                className={`cursor-pointer ${user.isBanned ? "text-green-600 focus:text-green-700" : "text-destructive focus:text-destructive"}`}
                                 disabled={!canSystemAdminToggleBan(user)}
                               >
                                 {user.isBanned ? <UserCheck className="mr-2 h-4 w-4" /> : <UserX className="mr-2 h-4 w-4" />}
@@ -424,18 +450,21 @@ export default function UsersPage() {
                              <DropdownMenuItem 
                                 onSelect={() => { setUserToSetAvatar(user); setIsSetAvatarDialogOpen(true); }}
                                 disabled={!canAdminModifyTargetUser(user)}
+                                className="cursor-pointer"
                               >
                                 <UserCog className="mr-2 h-4 w-4" /> Set Avatar
                               </DropdownMenuItem>
                              <DropdownMenuItem 
                                 onSelect={() => { setUserToChangePassword(user); setIsChangePasswordDialogOpen(true);}}
                                 disabled={!canAdminModifyTargetUser(user)}
+                                className="cursor-pointer"
                               >
                                 <KeyRound className="mr-2 h-4 w-4" /> Change Password
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onSelect={() => { setUserToEditRole(user); setIsEditRoleDialogOpen(true);}}
                                 disabled={!canCurrentUserEditRoleOf(user)}
+                                className="cursor-pointer"
                               >
                                 <Edit className="mr-2 h-4 w-4" /> Edit Role
                               </DropdownMenuItem>
@@ -443,6 +472,7 @@ export default function UsersPage() {
                                <DropdownMenuItem 
                                 onSelect={() => { setUserToSetTargets(user); setIsSetTargetsDialogOpen(true);}}
                                 disabled={!canAdminModifyTargetUser(user)}
+                                className="cursor-pointer"
                               >
                                 <Target className="mr-2 h-4 w-4" /> Set Sales Targets
                               </DropdownMenuItem>
@@ -452,7 +482,7 @@ export default function UsersPage() {
                            <DropdownMenuItem 
                             onSelect={() => { setUserToDelete(user); setIsDeleteUserDialogOpen(true);}}
                             disabled={!canAdminDeleteTargetUser(user)}
-                            className="text-destructive focus:text-destructive"
+                            className="cursor-pointer text-destructive focus:text-destructive"
                           >
                             <Trash2 className="mr-2 h-4 w-4" /> Delete User
                           </DropdownMenuItem>
@@ -573,7 +603,7 @@ export default function UsersPage() {
         <EditUserRoleDialog 
           user={userToEditRole} 
           currentUser={currentUser} 
-          onUserRoleUpdated={(updatedUser) => handleUserRoleUpdated(updatedUser.id, updatedUser.role)}
+          onUserRoleUpdated={handleUserRoleUpdated}
           isOpen={isEditRoleDialogOpen}
           onOpenChange={(open) => {
             setIsEditRoleDialogOpen(open);
@@ -597,7 +627,7 @@ export default function UsersPage() {
       {isDeleteUserDialogOpen && userToDelete && (
         <DeleteUserDialog 
           user={userToDelete} 
-          onUserDeleted={() => handleUserDeleted(userToDelete.id)}
+          onUserDeleted={handleUserDeleted} // Pass only the function
           isOpen={isDeleteUserDialogOpen}
           onOpenChange={(open) => {
             setIsDeleteUserDialogOpen(open);
@@ -608,6 +638,5 @@ export default function UsersPage() {
     </div>
   );
 }
-
     
     

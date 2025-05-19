@@ -10,28 +10,26 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { User } from "@/types";
-import { useToast } from '@/hooks/use-toast';
 import { UserCog, UploadCloud, XCircle, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 
 interface SetUserAvatarDialogProps {
   user: User;
   onAvatarChanged: (userId: string, avatarUrl: string | null) => Promise<boolean>; 
-  children: React.ReactNode; 
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function SetUserAvatarDialog({ user, onAvatarChanged, children }: SetUserAvatarDialogProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function SetUserAvatarDialog({ user, onAvatarChanged, isOpen, onOpenChange }: SetUserAvatarDialogProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(user.avatarUrl || null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Toast is handled by UsersPage
 
   useEffect(() => {
     if (isOpen) {
@@ -60,19 +58,11 @@ export function SetUserAvatarDialog({ user, onAvatarChanged, children }: SetUser
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) { 
-        toast({
-          title: "File too large",
-          description: "Please select an image smaller than 2MB.",
-          variant: "destructive",
-        });
+        alert("File too large. Please select an image smaller than 2MB.");
         return;
       }
       if (!file.type.startsWith('image/')) {
-        toast({
-          title: "Invalid file type",
-          description: "Please select an image file (e.g., JPG, PNG, GIF).",
-          variant: "destructive",
-        });
+        alert("Invalid file type. Please select an image file (e.g., JPG, PNG, GIF).");
         return;
       }
       setSelectedFile(file);
@@ -89,23 +79,9 @@ export function SetUserAvatarDialog({ user, onAvatarChanged, children }: SetUser
 
   const handleRemoveAvatar = async () => {
     setIsLoading(true);
-    const success = await onAvatarChanged(user.id, null); 
+    await onAvatarChanged(user.id, null); // Parent (UsersPage) handles outcome & toast
     setIsLoading(false);
-
-    if (success) {
-      toast({
-        title: "Avatar Removed",
-        description: `${user.name}'s profile picture has been removed.`,
-      });
-      setSelectedFile(null);
-      setPreviewUrl(null); 
-    } else {
-      toast({
-        title: "Update Failed",
-        description: `Could not remove ${user.name}'s profile picture.`,
-        variant: "destructive",
-      });
-    }
+    // Parent (UsersPage) will close dialog on success
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,66 +93,32 @@ export function SetUserAvatarDialog({ user, onAvatarChanged, children }: SetUser
       reader.readAsDataURL(selectedFile);
       reader.onloadend = async () => {
         const base64DataUrl = reader.result as string;
-        const success = await onAvatarChanged(user.id, base64DataUrl);
+        await onAvatarChanged(user.id, base64DataUrl); // Parent (UsersPage) handles outcome
         setIsLoading(false);
-        if (success) {
-          toast({
-            title: "Avatar Updated",
-            description: `${user.name}'s profile picture has been updated.`,
-          });
-          setIsOpen(false);
-        } else {
-          toast({
-            title: "Update Failed",
-            description: `Could not update ${user.name}'s profile picture.`,
-            variant: "destructive",
-          });
-        }
       };
       reader.onerror = () => {
         setIsLoading(false);
-        toast({
-          title: "File Read Error",
-          description: "Could not read the selected file.",
-          variant: "destructive",
-        });
+        alert("Could not read the selected file.");
       };
-    } else if (previewUrl === null && (user.avatarUrl || user.avatarUrl === null)) { 
-        // This covers two cases:
-        // 1. Avatar was already null and no new file selected (no change).
-        // 2. Avatar was present, then removed (handleRemoveAvatar called), and user saves.
-        //    In this case, onAvatarChanged(user.id, null) was already called by handleRemoveAvatar.
-        //    So, we only need to close if it's now null after being non-null,
-        //    or if it was already null and remains null.
-      if (previewUrl === null && user.avatarUrl !== null) {
-          // This means it was removed by handleRemoveAvatar and state is already updated
-          // Toast was shown by handleRemoveAvatar
-      } else if (previewUrl === null && user.avatarUrl === null) {
-          // No change
-          toast({ title: "No Change", description: "Avatar remains unset."});
-      }
-      setIsLoading(false);
-      setIsOpen(false);
-
-    } else if (!selectedFile && previewUrl === user.avatarUrl) {
-        toast({ title: "No Change", description: "Avatar was not changed."});
+    } else if (previewUrl === null && user.avatarUrl !== null) { 
+        // This implies avatar was removed via handleRemoveAvatar, which already called onAvatarChanged
         setIsLoading(false);
-        setIsOpen(false);
+        onOpenChange(false); // Close if no further action needed
+    } else if (previewUrl === (user.avatarUrl || null)) {
+        // No change made
+        setIsLoading(false);
+        onOpenChange(false);
     } else {
-      // Should ideally not be reached if logic is correct.
       setIsLoading(false);
-       toast({ title: "No Change", description: "No new avatar was selected or current one removed."});
-      setIsOpen(false);
+      onOpenChange(false); // Close if no file selected and no removal action
     }
   };
   
   const noChangeMade = !selectedFile && previewUrl === (user.avatarUrl || null);
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      {/* DialogTrigger is handled by parent controlling isOpen */}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center">
@@ -245,7 +187,7 @@ export function SetUserAvatarDialog({ user, onAvatarChanged, children }: SetUser
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isLoading}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading || noChangeMade}>

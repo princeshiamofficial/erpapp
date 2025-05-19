@@ -10,28 +10,26 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { User } from "@/types";
-import { useToast } from '@/hooks/use-toast';
 import { KeyRound, Eye, EyeOff } from 'lucide-react';
 
 interface ChangePasswordDialogProps {
   user: User;
-  onPasswordChanged: (userId: string, newPassword: string) => Promise<boolean>;
-  children: React.ReactNode; 
+  onPasswordChanged: (userId: string, newPassword: string) => Promise<boolean>; // This now returns a boolean for success
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function ChangePasswordDialog({ user, onPasswordChanged, children }: ChangePasswordDialogProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function ChangePasswordDialog({ user, onPasswordChanged, isOpen, onOpenChange }: ChangePasswordDialogProps) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  // Toast is now handled by UsersPage
 
   useEffect(() => {
     if (isOpen) {
@@ -45,54 +43,28 @@ export function ChangePasswordDialog({ user, onPasswordChanged, children }: Chan
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPassword || !confirmPassword) {
-      toast({
-        title: "Validation Error",
-        description: "Both password fields are required.",
-        variant: "destructive",
-      });
+      // Parent should handle toast if validation is needed here, or rely on parent validation
+      alert("Both password fields are required."); // Simple alert for now
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast({
-        title: "Validation Error",
-        description: "Passwords do not match.",
-        variant: "destructive",
-      });
+      alert("Passwords do not match."); // Simple alert
       return;
     }
     if (newPassword.length < 6) { 
-        toast({
-            title: "Validation Error",
-            description: "Password must be at least 6 characters long.",
-            variant: "destructive",
-        });
+        alert("Password must be at least 6 characters long."); // Simple alert
         return;
     }
 
     setIsLoading(true);
-    const success = await onPasswordChanged(user.id, newPassword);
+    await onPasswordChanged(user.id, newPassword); // Parent (UsersPage) handles outcome
     setIsLoading(false);
-
-    if (success) {
-      toast({
-        title: "Password Updated",
-        description: `Password for ${user.name} has been updated successfully.`,
-      });
-      setIsOpen(false);
-    } else {
-      toast({
-        title: "Update Failed",
-        description: "Could not update the password. Please try again.",
-        variant: "destructive",
-      });
-    }
+    // Parent (UsersPage) will close the dialog on success via onPasswordChanged handler
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      {/* DialogTrigger is handled by parent controlling isOpen */}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center">
@@ -156,7 +128,7 @@ export function ChangePasswordDialog({ user, onPasswordChanged, children }: Chan
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isLoading}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
