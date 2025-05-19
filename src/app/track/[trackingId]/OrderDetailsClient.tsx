@@ -5,9 +5,9 @@ import { useState, useEffect, useCallback, FormEvent, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, UserCheck, Layers, ThumbsUp, CornerDownRight, ChevronDown, ChevronUp, MessageCircle } from "lucide-react";
+import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, UserCheck, Layers, ThumbsUp, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, Disc } from "lucide-react"; // Added Disc
 import Image from "next/image";
-import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types"; // Added OrderItem
+import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Label } from '@/components/ui/label';
@@ -60,7 +60,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Diagnostic log for the order prop
   useEffect(() => {
     console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
   }, [initialOrder]);
@@ -150,8 +149,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     setIsSubmittingComment(false);
   };
 
-  const handleReplySubmit = async (parentId: string) => {
-    if (!currentReplyText.trim()) {
+  const handleReplySubmit = async () => {
+    if (!replyingTo || !currentReplyText.trim()) {
       toast({ title: "Cannot submit empty reply", variant: "destructive" });
       return;
     }
@@ -161,15 +160,15 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     if (currentUser) {
       result = await submitReplyAction(
         order.id,
-        parentId,
+        replyingTo.parentId,
         currentReplyText,
-        false, // isInternal: public replies are not internal
+        false, 
         currentUser
       );
     } else {
       result = await submitClientReplyAction(
         order.id,
-        parentId,
+        replyingTo.parentId,
         currentReplyText
       );
     }
@@ -242,14 +241,14 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     }
   };
 
-  const renderTextWithMentions = (text: string) => {
+ const renderTextWithMentions = (text: string) => {
     if (!text) return '';
-    const mentionRegex = /@([\w\s.-]+)/g; // Matches @ followed by one or more word chars, spaces, dots, or hyphens
+    const mentionRegex = /@([\w\s.-]+)/g; // Original regex
     const parts = text.split(mentionRegex);
 
     return parts.map((part, index) => {
       if (index % 2 === 1) { // This is a username part
-        return <strong key={index} className="text-primary font-semibold">{part}</strong>;
+        return <strong key={index} className="text-primary font-semibold">{part.trim()}</strong>;
       }
       return part;
     });
@@ -259,69 +258,72 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const handleReplyTextChangeForMention = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
     setCurrentReplyText(text);
+    console.log("Textarea changed:", text);
 
     const cursorPosition = e.target.selectionStart;
     const textBeforeCursor = text.substring(0, cursorPosition);
     const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@');
+    console.log("Last @ index:", lastAtSymbolIndex, "Cursor pos:", cursorPosition);
+
 
     if (lastAtSymbolIndex !== -1) {
       const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
-      // Check if the characters after @ are valid for a query (e.g., no space immediately after @)
-      // and if we are not in the middle of a word
-      const charAfterAt = text.charAt(lastAtSymbolIndex + 1);
-      const charBeforeAt = lastAtSymbolIndex > 0 ? text.charAt(lastAtSymbolIndex -1) : ' ';
-
-
-      if ( (charBeforeAt === ' ' || lastAtSymbolIndex === 0) && charAfterAt !== ' ' && /^[a-zA-Z0-9_]*$/.test(potentialQuery) ) {
-         // Only trigger if @ is start of word and query is alphanumeric/underscore
+       const charAfterAt = text.charAt(lastAtSymbolIndex + 1);
+      // Allow query to be empty (right after typing "@") or alphanumeric/underscore
+      if (/^[a-zA-Z0-9_]*$/.test(potentialQuery)) { 
+        console.log("Setting mentionQuery to:", `"${potentialQuery}"`);
         setMentionQuery(potentialQuery);
         setActiveMentionStartIndex(lastAtSymbolIndex);
 
         const clientOption = { id: 'client-mention', name: order.companyName, role: 'Client' as 'Client' };
         const usersToSearch = [clientOption, ...(allUsersForMentions || [])];
+        console.log("Users to search for mentions:", usersToSearch.map(u=>u.name));
 
 
         const filtered = usersToSearch.filter(user =>
           user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
           user.role.toLowerCase().includes(potentialQuery.toLowerCase())
         ).slice(0, 7);
+        console.log("Filtered mention suggestions:", filtered.map(u=>u.name));
         setMentionSuggestions(filtered);
         return;
       }
     }
-    // If no active mention, reset
+    console.log("No active mention, resetting query.");
     setMentionQuery(null);
     setActiveMentionStartIndex(null);
     setMentionSuggestions([]);
   };
 
   const handleMentionSelect = (userNameToInsert: string) => {
-    if (activeMentionStartIndex === null || !replyTextareaRef.current) return;
-
+    if (activeMentionStartIndex === null || !replyTextareaRef.current) {
+      console.log("handleMentionSelect: No active mention start index or textarea ref.");
+      return;
+    }
+  
     const text = currentReplyText;
-    const queryLength = mentionQuery?.length || 0;
-
-    const textBefore = text.substring(0, activeMentionStartIndex);
-    // Find where the text *after* the mention query would start
-    // This needs to consider the full query length to correctly splice
-    const textAfter = text.substring(activeMentionStartIndex + 1 + queryLength);
-
-
-    const newText = `${textBefore}@${userNameToInsert.replace(/\s+/g, '')} ${textAfter}`;
+    const queryLength = mentionQuery?.length || 0; // Length of the typed part after "@"
+    console.log(`handleMentionSelect: Inserting '${userNameToInsert}'. Query was '${mentionQuery}', length ${queryLength}. Start index ${activeMentionStartIndex}.`);
+  
+    const textBefore = text.substring(0, activeMentionStartIndex); // Text before the "@"
+    // Text after the part that was typed for the mention query.
+    // For example, if text is "Hello @dav how are you?" and "dav" was the query, 
+    // textAfter should be " how are you?"
+    const textAfterQueryEnd = text.substring(activeMentionStartIndex + 1 + queryLength); 
+  
+    const newText = `${textBefore}@${userNameToInsert.replace(/\s+/g, '')} ${textAfterQueryEnd}`;
+    console.log("handleMentionSelect: New text will be:", newText);
     setCurrentReplyText(newText);
-
-    // Set cursor position
-    const newCursorPosition = activeMentionStartIndex + 1 + userNameToInsert.replace(/\s+/g, '').length + 1;
-
-    // Needs a slight delay for the state update to propagate to the textarea value
+  
+    const newCursorPosition = activeMentionStartIndex + 1 + userNameToInsert.replace(/\s+/g, '').length + 1; // +1 for the space after
+  
     setTimeout(() => {
-        if (replyTextareaRef.current) {
-            replyTextareaRef.current.focus();
-            replyTextareaRef.current.setSelectionRange(newCursorPosition, newCursorPosition);
-        }
+      if (replyTextareaRef.current) {
+        replyTextareaRef.current.focus();
+        replyTextareaRef.current.setSelectionRange(newCursorPosition, newCursorPosition);
+      }
     }, 0);
-
-
+  
     setMentionQuery(null);
     setActiveMentionStartIndex(null);
     setMentionSuggestions([]);
@@ -335,7 +337,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     const reactorId = getReactorId();
     const hasLiked = reactorId && comment.likes?.reactedBy.includes(reactorId);
     const userToDisplay = comment.userId && allUsersForMentions ? allUsersForMentions.find(u => u.id === comment.userId) : null;
-    const avatarSrc = userToDisplay?.avatarUrl || undefined;
+    const avatarSrc = userToDisplay?.avatarUrl || (comment.userRole === 'Client' ? `https://placehold.co/36x36.png?text=${getInitials(comment.userName)}` : undefined);
     const avatarFallback = getInitials(comment.userName);
 
     const currentVisibleReplies = (comment.replies || []).filter(reply =>
@@ -350,9 +352,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
 
     return (
-      <div key={comment.id} className={`flex items-start space-x-2.5 sm:space-x-3 ${isReply ? 'ml-6 sm:ml-10' : ''}`}>
+      <div key={comment.id} className={`flex items-start space-x-2.5 sm:space-x-3 ${isReply ? 'ml-8 sm:ml-12' : ''}`}>
         <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border-2 border-primary/30 shadow-sm flex-shrink-0 mt-1">
-          <AvatarImage src={avatarSrc} alt={comment.userName} />
+          <AvatarImage src={avatarSrc} alt={comment.userName} data-ai-hint="user avatar" />
           <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{avatarFallback}</AvatarFallback>
         </Avatar>
         <div className="flex-1">
@@ -377,16 +379,23 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             >
               Like
             </motion.button>
+             {comment.likes && comment.likes.count > 0 && (
+              <div className="flex items-center text-muted-foreground">
+                <ThumbsUp className={`h-3.5 w-3.5 mr-0.5 ${hasLiked ? 'text-primary fill-primary/20' : 'text-muted-foreground/70'}`} />
+                {comment.likes.count}
+              </div>
+            )}
             <span className="text-muted-foreground">&middot;</span>
             <button
               onClick={() => {
                 const replyingToThis = replyingTo?.formUnderId === comment.id;
+                const replyingToTargetName = comment.userName.replace(/\s+/g, '');
                 setReplyingTo(replyingToThis ? null : {
                   parentId: isReply ? parentCommentId! : comment.id,
-                  targetName: comment.userName,
+                  targetName: replyingToTargetName,
                   formUnderId: comment.id
                 });
-                setCurrentReplyText(replyingToThis ? '' : `@${comment.userName.replace(/\s+/g, '')} `);
+                setCurrentReplyText(replyingToThis ? '' : `@${replyingToTargetName} `);
                 if (!replyingToThis && replyTextareaRef.current) {
                     setTimeout(() => replyTextareaRef.current?.focus(), 0);
                 }
@@ -399,23 +408,14 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <span className="text-muted-foreground" title={formatDate(comment.timestamp)}>
               {isClient ? formatDistanceToNowStrict(new Date(comment.timestamp), { addSuffix: true }) : <Skeleton className="h-3 w-10 inline-block" />}
             </span>
-            {comment.likes && comment.likes.count > 0 && (
-              <>
-                <span className="text-muted-foreground">&middot;</span>
-                <div className="flex items-center text-muted-foreground">
-                  <ThumbsUp className={`h-3.5 w-3.5 mr-0.5 ${hasLiked ? 'text-primary fill-primary/20' : 'text-muted-foreground/70'}`} />
-                  {comment.likes.count}
-                </div>
-              </>
-            )}
           </div>
 
           {replyingTo?.formUnderId === comment.id && (
             <Popover open={mentionQuery !== null} onOpenChange={(open) => { if(!open) setMentionQuery(null); }}>
               <PopoverAnchor asChild>
-                <form onSubmit={(e) => { e.preventDefault(); handleReplySubmit(replyingTo!.parentId); }} className="mt-2.5 flex items-start space-x-2.5 pl-1">
+                <form onSubmit={(e) => { e.preventDefault(); handleReplySubmit(); }} className="mt-2.5 flex items-start space-x-2.5 pl-1">
                   <Avatar className="h-7 w-7 border border-border/40 flex-shrink-0 mt-0.5 shadow-sm">
-                    <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? `https://placehold.co/28x28.png?text=${getInitials(currentUser?.name || "CL")}` : undefined)} alt="Current user avatar" />
+                    <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? `https://placehold.co/28x28.png?text=${getInitials(currentUser?.name || "CL")}` : `https://placehold.co/28x28.png?text=${getInitials("User")}`)} alt="Current user avatar" data-ai-hint="user avatar" />
                     <AvatarFallback className="bg-muted text-xs font-semibold">{getInitials(currentUser?.name || "CL")}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
@@ -429,7 +429,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                       rows={2}
                     />
                      <div className="flex justify-end items-center mt-1.5">
-                        {mentionQuery !== null && mentionSuggestions.length === 0 && <span className="text-xs text-muted-foreground mr-auto">No matches found</span>}
+                        {mentionQuery !== null && mentionSuggestions.length === 0 && activeMentionStartIndex !== null && <span className="text-xs text-muted-foreground mr-auto">No matches found</span>}
                         <Button type="button" variant="ghost" size="sm" className="text-xs h-7 px-2.5 mr-1.5 text-muted-foreground hover:text-foreground" onClick={() => setReplyingTo(null)} disabled={isSubmittingReply}>Cancel</Button>
                         <Button type="submit" size="sm" disabled={isSubmittingReply || !currentReplyText.trim()} className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-7 px-3 rounded-md">
                             {isSubmittingReply ? "Sending..." : "Send Reply"}
@@ -440,22 +440,23 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               </PopoverAnchor>
               {mentionSuggestions.length > 0 && (
                  <PopoverContent
+                    key={mentionQuery} // Add key to help with re-rendering/positioning
                     className="w-[250px] p-0"
                     side="top"
                     align="start"
-                    onOpenAutoFocus={(e) => e.preventDefault()} // Keep focus on textarea
+                    onOpenAutoFocus={(e) => e.preventDefault()} 
                 >
                     <Command>
                         <CommandList>
                         {mentionSuggestions.map((user) => (
                             <CommandItem
                             key={user.id}
-                            value={user.name + user.role} // For Command's internal filtering if CommandInput was used
+                            value={user.name + user.role} 
                             onSelect={() => handleMentionSelect(user.name)}
                             className="cursor-pointer flex items-center gap-2"
                             >
                              <Avatar className="h-6 w-6 text-xs">
-                                <AvatarImage src={(user as User).avatarUrl || undefined} />
+                                <AvatarImage src={(user as User).avatarUrl || (user.role === 'Client' ? `https://placehold.co/24x24.png?text=${getInitials(user.name)}` : undefined)} />
                                 <AvatarFallback className="bg-muted text-xs">{getInitials(user.name)}</AvatarFallback>
                             </Avatar>
                             <span className="text-xs font-medium">{user.name}</span>
@@ -482,7 +483,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 className="text-xs font-medium text-primary hover:text-primary/80 mt-2 pl-1"
             >
                 {isExpanded ? <ChevronUp className="h-3.5 w-3.5 mr-1" /> : <ChevronDown className="h-3.5 w-3.5 mr-1" />}
-                {isExpanded ? 'Hide Replies' : `View ${currentVisibleReplies.length - MAX_INITIAL_REPLIES_TO_SHOW} more replies`}
+                {isExpanded ? 'Hide Replies' : `View ${currentVisibleReplies.length - MAX_INITIAL_REPLIES_TO_SHOW} more ${currentVisibleReplies.length - MAX_INITIAL_REPLIES_TO_SHOW === 1 ? 'reply' : 'replies'}`}
             </Button>
            )}
         </div>
@@ -536,20 +537,20 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
           <div>
             <h3 className="text-xl font-semibold mb-4 sm:mb-5 text-foreground">Order Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-4 sm:gap-y-5 text-sm sm:text-base">
-              <div className="md:col-span-2">
+               <div className="md:col-span-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-4 md:gap-y-0">
-                  <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
-                    <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                        <Building className="h-5 w-5 text-primary " />
+                  <div className="flex items-start space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
+                    <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                        <Building className="h-4 w-4 sm:h-5 sm:w-5 text-primary " />
                     </div>
                     <div>
                       <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Company</span> {order.companyName}
                     </div>
                   </div>
 
-                  <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
-                    <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                        <Phone className="h-5 w-5 text-primary" />
+                  <div className="flex items-start space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
+                    <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                        <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     </div>
                     <div>
                       <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Phone</span> {order.phoneNumber}
@@ -558,45 +559,55 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 </div>
               </div>
 
-              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all md:col-span-2">
-                <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                    <MapPin className="h-5 w-5 text-primary" />
+              <div className="flex items-start space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20 hover:shadow-md hover:border-primary/30 transition-all md:col-span-2">
+                <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                    <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                 </div>
                 <div>
                   <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Address</span> {order.address}
                 </div>
               </div>
-
-              {Array.isArray(order.orderItems) && order.orderItems.length > 0 ? (
-                 order.orderItems.map((item, index) => (
-                  <div key={item.id || index} className="md:col-span-2 flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
-                      <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                      <Layers className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                      <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">
-                          Service Item {order.orderItems.length > 1 ? `#${index + 1}` : ''}
-                      </span>
-                      <span className="font-semibold text-card-foreground">{item.model}</span> - {item.quantity} Pcs ({item.lamination})
-                      </div>
+              
+              {/* Service Details Section Start */}
+                {Array.isArray(order.orderItems) && order.orderItems.length > 0 ? (
+                  <div className="md:col-span-2"> {/* Ensures this block spans full width in the details grid */}
+                    <h3 className="text-xl font-semibold mb-4 sm:mb-5 text-foreground flex items-start">
+                      <Layers className="h-7 w-7 text-primary mr-3 flex-shrink-0 p-1 bg-primary/10 rounded-md border border-primary/20" />
+                      Service Details
+                    </h3>
+                    <div className="space-y-3"> {/* Container for all individual items */}
+                      {order.orderItems.map((item, index) => (
+                        <div key={item.id || index} className="flex items-start space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
+                          <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                            <Disc className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                          </div>
+                          <div>
+                            <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">
+                              Item {order.orderItems.length > 1 ? `#${index + 1}` : ''}
+                            </span>
+                            <span className="font-semibold text-card-foreground">{item.model}</span> - {item.quantity} Pcs ({item.lamination})
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  ))
-              ) : (
-                  <div className="md:col-span-2 flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20">
-                  <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                      <Layers className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
+                ) : (
+                  <div className="md:col-span-2 flex items-start space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20">
+                    <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                      <Layers className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                    </div>
+                    <div>
                       <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Service Details</span>
                       Not specified
+                    </div>
                   </div>
-                  </div>
-              )}
+                )}
+              {/* Service Details Section End */}
 
 
-               <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
-                  <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                    <CalendarDays className="h-5 w-5 text-primary" />
+               <div className="flex items-start space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
+                  <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                    <CalendarDays className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   </div>
                   <div>
                     <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Order Placed</span> {isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-32" />}
@@ -604,9 +615,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 </div>
 
                 {order.designerRepresentativeName && (
-                    <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
-                        <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                            <UserCheck className="h-5 w-5 text-primary" />
+                    <div className="flex items-start space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
+                        <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                            <UserCheck className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                         </div>
                         <div>
                             <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Assigned Designer</span> {order.designerRepresentativeName}
@@ -673,12 +684,13 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
           <Separator className="my-6 sm:my-8 bg-border/30" />
           <form onSubmit={handleCommentSubmit} className="flex items-start space-x-3">
             <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/30 shadow-sm flex-shrink-0 mt-0.5">
-               <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? `https://placehold.co/40x40.png?text=${getInitials(currentUser?.name || "CL")}` : undefined)} alt="Your avatar" />
+               <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? `https://placehold.co/40x40.png?text=${getInitials(currentUser?.name || "CL")}` : `https://placehold.co/40x40.png?text=${getInitials("User")}`)} alt="Your avatar" data-ai-hint="user avatar" />
                <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{getInitials(currentUser?.name || "CL")}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <Textarea
                   id="comment"
+                  ref={textareaRef}
                   placeholder="Write a public comment..."
                   className="min-h-[80px] sm:min-h-[100px] text-sm sm:text-base mb-2.5 p-3 bg-background/70 border-border/70 rounded-lg shadow-inner focus:border-primary focus:ring-1 focus:ring-primary"
                   value={newComment}
@@ -711,3 +723,5 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
+
+    
