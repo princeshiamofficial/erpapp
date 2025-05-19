@@ -15,9 +15,10 @@ import { getContrastTextColor } from '@/lib/status-service';
 import { submitCommentAction, submitClientReplyAction, toggleOrderCommentReactionAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/contexts/auth-context'; // For checking logged-in user
-import { v4 as uuidv4 } from 'uuid'; // For client-side reactor ID
-import { motion } from 'framer-motion'; // For animations
+import { useAuth } from '@/contexts/auth-context'; 
+import { v4 as uuidv4 } from 'uuid';
+import { motion } from 'framer-motion';
+import { formatDistanceToNowStrict } from 'date-fns';
 
 interface OrderDetailsClientProps {
   order: TrackingLink;
@@ -44,7 +45,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
     setIsClient(true);
     setOrder(initialOrder);
 
-    // Get or generate clientReactorId for anonymous reactions
     let storedReactorId = localStorage.getItem(CLIENT_REACTOR_ID_KEY);
     if (!storedReactorId) {
       storedReactorId = uuidv4();
@@ -69,10 +69,14 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
 
   const currentStatusInfo = getStatusDisplayInfo(order.currentStatus);
 
-  const formatDate = (dateString: string | undefined) => {
+  const formatDate = (dateString: string | undefined, relative: boolean = false) => {
     if (!isClient || !dateString) return "Loading date..."; 
     try {
-      return new Date(dateString).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+      const date = new Date(dateString);
+      if (relative) {
+        return formatDistanceToNowStrict(date, { addSuffix: true });
+      }
+      return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
     } catch (e) {
       return "Invalid Date";
     }
@@ -141,8 +145,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
       return;
     }
 
-    // Optimistic update
-    const originalOrder = JSON.parse(JSON.stringify(order)) as TrackingLink; // Deep copy for revert
+    const originalOrder = JSON.parse(JSON.stringify(order)) as TrackingLink; 
     let newOrderState = JSON.parse(JSON.stringify(order)) as TrackingLink;
 
     const findAndUpdateComment = (commentsArr: Comment[]): boolean => {
@@ -186,86 +189,104 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
 
     if ('error' in result) {
       toast({ title: "Error", description: result.error, variant: "destructive" });
-      setOrder(originalOrder); // Revert optimistic update
+      setOrder(originalOrder); 
     } else {
-      setOrder(result); // Set order state with response from server
+      setOrder(result); 
     }
   };
 
 
   const renderComment = (comment: Comment, isReply = false, parentCommentId?: string) => {
-    if (comment.isInternal) return null;
+    if (comment.isInternal && !currentUser) return null; // Hide internal comments from clients
+    if (comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role)) return null; // Hide from clients even if some user type is logged in
+
     const reactorId = getReactorId();
     const hasLiked = reactorId && comment.likes?.reactedBy.includes(reactorId);
 
     return (
-      <div 
-        key={comment.id} 
-        className={`flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 ${isReply ? 'ml-8 sm:ml-12' : ''} bg-secondary/40 rounded-lg shadow-sm border border-border/30 hover:border-primary/30 transition-colors`}
-      >
-        <Avatar className="h-10 w-10 sm:h-11 sm:w-11 border-2 border-primary/30 flex-shrink-0 shadow-sm">
-          <AvatarImage src={`https://placehold.co/44x44.png?text=${comment.userName.slice(0,2).toUpperCase()}`} alt={comment.userName} data-ai-hint="user avatar"/>
-          <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs sm:text-sm">{comment.userName.slice(0,2).toUpperCase()}</AvatarFallback>
+      <div key={comment.id} className={`flex space-x-3 ${isReply ? 'ml-8 sm:ml-10' : ''}`}>
+        <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border border-border/50 flex-shrink-0 mt-1 shadow-sm">
+          <AvatarImage src={`https://placehold.co/36x36.png?text=${comment.userName.slice(0,2).toUpperCase()}`} alt={comment.userName} data-ai-hint="user avatar"/>
+          <AvatarFallback className="bg-muted text-xs font-semibold">{comment.userName.slice(0,2).toUpperCase()}</AvatarFallback>
         </Avatar>
         <div className="flex-1">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1">
-            <p className="text-sm sm:text-md font-semibold text-foreground">{comment.userName} 
-              {comment.userRole && <span className="text-xs text-muted-foreground font-normal ml-1.5">({comment.userRole})</span>}
-            </p>
-            <div className="text-xs text-muted-foreground flex items-center mt-0.5 sm:mt-0">
-              <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1.5 opacity-70" /> 
-              {isClient ? formatDate(comment.timestamp) : <Skeleton className="h-3 w-24" />}
+          <div className="bg-muted px-3.5 py-2.5 rounded-xl shadow-sm border border-border/20">
+            <div className="flex items-baseline space-x-1.5">
+              <p className="text-sm font-semibold text-foreground">{comment.userName}</p>
+              {comment.userRole && (
+                <span className="text-xs text-muted-foreground">
+                  ({comment.userRole === 'DESIGNER_REPRESENTATIVE' ? 'Designer Rep' : comment.userRole})
+                </span>
+              )}
             </div>
+            <p className="text-sm text-foreground/90 whitespace-pre-wrap mt-0.5">{comment.text}</p>
           </div>
-          <p className="text-sm sm:text-md text-foreground/90 whitespace-pre-wrap">{comment.text}</p>
-          
-          <div className="flex items-center gap-3 mt-2.5 pt-2.5 border-t border-border/20">
+          <div className="flex items-center space-x-2.5 mt-1.5 pl-1">
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => handleToggleLike(comment.id, isReply, parentCommentId)}
-              className={`flex items-center text-xs p-1.5 rounded-md transition-all ${hasLiked ? 'text-primary bg-primary/10 hover:bg-primary/20 font-medium' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}`}
+              className={`text-xs font-medium transition-colors ${hasLiked ? 'text-primary hover:text-primary/80' : 'text-muted-foreground hover:text-foreground'}`}
               title={hasLiked ? "Unlike" : "Like"}
               disabled={!reactorId}
             >
-              <ThumbsUp className={`h-4 w-4 mr-1.5 ${hasLiked ? 'fill-primary' : ''}`} /> 
-              <span>{comment.likes?.count || 0}</span>
+              Like
             </motion.button>
-
+            <span className="text-muted-foreground">&middot;</span>
             {!isReply && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-xs h-auto py-1.5 px-2.5 text-muted-foreground hover:text-primary hover:bg-primary/10"
+              <button
                 onClick={() => {
                   setReplyingToCommentId(replyingToCommentId === comment.id ? null : comment.id);
                   setCurrentReplyText('');
                 }}
+                className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
               >
-                <CornerDownRight className="h-3.5 w-3.5 mr-1.5" /> Reply
-              </Button>
+                Reply
+              </button>
+            )}
+            <span className="text-muted-foreground">&middot;</span>
+            <span className="text-xs text-muted-foreground" title={formatDate(comment.timestamp)}>
+              {isClient ? formatDate(comment.timestamp, true) : <Skeleton className="h-3 w-10 inline-block" />}
+            </span>
+            {comment.likes && comment.likes.count > 0 && (
+              <>
+                <span className="text-muted-foreground">&middot;</span>
+                <div className="flex items-center text-xs text-muted-foreground">
+                  <ThumbsUp className={`h-3.5 w-3.5 mr-1 ${hasLiked ? 'text-primary fill-primary/20' : 'text-muted-foreground/70'}`} />
+                  {comment.likes.count}
+                </div>
+              </>
             )}
           </div>
 
           {replyingToCommentId === comment.id && !isReply && (
-            <form onSubmit={(e) => { e.preventDefault(); handleReplySubmit(comment.id); }} className="mt-3 space-y-2.5">
-              <Textarea 
-                placeholder={`Reply to ${comment.userName}...`} 
-                value={currentReplyText}
-                onChange={(e) => setCurrentReplyText(e.target.value)}
-                className="min-h-[80px] text-sm bg-background/70 border-border/50 focus:border-primary rounded-md shadow-inner"
-                disabled={isSubmittingReply}
-              />
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="ghost" size="sm" onClick={() => setReplyingToCommentId(null)} disabled={isSubmittingReply}>Cancel</Button>
-                <Button type="submit" size="sm" disabled={isSubmittingReply || !currentReplyText.trim()} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                  {isSubmittingReply ? "Replying..." : "Send Reply"}
-                </Button>
+            <form onSubmit={(e) => { e.preventDefault(); handleReplySubmit(comment.id); }} className="mt-2.5 flex items-start space-x-2.5 pl-1">
+               <Avatar className="h-7 w-7 border border-border/40 flex-shrink-0 mt-0.5 shadow-sm">
+                 <AvatarImage src={currentUser ? `https://placehold.co/28x28.png?text=${currentUser.name.slice(0,2).toUpperCase()}` : `https://placehold.co/28x28.png?text=CL`} alt="Current user avatar" data-ai-hint="user avatar"/>
+                 <AvatarFallback className="bg-muted text-2xs font-semibold">{currentUser ? currentUser.name.slice(0,2).toUpperCase() : "CL"}</AvatarFallback>
+               </Avatar>
+              <div className="flex-1">
+                <Textarea 
+                  placeholder={`Write a reply to ${comment.userName}...`} 
+                  value={currentReplyText}
+                  onChange={(e) => setCurrentReplyText(e.target.value)}
+                  className="min-h-[60px] text-sm bg-background border-border/50 focus:border-primary rounded-lg shadow-sm p-2.5"
+                  disabled={isSubmittingReply}
+                  rows={2}
+                />
+                <div className="flex justify-end mt-1.5">
+                  <Button type="button" variant="ghost" size="sm" className="text-xs h-7 px-2.5 mr-1.5" onClick={() => setReplyingToCommentId(null)} disabled={isSubmittingReply}>Cancel</Button>
+                  <Button type="submit" size="sm" disabled={isSubmittingReply || !currentReplyText.trim()} className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-7 px-3">
+                    {isSubmittingReply ? "Sending..." : "Send"}
+                  </Button>
+                </div>
               </div>
             </form>
           )}
+
           {comment.replies && comment.replies.length > 0 && (
-            <div className="mt-4 space-y-4">
-              {comment.replies.filter(reply => !reply.isInternal).map(reply => renderComment(reply, true, comment.id))}
+            <div className="mt-3 space-y-3">
+              {comment.replies.filter(reply => !(reply.isInternal && !currentUser) && !(reply.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role)) )
+              .map(reply => renderComment(reply, true, comment.id))}
             </div>
           )}
         </div>
@@ -274,9 +295,17 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
   };
 
 
-  const publicComments = order.comments.filter(c => !c.isInternal);
-  const lastStatusUpdateTimestamp = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1].timestamp : order.createdAt;
+  const publicCommentsAndReplies = order.comments.reduce((acc, comment) => {
+    if (!(comment.isInternal && !currentUser) && !(comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role))) {
+      acc++; // Count parent comment
+      if (comment.replies) {
+        acc += comment.replies.filter(reply => !(reply.isInternal && !currentUser) && !(reply.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role))).length;
+      }
+    }
+    return acc;
+  }, 0);
 
+  const lastStatusUpdateTimestamp = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1].timestamp : order.createdAt;
   const serviceDetailsString = `${order.model} - ${order.quantity} Pcs (${order.lamination})`;
 
   return (
@@ -303,7 +332,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
               {currentStatusInfo.name}
             </p>
             <div className="text-sm text-muted-foreground mt-1.5 ml-[40px]">
-              Last updated: {isClient ? formatDate(lastStatusUpdateTimestamp) : <Skeleton className="h-4 w-48 inline-block" />}
+               Last updated: {isClient ? formatDate(lastStatusUpdateTimestamp) : <Skeleton className="h-4 w-48 inline-block" />}
             </div>
           </div>
 
@@ -334,7 +363,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
                 </div>
               </div>
               
-              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
+              <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all md:col-span-2">
                 <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
                     <MapPin className="h-5 w-5 text-primary" />
                 </div>
@@ -362,7 +391,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
                 </div>
 
                 {order.designerRepresentativeName && (
-                    <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
+                    <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all md:col-span-2">
                         <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
                             <UserCheck className="h-5 w-5 text-primary" />
                         </div>
@@ -411,14 +440,16 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
         <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
           <div className="flex items-center space-x-3 sm:space-x-4">
             <MessageSquare className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" />
-            <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Comments & Updates ({publicComments.length + publicComments.reduce((acc,c)=> acc + (c.replies?.filter(r => !r.isInternal).length || 0),0) })</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Comments & Updates ({publicCommentsAndReplies})</CardTitle>
           </div>
           <CardDescription className="text-muted-foreground mt-1 ml-[44px] sm:ml-[56px]">Share updates or ask questions about this order.</CardDescription>
         </CardHeader>
-        <CardContent className="p-6 sm:p-8 space-y-6">
-          <div className="space-y-4 sm:space-y-5 max-h-[500px] overflow-y-auto pr-2 sm:pr-3 custom-scrollbar">
-            {publicComments.map((comment) => renderComment(comment))}
-            {publicComments.length === 0 && (
+        <CardContent className="p-6 sm:p-8 space-y-5">
+          <div className="space-y-4 sm:space-y-5 max-h-[600px] overflow-y-auto pr-2 sm:pr-3 custom-scrollbar">
+             {order.comments
+              .filter(comment => !(comment.isInternal && !currentUser) && !(comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role)))
+              .map((comment) => renderComment(comment))}
+            {publicCommentsAndReplies === 0 && (
                 <div className="text-center py-8 sm:py-10">
                   <Image src="https://placehold.co/150x112.png" alt="No comments yet" data-ai-hint="empty message" width={150} height={112} className="mx-auto rounded-lg opacity-50 shadow-sm" />
                   <p className="mt-4 sm:mt-5 text-muted-foreground text-md sm:text-lg">No public comments yet.</p>
@@ -427,35 +458,44 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
             )}
           </div>
           <Separator className="my-6 sm:my-8 bg-border/30" />
-          <form onSubmit={handleCommentSubmit}>
-            <Label htmlFor="comment" className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 block text-foreground">Add a Comment</Label>
-            <Textarea 
-                id="comment" 
-                placeholder="Type your message here..." 
-                className="min-h-[120px] sm:min-h-[140px] text-sm sm:text-base mb-4 p-3 sm:p-4 focus:border-primary bg-background/80 border-border/70 rounded-lg shadow-sm" 
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                disabled={isSubmittingComment}
-            />
-            <Button 
-                type="submit" 
-                size="lg" 
-                className="w-full sm:w-auto shadow-lg hover:shadow-primary/40 transition-all duration-300 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm sm:text-md py-2.5 sm:py-3 px-5 sm:px-6 rounded-lg transform hover:scale-[1.02]"
-                disabled={isSubmittingComment}
-            >
-              {isSubmittingComment ? (
-                <>
-                  <Clock className="mr-2.5 h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> Submitting...
-                </>
-              ) : (
-                <>
-                  <Send className="mr-2.5 h-4 w-4 sm:h-5 sm:w-5" /> Submit Comment
-                </>
-              )}
-            </Button>
+          <form onSubmit={handleCommentSubmit} className="flex items-start space-x-3">
+            <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border border-border/50 flex-shrink-0 mt-0.5 shadow-sm">
+               <AvatarImage src={currentUser ? `https://placehold.co/40x40.png?text=${currentUser.name.slice(0,2).toUpperCase()}` : `https://placehold.co/40x40.png?text=CL`} alt="Your avatar" data-ai-hint="user avatar"/>
+               <AvatarFallback className="bg-muted text-sm font-semibold">{currentUser ? currentUser.name.slice(0,2).toUpperCase() : "CL"}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1">
+              <Textarea 
+                  id="comment" 
+                  placeholder="Write a public comment..." 
+                  className="min-h-[80px] sm:min-h-[100px] text-sm sm:text-base mb-2.5 p-3 bg-background border-border/70 rounded-lg shadow-sm focus:border-primary focus:ring-1 focus:ring-primary" 
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  disabled={isSubmittingComment}
+                  rows={3}
+              />
+              <div className="flex justify-end">
+                <Button 
+                    type="submit" 
+                    size="default" 
+                    className="shadow-md hover:shadow-primary/30 transition-all duration-300 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm py-2 px-5 rounded-lg transform hover:scale-[1.02]"
+                    disabled={isSubmittingComment || !newComment.trim()}
+                >
+                  {isSubmittingComment ? (
+                    <>
+                      <Clock className="mr-2 h-4 w-4 animate-spin" /> Posting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 h-4 w-4" /> Post Comment
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
           </form>
         </CardContent>
       </Card>
     </main>
   );
 }
+
