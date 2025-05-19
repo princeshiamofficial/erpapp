@@ -16,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { User, TrackingLink, CustomStatus, OrderLogEntry, Comment as OrderComment } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { getStatuses } from '@/lib/status-service';
-import { getGlobalSalesTargets, type GlobalSalesTargets } from '@/lib/settings-service';
+import { getGlobalSettings, type GlobalSalesTargets } from '@/lib/settings-service';
 import { setGlobalTargetAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 
@@ -57,6 +57,7 @@ const getInitials = (name: string) => {
 const DEFAULT_GLOBAL_TARGETS_STATE: GlobalSalesTargets = {
   globalMonthlyOrderTarget: 0,
   globalWeeklyOrderTarget: 0,
+  crmCompletionStatusIds: [],
 };
 
 
@@ -103,7 +104,7 @@ export default function DashboardPage() {
   const fetchGlobalTargets = useCallback(async () => {
     setIsLoadingGlobalTargets(true);
     try {
-      const targets = await getGlobalSalesTargets();
+      const targets = await getGlobalSettings();
       setGlobalTargets(targets);
     } catch (error) {
       console.error("Failed to fetch global sales targets:", error);
@@ -125,9 +126,10 @@ export default function DashboardPage() {
     setIsLoadingWeeklyDeliveries(true);
 
     try {
-      const [fetchedOrders, allStatuses] = await Promise.all([
+      const [fetchedOrders, allStatuses, fetchedGlobalTargets] = await Promise.all([
         getOrders(),
-        getStatuses()
+        getStatuses(),
+        getGlobalSettings() 
       ]);
       
       const statusMap = new Map(allStatuses.map(s => [s.id, s.name]));
@@ -291,6 +293,8 @@ export default function DashboardPage() {
         let crmMonthCompleted = 0;
         let crmWeekCompleted = 0;
 
+        const crmCompletionStatusSet = new Set(fetchedGlobalTargets.crmCompletionStatusIds || []);
+
         fetchedOrders.forEach(order => {
           const isOrderDeliveredThisMonth = order.statusHistory.some(
             log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: monthStart, end: monthEnd })
@@ -302,15 +306,29 @@ export default function DashboardPage() {
 
           if (isOrderDeliveredThisMonth) {
             deliveriesThisMonth++;
-            if (currentUser.role === 'CRM' && order.crmUserId === currentUser.id) {
-              crmMonthCompleted++;
-            }
           }
           if (isOrderDeliveredThisWeek) {
             deliveriesThisWeek++;
-            if (currentUser.role === 'CRM' && order.crmUserId === currentUser.id) {
-              crmWeekCompleted++;
+          }
+          
+          // CRM Completion Calculation
+          if (currentUser.role === 'CRM' && order.crmUserId === currentUser.id) {
+            let orderCompletedForCRMThisMonth = false;
+            let orderCompletedForCRMThisWeek = false;
+
+            for (const log of order.statusHistory) {
+              if (crmCompletionStatusSet.has(log.status)) {
+                const logDate = parseISO(log.timestamp);
+                if (isWithinInterval(logDate, { start: monthStart, end: monthEnd })) {
+                  orderCompletedForCRMThisMonth = true;
+                }
+                if (isWithinInterval(logDate, { start: weekStart, end: weekEnd })) {
+                  orderCompletedForCRMThisWeek = true;
+                }
+              }
             }
+            if (orderCompletedForCRMThisMonth) crmMonthCompleted++;
+            if (orderCompletedForCRMThisWeek) crmWeekCompleted++;
           }
         });
         setMonthlyDeliveriesCount(deliveriesThisMonth);

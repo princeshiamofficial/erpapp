@@ -5,12 +5,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getUsers } from '@/lib/user-service';
 import { getOrders } from '@/lib/order-service';
 import type { User, TrackingLink, GlobalSalesTargets } from '@/types';
-import { getGlobalSalesTargets } from '@/lib/settings-service';
+import { getGlobalSettings } from '@/lib/settings-service'; // Corrected import
 import { LeaderboardClientTabs } from '@/components/leaderboard/LeaderboardClientTabs'; // New Client Component
 
 const DEFAULT_GLOBAL_TARGETS_STATE: GlobalSalesTargets = {
   globalMonthlyOrderTarget: 0,
   globalWeeklyOrderTarget: 0,
+  crmCompletionStatusIds: [], // Ensure this is part of the default
 };
 
 interface CrmPerformanceData {
@@ -59,26 +60,30 @@ export default async function LeaderboardPage() {
   let crmMonthlyPerformance: CrmPerformanceData[] = [];
   let crmWeeklyPerformance: CrmPerformanceData[] = [];
   let fetchError: string | null = null;
+  let fetchedGlobalSettings: GlobalSalesTargets = DEFAULT_GLOBAL_TARGETS_STATE;
+
 
   try {
-    const [fetchedGlobalTargets, allUsers, allOrders] = await Promise.all([
-      getGlobalSalesTargets(),
+    const [globalSettings, allUsers, allOrders] = await Promise.all([
+      getGlobalSettings(), // Corrected function call
       getUsers(),
       getOrders(),
     ]);
+
+    fetchedGlobalSettings = globalSettings; // Store the fetched settings
 
     const crmUsers = allUsers.filter(user => user.role === 'CRM' && !user.isBanned);
 
     crmMonthlyPerformance = calculatePerformanceData(
       crmUsers,
       allOrders,
-      fetchedGlobalTargets.globalMonthlyOrderTarget,
+      fetchedGlobalSettings.globalMonthlyOrderTarget,
       'monthlyOrderTarget'
     );
     crmWeeklyPerformance = calculatePerformanceData(
       crmUsers,
       allOrders,
-      fetchedGlobalTargets.globalWeeklyOrderTarget,
+      fetchedGlobalSettings.globalWeeklyOrderTarget,
       'weeklyOrderTarget',
       true // Pass true if weekly calculation needs to differ for "ordersCompleted"
     );
