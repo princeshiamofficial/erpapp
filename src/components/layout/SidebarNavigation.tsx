@@ -14,8 +14,9 @@ import {
   FileText,
   Award,
   BarChart3,
-  ListChecks,
-  Layers // Added for Model Management
+  ListChecks, // Used for general status management
+  Layers,
+  Target // For CRM Target Completion Settings
 } from "lucide-react";
 import type { UserRole } from "@/types";
 import { cn } from "@/lib/utils";
@@ -37,8 +38,8 @@ const navItems: NavItem[] = [
   { href: "/admin/model-management", label: "Model Management", icon: Layers, roles: ["SYSTEM_ADMIN", "ADMIN"] },
   { href: "/admin/statuses", label: "Status Management", icon: ListChecks, roles: ["SYSTEM_ADMIN"] },
   { href: "/admin/service-management", label: "Service Options", icon: Settings2, roles: ["SYSTEM_ADMIN"] },
+  { href: "/admin/crm-target-settings", label: "CRM Target Rules", icon: Target, roles: ["SYSTEM_ADMIN"] },
   { href: "/reports", label: "Reports", icon: BarChart3, roles: ["SYSTEM_ADMIN", "ADMIN"], disabled: true },
-  // { href: "/settings", label: "Settings", icon: Settings, roles: ["SYSTEM_ADMIN", "ADMIN"], disabled: true }, // General settings if needed later
 ];
 
 export function SidebarNavigation() {
@@ -89,5 +90,3 @@ export function SidebarNavigation() {
     </>
   );
 }
-
-    
