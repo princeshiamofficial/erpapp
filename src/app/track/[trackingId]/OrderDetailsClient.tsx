@@ -199,14 +199,19 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
     const hasLiked = reactorId && comment.likes?.reactedBy.includes(reactorId);
 
     return (
-      <div key={comment.id} className={`flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 ${isReply ? 'ml-8 sm:ml-12' : ''} bg-secondary/40 rounded-lg shadow-sm border border-border/30 hover:border-primary/30 transition-colors`}>
+      <div 
+        key={comment.id} 
+        className={`flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 ${isReply ? 'ml-8 sm:ml-12' : ''} bg-secondary/40 rounded-lg shadow-sm border border-border/30 hover:border-primary/30 transition-colors`}
+      >
         <Avatar className="h-10 w-10 sm:h-11 sm:w-11 border-2 border-primary/30 flex-shrink-0 shadow-sm">
           <AvatarImage src={`https://placehold.co/44x44.png?text=${comment.userName.slice(0,2).toUpperCase()}`} alt={comment.userName} data-ai-hint="user avatar"/>
           <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs sm:text-sm">{comment.userName.slice(0,2).toUpperCase()}</AvatarFallback>
         </Avatar>
         <div className="flex-1">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-1">
-            <p className="text-sm sm:text-md font-semibold text-foreground">{comment.userName} <span className="text-xs text-muted-foreground font-normal">({comment.userRole})</span></p>
+            <p className="text-sm sm:text-md font-semibold text-foreground">{comment.userName} 
+              {comment.userRole && <span className="text-xs text-muted-foreground font-normal ml-1.5">({comment.userRole})</span>}
+            </p>
             <div className="text-xs text-muted-foreground flex items-center mt-0.5 sm:mt-0">
               <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1.5 opacity-70" /> 
               {isClient ? formatDate(comment.timestamp) : <Skeleton className="h-3 w-24" />}
@@ -214,15 +219,15 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
           </div>
           <p className="text-sm sm:text-md text-foreground/90 whitespace-pre-wrap">{comment.text}</p>
           
-          <div className="flex items-center gap-4 mt-2 pt-2 border-t border-border/20">
+          <div className="flex items-center gap-3 mt-2.5 pt-2.5 border-t border-border/20">
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => handleToggleLike(comment.id, isReply, parentCommentId)}
-              className={`flex items-center text-xs p-1.5 rounded-md transition-colors ${hasLiked ? 'text-primary bg-primary/10 hover:bg-primary/20' : 'text-muted-foreground hover:bg-muted/50'}`}
+              className={`flex items-center text-xs p-1.5 rounded-md transition-all ${hasLiked ? 'text-primary bg-primary/10 hover:bg-primary/20 font-medium' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}`}
               title={hasLiked ? "Unlike" : "Like"}
               disabled={!reactorId}
             >
-              <ThumbsUp className={`h-4 w-4 mr-1 ${hasLiked ? 'fill-primary' : ''}`} /> 
+              <ThumbsUp className={`h-4 w-4 mr-1.5 ${hasLiked ? 'fill-primary' : ''}`} /> 
               <span>{comment.likes?.count || 0}</span>
             </motion.button>
 
@@ -230,29 +235,29 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="text-xs h-auto py-1 px-2 text-muted-foreground hover:text-primary hover:bg-primary/10"
+                className="text-xs h-auto py-1.5 px-2.5 text-muted-foreground hover:text-primary hover:bg-primary/10"
                 onClick={() => {
                   setReplyingToCommentId(replyingToCommentId === comment.id ? null : comment.id);
                   setCurrentReplyText('');
                 }}
               >
-                <CornerDownRight className="h-3.5 w-3.5 mr-1" /> Reply
+                <CornerDownRight className="h-3.5 w-3.5 mr-1.5" /> Reply
               </Button>
             )}
           </div>
 
           {replyingToCommentId === comment.id && !isReply && (
-            <form onSubmit={(e) => { e.preventDefault(); handleReplySubmit(comment.id); }} className="mt-3 space-y-2">
+            <form onSubmit={(e) => { e.preventDefault(); handleReplySubmit(comment.id); }} className="mt-3 space-y-2.5">
               <Textarea 
                 placeholder={`Reply to ${comment.userName}...`} 
                 value={currentReplyText}
                 onChange={(e) => setCurrentReplyText(e.target.value)}
-                className="min-h-[80px] text-sm"
+                className="min-h-[80px] text-sm bg-background/70 border-border/50 focus:border-primary rounded-md shadow-inner"
                 disabled={isSubmittingReply}
               />
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="ghost" size="sm" onClick={() => setReplyingToCommentId(null)} disabled={isSubmittingReply}>Cancel</Button>
-                <Button type="submit" size="sm" disabled={isSubmittingReply || !currentReplyText.trim()}>
+                <Button type="submit" size="sm" disabled={isSubmittingReply || !currentReplyText.trim()} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                   {isSubmittingReply ? "Replying..." : "Send Reply"}
                 </Button>
               </div>
@@ -307,7 +312,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses }: OrderDe
           <div>
             <h3 className="text-xl font-semibold mb-4 sm:mb-5 text-foreground">Order Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-4 sm:gap-y-5 text-sm sm:text-base">
-              <div className="md:col-span-2">
+               <div className="md:col-span-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-4 md:gap-y-0">
                   <div className="flex items-start space-x-3 p-3 bg-secondary/30 rounded-lg border border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
                     <div className="p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
