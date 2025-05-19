@@ -33,7 +33,6 @@ export interface OrderLogEntry {
 
 export interface TrackingLink {
   id: string;
-  // customerName: string; // Marked for potential removal if not used
   companyName: string;
   address: string;
   phoneNumber: string;
@@ -61,6 +60,10 @@ export interface Comment {
   timestamp: string; // ISO string
   isInternal: boolean;
   replies?: Comment[]; // Array for nested replies
+  likes?: { // Added for "Like" functionality
+    count: number;
+    reactedBy: string[]; // Stores user IDs or client-generated IDs
+  };
 }
 
 export interface ServiceModelItem {
