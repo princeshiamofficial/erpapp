@@ -7,12 +7,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { User, CustomStatus, ServiceModelItem, ServiceLaminationItem } from "@/types";
+import type { User, CustomStatus, ServiceModelItem, ServiceLaminationItem, OrderItem } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { createOrderAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getModels, getLaminations } from '@/lib/service-options-service'; // Import new service
-import { Loader2 } from 'lucide-react';
+import { getModels, getLaminations } from '@/lib/service-options-service';
+import { Loader2, PlusCircle, Trash2 } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 
 interface CreateOrderDialogProps {
   currentUser: User;
@@ -21,15 +22,22 @@ interface CreateOrderDialogProps {
   children: React.ReactNode;
 }
 
+// Type for individual item in the dialog's state (quantity is string for input)
+interface DialogOrderItem {
+  id: string;
+  model: string;
+  quantity: string;
+  lamination: string;
+}
+
 export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children }: CreateOrderDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [companyName, setCompanyName] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [model, setModel] = useState<string>('');
-  const [quantity, setQuantity] = useState<string>('');
-  const [lamination, setLamination] = useState<string>('');
   const [initialStatusId, setInitialStatusId] = useState<string>('');
+  
+  const [orderItems, setOrderItems] = useState<DialogOrderItem[]>([{ id: uuidv4(), model: '', quantity: '', lamination: '' }]);
   
   const [modelOptions, setModelOptions] = useState<ServiceModelItem[]>([]);
   const [laminationOptions, setLaminationOptions] = useState<ServiceLaminationItem[]>([]);
@@ -42,10 +50,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setCompanyName('');
     setAddress('');
     setPhoneNumber('');
-    setModel('');
-    setQuantity('');
-    setLamination('');
     setInitialStatusId(''); 
+    setOrderItems([{ id: uuidv4(), model: '', quantity: '', lamination: '' }]);
   }, []);
 
   const fetchOptions = useCallback(async () => {
@@ -67,7 +73,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
   useEffect(() => {
     if (isOpen) {
-      fetchOptions(); // Fetch options when dialog opens
+      fetchOptions();
       if (availableStatuses.length > 0) {
         const isCurrentStatusInAvailableList = availableStatuses.some(s => s.id === initialStatusId);
         if (!initialStatusId || !isCurrentStatusInAvailableList) {
@@ -84,25 +90,62 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
   }, [isOpen, availableStatuses, initialStatusId, fetchOptions]);
 
+  const handleAddItem = () => {
+    setOrderItems([...orderItems, { id: uuidv4(), model: '', quantity: '', lamination: '' }]);
+  };
+
+  const handleRemoveItem = (id: string) => {
+    if (orderItems.length > 1) {
+      setOrderItems(orderItems.filter(item => item.id !== id));
+    }
+  };
+
+  const handleItemChange = (id: string, field: keyof Omit<DialogOrderItem, 'id'>, value: string) => {
+    setOrderItems(orderItems.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!companyName || !address || !phoneNumber || !model || !quantity || !lamination || !initialStatusId) {
+    if (!companyName || !address || !phoneNumber || !initialStatusId) {
       toast({
         title: "Validation Error",
-        description: "All fields including Company Name, Address, Phone Number, Model, Quantity, Lamination, and Initial Status are required.",
+        description: "Company Name, Address, Phone Number, and Initial Status are required.",
         variant: "destructive",
       });
       return;
     }
-    const parsedQuantity = parseInt(quantity, 10);
-    if (isNaN(parsedQuantity) || parsedQuantity < 1) {
+
+    if (orderItems.some(item => !item.model || !item.quantity || !item.lamination)) {
+      toast({
+        title: "Validation Error",
+        description: "All order items must have a Model, Quantity, and Lamination selected.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const parsedOrderItems: OrderItem[] = orderItems.map(item => {
+      const parsedQuantity = parseInt(item.quantity, 10);
+      if (isNaN(parsedQuantity) || parsedQuantity < 1) {
+        throw new Error(`Invalid quantity for one of the items: "${item.quantity}". Quantity must be a positive number.`);
+      }
+      return {
+        id: item.id, // Keep the dialog-generated ID for now, service might re-gen if needed
+        model: item.model,
+        quantity: parsedQuantity,
+        lamination: item.lamination,
+      };
+    });
+    
+    if (parsedOrderItems.some(item => isNaN(item.quantity) || item.quantity < 1)) {
         toast({
             title: "Validation Error",
-            description: "Quantity must be a positive number.",
+            description: "Quantity for all items must be a positive number.",
             variant: "destructive",
         });
         return;
     }
+
 
     if (availableStatuses.length === 0 && !initialStatusId) { 
       toast({
@@ -116,12 +159,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
     const orderData = {
       companyName,
-      // customerName: companyName, // Using companyName as customerName for now
       address,
       phoneNumber,
-      model,
-      quantity: parsedQuantity,
-      lamination,
+      orderItems: parsedOrderItems,
       initialStatusId,
     };
 
@@ -150,7 +190,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                     (availableStatuses.length > 0 || !!initialStatusId) &&
                     modelOptions.length > 0 && 
                     laminationOptions.length > 0 &&
-                    !isLoadingOptions;
+                    !isLoadingOptions &&
+                    orderItems.length > 0 &&
+                    orderItems.every(item => item.model && item.quantity && item.lamination && parseInt(item.quantity) > 0);
 
 
   return (
@@ -158,10 +200,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl">
+      <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
-          <DialogDescription>Enter company and order details. All fields are required.</DialogDescription>
+          <DialogDescription>Enter company details and add order items. All fields are required unless marked optional.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -178,49 +220,68 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               <Input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
             </div>
             
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="space-y-1 flex-1">
-                <Label htmlFor="model">Model</Label>
-                <Select value={model} onValueChange={setModel} required disabled={isLoadingOptions || modelOptions.length === 0}>
-                  <SelectTrigger id="model">
-                    <SelectValue placeholder={isLoadingOptions ? "Loading models..." : (modelOptions.length === 0 ? "No models configured" : "Select model")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {modelOptions.map(option => (
-                      <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-3 mt-4 border-t border-border pt-4">
+              <Label className="text-lg font-semibold">Order Items</Label>
+              {orderItems.map((item, index) => (
+                <div key={item.id} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end p-3 border rounded-md bg-secondary/30 relative">
+                  <div className="space-y-1">
+                    <Label htmlFor={`model-${item.id}`}>Model</Label>
+                    <Select value={item.model} onValueChange={(value) => handleItemChange(item.id, 'model', value)} required disabled={isLoadingOptions || modelOptions.length === 0}>
+                      <SelectTrigger id={`model-${item.id}`}>
+                        <SelectValue placeholder={isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {modelOptions.map(option => (
+                          <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-1 flex-1">
-                <Label htmlFor="quantity">Quantity</Label>
-                <Input id="quantity" type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder="e.g., 100" min="1" required />
-              </div>
+                  <div className="space-y-1">
+                    <Label htmlFor={`quantity-${item.id}`}>Quantity</Label>
+                    <Input id={`quantity-${item.id}`} type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} placeholder="e.g., 100" min="1" required />
+                  </div>
 
-              <div className="space-y-1 flex-1">
-                <Label htmlFor="lamination">Lamination</Label>
-                <Select value={lamination} onValueChange={setLamination} required disabled={isLoadingOptions || laminationOptions.length === 0}>
-                  <SelectTrigger id="lamination">
-                     <SelectValue placeholder={isLoadingOptions ? "Loading laminations..." : (laminationOptions.length === 0 ? "No laminations configured" : "Select lamination")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {laminationOptions.map(option => (
-                      <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-             {(isLoadingOptions && (modelOptions.length === 0 || laminationOptions.length === 0)) && 
-                <div className="flex items-center text-sm text-muted-foreground">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Loading model & lamination options...
+                  <div className="space-y-1">
+                    <Label htmlFor={`lamination-${item.id}`}>Lamination</Label>
+                    <Select value={item.lamination} onValueChange={(value) => handleItemChange(item.id, 'lamination', value)} required disabled={isLoadingOptions || laminationOptions.length === 0}>
+                      <SelectTrigger id={`lamination-${item.id}`}>
+                         <SelectValue placeholder={isLoadingOptions ? "Loading..." : (laminationOptions.length === 0 ? "No laminations" : "Select lamination")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {laminationOptions.map(option => (
+                          <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button 
+                    type="button" 
+                    variant="destructive" 
+                    size="icon" 
+                    onClick={() => handleRemoveItem(item.id)} 
+                    disabled={orderItems.length <= 1 || isSubmitting}
+                    className="h-10 w-10 self-end"
+                    title="Remove item"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
-            }
+              ))}
+               {(isLoadingOptions && (orderItems.length === 0 || (modelOptions.length === 0 || laminationOptions.length === 0))) && 
+                  <div className="flex items-center text-sm text-muted-foreground">
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading model & lamination options...
+                  </div>
+              }
+              <Button type="button" variant="outline" onClick={handleAddItem} className="mt-2" disabled={isSubmitting || isLoadingOptions}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Another Item
+              </Button>
+            </div>
 
 
-            <div className="space-y-1">
+            <div className="space-y-1 mt-4 border-t border-border pt-4">
               <Label htmlFor="initialStatus">Initial Status</Label>
               <Select value={initialStatusId} onValueChange={setInitialStatusId} required>
                 <SelectTrigger id="initialStatus" disabled={availableStatuses.length === 0}>
@@ -232,7 +293,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   ))}
                 </SelectContent>
               </Select>
-               {availableStatuses.length === 0 && <p className="text-xs text-muted-foreground mt-1">Statuses are loading or unavailable. Please wait or check admin settings.</p>}
+               {availableStatuses.length === 0 && !isSubmitting && <p className="text-xs text-muted-foreground mt-1">Statuses are loading or unavailable. Please wait or check admin settings.</p>}
             </div>
           </div>
           <DialogFooter className="pt-4 border-t">
@@ -246,3 +307,5 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
+
+    
