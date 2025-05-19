@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, Settings as SettingsIcon, MoreVertical } from "lucide-react";
+import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, Settings as SettingsIcon, MoreVertical, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole } from "@/types";
@@ -18,7 +18,6 @@ import { EditUserInfoDialog } from '@/components/users/edit-user-info-dialog';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Logo } from '@/components/layout/Logo';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { 
   DropdownMenu,
@@ -195,20 +194,57 @@ export default function UsersPage() {
     return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
   }
   
+  const usersToDisplay = useMemo(() => {
+    if (!currentUser) return [];
+    if (currentUser.role === 'ADMIN') {
+      return users.filter(user => user.role !== 'SYSTEM_ADMIN');
+    }
+    return users;
+  }, [users, currentUser]);
+
   const filteredUsers = useMemo(() => {
-    if (!searchTerm) return users;
-    return users.filter(user => 
+    if (!searchTerm) return usersToDisplay;
+    return usersToDisplay.filter(user => 
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.role.toLowerCase().replace(/_/g, ' ').includes(searchTerm.toLowerCase()) ||
       (user.companyName && user.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [users, searchTerm]);
+  }, [usersToDisplay, searchTerm]);
 
   if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center bg-background p-6 text-center">
-        <Logo className="h-16 w-16 mb-6 text-primary" />
+        <svg
+          width="64"
+          height="64"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className={cn("text-primary drop-shadow-[0_2px_3px_hsl(var(--primary)/0.5)] mb-6", "h-16 w-16")}
+        >
+          <path
+            d="M12 2L2 7V17L12 22L22 17V7L12 2Z"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M2 7L12 12M12 12L22 7M12 12V22M12 2V12"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path
+            d="M17 4.5L7 9.5"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
         <h2 className="text-2xl font-semibold mb-2">Access Denied</h2>
         <p className="text-muted-foreground">You must be an administrator to view this page.</p>
         <Button onClick={() => router.push('/dashboard')} className="mt-6">Go to Dashboard</Button>
@@ -271,10 +307,11 @@ export default function UsersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          {/* Refresh button is hidden
+          {/* 
           <Button variant="outline" size="icon" onClick={fetchUsers} disabled={isLoadingUsers} className="h-10 w-10" title="Refresh Users">
             <RefreshCw className={`h-5 w-5 ${isLoadingUsers ? 'animate-spin' : ''}`} />
-          </Button> */}
+          </Button> 
+          */}
           <AddUserDialog onUserAdded={handleUserAdded} currentUser={currentUser}>
             <Button size="lg" className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow h-10">
               <PlusCircle className="mr-2 h-5 w-5" />
@@ -357,7 +394,7 @@ export default function UsersPage() {
                         </TableCell>
                     )}
                     <TableCell className="text-muted-foreground">{user.companyName || 'N/A'}</TableCell>
-                    <TableCell className="pr-6 text-right">
+                    <TableCell className="pr-6 text-right space-x-1.5 whitespace-nowrap">
                        <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-9 w-9" title="User Actions">
@@ -427,7 +464,36 @@ export default function UsersPage() {
                  ) : (
                     <TableRow>
                         <TableCell colSpan={showBanStatusColumn ? 7 : 6} className="text-center py-12 h-[300px]">
-                             <Logo className="mx-auto h-16 w-16 mb-6 text-primary opacity-50" />
+                             <svg
+                                width="64"
+                                height="64"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                                className={cn("text-primary drop-shadow-[0_2px_3px_hsl(var(--primary)/0.5)] mx-auto mb-6 opacity-50", "h-16 w-16")}
+                              >
+                                <path
+                                  d="M12 2L2 7V17L12 22L22 17V7L12 2Z"
+                                  stroke="currentColor"
+                                  strokeWidth="1.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                                <path
+                                  d="M2 7L12 12M12 12L22 7M12 12V22M12 2V12"
+                                  stroke="currentColor"
+                                  strokeWidth="1.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                                <path
+                                  d="M17 4.5L7 9.5"
+                                  stroke="currentColor"
+                                  strokeWidth="1.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
                             <p className="text-lg text-muted-foreground font-medium">
                               {searchTerm ? "No users match your search." : "No users found in database."}
                             </p>
@@ -542,3 +608,6 @@ export default function UsersPage() {
     </div>
   );
 }
+
+    
+    
