@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"; // Removed DialogTrigger
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,9 +11,10 @@ import type { User, UserRole } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { UserCircle, UploadCloud, XCircle, Eye, EyeOff } from 'lucide-react';
+import { addUser as addUserToFirestoreService } from '@/lib/user-service'; // Renamed for clarity
 
 interface AddUserDialogProps {
-  onUserAdded: (newUser: Omit<User, 'id'> & { password?: string }) => Promise<boolean>; // Changed to expect a boolean for success
+  onUserAdded: () => void; // Simplified callback
   currentUser: User;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -46,7 +47,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange }
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  }, []); // Added resetForm to useCallback
+  }, []); 
 
   useEffect(() => {
     if (!isOpen) {
@@ -75,8 +76,8 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange }
       return ALL_USER_ROLES;
     }
     if (currentUser.role === 'ADMIN') {
-      // Regular admin CANNOT assign SYSTEM_ADMIN. This is already correct.
-      // Adding an explicit comment to clarify the existing behavior.
+      // Regular Admin can assign ADMIN, CRM, or DESIGNER_REPRESENTATIVE.
+      // They CANNOT assign SYSTEM_ADMIN. This is the existing correct behavior.
       return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE']; 
     }
     return []; 
@@ -156,7 +157,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange }
       }
     }
 
-    const newUser: Omit<User, 'id'> & { password?: string } = { 
+    const newUserFirestoreData: Omit<User, 'id'> & { password?: string } = { 
       name,
       email,
       role,
@@ -168,17 +169,23 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange }
       isBanned: false,
     };
 
-    const success = await onUserAdded(newUser);
+    const createdUser = await addUserToFirestoreService(newUserFirestoreData);
     setIsSubmitting(false);
-    if (success) {
-        onOpenChange(false); // Close dialog on success (handled by parent now)
+
+    if (createdUser) {
+        onUserAdded(); // Notify parent
+        onOpenChange(false); // Close dialog
+    } else {
+       toast({ title: "Error", description: "Could not add user. Email might be in use or database error.", variant: "destructive"});
     }
-    // Parent (UsersPage) now handles toasts for success/failure of onUserAdded
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      {/* DialogTrigger is handled by parent controlling isOpen */}
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      onOpenChange(open);
+      if (!open) resetForm();
+    }}>
+      {/* DialogTrigger is now handled by parent controlling isOpen state */}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>

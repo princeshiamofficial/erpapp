@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical } from "lucide-react";
+import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole } from "@/types";
@@ -98,87 +98,61 @@ export default function UsersPage() {
     }
   }, [currentUser, router, fetchUsers]);
 
-  const handleUserAdded = async (newUserData: Omit<User, 'id' | 'isBanned'> & {password: string}) => {
-    const createdUser = await addUserToDb(newUserData); 
-    if (createdUser) {
-      toast({ title: "User Added", description: `${newUserData.name} has been added. Default password is 'password'.`});
-      await fetchUsers(); 
-      if (currentUser && newUserData.email === currentUser.email && typeof refreshCurrentUser === 'function') { 
+  const handleUserAdded = async () => { // Parameter removed, dialog handles data
+    toast({ title: "User Added", description: `New user has been added. Default password is 'password'.`});
+    await fetchUsers(); 
+    // Refresh current user if admin adds themselves (unlikely, but good practice)
+    // if (currentUser && newUserData.email === currentUser.email && typeof refreshCurrentUser === 'function') { 
+    //   await refreshCurrentUser(); 
+    // }
+    setIsAddUserDialogOpen(false);
+  };
+
+  const handleUserRoleUpdated = async () => {
+    toast({ title: "Role Updated", description: `User role has been updated.`});
+    await fetchUsers();
+    if (currentUser && userToEditRole && userToEditRole.id === currentUser.id && typeof refreshCurrentUser === 'function') {
+        await refreshCurrentUser();
+    }
+    setIsEditRoleDialogOpen(false);
+    setUserToEditRole(null);
+  };
+
+  const handleUserDeleted = async () => {
+    toast({ title: "User Deleted", description: `User has been deleted.`});
+    await fetchUsers();
+    setIsDeleteUserDialogOpen(false);
+    setUserToDelete(null);
+  };
+
+  const handlePasswordChanged = async () => {
+    toast({ title: "Password Updated", description: `Password for user has been updated successfully.` });
+    await fetchUsers();
+    if (currentUser && userToChangePassword && userToChangePassword.id === currentUser.id && typeof refreshCurrentUser === 'function') {
+        await refreshCurrentUser();
+    }
+    setIsChangePasswordDialogOpen(false);
+    setUserToChangePassword(null);
+  };
+
+  const handleUserAvatarSetByAdmin = async () => {
+    toast({ title: "Avatar Updated", description: "User's avatar has been set." });
+    await fetchUsers(); 
+    if (currentUser && userToSetAvatar && userToSetAvatar.id === currentUser.id && typeof refreshCurrentUser === 'function') {
         await refreshCurrentUser(); 
-      }
-      setIsAddUserDialogOpen(false); // Close dialog on success
-    } else {
-       toast({ title: "Error", description: "Could not add user. Email might be in use or database error.", variant: "destructive"});
     }
-  };
-
-  const handleUserRoleUpdated = async (userId: string, role: UserRole) => {
-    const success = await updateUserRoleInFirestore(userId, role);
-    if (success) {
-      toast({ title: "Role Updated", description: `User role has been updated.`});
-      await fetchUsers();
-      if (currentUser && userId === currentUser.id && typeof refreshCurrentUser === 'function') await refreshCurrentUser();
-      setIsEditRoleDialogOpen(false);
-      setUserToEditRole(null);
-    } else {
-      toast({ title: "Error", description: "Could not update user role.", variant: "destructive"});
-    }
-  };
-
-  const handleUserDeleted = async (userId: string) => {
-    const success = await deleteUserFromFirestore(userId);
-    if (success) {
-      toast({ title: "User Deleted", description: `User has been deleted.`});
-      await fetchUsers();
-      setIsDeleteUserDialogOpen(false);
-      setUserToDelete(null);
-    } else {
-      toast({ title: "Error", description: "Could not delete user.", variant: "destructive"});
-    }
-  };
-
-  const handlePasswordChanged = async (userId: string, newPassword: string): Promise<boolean> => {
-    const success = await updateUserPasswordInFirestore(userId, newPassword);
-    if (success) {
-        toast({ title: "Password Updated", description: `Password for user has been updated successfully.` });
-        await fetchUsers();
-        if (currentUser && userId === currentUser.id && typeof refreshCurrentUser === 'function') {
-            await refreshCurrentUser();
-        }
-        setIsChangePasswordDialogOpen(false);
-        setUserToChangePassword(null);
-    } else {
-        toast({ title: "Update Failed", description: "Could not update the password. Please try again.", variant: "destructive" });
-    }
-    return success;
-  };
-
-  const handleUserAvatarSetByAdmin = async (userId: string, avatarUrl: string | null): Promise<boolean> => {
-    const success = await updateUserAvatarInFirestore(userId, avatarUrl);
-    if (success) {
-      toast({ title: "Avatar Updated", description: "User's avatar has been set." });
-      await fetchUsers(); 
-      if (currentUser && userId === currentUser.id && typeof refreshCurrentUser === 'function') await refreshCurrentUser(); 
-      setIsSetAvatarDialogOpen(false);
-      setUserToSetAvatar(null);
-    } else {
-      toast({ title: "Avatar Update Failed", description: "Could not set user avatar.", variant: "destructive" });
-    }
-    return success; 
+    setIsSetAvatarDialogOpen(false);
+    setUserToSetAvatar(null);
   };
   
-  const handleUserTargetsSetByAdmin = async (userId: string, monthlyTarget: number, weeklyTarget: number): Promise<boolean> => {
-    const success = await updateUserTargetsInFirestore(userId, monthlyTarget, weeklyTarget);
-    if (success) {
-      toast({ title: "Sales Targets Updated", description: "User's sales targets have been set." });
-      await fetchUsers();
-       if (currentUser && userId === currentUser.id && typeof refreshCurrentUser === 'function') await refreshCurrentUser();
-       setIsSetTargetsDialogOpen(false);
-       setUserToSetTargets(null);
-    } else {
-      toast({ title: "Target Update Failed", description: "Could not set user sales targets.", variant: "destructive" });
+  const handleUserTargetsSetByAdmin = async () => {
+    toast({ title: "Sales Targets Updated", description: "User's sales targets have been set." });
+    await fetchUsers();
+    if (currentUser && userToSetTargets && userToSetTargets.id === currentUser.id && typeof refreshCurrentUser === 'function') {
+        await refreshCurrentUser();
     }
-    return success; 
+    setIsSetTargetsDialogOpen(false);
+    setUserToSetTargets(null);
   };
 
   const handleToggleBanStatus = async () => {
@@ -206,7 +180,7 @@ export default function UsersPage() {
     setUserToToggleBan(null);
   };
 
-  const handleUserInfoUpdated = async () => { // This function is called by EditUserInfoDialog's onUserInfoUpdated
+  const handleUserInfoUpdated = async () => { 
     toast({ title: "User Info Updated", description: "User's information has been updated." });
     await fetchUsers();
     if (currentUser && userToEditInfo && userToEditInfo.id === currentUser.id && typeof refreshCurrentUser === 'function') {
@@ -226,10 +200,12 @@ export default function UsersPage() {
   
   const usersToDisplay = useMemo(() => {
     if (!currentUser) return [];
+    let displayableUsers = users;
     if (currentUser.role === 'ADMIN') {
-      return users.filter(user => user.role !== 'SYSTEM_ADMIN');
+      // Admins cannot see System Admins
+      displayableUsers = users.filter(user => user.role !== 'SYSTEM_ADMIN');
     }
-    return users;
+    return displayableUsers;
   }, [users, currentUser]);
 
   const filteredUsers = useMemo(() => {
@@ -294,10 +270,12 @@ export default function UsersPage() {
   const canAdminModifyTargetUser = useCallback((targetUser: User): boolean => {
     if (!currentUser) return false;
     if (currentUser.role === 'SYSTEM_ADMIN') {
-      return targetUser.role !== 'SYSTEM_ADMIN' && targetUser.id !== currentUser.id;
+      // System admin can modify anyone except themselves or other System Admins via these specific dialogs
+      return targetUser.id !== currentUser.id && targetUser.role !== 'SYSTEM_ADMIN';
     }
     if (currentUser.role === 'ADMIN') {
-      if (targetUser.id === currentUser.id) return true; 
+      if (targetUser.id === currentUser.id) return true; // Admins can modify themselves (e.g., password)
+      // Admins can modify CRM and DR users, but not other Admins or System Admins
       return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE';
     }
     return false; 
@@ -332,17 +310,15 @@ export default function UsersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <AddUserDialog 
-            onUserAdded={handleUserAdded} 
-            currentUser={currentUser}
-            isOpen={isAddUserDialogOpen}
-            onOpenChange={setIsAddUserDialogOpen}
+          {/* Refresh button was here, hidden by user request */}
+          <Button 
+            size="lg" 
+            onClick={() => setIsAddUserDialogOpen(true)} 
+            className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow h-10"
           >
-            <Button size="lg" onClick={() => setIsAddUserDialogOpen(true)} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow h-10">
-              <PlusCircle className="mr-2 h-5 w-5" />
-              Add New User
-            </Button>
-          </AddUserDialog>
+            <PlusCircle className="mr-2 h-5 w-5" />
+            Add New User
+          </Button>
         </div>
       </div>
       
@@ -539,6 +515,18 @@ export default function UsersPage() {
         </CardContent>
       </Card>
 
+      {currentUser && (
+        <AddUserDialog 
+          onUserAdded={handleUserAdded}
+          currentUser={currentUser}
+          isOpen={isAddUserDialogOpen}
+          onOpenChange={(open) => {
+            setIsAddUserDialogOpen(open);
+            if (!open) { /* Additional reset if needed, but dialog should handle internal reset */ }
+          }}
+        />
+      )}
+
       {isEditInfoDialogOpen && userToEditInfo && (
         <EditUserInfoDialog
           user={userToEditInfo}
@@ -624,10 +612,11 @@ export default function UsersPage() {
           />
       )}
 
-      {isDeleteUserDialogOpen && userToDelete && (
+      {isDeleteUserDialogOpen && userToDelete && currentUser && (
         <DeleteUserDialog 
           user={userToDelete} 
-          onUserDeleted={handleUserDeleted} // Pass only the function
+          currentUser={currentUser}
+          onUserDeleted={handleUserDeleted}
           isOpen={isDeleteUserDialogOpen}
           onOpenChange={(open) => {
             setIsDeleteUserDialogOpen(open);
