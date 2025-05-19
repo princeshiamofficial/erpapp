@@ -35,14 +35,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [router]);
 
   const refreshCurrentUser = useCallback(async () => {
-    if (currentUser && currentUser.id && !isSuspendedDialogOpen) { // Don't refresh if dialog is already showing
+    if (currentUser && currentUser.id && !isSuspendedDialogOpen) { 
       console.log(`AuthContext: Refreshing current user data for ID: ${currentUser.id}`);
       try {
         const firestoreUser = await getUserById(currentUser.id);
         if (firestoreUser) {
           if (firestoreUser.isBanned) {
             console.log("AuthContext: Current user has been banned during session. Showing suspension dialog.");
-            // Important: Set currentUser with banned status to ensure layout shows dialog correctly
             setCurrentUser(firestoreUser as User); 
             localStorage.setItem('colorhut-user', JSON.stringify(firestoreUser));
             setIsSuspendedDialogOpen(true);
@@ -53,18 +52,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               setCurrentUser(userToStore as User);
               localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
             }
+             if (isSuspendedDialogOpen) { // If dialog was open but user is no longer banned
+              setIsSuspendedDialogOpen(false);
+            }
           }
         } else {
           console.log("AuthContext: Current user not found in Firestore during refresh (e.g., deleted). Showing suspension dialog to force logout.");
-          // Keep current user in state so dialog can show, then logout
           setIsSuspendedDialogOpen(true); 
         }
       } catch (error) {
         console.error("AuthContext: Error refreshing current user data:", error);
-        // Optionally: setIsSuspendedDialogOpen(true); // To force logout on persistent error
       }
     }
-  }, [currentUser, isSuspendedDialogOpen]); // Removed logout from here, it's called by dialog
+  }, [currentUser, isSuspendedDialogOpen]); 
 
   useEffect(() => {
     const initializeAuth = async () => {
@@ -82,10 +82,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               console.log(`AuthContext: Validating stored user ID: ${storedUser.id} against Firestore.`);
               const firestoreUser = await getUserById(storedUser.id);
               if (firestoreUser) {
-                setCurrentUser(firestoreUser as User); // Set user regardless of ban status initially
+                setCurrentUser(firestoreUser as User); 
                 if (firestoreUser.isBanned) {
-                  console.log("AuthContext: Stored user is banned. Will trigger suspension dialog on layout mount.");
-                  setIsSuspendedDialogOpen(true); // Trigger dialog immediately if loaded user is banned
+                  console.log("AuthContext: Stored user is banned. Will trigger suspension dialog.");
+                  setIsSuspendedDialogOpen(true); 
                 }
               } else {
                 console.log("AuthContext: Stored user NOT found in Firestore. Clearing localStorage.");
@@ -137,23 +137,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (userFromDb) {
         console.log(`AuthContext: User found in DB for email ${email}:`, { id: userFromDb.id, role: userFromDb.role, isBanned: userFromDb.isBanned });
         if (userFromDb.password === pass) {
-          const { password, ...userToStore } = userFromDb;
-          setCurrentUser(userToStore as User);
-          localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
-
           if (userFromDb.isBanned) {
-            console.log("AuthContext: Login successful for banned user. Triggering suspension dialog.");
-            setIsSuspendedDialogOpen(true);
-            // router.push('/dashboard'); // Still push, layout will handle dialog
-            // setIsLoading(false);
-            // return true; // Indicate "successful" login to show dialog
+            console.log("AuthContext: Login attempt by banned user. Setting state for suspension dialog.");
+            const { password, ...userToStore } = userFromDb;
+            setCurrentUser(userToStore as User); // Set current user to banned user
+            localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
+            setIsSuspendedDialogOpen(true); // Trigger dialog
+            setIsLoading(false);
+            router.push('/dashboard'); // Navigate, layout will handle dialog display
+            return true; // Technically "authenticated" to reach the suspended state
           } else {
             console.log("AuthContext: Password matches and user not banned. Login successful.");
-            // router.push('/dashboard'); // Pushed after setting state
+            const { password, ...userToStore } = userFromDb;
+            setCurrentUser(userToStore as User);
+            localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
+            setIsLoading(false);
+            router.push('/dashboard'); 
+            return true; 
           }
-          setIsLoading(false);
-          router.push('/dashboard'); // Push to dashboard in both cases
-          return true; 
         } else {
           console.log("AuthContext: Password does NOT match for user:", email);
           toast({

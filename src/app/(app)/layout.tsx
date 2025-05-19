@@ -31,13 +31,11 @@ export default function AuthenticatedLayout({
   const router = useRouter();
 
   useEffect(() => {
-    // If not loading, no user, and suspension dialog isn't active/about to be active, redirect to login.
     if (!isLoading && !currentUser && !isSuspendedDialogOpen) {
       router.replace('/login');
     }
   }, [currentUser, isLoading, router, isSuspendedDialogOpen]);
 
-  // Show loader if still loading OR if there's no current user AND the suspension dialog isn't active.
   if (isLoading || (!currentUser && !isSuspendedDialogOpen)) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -99,4 +97,3 @@ export default function AuthenticatedLayout({
     </SidebarProvider>
   );
 }
-
