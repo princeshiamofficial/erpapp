@@ -13,7 +13,8 @@ import { CreateOrderDialog } from '@/components/orders/create-order-dialog';
 import type { TrackingLink, User, CustomStatus } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { getStatuses, getContrastTextColor, getStatusById } from '@/lib/status-service';
+import { cn } from "@/lib/utils";
+import { getStatusById, getContrastTextColor, getStatuses } from '@/lib/status-service';
 import { AssignDrDialog } from '@/components/orders/assign-dr-dialog';
 import { getOrders } from '@/lib/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -29,6 +30,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 const formatDate = (dateString: string | undefined) => {
@@ -113,7 +120,7 @@ export default function OrdersPage() {
   }, [allStatuses]);
 
   useEffect(() => {
-    if (allStatuses.length > 0 && filteredOrders.length > 0) {
+    if (allStatuses.length > 0) {
         const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
         const uniqueStatusIdsInFilteredOrders = new Set<string>();
         filteredOrders.forEach(order => uniqueStatusIdsInFilteredOrders.add(order.currentStatus));
@@ -122,13 +129,11 @@ export default function OrdersPage() {
             newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
         });
         
-        setOrderStatusDisplay(prevMap => {
-            if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(prevMap)) {
-                return newDisplayInfoMap;
-            }
-            return prevMap;
-        });
-    } else if (allStatuses.length > 0 && filteredOrders.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
+        // Only update if the map has actually changed to prevent potential loops
+        if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(orderStatusDisplay)) {
+          setOrderStatusDisplay(newDisplayInfoMap);
+        }
+    } else if (filteredOrders.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
         setOrderStatusDisplay({});
     } else if (allStatuses.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
         setOrderStatusDisplay({});
@@ -140,8 +145,8 @@ export default function OrdersPage() {
   const canAssignDr = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
   const canDeleteOrder = currentUser?.role === 'SYSTEM_ADMIN';
 
-  const handleOpenAssignDrDialog = async (orderToAssign: TrackingLink) => {
-    setIsLoading(true); // Consider a more specific loading state if needed
+  const handleOpenAssignDrDialog = useCallback(async (orderToAssign: TrackingLink) => {
+    setIsLoading(true); 
     try {
         console.log("OrdersPage/handleOpenAssignDrDialog: Opening for order:", orderToAssign.id);
         const freshStatuses = await getStatuses();
@@ -160,8 +165,8 @@ export default function OrdersPage() {
         }
         console.log("OrdersPage/handleOpenAssignDrDialog: 'ready-for-design' status in freshStatuses:", JSON.stringify(rfdCheck));
 
-        setAllStatuses(freshStatuses); // Update the main page's status list as well
-        setStatusesForDialog(freshStatuses); // Pass fresh statuses to dialog
+        setAllStatuses(freshStatuses); 
+        setStatusesForDialog(freshStatuses); 
         setSelectedOrderForDrAssignment(orderToAssign);
         setIsAssignDrDialogOpen(true);
     } catch (error) {
@@ -170,15 +175,14 @@ export default function OrdersPage() {
     } finally {
         setIsLoading(false);
     }
-  };
+  }, [toast]);
+
 
   const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromAction: TrackingLink) => {
       setOrders(prevOrders =>
         prevOrders.map(o => (o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o))
       );
       toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
-      // Optionally, re-fetch all data for absolute consistency, though optimistic update + revalidatePath should be good
-      // await fetchOrderData(); 
   }, [toast]);
 
 
@@ -214,10 +218,6 @@ export default function OrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-            {/* <Button variant="outline" className="h-10" onClick={fetchOrderData} disabled={isLoading}>
-                <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                Refresh Orders
-            </Button> */}
             {canCreateOrder && (
             <CreateOrderDialog
                 currentUser={currentUser}
@@ -287,8 +287,6 @@ export default function OrdersPage() {
                       <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                       <TableCell className="pr-6 text-right space-x-2">
                         <Skeleton className="h-9 w-9 inline-block rounded-md" />
-                        <Skeleton className="h-9 w-9 inline-block rounded-md" />
-                         {canDeleteOrder && <Skeleton className="h-9 w-9 inline-block rounded-md" />}
                       </TableCell>
                     </TableRow>
                   ))
@@ -302,7 +300,9 @@ export default function OrdersPage() {
                             {order.id}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-card-foreground">{order.companyName}</TableCell>
+                        <TableCell className="text-card-foreground">
+                          {order.companyName}
+                        </TableCell>
                         <TableCell>
                           <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
                             {statusInfo.name}
@@ -311,35 +311,41 @@ export default function OrdersPage() {
                         <TableCell className="text-card-foreground">{order.crmUserName}</TableCell>
                         <TableCell className="text-card-foreground">{order.designerRepresentativeName || 'N/A'}</TableCell>
                         <TableCell className="text-muted-foreground">{isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-20" />}</TableCell>
-                        <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
-                          {canAssignDr && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-9 px-3"
-                              onClick={() => handleOpenAssignDrDialog(order)}
-                            >
-                              <Users2 className="mr-1.5 h-4 w-4" /> {order.designerRepresentativeId ? "Re-assign DR" : "Assign DR"}
-                            </Button>
-                          )}
-                          <Link href={`/track/${order.id}`} passHref>
-                            <Button variant="outline" size="sm" className="h-9 px-3">
-                              <Eye className="mr-1.5 h-4 w-4" /> View
-                            </Button>
-                          </Link>
-                          {canDeleteOrder && (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="h-9 px-3"
-                              onClick={() => {
-                                setOrderToDelete(order);
-                                setIsDeleteDialogOpen(true);
-                              }}
-                            >
-                              <Trash2 className="mr-1.5 h-4 w-4" /> Delete
-                            </Button>
-                          )}
+                        <TableCell className="pr-6 text-right whitespace-nowrap">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-9 w-9" title="Order Actions">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {canAssignDr && (
+                                <DropdownMenuItem
+                                  onSelect={() => handleOpenAssignDrDialog(order)}
+                                  className="cursor-pointer"
+                                >
+                                  <Users2 className="mr-2 h-4 w-4" />
+                                  {order.designerRepresentativeId ? "Re-assign DR" : "Assign DR"}
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem asChild className="cursor-pointer">
+                                <Link href={`/track/${order.id}`}>
+                                  <Eye className="mr-2 h-4 w-4" /> View Details
+                                </Link>
+                              </DropdownMenuItem>
+                              {canDeleteOrder && (
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    setOrderToDelete(order);
+                                    setIsDeleteDialogOpen(true);
+                                  }}
+                                  className="cursor-pointer text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" /> Delete Order
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     );
