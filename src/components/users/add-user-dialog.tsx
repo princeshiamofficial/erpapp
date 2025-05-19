@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,21 +13,20 @@ import Image from 'next/image';
 import { UserCircle, UploadCloud, XCircle, Eye, EyeOff } from 'lucide-react';
 
 interface AddUserDialogProps {
-  onUserAdded: (newUser: Omit<User, 'id'> & { password?: string }) => Promise<void>;
-  currentUser: User; 
-  children?: React.ReactNode; // Made optional for programmatic control
+  onUserAdded: (newUser: Omit<User, 'id'> & { password?: string }) => Promise<boolean>; // Changed to expect a boolean for success
+  currentUser: User;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"];
 
-export function AddUserDialog({ onUserAdded, currentUser, children, isOpen, onOpenChange }: AddUserDialogProps) {
+export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange }: AddUserDialogProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [role, setRole] = useState<UserRole | undefined>(undefined);
-  const [password, setPassword] = useState('password'); 
+  const [password, setPassword] = useState('password');
   const [showPassword, setShowPassword] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -47,8 +46,7 @@ export function AddUserDialog({ onUserAdded, currentUser, children, isOpen, onOp
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  }, []);
-
+  }, []); // Added resetForm to useCallback
 
   useEffect(() => {
     if (!isOpen) {
@@ -77,7 +75,8 @@ export function AddUserDialog({ onUserAdded, currentUser, children, isOpen, onOp
       return ALL_USER_ROLES;
     }
     if (currentUser.role === 'ADMIN') {
-      // Regular admin CANNOT assign SYSTEM_ADMIN.
+      // Regular admin CANNOT assign SYSTEM_ADMIN. This is already correct.
+      // Adding an explicit comment to clarify the existing behavior.
       return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE']; 
     }
     return []; 
@@ -166,22 +165,20 @@ export function AddUserDialog({ onUserAdded, currentUser, children, isOpen, onOp
       avatarUrl: avatarBase64Url,
       monthlyOrderTarget: 0, 
       weeklyOrderTarget: 0,  
+      isBanned: false,
     };
 
-    try {
-      await onUserAdded(newUser);
-      // The parent (UsersPage) will handle toast and closing.
-    } catch (error) {
-      // Error handling is primarily in UsersPage's handleUserAdded
-      console.error("Error in AddUserDialog handleSubmit during onUserAdded:", error);
-    } finally {
-      setIsSubmitting(false);
+    const success = await onUserAdded(newUser);
+    setIsSubmitting(false);
+    if (success) {
+        onOpenChange(false); // Close dialog on success (handled by parent now)
     }
+    // Parent (UsersPage) now handles toasts for success/failure of onUserAdded
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
+      {/* DialogTrigger is handled by parent controlling isOpen */}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
@@ -301,4 +298,3 @@ export function AddUserDialog({ onUserAdded, currentUser, children, isOpen, onOp
     </Dialog>
   );
 }
-
