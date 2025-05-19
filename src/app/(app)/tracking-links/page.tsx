@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { Link2, Eye, Edit3, Search, ClipboardCopy, Check, RefreshCw, Loader2 } from "lucide-react"; 
+import { Link2, Eye, Edit3, Search, ClipboardCopy, Check, RefreshCw, Loader2, MoreVertical } from "lucide-react"; 
 import { useAuth } from "@/contexts/auth-context";
 import Image from "next/image";
 import Link from "next/link";
@@ -17,6 +17,12 @@ import { getContrastTextColor, getStatuses } from '@/lib/status-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast'; 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function TrackingLinksPage() {
   const { currentUser } = useAuth();
@@ -111,37 +117,26 @@ export default function TrackingLinksPage() {
 
   useEffect(() => {
     if (allStatuses.length > 0) {
-      if (filteredTrackingLinks.length > 0) {
-        const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
-        const uniqueStatusIds = new Set<string>();
-        filteredTrackingLinks.forEach(link => uniqueStatusIds.add(link.currentStatus));
-        
-        uniqueStatusIds.forEach(statusId => {
-          newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
-        });
-        setOrderStatusDisplay(prevMap => {
-          if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(prevMap)) {
-            return newDisplayInfoMap;
-          }
-          return prevMap;
-        });
-      } else { 
-        setOrderStatusDisplay(prevMap => {
-          if (Object.keys(prevMap).length > 0) {
-            return {};
-          }
-          return prevMap;
-        });
-      }
-    } else { 
+      const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
+      const uniqueStatusIds = new Set<string>();
+      filteredTrackingLinks.forEach(link => uniqueStatusIds.add(link.currentStatus));
+      
+      uniqueStatusIds.forEach(statusId => {
+        newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
+      });
+      
       setOrderStatusDisplay(prevMap => {
-        if (Object.keys(prevMap).length > 0) {
-          return {};
+        if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(prevMap)) {
+          return newDisplayInfoMap;
         }
         return prevMap;
       });
+    } else if (filteredTrackingLinks.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
+      setOrderStatusDisplay({});
+    } else if (allStatuses.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
+      setOrderStatusDisplay({});
     }
-  }, [filteredTrackingLinks, allStatuses, getStatusDisplayInfo]);
+  }, [filteredTrackingLinks, allStatuses, getStatusDisplayInfo, orderStatusDisplay]);
 
 
   if (!currentUser) return (
@@ -212,8 +207,6 @@ export default function TrackingLinksPage() {
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell className="pr-6 text-right space-x-2">
                         <Skeleton className="h-9 w-9 inline-block rounded-md" />
-                        <Skeleton className="h-9 w-9 inline-block rounded-md" />
-                        <Skeleton className="h-9 w-9 inline-block rounded-md" />
                       </TableCell>
                     </TableRow>
                   ))
@@ -241,23 +234,36 @@ export default function TrackingLinksPage() {
                         <TableCell className="text-muted-foreground">{link.viewCount || 0}</TableCell>
                         <TableCell className="text-card-foreground">{link.crmUserName}</TableCell>
                         <TableCell className="text-card-foreground">{link.designerRepresentativeName || 'N/A'}</TableCell>
-                        <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
-                          <Button variant="outline" size="sm" className="h-9 px-3" onClick={() => handleCopyLink(link.id)} title="Copy Link">
-                            {copiedLinkId === link.id ? <Check className="h-4 w-4 text-green-500" /> : <ClipboardCopy className="h-4 w-4" />}
-                            <span className="ml-1.5 hidden sm:inline">{copiedLinkId === link.id ? "Copied!" : "Copy"}</span>
-                          </Button>
-                          <Link href={`/track/${link.id}`} passHref>
-                            <Button variant="outline" size="sm" className="h-9 px-3">
-                              <Eye className="mr-1.5 h-4 w-4" /> 
-                              <span className="hidden sm:inline">View</span>
-                            </Button>
-                          </Link>
-                          {canEditSpecificLink(link) && (
-                            <Button variant="outline" size="sm" className="h-9 px-3" onClick={() => { setSelectedLink(link); setIsEditDialogOpen(true);}}>
-                              <Edit3 className="mr-1.5 h-4 w-4" />
-                              <span className="hidden sm:inline">Edit</span>
-                            </Button>
-                          )}
+                        <TableCell className="pr-6 text-right whitespace-nowrap">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-9 w-9" title="Actions">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onSelect={() => handleCopyLink(link.id)}
+                                className="cursor-pointer"
+                              >
+                                {copiedLinkId === link.id ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <ClipboardCopy className="mr-2 h-4 w-4" />}
+                                {copiedLinkId === link.id ? "Copied!" : "Copy Link"}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem asChild className="cursor-pointer">
+                                <Link href={`/track/${link.id}`}>
+                                  <Eye className="mr-2 h-4 w-4" /> View
+                                </Link>
+                              </DropdownMenuItem>
+                              {canEditSpecificLink(link) && (
+                                <DropdownMenuItem
+                                  onSelect={() => { setSelectedLink(link); setIsEditDialogOpen(true); }}
+                                  className="cursor-pointer"
+                                >
+                                  <Edit3 className="mr-2 h-4 w-4" /> Edit
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     );
@@ -294,5 +300,3 @@ export default function TrackingLinksPage() {
     </div>
   );
 }
-
-    
