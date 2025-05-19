@@ -1,7 +1,7 @@
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, orderBy, writeBatch, runTransaction, limit, where, deleteDoc } from 'firebase/firestore';
-import type { TrackingLink, Comment, OrderLogEntry, CustomStatus } from '@/types';
+import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, orderBy, writeBatch, limit, where, deleteDoc, runTransaction } from 'firebase/firestore';
+import type { TrackingLink, Comment, OrderLogEntry, CustomStatus, UserRole } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getStatuses, READY_FOR_DESIGN_STATUS_ID } from './status-service';
 import { format } from 'date-fns';
@@ -11,7 +11,6 @@ const ORDERS_COLLECTION = 'orders';
 const ORDER_SUBMITTED_ID = 'order-submitted';
 const IN_PRODUCTION_ID = 'in-production';
 const PENDING_CLIENT_APPROVAL_ID = 'pending-client-approval';
-
 
 const seedInitialOrders = async (): Promise<TrackingLink[]> => {
   const statuses: CustomStatus[] = await getStatuses();
@@ -28,38 +27,35 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
   if (!readyForDesignStatus) missingDetailed.push(`ID: '${READY_FOR_DESIGN_STATUS_ID}' (Expected Name: Ready for Design)`);
 
   if (missingDetailed.length > 0) {
-    console.error(`Default statuses not found, cannot seed initial orders properly. Specifically missing by ID: ${missingDetailed.join(', ')}. Please check that these statuses exist in your Firestore 'customOrderStatuses' collection with these exact IDs, or ensure the status seeding process is complete and successful.`);
-    return [];
-  }
-  
-  // This secondary check is for type safety although the above check should catch it.
-  if (!orderSubmittedStatus || !inProductionStatus || !pendingApprovalStatus || !readyForDesignStatus) {
-    console.error("One or more critical status objects are undefined even after attempting to find them by ID. Aborting seedInitialOrders.");
+    console.error(`seedInitialOrders: Default statuses not found by ID, cannot seed initial orders properly. Specifically missing: ${missingDetailed.join(', ')}. Please check that these statuses exist in your Firestore 'customOrderStatuses' collection with these exact IDs, or ensure the status seeding process is complete and successful.`);
     return [];
   }
 
-  type SeedOrderBase = Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments' | 'currentStatus' | 'viewCount'> & {
+  // This secondary check is for type safety although the above check should catch it.
+  if (!orderSubmittedStatus || !inProductionStatus || !pendingApprovalStatus || !readyForDesignStatus) {
+    console.error("seedInitialOrders: One or more critical status objects are undefined even after attempting to find them by ID. Aborting seedInitialOrders.");
+    return [];
+  }
+
+  type SeedOrderBase = Omit<TrackingLink, 'id' | 'createdAt' | 'statusHistory' | 'comments' | 'currentStatus' | 'viewCount' | 'isPublic' | 'customerName'> & {
     designerRepresentativeId?: string | null;
     designerRepresentativeName?: string | null;
   };
 
   const initialOrdersData: SeedOrderBase[] = [
     {
-      customerName: "Tech Solutions Contact", // Example contact person
       companyName: "Tech Solutions Inc.",
       address: "123 Tech Ave, Silicon Valley, CA 94001",
       phoneNumber: "555-0101",
-      model: "Premium Matte", // Assuming this is a valid model name
+      model: "Premium Matte",
       quantity: 500,
-      lamination: "Soft Touch", // Assuming this is a valid lamination name
-      crmUserId: "SysAdmin-001", // Assuming SysAdmin-001 exists
+      lamination: "Soft Touch",
+      crmUserId: "SysAdmin-001",
       crmUserName: "Default Admin",
-      isPublic: true,
       designerRepresentativeId: null,
       designerRepresentativeName: null,
     },
     {
-      customerName: "GreenScape Contact", // Example contact person
       companyName: "GreenScape Ltd.",
       address: "456 Green Rd, Meadowville, TX 75001",
       phoneNumber: "555-0102",
@@ -68,7 +64,6 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       lamination: "None",
       crmUserId: "SysAdmin-001",
       crmUserName: "Default Admin",
-      isPublic: false,
       designerRepresentativeId: null,
       designerRepresentativeName: null,
     },
@@ -78,62 +73,54 @@ const seedInitialOrders = async (): Promise<TrackingLink[]> => {
   const createdOrders: TrackingLink[] = [];
   const batch = writeBatch(db);
 
-  const dateTwoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
-  const dateStringTwoDaysAgo = format(dateTwoDaysAgo, 'yyyyMMdd');
-  const firstOrderId = `ORD-${dateStringTwoDaysAgo}-001`;
-  const firstOrderBaseData = initialOrdersData[0];
-  const firstOrder: TrackingLink = {
-    ...firstOrderBaseData,
-    id: firstOrderId,
-    createdAt: dateTwoDaysAgo.toISOString(),
-    currentStatus: inProductionStatus.id,
-    statusHistory: [
-      { id: uuidv4(), timestamp: dateTwoDaysAgo.toISOString(), status: orderSubmittedStatus.id, changedByUserId: firstOrderBaseData.crmUserId, changedByUserName: firstOrderBaseData.crmUserName, notes: "Order created, requirements gathered." },
-      { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: inProductionStatus.id, changedByUserId: firstOrderBaseData.crmUserId, changedByUserName: firstOrderBaseData.crmUserName, notes: "Production has commenced." }
-    ],
-    comments: [
-      { id: uuidv4(), userName: "Tech Solutions Inc. (Client)", text: "Looking forward to the first demo!", timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), isInternal: false }
-    ],
-    phoneNumber: firstOrderBaseData.phoneNumber,
-    model: firstOrderBaseData.model,
-    quantity: firstOrderBaseData.quantity,
-    lamination: firstOrderBaseData.lamination,
-    designerRepresentativeId: firstOrderBaseData.designerRepresentativeId || null,
-    designerRepresentativeName: firstOrderBaseData.designerRepresentativeName || null,
-    viewCount: 0,
-  };
-  const firstDocRef = doc(ordersRef, firstOrderId);
-  batch.set(firstDocRef, firstOrder);
-  createdOrders.push(firstOrder);
-
-  const dateOneDayAgo = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000);
-  const dateStringOneDayAgo = format(dateOneDayAgo, 'yyyyMMdd');
-  const secondOrderId = `ORD-${dateStringOneDayAgo}-001`;
-  const secondOrderBaseData = initialOrdersData[1];
-  const secondOrder: TrackingLink = {
-    ...secondOrderBaseData,
-    id: secondOrderId,
-    createdAt: dateOneDayAgo.toISOString(),
-    currentStatus: pendingApprovalStatus.id,
-    statusHistory: [
-      { id: uuidv4(), timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), status: orderSubmittedStatus.id, changedByUserId: secondOrderBaseData.crmUserId, changedByUserName: secondOrderBaseData.crmUserName, notes: "New landscaping project initiated." },
-      { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: readyForDesignStatus.id, changedByUserId: secondOrderBaseData.crmUserId, changedByUserName: secondOrderBaseData.crmUserName, notes: "Order ready for design team." },
-      { id: uuidv4(), timestamp: dateOneDayAgo.toISOString(), status: pendingApprovalStatus.id, changedByUserId: "DR-001", changedByUserName: "Carol DesignerRep", notes: "Initial designs submitted for client approval." }
-    ],
-    comments: [],
-    phoneNumber: secondOrderBaseData.phoneNumber,
-    model: secondOrderBaseData.model,
-    quantity: secondOrderBaseData.quantity,
-    lamination: secondOrderBaseData.lamination,
-    designerRepresentativeId: "DR-001", // Example assignment
-    designerRepresentativeName: "Carol DesignerRep", // Example assignment
-    viewCount: 0,
-  };
-  const secondDocRef = doc(ordersRef, secondOrderId);
-  batch.set(secondDocRef, secondOrder);
-  createdOrders.push(secondOrder);
-
   try {
+    const dateTwoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000);
+    const dateStringTwoDaysAgo = format(dateTwoDaysAgo, 'yyyyMMdd');
+    const firstOrderId = `ORD-${dateStringTwoDaysAgo}-001`;
+    const firstOrderBaseData = initialOrdersData[0];
+    const firstOrder: TrackingLink = {
+      ...firstOrderBaseData,
+      id: firstOrderId,
+      createdAt: dateTwoDaysAgo.toISOString(),
+      currentStatus: inProductionStatus.id,
+      statusHistory: [
+        { id: uuidv4(), timestamp: dateTwoDaysAgo.toISOString(), status: orderSubmittedStatus.id, changedByUserId: firstOrderBaseData.crmUserId, changedByUserName: firstOrderBaseData.crmUserName, notes: "Order created, requirements gathered." },
+        { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: inProductionStatus.id, changedByUserId: firstOrderBaseData.crmUserId, changedByUserName: firstOrderBaseData.crmUserName, notes: "Production has commenced." }
+      ],
+      comments: [
+        { id: uuidv4(), userName: "Tech Solutions Inc. (Client)", userRole: 'Client', text: "Looking forward to the first demo!", timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(), isInternal: false, replies: [] }
+      ],
+      isPublic: true,
+      viewCount: 0,
+    };
+    const firstDocRef = doc(ordersRef, firstOrderId);
+    batch.set(firstDocRef, firstOrder);
+    createdOrders.push(firstOrder);
+
+    const dateOneDayAgo = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000);
+    const dateStringOneDayAgo = format(dateOneDayAgo, 'yyyyMMdd');
+    const secondOrderId = `ORD-${dateStringOneDayAgo}-001`;
+    const secondOrderBaseData = initialOrdersData[1];
+    const secondOrder: TrackingLink = {
+      ...secondOrderBaseData,
+      id: secondOrderId,
+      createdAt: dateOneDayAgo.toISOString(),
+      currentStatus: pendingApprovalStatus.id,
+      statusHistory: [
+        { id: uuidv4(), timestamp: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), status: orderSubmittedStatus.id, changedByUserId: secondOrderBaseData.crmUserId, changedByUserName: secondOrderBaseData.crmUserName, notes: "New landscaping project initiated." },
+        { id: uuidv4(), timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), status: readyForDesignStatus.id, changedByUserId: secondOrderBaseData.crmUserId, changedByUserName: secondOrderBaseData.crmUserName, notes: "Order ready for design team." },
+        { id: uuidv4(), timestamp: dateOneDayAgo.toISOString(), status: pendingApprovalStatus.id, changedByUserId: "DR-001", changedByUserName: "Carol DesignerRep", notes: "Initial designs submitted for client approval." }
+      ],
+      comments: [],
+      isPublic: true,
+      designerRepresentativeId: "DR-001",
+      designerRepresentativeName: "Carol DesignerRep",
+      viewCount: 0,
+    };
+    const secondDocRef = doc(ordersRef, secondOrderId);
+    batch.set(secondDocRef, secondOrder);
+    createdOrders.push(secondOrder);
+
     await batch.commit();
     console.log('Initial orders seeded in Firestore with new ID format and viewCount.');
   } catch (error) {
@@ -157,15 +144,12 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
     }
   } catch (error) {
     console.error("Error fetching orders from Firestore:", error);
-    // Potentially return an empty array or re-throw, depending on desired error handling
-    // For now, let's attempt to seed if an error occurs during fetch, assuming it might be a first-time setup issue
-    // However, be cautious with this in production as it might mask underlying problems.
     try {
       console.warn("Attempting to seed initial orders due to a fetch error. This might indicate a problem if not a first run.");
       orders = await seedInitialOrders();
     } catch (seedError) {
       console.error("Failed to seed orders after a fetch error:", seedError);
-      return []; // Return empty if both fetch and seed fail
+      return [];
     }
   }
   return orders;
@@ -188,13 +172,12 @@ export const getOrderById = async (id: string): Promise<TrackingLink | undefined
 };
 
 export const addOrder = async (orderData: {
-  customerName: string;
   companyName: string;
   address: string;
-  phoneNumber: string; 
-  model: string; 
-  quantity: number; 
-  lamination: string; 
+  phoneNumber: string;
+  model: string;
+  quantity: number;
+  lamination: string;
   initialStatusId: string;
   crmUserId: string;
   crmUserName: string
@@ -221,7 +204,7 @@ export const addOrder = async (orderData: {
     if (!querySnapshot.empty) {
       const lastOrderIdToday = querySnapshot.docs[0].id;
       const parts = lastOrderIdToday.split('-');
-      if (parts.length === 3) {
+      if (parts.length === 3) { // ORD-DATE-NNN
         const lastSequenceToday = parseInt(parts[2], 10);
         if (!isNaN(lastSequenceToday)) {
           newSequence = lastSequenceToday + 1;
@@ -242,7 +225,6 @@ export const addOrder = async (orderData: {
 
     const newOrder: TrackingLink = {
       id: orderId,
-      customerName: orderData.customerName,
       companyName: orderData.companyName,
       address: orderData.address,
       phoneNumber: orderData.phoneNumber,
@@ -274,7 +256,6 @@ export const addOrder = async (orderData: {
 export const updateOrder = async (id: string, updates: Partial<TrackingLink>): Promise<boolean> => {
   try {
     const orderDoc = doc(db, ORDERS_COLLECTION, id);
-    // Sanitize updates: Firestore doesn't allow undefined values. Convert them to null.
     const sanitizedUpdates: { [key: string]: any } = {};
     for (const key in updates) {
       if (Object.prototype.hasOwnProperty.call(updates, key)) {
@@ -284,8 +265,8 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     }
 
     if (Object.keys(sanitizedUpdates).length === 0) {
-      console.log(`No updates to apply for order ${id}.`);
-      return true; // No changes needed, operation considered successful
+      console.log(`updateOrder: No updates to apply for order ${id}.`);
+      return true;
     }
 
     await updateDoc(orderDoc, sanitizedUpdates);
@@ -307,7 +288,8 @@ export const deleteOrder = async (orderId: string): Promise<boolean> => {
   }
 };
 
-export const addCommentToOrder = async (orderId: string, commentData: Omit<Comment, 'id' | 'timestamp'>): Promise<TrackingLink | undefined> => {
+// For top-level comments
+export const addCommentToOrder = async (orderId: string, commentData: Omit<Comment, 'id' | 'timestamp' | 'replies'>): Promise<TrackingLink | undefined> => {
   try {
     const orderRef = doc(db, ORDERS_COLLECTION, orderId);
 
@@ -324,9 +306,10 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
         id: uuidv4(),
         timestamp: new Date().toISOString(),
         userName: commentData.userName,
+        userRole: commentData.userRole, // Added userRole
         text: commentData.text,
         isInternal: commentData.isInternal,
-        // Conditionally add userId only if it's provided and not undefined
+        replies: [], // Initialize replies for new top-level comment
         ...(commentData.userId && { userId: commentData.userId }),
       };
 
@@ -336,12 +319,68 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
       return { ...order, comments: updatedComments };
     }).catch(transactionError => {
         console.error(`Transaction failed for adding comment to order ${orderId}:`, transactionError);
-        return undefined; // Explicitly return undefined on transaction failure
+        return undefined;
     });
 
   } catch (error) {
     console.error(`Error adding comment to order ${orderId}:`, error);
-    return undefined; // Explicitly return undefined on outer try-catch failure
+    return undefined;
+  }
+};
+
+// For replies to comments
+export const addReplyToComment = async (
+  orderId: string,
+  parentCommentId: string,
+  replyData: Omit<Comment, 'id' | 'timestamp' | 'replies'> // Replies don't have their own replies array in this model
+): Promise<TrackingLink | undefined> => {
+  try {
+    const orderRef = doc(db, ORDERS_COLLECTION, orderId);
+
+    return await runTransaction(db, async (transaction) => {
+      const orderDoc = await transaction.get(orderRef);
+      if (!orderDoc.exists()) {
+        console.error(`addReplyToComment: Order ${orderId} not found.`);
+        throw new Error(`Order ${orderId} not found.`);
+      }
+
+      const order = { ...orderDoc.data(), id: orderDoc.id } as TrackingLink;
+      const comments = order.comments || [];
+      const parentCommentIndex = comments.findIndex(c => c.id === parentCommentId);
+
+      if (parentCommentIndex === -1) {
+        console.error(`addReplyToComment: Parent comment ${parentCommentId} not found in order ${orderId}.`);
+        throw new Error(`Parent comment ${parentCommentId} not found.`);
+      }
+
+      const newReply: Comment = {
+        id: uuidv4(),
+        timestamp: new Date().toISOString(),
+        userName: replyData.userName,
+        userRole: replyData.userRole,
+        text: replyData.text,
+        isInternal: replyData.isInternal,
+        ...(replyData.userId && { userId: replyData.userId }),
+        // replies: [], // Replies themselves don't have replies in this model
+      };
+
+      const parentComment = comments[parentCommentIndex];
+      parentComment.replies = [...(parentComment.replies || []), newReply];
+      
+      const updatedComments = [...comments];
+      updatedComments[parentCommentIndex] = parentComment;
+
+      transaction.update(orderRef, { comments: updatedComments });
+      return { ...order, comments: updatedComments };
+
+    }).catch(transactionError => {
+        console.error(`Transaction failed for adding reply to comment ${parentCommentId} in order ${orderId}:`, transactionError);
+        return undefined;
+    });
+
+  } catch (error) {
+    console.error(`Error adding reply to comment ${parentCommentId} in order ${orderId}:`, error);
+    return undefined;
   }
 };
 
@@ -353,8 +392,7 @@ export const incrementOrderViewCount = async (orderId: string): Promise<boolean>
       const orderDoc = await transaction.get(orderRef);
       if (!orderDoc.exists()) {
         console.warn(`Order ${orderId} not found for incrementing view count.`);
-        // Optionally, throw an error or just return to stop the transaction
-        return; 
+        return;
       }
       const currentViewCount = orderDoc.data().viewCount || 0;
       transaction.update(orderRef, { viewCount: currentViewCount + 1 });
@@ -365,5 +403,3 @@ export const incrementOrderViewCount = async (orderId: string): Promise<boolean>
     return false;
   }
 };
-    
-    

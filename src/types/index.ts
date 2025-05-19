@@ -7,7 +7,7 @@ export interface User {
   email: string;
   role: UserRole;
   companyName?: string | null;
-  password?: string; 
+  password?: string;
   avatarUrl?: string | null;
   monthlyOrderTarget?: number | null;
   weeklyOrderTarget?: number | null;
@@ -18,7 +18,7 @@ export interface CustomStatus {
   id: string;
   name: string;
   color: string;
-  isSystemStatus?: boolean; 
+  isSystemStatus?: boolean;
   isVisible?: boolean;
 }
 
@@ -32,14 +32,14 @@ export interface OrderLogEntry {
 }
 
 export interface TrackingLink {
-  id: string; 
-  customerName: string; 
+  id: string;
+  // customerName: string; // Marked for potential removal if not used
   companyName: string;
   address: string;
-  phoneNumber: string; 
-  model: string; 
-  quantity: number; 
-  lamination: string; 
+  phoneNumber: string;
+  model: string;
+  quantity: number;
+  lamination: string;
   crmUserId: string;
   crmUserName: string;
   designerRepresentativeId?: string | null;
@@ -54,11 +54,13 @@ export interface TrackingLink {
 
 export interface Comment {
   id: string;
-  userId?: string | null; 
-  userName: string; 
+  userId?: string | null;
+  userName: string;
+  userRole?: UserRole | 'Client'; // Role of the commenter/replier
   text: string;
   timestamp: string; // ISO string
-  isInternal: boolean; 
+  isInternal: boolean;
+  replies?: Comment[]; // Array for nested replies
 }
 
 export interface ServiceModelItem {
@@ -70,4 +72,3 @@ export interface ServiceLaminationItem {
   id: string;
   name: string;
 }
-    
