@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, AlertTriangle, MoreVertical, Settings2, Layers, RefreshCw } from "lucide-react";
+import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, AlertTriangle, MoreVertical, Settings2, Layers, Package } from "lucide-react"; // Added Package
 import { useAuth } from "@/contexts/auth-context";
 import Link from "next/link";
 import { CreateOrderDialog } from '@/components/orders/create-order-dialog';
@@ -105,6 +105,7 @@ export default function OrdersPage() {
     const lowerSearchTerm = searchTerm.toLowerCase();
     return result.filter(order =>
       order.id.toLowerCase().includes(lowerSearchTerm) ||
+      (order.customerName && order.customerName.toLowerCase().includes(lowerSearchTerm)) ||
       (order.companyName && order.companyName.toLowerCase().includes(lowerSearchTerm)) ||
       (order.phoneNumber && order.phoneNumber.toLowerCase().includes(lowerSearchTerm)) ||
       order.crmUserName.toLowerCase().includes(lowerSearchTerm) ||
@@ -123,18 +124,18 @@ export default function OrdersPage() {
   }, [allStatuses]);
 
   useEffect(() => {
-    if (allStatuses.length > 0 && filteredOrders.length > 0) {
-        const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
-        const uniqueStatusIdsInFilteredOrders = new Set<string>();
-        filteredOrders.forEach(order => uniqueStatusIdsInFilteredOrders.add(order.currentStatus));
+    if (allStatuses.length > 0 && filteredOrders.length >= 0) { // Check >= 0 to handle empty filteredOrders list
+      const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
+      const uniqueStatusIdsInFilteredOrders = new Set<string>();
+      filteredOrders.forEach(order => uniqueStatusIdsInFilteredOrders.add(order.currentStatus));
 
-        uniqueStatusIdsInFilteredOrders.forEach(statusId => {
-            newDisplayInfoMap[statusId] = getStatusDisplayInfoCallback(statusId);
-        });
-        
-        if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(orderStatusDisplay)) {
-          setOrderStatusDisplay(newDisplayInfoMap);
-        }
+      uniqueStatusIdsInFilteredOrders.forEach(statusId => {
+          newDisplayInfoMap[statusId] = getStatusDisplayInfoCallback(statusId);
+      });
+      
+      if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(orderStatusDisplay)) {
+        setOrderStatusDisplay(newDisplayInfoMap);
+      }
     } else if (filteredOrders.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
         setOrderStatusDisplay({});
     } else if (allStatuses.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
@@ -152,7 +153,7 @@ export default function OrdersPage() {
     try {
         console.log("OrdersPage/handleOpenAssignDrDialog: Opening for order:", orderToAssign.id);
         const freshStatuses = await getStatuses();
-        console.log("OrdersPage/handleOpenAssignDrDialog: Fresh statuses fetched for dialog:", freshStatuses.map(s => ({id: s.id, name: s.name})));
+        console.log("OrdersPage/handleOpenAssignDrDialog: Fresh statuses IDs:", freshStatuses.map(s => s.id).join(', '));
         
         const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
         
@@ -187,7 +188,7 @@ export default function OrdersPage() {
         prevOrders.map(o => (o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o))
       );
       toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
-      // await fetchOrderData(); // Re-enable if optimistic update is not sufficient or for full reconciliation
+      // await fetchOrderData(); // Re-fetch can be done if optimistic update isn't sufficient
   }, [toast]);
 
 
@@ -225,14 +226,14 @@ export default function OrdersPage() {
         <div className="flex items-center gap-2 w-full sm:w-auto">
             {currentUser.role === 'SYSTEM_ADMIN' && (
               <Link href="/admin/service-management" passHref>
-                <Button variant="outline" size="lg" className="w-full sm:w-auto h-10">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow">
                   <Settings2 className="mr-2 h-4 w-4" /> Configure Options
                 </Button>
               </Link>
             )}
             {(currentUser.role === 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') && (
               <Link href="/admin/model-management" passHref>
-                <Button variant="outline" size="lg" className="w-full sm:w-auto h-10">
+                <Button variant="outline" size="lg" className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow">
                   <Layers className="mr-2 h-4 w-4" /> Configure Models
                 </Button>
               </Link>
@@ -324,7 +325,7 @@ export default function OrdersPage() {
                           </Link>
                         </TableCell>
                         <TableCell className="text-card-foreground">
-                          {order.companyName}
+                          <div>{order.companyName}</div>
                         </TableCell>
                         <TableCell>
                           <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
@@ -334,7 +335,7 @@ export default function OrdersPage() {
                         <TableCell className="text-card-foreground">{order.crmUserName}</TableCell>
                         <TableCell className="text-card-foreground">{order.designerRepresentativeName || 'N/A'}</TableCell>
                         <TableCell className="text-muted-foreground">{isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-20" />}</TableCell>
-                        <TableCell className="pr-6 text-right whitespace-nowrap">
+                        <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-9 w-9" title="Order Actions">
