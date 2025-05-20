@@ -5,9 +5,8 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, AlertTriangle, MoreVertical, RefreshCw } from "lucide-react";
+import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, AlertTriangle, MoreVertical, Settings2, Layers, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
-import Image from "next/image";
 import Link from "next/link";
 import { CreateOrderDialog } from '@/components/orders/create-order-dialog';
 import type { TrackingLink, User, CustomStatus } from '@/types';
@@ -100,12 +99,14 @@ export default function OrdersPage() {
       result = result.filter(order => order.crmUserId === currentUser.id);
     }
     if (!searchTerm) return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    
+    const lowerSearchTerm = searchTerm.toLowerCase();
     return result.filter(order =>
-      order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (order.companyName && order.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (order.phoneNumber && order.phoneNumber.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      order.crmUserName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (order.designerRepresentativeName && order.designerRepresentativeName.toLowerCase().includes(searchTerm.toLowerCase()))
+      order.id.toLowerCase().includes(lowerSearchTerm) ||
+      (order.companyName && order.companyName.toLowerCase().includes(lowerSearchTerm)) ||
+      (order.phoneNumber && order.phoneNumber.toLowerCase().includes(lowerSearchTerm)) ||
+      order.crmUserName.toLowerCase().includes(lowerSearchTerm) ||
+      (order.designerRepresentativeName && order.designerRepresentativeName.toLowerCase().includes(lowerSearchTerm))
     ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [orders, searchTerm, currentUser]);
 
@@ -129,7 +130,6 @@ export default function OrdersPage() {
             newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
         });
         
-        // Only update if the map has actually changed to prevent potential loops
         if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(orderStatusDisplay)) {
           setOrderStatusDisplay(newDisplayInfoMap);
         }
@@ -150,6 +150,8 @@ export default function OrdersPage() {
     try {
         console.log("OrdersPage/handleOpenAssignDrDialog: Opening for order:", orderToAssign.id);
         const freshStatuses = await getStatuses();
+        console.log("OrdersPage/handleOpenAssignDrDialog: Fresh statuses fetched for dialog:", freshStatuses.map(s => ({id: s.id, name: s.name})));
+        
         const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
         
         if (!rfdCheck) {
@@ -165,7 +167,7 @@ export default function OrdersPage() {
         }
         console.log("OrdersPage/handleOpenAssignDrDialog: 'ready-for-design' status in freshStatuses:", JSON.stringify(rfdCheck));
 
-        setAllStatuses(freshStatuses); 
+        setAllStatuses(freshStatuses); // Update the main page's status list as well
         setStatusesForDialog(freshStatuses); 
         setSelectedOrderForDrAssignment(orderToAssign);
         setIsAssignDrDialogOpen(true);
@@ -183,6 +185,7 @@ export default function OrdersPage() {
         prevOrders.map(o => (o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o))
       );
       toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
+      // await fetchOrderData(); // Can be uncommented if direct state update isn't sufficient
   }, [toast]);
 
 
@@ -218,6 +221,20 @@ export default function OrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
+            {currentUser.role === 'SYSTEM_ADMIN' && (
+              <Link href="/admin/service-management" passHref>
+                <Button variant="outline" size="lg" className="w-full sm:w-auto h-10">
+                  <Settings2 className="mr-2 h-4 w-4" /> Configure Options
+                </Button>
+              </Link>
+            )}
+            {(currentUser.role === 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') && (
+              <Link href="/admin/model-management" passHref>
+                <Button variant="outline" size="lg" className="w-full sm:w-auto h-10">
+                  <Layers className="mr-2 h-4 w-4" /> Configure Models
+                </Button>
+              </Link>
+            )}
             {canCreateOrder && (
             <CreateOrderDialog
                 currentUser={currentUser}
@@ -248,7 +265,9 @@ export default function OrdersPage() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex-grow">
               <CardTitle className="text-card-foreground text-xl">Order List</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">{currentUser.role === 'CRM' ? "Showing orders assigned to you." : "Showing all orders."}</CardDescription>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">
+                {currentUser.role === 'CRM' ? "Showing orders assigned to you." : "Showing all orders."}
+              </CardDescription>
             </div>
             <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -353,7 +372,7 @@ export default function OrdersPage() {
                 ) : (
                     <TableRow>
                         <TableCell colSpan={7} className="text-center py-12 h-[300px]">
-                            <Image src="https://placehold.co/180x135.png" alt="No orders" data-ai-hint="empty document" width={180} height={135} className="mx-auto rounded-md opacity-60 mb-4" />
+                            <Package className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
                             <p className="text-lg text-muted-foreground font-medium">
                               {searchTerm ? "No orders match your search." : "No orders found."}
                             </p>

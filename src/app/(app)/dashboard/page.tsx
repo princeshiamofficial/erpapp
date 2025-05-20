@@ -126,7 +126,7 @@ export default function DashboardPage() {
     setIsLoadingWeeklyDeliveries(true);
 
     try {
-      const [fetchedOrders, allStatuses, fetchedGlobalTargets] = await Promise.all([
+      const [fetchedOrdersUnfiltered, allStatuses, fetchedGlobalTargets] = await Promise.all([
         getOrders(),
         getStatuses(),
         getGlobalSettings() 
@@ -135,8 +135,13 @@ export default function DashboardPage() {
       const statusMap = new Map(allStatuses.map(s => [s.id, s.name]));
       const activities: ActivityItem[] = [];
 
-      const sortedOrders = [...fetchedOrders].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      const ordersToProcessForActivity = sortedOrders.slice(0, ORDERS_TO_SCAN_FOR_ACTIVITY);
+      // Filter orders for CRM user if applicable for activity feed
+      const ordersForActivity = currentUser.role === 'CRM'
+        ? fetchedOrdersUnfiltered.filter(order => order.crmUserId === currentUser.id)
+        : fetchedOrdersUnfiltered;
+      
+      const sortedOrdersForActivity = [...ordersForActivity].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      const ordersToProcessForActivity = sortedOrdersForActivity.slice(0, ORDERS_TO_SCAN_FOR_ACTIVITY);
 
 
       for (const order of ordersToProcessForActivity) {
@@ -163,8 +168,6 @@ export default function DashboardPage() {
             timestamp: log.timestamp,
           });
 
-          // Infer DR assignment from log notes or status change
-          // This relies on specific wording in log notes or specific status transition
           if (!drAssignedForThisOrder && order.designerRepresentativeName && log.notes?.toLowerCase().includes(`assigned to designer: ${order.designerRepresentativeName.toLowerCase()}`)) {
             activities.push({
               id: `dr-assigned-${order.id}-${log.id}`,
@@ -179,9 +182,7 @@ export default function DashboardPage() {
           }
         }
 
-        // Fallback if DR assigned but not explicitly logged in the preferred way
         if (!drAssignedForThisOrder && order.designerRepresentativeName) {
-            // Try to find a "Ready for Design" status log, assuming DR is assigned around that time.
             const readyForDesignLog = order.statusHistory.find(log => statusMap.get(log.status)?.toLowerCase() === 'ready for design');
             activities.push({
               id: `dr-assigned-${order.id}-fallback`,
@@ -189,13 +190,12 @@ export default function DashboardPage() {
               orderId: order.id,
               title: `Designer Assigned: ${order.id}`,
               details: `${order.designerRepresentativeName} assigned.`,
-              userName: readyForDesignLog?.changedByUserName || order.crmUserName, // Fallback to CRM user if no specific log
-              timestamp: readyForDesignLog?.timestamp || order.createdAt, // Fallback to order creation time
+              userName: readyForDesignLog?.changedByUserName || order.crmUserName, 
+              timestamp: readyForDesignLog?.timestamp || order.createdAt, 
             });
         }
 
         for (const comment of order.comments) {
-          // Filter out internal comments if current user is not admin/system_admin or involved in order
           if (comment.isInternal && currentUser?.role !== 'ADMIN' && currentUser?.role !== 'SYSTEM_ADMIN' && currentUser?.id !== order.crmUserId && currentUser?.id !== order.designerRepresentativeId) {
             continue;
           }
@@ -214,38 +214,30 @@ export default function DashboardPage() {
       const sortedActivities = activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setRecentActivities(sortedActivities.slice(0, MAX_RECENT_ACTIVITIES_DISPLAY));
 
-      // Calculate Active Orders
+      // Calculate Active Orders (scoped for CRM if applicable)
       const deliveredStatusId = allStatuses.find(s => s.name.toLowerCase() === 'delivered')?.id;
       const cancelledStatusId = allStatuses.find(s => s.name.toLowerCase() === 'cancelled')?.id;
       
-      let currentActiveOrdersAll = fetchedOrders.filter(order => {
+      const ordersForActiveCountCalculation = currentUser.role === 'CRM'
+        ? fetchedOrdersUnfiltered.filter(order => order.crmUserId === currentUser.id)
+        : fetchedOrdersUnfiltered;
+
+      let currentActiveOrdersCount = ordersForActiveCountCalculation.filter(order => {
         return order.currentStatus !== deliveredStatusId && order.currentStatus !== cancelledStatusId;
-      });
+      }).length;
+      setActiveOrdersCount(currentActiveOrdersCount);
 
-      let ordersForActiveCount = currentActiveOrdersAll;
-      if (currentUser.role === 'CRM') {
-        ordersForActiveCount = currentActiveOrdersAll.filter(order => order.crmUserId === currentUser.id);
-      }
-      setActiveOrdersCount(ordersForActiveCount.length);
-
-      // Calculate Active Orders Percentage Change (Month over Month)
+      // Calculate Active Orders Percentage Change (Month over Month, scoped for CRM if applicable)
       const now = new Date();
       const startOfCurrentMonth = startOfMonth(now);
       let activeOrdersAtStartOfMonthCount = 0;
 
       if (deliveredStatusId || cancelledStatusId) {
-          fetchedOrders.forEach(order => {
-              if (currentUser.role === 'CRM' && order.crmUserId !== currentUser.id) {
-                  return; // Skip if CRM user and order is not theirs
-              }
-
+          ordersForActiveCountCalculation.forEach(order => {
               const orderCreatedAt = new Date(order.createdAt);
-              // Only consider orders created before the current month for the "start of month" count
               if (orderCreatedAt < startOfCurrentMonth) { 
                   let lastKnownStatusBeforeThisMonth = '';
                   let mostRecentLogTimestamp = new Date(0); 
-
-                  // Find the last status of the order *before* the current month started
                   order.statusHistory.forEach(log => {
                       const logTimestamp = new Date(log.timestamp);
                       if (logTimestamp < startOfCurrentMonth) {
@@ -256,13 +248,11 @@ export default function DashboardPage() {
                       }
                   });
                   
-                  // If a status was found before this month, check if it was active
                   if (lastKnownStatusBeforeThisMonth) {
                       if (lastKnownStatusBeforeThisMonth !== deliveredStatusId && lastKnownStatusBeforeThisMonth !== cancelledStatusId) {
                           activeOrdersAtStartOfMonthCount++;
                       }
-                  } else { // If no status history before this month, but order was created before this month
-                         // Check its initial status (which is the first log entry)
+                  } else { 
                          const initialStatusWasTerminal = order.statusHistory[0]?.status === deliveredStatusId || order.statusHistory[0]?.status === cancelledStatusId;
                          if (!initialStatusWasTerminal) {
                             activeOrdersAtStartOfMonthCount++;
@@ -273,19 +263,19 @@ export default function DashboardPage() {
       }
       
       if (activeOrdersAtStartOfMonthCount > 0) {
-          setActiveOrdersPercentageChange(((ordersForActiveCount.length - activeOrdersAtStartOfMonthCount) / activeOrdersAtStartOfMonthCount) * 100);
-      } else if (ordersForActiveCount.length > 0) { // No active orders at start of month, but some now
-          setActiveOrdersPercentageChange(100); // Or handle as "New" or infinite %
-      } else { // No active orders then, no active orders now
-          setActiveOrdersPercentageChange(0); // Or handle as "N/A"
+          setActiveOrdersPercentageChange(((currentActiveOrdersCount - activeOrdersAtStartOfMonthCount) / activeOrdersAtStartOfMonthCount) * 100);
+      } else if (currentActiveOrdersCount > 0) { 
+          setActiveOrdersPercentageChange(100); 
+      } else { 
+          setActiveOrdersPercentageChange(0); 
       }
 
 
-      // Calculate Monthly Deliveries & Weekly Deliveries
+      // Calculate Monthly Deliveries & Weekly Deliveries (these remain system-wide for Admin/System Admin)
       if (deliveredStatusId) {
         const monthStart = startOfMonth(now);
         const monthEnd = endOfMonth(now);
-        const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday as start of the week
+        const weekStart = startOfWeek(now, { weekStartsOn: 1 }); 
         const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
         
         let deliveriesThisMonth = 0;
@@ -295,7 +285,7 @@ export default function DashboardPage() {
 
         const crmCompletionStatusSet = new Set(fetchedGlobalTargets.crmCompletionStatusIds || []);
 
-        fetchedOrders.forEach(order => {
+        fetchedOrdersUnfiltered.forEach(order => { // Use unfiltered for system-wide delivery counts
           const isOrderDeliveredThisMonth = order.statusHistory.some(
             log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: monthStart, end: monthEnd })
           );
@@ -303,15 +293,10 @@ export default function DashboardPage() {
             log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: weekStart, end: weekEnd })
           );
 
-
-          if (isOrderDeliveredThisMonth) {
-            deliveriesThisMonth++;
-          }
-          if (isOrderDeliveredThisWeek) {
-            deliveriesThisWeek++;
-          }
+          if (isOrderDeliveredThisMonth) deliveriesThisMonth++;
+          if (isOrderDeliveredThisWeek) deliveriesThisWeek++;
           
-          // CRM Completion Calculation
+          // CRM Completion Calculation (already scoped by crmUserId check)
           if (currentUser.role === 'CRM' && order.crmUserId === currentUser.id) {
             let orderCompletedForCRMThisMonth = false;
             let orderCompletedForCRMThisWeek = false;
