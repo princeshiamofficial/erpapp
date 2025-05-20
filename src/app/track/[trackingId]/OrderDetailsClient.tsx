@@ -1,11 +1,11 @@
 
 "use client";
 
-import { useState, useEffect, useCallback, FormEvent, useRef } from 'react';
+import React, { useState, useEffect, useCallback, FormEvent, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, UserCheck, Layers, ThumbsUp, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, Disc, Heart } from "lucide-react"; // Added Heart, ThumbsUp removed
+import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, UserCheck, Layers, ThumbsUp, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, Disc, Heart } from "lucide-react";
 import Image from "next/image";
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,22 +26,23 @@ import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@
 interface OrderDetailsClientProps {
   order: TrackingLink;
   allStatuses: CustomStatus[];
-  allUsersForMentions?: User[]; // Make it optional and provide a default
+  allUsersForMentions?: User[]; 
+  areCommentsVisible: boolean; // New prop
 }
 
 const CLIENT_REACTOR_ID_KEY = 'colorHutClientReactorId';
 const MAX_INITIAL_REPLIES_TO_SHOW = 1;
-const CLIENT_AVATAR_URL = 'https://i.ibb.co/HDQhC73/avatar-with-a-young-face-pictures-of-men-vector-46356734.jpg';
+const CLIENT_AVATAR_URL = 'https://i.ibb.co/7dphf0LX/avatar-with-a-young-face-pictures-of-men-vector-46356734.jpg';
 
 
-const getInitials = (name: string | undefined) => {
+const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
   const names = name.split(' ');
   if (names.length === 1) return names[0].charAt(0).toUpperCase();
   return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
 };
 
-export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersForMentions = [] }: OrderDetailsClientProps) {
+export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersForMentions = [], areCommentsVisible }: OrderDetailsClientProps) {
   const { currentUser } = useAuth();
   const [order, setOrder] = useState(initialOrder);
   const [isClient, setIsClient] = useState(false);
@@ -63,17 +64,19 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
-    if (initialOrder.orderItems) {
-        console.log('OrderItems:', initialOrder.orderItems);
-    } else {
-        console.log('OrderItems: is undefined or null');
-    }
+    // console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
+    // if (initialOrder.orderItems) {
+    //     console.log('OrderItems:', initialOrder.orderItems);
+    // } else {
+    //     console.log('OrderItems: is undefined or null');
+    // }
   }, [initialOrder]);
 
   useEffect(() => {
-     if(allUsersForMentions && allUsersForMentions.length > 0) {
-        console.log("OrderDetailsClient: Received allUsersForMentions:", allUsersForMentions.map(u => ({id: u.id, name: u.name, role: u.role})));
+     if(Array.isArray(allUsersForMentions) && allUsersForMentions.length > 0) {
+        // console.log("OrderDetailsClient: Received allUsersForMentions (first 5):", allUsersForMentions.slice(0, 5).map(u => ({id: u.id, name: u.name, role: u.role, avatarUrl: u.avatarUrl ? 'Exists' : 'None'})));
+    } else {
+        // console.log("OrderDetailsClient: Received allUsersForMentions as empty or not an array.");
     }
   }, [allUsersForMentions]);
 
@@ -166,7 +169,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     if (currentUser) {
       result = await submitReplyAction(
         order.id,
-        replyingTo.parentId, // Always submit to the top-level parent
+        replyingTo.parentId, 
         currentReplyText,
         false, 
         currentUser
@@ -174,7 +177,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     } else {
       result = await submitClientReplyAction(
         order.id,
-        replyingTo.parentId, // Always submit to the top-level parent
+        replyingTo.parentId, 
         currentReplyText
       );
     }
@@ -240,22 +243,12 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
  const renderTextWithMentions = (text: string) => {
     if (!text) return '';
-    // Updated regex to capture usernames that might include spaces if the @mention system allows/formats them that way
-    // For display, we'll remove the leading @.
-    const mentionRegex = /@([\w\s.-]+?)(?=\s|$|,|\.|\?|!)/g; 
-    
-    // If we want to match purely alphanumeric after @ for the regex itself: /@([a-zA-Z0-9_.-]+)/g
-    // Let's stick to a more general one for now, assuming mentions are space-separated.
-    // The core idea is that the mention is a single "word" after @.
-    // A better regex might be /@(\S+)/g if usernames are guaranteed to not have spaces.
-    // Given we strip spaces on insertion, /@(\S+)/g is safer.
     const displayRegex = /@(\S+)/g;
-
 
     const parts = text.split(displayRegex);
 
     return parts.map((part, index) => {
-      if (index % 2 === 1) { // This is a username part (captured group)
+      if (index % 2 === 1) { 
         return <strong key={index} className="text-primary font-semibold">{part.trim()}</strong>;
       }
       return part;
@@ -266,44 +259,31 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const handleReplyTextChangeForMention = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
     setCurrentReplyText(text);
-    console.log("Textarea changed:", text);
-
+    
     const cursorPosition = e.target.selectionStart;
     const textBeforeCursor = text.substring(0, cursorPosition);
     const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@');
     
-    console.log("Last @ index:", lastAtSymbolIndex, "Cursor pos:", cursorPosition);
-
-
     if (lastAtSymbolIndex !== -1) {
-      // Check if the character immediately preceding '@' is a space or if it's the start of the text.
-      // This helps differentiate between an email and a mention.
       const isStartOfMention = lastAtSymbolIndex === 0 || /\s/.test(textBeforeCursor.charAt(lastAtSymbolIndex - 1));
-
       if (isStartOfMention) {
         const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
-        // Allow query to be empty (right after typing "@") or alphanumeric/underscore for starting a query
-        if (/^[a-zA-Z0-9_]*$/.test(potentialQuery)) { 
-          console.log("Setting mentionQuery to:", `"${potentialQuery}"`);
-          setMentionQuery(potentialQuery); // This is the text *after* @
+        if (/^[a-zA-Z0-9_.-]*$/.test(potentialQuery)) { 
+          setMentionQuery(potentialQuery);
           setActiveMentionStartIndex(lastAtSymbolIndex);
 
           const clientOption = { id: 'client-mention', name: order.companyName, role: 'Client' as 'Client' };
-          const usersToSearch = [clientOption, ...(allUsersForMentions || [])];
-          console.log("Users to search for mentions:", usersToSearch.map(u=>u.name));
-
-
+          const usersToSearch = Array.isArray(allUsersForMentions) ? [clientOption, ...allUsersForMentions] : [clientOption];
+          
           const filtered = usersToSearch.filter(user =>
             user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
             user.role.toLowerCase().includes(potentialQuery.toLowerCase())
-          ).slice(0, 7); // Limit suggestions
-          console.log("Filtered mention suggestions:", filtered.map(u=>u.name));
+          ).slice(0, 7); 
           setMentionSuggestions(filtered);
           return;
         }
       }
     }
-    console.log("No active mention, resetting query.");
     setMentionQuery(null);
     setActiveMentionStartIndex(null);
     setMentionSuggestions([]);
@@ -311,21 +291,16 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   const handleMentionSelect = (userNameToInsert: string) => {
     if (activeMentionStartIndex === null || !replyTextareaRef.current) {
-      console.log("handleMentionSelect: No active mention start index or textarea ref.");
       return;
     }
   
     const text = currentReplyText;
-    // The query is what was typed *after* the "@"
-    const queryLength = mentionQuery?.length || 0;
-    console.log(`handleMentionSelect: Inserting '${userNameToInsert}'. Query was '${mentionQuery}', length ${queryLength}. Start index ${activeMentionStartIndex}.`);
+    const queryLength = mentionQuery?.length || 0; 
   
-    const textBeforeAt = text.substring(0, activeMentionStartIndex); // Text before the "@"
-    // Text after the part that was typed for the mention query.
+    const textBeforeAt = text.substring(0, activeMentionStartIndex); 
     const textAfterQueryEnd = text.substring(activeMentionStartIndex + 1 + queryLength); 
   
     const newText = `${textBeforeAt}@${userNameToInsert.replace(/\s+/g, '')} ${textAfterQueryEnd.startsWith(' ') ? textAfterQueryEnd : ' ' + textAfterQueryEnd}`.trimEnd() + ' ';
-    console.log("handleMentionSelect: New text will be:", newText);
     setCurrentReplyText(newText);
   
     const newCursorPosition = activeMentionStartIndex + 1 + userNameToInsert.replace(/\s+/g, '').length + 1; 
@@ -350,16 +325,21 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     const reactorId = getReactorId();
     const hasLiked = reactorId && comment.likes?.reactedBy.includes(reactorId);
     
-    let avatarSrc;
-    let avatarDataAiHint = "user avatar";
+    let avatarSrc: string | undefined = undefined;
+    let avatarDataAiHint = "user initials avatar";
+    let userToDisplay: User | undefined | null = null;
+
     if (comment.userRole === 'Client') {
       avatarSrc = CLIENT_AVATAR_URL;
       avatarDataAiHint = "client avatar";
-    } else {
-      const userToDisplay = comment.userId && allUsersForMentions ? allUsersForMentions.find(u => u.id === comment.userId) : null;
-      avatarSrc = userToDisplay?.avatarUrl; 
+    } else if (comment.userId && Array.isArray(allUsersForMentions)) {
+      userToDisplay = allUsersForMentions.find(u => u.id === comment.userId);
+      if (userToDisplay?.avatarUrl) {
+        avatarSrc = userToDisplay.avatarUrl;
+        avatarDataAiHint = "user uploaded avatar";
+      }
     }
-    const avatarFallback = getInitials(comment.userName);
+    const avatarFallback = getInitials(comment.userName || "User");
 
     const currentVisibleReplies = (comment.replies || []).filter(reply =>
         !(reply.isInternal && !currentUser) &&
@@ -373,15 +353,15 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
 
     return (
-      <div key={comment.id} className={`flex items-start space-x-2.5 sm:space-x-3 ${isReply ? 'ml-6 sm:ml-10' : ''}`}> {/* Adjusted reply indentation */}
-        <Avatar className="h-8 w-8 sm:h-9 sm:w-9 border-2 border-primary/20 shadow-sm flex-shrink-0 mt-1">
+      <div key={comment.id} className={`flex items-start space-x-2.5 sm:space-x-3 ${isReply ? 'ml-8 sm:ml-12' : ''}`}>
+        <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/20 shadow-sm flex-shrink-0 mt-1">
           <AvatarImage src={avatarSrc} alt={comment.userName} data-ai-hint={avatarDataAiHint} />
           <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{avatarFallback}</AvatarFallback>
         </Avatar>
         <div className="flex-1">
           <div
             onDoubleClick={() => handleToggleLike(comment.id, isReply, parentCommentId)}
-            className="bg-muted/70 dark:bg-muted/20 px-3 py-2 rounded-xl shadow-sm group transition-colors" // Simpler bubble
+            className="bg-muted dark:bg-muted/40 px-3.5 py-2.5 rounded-xl shadow-sm group transition-colors"
           >
             <div className="flex items-baseline space-x-1.5">
               <p className="text-sm font-semibold text-foreground">{comment.userName}</p>
@@ -393,7 +373,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             </div>
             <p className="text-sm text-foreground/90 whitespace-pre-wrap mt-0.5">{renderTextWithMentions(comment.text)}</p>
           </div>
-          <div className="flex items-center space-x-2 mt-1 pl-1 text-xs">
+          <div className="flex items-center space-x-2 mt-1.5 pl-1 text-xs">
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => handleToggleLike(comment.id, isReply, parentCommentId)}
@@ -406,9 +386,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               <motion.span
                 animate={{ scale: hasLiked && reactorId ? [1, 1.4, 1, 1.2, 1] : 1 }}
                 transition={{ duration: 0.4, ease: "easeInOut" }}
-                key={`${comment.id}-${hasLiked ? 'liked' : 'unliked'}`} // Key change to trigger animation
+                key={`${comment.id}-${hasLiked ? 'liked' : 'unliked'}`} 
               >
-                <Heart className={`h-4 w-4 ${hasLiked ? 'fill-red-500' : 'fill-transparent group-hover/likebtn:fill-red-500/30' }`} />
+                <Heart className={`h-4 w-4 ${hasLiked ? 'fill-red-500 text-red-500' : 'fill-transparent text-muted-foreground group-hover/likebtn:fill-red-500/30 group-hover/likebtn:text-red-500' }`} />
               </motion.span>
               {comment.likes && comment.likes.count > 0 && (
                 <span className="text-xs">{comment.likes.count}</span>
@@ -418,20 +398,20 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <span className="text-muted-foreground">&middot;</span>
             <button
               onClick={() => {
-                const replyingToThisId = replyingTo?.formUnderId;
-                const isOpeningNewReplyForm = replyingToThisId !== comment.id || (isReply && replyingToThisId !== parentCommentId);
+                const replyingToThis = replyingTo?.formUnderId === comment.id || (isReply && replyingTo?.formUnderId === (comment as any).id); // Cast to any for formUnderId if needed for child
+                const isOpeningNewReplyForm = !replyingToThis;
 
                 setReplyingTo(isOpeningNewReplyForm ? {
-                  parentId: isReply ? parentCommentId! : comment.id, // Replies always go to top-level parent
+                  parentId: isReply ? parentCommentId! : comment.id,
                   targetName: comment.userName,
-                  formUnderId: comment.id // Form always appears under the item clicked
+                  formUnderId: comment.id 
                 } : null);
                 
                 if (isOpeningNewReplyForm) {
                     setCurrentReplyText(`@${comment.userName.replace(/\s+/g, '')} `);
                     setTimeout(() => replyTextareaRef.current?.focus(), 0);
                 } else {
-                    setCurrentReplyText(''); // Clear if closing
+                    setCurrentReplyText(''); 
                 }
               }}
               className="font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 px-1.5 py-0.5 rounded-sm transition-colors"
@@ -447,9 +427,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
           {replyingTo?.formUnderId === comment.id && (
             <Popover open={mentionQuery !== null} onOpenChange={(open) => { if(!open) { setMentionQuery(null); setActiveMentionStartIndex(null); setMentionSuggestions([]);} }}>
               <PopoverAnchor asChild>
-                <form onSubmit={(e) => { e.preventDefault(); handleReplySubmit(); }} className="mt-2.5 flex items-start space-x-2.5 pl-0 sm:pl-1"> {/* Adjusted pl */}
+                <form onSubmit={(e) => { e.preventDefault(); handleReplySubmit(); }} className="mt-2.5 flex items-start space-x-2.5 pl-0 sm:pl-1">
                   <Avatar className="h-7 w-7 border border-border/40 flex-shrink-0 mt-0.5 shadow-sm">
-                    <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? CLIENT_AVATAR_URL : `https://placehold.co/28x28.png?text=${getInitials("User")}`)} alt="Current user avatar" data-ai-hint={currentUser ? "user avatar" : "client avatar"} />
+                    <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? CLIENT_AVATAR_URL : undefined)} alt="Current user avatar" data-ai-hint={currentUser ? "user avatar" : "client avatar"} />
                     <AvatarFallback className="bg-muted text-xs font-semibold">{getInitials(currentUser?.name || (clientReactorId ? "Client" : "U"))}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
@@ -472,7 +452,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                   </div>
                 </form>
               </PopoverAnchor>
-              {mentionQuery !== null && mentionSuggestions.length > 0 && ( // Check mentionQuery as well
+              {mentionQuery !== null && mentionSuggestions.length > 0 && ( 
                  <PopoverContent
                     key={mentionQuery} 
                     className="w-[250px] p-0"
@@ -528,15 +508,14 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     );
   };
 
-
   const publicCommentsAndRepliesCount = order.comments.reduce((acc, comment) => {
     if (!(comment.isInternal && !currentUser) && !(comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role))) {
-      acc++; // count parent comment
+      acc++; 
       const visibleReplies = (comment.replies || []).filter(reply => 
         !(reply.isInternal && !currentUser) && 
         !(reply.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role))
       );
-      acc += visibleReplies.length; // add count of visible replies
+      acc += visibleReplies.length; 
     }
     return acc;
   }, 0);
@@ -697,69 +676,69 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
         </CardContent>
       </Card>
 
-      <Card className="shadow-xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
-        <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
-          <div className="flex items-center space-x-3 sm:space-x-4">
-            <MessageCircle className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" />
-            <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Comments & Updates ({publicCommentsAndRepliesCount})</CardTitle>
-          </div>
-          <CardDescription className="text-muted-foreground mt-1 ml-[44px] sm:ml-[56px]">Share updates or ask questions about this order.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-6 sm:p-8 space-y-5">
-          <div className="space-y-4 sm:space-y-5 max-h-[600px] overflow-y-auto pr-2 sm:pr-3 custom-scrollbar">
-             {order.comments
-              .filter(comment => !(comment.isInternal && !currentUser) && !(comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role)))
-              .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) // Sort top-level comments
-              .map((comment) => renderComment(comment))}
-            {publicCommentsAndRepliesCount === 0 && (
-                <div className="text-center py-8 sm:py-10">
-                  <Image src="https://placehold.co/150x112.png" alt="No comments yet" data-ai-hint="empty message" width={150} height={112} className="mx-auto rounded-lg opacity-50 shadow-sm" />
-                  <p className="mt-4 sm:mt-5 text-muted-foreground text-md sm:text-lg">No public comments yet.</p>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Be the first to add one using the form below!</p>
-                </div>
-            )}
-          </div>
-          <Separator className="my-6 sm:my-8 bg-border/30" />
-          <form onSubmit={handleCommentSubmit} className="flex items-start space-x-3">
-            <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/30 shadow-sm flex-shrink-0 mt-0.5">
-               <AvatarImage src={currentUser?.avatarUrl || CLIENT_AVATAR_URL} alt="Your avatar" data-ai-hint={currentUser ? "user avatar" : "client avatar"} />
-               <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{getInitials(currentUser?.name || "Client")}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1">
-              <Textarea
-                  id="comment"
-                  ref={textareaRef}
-                  placeholder="Write a public comment..."
-                  className="min-h-[80px] sm:min-h-[100px] text-sm sm:text-base mb-2.5 p-3 bg-background/70 border-border/70 rounded-lg shadow-inner focus:border-primary focus:ring-1 focus:ring-primary"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  disabled={isSubmittingComment}
-                  rows={3}
-              />
-              <div className="flex justify-end">
-                <Button
-                    type="submit"
-                    size="default"
-                    className="shadow-md hover:shadow-primary/30 transition-all duration-300 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm py-2 px-5 rounded-lg transform hover:scale-[1.02]"
-                    disabled={isSubmittingComment || !newComment.trim()}
-                >
-                  {isSubmittingComment ? (
-                    <>
-                      <Clock className="mr-2 h-4 w-4 animate-spin" /> Posting...
-                    </>
-                  ) : (
-                    <>
-                      <Send className="mr-2 h-4 w-4" /> Post Comment
-                    </>
-                  )}
-                </Button>
-              </div>
+      {areCommentsVisible && (
+        <Card className="shadow-xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
+          <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <MessageCircle className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" />
+              <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Comments & Updates ({publicCommentsAndRepliesCount})</CardTitle>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+            <CardDescription className="text-muted-foreground mt-1 ml-[44px] sm:ml-[56px]">Share updates or ask questions about this order.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 sm:p-8 space-y-5">
+            <div className="space-y-4 sm:space-y-5 max-h-[600px] overflow-y-auto pr-2 sm:pr-3 custom-scrollbar">
+              {order.comments
+                .filter(comment => !(comment.isInternal && !currentUser) && !(comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role)))
+                .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) 
+                .map((comment) => renderComment(comment))}
+              {publicCommentsAndRepliesCount === 0 && (
+                  <div className="text-center py-8 sm:py-10">
+                    <Image src="https://placehold.co/150x112.png" alt="No comments yet" data-ai-hint="empty message" width={150} height={112} className="mx-auto rounded-lg opacity-50 shadow-sm" />
+                    <p className="mt-4 sm:mt-5 text-muted-foreground text-md sm:text-lg">No public comments yet.</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Be the first to add one using the form below!</p>
+                  </div>
+              )}
+            </div>
+            <Separator className="my-6 sm:my-8 bg-border/30" />
+            <form onSubmit={handleCommentSubmit} className="flex items-start space-x-3">
+              <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/30 shadow-sm flex-shrink-0 mt-0.5">
+                <AvatarImage src={currentUser?.avatarUrl || CLIENT_AVATAR_URL} alt="Your avatar" data-ai-hint={currentUser ? "user avatar" : "client avatar"} />
+                <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{getInitials(currentUser?.name || "Client")}</AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <Textarea
+                    id="comment"
+                    ref={textareaRef}
+                    placeholder="Write a public comment..."
+                    className="min-h-[80px] sm:min-h-[100px] text-sm sm:text-base mb-2.5 p-3 bg-background/70 border-border/70 rounded-lg shadow-inner focus:border-primary focus:ring-1 focus:ring-primary"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    disabled={isSubmittingComment}
+                    rows={3}
+                />
+                <div className="flex justify-end">
+                  <Button
+                      type="submit"
+                      size="default"
+                      className="shadow-md hover:shadow-primary/30 transition-all duration-300 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm py-2 px-5 rounded-lg transform hover:scale-[1.02]"
+                      disabled={isSubmittingComment || !newComment.trim()}
+                  >
+                    {isSubmittingComment ? (
+                      <>
+                        <Clock className="mr-2 h-4 w-4 animate-spin" /> Posting...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="mr-2 h-4 w-4" /> Post Comment
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
     </main>
   );
 }
-
-    

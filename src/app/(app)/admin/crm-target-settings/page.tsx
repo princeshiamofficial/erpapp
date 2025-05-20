@@ -3,19 +3,21 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"; // Added CardFooter
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { CustomStatus } from "@/types";
 import { getStatuses } from '@/lib/status-service';
-import { getCrmCompletionStatusIds } from '@/lib/settings-service';
-import { updateCompletionStatusIdsAction } from './actions';
+import { getCrmCompletionStatusIds, getGlobalSettings, GlobalSettings } from '@/lib/settings-service'; // Updated import
+import { updateCompletionStatusIdsAction, updateCommentsVisibilityAction } from './actions'; // Updated import
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, ListChecks } from 'lucide-react';
+import { RefreshCw, ListChecks, MessageSquare, Eye, EyeOff } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch'; // Added Switch import
+import { Separator } from '@/components/ui/separator'; // Added Separator import
 
 export default function CrmTargetSettingsPage() {
   const { currentUser } = useAuth();
@@ -24,18 +26,20 @@ export default function CrmTargetSettingsPage() {
 
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [selectedStatusIds, setSelectedStatusIds] = useState<Set<string>>(new Set());
+  const [areCommentsVisible, setAreCommentsVisible] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedStatuses, fetchedCompletionIds] = await Promise.all([
+      const [fetchedStatuses, globalSettings] = await Promise.all([
         getStatuses(),
-        getCrmCompletionStatusIds(),
+        getGlobalSettings(),
       ]);
       setAllStatuses(fetchedStatuses);
-      setSelectedStatusIds(new Set(fetchedCompletionIds));
+      setSelectedStatusIds(new Set(globalSettings.crmCompletionStatusIds ?? []));
+      setAreCommentsVisible(globalSettings.areCommentsVisibleOnPublicPage ?? true);
     } catch (error) {
       console.error("Error fetching settings data:", error);
       toast({ title: "Error", description: "Could not load settings.", variant: "destructive" });
@@ -64,17 +68,30 @@ export default function CrmTargetSettingsPage() {
     });
   };
 
-  const handleSubmit = async () => {
+  const handleSaveCrmTargets = async () => {
     setIsSubmitting(true);
     const result = await updateCompletionStatusIdsAction(Array.from(selectedStatusIds));
     if (result.success) {
       toast({ title: "Settings Updated", description: "CRM completion status settings have been saved." });
-      await fetchData(); // Re-fetch to confirm
+      await fetchData(); 
     } else {
-      toast({ title: "Update Failed", description: result.error || "Could not save settings.", variant: "destructive" });
+      toast({ title: "Update Failed", description: result.error || "Could not save CRM target settings.", variant: "destructive" });
     }
     setIsSubmitting(false);
   };
+
+  const handleToggleCommentsVisibility = async (newVisibility: boolean) => {
+    setIsSubmitting(true);
+    const result = await updateCommentsVisibilityAction(newVisibility);
+    if (result.success) {
+      setAreCommentsVisible(newVisibility);
+      toast({ title: "Settings Updated", description: `Public comments section is now ${newVisibility ? 'visible' : 'hidden'}.` });
+    } else {
+      toast({ title: "Update Failed", description: result.error || "Could not update comments visibility.", variant: "destructive" });
+    }
+    setIsSubmitting(false);
+  };
+
 
   if (!currentUser || currentUser.role !== 'SYSTEM_ADMIN') {
     return (
@@ -88,9 +105,9 @@ export default function CrmTargetSettingsPage() {
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
         <div>
-          <h1 className="page-title">CRM Target Completion Settings</h1>
+          <h1 className="page-title">Application Settings</h1>
           <p className="page-description">
-            Select which order statuses should count as "completed" for CRM monthly/weekly targets.
+            Configure CRM targets and public page comment visibility.
           </p>
         </div>
         <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
@@ -102,16 +119,16 @@ export default function CrmTargetSettingsPage() {
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
             <ListChecks className="h-6 w-6 text-primary" />
-            Select Completion Statuses
+            CRM Target Completion Statuses
           </CardTitle>
           <CardDescription className="text-muted-foreground text-sm mt-0.5">
-            Orders that reach any of the selected statuses will contribute to CRM completion counts.
+            Select which order statuses count as "completed" for CRM targets.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-6">
           {isLoading ? (
             <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
+              {[...Array(3)].map((_, i) => (
                 <div key={i} className="flex items-center space-x-2">
                   <Skeleton className="h-5 w-5 rounded" />
                   <Skeleton className="h-5 w-40 rounded" />
@@ -119,9 +136,9 @@ export default function CrmTargetSettingsPage() {
               ))}
             </div>
           ) : allStatuses.length === 0 ? (
-            <p className="text-muted-foreground">No order statuses found. Please configure statuses first.</p>
+            <p className="text-muted-foreground">No order statuses found. Configure statuses first.</p>
           ) : (
-            <ScrollArea className="h-[calc(100vh-450px)] pr-3">
+            <ScrollArea className="h-[calc(50vh-200px)] pr-3">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
                 {allStatuses.map((status) => (
                   <div key={status.id} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
@@ -149,10 +166,49 @@ export default function CrmTargetSettingsPage() {
           )}
         </CardContent>
         <CardFooter className="border-t p-5 flex justify-end">
-          <Button onClick={handleSubmit} disabled={isLoading || isSubmitting || allStatuses.length === 0}>
-            {isSubmitting ? "Saving..." : "Save Settings"}
+          <Button onClick={handleSaveCrmTargets} disabled={isLoading || isSubmitting || allStatuses.length === 0}>
+            {isSubmitting ? "Saving..." : "Save CRM Target Settings"}
           </Button>
         </CardFooter>
+      </Card>
+
+      <Separator className="my-8" />
+
+      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+        <CardHeader className="border-b p-5">
+          <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
+            <MessageSquare className="h-6 w-6 text-primary" />
+            Public Tracking Page Settings
+          </CardTitle>
+          <CardDescription className="text-muted-foreground text-sm mt-0.5">
+            Control features on the public order tracking view.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6">
+          {isLoading ? (
+            <div className="flex items-center space-x-2">
+              <Skeleton className="h-6 w-6 rounded" />
+              <Skeleton className="h-5 w-48 rounded" />
+            </div>
+          ) : (
+            <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+              <Label htmlFor="commentsVisibilitySwitch" className="flex flex-col space-y-1 cursor-pointer">
+                <span>Comments Section Visibility</span>
+                <span className="font-normal leading-snug text-muted-foreground text-xs">
+                  Show or hide the comments section on public tracking pages.
+                </span>
+              </Label>
+              <Switch
+                id="commentsVisibilitySwitch"
+                checked={areCommentsVisible}
+                onCheckedChange={handleToggleCommentsVisibility}
+                disabled={isSubmitting}
+                aria-label="Toggle comments section visibility"
+              />
+            </div>
+          )}
+        </CardContent>
+        {/* No specific save button for this, as Switch triggers action directly */}
       </Card>
     </div>
   );

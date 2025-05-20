@@ -2,7 +2,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { setCrmCompletionStatusIds } from "@/lib/settings-service";
+import { setCrmCompletionStatusIds, setCommentsVisibility } from "@/lib/settings-service"; // Added setCommentsVisibility
 
 export async function updateCompletionStatusIdsAction(ids: string[]): Promise<{ success: boolean; error?: string }> {
   try {
@@ -16,6 +16,21 @@ export async function updateCompletionStatusIdsAction(ids: string[]): Promise<{ 
     return { success: false, error: "Failed to update CRM completion status settings in database." };
   } catch (error) {
     console.error("Error in updateCompletionStatusIdsAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updateCommentsVisibilityAction(isVisible: boolean): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setCommentsVisibility(isVisible);
+    if (success) {
+      revalidatePath("/(app)/admin/crm-target-settings"); // Revalidate the settings page
+      revalidatePath("/track/[trackingId]", "layout"); // Revalidate all public tracking pages
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update comments visibility setting in database." };
+  } catch (error) {
+    console.error("Error in updateCommentsVisibilityAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

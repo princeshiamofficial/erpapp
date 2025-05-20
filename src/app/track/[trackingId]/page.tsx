@@ -3,6 +3,7 @@ import { Suspense } from 'react';
 import { OrderDetailsClient } from './OrderDetailsClient';
 import { getOrderById, incrementOrderViewCount } from '@/lib/order-service'; 
 import { getStatuses } from '@/lib/status-service';
+import { getGlobalSettings } from '@/lib/settings-service'; // Import global settings
 import { notFound } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image'; 
@@ -19,14 +20,17 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
     await incrementOrderViewCount(trackingId);
   }
 
-  const [orderData, allStatuses] = await Promise.all([
+  const [orderData, allStatuses, globalSettings] = await Promise.all([ // Fetch global settings
     getOrderById(trackingId),
-    getStatuses() 
+    getStatuses(),
+    getGlobalSettings()
   ]);
 
   if (!orderData) {
     notFound(); 
   }
+
+  const areCommentsVisible = globalSettings.areCommentsVisibleOnPublicPage ?? true;
 
   return (
     <div className="min-h-screen bg-background py-6 sm:py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary">
@@ -44,7 +48,12 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
       </header>
       
       <Suspense fallback={<TrackingPageSkeleton />}>
-        <OrderDetailsClient order={orderData} allStatuses={allStatuses} />
+        <OrderDetailsClient 
+            order={orderData} 
+            allStatuses={allStatuses} 
+            allUsersForMentions={[]} // Assuming allUsersForMentions might be fetched differently or is already part of another fetch
+            areCommentsVisible={areCommentsVisible} // Pass the visibility flag
+        />
       </Suspense>
 
       <footer className="text-center mt-16 sm:mt-20 py-8 sm:py-10 border-t border-border/30">
@@ -116,5 +125,3 @@ function TrackingPageSkeleton() {
     </div>
   );
 }
-
-
