@@ -1,5 +1,6 @@
 
 import type { Metadata } from 'next';
+import Head from 'next/head'; // Import Head
 import { GeistSans } from 'geist/font/sans';
 // import { GeistMono } from 'geist/font/mono'; // Removed problematic import
 import './globals.css';
@@ -21,6 +22,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <Head>
+        <link rel="preload" href="/globals.css" as="style" />
+      </Head>
       <body className={`${geistSans.variable} font-sans antialiased`}> {/* Removed geistMono.variable */}
         <AuthProvider>
           {children}
