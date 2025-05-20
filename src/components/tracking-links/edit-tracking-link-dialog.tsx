@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { TrackingLink, CustomStatus, User, UserRole } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { updateTrackingLinkAction } from '@/app/(app)/tracking-links/actions'; 
-
+import { AlertTriangle } from 'lucide-react';
 
 interface EditTrackingLinkDialogProps {
   isOpen: boolean;
@@ -44,23 +44,44 @@ export function EditTrackingLinkDialog({
     }
   }, [trackingLink, isOpen]);
 
+  const isCrmEditingOthersOrder = useMemo(() => {
+    return currentUser.role === 'CRM' && currentUser.id !== trackingLink.crmUserId;
+  }, [currentUser, trackingLink]);
+
   const displayableStatuses = useMemo(() => {
     if (!availableStatuses) return [];
-    if (currentUser.role === 'SYSTEM_ADMIN') {
-      return availableStatuses.filter(status => status.isVisible !== false || status.id === trackingLink.currentStatus);
-    }
-    return availableStatuses.filter(status => {
-      const isVisible = status.isVisible !== false;
-      const isCurrent = status.id === trackingLink.currentStatus;
+    
+    const filtered = availableStatuses.filter(status => {
+      const isCurrentlySelected = status.id === trackingLink.currentStatus;
+      if (isCurrentlySelected) return true; // Always show the current status
+
+      if (status.isVisible === false) return false; // Hide if explicitly set to not visible
+
+      if (currentUser.role === 'SYSTEM_ADMIN') return true; // System admin sees all visible
+
       const hasNoRoleRestrictions = !status.allowedRoles || status.allowedRoles.length === 0;
       const isRoleAllowed = status.allowedRoles && status.allowedRoles.includes(currentUser.role);
       
-      return (isVisible && (hasNoRoleRestrictions || isRoleAllowed)) || isCurrent;
+      return hasNoRoleRestrictions || isRoleAllowed;
     });
+
+    // Ensure currentStatus is in the list if it was filtered out by visibility/role but is the active one
+    if (!filtered.find(s => s.id === trackingLink.currentStatus)) {
+        const currentStatusObject = availableStatuses.find(s => s.id === trackingLink.currentStatus);
+        if (currentStatusObject) {
+            return [currentStatusObject, ...filtered];
+        }
+    }
+    return filtered;
+
   }, [availableStatuses, trackingLink.currentStatus, currentUser.role]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isCrmEditingOthersOrder) {
+      toast({ title: "Permission Denied", description: "CRMs can only modify orders assigned to them.", variant: "destructive" });
+      return;
+    }
     setIsSubmitting(true);
 
     const updates: { isPublic?: boolean; currentStatus?: string; statusNotes?: string } = {};
@@ -97,15 +118,38 @@ export function EditTrackingLinkDialog({
     }
   };
   
-  const canEditFields = currentUser && ['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role);
+  const canEditAnyField = (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') || 
+                         (currentUser.role === 'CRM' && currentUser.id === trackingLink.crmUserId) ||
+                         (currentUser.role === 'DESIGNER_REPRESENTATIVE'); // DRs can change status based on status-level permissions
+
+
+  const canEditStatus = (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') ||
+                        (currentUser.role === 'CRM' && currentUser.id === trackingLink.crmUserId) ||
+                        (currentUser.role === 'DESIGNER_REPRESENTATIVE'); // DR can change status based on individual status permissions
+
+  const canEditVisibility = (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') ||
+                            (currentUser.role === 'CRM' && currentUser.id === trackingLink.crmUserId) ||
+                            (currentUser.role === 'DESIGNER_REPRESENTATIVE');
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg p-6">
         <DialogHeader>
           <DialogTitle>Edit Tracking Link: {trackingLink.id}</DialogTitle>
-          <DialogDescription>Order for: {trackingLink.companyName} (Contact: {trackingLink.customerName || 'N/A'})</DialogDescription>
+          <DialogDescription>Order for: {trackingLink.companyName} (CRM: {trackingLink.crmUserName})</DialogDescription>
         </DialogHeader>
+
+        {isCrmEditingOthersOrder && (
+          <div className="my-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-md text-yellow-700 dark:text-yellow-400 text-sm flex items-start gap-2">
+            <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="font-semibold">Permission Restricted</p>
+              <p>As a CRM, you can only modify orders assigned to you. These fields are disabled.</p>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
           <div className="grid gap-6 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="flex items-center justify-between space-x-2 p-3 bg-secondary/30 rounded-md border border-border/20">
@@ -119,7 +163,7 @@ export function EditTrackingLinkDialog({
                 id="isPublic"
                 checked={isPublic}
                 onCheckedChange={setIsPublic}
-                disabled={!canEditFields || isSubmitting}
+                disabled={!canEditVisibility || isSubmitting || isCrmEditingOthersOrder}
               />
             </div>
 
@@ -129,7 +173,7 @@ export function EditTrackingLinkDialog({
                  <Select 
                   value={currentStatusId} 
                   onValueChange={(value) => setCurrentStatusId(value)}
-                  disabled={!canEditFields || isSubmitting || displayableStatuses.length === 0}
+                  disabled={!canEditStatus || isSubmitting || displayableStatuses.length === 0 || isCrmEditingOthersOrder}
                 >
                   <SelectTrigger id="currentStatus" className="mt-1">
                     <SelectValue placeholder="Select order status" />
@@ -156,7 +200,7 @@ export function EditTrackingLinkDialog({
                     value={statusNotes}
                     onChange={(e) => setStatusNotes(e.target.value)}
                     className="mt-1 min-h-[80px]"
-                    disabled={!canEditFields || isSubmitting}
+                    disabled={!canEditStatus || isSubmitting || isCrmEditingOthersOrder}
                   />
                 </div>
               )}
@@ -164,7 +208,7 @@ export function EditTrackingLinkDialog({
           </div>
           <DialogFooter className="pt-4 border-t mt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={!canEditFields || isSubmitting}>
+            <Button type="submit" disabled={!canEditAnyField || isSubmitting || isCrmEditingOthersOrder || (currentStatusId === trackingLink.currentStatus && isPublic === trackingLink.isPublic)}>
               {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
