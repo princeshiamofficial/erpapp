@@ -12,7 +12,6 @@ import { CreateOrderDialog } from '@/components/orders/create-order-dialog';
 import type { TrackingLink, User, CustomStatus } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { cn } from "@/lib/utils";
 import { getStatusById, getContrastTextColor, getStatuses } from '@/lib/status-service';
 import { AssignDrDialog } from '@/components/orders/assign-dr-dialog';
 import { getOrders } from '@/lib/order-service';
@@ -90,14 +89,17 @@ export default function OrdersPage() {
   }, [currentUser, fetchOrderData]);
 
   const memoizedAvailableStatusesForDialog = useMemo(() => {
-    return allStatuses.filter(s => s.isVisible !== false && (!s.isSystemStatus || s.name === "Order Submitted"));
+    return allStatuses.filter(s => s.isVisible !== false && (s.id === "order-submitted" || !s.isSystemStatus));
   }, [allStatuses]);
 
   const filteredOrders = useMemo(() => {
     let result = orders;
     if (currentUser?.role === 'CRM') {
       result = result.filter(order => order.crmUserId === currentUser.id);
+    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
+      result = result.filter(order => order.designerRepresentativeId === currentUser.id);
     }
+
     if (!searchTerm) return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     
     const lowerSearchTerm = searchTerm.toLowerCase();
@@ -112,7 +114,7 @@ export default function OrdersPage() {
 
   const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
   
-  const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
+  const getStatusDisplayInfoCallback = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
     const status = allStatuses.find(s => s.id === statusId);
     if (status) {
       return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
@@ -121,13 +123,13 @@ export default function OrdersPage() {
   }, [allStatuses]);
 
   useEffect(() => {
-    if (allStatuses.length > 0) {
+    if (allStatuses.length > 0 && filteredOrders.length > 0) {
         const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
         const uniqueStatusIdsInFilteredOrders = new Set<string>();
         filteredOrders.forEach(order => uniqueStatusIdsInFilteredOrders.add(order.currentStatus));
 
         uniqueStatusIdsInFilteredOrders.forEach(statusId => {
-            newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
+            newDisplayInfoMap[statusId] = getStatusDisplayInfoCallback(statusId);
         });
         
         if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(orderStatusDisplay)) {
@@ -138,7 +140,7 @@ export default function OrdersPage() {
     } else if (allStatuses.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
         setOrderStatusDisplay({});
     }
-  }, [filteredOrders, allStatuses, getStatusDisplayInfo, orderStatusDisplay]);
+  }, [filteredOrders, allStatuses, getStatusDisplayInfoCallback, orderStatusDisplay]);
 
 
   const canCreateOrder = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
@@ -185,7 +187,7 @@ export default function OrdersPage() {
         prevOrders.map(o => (o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o))
       );
       toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
-      // await fetchOrderData(); // Can be uncommented if direct state update isn't sufficient
+      // await fetchOrderData(); // Re-enable if optimistic update is not sufficient or for full reconciliation
   }, [toast]);
 
 
@@ -266,7 +268,9 @@ export default function OrdersPage() {
             <div className="flex-grow">
               <CardTitle className="text-card-foreground text-xl">Order List</CardTitle>
               <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                {currentUser.role === 'CRM' ? "Showing orders assigned to you." : "Showing all orders."}
+                {currentUser.role === 'CRM' ? "Showing orders assigned to you." : 
+                 currentUser.role === 'DESIGNER_REPRESENTATIVE' ? "Showing orders assigned to you." : 
+                 "Showing all orders."}
               </CardDescription>
             </div>
             <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
@@ -374,10 +378,17 @@ export default function OrdersPage() {
                         <TableCell colSpan={7} className="text-center py-12 h-[300px]">
                             <Package className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
                             <p className="text-lg text-muted-foreground font-medium">
-                              {searchTerm ? "No orders match your search." : "No orders found."}
+                              {searchTerm ? "No orders match your search." : 
+                               (currentUser.role === 'CRM' ? "You have no orders." : 
+                                currentUser.role === 'DESIGNER_REPRESENTATIVE' ? "No orders assigned to you." : 
+                                "No orders found.")
+                              }
                             </p>
                             <p className="text-sm text-muted-foreground">
-                                {searchTerm ? "Try a different search term." : (canCreateOrder ? "Start by creating a new one!" : "Check back later for updates.")}
+                                {searchTerm ? "Try a different search term." : 
+                                (canCreateOrder ? "Start by creating a new one!" : 
+                                 currentUser.role === 'DESIGNER_REPRESENTATIVE' ? "Check back later for assigned orders." :
+                                 "Check back later for updates.")}
                             </p>
                              {canCreateOrder && !searchTerm && (
                                 <CreateOrderDialog
