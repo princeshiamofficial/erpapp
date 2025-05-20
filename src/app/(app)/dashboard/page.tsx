@@ -16,7 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { User, TrackingLink, CustomStatus, OrderLogEntry, Comment as OrderComment } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { getStatuses } from '@/lib/status-service';
-import { getGlobalSettings, type GlobalSalesTargets } from '@/lib/settings-service';
+import { getGlobalSettings, type GlobalSettings } from '@/lib/settings-service';
 import { setGlobalTargetAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 
@@ -54,10 +54,11 @@ const getInitials = (name: string) => {
     return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
 }
 
-const DEFAULT_GLOBAL_TARGETS_STATE: GlobalSalesTargets = {
+const DEFAULT_GLOBAL_SETTINGS_STATE: GlobalSettings = {
   globalMonthlyOrderTarget: 0,
   globalWeeklyOrderTarget: 0,
   crmCompletionStatusIds: [],
+  areCommentsVisibleOnPublicPage: true,
 };
 
 
@@ -92,7 +93,7 @@ export default function DashboardPage() {
   const [weeklyDeliveriesCount, setWeeklyDeliveriesCount] = useState<number | null>(null);
   const [isLoadingWeeklyDeliveries, setIsLoadingWeeklyDeliveries] = useState(true);
 
-  const [globalTargets, setGlobalTargets] = useState<GlobalSalesTargets>(DEFAULT_GLOBAL_TARGETS_STATE);
+  const [globalTargets, setGlobalTargets] = useState<GlobalSettings>(DEFAULT_GLOBAL_SETTINGS_STATE);
 
   const [isSetGlobalMonthlyTargetDialogOpen, setIsSetGlobalMonthlyTargetDialogOpen] = useState(false);
   const [isSetGlobalWeeklyTargetDialogOpen, setIsSetGlobalWeeklyTargetDialogOpen] = useState(false);
@@ -109,7 +110,7 @@ export default function DashboardPage() {
     } catch (error) {
       console.error("Failed to fetch global sales targets:", error);
       toast({ title: "Error", description: "Could not load global sales targets.", variant: "destructive" });
-      setGlobalTargets(DEFAULT_GLOBAL_TARGETS_STATE); 
+      setGlobalTargets(DEFAULT_GLOBAL_SETTINGS_STATE); 
     } finally {
       setIsLoadingGlobalTargets(false);
     }
@@ -126,7 +127,7 @@ export default function DashboardPage() {
     setIsLoadingWeeklyDeliveries(true);
 
     try {
-      const [fetchedOrdersUnfiltered, allStatuses, fetchedGlobalTargets] = await Promise.all([
+      const [fetchedOrdersUnfiltered, allStatuses, fetchedGlobalSettings] = await Promise.all([
         getOrders(),
         getStatuses(),
         getGlobalSettings() 
@@ -135,10 +136,14 @@ export default function DashboardPage() {
       const statusMap = new Map(allStatuses.map(s => [s.id, s.name]));
       const activities: ActivityItem[] = [];
 
-      // Filter orders for CRM user if applicable for activity feed
-      const ordersForActivity = currentUser.role === 'CRM'
-        ? fetchedOrdersUnfiltered.filter(order => order.crmUserId === currentUser.id)
-        : fetchedOrdersUnfiltered;
+      let ordersForActivity: TrackingLink[];
+      if (currentUser.role === 'CRM') {
+        ordersForActivity = fetchedOrdersUnfiltered.filter(order => order.crmUserId === currentUser.id);
+      } else if (currentUser.role === 'DESIGNER_REPRESENTATIVE') {
+        ordersForActivity = fetchedOrdersUnfiltered.filter(order => order.designerRepresentativeId === currentUser.id);
+      } else { // ADMIN or SYSTEM_ADMIN
+        ordersForActivity = fetchedOrdersUnfiltered;
+      }
       
       const sortedOrdersForActivity = [...ordersForActivity].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       const ordersToProcessForActivity = sortedOrdersForActivity.slice(0, ORDERS_TO_SCAN_FOR_ACTIVITY);
@@ -218,16 +223,22 @@ export default function DashboardPage() {
       const deliveredStatusId = allStatuses.find(s => s.name.toLowerCase() === 'delivered')?.id;
       const cancelledStatusId = allStatuses.find(s => s.name.toLowerCase() === 'cancelled')?.id;
       
-      const ordersForActiveCountCalculation = currentUser.role === 'CRM'
-        ? fetchedOrdersUnfiltered.filter(order => order.crmUserId === currentUser.id)
-        : fetchedOrdersUnfiltered;
+      let ordersForActiveCountCalculation: TrackingLink[];
+       if (currentUser.role === 'CRM') {
+        ordersForActiveCountCalculation = fetchedOrdersUnfiltered.filter(order => order.crmUserId === currentUser.id);
+      } else if (currentUser.role === 'DESIGNER_REPRESENTATIVE') {
+        ordersForActiveCountCalculation = fetchedOrdersUnfiltered.filter(order => order.designerRepresentativeId === currentUser.id);
+      } else { // ADMIN or SYSTEM_ADMIN
+        ordersForActiveCountCalculation = fetchedOrdersUnfiltered;
+      }
+
 
       let currentActiveOrdersCount = ordersForActiveCountCalculation.filter(order => {
         return order.currentStatus !== deliveredStatusId && order.currentStatus !== cancelledStatusId;
       }).length;
       setActiveOrdersCount(currentActiveOrdersCount);
 
-      // Calculate Active Orders Percentage Change (Month over Month, scoped for CRM if applicable)
+      // Calculate Active Orders Percentage Change (Month over Month, scoped by role)
       const now = new Date();
       const startOfCurrentMonth = startOfMonth(now);
       let activeOrdersAtStartOfMonthCount = 0;
@@ -252,11 +263,14 @@ export default function DashboardPage() {
                       if (lastKnownStatusBeforeThisMonth !== deliveredStatusId && lastKnownStatusBeforeThisMonth !== cancelledStatusId) {
                           activeOrdersAtStartOfMonthCount++;
                       }
-                  } else { 
+                  } else if (order.statusHistory.length > 0) { 
                          const initialStatusWasTerminal = order.statusHistory[0]?.status === deliveredStatusId || order.statusHistory[0]?.status === cancelledStatusId;
                          if (!initialStatusWasTerminal) {
                             activeOrdersAtStartOfMonthCount++;
                          }
+                  } else if (order.currentStatus !== deliveredStatusId && order.currentStatus !== cancelledStatusId) {
+                      // If no history and created before this month, and current status is not terminal
+                      activeOrdersAtStartOfMonthCount++;
                   }
               }
           });
@@ -283,7 +297,7 @@ export default function DashboardPage() {
         let crmMonthCompleted = 0;
         let crmWeekCompleted = 0;
 
-        const crmCompletionStatusSet = new Set(fetchedGlobalTargets.crmCompletionStatusIds || []);
+        const crmCompletionStatusSet = new Set(fetchedGlobalSettings.crmCompletionStatusIds || []);
 
         fetchedOrdersUnfiltered.forEach(order => { // Use unfiltered for system-wide delivery counts
           const isOrderDeliveredThisMonth = order.statusHistory.some(
@@ -296,7 +310,7 @@ export default function DashboardPage() {
           if (isOrderDeliveredThisMonth) deliveriesThisMonth++;
           if (isOrderDeliveredThisWeek) deliveriesThisWeek++;
           
-          // CRM Completion Calculation (already scoped by crmUserId check)
+          // CRM Completion Calculation
           if (currentUser.role === 'CRM' && order.crmUserId === currentUser.id) {
             let orderCompletedForCRMThisMonth = false;
             let orderCompletedForCRMThisWeek = false;
@@ -395,7 +409,7 @@ export default function DashboardPage() {
   let summaryCards: any[] = [];
   
   let activeOrderCardData: any = {
-      title: currentUser.role === 'CRM' ? "Your Active Orders" : "Active Orders",
+      title: (currentUser.role === 'CRM' || currentUser.role === 'DESIGNER_REPRESENTATIVE') ? "Your Active Orders" : "Active Orders",
       value: isLoadingActiveOrders || activeOrdersCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : activeOrdersCount.toString(),
       icon: Package,
       dataAiHint: "delivery boxes",
