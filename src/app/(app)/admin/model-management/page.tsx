@@ -5,14 +5,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle } from "lucide-react"; // Removed DollarSign
+import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { ServiceModelItem } from "@/types";
 import { getModels } from '@/lib/service-options-service';
 import {
   addModelAction, updateModelAction, deleteModelAction
-} from '../service-management/actions'; // Re-use actions from the existing service management
+} from '../service-management/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -181,9 +181,7 @@ export default function ModelManagementPage() {
               <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
                 <div className="flex flex-col">
                   <span className="font-medium text-foreground">{item.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                     {formatCurrency(item.price)}
-                  </span>
+                  {/* Price display removed from here */}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(item)} title={`Edit model`} className="h-8 w-8">
@@ -244,7 +242,7 @@ export default function ModelManagementPage() {
                   placeholder="e.g., 1500.00"
                   min="0"
                   step="0.01"
-                  className="pl-3" // Adjusted padding since icon is removed
+                  className="pl-3"
                 />
               </div>
             </div>

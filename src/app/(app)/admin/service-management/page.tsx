@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Layers, ShieldHalf, RefreshCw, AlertTriangle } from "lucide-react"; // Removed DollarSign
+import { PlusCircle, Edit, Trash2, Layers, ShieldHalf, RefreshCw, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { ServiceModelItem, ServiceLaminationItem } from "@/types";
@@ -219,11 +219,7 @@ export default function ServiceManagementPage() {
               <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
                 <div className="flex flex-col">
                   <span className="font-medium text-foreground">{item.name}</span>
-                  {type === 'model' && (item as ServiceModelItem).price !== undefined && (
-                    <span className="text-xs text-muted-foreground">
-                      {formatCurrency((item as ServiceModelItem).price)}
-                    </span>
-                  )}
+                  {/* Price display removed for models in list view */}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(item, type)} title={`Edit ${type}`} className="h-8 w-8">
@@ -287,7 +283,7 @@ export default function ServiceManagementPage() {
                         placeholder="e.g., 1500.00"
                         min="0"
                         step="0.01"
-                        className="pl-3" // Adjusted padding
+                        className="pl-3"
                     />
                 </div>
               </div>
