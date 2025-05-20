@@ -3,7 +3,8 @@ import { Suspense } from 'react';
 import { OrderDetailsClient } from './OrderDetailsClient';
 import { getOrderById, incrementOrderViewCount } from '@/lib/order-service'; 
 import { getStatuses } from '@/lib/status-service';
-import { getGlobalSettings } from '@/lib/settings-service'; // Import global settings
+import { getGlobalSettings } from '@/lib/settings-service'; 
+import { getUsers } from '@/lib/user-service';
 import { notFound } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image'; 
@@ -20,10 +21,11 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
     await incrementOrderViewCount(trackingId);
   }
 
-  const [orderData, allStatuses, globalSettings] = await Promise.all([ // Fetch global settings
+  const [orderData, allStatuses, globalSettings, allUsers] = await Promise.all([ 
     getOrderById(trackingId),
     getStatuses(),
-    getGlobalSettings()
+    getGlobalSettings(),
+    getUsers() 
   ]);
 
   if (!orderData) {
@@ -51,8 +53,8 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
         <OrderDetailsClient 
             order={orderData} 
             allStatuses={allStatuses} 
-            allUsersForMentions={[]} // Assuming allUsersForMentions might be fetched differently or is already part of another fetch
-            areCommentsVisible={areCommentsVisible} // Pass the visibility flag
+            allUsersForMentions={allUsers} 
+            areCommentsVisible={areCommentsVisible}
         />
       </Suspense>
 

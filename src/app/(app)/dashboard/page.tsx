@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import Link from "next/link";
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +11,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks, Edit, PackageCheck, Truck, TrendingDown, Minus, RefreshCw, Loader2 } from 'lucide-react';
 import { formatDistanceToNow, startOfMonth, endOfMonth, isWithinInterval, startOfWeek, endOfWeek, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { SetSalesTargetDialog } from '@/components/dashboard/set-sales-target-dialog';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { User, TrackingLink, CustomStatus, OrderLogEntry, Comment as OrderComment } from '@/types';
@@ -19,6 +19,8 @@ import { getStatuses } from '@/lib/status-service';
 import { getGlobalSettings, type GlobalSettings } from '@/lib/settings-service';
 import { setGlobalTargetAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
+
+const SetSalesTargetDialog = dynamic(() => import('@/components/dashboard/set-sales-target-dialog').then(mod => mod.SetSalesTargetDialog));
 
 
 interface ActivityItem {
@@ -71,7 +73,7 @@ const getProgressColorClass = (percentage: number): string => {
 };
 
 const MAX_RECENT_ACTIVITIES_DISPLAY = 15;
-const ORDERS_TO_SCAN_FOR_ACTIVITY = 10; // Consider how many orders to scan for generating recent activity
+const ORDERS_TO_SCAN_FOR_ACTIVITY = 10;
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
@@ -92,6 +94,10 @@ export default function DashboardPage() {
 
   const [weeklyDeliveriesCount, setWeeklyDeliveriesCount] = useState<number | null>(null);
   const [isLoadingWeeklyDeliveries, setIsLoadingWeeklyDeliveries] = useState(true);
+  
+  const [monthlyOrdersCreatedCount, setMonthlyOrdersCreatedCount] = useState<number | null>(null);
+  const [isLoadingMonthlyOrdersCreated, setIsLoadingMonthlyOrdersCreated] = useState(true);
+
 
   const [globalTargets, setGlobalTargets] = useState<GlobalSettings>(DEFAULT_GLOBAL_SETTINGS_STATE);
 
@@ -125,6 +131,8 @@ export default function DashboardPage() {
     setActiveOrdersPercentageChange(null);
     setIsLoadingMonthlyDeliveries(true);
     setIsLoadingWeeklyDeliveries(true);
+    setIsLoadingMonthlyOrdersCreated(true);
+
 
     try {
       const [fetchedOrdersUnfiltered, allStatuses, fetchedGlobalSettings] = await Promise.all([
@@ -141,7 +149,7 @@ export default function DashboardPage() {
         ordersForActivity = fetchedOrdersUnfiltered.filter(order => order.crmUserId === currentUser.id);
       } else if (currentUser.role === 'DESIGNER_REPRESENTATIVE') {
         ordersForActivity = fetchedOrdersUnfiltered.filter(order => order.designerRepresentativeId === currentUser.id);
-      } else { // ADMIN or SYSTEM_ADMIN
+      } else { 
         ordersForActivity = fetchedOrdersUnfiltered;
       }
       
@@ -219,32 +227,30 @@ export default function DashboardPage() {
       const sortedActivities = activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setRecentActivities(sortedActivities.slice(0, MAX_RECENT_ACTIVITIES_DISPLAY));
 
-      // Calculate Active Orders (scoped for CRM if applicable)
       const deliveredStatusId = allStatuses.find(s => s.name.toLowerCase() === 'delivered')?.id;
       const cancelledStatusId = allStatuses.find(s => s.name.toLowerCase() === 'cancelled')?.id;
       
-      let ordersForActiveCountCalculation: TrackingLink[];
+      let ordersForScopedCounts: TrackingLink[];
        if (currentUser.role === 'CRM') {
-        ordersForActiveCountCalculation = fetchedOrdersUnfiltered.filter(order => order.crmUserId === currentUser.id);
+        ordersForScopedCounts = fetchedOrdersUnfiltered.filter(order => order.crmUserId === currentUser.id);
       } else if (currentUser.role === 'DESIGNER_REPRESENTATIVE') {
-        ordersForActiveCountCalculation = fetchedOrdersUnfiltered.filter(order => order.designerRepresentativeId === currentUser.id);
-      } else { // ADMIN or SYSTEM_ADMIN
-        ordersForActiveCountCalculation = fetchedOrdersUnfiltered;
+        ordersForScopedCounts = fetchedOrdersUnfiltered.filter(order => order.designerRepresentativeId === currentUser.id);
+      } else { 
+        ordersForScopedCounts = fetchedOrdersUnfiltered;
       }
 
 
-      let currentActiveOrdersCount = ordersForActiveCountCalculation.filter(order => {
+      let currentActiveOrdersCount = ordersForScopedCounts.filter(order => {
         return order.currentStatus !== deliveredStatusId && order.currentStatus !== cancelledStatusId;
       }).length;
       setActiveOrdersCount(currentActiveOrdersCount);
 
-      // Calculate Active Orders Percentage Change (Month over Month, scoped by role)
       const now = new Date();
       const startOfCurrentMonth = startOfMonth(now);
       let activeOrdersAtStartOfMonthCount = 0;
 
       if (deliveredStatusId || cancelledStatusId) {
-          ordersForActiveCountCalculation.forEach(order => {
+          ordersForScopedCounts.forEach(order => {
               const orderCreatedAt = new Date(order.createdAt);
               if (orderCreatedAt < startOfCurrentMonth) { 
                   let lastKnownStatusBeforeThisMonth = '';
@@ -269,7 +275,6 @@ export default function DashboardPage() {
                             activeOrdersAtStartOfMonthCount++;
                          }
                   } else if (order.currentStatus !== deliveredStatusId && order.currentStatus !== cancelledStatusId) {
-                      // If no history and created before this month, and current status is not terminal
                       activeOrdersAtStartOfMonthCount++;
                   }
               }
@@ -285,7 +290,6 @@ export default function DashboardPage() {
       }
 
 
-      // Calculate Monthly Deliveries & Weekly Deliveries (these remain system-wide for Admin/System Admin)
       if (deliveredStatusId) {
         const monthStart = startOfMonth(now);
         const monthEnd = endOfMonth(now);
@@ -296,21 +300,26 @@ export default function DashboardPage() {
         let deliveriesThisWeek = 0;
         let crmMonthCompleted = 0;
         let crmWeekCompleted = 0;
+        let ordersCreatedThisMonth = 0;
+
 
         const crmCompletionStatusSet = new Set(fetchedGlobalSettings.crmCompletionStatusIds || []);
 
-        fetchedOrdersUnfiltered.forEach(order => { // Use unfiltered for system-wide delivery counts
+        fetchedOrdersUnfiltered.forEach(order => { 
           const isOrderDeliveredThisMonth = order.statusHistory.some(
             log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: monthStart, end: monthEnd })
           );
           const isOrderDeliveredThisWeek = order.statusHistory.some(
             log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: weekStart, end: weekEnd })
           );
+          
+          if (isWithinInterval(parseISO(order.createdAt), { start: monthStart, end: monthEnd })) {
+            ordersCreatedThisMonth++;
+          }
 
           if (isOrderDeliveredThisMonth) deliveriesThisMonth++;
           if (isOrderDeliveredThisWeek) deliveriesThisWeek++;
           
-          // CRM Completion Calculation
           if (currentUser.role === 'CRM' && order.crmUserId === currentUser.id) {
             let orderCompletedForCRMThisMonth = false;
             let orderCompletedForCRMThisWeek = false;
@@ -330,12 +339,14 @@ export default function DashboardPage() {
             if (orderCompletedForCRMThisWeek) crmWeekCompleted++;
           }
         });
+        setMonthlyOrdersCreatedCount(ordersCreatedThisMonth);
         setMonthlyDeliveriesCount(deliveriesThisMonth);
         setWeeklyDeliveriesCount(deliveriesThisWeek);
         setCrmMonthlyOrdersCompleted(crmMonthCompleted);
         setCrmWeeklyOrdersCompleted(crmWeekCompleted);
 
       } else {
+        setMonthlyOrdersCreatedCount(0);
         setMonthlyDeliveriesCount(0); 
         setWeeklyDeliveriesCount(0);
         setCrmMonthlyOrdersCompleted(0);
@@ -348,6 +359,7 @@ export default function DashboardPage() {
       toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive" });
       setActiveOrdersCount(0); 
       setActiveOrdersPercentageChange(0);
+      setMonthlyOrdersCreatedCount(0);
       setMonthlyDeliveriesCount(0);
       setWeeklyDeliveriesCount(0);
       setCrmMonthlyOrdersCompleted(0);
@@ -355,6 +367,7 @@ export default function DashboardPage() {
     } finally {
       setIsLoadingActivities(false);
       setIsLoadingActiveOrders(false);
+      setIsLoadingMonthlyOrdersCreated(false);
       setIsLoadingMonthlyDeliveries(false);
       setIsLoadingWeeklyDeliveries(false);
     }
@@ -436,6 +449,16 @@ export default function DashboardPage() {
 
   if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
     summaryCards.push(
+      {
+        title: "Monthly Orders Created",
+        value: isLoadingMonthlyOrdersCreated || monthlyOrdersCreatedCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : monthlyOrdersCreatedCount.toString(),
+        icon: Package,
+        changeText: "This month",
+        dataAiHint: "calendar orders",
+        type: "info" as const,
+        trend: "neutral" as "up" | "down" | "neutral",
+        href: "/orders/monthly", 
+      },
       {
         title: "Monthly Deliveries",
         value: isLoadingMonthlyDeliveries || monthlyDeliveriesCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : monthlyDeliveriesCount.toString(),
@@ -611,6 +634,7 @@ export default function DashboardPage() {
 
       {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && isClient && (
         <>
+        {isSetGlobalMonthlyTargetDialogOpen && (
           <SetSalesTargetDialog
             isOpen={isSetGlobalMonthlyTargetDialogOpen}
             onOpenChange={setIsSetGlobalMonthlyTargetDialogOpen}
@@ -618,6 +642,8 @@ export default function DashboardPage() {
             onSetTarget={handleSetGlobalMonthlyOrderTarget}
             targetType="monthly"
           />
+        )}
+        {isSetGlobalWeeklyTargetDialogOpen && (
           <SetSalesTargetDialog
             isOpen={isSetGlobalWeeklyTargetDialogOpen}
             onOpenChange={setIsSetGlobalWeeklyTargetDialogOpen}
@@ -625,6 +651,7 @@ export default function DashboardPage() {
             onSetTarget={handleSetGlobalWeeklyOrderTarget}
             targetType="weekly"
           />
+        )}
         </>
       )}
 
@@ -668,7 +695,7 @@ export default function DashboardPage() {
                       <p className="text-xs text-muted-foreground">{activity.details}</p>
                       <div className="flex items-center space-x-2 mt-1.5 sm:mt-2">
                         <Avatar className="h-6 w-6 sm:h-7 sm:w-7 border border-border/50">
-                           <AvatarImage src={activity.userAvatar || `https://placehold.co/40x40.png?text=${getInitials(activity.userName)}`} alt={activity.userName} data-ai-hint="user avatar"/>
+                           <AvatarImage src={activity.userAvatar || undefined} alt={activity.userName} data-ai-hint="user avatar"/>
                           <AvatarFallback className="text-xs bg-primary/10 text-primary">{getInitials(activity.userName)}</AvatarFallback>
                         </Avatar>
                         <div className="text-xs text-muted-foreground">

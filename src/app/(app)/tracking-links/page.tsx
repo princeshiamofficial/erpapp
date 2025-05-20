@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
@@ -10,7 +11,6 @@ import { useAuth } from "@/contexts/auth-context";
 import Image from "next/image";
 import Link from "next/link";
 import type { TrackingLink, User, CustomStatus } from '@/types';
-import { EditTrackingLinkDialog } from '@/components/tracking-links/edit-tracking-link-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getOrders } from '@/lib/order-service'; 
 import { getContrastTextColor, getStatuses } from '@/lib/status-service';
@@ -23,6 +23,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+const EditTrackingLinkDialog = dynamic(() => import('@/components/tracking-links/edit-tracking-link-dialog').then(mod => mod.EditTrackingLinkDialog));
 
 export default function TrackingLinksPage() {
   const { currentUser } = useAuth();
@@ -76,6 +78,7 @@ export default function TrackingLinksPage() {
   const handleTrackingLinkUpdated = () => {
     fetchData(); 
     setIsEditDialogOpen(false);
+    setSelectedLink(null);
   };
 
   const handleCopyLink = async (linkId: string) => {
@@ -287,10 +290,13 @@ export default function TrackingLinksPage() {
         </CardContent>
       </Card>
 
-      {selectedLink && currentUser && allStatuses.length > 0 && (
+      {selectedLink && currentUser && allStatuses.length > 0 && isEditDialogOpen && (
         <EditTrackingLinkDialog
           isOpen={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
+          onOpenChange={(open) => { 
+            setIsEditDialogOpen(open);
+            if (!open) setSelectedLink(null);
+          }}
           trackingLink={selectedLink}
           currentUser={currentUser}
           availableStatuses={allStatuses}

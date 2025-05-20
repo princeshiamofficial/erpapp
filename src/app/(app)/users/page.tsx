@@ -2,19 +2,13 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, Edit, Trash2, KeyRound, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical, RefreshCw } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PlusCircle, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical, KeyRound, Edit, Trash2, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole } from "@/types";
-import { AddUserDialog } from '@/components/users/add-user-dialog';
-import { EditUserRoleDialog } from '@/components/users/edit-user-role-dialog';
-import { DeleteUserDialog } from '@/components/users/delete-user-dialog';
-import { ChangePasswordDialog } from '@/components/users/change-password-dialog';
-import { SetUserAvatarDialog } from '@/components/users/set-user-avatar-dialog';
-import { SetUserSalesTargetDialog } from '@/components/users/set-user-sales-target-dialog';
-import { EditUserInfoDialog } from '@/components/users/edit-user-info-dialog';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -30,7 +24,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { 
   getUsers, 
-  addUser as addUserToDb, 
   updateUserRoleInFirestore, 
   deleteUserFromFirestore, 
   updateUserPasswordInFirestore, 
@@ -42,6 +35,14 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+
+const AddUserDialog = dynamic(() => import('@/components/users/add-user-dialog').then(mod => mod.AddUserDialog));
+const EditUserInfoDialog = dynamic(() => import('@/components/users/edit-user-info-dialog').then(mod => mod.EditUserInfoDialog));
+const EditUserRoleDialog = dynamic(() => import('@/components/users/edit-user-role-dialog').then(mod => mod.EditUserRoleDialog));
+const ChangePasswordDialog = dynamic(() => import('@/components/users/change-password-dialog').then(mod => mod.ChangePasswordDialog));
+const SetUserAvatarDialog = dynamic(() => import('@/components/users/set-user-avatar-dialog').then(mod => mod.SetUserAvatarDialog));
+const SetUserSalesTargetDialog = dynamic(() => import('@/components/users/set-user-sales-target-dialog').then(mod => mod.SetUserSalesTargetDialog));
+const DeleteUserDialog = dynamic(() => import('@/components/users/delete-user-dialog').then(mod => mod.DeleteUserDialog));
 
 
 export default function UsersPage() {
@@ -98,13 +99,9 @@ export default function UsersPage() {
     }
   }, [currentUser, router, fetchUsers]);
 
-  const handleUserAdded = async () => { // Parameter removed, dialog handles data
+  const handleUserAdded = async () => {
     toast({ title: "User Added", description: `New user has been added. Default password is 'password'.`});
     await fetchUsers(); 
-    // Refresh current user if admin adds themselves (unlikely, but good practice)
-    // if (currentUser && newUserData.email === currentUser.email && typeof refreshCurrentUser === 'function') { 
-    //   await refreshCurrentUser(); 
-    // }
     setIsAddUserDialogOpen(false);
   };
 
@@ -202,7 +199,6 @@ export default function UsersPage() {
     if (!currentUser) return [];
     let displayableUsers = users;
     if (currentUser.role === 'ADMIN') {
-      // Admins cannot see System Admins
       displayableUsers = users.filter(user => user.role !== 'SYSTEM_ADMIN');
     }
     return displayableUsers;
@@ -270,12 +266,10 @@ export default function UsersPage() {
   const canAdminModifyTargetUser = useCallback((targetUser: User): boolean => {
     if (!currentUser) return false;
     if (currentUser.role === 'SYSTEM_ADMIN') {
-      // System admin can modify anyone except themselves or other System Admins via these specific dialogs
       return targetUser.id !== currentUser.id && targetUser.role !== 'SYSTEM_ADMIN';
     }
     if (currentUser.role === 'ADMIN') {
-      if (targetUser.id === currentUser.id) return true; // Admins can modify themselves (e.g., password)
-      // Admins can modify CRM and DR users, but not other Admins or System Admins
+      if (targetUser.id === currentUser.id) return true; 
       return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE';
     }
     return false; 
@@ -370,7 +364,7 @@ export default function UsersPage() {
                   <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
                     <TableCell className="pl-6">
                       <Avatar className="h-10 w-10 border border-border/70 shadow-sm">
-                        <AvatarImage src={user.avatarUrl || `https://placehold.co/40x40.png?text=${getInitials(user.name)}`} alt={user.name} data-ai-hint="user face" />
+                        <AvatarImage src={user.avatarUrl || undefined} alt={user.name} data-ai-hint="user face" />
                         <AvatarFallback className="bg-primary/10 text-primary font-semibold">{getInitials(user.name)}</AvatarFallback>
                       </Avatar>
                     </TableCell>
@@ -515,15 +509,12 @@ export default function UsersPage() {
         </CardContent>
       </Card>
 
-      {currentUser && (
+      {currentUser && isAddUserDialogOpen && (
         <AddUserDialog 
           onUserAdded={handleUserAdded}
           currentUser={currentUser}
           isOpen={isAddUserDialogOpen}
-          onOpenChange={(open) => {
-            setIsAddUserDialogOpen(open);
-            if (!open) { /* Additional reset if needed, but dialog should handle internal reset */ }
-          }}
+          onOpenChange={setIsAddUserDialogOpen}
         />
       )}
 
@@ -539,7 +530,7 @@ export default function UsersPage() {
         />
       )}
 
-      {userToToggleBan && (
+      {userToToggleBan && isBanDialogVisible && (
         <AlertDialog open={isBanDialogVisible} onOpenChange={(open) => { if(!open) { setUserToToggleBan(null); setIsBanDialogVisible(false); }}}>
           <AlertDialogContent>
             <AlertDialogHeader>

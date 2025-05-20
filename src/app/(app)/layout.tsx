@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { 
@@ -20,7 +21,8 @@ import { Button } from '@/components/ui/button';
 import { LogOut, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image'; 
-import { AccountSuspendedDialog } from '@/components/auth/AccountSuspendedDialog';
+
+const AccountSuspendedDialog = dynamic(() => import('@/components/auth/AccountSuspendedDialog').then(mod => mod.AccountSuspendedDialog));
 
 export default function AuthenticatedLayout({
   children,
@@ -90,10 +92,12 @@ export default function AuthenticatedLayout({
         </main>
       </SidebarInset>
       
-      <AccountSuspendedDialog 
-        isOpen={isSuspendedDialogOpen} 
-        onConfirmLogout={logout} 
-      />
+      {isSuspendedDialogOpen && (
+        <AccountSuspendedDialog 
+          isOpen={isSuspendedDialogOpen} 
+          onConfirmLogout={logout} 
+        />
+      )}
     </SidebarProvider>
   );
 }

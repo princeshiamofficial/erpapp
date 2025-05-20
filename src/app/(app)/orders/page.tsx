@@ -2,18 +2,17 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, AlertTriangle, MoreVertical, Settings2, Layers, Package } from "lucide-react"; // Added Package
+import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, AlertTriangle, MoreVertical, Settings2, Layers, Package, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import Link from "next/link";
-import { CreateOrderDialog } from '@/components/orders/create-order-dialog';
 import type { TrackingLink, User, CustomStatus } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { getStatusById, getContrastTextColor, getStatuses } from '@/lib/status-service';
-import { AssignDrDialog } from '@/components/orders/assign-dr-dialog';
 import { getOrders } from '@/lib/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createOrderAction, assignDrToOrderAction, deleteOrderAction } from './actions';
@@ -34,6 +33,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+const CreateOrderDialog = dynamic(() => import('@/components/orders/create-order-dialog').then(mod => mod.CreateOrderDialog));
+const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
 
 
 const formatDate = (dateString: string | undefined) => {
@@ -105,7 +107,6 @@ export default function OrdersPage() {
     const lowerSearchTerm = searchTerm.toLowerCase();
     return result.filter(order =>
       order.id.toLowerCase().includes(lowerSearchTerm) ||
-      (order.customerName && order.customerName.toLowerCase().includes(lowerSearchTerm)) ||
       (order.companyName && order.companyName.toLowerCase().includes(lowerSearchTerm)) ||
       (order.phoneNumber && order.phoneNumber.toLowerCase().includes(lowerSearchTerm)) ||
       order.crmUserName.toLowerCase().includes(lowerSearchTerm) ||
@@ -124,7 +125,7 @@ export default function OrdersPage() {
   }, [allStatuses]);
 
   useEffect(() => {
-    if (allStatuses.length > 0 && filteredOrders.length >= 0) { // Check >= 0 to handle empty filteredOrders list
+    if (allStatuses.length > 0 && filteredOrders.length >= 0) {
       const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
       const uniqueStatusIdsInFilteredOrders = new Set<string>();
       filteredOrders.forEach(order => uniqueStatusIdsInFilteredOrders.add(order.currentStatus));
@@ -133,9 +134,13 @@ export default function OrdersPage() {
           newDisplayInfoMap[statusId] = getStatusDisplayInfoCallback(statusId);
       });
       
-      if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(orderStatusDisplay)) {
-        setOrderStatusDisplay(newDisplayInfoMap);
-      }
+      setOrderStatusDisplay(prevMap => {
+        if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(prevMap)) {
+          return newDisplayInfoMap;
+        }
+        return prevMap;
+      });
+
     } else if (filteredOrders.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
         setOrderStatusDisplay({});
     } else if (allStatuses.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
@@ -151,10 +156,7 @@ export default function OrdersPage() {
   const handleOpenAssignDrDialog = useCallback(async (orderToAssign: TrackingLink) => {
     setIsLoading(true); 
     try {
-        console.log("OrdersPage/handleOpenAssignDrDialog: Opening for order:", orderToAssign.id);
         const freshStatuses = await getStatuses();
-        console.log("OrdersPage/handleOpenAssignDrDialog: Fresh statuses IDs:", freshStatuses.map(s => s.id).join(', '));
-        
         const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
         
         if (!rfdCheck) {
@@ -168,9 +170,7 @@ export default function OrdersPage() {
             setIsLoading(false);
             return; 
         }
-        console.log("OrdersPage/handleOpenAssignDrDialog: 'ready-for-design' status in freshStatuses:", JSON.stringify(rfdCheck));
-
-        setAllStatuses(freshStatuses); // Update the main page's status list as well
+        setAllStatuses(freshStatuses); 
         setStatusesForDialog(freshStatuses); 
         setSelectedOrderForDrAssignment(orderToAssign);
         setIsAssignDrDialogOpen(true);
@@ -188,7 +188,7 @@ export default function OrdersPage() {
         prevOrders.map(o => (o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o))
       );
       toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
-      // await fetchOrderData(); // Re-fetch can be done if optimistic update isn't sufficient
+      // await fetchOrderData(); // Optionally re-fetch for full reconciliation
   }, [toast]);
 
 
@@ -418,7 +418,7 @@ export default function OrdersPage() {
         </CardContent>
       </Card>
 
-      {statusesForDialog && selectedOrderForDrAssignment && currentUser && (
+      {statusesForDialog && selectedOrderForDrAssignment && currentUser && isAssignDrDialogOpen && (
         <AssignDrDialog
           isOpen={isAssignDrDialogOpen}
           onOpenChange={(open) => {
@@ -435,7 +435,7 @@ export default function OrdersPage() {
         />
       )}
 
-      {orderToDelete && (
+      {orderToDelete && isDeleteDialogOpen && (
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -448,7 +448,7 @@ export default function OrdersPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setOrderToDelete(null)} disabled={isDeletingOrder}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel onClick={() => { setOrderToDelete(null); setIsDeleteDialogOpen(false); }} disabled={isDeletingOrder}>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDeleteOrder}
                 className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
@@ -463,5 +463,3 @@ export default function OrdersPage() {
     </div>
   );
 }
-
-    
