@@ -5,12 +5,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Palette, AlertTriangle, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Palette, AlertTriangle, Eye, EyeOff, RefreshCw, Users } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { CustomStatus } from "@/types";
-import { getStatuses } from '@/lib/status-service'; // getStatuses to fetch
-import { addStatusAction, updateStatusAction, deleteStatusAction } from './actions'; // server actions
+import type { CustomStatus, UserRole } from "@/types";
+import { getStatuses } from '@/lib/status-service'; 
+import { addStatusAction, updateStatusAction, deleteStatusAction } from './actions'; 
 import { useToast } from '@/hooks/use-toast';
 import { 
   Dialog, 
@@ -24,6 +24,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox'; // For selecting roles
+import { Separator } from '@/components/ui/separator';
+
+const AVAILABLE_ROLES_FOR_STATUS_ASSIGNMENT: UserRole[] = ['CRM', 'DESIGNER_REPRESENTATIVE', 'ADMIN'];
 
 export default function AdminStatusesPage() {
   const { currentUser } = useAuth();
@@ -41,6 +45,8 @@ export default function AdminStatusesPage() {
   const [newStatusName, setNewStatusName] = useState('');
   const [newStatusColor, setNewStatusColor] = useState('#0EA5E9'); 
   const [newStatusIsVisible, setNewStatusIsVisible] = useState(true);
+  const [newStatusAllowedRoles, setNewStatusAllowedRoles] = useState<UserRole[]>([]);
+
 
   const [editingStatus, setEditingStatus] = useState<CustomStatus | null>(null);
   const [statusToDelete, setStatusToDelete] = useState<CustomStatus | null>(null);
@@ -59,7 +65,7 @@ export default function AdminStatusesPage() {
   }, [toast]);
 
   useEffect(() => {
-    if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) {
+    if (currentUser && (currentUser.role === 'SYSTEM_ADMIN')) { // Only SYSTEM_ADMIN can access this page now
       fetchStatuses();
     } else if (currentUser) {
       router.replace('/dashboard');
@@ -74,13 +80,14 @@ export default function AdminStatusesPage() {
       return;
     }
     setIsSubmitting(true);
-    const result = await addStatusAction(newStatusName, newStatusColor, newStatusIsVisible);
+    const result = await addStatusAction(newStatusName, newStatusColor, newStatusIsVisible, newStatusAllowedRoles);
     if (result.success && result.status) {
       toast({ title: "Success", description: `Status "${result.status.name}" added.` });
       setIsAddDialogOpen(false);
       setNewStatusName('');
       setNewStatusColor('#0EA5E9');
       setNewStatusIsVisible(true);
+      setNewStatusAllowedRoles([]);
       await fetchStatuses(); 
     } else {
       toast({ title: "Error", description: result.error || "Could not add status.", variant: "destructive" });
@@ -92,7 +99,8 @@ export default function AdminStatusesPage() {
     setEditingStatus(status);
     setNewStatusName(status.name);
     setNewStatusColor(status.color);
-    setNewStatusIsVisible(status.isVisible !== false); // Default to true if undefined
+    setNewStatusIsVisible(status.isVisible !== false); 
+    setNewStatusAllowedRoles(status.allowedRoles || []);
     setIsEditDialogOpen(true);
   };
 
@@ -107,8 +115,7 @@ export default function AdminStatusesPage() {
       return;
     }
     setIsSubmitting(true);
-    // Pass currentUser.role to the action
-    const result = await updateStatusAction(editingStatus.id, newStatusName, newStatusColor, newStatusIsVisible, currentUser.role);
+    const result = await updateStatusAction(editingStatus.id, newStatusName, newStatusColor, newStatusIsVisible, newStatusAllowedRoles, currentUser.role);
     if (result.success) {
       toast({ title: "Success", description: `Status "${editingStatus.name}" updated.` });
       setIsEditDialogOpen(false);
@@ -144,11 +151,22 @@ export default function AdminStatusesPage() {
     setIsSubmitting(false);
   };
 
+  const handleAllowedRoleChange = (role: UserRole, checked: boolean | "indeterminate", isEditing: boolean) => {
+    const currentRoles = isEditing ? newStatusAllowedRoles : newStatusAllowedRoles;
+    const setter = isEditing ? setNewStatusAllowedRoles : setNewStatusAllowedRoles;
 
-  if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
+    if (checked === true) {
+      setter([...currentRoles, role]);
+    } else {
+      setter(currentRoles.filter(r => r !== role));
+    }
+  };
+
+
+  if (!currentUser || currentUser.role !== 'SYSTEM_ADMIN') { // Strict check for SYSTEM_ADMIN
     return (
       <div className="flex h-screen w-full items-center justify-center">
-        <p>Access Denied. You must be an administrator to view this page.</p>
+        <p>Access Denied. You must be a System Administrator to view this page.</p>
       </div>
     );
   }
@@ -157,13 +175,46 @@ export default function AdminStatusesPage() {
     <div className="w-6 h-6 rounded-md border border-border" style={{ backgroundColor: color }} />
   );
 
+  const renderAllowedRolesCheckboxes = (isEditingDialog: boolean) => {
+    const currentSelectedRoles = isEditingDialog && editingStatus ? newStatusAllowedRoles : newStatusAllowedRoles;
+    const isSystemStatusBeingEdited = isEditingDialog && editingStatus?.isSystemStatus;
+    const disabledForNonSysAdminOnSystemStatus = isSystemStatusBeingEdited && currentUser?.role !== 'SYSTEM_ADMIN';
+
+    return (
+        <div className="space-y-3">
+        <Label>Restrict Assignment To Roles:</Label>
+        <div className="grid grid-cols-2 gap-3">
+            {AVAILABLE_ROLES_FOR_STATUS_ASSIGNMENT.map(role => (
+            <div key={role} className="flex items-center space-x-2 p-2 border rounded-md hover:bg-muted/50">
+                <Checkbox
+                id={`${isEditingDialog ? 'edit' : 'add'}-role-${role}`}
+                checked={currentSelectedRoles.includes(role)}
+                onCheckedChange={(checked) => handleAllowedRoleChange(role, checked, isEditingDialog)}
+                disabled={isSubmitting || disabledForNonSysAdminOnSystemStatus}
+                />
+                <Label htmlFor={`${isEditingDialog ? 'edit' : 'add'}-role-${role}`} className="text-sm font-normal">
+                {role.replace(/_/g, ' ')}
+                </Label>
+            </div>
+            ))}
+        </div>
+        {disabledForNonSysAdminOnSystemStatus && (
+             <p className="text-xs text-muted-foreground mt-1">Assignment permissions for system statuses can only be changed by a System Administrator.</p>
+        )}
+        <p className="text-xs text-muted-foreground">
+            If no roles are selected, any user with permission to change statuses can assign this status. System Admins always have permission.
+        </p>
+        </div>
+    );
+  };
+
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
         <div>
           <h1 className="page-title">Order Status Management</h1>
           <p className="page-description">
-            Define and manage custom order statuses for your workflow.
+            Define custom order statuses, colors, visibility, and role-based assignment permissions.
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -181,7 +232,7 @@ export default function AdminStatusesPage() {
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl">Current Statuses</CardTitle>
           <CardDescription className="text-muted-foreground text-sm mt-0.5">
-            View, edit, or delete custom order statuses. System statuses cannot be deleted. Only System Admins can change system status names.
+            Manage status properties. System status names and permissions can only be fully edited by System Admins.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -209,17 +260,23 @@ export default function AdminStatusesPage() {
             <ul className="divide-y divide-border/50">
               {statuses.map((status) => (
                 <li key={status.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 hover:bg-muted/30 transition-colors gap-3 sm:gap-0">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-grow">
                     <StatusColorPreview color={status.color} />
-                    <span className="font-medium text-foreground">{status.name}</span>
-                    {status.isSystemStatus && (
-                      <span className="text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded-sm border border-border">System</span>
-                    )}
-                    {status.isVisible !== false ? (
-                        <Eye className="h-4 w-4 text-green-500" title="Visible in dropdowns"/>
-                    ) : (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" title="Hidden in dropdowns" />
-                    )}
+                    <div>
+                        <span className="font-medium text-foreground">{status.name}</span>
+                        {status.isSystemStatus && (
+                        <span className="ml-2 text-xs bg-secondary text-secondary-foreground px-1.5 py-0.5 rounded-sm border border-border">System</span>
+                        )}
+                         {status.isVisible !== false ? (
+                            <Eye className="h-4 w-4 text-green-500 ml-2 inline-block" title="Visible in dropdowns"/>
+                        ) : (
+                            <EyeOff className="h-4 w-4 text-muted-foreground ml-2 inline-block" title="Hidden in dropdowns" />
+                        )}
+                        <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                            <Users className="h-3.5 w-3.5" />
+                            Allowed: {status.allowedRoles && status.allowedRoles.length > 0 ? status.allowedRoles.map(r => r.replace(/_/g, ' ')).join(', ') : 'All Permitted'}
+                        </div>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 self-end sm:self-center">
                     <Button variant="outline" size="icon" onClick={() => openEditDialog(status)} title="Edit Status" className="h-9 w-9">
@@ -245,10 +302,10 @@ export default function AdminStatusesPage() {
 
       {/* Add Status Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Add New Order Status</DialogTitle>
-            <DialogDescription>Define a name, choose a color, and set visibility for the new status.</DialogDescription>
+            <DialogDescription>Define properties for the new status.</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddStatus} className="space-y-4 py-2">
             <div>
@@ -264,6 +321,8 @@ export default function AdminStatusesPage() {
               <Switch id="newStatusIsVisible" checked={newStatusIsVisible} onCheckedChange={setNewStatusIsVisible} disabled={isSubmitting} />
               <Label htmlFor="newStatusIsVisible">Visible in dropdowns</Label>
             </div>
+            <Separator />
+            {renderAllowedRolesCheckboxes(false)}
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Adding..." : "Add Status"}</Button>
@@ -275,10 +334,10 @@ export default function AdminStatusesPage() {
       {/* Edit Status Dialog */}
       {editingStatus && currentUser && (
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent>
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Edit Order Status: {editingStatus.name}</DialogTitle>
-              <DialogDescription>Update the name, color, and visibility for this status.</DialogDescription>
+              <DialogDescription>Update properties for this status.</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleEditStatus} className="space-y-4 py-2">
               <div>
@@ -292,8 +351,6 @@ export default function AdminStatusesPage() {
                 />
                  {editingStatus.isSystemStatus && currentUser.role !== 'SYSTEM_ADMIN' && 
                     <p className="text-xs text-muted-foreground mt-1">System status names can only be changed by a System Administrator.</p>}
-                 {editingStatus.isSystemStatus && currentUser.role === 'SYSTEM_ADMIN' &&
-                    <p className="text-xs text-muted-foreground mt-1">Note: You are editing a system status name. Ensure system integrity.</p>}
               </div>
               <div className="flex items-center gap-4">
                 <Label htmlFor="editStatusColor">Status Color</Label>
@@ -304,6 +361,8 @@ export default function AdminStatusesPage() {
                 <Switch id="editStatusIsVisible" checked={newStatusIsVisible} onCheckedChange={setNewStatusIsVisible} disabled={isSubmitting}/>
                 <Label htmlFor="editStatusIsVisible">Visible in dropdowns</Label>
               </div>
+               <Separator />
+              {renderAllowedRolesCheckboxes(true)}
               <DialogFooter className="pt-4">
                 <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
                 <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Updating..." : "Save Changes"}</Button>
@@ -313,7 +372,6 @@ export default function AdminStatusesPage() {
         </Dialog>
       )}
       
-      {/* Delete Status Confirmation Dialog */}
       {statusToDelete && (
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
@@ -339,4 +397,3 @@ export default function AdminStatusesPage() {
     </div>
   );
 }
-

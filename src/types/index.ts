@@ -20,6 +20,7 @@ export interface CustomStatus {
   color: string;
   isSystemStatus?: boolean;
   isVisible?: boolean;
+  allowedRoles?: UserRole[]; // New field: roles allowed to assign this status
 }
 
 export interface OrderLogEntry {
@@ -31,14 +32,19 @@ export interface OrderLogEntry {
   notes?: string;
 }
 
+export interface OrderItem {
+  id: string; // Unique ID for this specific item in the order
+  model: string;
+  quantity: number;
+  lamination: string;
+}
+
 export interface TrackingLink {
   id: string;
   companyName: string;
   address: string;
   phoneNumber: string;
-  model: string;
-  quantity: number;
-  lamination: string;
+  orderItems: OrderItem[]; // Array of items
   crmUserId: string;
   crmUserName: string;
   designerRepresentativeId?: string | null;
@@ -55,14 +61,14 @@ export interface Comment {
   id: string;
   userId?: string | null;
   userName: string;
-  userRole?: UserRole | 'Client'; // Role of the commenter/replier
+  userRole?: UserRole | 'Client';
   text: string;
   timestamp: string; // ISO string
   isInternal: boolean;
-  replies?: Comment[]; // Array for nested replies
-  likes?: { // Added for "Like" functionality
+  replies?: Comment[];
+  likes?: {
     count: number;
-    reactedBy: string[]; // Stores user IDs or client-generated IDs
+    reactedBy: string[];
   };
 }
 
