@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, AlertTriangle, MoreVertical, Settings2, Layers, Package, RefreshCw } from "lucide-react";
+import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, AlertTriangle, MoreVertical, Settings2, Layers, Package } from "lucide-react"; // Added Package
 import { useAuth } from "@/contexts/auth-context";
 import Link from "next/link";
 import type { TrackingLink, User, CustomStatus } from '@/types';
@@ -102,6 +102,7 @@ export default function OrdersPage() {
       result = result.filter(order => order.designerRepresentativeId === currentUser.id);
     }
 
+
     if (!searchTerm) return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     
     const lowerSearchTerm = searchTerm.toLowerCase();
@@ -125,28 +126,25 @@ export default function OrdersPage() {
   }, [allStatuses]);
 
   useEffect(() => {
-    if (allStatuses.length > 0 && filteredOrders.length >= 0) {
+    if (allStatuses.length > 0) {
       const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
-      const uniqueStatusIdsInFilteredOrders = new Set<string>();
-      filteredOrders.forEach(order => uniqueStatusIdsInFilteredOrders.add(order.currentStatus));
+      const uniqueStatusIdsInScope = new Set<string>();
+      filteredOrders.forEach(order => uniqueStatusIdsInScope.add(order.currentStatus));
 
-      uniqueStatusIdsInFilteredOrders.forEach(statusId => {
-          newDisplayInfoMap[statusId] = getStatusDisplayInfoCallback(statusId);
+      uniqueStatusIdsInScope.forEach(statusId => {
+        newDisplayInfoMap[statusId] = getStatusDisplayInfoCallback(statusId);
       });
-      
+
       setOrderStatusDisplay(prevMap => {
         if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(prevMap)) {
           return newDisplayInfoMap;
         }
         return prevMap;
       });
-
-    } else if (filteredOrders.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
-        setOrderStatusDisplay({});
-    } else if (allStatuses.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
-        setOrderStatusDisplay({});
+    } else if (Object.keys(orderStatusDisplay).length > 0) {
+      setOrderStatusDisplay({});
     }
-  }, [filteredOrders, allStatuses, getStatusDisplayInfoCallback, orderStatusDisplay]);
+  }, [filteredOrders, allStatuses, getStatusDisplayInfoCallback]);
 
 
   const canCreateOrder = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
@@ -157,6 +155,14 @@ export default function OrdersPage() {
     setIsLoading(true); 
     try {
         const freshStatuses = await getStatuses();
+        if (!Array.isArray(freshStatuses)) {
+            console.error("OrdersPage/handleOpenAssignDrDialog: getStatuses() did not return an array. Received:", freshStatuses);
+            toast({ title: "Error", description: "Failed to load status configuration. Please try again.", variant: "destructive" });
+            setIsLoading(false);
+            return;
+        }
+        console.log("OrdersPage/handleOpenAssignDrDialog: Fresh statuses fetched for dialog, count:", freshStatuses.length, "IDs:", freshStatuses.map(s=>s.id).join(','));
+        
         const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
         
         if (!rfdCheck) {
@@ -170,12 +176,14 @@ export default function OrdersPage() {
             setIsLoading(false);
             return; 
         }
-        setAllStatuses(freshStatuses); 
+        console.log("OrdersPage/handleOpenAssignDrDialog: Found 'ready-for-design' status:", JSON.stringify(rfdCheck));
+
+        setAllStatuses(freshStatuses); // Update the main page's status list as well
         setStatusesForDialog(freshStatuses); 
         setSelectedOrderForDrAssignment(orderToAssign);
         setIsAssignDrDialogOpen(true);
     } catch (error) {
-        console.error("Error preparing assign DR dialog:", error);
+        console.error("OrdersPage/handleOpenAssignDrDialog: Error preparing assign DR dialog:", error);
         toast({ title: "Error", description: "Could not prepare DR assignment dialog. Check console.", variant: "destructive" });
     } finally {
         setIsLoading(false);
@@ -188,7 +196,7 @@ export default function OrdersPage() {
         prevOrders.map(o => (o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o))
       );
       toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
-      // await fetchOrderData(); // Optionally re-fetch for full reconciliation
+      // await fetchOrderData(); // Re-fetch for full reconciliation, can be optional if optimistic update is trusted
   }, [toast]);
 
 
@@ -463,3 +471,4 @@ export default function OrdersPage() {
     </div>
   );
 }
+

@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from '@/components/ui/input';
 import { Link2, Eye, Edit3, Search, ClipboardCopy, Check, RefreshCw, Loader2, MoreVertical } from "lucide-react"; 
 import { useAuth } from "@/contexts/auth-context";
-import Image from "next/image";
 import Link from "next/link";
 import type { TrackingLink, User, CustomStatus } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -62,7 +61,7 @@ export default function TrackingLinksPage() {
     }
   }, [fetchData, currentUser]);
 
-  const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
+  const getStatusDisplayInfoCallback = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
     const status = allStatuses.find(s => s.id === statusId);
     if (status) {
       return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
@@ -121,11 +120,11 @@ export default function TrackingLinksPage() {
   useEffect(() => {
     if (allStatuses.length > 0) {
       const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
-      const uniqueStatusIds = new Set<string>();
-      filteredTrackingLinks.forEach(link => uniqueStatusIds.add(link.currentStatus));
+      const uniqueStatusIdsInScope = new Set<string>();
+      filteredTrackingLinks.forEach(link => uniqueStatusIdsInScope.add(link.currentStatus));
       
-      uniqueStatusIds.forEach(statusId => {
-        newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
+      uniqueStatusIdsInScope.forEach(statusId => {
+        newDisplayInfoMap[statusId] = getStatusDisplayInfoCallback(statusId);
       });
       
       setOrderStatusDisplay(prevMap => {
@@ -134,12 +133,10 @@ export default function TrackingLinksPage() {
         }
         return prevMap;
       });
-    } else if (filteredTrackingLinks.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
-      setOrderStatusDisplay({});
-    } else if (allStatuses.length === 0 && Object.keys(orderStatusDisplay).length > 0) {
+    } else if (Object.keys(orderStatusDisplay).length > 0) {
       setOrderStatusDisplay({});
     }
-  }, [filteredTrackingLinks, allStatuses, getStatusDisplayInfo, orderStatusDisplay]);
+  }, [filteredTrackingLinks, allStatuses, getStatusDisplayInfoCallback]);
 
 
   if (!currentUser) return (
@@ -274,7 +271,7 @@ export default function TrackingLinksPage() {
                 ) : (
                     <TableRow>
                         <TableCell colSpan={8} className="text-center py-12 h-[300px]">
-                            <Image src="https://placehold.co/180x135.png" alt="No tracking links" data-ai-hint="empty link" width={180} height={135} className="mx-auto rounded-md opacity-60 mb-4" />
+                            <Link2 className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
                             <p className="text-lg text-muted-foreground font-medium">
                               {searchTerm ? "No tracking links match your search." : "No tracking links found."}
                             </p>
@@ -306,3 +303,4 @@ export default function TrackingLinksPage() {
     </div>
   );
 }
+
