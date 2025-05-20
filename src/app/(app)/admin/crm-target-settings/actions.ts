@@ -2,7 +2,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { setCrmCompletionStatusIds, setCommentsVisibility } from "@/lib/settings-service"; // Added setCommentsVisibility
+import { setCrmCompletionStatusIds, setCommentsVisibility } from "@/lib/settings-service";
 
 export async function updateCompletionStatusIdsAction(ids: string[]): Promise<{ success: boolean; error?: string }> {
   try {
@@ -13,6 +13,7 @@ export async function updateCompletionStatusIdsAction(ids: string[]): Promise<{ 
       revalidatePath("/(app)/leaderboard"); // For CRM target calculations
       return { success: true };
     }
+    // Explicitly return error object if success is false
     return { success: false, error: "Failed to update CRM completion status settings in database." };
   } catch (error) {
     console.error("Error in updateCompletionStatusIdsAction:", error);
@@ -28,6 +29,7 @@ export async function updateCommentsVisibilityAction(isVisible: boolean): Promis
       revalidatePath("/track/[trackingId]", "layout"); // Revalidate all public tracking pages
       return { success: true };
     }
+    // Explicitly return error object if success is false
     return { success: false, error: "Failed to update comments visibility setting in database." };
   } catch (error) {
     console.error("Error in updateCommentsVisibilityAction:", error);

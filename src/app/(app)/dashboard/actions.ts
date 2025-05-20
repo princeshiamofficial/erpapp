@@ -12,9 +12,10 @@ export async function setGlobalTargetAction(targetType: 'monthly' | 'weekly', ne
   try {
     const success = await updateTargetInDb(targetType, newTarget);
     if (success) {
-      revalidatePath('/(app)/dashboard'); // Revalidate to reflect changes if data is fetched server-side later
+      revalidatePath('/(app)/dashboard'); // Revalidate to reflect changes
       return { success: true };
     }
+    // Explicitly return error object if success is false
     return { success: false, error: "Failed to update target in database." };
   } catch (error) {
     console.error("Error in setGlobalTargetAction:", error);
