@@ -2,9 +2,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { TrackingLink, User, OrderLogEntry, CustomStatus } from "@/types";
+import type { TrackingLink, User, OrderLogEntry, CustomStatus, UserRole } from "@/types";
 import { updateOrder, getOrderById } from "@/lib/order-service"; 
-import { getStatusById } from "@/lib/status-service"; // To get status name for notes
+import { getStatusById } from "@/lib/status-service"; 
 import { v4 as uuidv4 } from 'uuid';
 
 export async function updateTrackingLinkAction(
@@ -31,22 +31,24 @@ export async function updateTrackingLinkAction(
 
     if (updates.isPublic !== undefined && updates.isPublic !== currentOrder.isPublic) {
       dataToUpdate.isPublic = updates.isPublic;
-      // Optional: Log visibility change if needed, or keep it silent. For now, silent.
-      // newLogEntries.push({
-      //   id: uuidv4(),
-      //   timestamp: new Date().toISOString(),
-      //   status: currentOrder.currentStatus, 
-      //   changedByUserId: currentUser.id,
-      //   changedByUserName: currentUser.name,
-      //   notes: `Link visibility changed to ${updates.isPublic ? 'Public' : 'Private'}.`,
-      // });
     }
 
     if (updates.currentStatus && updates.currentStatus !== currentOrder.currentStatus) {
+      // Server-side permission check for status change
+      if (currentUser.role !== 'SYSTEM_ADMIN') {
+        const targetStatus = await getStatusById(updates.currentStatus);
+        if (!targetStatus) {
+          return { error: `Status with ID ${updates.currentStatus} not found.` };
+        }
+        if (targetStatus.allowedRoles && targetStatus.allowedRoles.length > 0 && !targetStatus.allowedRoles.includes(currentUser.role)) {
+          return { error: `You do not have permission to set the order to "${targetStatus.name}".` };
+        }
+      }
+
       dataToUpdate.currentStatus = updates.currentStatus;
       
       const newStatusObject = await getStatusById(updates.currentStatus);
-      const newStatusName = newStatusObject ? newStatusObject.name : updates.currentStatus; // Fallback to ID if name not found
+      const newStatusName = newStatusObject ? newStatusObject.name : updates.currentStatus; 
 
       let logNotes = `Status changed to ${newStatusName}.`;
       if (updates.statusNotes && updates.statusNotes.trim() !== "") {
@@ -73,11 +75,15 @@ export async function updateTrackingLinkAction(
 
     const success = await updateOrder(orderId, dataToUpdate);
     if (!success) {
-      return { error: "Failed to update tracking link." };
+      return { error: "Failed to update tracking link in the database." };
     }
 
     revalidatePath("/(app)/tracking-links");
     revalidatePath(`/track/${orderId}`);
+    revalidatePath("/(app)/dashboard"); // For recent activity, active orders count
+    revalidatePath("/(app)/active-orders");
+    revalidatePath("/(app)/deliveries/monthly");
+    revalidatePath("/(app)/deliveries/weekly");
     
     const updatedOrder = await getOrderById(orderId);
      if (!updatedOrder) {
@@ -87,6 +93,6 @@ export async function updateTrackingLinkAction(
 
   } catch (error) {
     console.error("Error in updateTrackingLinkAction:", error);
-    return { error: error instanceof Error ? error.message : "Failed to update tracking link." };
+    return { error: error instanceof Error ? error.message : "An unexpected error occurred while updating the tracking link." };
   }
 }

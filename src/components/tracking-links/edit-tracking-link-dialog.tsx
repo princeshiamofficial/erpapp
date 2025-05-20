@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea"; 
-import type { TrackingLink, CustomStatus, User } from "@/types";
+import type { TrackingLink, CustomStatus, User, UserRole } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { updateTrackingLinkAction } from '@/app/(app)/tracking-links/actions'; 
 
@@ -46,10 +46,18 @@ export function EditTrackingLinkDialog({
 
   const displayableStatuses = useMemo(() => {
     if (!availableStatuses) return [];
-    return availableStatuses.filter(status =>
-      status.isVisible !== false || status.id === trackingLink.currentStatus
-    );
-  }, [availableStatuses, trackingLink.currentStatus]);
+    if (currentUser.role === 'SYSTEM_ADMIN') {
+      return availableStatuses.filter(status => status.isVisible !== false || status.id === trackingLink.currentStatus);
+    }
+    return availableStatuses.filter(status => {
+      const isVisible = status.isVisible !== false;
+      const isCurrent = status.id === trackingLink.currentStatus;
+      const hasNoRoleRestrictions = !status.allowedRoles || status.allowedRoles.length === 0;
+      const isRoleAllowed = status.allowedRoles && status.allowedRoles.includes(currentUser.role);
+      
+      return (isVisible && (hasNoRoleRestrictions || isRoleAllowed)) || isCurrent;
+    });
+  }, [availableStatuses, trackingLink.currentStatus, currentUser.role]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,7 +129,7 @@ export function EditTrackingLinkDialog({
                  <Select 
                   value={currentStatusId} 
                   onValueChange={(value) => setCurrentStatusId(value)}
-                  disabled={!canEditFields || isSubmitting}
+                  disabled={!canEditFields || isSubmitting || displayableStatuses.length === 0}
                 >
                   <SelectTrigger id="currentStatus" className="mt-1">
                     <SelectValue placeholder="Select order status" />
@@ -131,7 +139,7 @@ export function EditTrackingLinkDialog({
                       <SelectItem key={status.id} value={status.id}>{status.name}</SelectItem>
                     ))}
                     {displayableStatuses.length === 0 && availableStatuses.length > 0 && (
-                       <div className="p-2 text-sm text-muted-foreground text-center">No visible statuses available for selection.</div>
+                       <div className="p-2 text-sm text-muted-foreground text-center">No statuses available for you to assign.</div>
                     )}
                     {availableStatuses.length === 0 && (
                        <div className="p-2 text-sm text-muted-foreground text-center">Loading statuses...</div>
