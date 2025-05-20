@@ -180,7 +180,7 @@ export default function ServiceManagementPage() {
   
   const formatCurrency = (value?: number) => {
     if (value === undefined || value === null) return 'N/A';
-    return new Intl.NumberFormat('bn-BD', { style: 'currency', currency: 'BDT' }).format(value);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
   };
 
 
