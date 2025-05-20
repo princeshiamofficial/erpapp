@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle, DollarSign } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle } from "lucide-react"; // Removed DollarSign
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { ServiceModelItem } from "@/types";
@@ -143,7 +143,7 @@ export default function ModelManagementPage() {
   
   const formatCurrency = (value?: number) => {
     if (value === undefined || value === null) return 'N/A';
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+    return new Intl.NumberFormat('bn-BD', { style: 'currency', currency: 'BDT' }).format(value);
   };
 
   if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
@@ -181,8 +181,7 @@ export default function ModelManagementPage() {
               <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
                 <div className="flex flex-col">
                   <span className="font-medium text-foreground">{item.name}</span>
-                  <span className="text-xs text-muted-foreground flex items-center">
-                     <DollarSign className="h-3 w-3 mr-1 text-green-500" />
+                  <span className="text-xs text-muted-foreground">
                      {formatCurrency(item.price)}
                   </span>
                 </div>
@@ -233,9 +232,8 @@ export default function ModelManagementPage() {
               <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
             </div>
             <div>
-              <Label htmlFor="itemPrice">Price (USD)</Label>
+              <Label htmlFor="itemPrice">Price (BDT)</Label>
               <div className="relative mt-1">
-                <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input 
                   id="itemPrice" 
                   type="number"
@@ -243,10 +241,10 @@ export default function ModelManagementPage() {
                   onChange={(e) => setItemPrice(e.target.value)} 
                   required 
                   disabled={isSubmitting}
-                  placeholder="e.g., 15.00"
+                  placeholder="e.g., 1500.00"
                   min="0"
                   step="0.01"
-                  className="pl-8"
+                  className="pl-3" // Adjusted padding since icon is removed
                 />
               </div>
             </div>
