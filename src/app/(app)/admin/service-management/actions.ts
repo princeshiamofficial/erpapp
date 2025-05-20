@@ -16,9 +16,9 @@ const SERVICE_MANAGEMENT_PATH = "/(app)/admin/service-management";
 const MODEL_MANAGEMENT_PATH = "/(app)/admin/model-management";
 
 // Model Actions
-export async function addModelAction(name: string): Promise<{ success: boolean; model?: ServiceModelItem; error?: string }> {
+export async function addModelAction(name: string, price?: number): Promise<{ success: boolean; model?: ServiceModelItem; error?: string }> {
   try {
-    const newModel = await addModel(name);
+    const newModel = await addModel(name, price);
     if (newModel) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
       revalidatePath(MODEL_MANAGEMENT_PATH);
@@ -31,9 +31,9 @@ export async function addModelAction(name: string): Promise<{ success: boolean; 
   }
 }
 
-export async function updateModelAction(id: string, name: string): Promise<{ success: boolean; error?: string }> {
+export async function updateModelAction(id: string, name: string, price?: number): Promise<{ success: boolean; error?: string }> {
   try {
-    const success = await updateModel(id, name);
+    const success = await updateModel(id, name, price);
     if (success) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
       revalidatePath(MODEL_MANAGEMENT_PATH);
@@ -54,7 +54,7 @@ export async function deleteModelAction(id: string): Promise<{ success: boolean;
       revalidatePath(MODEL_MANAGEMENT_PATH);
       return { success: true };
     }
-    return { success: false, error: "Failed to delete model from database." };
+    return { success: false, error: "Failed to delete model from database. It might be in use by existing orders." };
   } catch (error) {
     console.error("Error in deleteModelAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
@@ -97,11 +97,10 @@ export async function deleteLaminationAction(id: string): Promise<{ success: boo
       revalidatePath(SERVICE_MANAGEMENT_PATH);
       return { success: true };
     }
-    return { success: false, error: "Failed to delete lamination from database." };
+    // More specific error if needed, e.g., for items in use.
+    return { success: false, error: "Failed to delete lamination from database. It might be in use by existing orders." };
   } catch (error) {
     console.error("Error in deleteLaminationAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
-
-    

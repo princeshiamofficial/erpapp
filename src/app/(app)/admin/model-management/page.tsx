@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle, DollarSign } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { ServiceModelItem } from "@/types";
@@ -22,6 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface ItemToEdit {
   id: string;
   name: string;
+  price: string; // Price as string for input
 }
 interface ItemToDelete {
   id: string;
@@ -41,6 +42,7 @@ export default function ModelManagementPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const [itemName, setItemName] = useState('');
+  const [itemPrice, setItemPrice] = useState(''); // For new/edit price input
   const [editingItem, setEditingItem] = useState<ItemToEdit | null>(null);
   const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
 
@@ -68,12 +70,14 @@ export default function ModelManagementPage() {
   const openAddDialog = () => {
     setEditingItem(null);
     setItemName('');
+    setItemPrice('0'); // Default price for new item
     setIsAddEditDialogOpen(true);
   };
 
   const openEditDialog = (item: ServiceModelItem) => {
-    setEditingItem({ id: item.id, name: item.name });
+    setEditingItem({ id: item.id, name: item.name, price: (item.price ?? 0).toString() });
     setItemName(item.name);
+    setItemPrice((item.price ?? 0).toString());
     setIsAddEditDialogOpen(true);
   };
   
@@ -88,24 +92,31 @@ export default function ModelManagementPage() {
       toast({ title: "Validation Error", description: "Name cannot be empty.", variant: "destructive" });
       return;
     }
+    const priceValue = parseFloat(itemPrice);
+    if (isNaN(priceValue) || priceValue < 0) {
+      toast({ title: "Validation Error", description: "Price must be a non-negative number.", variant: "destructive" });
+      return;
+    }
+
     setIsSubmitting(true);
     let result;
 
     if (editingItem) { // Editing existing item
-      result = await updateModelAction(editingItem.id, itemName);
+      result = await updateModelAction(editingItem.id, itemName.trim(), priceValue);
       if (result.success) {
-        toast({ title: "Success", description: `Model "${itemName}" updated.` });
+        toast({ title: "Success", description: `Model "${itemName.trim()}" updated.` });
       }
     } else { // Adding new item
-      result = await addModelAction(itemName);
+      result = await addModelAction(itemName.trim(), priceValue);
       if (result.success) {
-        toast({ title: "Success", description: `Model "${itemName}" added.` });
+        toast({ title: "Success", description: `Model "${itemName.trim()}" added.` });
       }
     }
 
     if (result && result.success) {
       setIsAddEditDialogOpen(false);
       setItemName('');
+      setItemPrice('');
       setEditingItem(null);
       await fetchData();
     } else if (result) {
@@ -128,6 +139,11 @@ export default function ModelManagementPage() {
       toast({ title: "Error", description: result.error || `Could not delete model. It might be in use.`, variant: "destructive" });
     }
     setIsSubmitting(false);
+  };
+  
+  const formatCurrency = (value?: number) => {
+    if (value === undefined || value === null) return 'N/A';
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
   };
 
   if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
@@ -163,7 +179,13 @@ export default function ModelManagementPage() {
           <ul className="divide-y divide-border/50">
             {items.map((item) => (
               <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
-                <span className="font-medium text-foreground">{item.name}</span>
+                <div className="flex flex-col">
+                  <span className="font-medium text-foreground">{item.name}</span>
+                  <span className="text-xs text-muted-foreground flex items-center">
+                     <DollarSign className="h-3 w-3 mr-1 text-green-500" />
+                     {formatCurrency(item.price)}
+                  </span>
+                </div>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(item)} title={`Edit model`} className="h-8 w-8">
                     <Edit className="h-4 w-4" />
@@ -185,7 +207,7 @@ export default function ModelManagementPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
         <div>
           <h1 className="page-title">Model Management</h1>
-          <p className="page-description">Configure Model options available for orders.</p>
+          <p className="page-description">Configure Model options (including prices) available for orders.</p>
         </div>
         <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
           <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
@@ -202,13 +224,31 @@ export default function ModelManagementPage() {
           <DialogHeader>
             <DialogTitle>{editingItem ? 'Edit' : 'Add New'} Model</DialogTitle>
             <DialogDescription>
-              {editingItem ? 'Update the name of this model.' : 'Enter the name for the new model.'}
+              {editingItem ? 'Update the name and price of this model.' : 'Enter the name and price for the new model.'}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
             <div>
               <Label htmlFor="itemName">Name</Label>
               <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
+            </div>
+            <div>
+              <Label htmlFor="itemPrice">Price (USD)</Label>
+              <div className="relative mt-1">
+                <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input 
+                  id="itemPrice" 
+                  type="number"
+                  value={itemPrice} 
+                  onChange={(e) => setItemPrice(e.target.value)} 
+                  required 
+                  disabled={isSubmitting}
+                  placeholder="e.g., 15.00"
+                  min="0"
+                  step="0.01"
+                  className="pl-8"
+                />
+              </div>
             </div>
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => setIsAddEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
@@ -243,5 +283,3 @@ export default function ModelManagementPage() {
     </div>
   );
 }
-
-    

@@ -20,7 +20,7 @@ export interface CustomStatus {
   color: string;
   isSystemStatus?: boolean;
   isVisible?: boolean;
-  allowedRoles?: UserRole[]; // New field: roles allowed to assign this status
+  allowedRoles?: UserRole[];
 }
 
 export interface OrderLogEntry {
@@ -37,14 +37,17 @@ export interface OrderItem {
   model: string;
   quantity: number;
   lamination: string;
+  sheet?: number | null;
+  price?: number | null; // This is likely the total price for this line item
 }
 
 export interface TrackingLink {
   id: string;
+  // customerName: string; // To be removed or kept if different from company contact
   companyName: string;
   address: string;
   phoneNumber: string;
-  orderItems: OrderItem[]; // Array of items
+  orderItems: OrderItem[];
   crmUserId: string;
   crmUserName: string;
   designerRepresentativeId?: string | null;
@@ -75,9 +78,18 @@ export interface Comment {
 export interface ServiceModelItem {
   id: string;
   name: string;
+  price?: number; // Price for this model
 }
 
 export interface ServiceLaminationItem {
   id: string;
   name: string;
+}
+
+// For settings-service
+export interface GlobalSettings {
+  globalMonthlyOrderTarget: number;
+  globalWeeklyOrderTarget: number;
+  crmCompletionStatusIds?: string[];
+  areCommentsVisibleOnPublicPage?: boolean;
 }

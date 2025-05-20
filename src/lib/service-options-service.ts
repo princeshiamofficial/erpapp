@@ -7,9 +7,14 @@ import { v4 as uuidv4 } from 'uuid';
 const MODELS_COLLECTION = 'serviceModels';
 const LAMINATIONS_COLLECTION = 'serviceLaminations';
 
-// Default options
-const defaultModels: string[] = ["Standard Gloss", "Premium Matte", "Eco-Friendly Recycled", "Luxury Silk"];
-const defaultLaminations: string[] = ["None", "Glossy", "Matte", "Soft Touch", "Anti-Scuff Matte"];
+// Default options with prices for models
+const defaultModelsData: Array<Omit<ServiceModelItem, 'id'>> = [
+  { name: "Standard Gloss", price: 10.00 },
+  { name: "Premium Matte", price: 15.00 },
+  { name: "Eco-Friendly Recycled", price: 12.50 },
+  { name: "Luxury Silk", price: 18.75 }
+];
+const defaultLaminationsData: string[] = ["None", "Glossy", "Matte", "Soft Touch", "Anti-Scuff Matte"];
 
 // --- Model Functions ---
 
@@ -18,9 +23,9 @@ const seedDefaultModels = async (): Promise<ServiceModelItem[]> => {
   const batch = writeBatch(db);
   const createdModels: ServiceModelItem[] = [];
 
-  defaultModels.forEach(name => {
+  defaultModelsData.forEach(modelData => {
     const id = uuidv4();
-    const newModel: ServiceModelItem = { id, name };
+    const newModel: ServiceModelItem = { id, name: modelData.name, price: modelData.price || 0 };
     const docRef = doc(modelsRef, id);
     batch.set(docRef, newModel);
     createdModels.push(newModel);
@@ -28,7 +33,7 @@ const seedDefaultModels = async (): Promise<ServiceModelItem[]> => {
 
   try {
     await batch.commit();
-    console.log('Default service models seeded in Firestore.');
+    console.log('Default service models (with prices) seeded in Firestore.');
     return createdModels;
   } catch (error) {
     console.error("Error seeding default service models:", error);
@@ -45,28 +50,36 @@ export const getModels = async (): Promise<ServiceModelItem[]> => {
       console.log("No service models found, seeding defaults.");
       return await seedDefaultModels();
     }
-    return snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as ServiceModelItem));
+    return snapshot.docs.map(docSnap => {
+      const data = docSnap.data();
+      return { 
+        id: docSnap.id, 
+        name: data.name,
+        price: data.price === undefined ? 0 : data.price // Default to 0 if price is missing
+      } as ServiceModelItem;
+    });
   } catch (error) {
     console.error("Error fetching service models:", error);
     return [];
   }
 };
 
-export const addModel = async (name: string): Promise<ServiceModelItem | null> => {
+export const addModel = async (name: string, price?: number): Promise<ServiceModelItem | null> => {
   if (!name.trim()) {
     throw new Error("Model name cannot be empty.");
   }
+  const numericPrice = price === undefined || isNaN(Number(price)) ? 0 : Number(price);
+
   try {
     const modelsCol = collection(db, MODELS_COLLECTION);
-    // Check if model with the same name already exists (case-insensitive check for better UX)
-    const q = query(modelsCol, where("name", "==", name.trim())); // Firestore queries are case-sensitive by default
+    const q = query(modelsCol, where("name", "==", name.trim()));
     const existing = await getDocs(q);
     if (!existing.empty && existing.docs.some(doc => doc.data().name.toLowerCase() === name.trim().toLowerCase())) {
       throw new Error(`Model with name "${name.trim()}" already exists.`);
     }
 
     const id = uuidv4();
-    const newModel: ServiceModelItem = { id, name: name.trim() };
+    const newModel: ServiceModelItem = { id, name: name.trim(), price: numericPrice };
     await setDoc(doc(modelsCol, id), newModel);
     return newModel;
   } catch (error) {
@@ -76,12 +89,13 @@ export const addModel = async (name: string): Promise<ServiceModelItem | null> =
   }
 };
 
-export const updateModel = async (id: string, name: string): Promise<boolean> => {
+export const updateModel = async (id: string, name: string, price?: number): Promise<boolean> => {
   if (!name.trim()) {
     throw new Error("Model name cannot be empty.");
   }
+  const numericPrice = price === undefined || isNaN(Number(price)) ? 0 : Number(price);
+
   try {
-    // Optional: Check if another model with the new name already exists (excluding the current one)
     const modelsCol = collection(db, MODELS_COLLECTION);
     const q = query(modelsCol, where("name", "==", name.trim()));
     const existing = await getDocs(q);
@@ -90,7 +104,7 @@ export const updateModel = async (id: string, name: string): Promise<boolean> =>
     }
 
     const modelDoc = doc(db, MODELS_COLLECTION, id);
-    await updateDoc(modelDoc, { name: name.trim() });
+    await updateDoc(modelDoc, { name: name.trim(), price: numericPrice });
     return true;
   } catch (error) {
     console.error("Error updating service model:", error);
@@ -106,6 +120,7 @@ export const deleteModel = async (id: string): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error("Error deleting service model:", error);
+    if (error instanceof Error) throw error; // Re-throw to be caught by action
     return false;
   }
 };
@@ -117,7 +132,7 @@ const seedDefaultLaminations = async (): Promise<ServiceLaminationItem[]> => {
   const batch = writeBatch(db);
   const createdLaminations: ServiceLaminationItem[] = [];
 
-  defaultLaminations.forEach(name => {
+  defaultLaminationsData.forEach(name => {
     const id = uuidv4();
     const newLamination: ServiceLaminationItem = { id, name };
     const docRef = doc(laminationsRef, id);
@@ -202,6 +217,7 @@ export const deleteLamination = async (id: string): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error("Error deleting service lamination:", error);
+    if (error instanceof Error) throw error; // Re-throw to be caught by action
     return false;
   }
 };
