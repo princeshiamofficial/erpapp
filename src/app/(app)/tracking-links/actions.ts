@@ -26,10 +26,14 @@ export async function updateTrackingLinkAction(
       return { error: `Order ${orderId} not found.` };
     }
 
-    // CRM Permission Check: Can only modify their own orders
+    // Permission Checks
     if (currentUser.role === 'CRM' && currentOrder.crmUserId !== currentUser.id) {
       return { error: "Permission Denied: CRMs can only modify orders assigned to them." };
     }
+    if (currentUser.role === 'DESIGNER_REPRESENTATIVE' && currentOrder.designerRepresentativeId !== currentUser.id) {
+      return { error: "Permission Denied: Designer Representatives can only modify orders assigned to them." };
+    }
+
 
     const dataToUpdate: Partial<TrackingLink> = {};
     let newLogEntries: OrderLogEntry[] = [];
@@ -45,11 +49,9 @@ export async function updateTrackingLinkAction(
         if (!targetStatus) {
           return { error: `Status with ID ${updates.currentStatus} not found.` };
         }
-        // If allowedRoles is defined and not empty, check if user's role is in it
         if (targetStatus.allowedRoles && targetStatus.allowedRoles.length > 0 && !targetStatus.allowedRoles.includes(currentUser.role)) {
           return { error: `You do not have permission to set the order to "${targetStatus.name}".` };
         }
-        // If allowedRoles is undefined or empty, any user with basic perms can set it (already handled by dialog access)
       }
 
       dataToUpdate.currentStatus = updates.currentStatus;
@@ -77,10 +79,6 @@ export async function updateTrackingLinkAction(
     }
 
     if (Object.keys(dataToUpdate).length === 0) {
-      // No actual changes to apply, but if notes were provided for a non-status change, this might be an issue
-      // For now, assume if no core fields changed, no update.
-      // If only statusNotes were provided without a status change, this log won't be created.
-      // This could be refined if notes should be logged even without a status change (e.g., as a general order note).
       return currentOrder; // Return current order if no changes
     }
 
