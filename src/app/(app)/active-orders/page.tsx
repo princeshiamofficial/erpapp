@@ -13,6 +13,7 @@ import type { TrackingLink, CustomStatus } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { getStatuses, getContrastTextColor } from '@/lib/status-service';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth-context'; // Added useAuth
 
 const formatDateForDisplay = (dateString: string | undefined) => {
   if (!dateString) return "N/A";
@@ -25,11 +26,17 @@ const formatDateForDisplay = (dateString: string | undefined) => {
 
 export default function ActiveOrdersPage() {
   const { toast } = useToast();
+  const { currentUser } = useAuth(); // Get current user
   const [activeOrders, setActiveOrders] = useState<TrackingLink[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
+  const [pageDescription, setPageDescription] = useState("All orders that are not yet 'Delivered' or 'Cancelled'.");
 
   const fetchActiveOrders = useCallback(async () => {
+    if (!currentUser) { // Don't fetch if currentUser is not yet available
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
       const [fetchedOrders, fetchedStatuses] = await Promise.all([
@@ -48,12 +55,23 @@ export default function ActiveOrdersPage() {
         return;
       }
       
-      const filteredActiveOrders = fetchedOrders.filter(order => {
+      let filteredOrders = fetchedOrders.filter(order => {
         return order.currentStatus !== deliveredStatus.id && order.currentStatus !== cancelledStatus.id;
       });
+
+      // Apply role-based filtering
+      if (currentUser.role === 'CRM') {
+        filteredOrders = filteredOrders.filter(order => order.crmUserId === currentUser.id);
+        setPageDescription("Your active orders that are not yet 'Delivered' or 'Cancelled'.");
+      } else if (currentUser.role === 'DESIGNER_REPRESENTATIVE') {
+        filteredOrders = filteredOrders.filter(order => order.designerRepresentativeId === currentUser.id);
+        setPageDescription("Active orders assigned to you that are not yet 'Delivered' or 'Cancelled'.");
+      } else {
+        setPageDescription("All orders that are not yet 'Delivered' or 'Cancelled'.");
+      }
       
       // Sort by creation date, most recent first
-      setActiveOrders(filteredActiveOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      setActiveOrders(filteredOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
 
     } catch (error) {
       console.error("Failed to fetch active orders:", error);
@@ -62,11 +80,17 @@ export default function ActiveOrdersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, currentUser]); // Added currentUser to dependencies
 
   useEffect(() => {
-    fetchActiveOrders();
-  }, [fetchActiveOrders]);
+    if (currentUser) { // Fetch only if currentUser is available
+      fetchActiveOrders();
+    } else {
+      // Handle case where currentUser might still be loading initially
+      // You might want to show a different loading state or wait
+      setIsLoading(false); // Or manage a separate loading state for auth
+    }
+  }, [fetchActiveOrders, currentUser]); // Added currentUser here too
 
   const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
     const status = allStatuses.find(s => s.id === statusId);
@@ -76,6 +100,15 @@ export default function ActiveOrdersPage() {
     return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' }; 
   }, [allStatuses]);
 
+
+  if (isLoading && !currentUser) { // Show loader if auth is still loading
+     return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        </div>
+     );
+  }
+
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
@@ -84,7 +117,7 @@ export default function ActiveOrdersPage() {
           <div>
             <h1 className="page-title">Active Orders</h1>
             <p className="page-description">
-              All orders that are not yet 'Delivered' or 'Cancelled'.
+              {pageDescription}
             </p>
           </div>
         </div>
@@ -100,7 +133,9 @@ export default function ActiveOrdersPage() {
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl">Current Active Orders</CardTitle>
           <CardDescription className="text-muted-foreground text-sm mt-0.5">
-            List of all ongoing orders.
+            {currentUser?.role === 'CRM' ? "List of your ongoing orders." : 
+             currentUser?.role === 'DESIGNER_REPRESENTATIVE' ? "List of ongoing orders assigned to you." :
+             "List of all ongoing orders."}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -163,7 +198,11 @@ export default function ActiveOrdersPage() {
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-12 h-[300px]">
                       <Package className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
-                      <p className="text-lg text-muted-foreground font-medium">No active orders found.</p>
+                      <p className="text-lg text-muted-foreground font-medium">
+                        {currentUser?.role === 'CRM' ? "You have no active orders." :
+                         currentUser?.role === 'DESIGNER_REPRESENTATIVE' ? "No active orders assigned to you." :
+                         "No active orders found."}
+                      </p>
                     </TableCell>
                   </TableRow>
                 )}
@@ -175,5 +214,3 @@ export default function ActiveOrdersPage() {
     </div>
   );
 }
-
-    
