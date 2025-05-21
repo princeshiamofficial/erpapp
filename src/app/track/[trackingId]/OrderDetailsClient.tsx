@@ -81,7 +81,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   useEffect(() => {
     setIsClient(true);
     setOrder(initialOrder);
-    // console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
+    console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
 
 
     let storedReactorId = localStorage.getItem('CLIENT_REACTOR_ID_KEY');
@@ -153,9 +153,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setOrder(result);
       setNewComment('');
       toast({ title: "Success", description: "Your comment has been submitted." });
-      //  if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
-      //   showBrowserNotification("Comment Posted", { body: "Your comment was successfully submitted." });
-      // }
     }
     setIsSubmittingComment(false);
   };
@@ -171,7 +168,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     if (currentUser) {
       result = await submitReplyAction(
         order.id,
-        replyingTo.parentId, // Always use the top-level parentId
+        replyingTo.parentId,
         currentReplyText,
         false, 
         currentUser
@@ -179,7 +176,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     } else {
       result = await submitClientReplyAction(
         order.id,
-        replyingTo.parentId, // Always use the top-level parentId
+        replyingTo.parentId,
         currentReplyText
       );
     }
@@ -192,9 +189,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setCurrentReplyText('');
       setReplyingTo(null);
       toast({ title: "Reply submitted" });
-      //  if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
-      //   showBrowserNotification("Reply Posted", { body: "Your reply was successfully submitted." });
-      // }
     }
   };
 
@@ -304,7 +298,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     
     const textBeforeAt = text.substring(0, activeMentionStartIndex);
     
-    // Determine the end of the partial mention based on cursor position
     const queryLength = mentionQuery?.length || 0;
     const currentMentionEndIndex = activeMentionStartIndex + 1 + queryLength;
     const textAfterMentionEnd = text.substring(currentMentionEndIndex);
@@ -328,7 +321,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
 
   const renderComment = (comment: Comment, isReply = false, parentCommentId?: string) => {
-    // console.log(`Rendering comment: ${comment.id}, User: ${comment.userName}, Role: ${comment.userRole}, UserID: ${comment.userId}`);
     if (comment.isInternal && !currentUser) return null;
     if (comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role)) return null;
 
@@ -348,9 +340,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
         avatarSrc = userToDisplay.avatarUrl;
         avatarDataAiHint = "user uploaded avatar";
       }
-      // console.log(`Comment by ${comment.userName}, found user: ${userToDisplay?.name}, avatarUrl: ${avatarSrc}`);
-    } else {
-      // console.log(`Comment by ${comment.userName}, no userId or allUsersForMentions not array. Using fallback.`);
     }
     const avatarFallback = getInitials(comment.userName || "User");
 
@@ -414,12 +403,12 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               onClick={() => {
                 const isOpeningNewReplyForm = !replyingTo || replyingTo.formUnderId !== comment.id;
                 const targetNameForMention = comment.userName;
-                const parentIdForReply = isReply ? parentCommentId! : comment.id; // Reply always goes to top-level comment
+                const parentIdForReply = isReply ? parentCommentId! : comment.id; 
                 
                 setReplyingTo(isOpeningNewReplyForm ? {
                     parentId: parentIdForReply,
                     targetName: targetNameForMention,
-                    formUnderId: comment.id // Form visually appears under this comment/reply
+                    formUnderId: comment.id 
                 } : null);
 
                 if (isOpeningNewReplyForm) {
@@ -534,12 +523,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     }
     return acc;
   }, 0);
-
-  const lastStatusUpdateEntry = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1] : null;
-  const lastStatusUpdateTimestamp = lastStatusUpdateEntry ? lastStatusUpdateEntry.timestamp : order.createdAt;
-  const lastUpdatedBy = lastStatusUpdateEntry ? lastStatusUpdateEntry.changedByUserName : order.crmUserName;
-
-
+  
   const orderSubtotal = Array.isArray(order.orderItems) ? order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0) : 0;
   const effectiveAdvancePayment = order.advancePayment || 0;
   const amountDue = orderSubtotal - effectiveAdvancePayment;
@@ -568,7 +552,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               {currentStatusInfo.name}
             </div>
             <div className="text-sm text-muted-foreground mt-1.5 ml-[40px]">
-              Last updated: {isClient ? formatDate(lastStatusUpdateTimestamp) : <Skeleton className="h-4 w-48 inline-block" />}
+              {order.updatedAt && order.updatedByUserName ? 
+                `Order Last Edited: ${isClient ? formatDate(order.updatedAt, true) : <Skeleton className="h-4 w-24 inline-block" />} by ${order.updatedByUserName}` : 
+                `Order Placed: ${isClient ? formatDate(order.createdAt, true) : <Skeleton className="h-4 w-24 inline-block" />}`}
             </div>
           </div>
 
@@ -589,9 +575,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 <div className="text-sm text-muted-foreground">
                   Date: {isClient ? new Date(order.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : <Skeleton className="h-4 w-32 inline-block" />}
                 </div>
-                 {lastStatusUpdateEntry && (
+                 {order.updatedAt && order.updatedByUserName && (
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    Updated: {isClient ? `${lastUpdatedBy} on ${formatDate(lastStatusUpdateTimestamp)}` : <Skeleton className="h-3 w-28" />}
+                    Details Last Updated: {isClient ? `${order.updatedByUserName} on ${formatDate(order.updatedAt)}` : <Skeleton className="h-3 w-28" />}
                   </div>
                 )}
               </div>
@@ -650,12 +636,12 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 )}
 
                 {orderSubtotal > 0 && amountDue <= 0 ? (
-                  <div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end">
+                   <div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end">
                     <div className="absolute -left-8 -top-4 sm:-left-12 sm:-top-6 transform -rotate-[15deg] border-4 border-green-500 text-green-500 font-bold uppercase text-3xl sm:text-4xl px-3 py-1 rounded-md shadow-lg bg-white/80 dark:bg-black/80 backdrop-blur-sm">
                       PAID
                     </div>
                   </div>
-                ) : amountDue > 0 ? (
+                ) : (amountDue > 0 || effectiveAdvancePayment === 0) && (
                   <>
                     <Separator className="my-2 bg-border/50" />
                     <div className="flex justify-between">
@@ -663,10 +649,10 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                       <span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span>
                     </div>
                   </>
-                ) : null }
+                )}
 
-                 {(order.paymentMethod && (effectiveAdvancePayment > 0 || amountDue > 0)) && (
-                  <div className={`flex justify-between mt-2 pt-2 ${ (orderSubtotal > 0 && amountDue <= 0) ? 'border-transparent' : 'border-t border-dashed border-border/40'}`}>
+                 {(order.paymentMethod && (effectiveAdvancePayment > 0 || (orderSubtotal > 0 && amountDue > 0) || (orderSubtotal > 0 && amountDue <=0 && effectiveAdvancePayment === 0) )) && (
+                  <div className={`flex justify-between mt-2 pt-2 ${ (orderSubtotal > 0 && amountDue <= 0 && effectiveAdvancePayment > 0) ? 'border-transparent' : 'border-t border-dashed border-border/40'}`}>
                     <span className="text-md text-muted-foreground">Payment Method:</span>
                     <span className="text-md text-foreground flex items-center gap-1.5">
                       <Landmark className="h-4 w-4 text-muted-foreground/80" />{order.paymentMethod}

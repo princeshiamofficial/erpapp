@@ -55,6 +55,9 @@ export interface TrackingLink {
   designerRepresentativeId?: string | null;
   designerRepresentativeName?: string | null;
   createdAt: string; // ISO string
+  updatedAt?: string; // ISO string for last edit of order details
+  updatedByUserId?: string;
+  updatedByUserName?: string;
   isPublic: boolean;
   currentStatus: string; // ID of a CustomStatus
   statusHistory: OrderLogEntry[];
@@ -99,5 +102,6 @@ export interface GlobalSettings {
   globalWeeklyOrderTarget: number;
   crmCompletionStatusIds?: string[];
   areCommentsVisibleOnPublicPage?: boolean;
-  rolesAllowedToEditOrders?: UserRole[]; // Reverted: This will store roles like 'CRM', 'ADMIN', 'DESIGNER_REPRESENTATIVE'
+  rolesAllowedToEditOrders?: UserRole[];
 }
+
