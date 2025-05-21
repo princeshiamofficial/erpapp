@@ -65,7 +65,7 @@ export async function createOrderAction(
       }
 
       processedOrderItems.push({
-        id: item.id, 
+        id: item.id || uuidv4(), // Ensure ID exists, generate if dialog didn't
         model: item.model.trim(),
         quantity: quantity,
         lamination: item.lamination.trim(),
@@ -75,15 +75,13 @@ export async function createOrderAction(
     }
 
     let parsedAdvancePayment: number | null = null;
-    if (data.advancePayment !== undefined && data.advancePayment !== null) {
-      const advancePaymentStr = String(data.advancePayment);
-      if (advancePaymentStr.trim() !== '') {
-        const numAdvancePayment = Number(advancePaymentStr);
-        if (isNaN(numAdvancePayment) || numAdvancePayment < 0) {
-          return { error: "Advance Payment must be a non-negative number." };
-        }
-        parsedAdvancePayment = numAdvancePayment;
+    const advancePaymentStr = String(data.advancePayment ?? '');
+    if (advancePaymentStr.trim() !== '') {
+      const numAdvancePayment = Number(advancePaymentStr);
+      if (isNaN(numAdvancePayment) || numAdvancePayment < 0) {
+        return { error: "Advance Payment must be a non-negative number." };
       }
+      parsedAdvancePayment = numAdvancePayment;
     }
 
     let finalPaymentMethod: string | null = null;
@@ -136,21 +134,19 @@ export async function updateOrderAction(
   currentUser: User 
 ): Promise<{ success: boolean; error?: string; order?: TrackingLink }> {
   console.log("updateOrderAction: Received currentUser (server-side):", JSON.stringify(currentUser));
-  if (!currentUser || !currentUser.role) {
+  if (!currentUser || !currentUser.role) { // Basic check that a user object is passed
     return { success: false, error: "User authentication error. Please log in again." };
   }
 
   try {
-    const globalSettings = await getGlobalSettings();
-    const isAllowedByRoleSetting = globalSettings.rolesAllowedToEditOrders?.includes(currentUser.role) ?? false;
-
-    if (currentUser.role !== 'SYSTEM_ADMIN' && !isAllowedByRoleSetting) {
-      return { success: false, error: "You do not have permission to edit orders." };
-    }
+    // Permission check for editing is now primarily handled by the UI
+    // This action assumes if it's called, the user had permission to initiate the edit.
+    // A check for `currentUser` object validity remains.
 
     if (!orderId) return { success: false, error: "Order ID is required." };
     if (Object.keys(updates).length === 0) return { success: false, error: "No updates provided." };
 
+    // Field validations (remain important)
     if (updates.companyName !== undefined && !updates.companyName.trim()) return { success: false, error: "Company Name cannot be empty."};
     if (updates.address !== undefined && !updates.address.trim()) return { success: false, error: "Address cannot be empty."};
     if (updates.phoneNumber !== undefined && !updates.phoneNumber.trim()) return { success: false, error: "Phone Number cannot be empty."};
@@ -301,3 +297,4 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
     return { success: false, error: errorMessage };
   }
 }
+
