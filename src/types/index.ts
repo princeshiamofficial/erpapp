@@ -48,7 +48,8 @@ export interface TrackingLink {
   address: string;
   phoneNumber: string;
   orderItems: OrderItem[];
-  advancePayment?: number | null; // New field for advance payment
+  advancePayment?: number | null;
+  paymentMethod?: string | null; // New field for payment method
   crmUserId: string;
   crmUserName: string;
   designerRepresentativeId?: string | null;

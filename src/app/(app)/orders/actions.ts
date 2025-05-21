@@ -11,34 +11,25 @@ export async function createOrderAction(
     companyName: string;
     address: string;
     phoneNumber: string;
-    orderItems: Array<Omit<OrderItem, 'id'>>; // IDs will be added here
+    orderItems: Array<Omit<OrderItem, 'id'>>;
     advancePayment?: number | null;
+    paymentMethod?: string | null; // New field
     initialStatusId: string;
   },
   currentUser: User
 ): Promise<TrackingLink | { error: string }> {
   try {
-    // --- Start Validation ---
+    // Top-level validations
     if (!currentUser || !currentUser.id || !currentUser.name) {
-      console.error("createOrderAction: User information is missing.", currentUser);
       return { error: "User information is missing. Please re-authenticate." };
     }
-    if (!data.companyName?.trim()) {
-      return { error: "Company Name is required." };
-    }
-    if (!data.address?.trim()) {
-      return { error: "Address is required." };
-    }
-    if (!data.phoneNumber?.trim()) {
-      return { error: "Phone Number is required." };
-    }
-    if (!data.initialStatusId) {
-      return { error: "Initial status ID is required." };
-    }
+    if (!data.companyName?.trim()) return { error: "Company Name is required." };
+    if (!data.address?.trim()) return { error: "Address is required." };
+    if (!data.phoneNumber?.trim()) return { error: "Phone Number is required." };
+    if (!data.initialStatusId) return { error: "Initial status ID is required." };
     if (!data.orderItems || data.orderItems.length === 0) {
       return { error: "At least one order item is required." };
     }
-
     if (data.advancePayment !== undefined && data.advancePayment !== null) {
       if (isNaN(Number(data.advancePayment)) || Number(data.advancePayment) < 0) {
         return { error: "Advance Payment must be a non-negative number." };
@@ -46,24 +37,14 @@ export async function createOrderAction(
     }
 
     const processedOrderItems: OrderItem[] = data.orderItems.map(item => {
-      if (!item.model?.trim()) {
-        throw new Error("Model is required for all order items.");
-      }
-      const quantity = Number(item.quantity); // Quantity might come as string from form
-      if (isNaN(quantity) || quantity < 1) {
-        throw new Error(`Invalid quantity for model "${item.model}". Quantity must be a positive number.`);
-      }
-      if (!item.lamination?.trim()) {
-        throw new Error(`Lamination is required for model "${item.model}".`);
-      }
+      if (!item.model?.trim()) throw new Error("Model is required for all order items.");
+      const quantity = Number(item.quantity);
+      if (isNaN(quantity) || quantity < 1) throw new Error(`Invalid quantity for model "${item.model}". Quantity must be a positive number.`);
+      if (!item.lamination?.trim()) throw new Error(`Lamination is required for model "${item.model}".`);
       const unitPrice = Number(item.unitPrice);
-      if (isNaN(unitPrice) || unitPrice < 0) {
-        throw new Error(`Invalid unit price for model "${item.model}".`);
-      }
+      if (isNaN(unitPrice) || unitPrice < 0) throw new Error(`Invalid unit price for model "${item.model}".`);
       const lineItemTotalPrice = Number(item.lineItemTotalPrice);
-      if (isNaN(lineItemTotalPrice) || lineItemTotalPrice < 0) {
-        throw new Error(`Invalid line item total price for model "${item.model}".`);
-      }
+      if (isNaN(lineItemTotalPrice) || lineItemTotalPrice < 0) throw new Error(`Invalid line item total price for model "${item.model}".`);
 
       return {
         id: uuidv4(), // Ensure each item has a unique ID
@@ -74,15 +55,15 @@ export async function createOrderAction(
         lineItemTotalPrice: lineItemTotalPrice,
       };
     });
-    // --- End Validation ---
 
     const newOrderData = {
       companyName: data.companyName.trim(),
-      customerName: data.companyName.trim(), // Setting customerName same as companyName
+      customerName: data.companyName.trim(),
       address: data.address.trim(),
       phoneNumber: data.phoneNumber.trim(),
       orderItems: processedOrderItems,
       advancePayment: data.advancePayment === undefined ? null : data.advancePayment,
+      paymentMethod: data.paymentMethod === undefined ? null : (data.paymentMethod.trim() || null),
       crmUserId: currentUser.id,
       crmUserName: currentUser.name,
       initialStatusId: data.initialStatusId,
@@ -102,7 +83,6 @@ export async function createOrderAction(
 
   } catch (error: any) {
     console.error("Unexpected error in createOrderAction:", error);
-    // Ensure a generic error message if a specific one isn't thrown
     const errorMessage = error instanceof Error ? error.message : "An unexpected server error occurred. Please try again later.";
     if (errorMessage.includes("Model is required") || errorMessage.includes("Invalid quantity") || errorMessage.includes("Lamination is required") || errorMessage.includes("Invalid unit price") || errorMessage.includes("Invalid line item total price")) {
       return { error: errorMessage };

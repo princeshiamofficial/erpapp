@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { User, CustomStatus, ServiceModelItem, ServiceLaminationItem } from "@/types"; // OrderItem removed, as it will be inferred
+import type { User, CustomStatus, ServiceModelItem, ServiceLaminationItem } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { createOrderAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -39,6 +39,8 @@ const formatCurrency = (value: number | null | undefined): string => {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
+const PAYMENT_METHODS = ["Cash", "Card", "Bank Transfer", "Mobile Banking", "Cheque", "Other"];
+
 export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children }: CreateOrderDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [companyName, setCompanyName] = useState('');
@@ -46,6 +48,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [phoneNumber, setPhoneNumber] = useState('');
   const [initialStatusId, setInitialStatusId] = useState<string>('');
   const [advancePayment, setAdvancePayment] = useState<string>('');
+  const [paymentMethod, setPaymentMethod] = useState<string>('');
 
   const initialOrderItemState: DialogOrderItem = {
     id: uuidv4(),
@@ -71,6 +74,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setPhoneNumber('');
     setInitialStatusId('');
     setAdvancePayment('');
+    setPaymentMethod('');
     setOrderItems([{ ...initialOrderItemState, id: uuidv4() }]);
     setPopoverOpenStates({});
   }, []);
@@ -171,7 +175,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       return;
     }
 
-    const parsedOrderItems: Array<Omit<DialogOrderItem, 'id'>> = []; // Using DialogOrderItem type structure initially
+    const parsedOrderItems: Array<Omit<DialogOrderItem, 'id'>> = [];
     for (const item of orderItems) {
       const quantity = parseInt(item.quantity, 10);
       if (isNaN(quantity) || quantity < 1) {
@@ -179,12 +183,12 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         return;
       }
       if (item.unitPrice === null || item.lineItemTotalPrice === null) {
-        toast({ title: "Price Error", description: `Pricing information is missing for model "${item.model}". Ensure models have prices set in admin settings.`, variant: "destructive" });
+        toast({ title: "Price Error", description: `Pricing information is missing for model "${item.model}". Ensure models have prices set.`, variant: "destructive" });
         return;
       }
       parsedOrderItems.push({
         model: item.model,
-        quantity: item.quantity, // Keep as string initially for action validation
+        quantity: item.quantity,
         lamination: item.lamination,
         unitPrice: item.unitPrice,
         lineItemTotalPrice: item.lineItemTotalPrice,
@@ -215,8 +219,12 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       companyName,
       address,
       phoneNumber,
-      orderItems: parsedOrderItems, // Will be further parsed in action
+      orderItems: parsedOrderItems.map(item => ({
+        ...item,
+        quantity: Number(item.quantity), // Ensure quantity is number for action
+      })),
       advancePayment: parsedAdvancePayment,
+      paymentMethod: paymentMethod.trim() || null,
       initialStatusId,
     };
 
@@ -280,9 +288,25 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               <Label htmlFor="phoneNumber">Phone Number</Label>
               <Input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
             </div>
-            <div className="space-y-1 mt-2">
-              <Label htmlFor="advancePayment">Advance Payment (BDT - Optional)</Label>
-              <Input id="advancePayment" type="number" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)} placeholder="e.g., 500.00" min="0" step="0.01" />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                <div className="space-y-1">
+                <Label htmlFor="advancePayment">Advance Payment (BDT - Optional)</Label>
+                <Input id="advancePayment" type="number" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)} placeholder="e.g., 500.00" min="0" step="0.01" />
+                </div>
+                <div className="space-y-1">
+                <Label htmlFor="paymentMethod">Payment Method (Optional)</Label>
+                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                    <SelectTrigger id="paymentMethod">
+                    <SelectValue placeholder="Select payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                    {PAYMENT_METHODS.map(method => (
+                        <SelectItem key={method} value={method}>{method}</SelectItem>
+                    ))}
+                    </SelectContent>
+                </Select>
+                </div>
             </div>
 
 
@@ -361,7 +385,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                     </div>
 
                     {orderItems.length > 1 && (
-                      <Button
+                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"

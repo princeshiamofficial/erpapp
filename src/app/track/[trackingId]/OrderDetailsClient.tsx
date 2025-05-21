@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Disc, ThumbsUp } from "lucide-react";
+import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Disc, ThumbsUp, DollarSign, Landmark } from "lucide-react";
 import Image from "next/image";
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,6 +22,7 @@ import { motion } from 'framer-motion';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+
 
 interface OrderDetailsClientProps {
   order: TrackingLink;
@@ -68,24 +69,20 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-
   useEffect(() => {
-    // console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
-    // console.log('OrderDetailsClient received orderItems:', JSON.stringify(initialOrder?.orderItems, null, 2));
-  }, [initialOrder]);
-
-  useEffect(() => {
-    if (Array.isArray(allUsersForMentions)) {
-      // console.log("OrderDetailsClient: Received allUsersForMentions (first 5):", allUsersForMentions.slice(0, 5).map(u => ({id: u.id, name: u.name, role: u.role, avatarUrl: u.avatarUrl ? 'Exists' : 'None'})));
-    } else {
-      // console.warn("OrderDetailsClient: allUsersForMentions prop is not an array. Received:", allUsersForMentions);
-    }
+     if (Array.isArray(allUsersForMentions)) {
+        // console.log("OrderDetailsClient: Received allUsersForMentions (first 5):", allUsersForMentions.slice(0, 5).map(u => ({id: u.id, name: u.name, role: u.role, avatarUrl: u.avatarUrl ? 'Exists' : 'None'})));
+     } else {
+        // console.warn("OrderDetailsClient: allUsersForMentions prop is not an array. Received:", allUsersForMentions);
+     }
   }, [allUsersForMentions]);
 
 
   useEffect(() => {
     setIsClient(true);
     setOrder(initialOrder);
+    // console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
+
 
     let storedReactorId = localStorage.getItem('CLIENT_REACTOR_ID_KEY');
     if (!storedReactorId) {
@@ -143,7 +140,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     }
     setIsSubmittingComment(true);
     const result = await submitCommentAction(order.id, {
-      userName: currentUser ? currentUser.name : (order.customerName || order.companyName || "Client"), // Use customerName if available
+      userName: currentUser ? currentUser.name : (order.companyName || "Client"),
       userRole: currentUser ? currentUser.role : 'Client',
       text: newComment,
       isInternal: false,
@@ -156,7 +153,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setOrder(result);
       setNewComment('');
       toast({ title: "Success", description: "Your comment has been submitted." });
-      // showBrowserNotification("Comment Posted!", { body: "Your comment is now live." });
     }
     setIsSubmittingComment(false);
   };
@@ -174,7 +170,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
         order.id,
         replyingTo.parentId,
         currentReplyText,
-        false,
+        false, // Replies from public page are never internal
         currentUser
       );
     } else {
@@ -193,7 +189,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setCurrentReplyText('');
       setReplyingTo(null);
       toast({ title: "Reply submitted" });
-      // showBrowserNotification("Reply Posted!", { body: "Your reply is now live." });
     }
   };
 
@@ -247,7 +242,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   const renderTextWithMentions = (text: string) => {
     if (!text) return '';
-    return text.split(/(@[\w\s.-]+)/g).map((part, index) => { // Allow spaces in mentions
+    return text.split(/(@[\w\s.-]+)/g).map((part, index) => {
       if (index % 2 === 1 && part.startsWith('@')) {
         return <strong key={index} className="text-primary font-semibold">{part.substring(1)}</strong>;
       }
@@ -275,19 +270,17 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
       // Only trigger suggestions if cursor is right after "@" or after some typed characters
       if (cursorPosition === lastAtSymbolIndex + 1 || /^[a-zA-Z0-9_.-]*$/.test(potentialQuery)) {
-        // console.log("FCM: Mention - Potential Query:", potentialQuery);
         setMentionQuery(potentialQuery);
         setActiveMentionStartIndex(lastAtSymbolIndex);
 
-        const clientOption = { id: 'client-mention', name: (order.customerName || order.companyName || "Client"), role: 'Client' as 'Client' };
+        const clientOption = { id: 'client-mention', name: (order.companyName || "Client"), role: 'Client' as 'Client' };
         const usersToSearch = (Array.isArray(allUsersForMentions) ? [clientOption, ...allUsersForMentions] : [clientOption]);
-
+        
         const filtered = usersToSearch.filter(user =>
           user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
           user.role.toLowerCase().includes(potentialQuery.toLowerCase())
         ).slice(0, 7);
         setMentionSuggestions(filtered);
-        // console.log("FCM: Mention - Filtered Suggestions:", filtered);
         return;
       }
     }
@@ -299,19 +292,17 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   const handleMentionSelect = (userNameToInsert: string) => {
     if (activeMentionStartIndex === null || !replyTextareaRef.current) {
-      // console.log("FCM: Mention - Select cancelled, no active mention start index or textarea ref.");
       return;
     }
 
     const text = currentReplyText;
-    const queryLength = mentionQuery?.length || 0; // Length of text after "@"
+    const queryLength = mentionQuery?.length || 0; 
     const cursorPosition = activeMentionStartIndex + 1 + queryLength;
 
 
     const textBeforeAt = text.substring(0, activeMentionStartIndex);
     const textAfterQueryEnd = text.substring(cursorPosition);
 
-    // Replace spaces in username with nothing for the mention tag, but use full name for display
     const mentionTag = userNameToInsert.replace(/\s+/g, '');
 
     const newText = `${textBeforeAt}@${mentionTag} ${textAfterQueryEnd.startsWith(' ') ? textAfterQueryEnd : textAfterQueryEnd}`.trimEnd() + ' ';
@@ -368,7 +359,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
 
     return (
-      <div key={comment.id} className={`flex space-x-2.5 sm:space-x-3 ${isReply ? 'ml-8 sm:ml-12' : ''}`}>
+      <div key={comment.id} className={`flex space-x-2.5 sm:space-x-3 ${isReply ? 'ml-8 sm:ml-10' : ''}`}>
         <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/30 shadow-sm flex-shrink-0 mt-0.5">
           <AvatarImage src={avatarSrc} alt={comment.userName} data-ai-hint={avatarDataAiHint} />
           <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{avatarFallback}</AvatarFallback>
@@ -392,7 +383,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => handleToggleLike(comment.id, isReply, parentCommentId)}
-              className={`font-medium px-1.5 py-0.5 rounded-sm transition-colors flex items-center gap-1 group/likebtn ${hasLiked ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20 font-semibold' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+              className={`font-medium px-1.5 py-0.5 rounded-sm transition-colors flex items-center gap-1 group/likebtn ${hasLiked ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20 font-semibold' : 'text-muted-foreground hover:bg-muted/50 hover:text-red-500'
                 }`}
               title={hasLiked ? "Unlike" : "Like"}
               disabled={!reactorId}
@@ -413,19 +404,20 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <span className="text-muted-foreground">&middot;</span>
             <button
               onClick={() => {
-                const isOpeningNewReplyForm = !replyingTo || replyingTo.formUnderId !== comment.id;
-                setReplyingTo(isOpeningNewReplyForm ? {
-                  parentId: isReply ? parentCommentId! : comment.id,
-                  targetName: comment.userName,
-                  formUnderId: comment.id
-                } : null);
+                 const isOpeningNewReplyForm = !replyingTo || replyingTo.formUnderId !== comment.id;
+                 const targetUserNameForMention = comment.userName.replace(/\s+/g, '');
+                 setReplyingTo(isOpeningNewReplyForm ? {
+                   parentId: isReply ? parentCommentId! : comment.id,
+                   targetName: comment.userName,
+                   formUnderId: comment.id 
+                 } : null);
 
-                if (isOpeningNewReplyForm) {
-                  setCurrentReplyText(`@${comment.userName.replace(/\s+/g, '')} `);
-                  setTimeout(() => replyTextareaRef.current?.focus(), 0);
-                } else {
-                  setCurrentReplyText('');
-                }
+                 if (isOpeningNewReplyForm) {
+                   setCurrentReplyText(`@${targetUserNameForMention} `);
+                   setTimeout(() => replyTextareaRef.current?.focus(), 0);
+                 } else {
+                   setCurrentReplyText('');
+                 }
               }}
               className="font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 px-1.5 py-0.5 rounded-sm transition-colors"
             >
@@ -443,7 +435,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 <form onSubmit={(e) => { e.preventDefault(); handleReplySubmit(); }} className="mt-2.5 flex items-start space-x-2.5 pl-0 sm:pl-1">
                   <Avatar className="h-7 w-7 border border-border/40 flex-shrink-0 mt-0.5 shadow-sm">
                     <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? CLIENT_AVATAR_URL : undefined)} alt="Current user avatar" data-ai-hint={currentUser ? "user uploaded avatar" : "client avatar"} />
-                    <AvatarFallback className="bg-muted text-xs font-semibold">{getInitials(currentUser?.name || (clientReactorId ? (order.customerName || order.companyName || "Client") : "U"))}</AvatarFallback>
+                    <AvatarFallback className="bg-muted text-xs font-semibold">{getInitials(currentUser?.name || (clientReactorId ? (order.companyName || "Client") : "U"))}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <Textarea
@@ -536,7 +528,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const lastStatusUpdateTimestamp = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1].timestamp : order.createdAt;
 
   const orderSubtotal = Array.isArray(order.orderItems) ? order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0) : 0;
-  const amountDue = order.advancePayment ? orderSubtotal - order.advancePayment : orderSubtotal;
+  const amountDue = (order.advancePayment !== null && order.advancePayment !== undefined) ? orderSubtotal - order.advancePayment : orderSubtotal;
 
 
   return (
@@ -593,13 +585,13 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               <p className="text-foreground/90">{order.address}</p>
               <p className="text-foreground/90">Phone: {order.phoneNumber}</p>
             </div>
-
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">
-                <Layers className="h-6 w-6 text-primary mr-2.5 mt-0.5 flex-shrink-0 p-0.5 bg-primary/10 rounded-md border border-primary/20" />
-                Order Items
-              </h3>
-              {Array.isArray(order.orderItems) && order.orderItems.length > 0 ? (
+            
+            {Array.isArray(order.orderItems) && order.orderItems.length > 0 && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">
+                  <Layers className="h-6 w-6 text-primary mr-2.5 mt-0.5 flex-shrink-0 p-0.5 bg-primary/10 rounded-md border border-primary/20" />
+                  Order Items
+                </h3>
                 <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
                   <Table>
                     <TableHeader>
@@ -624,18 +616,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                     </TableBody>
                   </Table>
                 </div>
-              ) : (
-                <div className="flex items-center space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20">
-                  <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                    <Layers className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  </div>
-                  <div>
-                    <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Order Items</span>
-                    Not specified for this order.
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
             <div className="flex justify-end mt-8 pt-6 border-t border-border/30">
               <div className="w-full max-w-xs sm:max-w-sm">
@@ -643,10 +625,18 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                   <span className="text-md font-semibold text-muted-foreground">Subtotal:</span>
                   <span className="text-md font-bold text-foreground">{formatCurrency(orderSubtotal)}</span>
                 </div>
-                {order.advancePayment && order.advancePayment > 0 && (
+                {(order.advancePayment !== null && order.advancePayment !== undefined && order.advancePayment > 0) && (
                   <div className="flex justify-between mb-2">
                     <span className="text-md text-muted-foreground">Advance Payment:</span>
                     <span className="text-md text-foreground">{formatCurrency(order.advancePayment)}</span>
+                  </div>
+                )}
+                 {order.paymentMethod && (
+                  <div className="flex justify-between mb-2">
+                    <span className="text-md text-muted-foreground">Payment Method:</span>
+                    <span className="text-md text-foreground flex items-center gap-1.5">
+                      <Landmark className="h-4 w-4 text-muted-foreground/80" />{order.paymentMethod}
+                    </span>
                   </div>
                 )}
                 <Separator className="my-2 bg-border/50" />
@@ -723,7 +713,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <form onSubmit={handleCommentSubmit} className="flex items-start space-x-3">
               <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/30 shadow-sm flex-shrink-0 mt-0.5">
                 <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? CLIENT_AVATAR_URL : undefined)} alt="Your avatar" data-ai-hint={currentUser ? "user uploaded avatar" : "client avatar"} />
-                <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{getInitials(currentUser?.name || (order.customerName || order.companyName || "Client"))}</AvatarFallback>
+                <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{getInitials(currentUser?.name || (order.companyName || "Client"))}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <Textarea

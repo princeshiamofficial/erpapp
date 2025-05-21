@@ -11,6 +11,7 @@ const ORDERS_COLLECTION = 'orders';
 const ORDER_SUBMITTED_ID = 'order-submitted';
 const IN_PRODUCTION_ID = 'in-production';
 const PENDING_CLIENT_APPROVAL_ID = 'pending-client-approval';
+// READY_FOR_DESIGN_STATUS_ID is imported
 
 export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
   const statuses: CustomStatus[] = await getStatuses();
@@ -47,11 +48,12 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     const firstOrder: TrackingLink = {
       id: firstOrderId,
       companyName: "Tech Solutions Inc.",
-      customerName: "Tech Solutions Inc.", // Defaulting customerName
+      customerName: "Tech Solutions Inc.",
       address: "123 Tech Ave, Silicon Valley, CA 94001",
       phoneNumber: "555-0101",
       orderItems: firstOrderItems,
       advancePayment: 1000,
+      paymentMethod: "Bank Transfer",
       crmUserId: "SysAdmin-001",
       crmUserName: "Default Admin",
       designerRepresentativeId: null,
@@ -83,11 +85,12 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     const secondOrder: TrackingLink = {
       id: secondOrderId,
       companyName: "GreenScape Ltd.",
-      customerName: "GreenScape Ltd.", // Defaulting customerName
+      customerName: "GreenScape Ltd.",
       address: "456 Green Rd, Meadowville, TX 75001",
       phoneNumber: "555-0102",
       orderItems: secondOrderItems,
       advancePayment: null,
+      paymentMethod: "Cash",
       crmUserId: "SysAdmin-001",
       crmUserName: "Default Admin",
       createdAt: dateOneDayAgo.toISOString(),
@@ -108,7 +111,7 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     createdOrders.push(secondOrder);
 
     await batch.commit();
-    console.log('Initial orders seeded in Firestore with new ID format, viewCount, advancePayment, and orderItems including pricing.');
+    console.log('Initial orders seeded in Firestore with new ID format, viewCount, advancePayment, paymentMethod, and orderItems including pricing.');
     return createdOrders;
   } catch (error) {
     console.error("Error seeding initial orders:", error);
@@ -158,6 +161,7 @@ export const addOrder = async (orderData: {
   phoneNumber: string;
   orderItems: OrderItem[];
   advancePayment?: number | null;
+  paymentMethod?: string | null; // New field
   initialStatusId: string;
   crmUserId: string;
   crmUserName: string;
@@ -211,6 +215,7 @@ export const addOrder = async (orderData: {
       phoneNumber: orderData.phoneNumber,
       orderItems: orderData.orderItems,
       advancePayment: orderData.advancePayment === undefined ? null : orderData.advancePayment,
+      paymentMethod: orderData.paymentMethod === undefined ? null : (orderData.paymentMethod || null),
       crmUserId: orderData.crmUserId,
       crmUserName: orderData.crmUserName,
       createdAt: transactionTime,
@@ -239,7 +244,6 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     const orderDoc = doc(db, ORDERS_COLLECTION, id);
     const sanitizedUpdates: { [key: string]: any } = {};
 
-    // Sanitize updates to ensure no undefined values are sent to Firestore
     for (const key in updates) {
       if (Object.prototype.hasOwnProperty.call(updates, key)) {
         const value = updates[key as keyof TrackingLink];
@@ -290,8 +294,8 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
         userRole: commentData.userRole,
         text: commentData.text,
         isInternal: commentData.isInternal,
-        replies: [], // Initialize replies as an empty array
-        likes: { count: 0, reactedBy: [] }, // Initialize likes
+        replies: [],
+        likes: { count: 0, reactedBy: [] },
         ...(commentData.userId && { userId: commentData.userId }),
       };
 
@@ -335,8 +339,8 @@ export const addReplyToComment = async (
         userRole: replyData.userRole,
         text: replyData.text,
         isInternal: replyData.isInternal,
-        replies: [], // Replies to replies are not supported in this flat structure
-        likes: { count: 0, reactedBy: [] }, // Initialize likes
+        replies: [],
+        likes: { count: 0, reactedBy: [] },
         ...(replyData.userId && { userId: replyData.userId }),
       };
 
