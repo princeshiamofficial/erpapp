@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, FormEvent, useRef } from 'react';
@@ -72,7 +73,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     if (Array.isArray(allUsersForMentions)) {
         // console.log("OrderDetailsClient: Received allUsersForMentions (first 5):", allUsersForMentions.slice(0, 5).map(u => ({id: u.id, name: u.name, role: u.role, avatarUrl: u.avatarUrl ? 'Exists' : 'None'})));
     } else {
-        // console.warn("OrderDetailsClient: allUsersForMentions prop is not an array. Received:", allUsersForMentions);
+        console.warn("OrderDetailsClient: allUsersForMentions prop is not an array. Received:", allUsersForMentions);
     }
   }, [allUsersForMentions]);
 
@@ -152,9 +153,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setOrder(result);
       setNewComment('');
       toast({ title: "Success", description: "Your comment has been submitted." });
-       if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
-        showBrowserNotification("Comment Posted", { body: "Your comment was successfully submitted." });
-      }
+      //  if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
+      //   showBrowserNotification("Comment Posted", { body: "Your comment was successfully submitted." });
+      // }
     }
     setIsSubmittingComment(false);
   };
@@ -170,7 +171,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     if (currentUser) {
       result = await submitReplyAction(
         order.id,
-        replyingTo.parentId,
+        replyingTo.parentId, // Always use the top-level parentId
         currentReplyText,
         false, 
         currentUser
@@ -178,7 +179,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     } else {
       result = await submitClientReplyAction(
         order.id,
-        replyingTo.parentId,
+        replyingTo.parentId, // Always use the top-level parentId
         currentReplyText
       );
     }
@@ -191,9 +192,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setCurrentReplyText('');
       setReplyingTo(null);
       toast({ title: "Reply submitted" });
-       if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
-        showBrowserNotification("Reply Posted", { body: "Your reply was successfully submitted." });
-      }
+      //  if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
+      //   showBrowserNotification("Reply Posted", { body: "Your reply was successfully submitted." });
+      // }
     }
   };
 
@@ -249,7 +250,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     if (!text) return '';
     return text.split(/(@[^\s@]+)/g).map((part, index) => {
       if (index % 2 === 1 && part.startsWith('@')) {
-        return <strong key={index} className="text-primary font-semibold">{part.substring(1)}</strong>;
+         return <strong key={index} className="text-primary font-semibold">{part.substring(1)}</strong>;
       }
       return part;
     });
@@ -273,13 +274,13 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
     if (lastAtSymbolIndex !== -1) {
         const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
-        // Allow query to be empty (just "@") or start with characters
+        
         if (/^[^\s@]*/.test(potentialQuery)) { 
             setMentionQuery(potentialQuery);
             setActiveMentionStartIndex(lastAtSymbolIndex);
             
             const clientOption = { id: 'client-mention', name: (order.companyName || "Client"), role: 'Client' as 'Client' };
-             const usersToSearch = (Array.isArray(allUsersForMentions) ? [clientOption, ...allUsersForMentions] : [clientOption]);
+            const usersToSearch = (Array.isArray(allUsersForMentions) ? [clientOption, ...allUsersForMentions] : [clientOption]);
             
             const filtered = usersToSearch.filter(user =>
                 (user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
@@ -327,6 +328,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
 
   const renderComment = (comment: Comment, isReply = false, parentCommentId?: string) => {
+    // console.log(`Rendering comment: ${comment.id}, User: ${comment.userName}, Role: ${comment.userRole}, UserID: ${comment.userId}`);
     if (comment.isInternal && !currentUser) return null;
     if (comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role)) return null;
 
@@ -346,23 +348,26 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
         avatarSrc = userToDisplay.avatarUrl;
         avatarDataAiHint = "user uploaded avatar";
       }
+      // console.log(`Comment by ${comment.userName}, found user: ${userToDisplay?.name}, avatarUrl: ${avatarSrc}`);
+    } else {
+      // console.log(`Comment by ${comment.userName}, no userId or allUsersForMentions not array. Using fallback.`);
     }
     const avatarFallback = getInitials(comment.userName || "User");
 
 
-    const currentVisibleReplies = (comment.replies || []).filter(reply =>
+    const visibleReplies = (comment.replies || []).filter(reply =>
       !(reply.isInternal && !currentUser) &&
       !(reply.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role))
     ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     const isRepliesExpanded = expandedReplies[comment.id] || false;
-    const repliesToRender = isRepliesExpanded || currentVisibleReplies.length <= MAX_INITIAL_REPLIES_TO_SHOW
-      ? currentVisibleReplies
-      : currentVisibleReplies.slice(0, MAX_INITIAL_REPLIES_TO_SHOW);
+    const repliesToRender = isRepliesExpanded || visibleReplies.length <= MAX_INITIAL_REPLIES_TO_SHOW
+      ? visibleReplies
+      : visibleReplies.slice(0, MAX_INITIAL_REPLIES_TO_SHOW);
 
 
     return (
-      <div key={comment.id} className={`flex space-x-2.5 sm:space-x-3 ${isReply ? 'ml-8 sm:ml-10' : ''}`}>
+      <div key={comment.id} className={`flex space-x-2.5 sm:space-x-3 ${isReply ? 'ml-8 sm:ml-12' : ''}`}>
         <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/30 shadow-sm flex-shrink-0 mt-0.5">
            <AvatarImage src={avatarSrc} alt={comment.userName} data-ai-hint={avatarDataAiHint} />
           <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{avatarFallback}</AvatarFallback>
@@ -407,20 +412,22 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <span className="text-muted-foreground">&middot;</span>
             <button
               onClick={() => {
-                 const isOpeningNewReplyForm = !replyingTo || replyingTo.formUnderId !== comment.id;
-                 const targetUserNameForMention = comment.userName.replace(/\s+/g, '');
-                 setReplyingTo(isOpeningNewReplyForm ? {
-                   parentId: isReply ? parentCommentId! : comment.id,
-                   targetName: comment.userName,
-                   formUnderId: comment.id 
-                 } : null);
+                const isOpeningNewReplyForm = !replyingTo || replyingTo.formUnderId !== comment.id;
+                const targetNameForMention = comment.userName;
+                const parentIdForReply = isReply ? parentCommentId! : comment.id; // Reply always goes to top-level comment
+                
+                setReplyingTo(isOpeningNewReplyForm ? {
+                    parentId: parentIdForReply,
+                    targetName: targetNameForMention,
+                    formUnderId: comment.id // Form visually appears under this comment/reply
+                } : null);
 
-                 if (isOpeningNewReplyForm) {
-                   setCurrentReplyText(`@${targetUserNameForMention} `);
-                   setTimeout(() => replyTextareaRef.current?.focus(), 0);
-                 } else {
-                   setCurrentReplyText('');
-                 }
+                if (isOpeningNewReplyForm) {
+                    setCurrentReplyText(`@${targetNameForMention.replace(/\s+/g, '')} `);
+                    setTimeout(() => replyTextareaRef.current?.focus(), 0);
+                } else {
+                    setCurrentReplyText('');
+                }
               }}
               className="font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 px-1.5 py-0.5 rounded-sm transition-colors"
             >
@@ -443,7 +450,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                   <div className="flex-1">
                     <Textarea
                       ref={replyTextareaRef}
-                      placeholder={`Write a reply to ${replyingTo.targetName}...`}
+                      placeholder={`Replying to ${replyingTo.targetName}...`}
                       value={currentReplyText}
                       onChange={handleReplyTextChangeForMention}
                       className="min-h-[50px] sm:min-h-[60px] text-sm bg-background/70 border-border/50 focus:border-primary rounded-lg shadow-inner p-2.5"
@@ -500,7 +507,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               {repliesToRender.map(reply => renderComment(reply, true, comment.id))}
             </div>
           )}
-          {!isReply && currentVisibleReplies.length > MAX_INITIAL_REPLIES_TO_SHOW && (
+          {!isReply && visibleReplies.length > MAX_INITIAL_REPLIES_TO_SHOW && (
             <Button
               variant="link"
               size="sm"
@@ -508,7 +515,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               className="text-xs font-medium text-primary hover:text-primary/80 mt-2 pl-1"
             >
               {isRepliesExpanded ? <ChevronUp className="h-3.5 w-3.5 mr-1" /> : <ChevronDown className="h-3.5 w-3.5 mr-1" />}
-              {isRepliesExpanded ? 'Hide Replies' : `View ${currentVisibleReplies.length - MAX_INITIAL_REPLIES_TO_SHOW} more ${currentVisibleReplies.length - MAX_INITIAL_REPLIES_TO_SHOW === 1 ? 'reply' : 'replies'}`}
+              {isRepliesExpanded ? 'Hide Replies' : `View ${visibleReplies.length - MAX_INITIAL_REPLIES_TO_SHOW} more ${visibleReplies.length - MAX_INITIAL_REPLIES_TO_SHOW === 1 ? 'reply' : 'replies'}`}
             </Button>
           )}
         </div>
@@ -537,7 +544,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const effectiveAdvancePayment = order.advancePayment || 0;
   const amountDue = orderSubtotal - effectiveAdvancePayment;
 
-
   return (
     <main className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
       <Card className="shadow-2xl overflow-hidden border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
@@ -558,9 +564,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               {getStatusIcon(order.currentStatus, "h-8 w-8")}
               Current Status
             </h3>
-            <p className="text-3xl sm:text-4xl font-bold ml-[40px] mt-1" style={{ color: currentStatusInfo.color }}>
+            <div className="text-3xl sm:text-4xl font-bold ml-[40px] mt-1" style={{ color: currentStatusInfo.color }}>
               {currentStatusInfo.name}
-            </p>
+            </div>
             <div className="text-sm text-muted-foreground mt-1.5 ml-[40px]">
               Last updated: {isClient ? formatDate(lastStatusUpdateTimestamp) : <Skeleton className="h-4 w-48 inline-block" />}
             </div>
@@ -585,7 +591,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 </div>
                  {lastStatusUpdateEntry && (
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    Updated: {isClient ? `${lastUpdatedBy} on ${new Date(lastStatusUpdateTimestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : <Skeleton className="h-3 w-28" />}
+                    Updated: {isClient ? `${lastUpdatedBy} on ${formatDate(lastStatusUpdateTimestamp)}` : <Skeleton className="h-3 w-28" />}
                   </div>
                 )}
               </div>
@@ -659,7 +665,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                   </>
                 ) : null }
 
-                 {(order.paymentMethod) && (
+                 {(order.paymentMethod && (effectiveAdvancePayment > 0 || amountDue > 0)) && (
                   <div className={`flex justify-between mt-2 pt-2 ${ (orderSubtotal > 0 && amountDue <= 0) ? 'border-transparent' : 'border-t border-dashed border-border/40'}`}>
                     <span className="text-md text-muted-foreground">Payment Method:</span>
                     <span className="text-md text-foreground flex items-center gap-1.5">
@@ -775,3 +781,4 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
+
