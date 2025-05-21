@@ -6,17 +6,17 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, UserCheck, Package as PackageIcon, Settings2, Layers } from "lucide-react"; 
+import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, Package as PackageIcon, Settings2, Layers, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import Link from "next/link";
 import type { TrackingLink, User, CustomStatus, GlobalSettings } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { getStatuses, getContrastTextColor } from '@/lib/status-service'; 
+import { getStatuses, getContrastTextColor } from '@/lib/status-service';
 import { getOrders } from '@/lib/order-service';
-import { getGlobalSettings } from '@/lib/settings-service'; 
+import { getGlobalSettings } from '@/lib/settings-service';
 import { Skeleton } from '@/components/ui/skeleton';
-import { deleteOrderAction } from './actions'; // createOrderAction and assignDrToOrderAction will be used by dialogs
+import { deleteOrderAction, updateOrderAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -35,7 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils"; 
+import { cn } from "@/lib/utils";
 
 const CreateOrderDialog = dynamic(() => import('@/components/orders/create-order-dialog').then(mod => mod.CreateOrderDialog));
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
@@ -71,10 +71,10 @@ export default function OrdersPage() {
 
   const [orderToEdit, setOrderToEdit] = useState<TrackingLink | null>(null);
   const [isEditOrderDialogOpen, setIsEditOrderDialogOpen] = useState(false);
-  
+
 
   const fetchOrderData = useCallback(async () => {
-    if (!currentUser) { // Ensure currentUser is available
+    if (!currentUser) {
       setIsLoading(false);
       return;
     }
@@ -83,7 +83,7 @@ export default function OrdersPage() {
       const [fetchedOrders, fetchedStatuses, fetchedSettings] = await Promise.all([
         getOrders(),
         getStatuses(),
-        getGlobalSettings() 
+        getGlobalSettings()
       ]);
       setOrders(fetchedOrders);
       setAllStatuses(fetchedStatuses);
@@ -97,14 +97,14 @@ export default function OrdersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser, toast]); // Add currentUser to dependency array
+  }, [currentUser, toast]);
 
   useEffect(() => {
     setIsClient(true);
     if (currentUser) {
       fetchOrderData();
     } else {
-      setIsLoading(false); // If no current user, stop loading
+      setIsLoading(false);
     }
   }, [currentUser, fetchOrderData]);
 
@@ -112,7 +112,7 @@ export default function OrdersPage() {
   const memoizedAvailableStatusesForDialog = useMemo(() => {
     return allStatuses.filter(s => s.isVisible !== false);
   }, [allStatuses]);
-  
+
   const filteredOrders = useMemo(() => {
     let result = orders;
     if (currentUser?.role === 'CRM') {
@@ -120,14 +120,13 @@ export default function OrdersPage() {
     } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
       result = result.filter(order => order.designerRepresentativeId === currentUser.id);
     }
-  
+
     if (!searchTerm) return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    
+
     const lowerSearchTerm = searchTerm.toLowerCase();
     return result.filter(order =>
       order.id.toLowerCase().includes(lowerSearchTerm) ||
       (order.companyName && order.companyName.toLowerCase().includes(lowerSearchTerm)) ||
-      (order.customerName && order.customerName.toLowerCase().includes(lowerSearchTerm)) ||
       (order.phoneNumber && order.phoneNumber.toLowerCase().includes(lowerSearchTerm)) ||
       order.crmUserName.toLowerCase().includes(lowerSearchTerm) ||
       (order.designerRepresentativeName && order.designerRepresentativeName.toLowerCase().includes(lowerSearchTerm))
@@ -135,13 +134,13 @@ export default function OrdersPage() {
   }, [orders, searchTerm, currentUser]);
 
   const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
-  
+
   const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
     const status = allStatuses.find(s => s.id === statusId);
     if (status) {
       return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
     }
-    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' }; 
+    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' };
   }, [allStatuses]);
 
   useEffect(() => {
@@ -149,27 +148,26 @@ export default function OrdersPage() {
       const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
       const uniqueStatusIdsInScope = new Set<string>();
       filteredOrders.forEach(order => uniqueStatusIdsInScope.add(order.currentStatus));
-  
+
       uniqueStatusIdsInScope.forEach(statusId => {
         newDisplayInfoMap[statusId] = getStatusDisplayInfo(statusId);
       });
-      
+
       setOrderStatusDisplay(prevMap => {
-          // Only update if the content of the map actually changes
-          if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(prevMap)) {
-              return newDisplayInfoMap;
-          }
-          return prevMap;
+        if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(prevMap)) {
+          return newDisplayInfoMap;
+        }
+        return prevMap;
       });
     } else if (Object.keys(orderStatusDisplay).length > 0 && (allStatuses.length === 0 || filteredOrders.length === 0)) {
-        setOrderStatusDisplay({}); 
+      setOrderStatusDisplay({});
     }
-  }, [filteredOrders, allStatuses, getStatusDisplayInfo, orderStatusDisplay]); // orderStatusDisplay removed from deps
+  }, [filteredOrders, allStatuses, getStatusDisplayInfo]);
 
 
   const canCreateOrder = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
   const canAssignDr = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
-  
+
   const canEditOrder = useMemo(() => {
     if (!currentUser || !globalAppSettings) return false;
     if (currentUser.role === 'SYSTEM_ADMIN') return true;
@@ -178,57 +176,51 @@ export default function OrdersPage() {
 
   const canDeleteOrder = currentUser?.role === 'SYSTEM_ADMIN';
 
- const handleOpenAssignDrDialog = useCallback(async (orderToAssign: TrackingLink) => {
-    setIsLoading(true); // Consider a more specific loading state for the dialog prep
+  const handleOpenAssignDrDialog = useCallback(async (orderToAssign: TrackingLink) => {
+    setIsLoading(true); // Consider a more specific loading state
     try {
-        console.log("OrdersPage/handleOpenAssignDrDialog: Opening for order:", orderToAssign.id);
-        const freshStatuses = await getStatuses();
-        if (!Array.isArray(freshStatuses)) {
-            console.error("OrdersPage/handleOpenAssignDrDialog: getStatuses() did not return an array. Received:", freshStatuses);
-            toast({ title: "Error", description: "Failed to load status configuration for DR assignment. Please try again.", variant: "destructive" });
-            setIsLoading(false);
-            return;
-        }
-        
-        console.log("OrdersPage/handleOpenAssignDrDialog: Fresh statuses fetched IDs:", freshStatuses.map(s => s.id).join(', '));
-        const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
-        
-        if (rfdCheck) {
-            console.log("OrdersPage/handleOpenAssignDrDialog: 'ready-for-design' status in freshStatuses:", JSON.stringify(rfdCheck));
-        } else {
-            console.error("OrdersPage/handleOpenAssignDrDialog: CRITICAL - 'ready-for-design' status (ID: 'ready-for-design') NOT FOUND in freshStatuses from getStatuses().");
-            toast({
-                title: "Configuration Error",
-                description: "The required system status 'Ready for Design' (ID: ready-for-design) is missing. Please ensure it is configured in Admin > Status Management. DR assignment is not possible.",
-                variant: "destructive",
-                duration: 10000,
-            });
-            setIsLoading(false);
-            return; 
-        }
-        
-        setAllStatuses(freshStatuses); // Update the main page's status list as well
-        setStatusesForDialog(freshStatuses);
-        setSelectedOrderForDrAssignment(orderToAssign);
-        setIsAssignDrDialogOpen(true);
-    } catch (error) {
-        console.error("OrdersPage/handleOpenAssignDrDialog: Error preparing assign DR dialog:", error);
-        toast({ title: "Error", description: "Could not prepare DR assignment dialog. Check console.", variant: "destructive" });
-    } finally {
+      console.log("OrdersPage/handleOpenAssignDrDialog: Opening for order:", orderToAssign.id);
+      const freshStatuses = await getStatuses();
+      if (!Array.isArray(freshStatuses)) {
+        console.error("OrdersPage/handleOpenAssignDrDialog: getStatuses() did not return an array. Received:", freshStatuses);
+        toast({ title: "Error", description: "Failed to load status configuration for DR assignment. Please try again.", variant: "destructive" });
         setIsLoading(false);
+        return;
+      }
+
+      const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
+      if (rfdCheck) {
+        // console.log("OrdersPage/handleOpenAssignDrDialog: 'ready-for-design' status in freshStatuses:", JSON.stringify(rfdCheck));
+      } else {
+        console.error("OrdersPage/handleOpenAssignDrDialog: CRITICAL - 'ready-for-design' status (ID: 'ready-for-design') NOT FOUND in freshStatuses from getStatuses().");
+        toast({
+          title: "Configuration Error",
+          description: "The required system status 'Ready for Design' (ID: ready-for-design) is missing. Please ensure it is configured in Admin > Status Management. DR assignment is not possible.",
+          variant: "destructive",
+          duration: 10000,
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      setAllStatuses(freshStatuses); // Update the main page's status list as well
+      setStatusesForDialog(freshStatuses);
+      setSelectedOrderForDrAssignment(orderToAssign);
+      setIsAssignDrDialogOpen(true);
+    } catch (error) {
+      console.error("OrdersPage/handleOpenAssignDrDialog: Error preparing assign DR dialog:", error);
+      toast({ title: "Error", description: "Could not prepare DR assignment dialog. Check console.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
   }, [toast]);
 
   const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromAction: TrackingLink) => {
-      console.log("OrdersPage/handleDrAssignmentSuccess: DR assigned for order", updatedOrderFromAction.id);
-      setOrders(prevOrders =>
-        prevOrders.map(o => (o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o))
-      );
-      toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
-      setIsAssignDrDialogOpen(false);
-      setSelectedOrderForDrAssignment(null);
-      setStatusesForDialog(null);
-      // await fetchOrderData(); // Re-fetch for full reconciliation if optimistic update is not enough
+    setOrders(prevOrders =>
+      prevOrders.map(o => (o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o))
+    );
+    toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
+    // await fetchOrderData(); // Potentially re-fetch for full reconciliation
   }, [toast]);
 
   const handleDeleteOrder = async () => {
@@ -237,7 +229,7 @@ export default function OrdersPage() {
     const result = await deleteOrderAction(orderToDelete.id);
     if (result.success) {
       toast({ title: "Order Deleted", description: `Order ${orderToDelete.id} has been deleted successfully.` });
-      await fetchOrderData(); 
+      await fetchOrderData();
     } else {
       toast({ title: "Deletion Failed", description: result.error || "Could not delete the order.", variant: "destructive" });
     }
@@ -246,16 +238,31 @@ export default function OrdersPage() {
     setOrderToDelete(null);
   };
 
-  const handleOrderUpdated = useCallback(async () => {
+  const handleOpenEditOrderDialog = (order: TrackingLink) => {
     if (!currentUser || !currentUser.role) {
-      console.error("OrdersPage/handleOrderUpdated: Current user or role is missing. Aborting update.");
-      toast({ title: "Authentication Error", description: "Your session seems invalid. Please log in again.", variant: "destructive" });
+      toast({ title: "Authentication Error", description: "Cannot edit order. User not properly authenticated.", variant: "destructive" });
+      console.error("OrdersPage/handleOpenEditOrderDialog: currentUser is invalid.", currentUser);
       return;
     }
-    console.log("OrdersPage/handleOrderUpdated: Calling updateOrderAction with currentUser (client-side):", JSON.stringify(currentUser));
+    console.log("OrdersPage/handleOpenEditOrderDialog: Opening for order:", order.id, "with currentUser:", JSON.stringify(currentUser));
+    setOrderToEdit(order);
+    setIsEditOrderDialogOpen(true);
+  };
+
+  const handleOrderUpdated = useCallback(async () => {
+    console.log("OrdersPage/handleOrderUpdated: Current user before calling action:", JSON.stringify(currentUser));
+    if (!currentUser || !currentUser.role) {
+      console.error("OrdersPage/handleOrderUpdated: currentUser is invalid. Aborting update.");
+      toast({ title: "Authentication Error", description: "Your session seems invalid. Please log in again to update orders.", variant: "destructive" });
+      setIsEditOrderDialogOpen(false); // Ensure dialog closes
+      setOrderToEdit(null); // Clear the order being edited
+      return;
+    }
     
+    // The EditOrderDialog now calls the server action itself.
+    // This function is now primarily for post-update actions on the OrdersPage.
     toast({ title: "Order Updated", description: "Order details have been successfully updated."});
-    await fetchOrderData();
+    await fetchOrderData(); // Re-fetch data to reflect changes
     setIsEditOrderDialogOpen(false);
     setOrderToEdit(null);
   }, [currentUser, toast, fetchOrderData]);
@@ -277,42 +284,42 @@ export default function OrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-            {(currentUser.role === 'SYSTEM_ADMIN') && (
-              <Link href="/admin/service-management" passHref>
-                <Button variant="outline" size="lg" className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow">
-                  <Settings2 className="mr-2 h-4 w-4" /> Configure Options
-                </Button>
-              </Link>
-            )}
-            {(currentUser.role === 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') && (
-              <Link href="/admin/model-management" passHref>
-                <Button variant="outline" size="lg" className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow">
-                  <Layers className="mr-2 h-4 w-4" /> Configure Models
-                </Button>
-              </Link>
-            )}
-            {canCreateOrder && (
+          {(currentUser.role === 'SYSTEM_ADMIN') && (
+            <Link href="/admin/service-management" passHref>
+              <Button variant="outline" size="lg" className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow">
+                <Settings2 className="mr-2 h-4 w-4" /> Configure Options
+              </Button>
+            </Link>
+          )}
+          {(currentUser.role === 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') && (
+            <Link href="/admin/model-management" passHref>
+              <Button variant="outline" size="lg" className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow">
+                <Layers className="mr-2 h-4 w-4" /> Configure Models
+              </Button>
+            </Link>
+          )}
+          {canCreateOrder && (
             <CreateOrderDialog
-                currentUser={currentUser}
-                availableStatuses={memoizedAvailableStatusesForDialog}
-                onOrderCreated={async () => {
-                  await fetchOrderData();
-                }}
+              currentUser={currentUser}
+              availableStatuses={memoizedAvailableStatusesForDialog}
+              onOrderCreated={async () => {
+                await fetchOrderData();
+              }}
             >
-                <Button
+              <Button
                 size="lg"
                 className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow font-semibold h-10"
                 disabled={isLoading || (allStatuses.length === 0 && memoizedAvailableStatusesForDialog.length === 0)}
-                >
+              >
                 {(isLoading && allStatuses.length === 0 && memoizedAvailableStatusesForDialog.length === 0) ? (
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 ) : (
-                    <PlusCircle className="mr-2 h-5 w-5" />
+                  <PlusCircle className="mr-2 h-5 w-5" />
                 )}
                 {(isLoading && allStatuses.length === 0 && memoizedAvailableStatusesForDialog.length === 0) ? "Loading Data..." : "Create New Order"}
-                </Button>
+              </Button>
             </CreateOrderDialog>
-            )}
+          )}
         </div>
       </div>
 
@@ -322,19 +329,19 @@ export default function OrdersPage() {
             <div className="flex-grow">
               <CardTitle className="text-card-foreground text-xl">Order List</CardTitle>
               <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                {currentUser.role === 'CRM' ? "Showing orders assigned to you." : 
-                 currentUser.role === 'DESIGNER_REPRESENTATIVE' ? "Showing orders assigned to you." : 
-                 "Showing all orders."}
+                {currentUser.role === 'CRM' ? "Showing orders assigned to you." :
+                  currentUser.role === 'DESIGNER_REPRESENTATIVE' ? "Showing orders assigned to you." :
+                    "Showing all orders."}
               </CardDescription>
             </div>
             <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search orders..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-background h-10 rounded-md w-full"
-                />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search orders..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-background h-10 rounded-md w-full"
+              />
             </div>
           </div>
         </CardHeader>
@@ -398,7 +405,8 @@ export default function OrdersPage() {
                             <DropdownMenuContent align="end">
                               {canEditOrder && (
                                 <DropdownMenuItem
-                                  onSelect={() => { setOrderToEdit(order); setIsEditOrderDialogOpen(true); }}
+                                  onSelect={() => handleOpenEditOrderDialog(order)}
+                                  disabled={!currentUser || !currentUser.role} 
                                   className="cursor-pointer"
                                 >
                                   <Edit3 className="mr-2 h-4 w-4" /> Edit Order
@@ -420,16 +428,16 @@ export default function OrdersPage() {
                               </DropdownMenuItem>
                               {canDeleteOrder && (
                                 <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onSelect={() => {
-                                    setOrderToDelete(order);
-                                    setIsDeleteDialogOpen(true);
-                                  }}
-                                  className="cursor-pointer text-destructive focus:text-destructive"
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" /> Delete Order
-                                </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onSelect={() => {
+                                      setOrderToDelete(order);
+                                      setIsDeleteDialogOpen(true);
+                                    }}
+                                    className="cursor-pointer text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Order
+                                  </DropdownMenuItem>
                                 </>
                               )}
                             </DropdownMenuContent>
@@ -439,43 +447,43 @@ export default function OrdersPage() {
                     );
                   })
                 ) : (
-                    <TableRow>
-                        <TableCell colSpan={7} className="text-center py-12 h-[300px]">
-                            <PackageIcon className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
-                            <p className="text-lg text-muted-foreground font-medium">
-                              {searchTerm ? "No orders match your search." : 
-                               (currentUser.role === 'CRM' ? "You have no orders." : 
-                                currentUser.role === 'DESIGNER_REPRESENTATIVE' ? "No orders assigned to you." : 
-                                "No orders found.")
-                              }
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                                {searchTerm ? "Try a different search term." : 
-                                (canCreateOrder ? "Start by creating a new one!" : 
-                                 currentUser.role === 'DESIGNER_REPRESENTATIVE' ? "Check back later for assigned orders." :
-                                 "Check back later for updates.")}
-                            </p>
-                             {canCreateOrder && !searchTerm && (
-                                <CreateOrderDialog
-                                  currentUser={currentUser}
-                                  availableStatuses={memoizedAvailableStatusesForDialog}
-                                  onOrderCreated={async () => {
-                                    await fetchOrderData();
-                                  }}
-                                >
-                                    <Button size="sm" className="mt-4" disabled={isLoading || (allStatuses.length === 0)}>
-                                      {(isLoading && allStatuses.length === 0) ? (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                      ) : (
-                                        <PlusCircle className="mr-2 h-4 w-4" />
-                                      )}
-                                      {(isLoading && allStatuses.length === 0) ? "Loading Data..." : "Create Order"}
-                                    </Button>
-                                </CreateOrderDialog>
-                             )}
-                        </TableCell>
-                    </TableRow>
-                 )}
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 h-[300px]">
+                      <PackageIcon className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
+                      <p className="text-lg text-muted-foreground font-medium">
+                        {searchTerm ? "No orders match your search." :
+                          (currentUser?.role === 'CRM' ? "You have no orders." :
+                            currentUser?.role === 'DESIGNER_REPRESENTATIVE' ? "No orders assigned to you." :
+                              "No orders found.")
+                        }
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {searchTerm ? "Try a different search term." :
+                          (canCreateOrder ? "Start by creating a new one!" :
+                            currentUser?.role === 'DESIGNER_REPRESENTATIVE' ? "Check back later for assigned orders." :
+                              "Check back later for updates.")}
+                      </p>
+                      {canCreateOrder && !searchTerm && (
+                        <CreateOrderDialog
+                          currentUser={currentUser}
+                          availableStatuses={memoizedAvailableStatusesForDialog}
+                          onOrderCreated={async () => {
+                            await fetchOrderData();
+                          }}
+                        >
+                          <Button size="sm" className="mt-4" disabled={isLoading || (allStatuses.length === 0)}>
+                            {(isLoading && allStatuses.length === 0) ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <PlusCircle className="mr-2 h-4 w-4" />
+                            )}
+                            {(isLoading && allStatuses.length === 0) ? "Loading Data..." : "Create Order"}
+                          </Button>
+                        </CreateOrderDialog>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
@@ -517,7 +525,7 @@ export default function OrdersPage() {
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
-                 Are you absolutely sure?
+                Are you absolutely sure?
               </AlertDialogTitle>
               <AlertDialogDescription>
                 This action will permanently delete order "<span className="font-semibold">{orderToDelete.id}</span>".
@@ -531,7 +539,7 @@ export default function OrdersPage() {
                 className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                 disabled={isDeletingOrder}
               >
-                {isDeletingOrder ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Deleting...</> : "Yes, delete order"}
+                {isDeletingOrder ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting...</> : "Yes, delete order"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -540,3 +548,4 @@ export default function OrdersPage() {
     </div>
   );
 }
+
