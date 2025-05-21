@@ -5,7 +5,8 @@ import React, { useState, useEffect, useCallback, FormEvent, useRef } from 'reac
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, UserCheck, Layers, Heart, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, Disc } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'; // Added Table imports
+import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, UserCheck, Disc } from "lucide-react";
 import Image from "next/image";
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -26,7 +27,7 @@ import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@
 interface OrderDetailsClientProps {
   order: TrackingLink;
   allStatuses: CustomStatus[];
-  allUsersForMentions?: User[]; 
+  allUsersForMentions?: User[];
   areCommentsVisible: boolean;
 }
 
@@ -69,6 +70,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
+
   useEffect(() => {
     console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
     if (initialOrder.orderItems) {
@@ -79,12 +81,10 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   }, [initialOrder]);
 
   useEffect(() => {
-    if (Array.isArray(allUsersForMentions) && allUsersForMentions.length > 0) {
+    if (Array.isArray(allUsersForMentions)) {
       console.log("OrderDetailsClient: Received allUsersForMentions (first 5):", allUsersForMentions.slice(0, 5).map(u => ({id: u.id, name: u.name, role: u.role, avatarUrl: u.avatarUrl ? 'Exists' : 'None'})));
-    } else if (!Array.isArray(allUsersForMentions)) {
-      console.warn("OrderDetailsClient: allUsersForMentions prop is not an array. Received:", allUsersForMentions);
     } else {
-      console.log("OrderDetailsClient: Received allUsersForMentions as empty array.");
+      console.warn("OrderDetailsClient: allUsersForMentions prop is not an array. Received:", allUsersForMentions);
     }
   }, [allUsersForMentions]);
 
@@ -162,7 +162,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setOrder(result);
       setNewComment('');
       toast({ title: "Success", description: "Your comment has been submitted." });
-      // showBrowserNotification("Comment Posted!", { body: "Your comment is now live." });
+      showBrowserNotification("Comment Posted!", { body: "Your comment is now live." });
     }
     setIsSubmittingComment(false);
   };
@@ -178,15 +178,15 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     if (currentUser) {
       result = await submitReplyAction(
         order.id,
-        replyingTo.parentId, 
+        replyingTo.parentId,
         currentReplyText,
-        false, 
+        false, // Public replies are not internal by default
         currentUser
       );
     } else {
       result = await submitClientReplyAction(
         order.id,
-        replyingTo.parentId, 
+        replyingTo.parentId,
         currentReplyText
       );
     }
@@ -199,7 +199,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setCurrentReplyText('');
       setReplyingTo(null);
       toast({ title: "Reply submitted" });
-      // showBrowserNotification("Reply Posted!", { body: "Your reply is now live." });
+      showBrowserNotification("Reply Posted!", { body: "Your reply is now live." });
     }
   };
 
@@ -217,7 +217,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       for (let i = 0; i < commentsArr.length; i++) {
         const currentComment = commentsArr[i];
         if (currentComment.id === (isReply ? parentCommentIdIfReply : targetCommentId)) {
-          const targetItem = isReply 
+          const targetItem = isReply
             ? (currentComment.replies || []).find(r => r.id === targetCommentId)
             : currentComment;
 
@@ -266,30 +266,29 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const handleReplyTextChangeForMention = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
     setCurrentReplyText(text);
-    
+
     const cursorPosition = e.target.selectionStart;
     if (cursorPosition === null) return;
 
     const textBeforeCursor = text.substring(0, cursorPosition);
     const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@');
-    
+
     if (lastAtSymbolIndex !== -1) {
       const isStartOfMention = lastAtSymbolIndex === 0 || /\s/.test(textBeforeCursor.charAt(lastAtSymbolIndex - 1));
       if (isStartOfMention) {
         const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
         console.log("FCM: Mention - Potential Query:", potentialQuery);
-        if (/^[a-zA-Z0-9_.-]*$/.test(potentialQuery)) { 
+        if (/^[a-zA-Z0-9_.-]*$/.test(potentialQuery)) {
           setMentionQuery(potentialQuery);
           setActiveMentionStartIndex(lastAtSymbolIndex);
 
           const clientOption = { id: 'client-mention', name: order.companyName, role: 'Client' as 'Client' };
-          
           const usersToSearch = Array.isArray(allUsersForMentions) ? [clientOption, ...allUsersForMentions] : [clientOption];
-          
+
           const filtered = usersToSearch.filter(user =>
             user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
             user.role.toLowerCase().includes(potentialQuery.toLowerCase())
-          ).slice(0, 7); 
+          ).slice(0, 7);
           setMentionSuggestions(filtered);
            console.log("FCM: Mention - Filtered Suggestions:", filtered);
           return;
@@ -306,25 +305,25 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       console.log("FCM: Mention - Select cancelled, no active mention start index or textarea ref.");
       return;
     }
-  
+
     const text = currentReplyText;
-    const queryLength = mentionQuery?.length || 0; 
-  
-    const textBeforeAt = text.substring(0, activeMentionStartIndex); 
-    const textAfterQueryEnd = text.substring(activeMentionStartIndex + 1 + queryLength); 
-  
+    const queryLength = mentionQuery?.length || 0;
+
+    const textBeforeAt = text.substring(0, activeMentionStartIndex);
+    const textAfterQueryEnd = text.substring(activeMentionStartIndex + 1 + queryLength);
+
     const newText = `${textBeforeAt}@${userNameToInsert.replace(/\s+/g, '')} ${textAfterQueryEnd.startsWith(' ') ? textAfterQueryEnd : ' ' + textAfterQueryEnd}`.trimEnd() + ' ';
     setCurrentReplyText(newText);
-  
-    const newCursorPosition = activeMentionStartIndex + 1 + userNameToInsert.replace(/\s+/g, '').length + 1; 
-  
+
+    const newCursorPosition = activeMentionStartIndex + 1 + userNameToInsert.replace(/\s+/g, '').length + 1;
+
     setTimeout(() => {
       if (replyTextareaRef.current) {
         replyTextareaRef.current.focus();
         replyTextareaRef.current.setSelectionRange(newCursorPosition, newCursorPosition);
       }
     }, 0);
-  
+
     setMentionQuery(null);
     setActiveMentionStartIndex(null);
     setMentionSuggestions([]);
@@ -337,7 +336,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
     const reactorId = getReactorId();
     const hasLiked = reactorId && comment.likes?.reactedBy.includes(reactorId);
-    
+
     let avatarSrc: string | undefined = undefined;
     let avatarDataAiHint = "user initials avatar";
     let userToDisplay: User | undefined | null = null;
@@ -345,7 +344,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     console.log(`Rendering comment by: ${comment.userName}, Role: ${comment.userRole}, UserID: ${comment.userId}, Comment ID: ${comment.id}`);
 
     if (comment.userRole === 'Client') {
-      avatarSrc = CLIENT_AVATAR_URL; 
+      avatarSrc = CLIENT_AVATAR_URL;
       avatarDataAiHint = "client avatar";
       console.log(`Comment by Client ${comment.userName}. Using default client avatar: ${avatarSrc}`);
     } else if (comment.userId && Array.isArray(allUsersForMentions)) {
@@ -359,7 +358,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
         console.log(`User ${userToDisplay?.name || 'Unknown User'} - No specific avatarUrl. Using fallback.`);
       }
     } else {
-       console.log(`Comment by ${comment.userName} - No specific user ID or allUsersForMentions not an array. Using fallback avatar.`);
+       console.log(`Comment by ${comment.userName} - No specific user ID or allUsersForMentions not an array or empty. Using fallback avatar.`);
     }
     const avatarFallback = getInitials(comment.userName || "User");
     console.log(`Final avatarSrc for ${comment.userName}: ${avatarSrc}, Fallback: ${avatarFallback}`);
@@ -410,7 +409,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               <motion.span
                 animate={{ scale: hasLiked && reactorId ? [1, 1.4, 1, 1.2, 1] : 1 }}
                 transition={{ duration: 0.4, ease: "easeInOut" }}
-                key={`${comment.id}-${hasLiked ? 'liked' : 'unliked'}`} 
+                key={`${comment.id}-${hasLiked ? 'liked' : 'unliked'}`}
               >
                 <Heart className={`h-4 w-4 ${hasLiked ? 'fill-red-500 text-red-500' : 'fill-transparent text-muted-foreground group-hover/likebtn:fill-red-500/30 group-hover/likebtn:text-red-500' }`} />
               </motion.span>
@@ -418,7 +417,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 <span className="text-xs">{comment.likes.count}</span>
               )}
             </motion.button>
-             
+
             <span className="text-muted-foreground">&middot;</span>
             <button
               onClick={() => {
@@ -426,14 +425,14 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 setReplyingTo(isOpeningNewReplyForm ? {
                   parentId: isReply ? parentCommentId! : comment.id,
                   targetName: comment.userName,
-                  formUnderId: comment.id 
+                  formUnderId: comment.id
                 } : null);
-                
+
                 if (isOpeningNewReplyForm) {
                     setCurrentReplyText(`@${comment.userName.replace(/\s+/g, '')} `);
                     setTimeout(() => replyTextareaRef.current?.focus(), 0);
                 } else {
-                    setCurrentReplyText(''); 
+                    setCurrentReplyText('');
                 }
               }}
               className="font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 px-1.5 py-0.5 rounded-sm transition-colors"
@@ -442,7 +441,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             </button>
             <span className="text-muted-foreground">&middot;</span>
             <span className="text-muted-foreground" title={isClient ? formatDate(comment.timestamp) : 'Loading date...'}>
-              {isClient ? formatDistanceToNowStrict(new Date(comment.timestamp)) : <Skeleton className="h-3 w-10 inline-block" />} 
+              {isClient ? formatDistanceToNowStrict(new Date(comment.timestamp)) : <Skeleton className="h-3 w-10 inline-block" />}
             </span>
           </div>
 
@@ -474,20 +473,20 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                   </div>
                 </form>
               </PopoverAnchor>
-              {mentionQuery !== null && mentionSuggestions.length > 0 && ( 
+              {mentionQuery !== null && mentionSuggestions.length > 0 && (
                  <PopoverContent
-                    key={mentionQuery + (activeMentionStartIndex ?? '')} 
+                    key={mentionQuery + (activeMentionStartIndex ?? '')}
                     className="w-[250px] p-0"
                     side="top"
                     align="start"
-                    onOpenAutoFocus={(e) => e.preventDefault()} 
+                    onOpenAutoFocus={(e) => e.preventDefault()}
                 >
                     <Command>
                         <CommandList>
                         {mentionSuggestions.map((user) => (
                             <CommandItem
                             key={user.id}
-                            value={user.name + user.role} 
+                            value={user.name + user.role}
                             onSelect={() => handleMentionSelect(user.name)}
                             className="cursor-pointer flex items-center gap-2"
                             >
@@ -532,12 +531,12 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   const publicCommentsAndRepliesCount = order.comments.reduce((acc, comment) => {
     if (!(comment.isInternal && !currentUser) && !(comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role))) {
-      acc++; 
-      const visibleReplies = (comment.replies || []).filter(reply => 
-        !(reply.isInternal && !currentUser) && 
+      acc++;
+      const visibleReplies = (comment.replies || []).filter(reply =>
+        !(reply.isInternal && !currentUser) &&
         !(reply.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role))
       );
-      acc += visibleReplies.length; 
+      acc += visibleReplies.length;
     }
     return acc;
   }, 0);
@@ -607,44 +606,49 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                   <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Address</span> {order.address}
                 </div>
               </div>
-              
+
+              <div className="md:col-span-2">
+                <h3 className="text-xl font-semibold mb-4 sm:mb-5 text-foreground flex items-start">
+                  <Layers className="h-7 w-7 text-primary mr-3 flex-shrink-0 p-1 bg-primary/10 rounded-md border border-primary/20" />
+                  Service Items
+                </h3>
                 {Array.isArray(order.orderItems) && order.orderItems.length > 0 ? (
-                  <div className="md:col-span-2"> 
-                    <h3 className="text-xl font-semibold mb-4 sm:mb-5 text-foreground flex items-start">
-                      <Layers className="h-7 w-7 text-primary mr-3 flex-shrink-0 p-1 bg-primary/10 rounded-md border border-primary/20" />
-                      Service Details
-                    </h3>
-                    <div className="space-y-3"> 
-                      {order.orderItems.map((item, index) => (
-                        <div key={item.id || index} className="flex items-start space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
-                          <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                            <Disc className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                          </div>
-                          <div>
-                            <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">
-                              Item {order.orderItems.length > 1 ? `#${index + 1}` : ''}
-                            </span>
-                            <span className="font-semibold text-card-foreground">{item.model}</span> - {item.quantity} Pcs ({item.lamination})
-                            <div className="text-xs mt-0.5">
-                                <span className="text-muted-foreground">Unit Price: </span><span className="font-medium">{formatCurrency(item.unitPrice)}</span>
-                                <span className="text-muted-foreground ml-2">Line Total: </span><span className="font-medium">{formatCurrency(item.lineItemTotalPrice)}</span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="overflow-x-auto rounded-lg border border-border/30 bg-secondary/40 dark:bg-secondary/10 shadow-sm">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Model</TableHead>
+                          <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-center">Quantity</TableHead>
+                          <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Lamination</TableHead>
+                          <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Unit Price</TableHead>
+                          <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Line Total</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {order.orderItems.map((item, index) => (
+                          <TableRow key={item.id || index} className="hover:bg-muted/50 transition-colors">
+                            <TableCell className="font-medium text-card-foreground">{item.model}</TableCell>
+                            <TableCell className="text-center text-card-foreground">{item.quantity}</TableCell>
+                            <TableCell className="text-card-foreground">{item.lamination}</TableCell>
+                            <TableCell className="text-right text-card-foreground">{formatCurrency(item.unitPrice)}</TableCell>
+                            <TableCell className="text-right font-semibold text-card-foreground">{formatCurrency(item.lineItemTotalPrice)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 ) : (
-                  <div className="md:col-span-2 flex items-start space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20">
+                  <div className="flex items-center space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20">
                     <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
                       <Layers className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     </div>
                     <div>
-                      <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Service Details</span>
+                      <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Service Items</span>
                       Not specified
                     </div>
                   </div>
                 )}
+              </div>
 
                <div className="flex items-start space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
                   <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
@@ -714,7 +718,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <div className="space-y-4 sm:space-y-5 max-h-[600px] overflow-y-auto pr-2 sm:pr-3 custom-scrollbar">
               {order.comments
                 .filter(comment => !(comment.isInternal && !currentUser) && !(comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role)))
-                .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()) 
+                .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
                 .map((comment) => renderComment(comment))}
               {publicCommentsAndRepliesCount === 0 && (
                   <div className="text-center py-8 sm:py-10">
