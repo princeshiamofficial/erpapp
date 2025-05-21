@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, FormEvent, useRef } from 'reac
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, UserCheck, Layers, ThumbsUp, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, Disc, Heart } from "lucide-react";
+import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, UserCheck, Layers, ThumbsUp, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, Disc, Heart, Plus, Minus } from "lucide-react";
 import Image from "next/image";
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -27,7 +27,7 @@ interface OrderDetailsClientProps {
   order: TrackingLink;
   allStatuses: CustomStatus[];
   allUsersForMentions?: User[]; 
-  areCommentsVisible: boolean; // New prop
+  areCommentsVisible: boolean;
 }
 
 const CLIENT_REACTOR_ID_KEY = 'colorHutClientReactorId';
@@ -41,6 +41,12 @@ const getInitials = (name: string | undefined): string => {
   if (names.length === 1) return names[0].charAt(0).toUpperCase();
   return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
 };
+
+const formatCurrency = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) return 'N/A';
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
+};
+
 
 export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersForMentions = [], areCommentsVisible }: OrderDetailsClientProps) {
   const { currentUser } = useAuth();
@@ -64,19 +70,21 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    // console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
-    // if (initialOrder.orderItems) {
-    //     console.log('OrderItems:', initialOrder.orderItems);
-    // } else {
-    //     console.log('OrderItems: is undefined or null');
-    // }
+    console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
+    if (initialOrder.orderItems) {
+        console.log('OrderItems:', initialOrder.orderItems);
+    } else {
+        console.log('OrderItems: is undefined or null');
+    }
   }, [initialOrder]);
 
   useEffect(() => {
-     if(Array.isArray(allUsersForMentions) && allUsersForMentions.length > 0) {
-        // console.log("OrderDetailsClient: Received allUsersForMentions (first 5):", allUsersForMentions.slice(0, 5).map(u => ({id: u.id, name: u.name, role: u.role, avatarUrl: u.avatarUrl ? 'Exists' : 'None'})));
+    if (Array.isArray(allUsersForMentions) && allUsersForMentions.length > 0) {
+      console.log("OrderDetailsClient: Received allUsersForMentions (first 5):", allUsersForMentions.slice(0, 5).map(u => ({id: u.id, name: u.name, role: u.role, avatarUrl: u.avatarUrl ? 'Exists' : 'None'})));
+    } else if (!Array.isArray(allUsersForMentions)) {
+      console.warn("OrderDetailsClient: allUsersForMentions prop is not an array. Received:", allUsersForMentions);
     } else {
-        // console.log("OrderDetailsClient: Received allUsersForMentions as empty or not an array.");
+      console.log("OrderDetailsClient: Received allUsersForMentions as empty array.");
     }
   }, [allUsersForMentions]);
 
@@ -243,11 +251,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
  const renderTextWithMentions = (text: string) => {
     if (!text) return '';
-    const displayRegex = /@(\S+)/g;
-
-    const parts = text.split(displayRegex);
-
-    return parts.map((part, index) => {
+    const displayRegex = /@(\S+)/g; 
+    return text.split(displayRegex).map((part, index) => {
       if (index % 2 === 1) { 
         return <strong key={index} className="text-primary font-semibold">{part.trim()}</strong>;
       }
@@ -268,6 +273,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       const isStartOfMention = lastAtSymbolIndex === 0 || /\s/.test(textBeforeCursor.charAt(lastAtSymbolIndex - 1));
       if (isStartOfMention) {
         const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
+         console.log("FCM: Mention - Potential Query:", potentialQuery);
         if (/^[a-zA-Z0-9_.-]*$/.test(potentialQuery)) { 
           setMentionQuery(potentialQuery);
           setActiveMentionStartIndex(lastAtSymbolIndex);
@@ -280,6 +286,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             user.role.toLowerCase().includes(potentialQuery.toLowerCase())
           ).slice(0, 7); 
           setMentionSuggestions(filtered);
+           console.log("FCM: Mention - Filtered Suggestions:", filtered);
           return;
         }
       }
@@ -291,6 +298,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   const handleMentionSelect = (userNameToInsert: string) => {
     if (activeMentionStartIndex === null || !replyTextareaRef.current) {
+      console.log("FCM: Mention - Select cancelled, no active mention start index or textarea ref.");
       return;
     }
   
@@ -330,7 +338,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     let userToDisplay: User | undefined | null = null;
 
     if (comment.userRole === 'Client') {
-      avatarSrc = CLIENT_AVATAR_URL;
+      avatarSrc = CLIENT_AVATAR_URL; // Use the constant
       avatarDataAiHint = "client avatar";
     } else if (comment.userId && Array.isArray(allUsersForMentions)) {
       userToDisplay = allUsersForMentions.find(u => u.id === comment.userId);
@@ -353,7 +361,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
 
     return (
-      <div key={comment.id} className={`flex items-start space-x-2.5 sm:space-x-3 ${isReply ? 'ml-8 sm:ml-12' : ''}`}>
+      <div key={comment.id} className={`flex space-x-2.5 sm:space-x-3 ${isReply ? 'ml-8 sm:ml-12' : ''}`}>
         <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/20 shadow-sm flex-shrink-0 mt-1">
           <AvatarImage src={avatarSrc} alt={comment.userName} data-ai-hint={avatarDataAiHint} />
           <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{avatarFallback}</AvatarFallback>
@@ -361,7 +369,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
         <div className="flex-1">
           <div
             onDoubleClick={() => handleToggleLike(comment.id, isReply, parentCommentId)}
-            className="bg-muted dark:bg-muted/40 px-3.5 py-2.5 rounded-xl shadow-sm group transition-colors"
+            className="bg-muted dark:bg-muted/50 px-3.5 py-2.5 rounded-xl shadow-sm group transition-colors"
           >
             <div className="flex items-baseline space-x-1.5">
               <p className="text-sm font-semibold text-foreground">{comment.userName}</p>
@@ -398,9 +406,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <span className="text-muted-foreground">&middot;</span>
             <button
               onClick={() => {
-                const replyingToThis = replyingTo?.formUnderId === comment.id || (isReply && replyingTo?.formUnderId === (comment as any).id); // Cast to any for formUnderId if needed for child
-                const isOpeningNewReplyForm = !replyingToThis;
-
+                const isOpeningNewReplyForm = !replyingTo || replyingTo.formUnderId !== comment.id;
                 setReplyingTo(isOpeningNewReplyForm ? {
                   parentId: isReply ? parentCommentId! : comment.id,
                   targetName: comment.userName,
@@ -454,7 +460,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               </PopoverAnchor>
               {mentionQuery !== null && mentionSuggestions.length > 0 && ( 
                  <PopoverContent
-                    key={mentionQuery} 
+                    key={mentionQuery + (activeMentionStartIndex ?? '')} 
                     className="w-[250px] p-0"
                     side="top"
                     align="start"
@@ -603,6 +609,11 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                               Item {order.orderItems.length > 1 ? `#${index + 1}` : ''}
                             </span>
                             <span className="font-semibold text-card-foreground">{item.model}</span> - {item.quantity} Pcs ({item.lamination})
+                             {item.sheet !== null && item.sheet !== undefined && <span className="text-muted-foreground text-xs">, Sheet: {item.sheet}</span>}
+                            <div className="text-xs mt-0.5">
+                                <span className="text-muted-foreground">Unit Price: </span><span className="font-medium">{formatCurrency(item.unitPrice)}</span>
+                                <span className="text-muted-foreground ml-2">Line Total: </span><span className="font-medium">{formatCurrency(item.lineItemTotalPrice)}</span>
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -619,7 +630,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                     </div>
                   </div>
                 )}
-
 
                <div className="flex items-start space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
                   <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
@@ -703,7 +713,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <form onSubmit={handleCommentSubmit} className="flex items-start space-x-3">
               <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/30 shadow-sm flex-shrink-0 mt-0.5">
                 <AvatarImage src={currentUser?.avatarUrl || CLIENT_AVATAR_URL} alt="Your avatar" data-ai-hint={currentUser ? "user avatar" : "client avatar"} />
-                <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{getInitials(currentUser?.name || "Client")}</AvatarFallback>
+                <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{getInitials(currentUser?.name || order.companyName || "Client")}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <Textarea

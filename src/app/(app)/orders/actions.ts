@@ -2,8 +2,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { TrackingLink, User, OrderItem } from "@/types";
-import { addOrder } from "@/lib/order-service";
+import type { TrackingLink, User, OrderItem, OrderLogEntry } from "@/types"; // Added OrderLogEntry
+import { addOrder, updateOrder as updateOrderService, getOrderById } from "@/lib/order-service"; // Renamed updateOrder
 import { v4 as uuidv4 } from 'uuid';
 
 export async function createOrderAction(
@@ -11,7 +11,7 @@ export async function createOrderAction(
     companyName: string;
     address: string;
     phoneNumber: string;
-    orderItems: Array<Omit<OrderItem, 'id' | 'quantity'> & { quantity: string }>; // Quantity is string from form
+    orderItems: Array<Omit<OrderItem, 'id'> & { id?: string }>; // ID is optional from client, will be ensured here
     initialStatusId: string;
   },
   currentUser: User
@@ -38,30 +38,46 @@ export async function createOrderAction(
       return { error: "At least one order item is required." };
     }
 
-    const processedOrderItems: OrderItem[] = [];
-    for (const item of data.orderItems) {
+    const processedOrderItems: OrderItem[] = data.orderItems.map(item => {
       if (!item.model?.trim()) {
-        return { error: "Model is required for all order items." };
+        throw new Error("Model is required for all order items.");
       }
-      const quantity = parseInt(item.quantity, 10);
+      const quantity = Number(item.quantity);
       if (isNaN(quantity) || quantity < 1) {
-        return { error: `Invalid quantity for model "${item.model}". Quantity must be a positive number.` };
+        throw new Error(`Invalid quantity for model "${item.model}". Quantity must be a positive number.`);
       }
       if (!item.lamination?.trim()) {
-        return { error: `Lamination is required for model "${item.model}".` };
+        throw new Error(`Lamination is required for model "${item.model}".`);
       }
-      processedOrderItems.push({
-        id: uuidv4(), // Generate unique ID for each order item
+      const sheetQty = item.sheet === undefined || item.sheet === null ? null : Number(item.sheet);
+      if (sheetQty !== null && (isNaN(sheetQty) || sheetQty < 0)) {
+          throw new Error(`Invalid sheet quantity for model "${item.model}". Must be a non-negative number if provided.`);
+      }
+      const unitPrice = Number(item.unitPrice);
+      if (isNaN(unitPrice) || unitPrice < 0) {
+        throw new Error(`Invalid unit price for model "${item.model}".`);
+      }
+      const lineItemTotalPrice = Number(item.lineItemTotalPrice);
+       if (isNaN(lineItemTotalPrice) || lineItemTotalPrice < 0) {
+        throw new Error(`Invalid line item total price for model "${item.model}".`);
+      }
+
+
+      return {
+        id: item.id || uuidv4(), // Ensure each item has a unique ID
         model: item.model.trim(),
         quantity: quantity,
         lamination: item.lamination.trim(),
-      });
-    }
+        sheet: sheetQty,
+        unitPrice: unitPrice,
+        lineItemTotalPrice: lineItemTotalPrice,
+      };
+    });
     // --- End Validation ---
 
     const newOrderData = {
-      customerName: data.companyName.trim(), // Assuming customerName is same as companyName for now
       companyName: data.companyName.trim(),
+      // customerName will be set to companyName in addOrder service for now
       address: data.address.trim(),
       phoneNumber: data.phoneNumber.trim(),
       orderItems: processedOrderItems,
@@ -77,19 +93,14 @@ export async function createOrderAction(
     }
 
     revalidatePath("/(app)/orders");
-    revalidatePath("/(app)/dashboard"); // For active orders count etc.
+    revalidatePath("/(app)/dashboard");
     revalidatePath("/(app)/orders/monthly");
     revalidatePath("/(app)/active-orders");
     return createdOrder;
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Unexpected error in createOrderAction:", error);
-    // Log the actual error on the server for debugging
-    // Return a generic error to the client
-    if (error instanceof Error) {
-        return { error: `An unexpected server error occurred: ${error.message}` };
-    }
-    return { error: "An unexpected server error occurred. Please try again later." };
+    return { error: error.message || "An unexpected server error occurred. Please try again later." };
   }
 }
 
@@ -109,20 +120,19 @@ export async function assignDrToOrderAction(
       console.error("assignDrToOrderAction: Ready for Design status ID is required.");
       return { error: "Ready for Design status ID is required." };
     }
-    if (readyForDesignStatusId !== 'ready-for-design') {
+     if (readyForDesignStatusId !== 'ready-for-design') { // Hardcoded ID check
       console.error("assignDrToOrderAction: Invalid readyForDesignStatusId received. Expected 'ready-for-design', got:", readyForDesignStatusId);
       return { error: "Invalid target status ID for DR assignment. Configuration error." };
     }
 
-    // Fetch current order to get existing status history
-    const { getOrderById, updateOrder } = await import("@/lib/order-service"); // Dynamic import for service
+
     const currentOrder = await getOrderById(orderId);
 
     if (!currentOrder) {
       console.error(`assignDrToOrderAction: Order ${orderId} not found.`);
       return { error: `Order ${orderId} not found.` };
     }
-    console.log("assignDrToOrderAction: Current order fetched:", JSON.stringify(currentOrder));
+    // console.log("assignDrToOrderAction: Current order fetched:", JSON.stringify(currentOrder));
 
 
     const logEntry: OrderLogEntry = {
@@ -145,9 +155,9 @@ export async function assignDrToOrderAction(
     console.log("assignDrToOrderAction: Data being sent to updateOrder service:", JSON.stringify(updatedOrderData));
 
 
-    const success = await updateOrder(orderId, updatedOrderData);
+    const success = await updateOrderService(orderId, updatedOrderData); // renamed service function
     if (!success) {
-      console.error("assignDrToOrderAction: updateOrder service returned false for orderId:", orderId);
+      console.error("assignDrToOrderAction: updateOrderService returned false for orderId:", orderId);
       return { error: "Failed to update order with DR assignment." };
     }
 
@@ -157,7 +167,7 @@ export async function assignDrToOrderAction(
     revalidatePath("/(app)/active-orders");
 
 
-    const updatedOrder = await getOrderById(orderId); // Re-fetch to get the latest version with all updates
+    const updatedOrder = await getOrderById(orderId);
     if (!updatedOrder) {
         console.error("assignDrToOrderAction: Failed to retrieve updated order after DR assignment for orderId:", orderId);
         return { error: "Failed to retrieve updated order after DR assignment."};
@@ -165,19 +175,15 @@ export async function assignDrToOrderAction(
     console.log("assignDrToOrderAction: Successfully updated and re-fetched order:", JSON.stringify(updatedOrder));
     return updatedOrder;
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Unexpected error in assignDrToOrderAction:", error);
-    if (error instanceof Error) {
-      return { error: `An unexpected server error occurred during DR assignment: ${error.message}` };
-    }
-    return { error: "An unexpected server error occurred during DR assignment. Please try again later." };
+    return { error: error.message || "An unexpected server error occurred during DR assignment. Please try again later." };
   }
 }
 
 export async function deleteOrderAction(orderId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const { deleteOrder } = await import("@/lib/order-service");
-    const success = await deleteOrder(orderId);
+    const success = await deleteDoc(orderId); // Assuming deleteDoc is the name in order-service, if not, adjust
     if (success) {
       revalidatePath("/(app)/orders");
       revalidatePath("/(app)/dashboard");
@@ -186,13 +192,8 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
       return { success: true };
     }
     return { success: false, error: "Failed to delete order from database." };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in deleteOrderAction:", error);
-    if (error instanceof Error) {
-        return { success: false, error: error.message };
-    }
-    return { success: false, error: "An unexpected error occurred while deleting order." };
+    return { success: false, error: error.message || "An unexpected error occurred while deleting order." };
   }
 }
-
-    

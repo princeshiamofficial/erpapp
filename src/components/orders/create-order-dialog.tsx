@@ -22,13 +22,20 @@ interface CreateOrderDialogProps {
   children: React.ReactNode;
 }
 
-// Type for individual item in the dialog's state (quantity is string for input)
 interface DialogOrderItem {
   id: string;
   model: string;
   quantity: string;
   lamination: string;
+  sheet: string;
+  unitPrice: number | null;
+  lineItemTotalPrice: number | null;
 }
+
+const formatCurrency = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) return 'N/A';
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
+};
 
 export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children }: CreateOrderDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -37,7 +44,16 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [phoneNumber, setPhoneNumber] = useState('');
   const [initialStatusId, setInitialStatusId] = useState<string>('');
   
-  const [orderItems, setOrderItems] = useState<DialogOrderItem[]>([{ id: uuidv4(), model: '', quantity: '', lamination: '' }]);
+  const initialOrderItemState: DialogOrderItem = {
+    id: uuidv4(),
+    model: '',
+    quantity: '1', // Default quantity to 1
+    lamination: '',
+    sheet: '',
+    unitPrice: null,
+    lineItemTotalPrice: null,
+  };
+  const [orderItems, setOrderItems] = useState<DialogOrderItem[]>([initialOrderItemState]);
   
   const [modelOptions, setModelOptions] = useState<ServiceModelItem[]>([]);
   const [laminationOptions, setLaminationOptions] = useState<ServiceLaminationItem[]>([]);
@@ -50,9 +66,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setCompanyName('');
     setAddress('');
     setPhoneNumber('');
-    setInitialStatusId(''); 
-    setOrderItems([{ id: uuidv4(), model: '', quantity: '', lamination: '' }]);
-  }, []);
+    setInitialStatusId('');
+    setOrderItems([{ ...initialOrderItemState, id: uuidv4() }]);
+  }, [initialOrderItemState]);
 
   const fetchOptions = useCallback(async () => {
     setIsLoadingOptions(true);
@@ -74,34 +90,56 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   useEffect(() => {
     if (isOpen) {
       fetchOptions();
-      if (availableStatuses.length > 0) {
-        const isCurrentStatusInAvailableList = availableStatuses.some(s => s.id === initialStatusId);
-        if (!initialStatusId || !isCurrentStatusInAvailableList) {
-          const orderSubmittedStatus = availableStatuses.find(s => s.id === "order-submitted");
-          if (orderSubmittedStatus) {
-            setInitialStatusId(orderSubmittedStatus.id);
-          } else if (availableStatuses[0]) { 
-            setInitialStatusId(availableStatuses[0].id);
-          }
+      const isCurrentStatusInAvailableList = availableStatuses.some(s => s.id === initialStatusId);
+      if (!initialStatusId || !isCurrentStatusInAvailableList) {
+        const orderSubmittedStatus = availableStatuses.find(s => s.id === "order-submitted");
+        if (orderSubmittedStatus) {
+          setInitialStatusId(orderSubmittedStatus.id);
+        } else if (availableStatuses.length > 0 && availableStatuses[0]) {
+          setInitialStatusId(availableStatuses[0].id);
+        } else {
+          setInitialStatusId('');
         }
-      } else {
-        setInitialStatusId('');
       }
     }
   }, [isOpen, availableStatuses, initialStatusId, fetchOptions]);
 
+
+  const calculateLineItemTotal = (unitPrice: number | null, quantityStr: string): number | null => {
+    if (unitPrice === null) return null;
+    const quantity = parseInt(quantityStr, 10);
+    if (isNaN(quantity) || quantity < 1) return null;
+    return unitPrice * quantity;
+  };
+
+  const handleItemChange = (id: string, field: keyof DialogOrderItem, value: string | number | null) => {
+    setOrderItems(prevItems =>
+      prevItems.map(item => {
+        if (item.id === id) {
+          const updatedItem = { ...item, [field]: value };
+          
+          if (field === 'model') {
+            const selectedModel = modelOptions.find(opt => opt.name === value);
+            updatedItem.unitPrice = selectedModel?.price ?? null;
+            updatedItem.lineItemTotalPrice = calculateLineItemTotal(updatedItem.unitPrice, updatedItem.quantity);
+          } else if (field === 'quantity') {
+            updatedItem.lineItemTotalPrice = calculateLineItemTotal(updatedItem.unitPrice, String(value));
+          }
+          return updatedItem;
+        }
+        return item;
+      })
+    );
+  };
+  
   const handleAddItem = () => {
-    setOrderItems([...orderItems, { id: uuidv4(), model: '', quantity: '', lamination: '' }]);
+    setOrderItems([...orderItems, { ...initialOrderItemState, id: uuidv4() }]);
   };
 
   const handleRemoveItem = (id: string) => {
     if (orderItems.length > 1) {
       setOrderItems(orderItems.filter(item => item.id !== id));
     }
-  };
-
-  const handleItemChange = (id: string, field: keyof Omit<DialogOrderItem, 'id'>, value: string) => {
-    setOrderItems(orderItems.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,34 +156,39 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     if (orderItems.some(item => !item.model || !item.quantity || !item.lamination)) {
       toast({
         title: "Validation Error",
-        description: "All order items must have a Model, Quantity, and Lamination selected.",
+        description: "All order items must have Model, Quantity, and Lamination selected.",
         variant: "destructive",
       });
       return;
     }
-
-    const parsedOrderItems: OrderItem[] = orderItems.map(item => {
-      const parsedQuantity = parseInt(item.quantity, 10);
-      if (isNaN(parsedQuantity) || parsedQuantity < 1) {
-        throw new Error(`Invalid quantity for one of the items: "${item.quantity}". Quantity must be a positive number.`);
-      }
-      return {
-        id: item.id, // Keep the dialog-generated ID for now, service might re-gen if needed
-        model: item.model,
-        quantity: parsedQuantity,
-        lamination: item.lamination,
-      };
-    });
     
-    if (parsedOrderItems.some(item => isNaN(item.quantity) || item.quantity < 1)) {
-        toast({
-            title: "Validation Error",
-            description: "Quantity for all items must be a positive number.",
-            variant: "destructive",
-        });
+    const processedOrderItems: Array<Omit<OrderItem, 'id'> & { id?: string }> = [];
+    for (const item of orderItems) {
+      const quantity = parseInt(item.quantity, 10);
+      if (isNaN(quantity) || quantity < 1) {
+        toast({ title: "Validation Error", description: `Invalid quantity for model "${item.model}". Quantity must be a positive number.`, variant: "destructive" });
         return;
-    }
+      }
+      const sheetQty = item.sheet.trim() === '' ? null : parseInt(item.sheet, 10);
+      if (item.sheet.trim() !== '' && (isNaN(sheetQty!) || sheetQty! < 0)) {
+        toast({ title: "Validation Error", description: `Invalid sheet quantity for model "${item.model}". Must be a non-negative number if provided.`, variant: "destructive" });
+        return;
+      }
+      if (item.unitPrice === null || item.lineItemTotalPrice === null) {
+        toast({ title: "Price Error", description: `Pricing information is missing for model "${item.model}". Ensure a model is selected.`, variant: "destructive" });
+        return;
+      }
 
+      processedOrderItems.push({
+        id: item.id, // Keep the dialog-generated ID
+        model: item.model,
+        quantity: quantity,
+        lamination: item.lamination,
+        sheet: sheetQty,
+        unitPrice: item.unitPrice,
+        lineItemTotalPrice: item.lineItemTotalPrice,
+      });
+    }
 
     if (availableStatuses.length === 0 && !initialStatusId) { 
       toast({
@@ -161,7 +204,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       companyName,
       address,
       phoneNumber,
-      orderItems: parsedOrderItems,
+      orderItems: processedOrderItems as OrderItem[], // Cast after ensuring IDs are there
       initialStatusId,
     };
 
@@ -192,8 +235,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                     laminationOptions.length > 0 &&
                     !isLoadingOptions &&
                     orderItems.length > 0 &&
-                    orderItems.every(item => item.model && item.quantity && item.lamination && parseInt(item.quantity) > 0);
-
+                    orderItems.every(item => item.model && item.quantity && parseInt(item.quantity) > 0 && item.lamination && item.unitPrice !== null && item.lineItemTotalPrice !== null);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
@@ -203,7 +245,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-3xl">
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
-          <DialogDescription>Enter company details and add order items. All fields are required unless marked optional.</DialogDescription>
+          <DialogDescription>Enter company details and add order items. All fields are required.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -223,50 +265,67 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             <div className="space-y-3 mt-4 border-t border-border pt-4">
               <Label className="text-lg font-semibold">Order Items</Label>
               {orderItems.map((item, index) => (
-                <div key={item.id} className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end p-3 border rounded-md bg-secondary/30 relative">
-                  <div className="space-y-1">
-                    <Label htmlFor={`model-${item.id}`}>Model</Label>
-                    <Select value={item.model} onValueChange={(value) => handleItemChange(item.id, 'model', value)} required disabled={isLoadingOptions || modelOptions.length === 0}>
-                      <SelectTrigger id={`model-${item.id}`}>
-                        <SelectValue placeholder={isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {modelOptions.map(option => (
-                          <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                <div key={item.id} className="p-3 border rounded-md bg-secondary/30 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor={`model-${item.id}`}>Model</Label>
+                      <Select value={item.model} onValueChange={(value) => handleItemChange(item.id, 'model', value)} required disabled={isLoadingOptions || modelOptions.length === 0}>
+                        <SelectTrigger id={`model-${item.id}`}>
+                          <SelectValue placeholder={isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {modelOptions.map(option => (
+                            <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                     <div className="space-y-1">
+                      <Label htmlFor={`lamination-${item.id}`}>Lamination</Label>
+                      <Select value={item.lamination} onValueChange={(value) => handleItemChange(item.id, 'lamination', value)} required disabled={isLoadingOptions || laminationOptions.length === 0}>
+                        <SelectTrigger id={`lamination-${item.id}`}>
+                           <SelectValue placeholder={isLoadingOptions ? "Loading..." : (laminationOptions.length === 0 ? "No laminations" : "Select lamination")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {laminationOptions.map(option => (
+                            <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1fr_auto] gap-3 items-end">
+                    <div className="space-y-1">
+                      <Label htmlFor={`quantity-${item.id}`}>Quantity</Label>
+                      <Input id={`quantity-${item.id}`} type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} placeholder="e.g., 100" min="1" required />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor={`sheet-${item.id}`}>Sheet (Qty)</Label>
+                      <Input id={`sheet-${item.id}`} type="number" value={item.sheet} onChange={(e) => handleItemChange(item.id, 'sheet', e.target.value)} placeholder="e.g., 50 (Optional)" min="0" />
+                    </div>
+                     <div className="space-y-1">
+                        <Label>Unit Price</Label>
+                        <Input value={formatCurrency(item.unitPrice)} readOnly disabled className="bg-muted/50"/>
+                      </div>
+                     <div className="space-y-1">
+                        <Label>Line Total</Label>
+                        <Input value={formatCurrency(item.lineItemTotalPrice)} readOnly disabled className="bg-muted/50"/>
+                      </div>
 
-                  <div className="space-y-1">
-                    <Label htmlFor={`quantity-${item.id}`}>Quantity</Label>
-                    <Input id={`quantity-${item.id}`} type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} placeholder="e.g., 100" min="1" required />
+                    {orderItems.length > 1 && (
+                      <Button 
+                        type="button" 
+                        variant="destructive" 
+                        size="icon" 
+                        onClick={() => handleRemoveItem(item.id)} 
+                        disabled={isSubmitting}
+                        className="h-10 w-10 self-end sm:ml-auto" 
+                        title="Remove item"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
-
-                  <div className="space-y-1">
-                    <Label htmlFor={`lamination-${item.id}`}>Lamination</Label>
-                    <Select value={item.lamination} onValueChange={(value) => handleItemChange(item.id, 'lamination', value)} required disabled={isLoadingOptions || laminationOptions.length === 0}>
-                      <SelectTrigger id={`lamination-${item.id}`}>
-                         <SelectValue placeholder={isLoadingOptions ? "Loading..." : (laminationOptions.length === 0 ? "No laminations" : "Select lamination")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {laminationOptions.map(option => (
-                          <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button 
-                    type="button" 
-                    variant="destructive" 
-                    size="icon" 
-                    onClick={() => handleRemoveItem(item.id)} 
-                    disabled={orderItems.length <= 1 || isSubmitting}
-                    className="h-10 w-10 self-end"
-                    title="Remove item"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
               ))}
                {(isLoadingOptions && (orderItems.length === 0 || (modelOptions.length === 0 || laminationOptions.length === 0))) && 
@@ -280,7 +339,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               </Button>
             </div>
 
-
             <div className="space-y-1 mt-4 border-t border-border pt-4">
               <Label htmlFor="initialStatus">Initial Status</Label>
               <Select value={initialStatusId} onValueChange={setInitialStatusId} required>
@@ -293,13 +351,13 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   ))}
                 </SelectContent>
               </Select>
-               {availableStatuses.length === 0 && !isSubmitting && <p className="text-xs text-muted-foreground mt-1">Statuses are loading or unavailable. Please wait or check admin settings.</p>}
+               {availableStatuses.length === 0 && !isSubmitting && !isLoadingOptions && <p className="text-xs text-muted-foreground mt-1">Statuses are loading or unavailable. Please wait or check admin settings.</p>}
             </div>
           </div>
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => { setIsOpen(false); }} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={!canSubmit}>
-              {isSubmitting ? "Creating..." : "Create Order"}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</> : "Create Order"}
             </Button>
           </DialogFooter>
         </form>
@@ -307,5 +365,3 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
-
-    

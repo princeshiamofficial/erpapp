@@ -38,12 +38,12 @@ export interface OrderItem {
   quantity: number;
   lamination: string;
   sheet?: number | null;
-  price?: number | null; // This is likely the total price for this line item
+  unitPrice: number; // Price per unit of the selected model
+  lineItemTotalPrice: number; // Calculated as unitPrice * quantity
 }
 
 export interface TrackingLink {
   id: string;
-  // customerName: string; // To be removed or kept if different from company contact
   companyName: string;
   address: string;
   phoneNumber: string;
