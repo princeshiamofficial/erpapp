@@ -7,11 +7,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { User, CustomStatus, ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem, OrderItem } from "@/types"; // Added ServicePaymentMethodItem
+import type { User, CustomStatus, ServiceModelItem, ServiceLaminationItem, OrderItem, ServicePaymentMethodItem } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { createOrderAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getModels, getLaminations, getPaymentMethods } from '@/lib/service-options-service'; // Added getPaymentMethods
+import { getModels, getLaminations, getPaymentMethods } from '@/lib/service-options-service';
 import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -39,6 +39,15 @@ const formatCurrency = (value: number | null | undefined): string => {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
+const initialOrderItemState: DialogOrderItem = {
+  id: uuidv4(),
+  model: '',
+  quantity: '1',
+  lamination: '',
+  unitPrice: null,
+  lineItemTotalPrice: null,
+};
+
 export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children }: CreateOrderDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [companyName, setCompanyName] = useState('');
@@ -47,20 +56,14 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [initialStatusId, setInitialStatusId] = useState<string>('');
   const [advancePayment, setAdvancePayment] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('');
+  const [showCustomPaymentInput, setShowCustomPaymentInput] = useState(false);
+  const [customPaymentMethodText, setCustomPaymentMethodText] = useState('');
 
-  const initialOrderItemState: DialogOrderItem = {
-    id: uuidv4(),
-    model: '',
-    quantity: '1',
-    lamination: '',
-    unitPrice: null,
-    lineItemTotalPrice: null,
-  };
   const [orderItems, setOrderItems] = useState<DialogOrderItem[]>([{ ...initialOrderItemState }]);
 
   const [modelOptions, setModelOptions] = useState<ServiceModelItem[]>([]);
   const [laminationOptions, setLaminationOptions] = useState<ServiceLaminationItem[]>([]);
-  const [paymentMethodOptions, setPaymentMethodOptions] = useState<ServicePaymentMethodItem[]>([]); // Added state for payment method options
+  const [paymentMethodOptions, setPaymentMethodOptions] = useState<ServicePaymentMethodItem[]>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [popoverOpenStates, setPopoverOpenStates] = useState<Record<string, boolean>>({});
 
@@ -74,21 +77,23 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setInitialStatusId('');
     setAdvancePayment('');
     setPaymentMethod('');
+    setShowCustomPaymentInput(false);
+    setCustomPaymentMethodText('');
     setOrderItems([{ ...initialOrderItemState, id: uuidv4() }]);
     setPopoverOpenStates({});
-  }, [initialOrderItemState]);
+  }, []);
 
   const fetchOptions = useCallback(async () => {
     setIsLoadingOptions(true);
     try {
-      const [fetchedModels, fetchedLaminations, fetchedPaymentMethods] = await Promise.all([ // Fetch payment methods
+      const [fetchedModels, fetchedLaminations, fetchedPaymentMethods] = await Promise.all([
         getModels(),
         getLaminations(),
         getPaymentMethods(),
       ]);
       setModelOptions(fetchedModels);
       setLaminationOptions(fetchedLaminations);
-      setPaymentMethodOptions(fetchedPaymentMethods); // Set payment method options
+      setPaymentMethodOptions(fetchedPaymentMethods);
     } catch (error) {
       console.error("Failed to fetch order options:", error);
       toast({ title: "Error", description: "Could not load order options.", variant: "destructive" });
@@ -114,7 +119,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
   }, [isOpen, availableStatuses, fetchOptions, initialStatusId]);
 
-
   const calculateLineItemTotal = (unitPrice: number | null, quantityStr: string): number | null => {
     if (unitPrice === null) return null;
     const quantity = parseInt(quantityStr, 10);
@@ -127,13 +131,14 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       prevItems.map(item => {
         if (item.id === itemId) {
           let updatedItem = { ...item };
-          if (field === 'modelName') { // Handle model selection from combobox
+          if (field === 'modelName') {
             const selectedModel = modelOptions.find(opt => opt.name === value);
             updatedItem.model = selectedModel ? selectedModel.name : '';
             updatedItem.unitPrice = selectedModel?.price ?? null;
-          } else {
-            updatedItem = { ...item, [field]: value };
+          } else if (field === 'quantity' || field === 'lamination' || field === 'model') {
+             updatedItem = { ...item, [field]: value as string }; // model, quantity, lamination are strings in DialogOrderItem
           }
+
 
           if (field === 'modelName' || field === 'quantity') {
             updatedItem.lineItemTotalPrice = calculateLineItemTotal(updatedItem.unitPrice, updatedItem.quantity);
@@ -159,6 +164,16 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setPopoverOpenStates(prev => ({ ...prev, [itemId]: open === undefined ? !prev[itemId] : open }));
   };
 
+  const handlePaymentMethodChange = (value: string) => {
+    setPaymentMethod(value);
+    if (value.toLowerCase() === 'other') {
+      setShowCustomPaymentInput(true);
+    } else {
+      setShowCustomPaymentInput(false);
+      setCustomPaymentMethodText('');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!companyName || !address || !phoneNumber || !initialStatusId) {
@@ -179,7 +194,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       return;
     }
 
-    const parsedOrderItems: Array<Omit<OrderItem, 'id'>> = [];
+    const parsedOrderItems: OrderItem[] = [];
     for (const item of orderItems) {
       const quantity = parseInt(item.quantity, 10);
       if (isNaN(quantity) || quantity < 1) {
@@ -191,6 +206,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         return;
       }
       parsedOrderItems.push({
+        id: item.id, // Important: Keep the client-generated ID
         model: item.model,
         quantity: quantity,
         lamination: item.lamination,
@@ -198,6 +214,20 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         lineItemTotalPrice: item.lineItemTotalPrice,
       });
     }
+
+    let finalPaymentMethod = paymentMethod.trim() || null;
+    if (paymentMethod.toLowerCase() === 'other') {
+      if (!customPaymentMethodText.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Please specify the 'Other' payment method.",
+          variant: "destructive",
+        });
+        return;
+      }
+      finalPaymentMethod = customPaymentMethodText.trim();
+    }
+
 
     let parsedAdvancePayment: number | null = null;
     if (advancePayment.trim() !== '') {
@@ -207,7 +237,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         return;
       }
     }
-
 
     if (availableStatuses.length === 0 && !initialStatusId) {
       toast({
@@ -225,7 +254,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       phoneNumber,
       orderItems: parsedOrderItems,
       advancePayment: parsedAdvancePayment,
-      paymentMethod: paymentMethod.trim() || null,
+      paymentMethod: finalPaymentMethod,
       initialStatusId,
     };
 
@@ -263,7 +292,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       item.lamination &&
       item.unitPrice !== null &&
       item.lineItemTotalPrice !== null
-    );
+    ) &&
+    !(paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim());
+
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
@@ -273,20 +304,20 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
-          <DialogDescription>Enter company details and add order items. All fields are required unless marked optional.</DialogDescription>
+          <DialogDescription>Enter company details and add order items. Required fields are marked with *.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="space-y-1">
-              <Label htmlFor="companyName">Company Name</Label>
+              <Label htmlFor="companyName">Company Name *</Label>
               <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="address">Address *</Label>
               <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="phoneNumber">Phone Number</Label>
+              <Label htmlFor="phoneNumber">Phone Number *</Label>
               <Input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
             </div>
 
@@ -297,9 +328,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="paymentMethod">Payment Method (Optional)</Label>
-                  <Select value={paymentMethod} onValueChange={setPaymentMethod} disabled={isLoadingOptions || paymentMethodOptions.length === 0}>
+                  <Select value={paymentMethod} onValueChange={handlePaymentMethodChange} disabled={isLoadingOptions || paymentMethodOptions.length === 0}>
                     <SelectTrigger id="paymentMethod">
-                      <SelectValue placeholder={isLoadingOptions ? "Loading..." : (paymentMethodOptions.length === 0 ? "No payment methods" : "Select payment method")} />
+                      <SelectValue placeholder={isLoadingOptions ? "Loading..." : (paymentMethodOptions.length === 0 ? "No methods" : "Select payment method")} />
                     </SelectTrigger>
                     <SelectContent>
                       {paymentMethodOptions.map(option => (
@@ -307,17 +338,28 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                       ))}
                     </SelectContent>
                   </Select>
+                   {showCustomPaymentInput && (
+                    <div className="mt-2 space-y-1">
+                      <Label htmlFor="customPaymentMethodText">Specify Other Payment Method *</Label>
+                      <Input
+                        id="customPaymentMethodText"
+                        value={customPaymentMethodText}
+                        onChange={(e) => setCustomPaymentMethodText(e.target.value)}
+                        placeholder="e.g., Specific Mobile Wallet"
+                        required={paymentMethod.toLowerCase() === 'other'}
+                      />
+                    </div>
+                  )}
                 </div>
             </div>
 
-
             <div className="space-y-3 mt-4 border-t border-border pt-4">
-              <Label className="text-lg font-semibold">Order Items</Label>
+              <Label className="text-lg font-semibold">Order Items *</Label>
               {orderItems.map((item, index) => (
                 <div key={item.id} className="p-3 border rounded-md bg-secondary/30 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_2fr_1.5fr_auto] gap-3 items-end">
+                  <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_2fr_1.5fr_auto] gap-x-3 gap-y-2 items-end">
                     <div className="space-y-1">
-                      <Label htmlFor={`model-${item.id}`}>Model</Label>
+                      <Label htmlFor={`model-${item.id}`}>Model *</Label>
                       <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
                         <PopoverTrigger asChild>
                           <Button
@@ -364,11 +406,11 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                       </Popover>
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor={`quantity-${item.id}`}>Quantity</Label>
+                      <Label htmlFor={`quantity-${item.id}`}>Quantity *</Label>
                       <Input id={`quantity-${item.id}`} type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} placeholder="e.g., 100" min="1" required />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor={`lamination-${item.id}`}>Lamination</Label>
+                      <Label htmlFor={`lamination-${item.id}`}>Lamination *</Label>
                       <Select value={item.lamination} onValueChange={(value) => handleItemChange(item.id, 'lamination', value)} required disabled={isLoadingOptions || laminationOptions.length === 0}>
                         <SelectTrigger id={`lamination-${item.id}`}>
                           <SelectValue placeholder={isLoadingOptions ? "Loading..." : (laminationOptions.length === 0 ? "No laminations" : "Select lamination")} />
@@ -413,10 +455,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             </div>
 
             <div className="space-y-1 mt-4 border-t border-border pt-4">
-              <Label htmlFor="initialStatus">Initial Status</Label>
+              <Label htmlFor="initialStatus">Initial Status *</Label>
               <Select value={initialStatusId} onValueChange={setInitialStatusId} required>
                 <SelectTrigger id="initialStatus" disabled={availableStatuses.length === 0}>
-                  <SelectValue placeholder={availableStatuses.length === 0 ? "Loading statuses..." : "Select initial status"} />
+                  <SelectValue placeholder={availableStatuses.length === 0 ? "No statuses..." : "Select initial status"} />
                 </SelectTrigger>
                 <SelectContent>
                   {availableStatuses.map(status => (
@@ -438,3 +480,5 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
+
+    
