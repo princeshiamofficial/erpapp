@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Edit } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Edit } from "lucide-react";
 import Image from "next/image";
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -274,7 +274,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             setActiveMentionStartIndex(lastAtSymbolIndex);
             
             const clientOption = { id: 'client-mention', name: (order.companyName || "Client"), role: 'Client' as 'Client' };
-            const usersToSearch = Array.isArray(allUsersForMentions) ? [clientOption, ...allUsersForMentions] : [clientOption];
+            const usersToSearchFromProp = Array.isArray(allUsersForMentions) ? allUsersForMentions : [];
+            const usersToSearch = [clientOption, ...usersToSearchFromProp];
             
             const filtered = usersToSearch.filter(user =>
                 (user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
@@ -604,7 +605,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                         <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-center">Quantity</TableHead>
                         <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Lamination</TableHead>
                         <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Unit Price</TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Line Total</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Total Price</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -768,6 +769,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
+
 
 
 

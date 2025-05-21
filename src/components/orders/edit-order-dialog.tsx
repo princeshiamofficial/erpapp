@@ -29,7 +29,7 @@ interface EditOrderDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   order: TrackingLink;
-  currentUser: User; // Prop for receiving the current user
+  currentUser: User; 
   onOrderUpdated: () => void;
 }
 
@@ -112,6 +112,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       setOrderItems(order.orderItems.map(item => ({
         ...item,
         quantity: item.quantity.toString(),
+        unitPrice: item.unitPrice, 
+        lineItemTotalPrice: item.lineItemTotalPrice,
       })));
     }
      setPopoverOpenStates({});
@@ -190,7 +192,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setPaymentMethod(value);
     if (value.toLowerCase() === 'other') {
       setShowCustomPaymentInput(true);
-      setCustomPaymentMethodText('');
+      setCustomPaymentMethodText(''); 
     } else {
       setShowCustomPaymentInput(false);
       setCustomPaymentMethodText('');
@@ -211,15 +213,21 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       return;
     }
 
-    if (orderItems.some(item => !item.model || !item.quantity || parseInt(item.quantity, 10) < 1 || !item.lamination || item.unitPrice === null)) {
-      toast({
-        title: "Validation Error",
-        description: "All order items must have Model, a valid Quantity (>=1), Lamination, and an associated Unit Price (via model selection).",
-        variant: "destructive",
-      });
-      return;
+    for (const item of orderItems) {
+      if (!item.model || !item.quantity || !item.lamination) {
+        toast({ title: "Validation Error", description: "All order items must have Model, Quantity, and Lamination selected.", variant: "destructive" });
+        return;
+      }
+      const quantityNum = parseInt(item.quantity, 10);
+      if (isNaN(quantityNum) || quantityNum < 1) {
+        toast({ title: "Validation Error", description: `Invalid quantity "${item.quantity}" for model "${item.model}". Quantity must be a positive number.`, variant: "destructive"});
+        return;
+      }
+      if (item.unitPrice === null || item.lineItemTotalPrice === null) {
+        toast({ title: "Price Error", description: `Pricing information is missing for model "${item.model}". Ensure model is selected and has a price.`, variant: "destructive" });
+        return;
+      }
     }
-
 
     let finalPaymentMethod = paymentMethod.trim() || null;
     if (paymentMethod.toLowerCase() === 'other') {
@@ -241,20 +249,14 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
 
     setIsSubmitting(true);
 
-    const processedOrderItems: OrderItem[] = orderItems.map(item => {
-      const quantity = parseInt(item.quantity, 10);
-      const unitPrice = item.unitPrice ?? 0;
-      const lineItemTotalPrice = calculateLineItemTotal(unitPrice, item.quantity) ?? 0;
-
-      return {
-        id: item.id,
-        model: item.model,
-        quantity: quantity,
-        lamination: item.lamination,
-        unitPrice: unitPrice,
-        lineItemTotalPrice: lineItemTotalPrice,
-      };
-    });
+    const processedOrderItems: OrderItem[] = orderItems.map(item => ({
+      id: item.id,
+      model: item.model,
+      quantity: parseInt(item.quantity, 10),
+      lamination: item.lamination,
+      unitPrice: item.unitPrice!,
+      lineItemTotalPrice: item.lineItemTotalPrice!,
+    }));
 
 
     const updates: Partial<TrackingLink> = {
@@ -266,13 +268,12 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       orderItems: processedOrderItems,
     };
 
-    // Pass the currentUser from props to the server action
     const result = await updateOrderAction(order.id, updates, currentUser);
     setIsSubmitting(false);
 
     if (result.success && result.order) {
-      onOrderUpdated(); // Parent will show toast and re-fetch data
-      onOpenChange(false); // Close the dialog
+      onOrderUpdated(); 
+      onOpenChange(false); 
     } else {
       toast({ title: "Update Failed", description: result.error || "Could not update order.", variant: "destructive" });
     }
@@ -285,13 +286,13 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     orderItems.every(item =>
       item.model &&
       item.quantity &&
-      parseInt(item.quantity, 10) > 0 &&
+      parseInt(item.quantity) > 0 &&
       item.lamination &&
       item.unitPrice !== null &&
       item.lineItemTotalPrice !== null
     ) &&
     !(paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
-    currentUser && currentUser.role; // Ensure currentUser (from prop) is valid for submission
+    currentUser && currentUser.role; 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -334,7 +335,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                       {paymentMethodOptions.map(option => (
                         <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
                       ))}
-                      {paymentMethodOptions.length === 0 && <div className="p-2 text-sm text-muted-foreground text-center">No payment methods available.</div>}
+                      {paymentMethodOptions.length === 0 && !isLoadingOptions && <div className="p-2 text-sm text-muted-foreground text-center">No payment methods available.</div>}
                     </SelectContent>
                   </Select>
                   {showCustomPaymentInput && (
@@ -355,7 +356,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
 
               <div className="space-y-3 mt-4 border-t border-border pt-4">
                 <Label className="text-lg font-semibold">Order Items *</Label>
-                {orderItems.map((item, index) => (
+                {orderItems.map((item) => (
                   <div key={item.id} className="p-3 border rounded-md bg-secondary/30 space-y-3">
                     <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_2fr_1.5fr_auto] gap-x-3 gap-y-2 items-end">
                       <div className="space-y-1">
@@ -426,7 +427,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                       </div>
 
                       <div className="space-y-1">
-                        <Label>Line Total</Label>
+                        <Label>Total Price</Label>
                         <Input value={formatCurrency(item.lineItemTotalPrice)} readOnly disabled className="bg-muted/50 text-foreground" />
                       </div>
 
