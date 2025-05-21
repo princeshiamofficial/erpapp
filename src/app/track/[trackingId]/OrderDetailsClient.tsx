@@ -70,14 +70,15 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
 
   useEffect(() => {
-    console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
+    // console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
+    // console.log('OrderDetailsClient received orderItems:', JSON.stringify(initialOrder?.orderItems, null, 2));
   }, [initialOrder]);
 
   useEffect(() => {
     if (Array.isArray(allUsersForMentions)) {
-      console.log("OrderDetailsClient: Received allUsersForMentions (first 5):", allUsersForMentions.slice(0, 5).map(u => ({id: u.id, name: u.name, role: u.role, avatarUrl: u.avatarUrl ? 'Exists' : 'None'})));
+      // console.log("OrderDetailsClient: Received allUsersForMentions (first 5):", allUsersForMentions.slice(0, 5).map(u => ({id: u.id, name: u.name, role: u.role, avatarUrl: u.avatarUrl ? 'Exists' : 'None'})));
     } else {
-      console.warn("OrderDetailsClient: allUsersForMentions prop is not an array. Received:", allUsersForMentions);
+      // console.warn("OrderDetailsClient: allUsersForMentions prop is not an array. Received:", allUsersForMentions);
     }
   }, [allUsersForMentions]);
 
@@ -142,7 +143,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     }
     setIsSubmittingComment(true);
     const result = await submitCommentAction(order.id, {
-      userName: currentUser ? currentUser.name : `${order.companyName} (Client)`,
+      userName: currentUser ? currentUser.name : (order.customerName || order.companyName || "Client"), // Use customerName if available
       userRole: currentUser ? currentUser.role : 'Client',
       text: newComment,
       isInternal: false,
@@ -171,15 +172,15 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     if (currentUser) {
       result = await submitReplyAction(
         order.id,
-        replyingTo.parentId, // Always use the top-level parent's ID
+        replyingTo.parentId,
         currentReplyText,
-        false, 
+        false,
         currentUser
       );
     } else {
       result = await submitClientReplyAction(
         order.id,
-        replyingTo.parentId, // Always use the top-level parent's ID
+        replyingTo.parentId,
         currentReplyText
       );
     }
@@ -244,10 +245,10 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     }
   };
 
- const renderTextWithMentions = (text: string) => {
+  const renderTextWithMentions = (text: string) => {
     if (!text) return '';
-    return text.split(/(@[\w.-]+)/g).map((part, index) => {
-      if (index % 2 === 1 && part.startsWith('@')) { 
+    return text.split(/(@[\w\s.-]+)/g).map((part, index) => { // Allow spaces in mentions
+      if (index % 2 === 1 && part.startsWith('@')) {
         return <strong key={index} className="text-primary font-semibold">{part.substring(1)}</strong>;
       }
       return part;
@@ -258,63 +259,65 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const handleReplyTextChangeForMention = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
     setCurrentReplyText(text);
-    
+
     const cursorPosition = e.target.selectionStart;
     if (cursorPosition === null) {
-        setMentionQuery(null);
-        setActiveMentionStartIndex(null);
-        setMentionSuggestions([]);
-        return;
+      setMentionQuery(null);
+      setActiveMentionStartIndex(null);
+      setMentionSuggestions([]);
+      return;
     }
 
     const textBeforeCursor = text.substring(0, cursorPosition);
     const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@');
-    
+
     if (lastAtSymbolIndex !== -1) {
-        const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
-        const charAfterQuery = text.charAt(lastAtSymbolIndex + 1 + potentialQuery.length);
-        
-        // Only trigger if cursor is at the end of the potential mention, or before a space
-        if (/^[a-zA-Z0-9_.-]*$/.test(potentialQuery) && (charAfterQuery === '' || charAfterQuery === ' ')) {
-            console.log("FCM: Mention - Potential Query:", potentialQuery);
-            setMentionQuery(potentialQuery);
-            setActiveMentionStartIndex(lastAtSymbolIndex);
+      const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
+      // Only trigger suggestions if cursor is right after "@" or after some typed characters
+      if (cursorPosition === lastAtSymbolIndex + 1 || /^[a-zA-Z0-9_.-]*$/.test(potentialQuery)) {
+        // console.log("FCM: Mention - Potential Query:", potentialQuery);
+        setMentionQuery(potentialQuery);
+        setActiveMentionStartIndex(lastAtSymbolIndex);
 
-            const clientOption = { id: 'client-mention', name: order.companyName, role: 'Client' as 'Client' };
-            const usersToSearch = (Array.isArray(allUsersForMentions) ? [clientOption, ...allUsersForMentions] : [clientOption]);
+        const clientOption = { id: 'client-mention', name: (order.customerName || order.companyName || "Client"), role: 'Client' as 'Client' };
+        const usersToSearch = (Array.isArray(allUsersForMentions) ? [clientOption, ...allUsersForMentions] : [clientOption]);
 
-            const filtered = usersToSearch.filter(user =>
-                user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
-                user.role.toLowerCase().includes(potentialQuery.toLowerCase())
-            ).slice(0, 7);
-            setMentionSuggestions(filtered);
-            console.log("FCM: Mention - Filtered Suggestions:", filtered);
-            return;
-        }
+        const filtered = usersToSearch.filter(user =>
+          user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
+          user.role.toLowerCase().includes(potentialQuery.toLowerCase())
+        ).slice(0, 7);
+        setMentionSuggestions(filtered);
+        // console.log("FCM: Mention - Filtered Suggestions:", filtered);
+        return;
+      }
     }
     setMentionQuery(null);
     setActiveMentionStartIndex(null);
     setMentionSuggestions([]);
-};
+  };
 
 
   const handleMentionSelect = (userNameToInsert: string) => {
     if (activeMentionStartIndex === null || !replyTextareaRef.current) {
-      console.log("FCM: Mention - Select cancelled, no active mention start index or textarea ref.");
+      // console.log("FCM: Mention - Select cancelled, no active mention start index or textarea ref.");
       return;
     }
 
     const text = currentReplyText;
-    const queryLength = mentionQuery?.length || 0;
-    const cursorPosition = replyTextareaRef.current.selectionStart || 0;
+    const queryLength = mentionQuery?.length || 0; // Length of text after "@"
+    const cursorPosition = activeMentionStartIndex + 1 + queryLength;
+
 
     const textBeforeAt = text.substring(0, activeMentionStartIndex);
-    const textAfterQueryEnd = text.substring(activeMentionStartIndex + 1 + queryLength);
-    
-    const newText = `${textBeforeAt}@${userNameToInsert.replace(/\s+/g, '')} ${textAfterQueryEnd.startsWith(' ') ? textAfterQueryEnd : textAfterQueryEnd}`.trimEnd() + ' ';
+    const textAfterQueryEnd = text.substring(cursorPosition);
+
+    // Replace spaces in username with nothing for the mention tag, but use full name for display
+    const mentionTag = userNameToInsert.replace(/\s+/g, '');
+
+    const newText = `${textBeforeAt}@${mentionTag} ${textAfterQueryEnd.startsWith(' ') ? textAfterQueryEnd : textAfterQueryEnd}`.trimEnd() + ' ';
     setCurrentReplyText(newText);
 
-    const newCursorPosition = activeMentionStartIndex + 1 + userNameToInsert.replace(/\s+/g, '').length + 1;
+    const newCursorPosition = activeMentionStartIndex + 1 + mentionTag.length + 1;
 
     setTimeout(() => {
       if (replyTextareaRef.current) {
@@ -340,36 +343,28 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     let avatarDataAiHint = "user initials avatar";
     let userToDisplay: User | undefined | null = null;
 
-    // console.log(`Rendering comment by: ${comment.userName}, Role: ${comment.userRole}, UserID: ${comment.userId}, Comment ID: ${comment.id}`);
     if (comment.userRole === 'Client') {
       avatarSrc = CLIENT_AVATAR_URL;
       avatarDataAiHint = "client avatar";
-      // console.log(`Comment by Client ${comment.userName}. Using client avatar: ${avatarSrc}`);
     } else if (comment.userId && Array.isArray(allUsersForMentions)) {
       userToDisplay = allUsersForMentions.find(u => u.id === comment.userId);
-      // console.log(`User lookup for ID ${comment.userId}: Found user - ${userToDisplay?.name}`);
       if (userToDisplay?.avatarUrl) {
         avatarSrc = userToDisplay.avatarUrl;
         avatarDataAiHint = "user uploaded avatar";
-        // console.log(`User ${userToDisplay.name} found with avatarUrl: ${avatarSrc}`);
-      } else {
-        // console.log(`User ${userToDisplay?.name || 'Unknown User'} - No specific avatarUrl. Using fallback.`);
       }
-    } else {
-       // console.log(`Comment by ${comment.userName} - No specific user ID or allUsersForMentions not an array or empty. Using fallback avatar.`);
     }
     const avatarFallback = getInitials(comment.userName || "User");
 
 
     const currentVisibleReplies = (comment.replies || []).filter(reply =>
-        !(reply.isInternal && !currentUser) &&
-        !(reply.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role))
+      !(reply.isInternal && !currentUser) &&
+      !(reply.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role))
     ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     const isRepliesExpanded = expandedReplies[comment.id] || false;
     const repliesToRender = isRepliesExpanded || currentVisibleReplies.length <= MAX_INITIAL_REPLIES_TO_SHOW
-        ? currentVisibleReplies
-        : currentVisibleReplies.slice(0, MAX_INITIAL_REPLIES_TO_SHOW);
+      ? currentVisibleReplies
+      : currentVisibleReplies.slice(0, MAX_INITIAL_REPLIES_TO_SHOW);
 
 
     return (
@@ -397,9 +392,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => handleToggleLike(comment.id, isReply, parentCommentId)}
-              className={`font-medium px-1.5 py-0.5 rounded-sm transition-colors flex items-center gap-1 group/likebtn ${
-                hasLiked ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20 font-semibold' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
-              }`}
+              className={`font-medium px-1.5 py-0.5 rounded-sm transition-colors flex items-center gap-1 group/likebtn ${hasLiked ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20 font-semibold' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
+                }`}
               title={hasLiked ? "Unlike" : "Like"}
               disabled={!reactorId}
             >
@@ -408,7 +402,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 transition={{ duration: 0.4, ease: "easeInOut" }}
                 key={`${comment.id}-${hasLiked ? 'liked' : 'unliked'}`}
               >
-                <Heart className={`h-4 w-4 ${hasLiked ? 'fill-red-500 text-red-500' : 'fill-transparent text-muted-foreground group-hover/likebtn:text-red-500' }`} />
+                <Heart className={`h-4 w-4 ${hasLiked ? 'fill-red-500 text-red-500' : 'fill-transparent text-muted-foreground group-hover/likebtn:text-red-500'}`} />
               </motion.span>
               <span className="text-xs">Like</span>
               {comment.likes && comment.likes.count > 0 && (
@@ -427,10 +421,10 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 } : null);
 
                 if (isOpeningNewReplyForm) {
-                    setCurrentReplyText(`@${comment.userName.replace(/\s+/g, '')} `);
-                    setTimeout(() => replyTextareaRef.current?.focus(), 0);
+                  setCurrentReplyText(`@${comment.userName.replace(/\s+/g, '')} `);
+                  setTimeout(() => replyTextareaRef.current?.focus(), 0);
                 } else {
-                    setCurrentReplyText('');
+                  setCurrentReplyText('');
                 }
               }}
               className="font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 px-1.5 py-0.5 rounded-sm transition-colors"
@@ -439,17 +433,17 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             </button>
             <span className="text-muted-foreground">&middot;</span>
             <span className="text-muted-foreground" title={isClient ? formatDate(comment.timestamp) : 'Loading date...'}>
-              {isClient ? formatDistanceToNowStrict(new Date(comment.timestamp), { addSuffix: true}) : <Skeleton className="h-3 w-10 inline-block" />}
+              {isClient ? formatDistanceToNowStrict(new Date(comment.timestamp), { addSuffix: true }) : <Skeleton className="h-3 w-10 inline-block" />}
             </span>
           </div>
 
           {replyingTo?.formUnderId === comment.id && (
-            <Popover open={mentionQuery !== null && mentionSuggestions.length > 0} onOpenChange={(open) => { if(!open) { setMentionQuery(null); setActiveMentionStartIndex(null); setMentionSuggestions([]);} }}>
+            <Popover open={mentionQuery !== null && mentionSuggestions.length > 0} onOpenChange={(open) => { if (!open) { setMentionQuery(null); setActiveMentionStartIndex(null); setMentionSuggestions([]); } }}>
               <PopoverAnchor asChild>
                 <form onSubmit={(e) => { e.preventDefault(); handleReplySubmit(); }} className="mt-2.5 flex items-start space-x-2.5 pl-0 sm:pl-1">
                   <Avatar className="h-7 w-7 border border-border/40 flex-shrink-0 mt-0.5 shadow-sm">
-                    <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? CLIENT_AVATAR_URL : undefined)} alt="Current user avatar" data-ai-hint={currentUser ? "user avatar" : "client avatar"} />
-                    <AvatarFallback className="bg-muted text-xs font-semibold">{getInitials(currentUser?.name || (clientReactorId ? "Client" : "U"))}</AvatarFallback>
+                    <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? CLIENT_AVATAR_URL : undefined)} alt="Current user avatar" data-ai-hint={currentUser ? "user uploaded avatar" : "client avatar"} />
+                    <AvatarFallback className="bg-muted text-xs font-semibold">{getInitials(currentUser?.name || (clientReactorId ? (order.customerName || order.companyName || "Client") : "U"))}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
                     <Textarea
@@ -461,46 +455,46 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                       disabled={isSubmittingReply}
                       rows={2}
                     />
-                     <div className="flex justify-end items-center mt-1.5">
-                        {mentionQuery !== null && mentionSuggestions.length === 0 && activeMentionStartIndex !== null && <span className="text-xs text-muted-foreground mr-auto">No matches found</span>}
-                        <Button type="button" variant="ghost" size="sm" className="text-xs h-7 px-2.5 mr-1.5 text-muted-foreground hover:text-foreground" onClick={() => {setReplyingTo(null); setCurrentReplyText('');}} disabled={isSubmittingReply}>Cancel</Button>
-                        <Button type="submit" size="sm" disabled={isSubmittingReply || !currentReplyText.trim()} className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-7 px-3 rounded-md">
-                            {isSubmittingReply ? "Sending..." : "Send Reply"}
-                        </Button>
+                    <div className="flex justify-end items-center mt-1.5">
+                      {mentionQuery !== null && mentionSuggestions.length === 0 && activeMentionStartIndex !== null && <span className="text-xs text-muted-foreground mr-auto">No matches found</span>}
+                      <Button type="button" variant="ghost" size="sm" className="text-xs h-7 px-2.5 mr-1.5 text-muted-foreground hover:text-foreground" onClick={() => { setReplyingTo(null); setCurrentReplyText(''); }} disabled={isSubmittingReply}>Cancel</Button>
+                      <Button type="submit" size="sm" disabled={isSubmittingReply || !currentReplyText.trim()} className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-7 px-3 rounded-md">
+                        {isSubmittingReply ? "Sending..." : "Send Reply"}
+                      </Button>
                     </div>
                   </div>
                 </form>
               </PopoverAnchor>
               {mentionQuery !== null && mentionSuggestions.length > 0 && (
-                 <PopoverContent
-                    key={mentionQuery + (activeMentionStartIndex ?? '') + 'popover'}
-                    className="w-[250px] p-0"
-                    side="top"
-                    align="start"
-                    onOpenAutoFocus={(e) => e.preventDefault()}
+                <PopoverContent
+                  key={mentionQuery + (activeMentionStartIndex ?? '') + 'popover'}
+                  className="w-[250px] p-0"
+                  side="top"
+                  align="start"
+                  onOpenAutoFocus={(e) => e.preventDefault()}
                 >
-                    <Command>
-                        <CommandList>
-                        {mentionSuggestions.map((user) => (
-                            <CommandItem
-                            key={user.id + (activeMentionStartIndex ?? '')}
-                            value={user.name + user.role}
-                            onSelect={() => handleMentionSelect(user.name)}
-                            className="cursor-pointer flex items-center gap-2"
-                            >
-                             <Avatar className="h-6 w-6 text-xs">
-                                <AvatarImage src={user.role === 'Client' ? CLIENT_AVATAR_URL : (user as User).avatarUrl || undefined} />
-                                <AvatarFallback className="bg-muted text-xs">{getInitials(user.name)}</AvatarFallback>
-                            </Avatar>
-                            <span className="text-xs font-medium">{user.name}</span>
-                            <span className="text-xs text-muted-foreground">({user.role === 'DESIGNER_REPRESENTATIVE' ? 'DR' : user.role.replace(/_/g, ' ')})</span>
-                            </CommandItem>
-                        ))}
-                        </CommandList>
-                         {mentionSuggestions.length === 0 && mentionQuery && (
-                            <CommandEmpty>No users found matching "@{mentionQuery}"</CommandEmpty>
-                        )}
-                    </Command>
+                  <Command>
+                    <CommandList>
+                      {mentionSuggestions.map((user) => (
+                        <CommandItem
+                          key={user.id + (activeMentionStartIndex ?? '')}
+                          value={user.name + user.role}
+                          onSelect={() => handleMentionSelect(user.name)}
+                          className="cursor-pointer flex items-center gap-2"
+                        >
+                          <Avatar className="h-6 w-6 text-xs">
+                            <AvatarImage src={user.role === 'Client' ? CLIENT_AVATAR_URL : (user as User).avatarUrl || undefined} />
+                            <AvatarFallback className="bg-muted text-xs">{getInitials(user.name)}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-xs font-medium">{user.name}</span>
+                          <span className="text-xs text-muted-foreground">({user.role === 'DESIGNER_REPRESENTATIVE' ? 'DR' : user.role.replace(/_/g, ' ')})</span>
+                        </CommandItem>
+                      ))}
+                    </CommandList>
+                    {mentionSuggestions.length === 0 && mentionQuery && (
+                      <CommandEmpty>No users found matching "@{mentionQuery}"</CommandEmpty>
+                    )}
+                  </Command>
                 </PopoverContent>
               )}
             </Popover>
@@ -511,17 +505,17 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               {repliesToRender.map(reply => renderComment(reply, true, comment.id))}
             </div>
           )}
-           {!isReply && currentVisibleReplies.length > MAX_INITIAL_REPLIES_TO_SHOW && (
-             <Button
-                variant="link"
-                size="sm"
-                onClick={() => setExpandedReplies(prev => ({ ...prev, [comment.id]: !isRepliesExpanded }))}
-                className="text-xs font-medium text-primary hover:text-primary/80 mt-2 pl-1"
+          {!isReply && currentVisibleReplies.length > MAX_INITIAL_REPLIES_TO_SHOW && (
+            <Button
+              variant="link"
+              size="sm"
+              onClick={() => setExpandedReplies(prev => ({ ...prev, [comment.id]: !isRepliesExpanded }))}
+              className="text-xs font-medium text-primary hover:text-primary/80 mt-2 pl-1"
             >
-                {isRepliesExpanded ? <ChevronUp className="h-3.5 w-3.5 mr-1" /> : <ChevronDown className="h-3.5 w-3.5 mr-1" />}
-                {isRepliesExpanded ? 'Hide Replies' : `View ${currentVisibleReplies.length - MAX_INITIAL_REPLIES_TO_SHOW} more ${currentVisibleReplies.length - MAX_INITIAL_REPLIES_TO_SHOW === 1 ? 'reply' : 'replies'}`}
+              {isRepliesExpanded ? <ChevronUp className="h-3.5 w-3.5 mr-1" /> : <ChevronDown className="h-3.5 w-3.5 mr-1" />}
+              {isRepliesExpanded ? 'Hide Replies' : `View ${currentVisibleReplies.length - MAX_INITIAL_REPLIES_TO_SHOW} more ${currentVisibleReplies.length - MAX_INITIAL_REPLIES_TO_SHOW === 1 ? 'reply' : 'replies'}`}
             </Button>
-           )}
+          )}
         </div>
       </div>
     );
@@ -542,6 +536,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const lastStatusUpdateTimestamp = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1].timestamp : order.createdAt;
 
   const orderSubtotal = Array.isArray(order.orderItems) ? order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0) : 0;
+  const amountDue = order.advancePayment ? orderSubtotal - order.advancePayment : orderSubtotal;
+
 
   return (
     <main className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
@@ -566,14 +562,13 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <p className="text-3xl sm:text-4xl font-bold ml-[40px] mt-1" style={{ color: currentStatusInfo.color }}>
               {currentStatusInfo.name}
             </p>
-             <div className="text-sm text-muted-foreground mt-1.5 ml-[40px]">
-               Last updated: {isClient ? formatDate(lastStatusUpdateTimestamp) : <Skeleton className="h-4 w-48 inline-block" />}
+            <div className="text-sm text-muted-foreground mt-1.5 ml-[40px]">
+              Last updated: {isClient ? formatDate(lastStatusUpdateTimestamp) : <Skeleton className="h-4 w-48 inline-block" />}
             </div>
           </div>
 
           <Separator className="my-6 sm:my-8 bg-border/30" />
-          
-          {/* Invoice Section */}
+
           <div className="border border-border/30 rounded-lg p-6 shadow-sm bg-secondary/20 dark:bg-card-foreground/5">
             <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30">
               <div>
@@ -598,48 +593,48 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               <p className="text-foreground/90">{order.address}</p>
               <p className="text-foreground/90">Phone: {order.phoneNumber}</p>
             </div>
-            
+
             <div className="mb-6">
-                 <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">
-                  <Layers className="h-6 w-6 text-primary mr-2.5 mt-0.5 flex-shrink-0 p-0.5 bg-primary/10 rounded-md border border-primary/20" />
-                  Order Items
-                </h3>
-                {Array.isArray(order.orderItems) && order.orderItems.length > 0 ? (
-                  <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Model</TableHead>
-                          <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-center">Quantity</TableHead>
-                          <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Lamination</TableHead>
-                          <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Unit Price</TableHead>
-                          <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Line Total</TableHead>
+              <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">
+                <Layers className="h-6 w-6 text-primary mr-2.5 mt-0.5 flex-shrink-0 p-0.5 bg-primary/10 rounded-md border border-primary/20" />
+                Order Items
+              </h3>
+              {Array.isArray(order.orderItems) && order.orderItems.length > 0 ? (
+                <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Model</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-center">Quantity</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Lamination</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Unit Price</TableHead>
+                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Line Total</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {order.orderItems.map((item, index) => (
+                        <TableRow key={item.id || index} className="hover:bg-muted/50 transition-colors">
+                          <TableCell className="font-medium text-card-foreground">{item.model}</TableCell>
+                          <TableCell className="text-center text-card-foreground">{item.quantity}</TableCell>
+                          <TableCell className="text-card-foreground">{item.lamination}</TableCell>
+                          <TableCell className="text-right text-card-foreground">{formatCurrency(item.unitPrice)}</TableCell>
+                          <TableCell className="text-right font-semibold text-card-foreground">{formatCurrency(item.lineItemTotalPrice)}</TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {order.orderItems.map((item, index) => (
-                          <TableRow key={item.id || index} className="hover:bg-muted/50 transition-colors">
-                            <TableCell className="font-medium text-card-foreground">{item.model}</TableCell>
-                            <TableCell className="text-center text-card-foreground">{item.quantity}</TableCell>
-                            <TableCell className="text-card-foreground">{item.lamination}</TableCell>
-                            <TableCell className="text-right text-card-foreground">{formatCurrency(item.unitPrice)}</TableCell>
-                            <TableCell className="text-right font-semibold text-card-foreground">{formatCurrency(item.lineItemTotalPrice)}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20">
+                  <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
+                    <Layers className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   </div>
-                ) : (
-                  <div className="flex items-center space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20">
-                    <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                      <Layers className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                    </div>
-                    <div>
-                      <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Order Items</span>
-                      Not specified for this order.
-                    </div>
+                  <div>
+                    <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Order Items</span>
+                    Not specified for this order.
                   </div>
-                )}
+                </div>
+              )}
             </div>
 
             <div className="flex justify-end mt-8 pt-6 border-t border-border/30">
@@ -648,15 +643,25 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                   <span className="text-md font-semibold text-muted-foreground">Subtotal:</span>
                   <span className="text-md font-bold text-foreground">{formatCurrency(orderSubtotal)}</span>
                 </div>
+                {order.advancePayment && order.advancePayment > 0 && (
+                  <div className="flex justify-between mb-2">
+                    <span className="text-md text-muted-foreground">Advance Payment:</span>
+                    <span className="text-md text-foreground">{formatCurrency(order.advancePayment)}</span>
+                  </div>
+                )}
+                <Separator className="my-2 bg-border/50" />
+                <div className="flex justify-between">
+                  <span className="text-lg font-bold text-primary">Amount Due:</span>
+                  <span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span>
+                </div>
               </div>
             </div>
             {order.designerRepresentativeName && (
-                <div className="mt-6 pt-4 border-t border-border/20 text-sm text-muted-foreground">
-                    <p className="flex items-center"><UserCheck className="h-4 w-4 mr-2 text-green-500" /> Assigned Designer: {order.designerRepresentativeName}</p>
-                </div>
+              <div className="mt-6 pt-4 border-t border-border/20 text-sm text-muted-foreground">
+                <p className="flex items-center"><UserCheck className="h-4 w-4 mr-2 text-green-500" /> Assigned Designer: {order.designerRepresentativeName}</p>
+              </div>
             )}
           </div>
-          {/* End Invoice Section */}
 
           <Separator className="my-6 sm:my-8 bg-border/30" />
 
@@ -685,7 +690,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                     </div>
                   </div>
                 );
-                })}
+              })}
             </div>
           </div>
         </CardContent>
@@ -707,36 +712,36 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
                 .map((comment) => renderComment(comment))}
               {publicCommentsAndRepliesCount === 0 && (
-                  <div className="text-center py-8 sm:py-10">
-                    <Image src="https://placehold.co/150x112.png" alt="No comments yet" data-ai-hint="empty message" width={150} height={112} className="mx-auto rounded-lg opacity-50 shadow-sm" />
-                    <p className="mt-4 sm:mt-5 text-muted-foreground text-md sm:text-lg">No public comments yet.</p>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Be the first to add one using the form below!</p>
-                  </div>
+                <div className="text-center py-8 sm:py-10">
+                  <Image src="https://placehold.co/150x112.png" alt="No comments yet" data-ai-hint="empty message" width={150} height={112} className="mx-auto rounded-lg opacity-50 shadow-sm" />
+                  <p className="mt-4 sm:mt-5 text-muted-foreground text-md sm:text-lg">No public comments yet.</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Be the first to add one using the form below!</p>
+                </div>
               )}
             </div>
             <Separator className="my-6 sm:my-8 bg-border/30" />
             <form onSubmit={handleCommentSubmit} className="flex items-start space-x-3">
               <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/30 shadow-sm flex-shrink-0 mt-0.5">
-                <AvatarImage src={currentUser?.avatarUrl || CLIENT_AVATAR_URL} alt="Your avatar" data-ai-hint={currentUser ? "user uploaded avatar" : "client avatar"} />
-                <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{getInitials(currentUser?.name || order.companyName || "Client")}</AvatarFallback>
+                <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? CLIENT_AVATAR_URL : undefined)} alt="Your avatar" data-ai-hint={currentUser ? "user uploaded avatar" : "client avatar"} />
+                <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{getInitials(currentUser?.name || (order.customerName || order.companyName || "Client"))}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <Textarea
-                    id="comment"
-                    ref={textareaRef}
-                    placeholder="Write a public comment..."
-                    className="min-h-[80px] sm:min-h-[100px] text-sm sm:text-base mb-2.5 p-3 bg-background/70 border-border/70 rounded-lg shadow-inner focus:border-primary focus:ring-1 focus:ring-primary"
-                    value={newComment}
-                    onChange={(e) => setNewComment(e.target.value)}
-                    disabled={isSubmittingComment}
-                    rows={3}
+                  id="comment"
+                  ref={textareaRef}
+                  placeholder="Write a public comment..."
+                  className="min-h-[80px] sm:min-h-[100px] text-sm sm:text-base mb-2.5 p-3 bg-background/70 border-border/70 rounded-lg shadow-inner focus:border-primary focus:ring-1 focus:ring-primary"
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                  disabled={isSubmittingComment}
+                  rows={3}
                 />
                 <div className="flex justify-end">
                   <Button
-                      type="submit"
-                      size="default"
-                      className="shadow-md hover:shadow-primary/30 transition-all duration-300 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm py-2 px-5 rounded-lg transform hover:scale-[1.02]"
-                      disabled={isSubmittingComment || !newComment.trim()}
+                    type="submit"
+                    size="default"
+                    className="shadow-md hover:shadow-primary/30 transition-all duration-300 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm py-2 px-5 rounded-lg transform hover:scale-[1.02]"
+                    disabled={isSubmittingComment || !newComment.trim()}
                   >
                     {isSubmittingComment ? (
                       <>

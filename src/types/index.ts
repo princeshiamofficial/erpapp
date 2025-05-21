@@ -43,10 +43,12 @@ export interface OrderItem {
 
 export interface TrackingLink {
   id: string;
+  customerName?: string | null; // Optional contact person name
   companyName: string;
   address: string;
   phoneNumber: string;
   orderItems: OrderItem[];
+  advancePayment?: number | null; // New field for advance payment
   crmUserId: string;
   crmUserName: string;
   designerRepresentativeId?: string | null;
@@ -77,7 +79,7 @@ export interface Comment {
 export interface ServiceModelItem {
   id: string;
   name: string;
-  price?: number; // Price for this model
+  price?: number;
 }
 
 export interface ServiceLaminationItem {
@@ -92,4 +94,3 @@ export interface GlobalSettings {
   crmCompletionStatusIds?: string[];
   areCommentsVisibleOnPublicPage?: boolean;
 }
-
