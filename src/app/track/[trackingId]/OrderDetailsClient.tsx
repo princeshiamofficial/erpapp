@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, FormEvent, useRef } from 'react';
@@ -6,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Disc, ThumbsUp, DollarSign, Landmark } from "lucide-react";
+import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Edit } from "lucide-react";
 import Image from "next/image";
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -81,7 +80,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   useEffect(() => {
     setIsClient(true);
     setOrder(initialOrder);
-    console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
+    // console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
 
 
     let storedReactorId = localStorage.getItem('CLIENT_REACTOR_ID_KEY');
@@ -153,6 +152,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setOrder(result);
       setNewComment('');
       toast({ title: "Success", description: "Your comment has been submitted." });
+       if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
+        showBrowserNotification("Comment Posted", { body: "Your comment was successfully submitted." });
+      }
     }
     setIsSubmittingComment(false);
   };
@@ -189,6 +191,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setCurrentReplyText('');
       setReplyingTo(null);
       toast({ title: "Reply submitted" });
+       if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
+        showBrowserNotification("Reply Posted", { body: "Your reply was successfully submitted." });
+      }
     }
   };
 
@@ -268,14 +273,17 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
     if (lastAtSymbolIndex !== -1) {
         const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
-        if (/^[^\s@]*$/.test(potentialQuery)) {
+        // Allow query to be empty (just "@") or start with characters
+        if (/^[^\s@]*/.test(potentialQuery)) { 
             setMentionQuery(potentialQuery);
             setActiveMentionStartIndex(lastAtSymbolIndex);
+            
             const clientOption = { id: 'client-mention', name: (order.companyName || "Client"), role: 'Client' as 'Client' };
-            const usersToSearch = (Array.isArray(allUsersForMentions) ? [clientOption, ...allUsersForMentions] : [clientOption]);
+             const usersToSearch = (Array.isArray(allUsersForMentions) ? [clientOption, ...allUsersForMentions] : [clientOption]);
+            
             const filtered = usersToSearch.filter(user =>
-            (user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
-                user.role.toLowerCase().includes(potentialQuery.toLowerCase()))
+                (user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
+                 (user.role && user.role.toLowerCase().includes(potentialQuery.toLowerCase())))
             ).slice(0, 7);
             setMentionSuggestions(filtered);
             return;
@@ -291,14 +299,19 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     if (activeMentionStartIndex === null || !replyTextareaRef.current) return;
 
     const text = currentReplyText;
-    const queryLength = mentionQuery?.length || 0; 
-    const mentionEndIndex = activeMentionStartIndex + 1 + queryLength;
+    const mentionTag = userNameToInsert.replace(/\s+/g, ''); 
+    
     const textBeforeAt = text.substring(0, activeMentionStartIndex);
-    const textAfterMentionEnd = text.substring(mentionEndIndex);
-    const mentionTag = userNameToInsert.replace(/\s+/g, '');
-    const newText = `${textBeforeAt}@${mentionTag} ${textAfterMentionEnd.startsWith(' ') ? textAfterMentionEnd : textAfterMentionEnd.trimStart()}`;
+    
+    // Determine the end of the partial mention based on cursor position
+    const queryLength = mentionQuery?.length || 0;
+    const currentMentionEndIndex = activeMentionStartIndex + 1 + queryLength;
+    const textAfterMentionEnd = text.substring(currentMentionEndIndex);
+
+    const newText = `${textBeforeAt}@${mentionTag} ${textAfterMentionEnd.trimStart()}`;
     setCurrentReplyText(newText);
-    const newCursorPosition = activeMentionStartIndex + 1 + mentionTag.length + 1; 
+    
+    const newCursorPosition = activeMentionStartIndex + 1 + mentionTag.length + 1;
 
     setTimeout(() => {
       if (replyTextareaRef.current) {
@@ -349,15 +362,15 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
 
     return (
-      <div key={comment.id} className={`flex space-x-2.5 sm:space-x-3 ${isReply ? 'ml-8 sm:ml-12' : ''}`}>
+      <div key={comment.id} className={`flex space-x-2.5 sm:space-x-3 ${isReply ? 'ml-8 sm:ml-10' : ''}`}>
         <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/30 shadow-sm flex-shrink-0 mt-0.5">
-          <AvatarImage src={avatarSrc} alt={comment.userName} data-ai-hint={avatarDataAiHint} />
+           <AvatarImage src={avatarSrc} alt={comment.userName} data-ai-hint={avatarDataAiHint} />
           <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{avatarFallback}</AvatarFallback>
         </Avatar>
         <div className="flex-1">
           <div
             onDoubleClick={() => handleToggleLike(comment.id, isReply, parentCommentId)}
-            className="bg-muted dark:bg-muted/60 px-3.5 py-2.5 rounded-xl shadow-sm group transition-colors hover:border-primary/30 border border-transparent"
+            className="bg-muted dark:bg-muted/60 px-3.5 py-2.5 rounded-xl shadow-sm group transition-colors border border-transparent"
           >
             <div className="flex items-baseline space-x-1.5">
               <p className="text-sm font-semibold text-foreground">{comment.userName}</p>
@@ -424,7 +437,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               <PopoverAnchor asChild>
                 <form onSubmit={(e) => { e.preventDefault(); handleReplySubmit(); }} className="mt-2.5 flex items-start space-x-2.5 pl-0 sm:pl-1">
                   <Avatar className="h-7 w-7 border border-border/40 flex-shrink-0 mt-0.5 shadow-sm">
-                    <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? CLIENT_AVATAR_URL : undefined)} alt="Current user avatar" data-ai-hint={currentUser ? "user uploaded avatar" : "client avatar"} />
+                    <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? CLIENT_AVATAR_URL : undefined)} alt="Current user avatar" data-ai-hint={currentUser?.avatarUrl ? "user uploaded avatar" : (clientReactorId ? "client avatar" : "user initials avatar")} />
                     <AvatarFallback className="bg-muted text-xs font-semibold">{getInitials(currentUser?.name || (clientReactorId ? (order.companyName || "Client") : "U"))}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
@@ -515,7 +528,10 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     return acc;
   }, 0);
 
-  const lastStatusUpdateTimestamp = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1].timestamp : order.createdAt;
+  const lastStatusUpdateEntry = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1] : null;
+  const lastStatusUpdateTimestamp = lastStatusUpdateEntry ? lastStatusUpdateEntry.timestamp : order.createdAt;
+  const lastUpdatedBy = lastStatusUpdateEntry ? lastStatusUpdateEntry.changedByUserName : order.crmUserName;
+
 
   const orderSubtotal = Array.isArray(order.orderItems) ? order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0) : 0;
   const effectiveAdvancePayment = order.advancePayment || 0;
@@ -567,6 +583,11 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 <div className="text-sm text-muted-foreground">
                   Date: {isClient ? new Date(order.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : <Skeleton className="h-4 w-32 inline-block" />}
                 </div>
+                 {lastStatusUpdateEntry && (
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    Updated: {isClient ? `${lastUpdatedBy} on ${new Date(lastStatusUpdateTimestamp).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}` : <Skeleton className="h-3 w-28" />}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -580,8 +601,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             {Array.isArray(order.orderItems) && order.orderItems.length > 0 && (
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">
-                  <Layers className="h-6 w-6 text-primary mr-2.5 mt-0.5 flex-shrink-0 p-0.5 bg-primary/10 rounded-md border border-primary/20" />
-                  Order Items
+                   Order Items
                 </h3>
                 <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
                   <Table>
@@ -622,6 +642,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                     <span className="text-md text-foreground">{formatCurrency(effectiveAdvancePayment)}</span>
                   </div>
                 )}
+
                 {orderSubtotal > 0 && amountDue <= 0 ? (
                   <div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end">
                     <div className="absolute -left-8 -top-4 sm:-left-12 sm:-top-6 transform -rotate-[15deg] border-4 border-green-500 text-green-500 font-bold uppercase text-3xl sm:text-4xl px-3 py-1 rounded-md shadow-lg bg-white/80 dark:bg-black/80 backdrop-blur-sm">
@@ -637,7 +658,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                     </div>
                   </>
                 ) : null }
-                 {(effectiveAdvancePayment > 0 || order.paymentMethod) && order.paymentMethod && (
+
+                 {(order.paymentMethod) && (
                   <div className={`flex justify-between mt-2 pt-2 ${ (orderSubtotal > 0 && amountDue <= 0) ? 'border-transparent' : 'border-t border-dashed border-border/40'}`}>
                     <span className="text-md text-muted-foreground">Payment Method:</span>
                     <span className="text-md text-foreground flex items-center gap-1.5">
@@ -711,10 +733,10 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               )}
             </div>
             <Separator className="my-6 sm:my-8 bg-border/30" />
-            <form onSubmit={handleCommentSubmit} className="flex items-start space-x-3">
+            <form onSubmit={handleCommentSubmit} className="mt-2.5 flex items-start space-x-2.5">
               <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/30 shadow-sm flex-shrink-0 mt-0.5">
-                <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? CLIENT_AVATAR_URL : undefined)} alt="Your avatar" data-ai-hint={currentUser ? "user uploaded avatar" : "client avatar"} />
-                <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{getInitials(currentUser?.name || (order.companyName || "Client"))}</AvatarFallback>
+                <AvatarImage src={currentUser?.avatarUrl || (clientReactorId ? CLIENT_AVATAR_URL : undefined)} alt="Your avatar" data-ai-hint={currentUser?.avatarUrl ? "user uploaded avatar" : (clientReactorId ? "client avatar" : "user initials avatar")} />
+                <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{getInitials(currentUser?.name || (clientReactorId ? (order.companyName || "Client") : "U"))}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <Textarea
@@ -753,4 +775,3 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
-
