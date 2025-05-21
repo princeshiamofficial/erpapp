@@ -43,29 +43,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const resetForm = useCallback(() => {
-    setCompanyName(order?.companyName || '');
-    setAddress(order?.address || '');
-    setPhoneNumber(order?.phoneNumber || '');
-    setAdvancePayment(order?.advancePayment?.toString() || '');
-    
-    const currentPaymentMethod = order?.paymentMethod || '';
-    setPaymentMethod(currentPaymentMethod);
-    const isOther = paymentMethodOptions.some(opt => opt.name.toLowerCase() === 'other') && currentPaymentMethod.toLowerCase() !== 'other' && !paymentMethodOptions.some(opt => opt.name === currentPaymentMethod);
-    
-    if (currentPaymentMethod && !paymentMethodOptions.some(opt => opt.name === currentPaymentMethod)) {
-        // If current method is not in standard options, assume it's "Other"
-        setPaymentMethod("Other");
-        setShowCustomPaymentInput(true);
-        setCustomPaymentMethodText(currentPaymentMethod);
-    } else {
-        setPaymentMethod(currentPaymentMethod);
-        setShowCustomPaymentInput(currentPaymentMethod.toLowerCase() === 'other');
-        setCustomPaymentMethodText(currentPaymentMethod.toLowerCase() === 'other' ? currentPaymentMethod : '');
-    }
-
-  }, [order, paymentMethodOptions]);
-
   useEffect(() => {
     const fetchOptions = async () => {
       setIsLoadingOptions(true);
@@ -85,17 +62,36 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   }, [isOpen, toast]);
 
   useEffect(() => {
-    if (isOpen && order && paymentMethodOptions.length > 0) {
-      resetForm();
+    if (isOpen && order) {
+      setCompanyName(order.companyName);
+      setAddress(order.address);
+      setPhoneNumber(order.phoneNumber);
+      setAdvancePayment(order.advancePayment?.toString() || '');
+
+      const currentPM = order.paymentMethod || '';
+      const isStandardOption = paymentMethodOptions.some(opt => opt.name === currentPM);
+      const hasOtherOption = paymentMethodOptions.some(opt => opt.name.toLowerCase() === 'other');
+
+      if (currentPM && !isStandardOption && hasOtherOption) {
+        setPaymentMethod("Other");
+        setShowCustomPaymentInput(true);
+        setCustomPaymentMethodText(currentPM);
+      } else {
+        setPaymentMethod(currentPM);
+        setShowCustomPaymentInput(currentPM.toLowerCase() === 'other' && hasOtherOption);
+        // If currentPM is literally "Other", and it's a standard option, custom text might be empty or the word "Other"
+        // If it's custom, set it. If it's the standard "Other", clear custom text to prompt input.
+        setCustomPaymentMethodText(currentPM.toLowerCase() === 'other' && hasOtherOption ? '' : (isStandardOption ? '' : currentPM) );
+      }
     }
-  }, [isOpen, order, paymentMethodOptions, resetForm]);
+  }, [isOpen, order, paymentMethodOptions]);
 
 
   const handlePaymentMethodChange = (value: string) => {
     setPaymentMethod(value);
     if (value.toLowerCase() === 'other') {
       setShowCustomPaymentInput(true);
-      // Do not clear customPaymentMethodText here if user switches to "Other" then back to "Other"
+      setCustomPaymentMethodText(''); // Clear custom text when "Other" is selected from dropdown
     } else {
       setShowCustomPaymentInput(false);
       setCustomPaymentMethodText('');
@@ -177,19 +173,20 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
               <div className="space-y-1">
-                <Label htmlFor="edit-advancePayment">Advance Payment (BDT)</Label>
+                <Label htmlFor="edit-advancePayment">Advance Payment (BDT - Optional)</Label>
                 <Input id="edit-advancePayment" type="number" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)} placeholder="e.g., 500.00" min="0" step="0.01" disabled={isSubmitting} />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="edit-paymentMethod">Payment Method</Label>
+                <Label htmlFor="edit-paymentMethod">Payment Method (Optional)</Label>
                 <Select value={paymentMethod} onValueChange={handlePaymentMethodChange} disabled={isLoadingOptions || paymentMethodOptions.length === 0 || isSubmitting}>
                   <SelectTrigger id="edit-paymentMethod">
-                    <SelectValue placeholder={paymentMethodOptions.length === 0 ? "No methods" : "Select method"} />
+                    <SelectValue placeholder={isLoadingOptions ? "Loading..." : (paymentMethodOptions.length === 0 ? "No methods" : "Select payment method")} />
                   </SelectTrigger>
                   <SelectContent>
                     {paymentMethodOptions.map(option => (
                       <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
                     ))}
+                    {paymentMethodOptions.length === 0 && <div className="p-2 text-sm text-muted-foreground text-center">No payment methods found. Configure in Admin &gt; Service Options.</div>}
                   </SelectContent>
                 </Select>
                 {showCustomPaymentInput && (
