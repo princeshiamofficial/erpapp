@@ -70,18 +70,18 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-     if (Array.isArray(allUsersForMentions)) {
+    if (Array.isArray(allUsersForMentions)) {
         // console.log("OrderDetailsClient: Received allUsersForMentions (first 5):", allUsersForMentions.slice(0, 5).map(u => ({id: u.id, name: u.name, role: u.role, avatarUrl: u.avatarUrl ? 'Exists' : 'None'})));
-     } else {
+    } else {
         // console.warn("OrderDetailsClient: allUsersForMentions prop is not an array. Received:", allUsersForMentions);
-     }
+    }
   }, [allUsersForMentions]);
 
 
   useEffect(() => {
     setIsClient(true);
     setOrder(initialOrder);
-    // console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
+    console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
 
 
     let storedReactorId = localStorage.getItem('CLIENT_REACTOR_ID_KEY');
@@ -170,7 +170,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
         order.id,
         replyingTo.parentId,
         currentReplyText,
-        false, // Replies from public page are never internal
+        false, 
         currentUser
       );
     } else {
@@ -242,10 +242,15 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   const renderTextWithMentions = (text: string) => {
     if (!text) return '';
-    return text.split(/(@[\w\s.-]+)/g).map((part, index) => {
+    // Split by mention pattern, keeping the delimiter
+    // The regex looks for @ followed by non-whitespace characters that are not another @
+    // It ensures that we capture the mention correctly and also handle text around it.
+    return text.split(/(@[^\s@]+)/g).map((part, index) => {
       if (index % 2 === 1 && part.startsWith('@')) {
+        // part is a mention, e.g., "@MehanAhmed"
         return <strong key={index} className="text-primary font-semibold">{part.substring(1)}</strong>;
       }
+      // part is regular text
       return part;
     });
   };
@@ -262,27 +267,27 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setMentionSuggestions([]);
       return;
     }
-
+    
     const textBeforeCursor = text.substring(0, cursorPosition);
     const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@');
 
     if (lastAtSymbolIndex !== -1) {
-      const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
-      // Only trigger suggestions if cursor is right after "@" or after some typed characters
-      if (cursorPosition === lastAtSymbolIndex + 1 || /^[a-zA-Z0-9_.-]*$/.test(potentialQuery)) {
-        setMentionQuery(potentialQuery);
-        setActiveMentionStartIndex(lastAtSymbolIndex);
+        const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
+        // Check if characters after @ are valid for a mention (no spaces, no other @)
+        if (/^[^\s@]*$/.test(potentialQuery)) {
+            setMentionQuery(potentialQuery);
+            setActiveMentionStartIndex(lastAtSymbolIndex);
 
-        const clientOption = { id: 'client-mention', name: (order.companyName || "Client"), role: 'Client' as 'Client' };
-        const usersToSearch = (Array.isArray(allUsersForMentions) ? [clientOption, ...allUsersForMentions] : [clientOption]);
-        
-        const filtered = usersToSearch.filter(user =>
-          user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
-          user.role.toLowerCase().includes(potentialQuery.toLowerCase())
-        ).slice(0, 7);
-        setMentionSuggestions(filtered);
-        return;
-      }
+            const clientOption = { id: 'client-mention', name: (order.companyName || "Client"), role: 'Client' as 'Client' };
+            const usersToSearch = (Array.isArray(allUsersForMentions) ? [clientOption, ...allUsersForMentions] : [clientOption]);
+            
+            const filtered = usersToSearch.filter(user =>
+            (user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
+                user.role.toLowerCase().includes(potentialQuery.toLowerCase()))
+            ).slice(0, 7);
+            setMentionSuggestions(filtered);
+            return;
+        }
     }
     setMentionQuery(null);
     setActiveMentionStartIndex(null);
@@ -292,23 +297,28 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   const handleMentionSelect = (userNameToInsert: string) => {
     if (activeMentionStartIndex === null || !replyTextareaRef.current) {
-      return;
+        console.log("Mention select: No active mention start index or textarea ref.");
+        return;
     }
 
     const text = currentReplyText;
+    // The query is the text after '@' up to the cursor when the popover was triggered.
+    // It might be empty if popover opened right after '@', or it might have characters.
     const queryLength = mentionQuery?.length || 0; 
-    const cursorPosition = activeMentionStartIndex + 1 + queryLength;
-
+    
+    // Calculate where the current partial mention ends
+    const mentionEndIndex = activeMentionStartIndex + 1 + queryLength;
 
     const textBeforeAt = text.substring(0, activeMentionStartIndex);
-    const textAfterQueryEnd = text.substring(cursorPosition);
-
+    const textAfterMentionEnd = text.substring(mentionEndIndex);
+    
+    // Sanitize userNameToInsert to remove spaces for a cleaner mention tag
     const mentionTag = userNameToInsert.replace(/\s+/g, '');
 
-    const newText = `${textBeforeAt}@${mentionTag} ${textAfterQueryEnd.startsWith(' ') ? textAfterQueryEnd : textAfterQueryEnd}`.trimEnd() + ' ';
+    const newText = `${textBeforeAt}@${mentionTag} ${textAfterMentionEnd.startsWith(' ') ? textAfterMentionEnd : textAfterMentionEnd.trimStart()}`;
     setCurrentReplyText(newText);
 
-    const newCursorPosition = activeMentionStartIndex + 1 + mentionTag.length + 1;
+    const newCursorPosition = activeMentionStartIndex + 1 + mentionTag.length + 1; // +1 for the space after
 
     setTimeout(() => {
       if (replyTextareaRef.current) {
@@ -528,7 +538,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const lastStatusUpdateTimestamp = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1].timestamp : order.createdAt;
 
   const orderSubtotal = Array.isArray(order.orderItems) ? order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0) : 0;
-  const amountDue = (order.advancePayment !== null && order.advancePayment !== undefined) ? orderSubtotal - order.advancePayment : orderSubtotal;
+  const amountDue = orderSubtotal - (order.advancePayment || 0);
 
 
   return (
@@ -625,25 +635,36 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                   <span className="text-md font-semibold text-muted-foreground">Subtotal:</span>
                   <span className="text-md font-bold text-foreground">{formatCurrency(orderSubtotal)}</span>
                 </div>
-                {(order.advancePayment !== null && order.advancePayment !== undefined && order.advancePayment > 0) && (
-                  <div className="flex justify-between mb-2">
-                    <span className="text-md text-muted-foreground">Advance Payment:</span>
-                    <span className="text-md text-foreground">{formatCurrency(order.advancePayment)}</span>
-                  </div>
+                {(order.advancePayment && order.advancePayment > 0) && (
+                  <>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-md text-muted-foreground">Advance Payment:</span>
+                      <span className="text-md text-foreground">{formatCurrency(order.advancePayment)}</span>
+                    </div>
+                     <Separator className="my-2 bg-border/50" />
+                    <div className="flex justify-between">
+                      <span className="text-lg font-bold text-primary">Amount Due:</span>
+                      <span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span>
+                    </div>
+                  </>
                 )}
                  {order.paymentMethod && (
-                  <div className="flex justify-between mb-2">
+                  <div className="flex justify-between mt-2 pt-2 border-t border-dashed border-border/40">
                     <span className="text-md text-muted-foreground">Payment Method:</span>
                     <span className="text-md text-foreground flex items-center gap-1.5">
                       <Landmark className="h-4 w-4 text-muted-foreground/80" />{order.paymentMethod}
                     </span>
                   </div>
                 )}
-                <Separator className="my-2 bg-border/50" />
-                <div className="flex justify-between">
-                  <span className="text-lg font-bold text-primary">Amount Due:</span>
-                  <span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span>
-                </div>
+                 {!(order.advancePayment && order.advancePayment > 0) && (
+                    <>
+                      <Separator className="my-2 bg-border/50" />
+                       <div className="flex justify-between">
+                        <span className="text-lg font-bold text-primary">Amount Due:</span>
+                        <span className="text-lg font-bold text-primary">{formatCurrency(orderSubtotal)}</span>
+                      </div>
+                    </>
+                )}
               </div>
             </div>
             {order.designerRepresentativeName && (
@@ -752,3 +773,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
+
+
+    
