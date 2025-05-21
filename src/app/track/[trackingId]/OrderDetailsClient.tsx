@@ -242,15 +242,10 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   const renderTextWithMentions = (text: string) => {
     if (!text) return '';
-    // Split by mention pattern, keeping the delimiter
-    // The regex looks for @ followed by non-whitespace characters that are not another @
-    // It ensures that we capture the mention correctly and also handle text around it.
     return text.split(/(@[^\s@]+)/g).map((part, index) => {
       if (index % 2 === 1 && part.startsWith('@')) {
-        // part is a mention, e.g., "@MehanAhmed"
         return <strong key={index} className="text-primary font-semibold">{part.substring(1)}</strong>;
       }
-      // part is regular text
       return part;
     });
   };
@@ -273,14 +268,11 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
     if (lastAtSymbolIndex !== -1) {
         const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
-        // Check if characters after @ are valid for a mention (no spaces, no other @)
         if (/^[^\s@]*$/.test(potentialQuery)) {
             setMentionQuery(potentialQuery);
             setActiveMentionStartIndex(lastAtSymbolIndex);
-
             const clientOption = { id: 'client-mention', name: (order.companyName || "Client"), role: 'Client' as 'Client' };
             const usersToSearch = (Array.isArray(allUsersForMentions) ? [clientOption, ...allUsersForMentions] : [clientOption]);
-            
             const filtered = usersToSearch.filter(user =>
             (user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
                 user.role.toLowerCase().includes(potentialQuery.toLowerCase()))
@@ -296,29 +288,17 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
 
   const handleMentionSelect = (userNameToInsert: string) => {
-    if (activeMentionStartIndex === null || !replyTextareaRef.current) {
-        console.log("Mention select: No active mention start index or textarea ref.");
-        return;
-    }
+    if (activeMentionStartIndex === null || !replyTextareaRef.current) return;
 
     const text = currentReplyText;
-    // The query is the text after '@' up to the cursor when the popover was triggered.
-    // It might be empty if popover opened right after '@', or it might have characters.
     const queryLength = mentionQuery?.length || 0; 
-    
-    // Calculate where the current partial mention ends
     const mentionEndIndex = activeMentionStartIndex + 1 + queryLength;
-
     const textBeforeAt = text.substring(0, activeMentionStartIndex);
     const textAfterMentionEnd = text.substring(mentionEndIndex);
-    
-    // Sanitize userNameToInsert to remove spaces for a cleaner mention tag
     const mentionTag = userNameToInsert.replace(/\s+/g, '');
-
     const newText = `${textBeforeAt}@${mentionTag} ${textAfterMentionEnd.startsWith(' ') ? textAfterMentionEnd : textAfterMentionEnd.trimStart()}`;
     setCurrentReplyText(newText);
-
-    const newCursorPosition = activeMentionStartIndex + 1 + mentionTag.length + 1; // +1 for the space after
+    const newCursorPosition = activeMentionStartIndex + 1 + mentionTag.length + 1; 
 
     setTimeout(() => {
       if (replyTextareaRef.current) {
@@ -369,7 +349,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
 
     return (
-      <div key={comment.id} className={`flex space-x-2.5 sm:space-x-3 ${isReply ? 'ml-8 sm:ml-10' : ''}`}>
+      <div key={comment.id} className={`flex space-x-2.5 sm:space-x-3 ${isReply ? 'ml-8 sm:ml-12' : ''}`}>
         <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/30 shadow-sm flex-shrink-0 mt-0.5">
           <AvatarImage src={avatarSrc} alt={comment.userName} data-ai-hint={avatarDataAiHint} />
           <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{avatarFallback}</AvatarFallback>
@@ -538,7 +518,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const lastStatusUpdateTimestamp = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1].timestamp : order.createdAt;
 
   const orderSubtotal = Array.isArray(order.orderItems) ? order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0) : 0;
-  const amountDue = orderSubtotal - (order.advancePayment || 0);
+  const effectiveAdvancePayment = order.advancePayment || 0;
+  const amountDue = orderSubtotal - effectiveAdvancePayment;
 
 
   return (
@@ -570,7 +551,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
           </div>
 
           <Separator className="my-6 sm:my-8 bg-border/30" />
-
+          
           <div className="border border-border/30 rounded-lg p-6 shadow-sm bg-secondary/20 dark:bg-card-foreground/5">
             <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30">
               <div>
@@ -630,40 +611,39 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             )}
 
             <div className="flex justify-end mt-8 pt-6 border-t border-border/30">
-              <div className="w-full max-w-xs sm:max-w-sm">
+              <div className="w-full max-w-xs sm:max-w-sm relative">
                 <div className="flex justify-between mb-2">
                   <span className="text-md font-semibold text-muted-foreground">Subtotal:</span>
                   <span className="text-md font-bold text-foreground">{formatCurrency(orderSubtotal)}</span>
                 </div>
-                {(order.advancePayment && order.advancePayment > 0) && (
-                  <>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-md text-muted-foreground">Advance Payment:</span>
-                      <span className="text-md text-foreground">{formatCurrency(order.advancePayment)}</span>
+                {(effectiveAdvancePayment > 0) && (
+                  <div className="flex justify-between mb-2">
+                    <span className="text-md text-muted-foreground">Advance Payment:</span>
+                    <span className="text-md text-foreground">{formatCurrency(effectiveAdvancePayment)}</span>
+                  </div>
+                )}
+                {orderSubtotal > 0 && amountDue <= 0 ? (
+                  <div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end">
+                    <div className="absolute -left-8 -top-4 sm:-left-12 sm:-top-6 transform -rotate-[15deg] border-4 border-green-500 text-green-500 font-bold uppercase text-3xl sm:text-4xl px-3 py-1 rounded-md shadow-lg bg-white/80 dark:bg-black/80 backdrop-blur-sm">
+                      PAID
                     </div>
-                     <Separator className="my-2 bg-border/50" />
+                  </div>
+                ) : amountDue > 0 ? (
+                  <>
+                    <Separator className="my-2 bg-border/50" />
                     <div className="flex justify-between">
                       <span className="text-lg font-bold text-primary">Amount Due:</span>
                       <span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span>
                     </div>
                   </>
-                )}
-                 {order.paymentMethod && (
-                  <div className="flex justify-between mt-2 pt-2 border-t border-dashed border-border/40">
+                ) : null }
+                 {(effectiveAdvancePayment > 0 || order.paymentMethod) && order.paymentMethod && (
+                  <div className={`flex justify-between mt-2 pt-2 ${ (orderSubtotal > 0 && amountDue <= 0) ? 'border-transparent' : 'border-t border-dashed border-border/40'}`}>
                     <span className="text-md text-muted-foreground">Payment Method:</span>
                     <span className="text-md text-foreground flex items-center gap-1.5">
                       <Landmark className="h-4 w-4 text-muted-foreground/80" />{order.paymentMethod}
                     </span>
                   </div>
-                )}
-                 {!(order.advancePayment && order.advancePayment > 0) && (
-                    <>
-                      <Separator className="my-2 bg-border/50" />
-                       <div className="flex justify-between">
-                        <span className="text-lg font-bold text-primary">Amount Due:</span>
-                        <span className="text-lg font-bold text-primary">{formatCurrency(orderSubtotal)}</span>
-                      </div>
-                    </>
                 )}
               </div>
             </div>
@@ -774,5 +754,3 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   );
 }
 
-
-    
