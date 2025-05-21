@@ -1,11 +1,12 @@
 
 import { db } from './firebase';
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, orderBy, writeBatch, where } from 'firebase/firestore';
-import type { ServiceModelItem, ServiceLaminationItem } from '@/types';
+import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
 const MODELS_COLLECTION = 'serviceModels';
 const LAMINATIONS_COLLECTION = 'serviceLaminations';
+const PAYMENT_METHODS_COLLECTION = 'servicePaymentMethods';
 
 // Default options with prices for models
 const defaultModelsData: Array<Omit<ServiceModelItem, 'id'>> = [
@@ -15,6 +16,7 @@ const defaultModelsData: Array<Omit<ServiceModelItem, 'id'>> = [
   { name: "Luxury Silk", price: 18.75 }
 ];
 const defaultLaminationsData: string[] = ["None", "Glossy", "Matte", "Soft Touch", "Anti-Scuff Matte"];
+const defaultPaymentMethodsData: string[] = ["Cash", "Card", "Bank Transfer", "Mobile Banking", "Cheque", "Other"];
 
 // --- Model Functions ---
 
@@ -55,7 +57,7 @@ export const getModels = async (): Promise<ServiceModelItem[]> => {
       return { 
         id: docSnap.id, 
         name: data.name,
-        price: data.price === undefined ? 0 : data.price // Default to 0 if price is missing
+        price: data.price === undefined ? 0 : data.price 
       } as ServiceModelItem;
     });
   } catch (error) {
@@ -120,7 +122,7 @@ export const deleteModel = async (id: string): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error("Error deleting service model:", error);
-    if (error instanceof Error) throw error; // Re-throw to be caught by action
+    if (error instanceof Error) throw error; 
     return false;
   }
 };
@@ -217,7 +219,104 @@ export const deleteLamination = async (id: string): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error("Error deleting service lamination:", error);
-    if (error instanceof Error) throw error; // Re-throw to be caught by action
+    if (error instanceof Error) throw error; 
+    return false;
+  }
+};
+
+// --- Payment Method Functions ---
+
+const seedDefaultPaymentMethods = async (): Promise<ServicePaymentMethodItem[]> => {
+  const paymentMethodsRef = collection(db, PAYMENT_METHODS_COLLECTION);
+  const batch = writeBatch(db);
+  const createdItems: ServicePaymentMethodItem[] = [];
+
+  defaultPaymentMethodsData.forEach(name => {
+    const id = uuidv4();
+    const newItem: ServicePaymentMethodItem = { id, name };
+    const docRef = doc(paymentMethodsRef, id);
+    batch.set(docRef, newItem);
+    createdItems.push(newItem);
+  });
+
+  try {
+    await batch.commit();
+    console.log('Default payment methods seeded in Firestore.');
+    return createdItems;
+  } catch (error) {
+    console.error("Error seeding default payment methods:", error);
+    return [];
+  }
+};
+
+export const getPaymentMethods = async (): Promise<ServicePaymentMethodItem[]> => {
+  const itemsCol = collection(db, PAYMENT_METHODS_COLLECTION);
+  const q = query(itemsCol, orderBy("name", "asc"));
+  try {
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) {
+      console.log("No payment methods found, seeding defaults.");
+      return await seedDefaultPaymentMethods();
+    }
+    return snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as ServicePaymentMethodItem));
+  } catch (error) {
+    console.error("Error fetching payment methods:", error);
+    return [];
+  }
+};
+
+export const addPaymentMethod = async (name: string): Promise<ServicePaymentMethodItem | null> => {
+  if (!name.trim()) {
+    throw new Error("Payment method name cannot be empty.");
+  }
+  try {
+    const itemsCol = collection(db, PAYMENT_METHODS_COLLECTION);
+    const q = query(itemsCol, where("name", "==", name.trim()));
+    const existing = await getDocs(q);
+    if (!existing.empty && existing.docs.some(doc => doc.data().name.toLowerCase() === name.trim().toLowerCase())) {
+      throw new Error(`Payment method with name "${name.trim()}" already exists.`);
+    }
+
+    const id = uuidv4();
+    const newItem: ServicePaymentMethodItem = { id, name: name.trim() };
+    await setDoc(doc(itemsCol, id), newItem);
+    return newItem;
+  } catch (error) {
+    console.error("Error adding payment method:", error);
+    if (error instanceof Error) throw error;
+    return null;
+  }
+};
+
+export const updatePaymentMethod = async (id: string, name: string): Promise<boolean> => {
+  if (!name.trim()) {
+    throw new Error("Payment method name cannot be empty.");
+  }
+  try {
+    const itemsCol = collection(db, PAYMENT_METHODS_COLLECTION);
+    const q = query(itemsCol, where("name", "==", name.trim()));
+    const existing = await getDocs(q);
+    if (!existing.empty && existing.docs.some(doc => doc.id !== id && doc.data().name.toLowerCase() === name.trim().toLowerCase())) {
+      throw new Error(`Another payment method with name "${name.trim()}" already exists.`);
+    }
+    const itemDoc = doc(db, PAYMENT_METHODS_COLLECTION, id);
+    await updateDoc(itemDoc, { name: name.trim() });
+    return true;
+  } catch (error) {
+    console.error("Error updating payment method:", error);
+    if (error instanceof Error) throw error;
+    return false;
+  }
+};
+
+export const deletePaymentMethod = async (id: string): Promise<boolean> => {
+  try {
+    const itemDoc = doc(db, PAYMENT_METHODS_COLLECTION, id);
+    await deleteDoc(itemDoc);
+    return true;
+  } catch (error) {
+    console.error("Error deleting payment method:", error);
+    if (error instanceof Error) throw error;
     return false;
   }
 };

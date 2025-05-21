@@ -7,11 +7,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { User, CustomStatus, ServiceModelItem, ServiceLaminationItem } from "@/types";
+import type { User, CustomStatus, ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem, OrderItem } from "@/types"; // Added ServicePaymentMethodItem
 import { useToast } from '@/hooks/use-toast';
 import { createOrderAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getModels, getLaminations } from '@/lib/service-options-service';
+import { getModels, getLaminations, getPaymentMethods } from '@/lib/service-options-service'; // Added getPaymentMethods
 import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -39,8 +39,6 @@ const formatCurrency = (value: number | null | undefined): string => {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
-const PAYMENT_METHODS = ["Cash", "Card", "Bank Transfer", "Mobile Banking", "Cheque", "Other"];
-
 export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children }: CreateOrderDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [companyName, setCompanyName] = useState('');
@@ -62,6 +60,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
   const [modelOptions, setModelOptions] = useState<ServiceModelItem[]>([]);
   const [laminationOptions, setLaminationOptions] = useState<ServiceLaminationItem[]>([]);
+  const [paymentMethodOptions, setPaymentMethodOptions] = useState<ServicePaymentMethodItem[]>([]); // Added state for payment method options
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [popoverOpenStates, setPopoverOpenStates] = useState<Record<string, boolean>>({});
 
@@ -77,19 +76,21 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setPaymentMethod('');
     setOrderItems([{ ...initialOrderItemState, id: uuidv4() }]);
     setPopoverOpenStates({});
-  }, []);
+  }, [initialOrderItemState]);
 
   const fetchOptions = useCallback(async () => {
     setIsLoadingOptions(true);
     try {
-      const [fetchedModels, fetchedLaminations] = await Promise.all([
+      const [fetchedModels, fetchedLaminations, fetchedPaymentMethods] = await Promise.all([ // Fetch payment methods
         getModels(),
-        getLaminations()
+        getLaminations(),
+        getPaymentMethods(),
       ]);
       setModelOptions(fetchedModels);
       setLaminationOptions(fetchedLaminations);
+      setPaymentMethodOptions(fetchedPaymentMethods); // Set payment method options
     } catch (error) {
-      console.error("Failed to fetch model/lamination options:", error);
+      console.error("Failed to fetch order options:", error);
       toast({ title: "Error", description: "Could not load order options.", variant: "destructive" });
     } finally {
       setIsLoadingOptions(false);
@@ -121,18 +122,21 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     return unitPrice * quantity;
   };
 
-  const handleItemChange = (itemId: string, field: keyof DialogOrderItem, value: string | number | null) => {
+  const handleItemChange = (itemId: string, field: keyof DialogOrderItem | 'modelName', value: string | number | null) => {
     setOrderItems(prevItems =>
       prevItems.map(item => {
         if (item.id === itemId) {
-          const updatedItem = { ...item, [field]: value };
-
-          if (field === 'model') {
+          let updatedItem = { ...item };
+          if (field === 'modelName') { // Handle model selection from combobox
             const selectedModel = modelOptions.find(opt => opt.name === value);
+            updatedItem.model = selectedModel ? selectedModel.name : '';
             updatedItem.unitPrice = selectedModel?.price ?? null;
+          } else {
+            updatedItem = { ...item, [field]: value };
+          }
+
+          if (field === 'modelName' || field === 'quantity') {
             updatedItem.lineItemTotalPrice = calculateLineItemTotal(updatedItem.unitPrice, updatedItem.quantity);
-          } else if (field === 'quantity') {
-            updatedItem.lineItemTotalPrice = calculateLineItemTotal(updatedItem.unitPrice, String(value));
           }
           return updatedItem;
         }
@@ -175,7 +179,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       return;
     }
 
-    const parsedOrderItems: Array<Omit<DialogOrderItem, 'id'>> = [];
+    const parsedOrderItems: Array<Omit<OrderItem, 'id'>> = [];
     for (const item of orderItems) {
       const quantity = parseInt(item.quantity, 10);
       if (isNaN(quantity) || quantity < 1) {
@@ -188,7 +192,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       }
       parsedOrderItems.push({
         model: item.model,
-        quantity: item.quantity,
+        quantity: quantity,
         lamination: item.lamination,
         unitPrice: item.unitPrice,
         lineItemTotalPrice: item.lineItemTotalPrice,
@@ -219,10 +223,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       companyName,
       address,
       phoneNumber,
-      orderItems: parsedOrderItems.map(item => ({
-        ...item,
-        quantity: Number(item.quantity), // Ensure quantity is number for action
-      })),
+      orderItems: parsedOrderItems,
       advancePayment: parsedAdvancePayment,
       paymentMethod: paymentMethod.trim() || null,
       initialStatusId,
@@ -272,7 +273,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Create New Order</DialogTitle>
-          <DialogDescription>Enter company details and add order items. All fields are required.</DialogDescription>
+          <DialogDescription>Enter company details and add order items. All fields are required unless marked optional.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -295,17 +296,17 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                 <Input id="advancePayment" type="number" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)} placeholder="e.g., 500.00" min="0" step="0.01" />
                 </div>
                 <div className="space-y-1">
-                <Label htmlFor="paymentMethod">Payment Method (Optional)</Label>
-                <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <Label htmlFor="paymentMethod">Payment Method (Optional)</Label>
+                  <Select value={paymentMethod} onValueChange={setPaymentMethod} disabled={isLoadingOptions || paymentMethodOptions.length === 0}>
                     <SelectTrigger id="paymentMethod">
-                    <SelectValue placeholder="Select payment method" />
+                      <SelectValue placeholder={isLoadingOptions ? "Loading..." : (paymentMethodOptions.length === 0 ? "No payment methods" : "Select payment method")} />
                     </SelectTrigger>
                     <SelectContent>
-                    {PAYMENT_METHODS.map(method => (
-                        <SelectItem key={method} value={method}>{method}</SelectItem>
-                    ))}
+                      {paymentMethodOptions.map(option => (
+                        <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
+                      ))}
                     </SelectContent>
-                </Select>
+                  </Select>
                 </div>
             </div>
 
@@ -343,7 +344,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                                     key={option.id}
                                     value={option.name}
                                     onSelect={(currentValue) => {
-                                      handleItemChange(item.id, 'model', currentValue === item.model ? '' : currentValue);
+                                      handleItemChange(item.id, 'modelName', currentValue === item.model ? '' : currentValue);
                                       togglePopover(item.id, false);
                                     }}
                                   >
@@ -400,10 +401,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   </div>
                 </div>
               ))}
-              {(isLoadingOptions && (orderItems.length === 0 || (modelOptions.length === 0 || laminationOptions.length === 0))) &&
+              {(isLoadingOptions && (orderItems.length === 0 || (modelOptions.length === 0 || laminationOptions.length === 0 || paymentMethodOptions.length === 0))) &&
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Loading model & lamination options...
+                  Loading order options...
                 </div>
               }
               <Button type="button" variant="outline" onClick={handleAddItem} className="mt-2" disabled={isSubmitting || isLoadingOptions}>

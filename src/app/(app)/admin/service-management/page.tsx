@@ -5,14 +5,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Layers, ShieldHalf, RefreshCw, AlertTriangle } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Layers, ShieldHalf, RefreshCw, AlertTriangle, CreditCard } from "lucide-react"; // Added CreditCard
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { ServiceModelItem, ServiceLaminationItem } from "@/types";
-import { getModels, getLaminations } from '@/lib/service-options-service';
+import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem } from "@/types"; // Added ServicePaymentMethodItem
+import { getModels, getLaminations, getPaymentMethods } from '@/lib/service-options-service'; // Added getPaymentMethods
 import {
   addModelAction, updateModelAction, deleteModelAction,
-  addLaminationAction, updateLaminationAction, deleteLaminationAction
+  addLaminationAction, updateLaminationAction, deleteLaminationAction,
+  addPaymentMethodAction, updatePaymentMethodAction, deletePaymentMethodAction // Added PaymentMethod actions
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -20,11 +21,11 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 
-type ItemType = 'model' | 'lamination';
+type ItemType = 'model' | 'lamination' | 'paymentMethod'; // Added paymentMethod
 interface ItemToEdit {
   id: string;
   name: string;
-  price?: string; // Price is only for models
+  price?: string; 
   type: ItemType;
 }
 interface ItemToDelete {
@@ -40,6 +41,7 @@ export default function ServiceManagementPage() {
 
   const [models, setModels] = useState<ServiceModelItem[]>([]);
   const [laminations, setLaminations] = useState<ServiceLaminationItem[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<ServicePaymentMethodItem[]>([]); // Added state for payment methods
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -47,7 +49,7 @@ export default function ServiceManagementPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const [itemName, setItemName] = useState('');
-  const [itemPrice, setItemPrice] = useState(''); // For model price
+  const [itemPrice, setItemPrice] = useState(''); 
   const [editingItem, setEditingItem] = useState<ItemToEdit | null>(null);
   const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
   const [itemTypeToAdd, setItemTypeToAdd] = useState<ItemType | null>(null);
@@ -56,12 +58,14 @@ export default function ServiceManagementPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedModels, fetchedLaminations] = await Promise.all([
+      const [fetchedModels, fetchedLaminations, fetchedPaymentMethods] = await Promise.all([ // Fetch payment methods
         getModels(),
         getLaminations(),
+        getPaymentMethods(),
       ]);
       setModels(fetchedModels);
       setLaminations(fetchedLaminations);
+      setPaymentMethods(fetchedPaymentMethods); // Set payment methods state
     } catch (error) {
       console.error("Error fetching service options:", error);
       toast({ title: "Error", description: "Could not load service options.", variant: "destructive" });
@@ -82,11 +86,11 @@ export default function ServiceManagementPage() {
     setEditingItem(null);
     setItemTypeToAdd(type);
     setItemName('');
-    setItemPrice(type === 'model' ? '0' : ''); // Default price for new model
+    setItemPrice(type === 'model' ? '0' : ''); 
     setIsAddEditDialogOpen(true);
   };
 
-  const openEditDialog = (item: ServiceModelItem | ServiceLaminationItem, type: ItemType) => {
+  const openEditDialog = (item: ServiceModelItem | ServiceLaminationItem | ServicePaymentMethodItem, type: ItemType) => {
     setEditingItem({ 
       id: item.id, 
       name: item.name, 
@@ -99,7 +103,7 @@ export default function ServiceManagementPage() {
     setIsAddEditDialogOpen(true);
   };
   
-  const openDeleteDialog = (item: ServiceModelItem | ServiceLaminationItem, type: ItemType) => {
+  const openDeleteDialog = (item: ServiceModelItem | ServiceLaminationItem | ServicePaymentMethodItem, type: ItemType) => {
     setItemToDelete({ id: item.id, name: item.name, type });
     setIsDeleteDialogOpen(true);
   };
@@ -127,20 +131,24 @@ export default function ServiceManagementPage() {
     if (editingItem) { // Editing existing item
       if (currentType === 'model') {
         result = await updateModelAction(editingItem.id, itemName.trim(), priceValue);
-      } else {
+      } else if (currentType === 'lamination') {
         result = await updateLaminationAction(editingItem.id, itemName.trim());
+      } else if (currentType === 'paymentMethod') {
+        result = await updatePaymentMethodAction(editingItem.id, itemName.trim());
       }
-      if (result.success) {
-        toast({ title: "Success", description: `${currentType === 'model' ? 'Model' : 'Lamination'} "${itemName.trim()}" updated.` });
+      if (result?.success) {
+        toast({ title: "Success", description: `${currentType === 'model' ? 'Model' : currentType === 'lamination' ? 'Lamination' : 'Payment Method'} "${itemName.trim()}" updated.` });
       }
     } else if (itemTypeToAdd) { // Adding new item
        if (currentType === 'model') {
         result = await addModelAction(itemName.trim(), priceValue);
-      } else {
+      } else if (currentType === 'lamination') {
         result = await addLaminationAction(itemName.trim());
+      } else if (currentType === 'paymentMethod') {
+        result = await addPaymentMethodAction(itemName.trim());
       }
-      if (result.success) {
-        toast({ title: "Success", description: `${currentType === 'model' ? 'Model' : 'Lamination'} "${itemName.trim()}" added.` });
+      if (result?.success) {
+        toast({ title: "Success", description: `${currentType === 'model' ? 'Model' : currentType === 'lamination' ? 'Lamination' : 'Payment Method'} "${itemName.trim()}" added.` });
       }
     }
 
@@ -163,16 +171,18 @@ export default function ServiceManagementPage() {
     let result;
     if (itemToDelete.type === 'model') {
       result = await deleteModelAction(itemToDelete.id);
-    } else {
+    } else if (itemToDelete.type === 'lamination') {
       result = await deleteLaminationAction(itemToDelete.id);
+    } else if (itemToDelete.type === 'paymentMethod') {
+      result = await deletePaymentMethodAction(itemToDelete.id);
     }
 
-    if (result.success) {
-      toast({ title: "Success", description: `${itemToDelete.type === 'model' ? 'Model' : 'Lamination'} "${itemToDelete.name}" deleted.` });
+    if (result?.success) {
+      toast({ title: "Success", description: `${itemToDelete.type === 'model' ? 'Model' : itemToDelete.type === 'lamination' ? 'Lamination' : 'Payment Method'} "${itemToDelete.name}" deleted.` });
       setIsDeleteDialogOpen(false);
       setItemToDelete(null);
       await fetchData();
-    } else {
+    } else if (result) {
       toast({ title: "Error", description: result.error || `Could not delete ${itemToDelete.type}. It might be in use.`, variant: "destructive" });
     }
     setIsSubmitting(false);
@@ -192,7 +202,7 @@ export default function ServiceManagementPage() {
     );
   }
   
-  const renderItemList = (items: (ServiceModelItem | ServiceLaminationItem)[], type: ItemType, title: string, Icon: React.ElementType) => (
+  const renderItemList = (items: (ServiceModelItem | ServiceLaminationItem | ServicePaymentMethodItem)[], type: ItemType, title: string, Icon: React.ElementType) => (
     <Card className="shadow-xl border bg-card rounded-lg overflow-hidden flex-1 min-w-[300px]">
       <CardHeader className="border-b p-5 flex flex-row items-center justify-between">
         <div>
@@ -248,23 +258,24 @@ export default function ServiceManagementPage() {
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 page-header">
         <div>
           <h1 className="page-title">Service Options Management</h1>
-          <p className="page-description">Configure Model (with prices) and Lamination options available for orders.</p>
+          <p className="page-description">Configure Model, Lamination, and Payment Method options available for orders.</p>
         </div>
         <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
           <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
         </Button>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-6">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {renderItemList(models, 'model', 'Models', Layers)}
         {renderItemList(laminations, 'lamination', 'Laminations', ShieldHalf)}
+        {renderItemList(paymentMethods, 'paymentMethod', 'Payment Methods', CreditCard)} 
       </div>
 
       {/* Add/Edit Dialog */}
       <Dialog open={isAddEditDialogOpen} onOpenChange={setIsAddEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingItem ? 'Edit' : 'Add New'} {(editingItem?.type || itemTypeToAdd) === 'model' ? 'Model' : 'Lamination'}</DialogTitle>
+            <DialogTitle>{editingItem ? 'Edit' : 'Add New'} {(editingItem?.type || itemTypeToAdd) === 'model' ? 'Model' : (editingItem?.type || itemTypeToAdd) === 'lamination' ? 'Lamination' : 'Payment Method'}</DialogTitle>
             <DialogDescription>
               {editingItem ? 'Update the name of this option.' : 'Enter the name for the new option.'}
               {(editingItem?.type || itemTypeToAdd) === 'model' && ' Also set its price.'}
@@ -327,4 +338,3 @@ export default function ServiceManagementPage() {
     </div>
   );
 }
-

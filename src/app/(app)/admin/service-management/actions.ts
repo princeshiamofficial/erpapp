@@ -9,11 +9,15 @@ import {
   addLamination,
   updateLamination,
   deleteLamination,
+  addPaymentMethod,
+  updatePaymentMethod,
+  deletePaymentMethod,
 } from "@/lib/service-options-service";
-import type { ServiceModelItem, ServiceLaminationItem } from "@/types";
+import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem } from "@/types";
 
 const SERVICE_MANAGEMENT_PATH = "/(app)/admin/service-management";
 const MODEL_MANAGEMENT_PATH = "/(app)/admin/model-management";
+const CREATE_ORDER_DIALOG_REVALIDATION_TARGET = "/(app)/orders"; // To refresh CreateOrderDialog options
 
 // Model Actions
 export async function addModelAction(name: string, price?: number): Promise<{ success: boolean; model?: ServiceModelItem; error?: string }> {
@@ -22,6 +26,7 @@ export async function addModelAction(name: string, price?: number): Promise<{ su
     if (newModel) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
       revalidatePath(MODEL_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
       return { success: true, model: newModel };
     }
     return { success: false, error: "Failed to add model to database." };
@@ -37,6 +42,7 @@ export async function updateModelAction(id: string, name: string, price?: number
     if (success) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
       revalidatePath(MODEL_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
       return { success: true };
     }
     return { success: false, error: "Failed to update model in database." };
@@ -52,6 +58,7 @@ export async function deleteModelAction(id: string): Promise<{ success: boolean;
     if (success) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
       revalidatePath(MODEL_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
       return { success: true };
     }
     return { success: false, error: "Failed to delete model from database. It might be in use by existing orders." };
@@ -67,6 +74,7 @@ export async function addLaminationAction(name: string): Promise<{ success: bool
     const newLamination = await addLamination(name);
     if (newLamination) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
       return { success: true, lamination: newLamination };
     }
     return { success: false, error: "Failed to add lamination to database." };
@@ -81,6 +89,7 @@ export async function updateLaminationAction(id: string, name: string): Promise<
     const success = await updateLamination(id, name);
     if (success) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
       return { success: true };
     }
     return { success: false, error: "Failed to update lamination in database." };
@@ -95,12 +104,58 @@ export async function deleteLaminationAction(id: string): Promise<{ success: boo
     const success = await deleteLamination(id);
     if (success) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
       return { success: true };
     }
-    // More specific error if needed, e.g., for items in use.
     return { success: false, error: "Failed to delete lamination from database. It might be in use by existing orders." };
   } catch (error) {
     console.error("Error in deleteLaminationAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+// Payment Method Actions
+export async function addPaymentMethodAction(name: string): Promise<{ success: boolean; paymentMethod?: ServicePaymentMethodItem; error?: string }> {
+  try {
+    const newPaymentMethod = await addPaymentMethod(name);
+    if (newPaymentMethod) {
+      revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
+      return { success: true, paymentMethod: newPaymentMethod };
+    }
+    return { success: false, error: "Failed to add payment method to database." };
+  } catch (error) {
+    console.error("Error in addPaymentMethodAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updatePaymentMethodAction(id: string, name: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await updatePaymentMethod(id, name);
+    if (success) {
+      revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update payment method in database." };
+  } catch (error) {
+    console.error("Error in updatePaymentMethodAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function deletePaymentMethodAction(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await deletePaymentMethod(id);
+    if (success) {
+      revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
+      return { success: true };
+    }
+    return { success: false, error: "Failed to delete payment method from database. It might be in use by existing orders." };
+  } catch (error) {
+    console.error("Error in deletePaymentMethodAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

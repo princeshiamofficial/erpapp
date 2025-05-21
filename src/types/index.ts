@@ -37,19 +37,19 @@ export interface OrderItem {
   model: string;
   quantity: number;
   lamination: string;
-  unitPrice: number; // Price per unit of the selected model
-  lineItemTotalPrice: number; // Calculated as unitPrice * quantity
+  unitPrice: number; 
+  lineItemTotalPrice: number; 
 }
 
 export interface TrackingLink {
   id: string;
-  customerName?: string | null; // Optional contact person name
+  customerName?: string | null;
   companyName: string;
   address: string;
   phoneNumber: string;
   orderItems: OrderItem[];
   advancePayment?: number | null;
-  paymentMethod?: string | null; // New field for payment method
+  paymentMethod?: string | null; 
   crmUserId: string;
   crmUserName: string;
   designerRepresentativeId?: string | null;
@@ -73,7 +73,7 @@ export interface Comment {
   replies?: Comment[];
   likes?: {
     count: number;
-    reactedBy: string[];
+    reactedBy: string[]; // Array of user IDs or client-generated IDs
   };
 }
 
@@ -84,6 +84,11 @@ export interface ServiceModelItem {
 }
 
 export interface ServiceLaminationItem {
+  id: string;
+  name: string;
+}
+
+export interface ServicePaymentMethodItem {
   id: string;
   name: string;
 }
