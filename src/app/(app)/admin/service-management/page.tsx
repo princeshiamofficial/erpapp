@@ -203,7 +203,7 @@ export default function ServiceManagementPage() {
   }
   
   const renderItemList = (items: (ServiceModelItem | ServiceLaminationItem | ServicePaymentMethodItem)[], type: ItemType, title: string, Icon: React.ElementType) => (
-    <Card className="shadow-xl border bg-card rounded-lg overflow-hidden flex-1 min-w-[300px]">
+    <Card className="shadow-xl border bg-card rounded-lg overflow-hidden w-full">
       <CardHeader className="border-b p-5 flex flex-row items-center justify-between">
         <div>
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Icon className="h-5 w-5 text-primary"/>{title}</CardTitle>
@@ -265,7 +265,7 @@ export default function ServiceManagementPage() {
         </Button>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="flex flex-col space-y-6">
         {renderItemList(models, 'model', 'Models', Layers)}
         {renderItemList(laminations, 'lamination', 'Laminations', ShieldHalf)}
         {renderItemList(paymentMethods, 'paymentMethod', 'Payment Methods', CreditCard)} 
@@ -338,3 +338,4 @@ export default function ServiceManagementPage() {
     </div>
   );
 }
+
