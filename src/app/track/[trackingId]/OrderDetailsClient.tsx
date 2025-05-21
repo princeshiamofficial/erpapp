@@ -242,7 +242,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   const renderTextWithMentions = (text: string) => {
     if (!text) return '';
-    return text.split(/(@[^\s@]+)/g).map((part, index) => {
+    // Updated regex to ensure it captures simple usernames after @ and doesn't require spaces around it.
+    // It will match @ followed by alphanumeric characters.
+    return text.split(/(@[a-zA-Z0-9_]+)/g).map((part, index) => {
       if (index % 2 === 1 && part.startsWith('@')) {
          return <strong key={index} className="text-primary font-semibold">{part.substring(1)}</strong>;
       }
@@ -269,16 +271,19 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     if (lastAtSymbolIndex !== -1) {
         const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
         
-        if (/^[^\s@]*/.test(potentialQuery)) { 
+        // Allow empty query to show all users if user just typed "@"
+        // Regex ensures only valid username characters (alphanumeric/underscore) are part of the query
+        if (/^[a-zA-Z0-9_]*$/.test(potentialQuery)) { 
             setMentionQuery(potentialQuery);
             setActiveMentionStartIndex(lastAtSymbolIndex);
             
             const clientOption = { id: 'client-mention', name: (order.companyName || "Client"), role: 'Client' as 'Client' };
-            const usersToSearch = (Array.isArray(allUsersForMentions) ? [clientOption, ...allUsersForMentions] : [clientOption]);
+            // Ensure allUsersForMentions is an array before spreading
+            const usersToSearch = Array.isArray(allUsersForMentions) ? [clientOption, ...allUsersForMentions] : [clientOption];
             
             const filtered = usersToSearch.filter(user =>
                 (user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
-                 (user.role && user.role.toLowerCase().includes(potentialQuery.toLowerCase())))
+                 (user.role && user.role.toLowerCase().replace(/_/g, ' ').includes(potentialQuery.toLowerCase())))
             ).slice(0, 7);
             setMentionSuggestions(filtered);
             return;
@@ -294,19 +299,22 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     if (activeMentionStartIndex === null || !replyTextareaRef.current) return;
 
     const text = currentReplyText;
+    // Sanitize username for mention tag: remove spaces, keep it simple
     const mentionTag = userNameToInsert.replace(/\s+/g, ''); 
     
     const textBeforeAt = text.substring(0, activeMentionStartIndex);
     
     const queryLength = mentionQuery?.length || 0;
+    // Calculate the end index of the partial mention currently in the textarea
     const currentMentionEndIndex = activeMentionStartIndex + 1 + queryLength;
     const textAfterMentionEnd = text.substring(currentMentionEndIndex);
 
     const newText = `${textBeforeAt}@${mentionTag} ${textAfterMentionEnd.trimStart()}`;
     setCurrentReplyText(newText);
     
-    const newCursorPosition = activeMentionStartIndex + 1 + mentionTag.length + 1;
+    const newCursorPosition = activeMentionStartIndex + 1 + mentionTag.length + 1; // +1 for the space
 
+    // Refocus and set cursor position
     setTimeout(() => {
       if (replyTextareaRef.current) {
         replyTextareaRef.current.focus();
@@ -566,9 +574,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 <h2 className="text-3xl font-bold text-primary mb-2 flex items-center">
                   <FileText className="h-8 w-8 mr-3" /> INVOICE
                 </h2>
-                <p className="text-muted-foreground">Color Hut Inc.</p>
+                <p className="text-muted-foreground">Color Hut</p>
                 <p className="text-muted-foreground text-sm">123 Creative Lane, Design City, DC 54321</p>
-                <p className="text-muted-foreground text-sm">contact@colorhut.dev | (555) 123-4567</p>
+                <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
               </div>
               <div className="text-left sm:text-right mt-4 sm:mt-0">
                 <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
@@ -641,7 +649,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                       PAID
                     </div>
                   </div>
-                ) : (amountDue > 0 || effectiveAdvancePayment === 0) && (
+                ) : (amountDue > 0 ) && (
                   <>
                     <Separator className="my-2 bg-border/50" />
                     <div className="flex justify-between">
@@ -651,7 +659,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                   </>
                 )}
 
-                 {(order.paymentMethod && (effectiveAdvancePayment > 0 || (orderSubtotal > 0 && amountDue > 0) || (orderSubtotal > 0 && amountDue <=0 && effectiveAdvancePayment === 0) )) && (
+                 {(order.paymentMethod && (effectiveAdvancePayment > 0 || (orderSubtotal > 0 && amountDue > 0) || (orderSubtotal > 0 && amountDue <=0 && effectiveAdvancePayment > 0 ) )) && (
                   <div className={`flex justify-between mt-2 pt-2 ${ (orderSubtotal > 0 && amountDue <= 0 && effectiveAdvancePayment > 0) ? 'border-transparent' : 'border-t border-dashed border-border/40'}`}>
                     <span className="text-md text-muted-foreground">Payment Method:</span>
                     <span className="text-md text-foreground flex items-center gap-1.5">
@@ -767,4 +775,5 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
+
 
