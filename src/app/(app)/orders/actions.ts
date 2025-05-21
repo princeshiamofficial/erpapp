@@ -3,22 +3,22 @@
 
 import { revalidatePath } from "next/cache";
 import type { TrackingLink, User, OrderItem } from "@/types";
-import { addOrder, getOrderById, deleteOrder as deleteOrderFromDb } from "@/lib/order-service";
+import { addOrder, getOrderById, deleteOrder as deleteOrderFromDb, updateOrder } from "@/lib/order-service";
 import { v4 as uuidv4 } from 'uuid';
 
 interface CreateOrderDialogFormData {
   companyName: string;
   address: string;
-  phoneNumber: string; // Now mandatory
+  phoneNumber: string;
   orderItems: Array<{
-    id: string; // ID from dialog state
+    id: string;
     model: string;
-    quantity: string; // Still string from input
+    quantity: string;
     lamination: string;
-    unitPrice: number | null; // Can be null if model not selected
-    lineItemTotalPrice: number | null; // Can be null
+    unitPrice: number | null;
+    lineItemTotalPrice: number | null;
   }>;
-  advancePayment?: string; // Input is string
+  advancePayment?: string; // Still received as string from form
   paymentMethod?: string;
   customPaymentMethodText?: string;
   initialStatusId: string;
@@ -35,25 +35,60 @@ export async function createOrderAction(
     }
     if (!data.companyName?.trim()) return { error: "Company Name is required." };
     if (!data.address?.trim()) return { error: "Address is required." };
-    if (!data.phoneNumber?.trim()) return { error: "Phone Number is required." }; // Mandatory check
+    if (!data.phoneNumber?.trim()) return { error: "Phone Number is required." };
     if (!data.initialStatusId) return { error: "Initial status ID is required." };
     if (!data.orderItems || data.orderItems.length === 0) {
       return { error: "At least one order item is required." };
     }
 
+    // Validate and process orderItems
+    const processedOrderItems: OrderItem[] = [];
+    for (const item of data.orderItems) {
+      if (!item.model?.trim()) throw new Error("Model is required for all order items.");
+      
+      const quantity = parseInt(item.quantity, 10);
+      if (isNaN(quantity) || quantity < 1) {
+        throw new Error(`Invalid quantity for model "${item.model}". Quantity must be a positive number.`);
+      }
+      
+      if (!item.lamination?.trim()) {
+        throw new Error(`Lamination is required for model "${item.model}".`);
+      }
+
+      if (item.unitPrice === undefined || item.unitPrice === null || isNaN(Number(item.unitPrice)) || Number(item.unitPrice) < 0) {
+        throw new Error(`Unit price is missing or invalid for model "${item.model}". Please ensure a model with a price is selected.`);
+      }
+      if (item.lineItemTotalPrice === undefined || item.lineItemTotalPrice === null || isNaN(Number(item.lineItemTotalPrice)) || Number(item.lineItemTotalPrice) < 0) {
+        throw new Error(`Line item total price is missing or invalid for model "${item.model}". This should be calculated automatically.`);
+      }
+
+      processedOrderItems.push({
+        id: item.id, // Use the client-generated ID
+        model: item.model.trim(),
+        quantity: quantity,
+        lamination: item.lamination.trim(),
+        unitPrice: Number(item.unitPrice),
+        lineItemTotalPrice: Number(item.lineItemTotalPrice),
+      });
+    }
+
     // Validate advancePayment if provided
     let parsedAdvancePayment: number | null = null;
-    if (data.advancePayment !== undefined && data.advancePayment !== null && data.advancePayment.trim() !== '') {
-      const numAdvancePayment = Number(data.advancePayment);
-      if (isNaN(numAdvancePayment) || numAdvancePayment < 0) {
-        return { error: "Advance Payment must be a non-negative number." };
+    if (data.advancePayment !== undefined && data.advancePayment !== null) {
+      const advancePaymentStr = String(data.advancePayment); // Ensure it's a string
+      if (advancePaymentStr.trim() !== '') {
+        const numAdvancePayment = Number(advancePaymentStr);
+        if (isNaN(numAdvancePayment) || numAdvancePayment < 0) {
+          return { error: "Advance Payment must be a non-negative number." };
+        }
+        parsedAdvancePayment = numAdvancePayment;
       }
-      parsedAdvancePayment = numAdvancePayment;
     }
+
 
     // Validate and process paymentMethod
     let finalPaymentMethod: string | null = null;
-    if (data.paymentMethod && data.paymentMethod.trim() !== '') {
+    if (data.paymentMethod && typeof data.paymentMethod === 'string' && data.paymentMethod.trim() !== '') {
       if (data.paymentMethod.toLowerCase() === 'other') {
         if (!data.customPaymentMethodText || !data.customPaymentMethodText.trim()) {
           return { error: "Please specify the 'Other' payment method text." };
@@ -64,35 +99,12 @@ export async function createOrderAction(
       }
     }
 
-    const processedOrderItems: OrderItem[] = data.orderItems.map(item => {
-      if (!item.model?.trim()) throw new Error("Model is required for all order items.");
-      
-      const quantity = parseInt(item.quantity, 10);
-      if (isNaN(quantity) || quantity < 1) throw new Error(`Invalid quantity for model "${item.model}". Quantity must be a positive number.`);
-      
-      if (!item.lamination?.trim()) throw new Error(`Lamination is required for model "${item.model}".`);
-
-      if (item.unitPrice === undefined || item.unitPrice === null || isNaN(Number(item.unitPrice)) || Number(item.unitPrice) < 0) {
-        throw new Error(`Unit price is missing or invalid for model "${item.model}". Please ensure a model with a price is selected.`);
-      }
-      if (item.lineItemTotalPrice === undefined || item.lineItemTotalPrice === null || isNaN(Number(item.lineItemTotalPrice)) || Number(item.lineItemTotalPrice) < 0) {
-        throw new Error(`Line item total price is missing or invalid for model "${item.model}". This should be calculated automatically.`);
-      }
-
-      return {
-        id: item.id, // Use the ID from the dialog state (already a UUID)
-        model: item.model.trim(),
-        quantity: quantity,
-        lamination: item.lamination.trim(),
-        unitPrice: Number(item.unitPrice),
-        lineItemTotalPrice: Number(item.lineItemTotalPrice),
-      };
-    });
 
     const newOrderData = {
       companyName: data.companyName.trim(),
+      customerName: data.companyName.trim(), // Default customerName to companyName
       address: data.address.trim(),
-      phoneNumber: data.phoneNumber.trim(), // Already validated as present
+      phoneNumber: data.phoneNumber.trim(),
       orderItems: processedOrderItems,
       advancePayment: parsedAdvancePayment,
       paymentMethod: finalPaymentMethod,
@@ -109,8 +121,8 @@ export async function createOrderAction(
 
     revalidatePath("/(app)/orders");
     revalidatePath("/(app)/dashboard");
-    revalidatePath("/(app)/orders/monthly");
     revalidatePath("/(app)/active-orders");
+    revalidatePath("/(app)/orders/monthly");
     return createdOrder;
 
   } catch (error: any) {
@@ -124,7 +136,7 @@ export async function assignDrToOrderAction(
   orderId: string,
   designerRepresentativeId: string,
   designerRepresentativeName: string,
-  actingUser: User, // Renamed from currentUser for clarity
+  actingUser: User, 
   readyForDesignStatusId: string
 ): Promise<TrackingLink | { error: string }> {
   try {
@@ -165,18 +177,20 @@ export async function assignDrToOrderAction(
     console.log("assignDrToOrderAction: Data being sent to updateOrder service:", JSON.stringify(updatedOrderData));
 
 
-    const success = await addOrder(orderId, updatedOrderData); // Naming inconsistency: should call updateOrder
-    if (!success) { // updateOrder typically returns boolean
+    const success = await updateOrder(orderId, updatedOrderData);
+    if (!success) { 
       console.error("assignDrToOrderAction: updateOrderService returned false for orderId:", orderId);
       return { error: "Failed to update order with DR assignment." };
     }
 
     revalidatePath("/(app)/orders");
-    revalidatePath(`/track/${orderId}`);
     revalidatePath("/(app)/dashboard");
     revalidatePath("/(app)/active-orders");
+    revalidatePath(`/track/${orderId}`);
     revalidatePath("/(app)/deliveries/monthly");
     revalidatePath("/(app)/deliveries/weekly");
+    revalidatePath("/(app)/orders/monthly");
+
 
     const updatedOrder = await getOrderById(orderId);
     if (!updatedOrder) {
@@ -202,9 +216,10 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
       revalidatePath("/(app)/dashboard");
       revalidatePath("/(app)/active-orders");
       revalidatePath("/(app)/orders/monthly");
+      revalidatePath("/(app)/deliveries/monthly");
+      revalidatePath("/(app)/deliveries/weekly");
       return { success: true };
     }
-    // Ensure a structured error is returned if deleteOrderFromDb returns false
     return { success: false, error: "Failed to delete order from database. Service returned failure." };
   } catch (error: any) {
     console.error("Error in deleteOrderAction:", error);
