@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, FormEvent, useRef } from 'reac
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, UserCheck, Layers, ThumbsUp, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, Disc, Heart, Plus, Minus } from "lucide-react";
+import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, UserCheck, Layers, Heart, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, Disc } from "lucide-react";
 import Image from "next/image";
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -162,6 +162,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setOrder(result);
       setNewComment('');
       toast({ title: "Success", description: "Your comment has been submitted." });
+      // showBrowserNotification("Comment Posted!", { body: "Your comment is now live." });
     }
     setIsSubmittingComment(false);
   };
@@ -198,6 +199,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setCurrentReplyText('');
       setReplyingTo(null);
       toast({ title: "Reply submitted" });
+      // showBrowserNotification("Reply Posted!", { body: "Your reply is now live." });
     }
   };
 
@@ -251,10 +253,10 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
  const renderTextWithMentions = (text: string) => {
     if (!text) return '';
-    const displayRegex = /@(\S+)/g; 
-    return text.split(displayRegex).map((part, index) => {
-      if (index % 2 === 1) { 
-        return <strong key={index} className="text-primary font-semibold">{part.trim()}</strong>;
+    // Updated regex to capture username without the @ symbol for display
+    return text.split(/(@[\w.-]+)/g).map((part, index) => {
+      if (index % 2 === 1 && part.startsWith('@')) { // Part is a mention
+        return <strong key={index} className="text-primary font-semibold">{part.substring(1)}</strong>;
       }
       return part;
     });
@@ -266,6 +268,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     setCurrentReplyText(text);
     
     const cursorPosition = e.target.selectionStart;
+    if (cursorPosition === null) return;
+
     const textBeforeCursor = text.substring(0, cursorPosition);
     const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@');
     
@@ -273,12 +277,13 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       const isStartOfMention = lastAtSymbolIndex === 0 || /\s/.test(textBeforeCursor.charAt(lastAtSymbolIndex - 1));
       if (isStartOfMention) {
         const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
-         console.log("FCM: Mention - Potential Query:", potentialQuery);
+        console.log("FCM: Mention - Potential Query:", potentialQuery);
         if (/^[a-zA-Z0-9_.-]*$/.test(potentialQuery)) { 
           setMentionQuery(potentialQuery);
           setActiveMentionStartIndex(lastAtSymbolIndex);
 
           const clientOption = { id: 'client-mention', name: order.companyName, role: 'Client' as 'Client' };
+          
           const usersToSearch = Array.isArray(allUsersForMentions) ? [clientOption, ...allUsersForMentions] : [clientOption];
           
           const filtered = usersToSearch.filter(user =>
@@ -337,17 +342,28 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     let avatarDataAiHint = "user initials avatar";
     let userToDisplay: User | undefined | null = null;
 
+    console.log(`Rendering comment by: ${comment.userName}, Role: ${comment.userRole}, UserID: ${comment.userId}, Comment ID: ${comment.id}`);
+
     if (comment.userRole === 'Client') {
-      avatarSrc = CLIENT_AVATAR_URL; // Use the constant
+      avatarSrc = CLIENT_AVATAR_URL; 
       avatarDataAiHint = "client avatar";
+      console.log(`Comment by Client ${comment.userName}. Using default client avatar: ${avatarSrc}`);
     } else if (comment.userId && Array.isArray(allUsersForMentions)) {
       userToDisplay = allUsersForMentions.find(u => u.id === comment.userId);
+      console.log(`User lookup for ID ${comment.userId}: Found user - ${userToDisplay?.name}`);
       if (userToDisplay?.avatarUrl) {
         avatarSrc = userToDisplay.avatarUrl;
         avatarDataAiHint = "user uploaded avatar";
+        console.log(`User ${userToDisplay.name} found with avatarUrl: ${avatarSrc}`);
+      } else {
+        console.log(`User ${userToDisplay?.name || 'Unknown User'} - No specific avatarUrl. Using fallback.`);
       }
+    } else {
+       console.log(`Comment by ${comment.userName} - No specific user ID or allUsersForMentions not an array. Using fallback avatar.`);
     }
     const avatarFallback = getInitials(comment.userName || "User");
+    console.log(`Final avatarSrc for ${comment.userName}: ${avatarSrc}, Fallback: ${avatarFallback}`);
+
 
     const currentVisibleReplies = (comment.replies || []).filter(reply =>
         !(reply.isInternal && !currentUser) &&
@@ -362,7 +378,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
     return (
       <div key={comment.id} className={`flex space-x-2.5 sm:space-x-3 ${isReply ? 'ml-8 sm:ml-12' : ''}`}>
-        <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/20 shadow-sm flex-shrink-0 mt-1">
+        <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/20 shadow-sm flex-shrink-0 mt-0.5">
           <AvatarImage src={avatarSrc} alt={comment.userName} data-ai-hint={avatarDataAiHint} />
           <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">{avatarFallback}</AvatarFallback>
         </Avatar>
@@ -426,7 +442,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             </button>
             <span className="text-muted-foreground">&middot;</span>
             <span className="text-muted-foreground" title={isClient ? formatDate(comment.timestamp) : 'Loading date...'}>
-              {isClient ? formatDistanceToNowStrict(new Date(comment.timestamp), { addSuffix: false }) : <Skeleton className="h-3 w-10 inline-block" />} 
+              {isClient ? formatDistanceToNowStrict(new Date(comment.timestamp)) : <Skeleton className="h-3 w-10 inline-block" />} 
             </span>
           </div>
 
@@ -609,7 +625,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                               Item {order.orderItems.length > 1 ? `#${index + 1}` : ''}
                             </span>
                             <span className="font-semibold text-card-foreground">{item.model}</span> - {item.quantity} Pcs ({item.lamination})
-                             {item.sheet !== null && item.sheet !== undefined && <span className="text-muted-foreground text-xs">, Sheet: {item.sheet}</span>}
                             <div className="text-xs mt-0.5">
                                 <span className="text-muted-foreground">Unit Price: </span><span className="font-medium">{formatCurrency(item.unitPrice)}</span>
                                 <span className="text-muted-foreground ml-2">Line Total: </span><span className="font-medium">{formatCurrency(item.lineItemTotalPrice)}</span>
@@ -712,7 +727,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <Separator className="my-6 sm:my-8 bg-border/30" />
             <form onSubmit={handleCommentSubmit} className="flex items-start space-x-3">
               <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/30 shadow-sm flex-shrink-0 mt-0.5">
-                <AvatarImage src={currentUser?.avatarUrl || CLIENT_AVATAR_URL} alt="Your avatar" data-ai-hint={currentUser ? "user avatar" : "client avatar"} />
+                <AvatarImage src={currentUser?.avatarUrl || CLIENT_AVATAR_URL} alt="Your avatar" data-ai-hint={currentUser ? "user uploaded avatar" : "client avatar"} />
                 <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">{getInitials(currentUser?.name || order.companyName || "Client")}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
@@ -752,3 +767,4 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
+

@@ -37,7 +37,6 @@ export interface OrderItem {
   model: string;
   quantity: number;
   lamination: string;
-  sheet?: number | null;
   unitPrice: number; // Price per unit of the selected model
   lineItemTotalPrice: number; // Calculated as unitPrice * quantity
 }
@@ -93,3 +92,4 @@ export interface GlobalSettings {
   crmCompletionStatusIds?: string[];
   areCommentsVisibleOnPublicPage?: boolean;
 }
+

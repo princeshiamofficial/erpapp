@@ -2,8 +2,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { TrackingLink, User, OrderItem, OrderLogEntry } from "@/types"; // Added OrderLogEntry
-import { addOrder, updateOrder as updateOrderService, getOrderById } from "@/lib/order-service"; // Renamed updateOrder
+import type { TrackingLink, User, OrderItem, OrderLogEntry } from "@/types"; 
+import { addOrder, updateOrder as updateOrderService, getOrderById, deleteOrder as deleteOrderFromDb } from "@/lib/order-service"; 
 import { v4 as uuidv4 } from 'uuid';
 
 export async function createOrderAction(
@@ -11,7 +11,7 @@ export async function createOrderAction(
     companyName: string;
     address: string;
     phoneNumber: string;
-    orderItems: Array<Omit<OrderItem, 'id'> & { id?: string }>; // ID is optional from client, will be ensured here
+    orderItems: Array<Omit<OrderItem, 'id'>>; // ID will be added here
     initialStatusId: string;
   },
   currentUser: User
@@ -49,10 +49,6 @@ export async function createOrderAction(
       if (!item.lamination?.trim()) {
         throw new Error(`Lamination is required for model "${item.model}".`);
       }
-      const sheetQty = item.sheet === undefined || item.sheet === null ? null : Number(item.sheet);
-      if (sheetQty !== null && (isNaN(sheetQty) || sheetQty < 0)) {
-          throw new Error(`Invalid sheet quantity for model "${item.model}". Must be a non-negative number if provided.`);
-      }
       const unitPrice = Number(item.unitPrice);
       if (isNaN(unitPrice) || unitPrice < 0) {
         throw new Error(`Invalid unit price for model "${item.model}".`);
@@ -62,13 +58,11 @@ export async function createOrderAction(
         throw new Error(`Invalid line item total price for model "${item.model}".`);
       }
 
-
       return {
-        id: item.id || uuidv4(), // Ensure each item has a unique ID
+        id: uuidv4(), // Ensure each item has a unique ID
         model: item.model.trim(),
         quantity: quantity,
         lamination: item.lamination.trim(),
-        sheet: sheetQty,
         unitPrice: unitPrice,
         lineItemTotalPrice: lineItemTotalPrice,
       };
@@ -77,7 +71,6 @@ export async function createOrderAction(
 
     const newOrderData = {
       companyName: data.companyName.trim(),
-      // customerName will be set to companyName in addOrder service for now
       address: data.address.trim(),
       phoneNumber: data.phoneNumber.trim(),
       orderItems: processedOrderItems,
@@ -116,24 +109,16 @@ export async function assignDrToOrderAction(
       console.error("assignDrToOrderAction: Acting user information is missing.", { actingUser });
       return { error: "Acting user information is missing." };
     }
-    if (!readyForDesignStatusId) {
-      console.error("assignDrToOrderAction: Ready for Design status ID is required.");
-      return { error: "Ready for Design status ID is required." };
-    }
-     if (readyForDesignStatusId !== 'ready-for-design') { // Hardcoded ID check
+    if (readyForDesignStatusId !== 'ready-for-design') { 
       console.error("assignDrToOrderAction: Invalid readyForDesignStatusId received. Expected 'ready-for-design', got:", readyForDesignStatusId);
       return { error: "Invalid target status ID for DR assignment. Configuration error." };
     }
 
-
     const currentOrder = await getOrderById(orderId);
-
     if (!currentOrder) {
       console.error(`assignDrToOrderAction: Order ${orderId} not found.`);
       return { error: `Order ${orderId} not found.` };
     }
-    // console.log("assignDrToOrderAction: Current order fetched:", JSON.stringify(currentOrder));
-
 
     const logEntry: OrderLogEntry = {
       id: uuidv4(),
@@ -154,8 +139,7 @@ export async function assignDrToOrderAction(
     };
     console.log("assignDrToOrderAction: Data being sent to updateOrder service:", JSON.stringify(updatedOrderData));
 
-
-    const success = await updateOrderService(orderId, updatedOrderData); // renamed service function
+    const success = await updateOrderService(orderId, updatedOrderData); 
     if (!success) {
       console.error("assignDrToOrderAction: updateOrderService returned false for orderId:", orderId);
       return { error: "Failed to update order with DR assignment." };
@@ -165,7 +149,6 @@ export async function assignDrToOrderAction(
     revalidatePath(`/track/${orderId}`);
     revalidatePath("/(app)/dashboard");
     revalidatePath("/(app)/active-orders");
-
 
     const updatedOrder = await getOrderById(orderId);
     if (!updatedOrder) {
@@ -183,7 +166,7 @@ export async function assignDrToOrderAction(
 
 export async function deleteOrderAction(orderId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const success = await deleteDoc(orderId); // Assuming deleteDoc is the name in order-service, if not, adjust
+    const success = await deleteOrderFromDb(orderId); 
     if (success) {
       revalidatePath("/(app)/orders");
       revalidatePath("/(app)/dashboard");
@@ -197,3 +180,4 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
     return { success: false, error: error.message || "An unexpected error occurred while deleting order." };
   }
 }
+

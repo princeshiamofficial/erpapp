@@ -1,6 +1,6 @@
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, orderBy, writeBatch, limit, where, deleteDoc as deleteFirestoreDoc, runTransaction } from 'firebase/firestore'; // Renamed deleteDoc to deleteFirestoreDoc
+import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, orderBy, writeBatch, limit, where, deleteDoc as deleteFirestoreDoc, runTransaction } from 'firebase/firestore';
 import type { TrackingLink, Comment, OrderLogEntry, CustomStatus, UserRole, OrderItem } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getStatuses, READY_FOR_DESIGN_STATUS_ID } from './status-service';
@@ -27,7 +27,7 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
   if (!readyForDesignStatus) missingDetailed.push(`ID: '${READY_FOR_DESIGN_STATUS_ID}' (Ready for Design)`);
   
   if (missingDetailed.length > 0) {
-    console.error(`seedInitialOrders: Critical default statuses not found by ID, cannot seed initial orders properly. Specifically missing: ${missingDetailed.join(', ')}. Please ensure these system statuses exist in your Firestore 'customOrderStatuses' collection or that the status seeding mechanism is working correctly.`);
+    console.error(`seedInitialOrders: Critical default statuses not found by ID, cannot seed initial orders properly. Specifically missing: ${missingDetailed.join(', ')}. Please check that these statuses exist in your Firestore 'customOrderStatuses' collection with their correct IDs, or ensure the status seeding process is complete and successful.`);
     return [];
   }
   
@@ -41,7 +41,7 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     const firstOrderId = `ORD-${dateStringTwoDaysAgo}-001`;
     
     const firstOrderItems: OrderItem[] = [{ 
-      id: uuidv4(), model: "Premium Matte", quantity: 500, lamination: "Soft Touch", sheet: 250, unitPrice: 15, lineItemTotalPrice: 7500 
+      id: uuidv4(), model: "Premium Matte", quantity: 500, lamination: "Soft Touch", unitPrice: 15, lineItemTotalPrice: 7500 
     }];
 
     const firstOrder: TrackingLink = {
@@ -55,7 +55,7 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       designerRepresentativeId: null,
       designerRepresentativeName: null,
       createdAt: dateTwoDaysAgo.toISOString(),
-      currentStatus: inProductionStatus!.id, // Use ! as we checked above
+      currentStatus: inProductionStatus!.id, 
       statusHistory: [
         { id: uuidv4(), timestamp: dateTwoDaysAgo.toISOString(), status: orderSubmittedStatus!.id, changedByUserId: "SysAdmin-001", changedByUserName: "Default Admin", notes: "Order created, requirements gathered." },
         { id: uuidv4(), timestamp: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), status: inProductionStatus!.id, changedByUserId: "SysAdmin-001", changedByUserName: "Default Admin", notes: "Production has commenced." }
@@ -75,7 +75,7 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     const secondOrderId = `ORD-${dateStringOneDayAgo}-001`;
 
     const secondOrderItems: OrderItem[] = [{ 
-      id: uuidv4(), model: "Eco-Friendly Recycled", quantity: 1000, lamination: "None", sheet: 1000, unitPrice: 12.50, lineItemTotalPrice: 12500
+      id: uuidv4(), model: "Eco-Friendly Recycled", quantity: 1000, lamination: "None", unitPrice: 12.50, lineItemTotalPrice: 12500
     }];
 
     const secondOrder: TrackingLink = {
@@ -119,7 +119,8 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
   try {
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
-      // orders = await seedInitialOrders(); // Seeding disabled for now, uncomment if needed for dev
+      // console.log("No orders found in Firestore, seeding defaults.");
+      // orders = await seedInitialOrders(); // Seeding disabled for now
     } else {
       orders = snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as TrackingLink));
     }
@@ -150,7 +151,7 @@ export const addOrder = async (orderData: {
   companyName: string;
   address: string;
   phoneNumber: string;
-  orderItems: OrderItem[];
+  orderItems: OrderItem[]; // This now expects the structured OrderItem
   initialStatusId: string;
   crmUserId: string;
   crmUserName: string;
@@ -221,7 +222,7 @@ export const addOrder = async (orderData: {
 
   } catch (error: any) {
     console.error("Error adding order to Firestore:", error);
-    throw new Error(error.message || "Failed to create order in database.");
+    return null; // Return null on error
   }
 };
 
@@ -241,7 +242,6 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
       console.log(`updateOrder: No updates to apply for order ${id}.`);
       return true;
     }
-
     await updateDoc(orderDoc, sanitizedUpdates);
     return true;
   } catch (error) {
@@ -250,10 +250,10 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
   }
 };
 
-export const deleteOrder = async (orderId: string): Promise<boolean> => { // Renamed from deleteFirestoreDoc for consistency
+export const deleteOrder = async (orderId: string): Promise<boolean> => {
   try {
     const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
-    await deleteFirestoreDoc(orderDocRef); // Use the imported deleteDoc from Firestore
+    await deleteFirestoreDoc(orderDocRef); 
     return true;
   } catch (error) {
     console.error(`Error deleting order ${orderId} from Firestore:`, error);
@@ -348,8 +348,8 @@ export const toggleReaction = async (
   targetCommentId: string,
   isReply: boolean,
   parentCommentIdIfReply: string | undefined,
-  reactorId: string,
-  reactionType: 'like' // Currently only 'like'
+  reactorId: string, 
+  reactionType: 'like' 
 ): Promise<TrackingLink | undefined> => {
   try {
     const orderRef = doc(db, ORDERS_COLLECTION, orderId);
@@ -431,3 +431,4 @@ export const incrementOrderViewCount = async (orderId: string): Promise<boolean>
     return false;
   }
 };
+
