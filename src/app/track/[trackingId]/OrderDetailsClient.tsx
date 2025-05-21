@@ -5,8 +5,8 @@ import React, { useState, useEffect, useCallback, FormEvent, useRef } from 'reac
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'; // Added Table imports
-import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, UserCheck, Disc } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Send, MessageSquare, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Disc } from "lucide-react";
 import Image from "next/image";
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -23,7 +23,6 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
-
 interface OrderDetailsClientProps {
   order: TrackingLink;
   allStatuses: CustomStatus[];
@@ -31,10 +30,7 @@ interface OrderDetailsClientProps {
   areCommentsVisible: boolean;
 }
 
-const CLIENT_REACTOR_ID_KEY = 'colorHutClientReactorId';
-const MAX_INITIAL_REPLIES_TO_SHOW = 1;
 const CLIENT_AVATAR_URL = 'https://i.ibb.co/7dphf0LX/avatar-with-a-young-face-pictures-of-men-vector-46356734.jpg';
-
 
 const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
@@ -73,11 +69,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   useEffect(() => {
     console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
-    if (initialOrder.orderItems) {
-        console.log('OrderItems:', initialOrder.orderItems);
-    } else {
-        console.log('OrderItems: is undefined or null');
-    }
   }, [initialOrder]);
 
   useEffect(() => {
@@ -93,10 +84,10 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     setIsClient(true);
     setOrder(initialOrder);
 
-    let storedReactorId = localStorage.getItem(CLIENT_REACTOR_ID_KEY);
+    let storedReactorId = localStorage.getItem('colorHutClientReactorId');
     if (!storedReactorId) {
       storedReactorId = uuidv4();
-      localStorage.setItem(CLIENT_REACTOR_ID_KEY, storedReactorId);
+      localStorage.setItem('colorHutClientReactorId', storedReactorId);
     }
     setClientReactorId(storedReactorId);
 
@@ -162,7 +153,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setOrder(result);
       setNewComment('');
       toast({ title: "Success", description: "Your comment has been submitted." });
-      showBrowserNotification("Comment Posted!", { body: "Your comment is now live." });
+      // showBrowserNotification("Comment Posted!", { body: "Your comment is now live." });
     }
     setIsSubmittingComment(false);
   };
@@ -180,7 +171,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
         order.id,
         replyingTo.parentId,
         currentReplyText,
-        false, // Public replies are not internal by default
+        false, 
         currentUser
       );
     } else {
@@ -199,7 +190,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setCurrentReplyText('');
       setReplyingTo(null);
       toast({ title: "Reply submitted" });
-      showBrowserNotification("Reply Posted!", { body: "Your reply is now live." });
+      // showBrowserNotification("Reply Posted!", { body: "Your reply is now live." });
     }
   };
 
@@ -253,9 +244,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
  const renderTextWithMentions = (text: string) => {
     if (!text) return '';
-    // Updated regex to capture username without the @ symbol for display
     return text.split(/(@[\w.-]+)/g).map((part, index) => {
-      if (index % 2 === 1 && part.startsWith('@')) { // Part is a mention
+      if (index % 2 === 1 && part.startsWith('@')) { 
         return <strong key={index} className="text-primary font-semibold">{part.substring(1)}</strong>;
       }
       return part;
@@ -272,13 +262,13 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
     const textBeforeCursor = text.substring(0, cursorPosition);
     const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@');
-
+    
     if (lastAtSymbolIndex !== -1) {
-      const isStartOfMention = lastAtSymbolIndex === 0 || /\s/.test(textBeforeCursor.charAt(lastAtSymbolIndex - 1));
-      if (isStartOfMention) {
-        const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
-        console.log("FCM: Mention - Potential Query:", potentialQuery);
-        if (/^[a-zA-Z0-9_.-]*$/.test(potentialQuery)) {
+      const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
+      const charBeforeAt = lastAtSymbolIndex > 0 ? textBeforeCursor.charAt(lastAtSymbolIndex - 1) : ' ';
+
+      if (/\s|^/.test(charBeforeAt) && /^[a-zA-Z0-9_.-]*$/.test(potentialQuery)) {
+          console.log("FCM: Mention - Potential Query:", potentialQuery);
           setMentionQuery(potentialQuery);
           setActiveMentionStartIndex(lastAtSymbolIndex);
 
@@ -290,9 +280,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             user.role.toLowerCase().includes(potentialQuery.toLowerCase())
           ).slice(0, 7);
           setMentionSuggestions(filtered);
-           console.log("FCM: Mention - Filtered Suggestions:", filtered);
+          console.log("FCM: Mention - Filtered Suggestions:", filtered);
           return;
-        }
       }
     }
     setMentionQuery(null);
@@ -310,9 +299,11 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     const queryLength = mentionQuery?.length || 0;
 
     const textBeforeAt = text.substring(0, activeMentionStartIndex);
+    // To get text after the current partial mention, consider the cursor position 
+    // or the end of the partial mention (activeMentionStartIndex + 1 + queryLength)
     const textAfterQueryEnd = text.substring(activeMentionStartIndex + 1 + queryLength);
-
-    const newText = `${textBeforeAt}@${userNameToInsert.replace(/\s+/g, '')} ${textAfterQueryEnd.startsWith(' ') ? textAfterQueryEnd : ' ' + textAfterQueryEnd}`.trimEnd() + ' ';
+    
+    const newText = `${textBeforeAt}@${userNameToInsert.replace(/\s+/g, '')} ${textAfterQueryEnd.startsWith(' ') ? textAfterQueryEnd : textAfterQueryEnd}`.trimEnd() + ' ';
     setCurrentReplyText(newText);
 
     const newCursorPosition = activeMentionStartIndex + 1 + userNameToInsert.replace(/\s+/g, '').length + 1;
@@ -342,11 +333,10 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     let userToDisplay: User | undefined | null = null;
 
     console.log(`Rendering comment by: ${comment.userName}, Role: ${comment.userRole}, UserID: ${comment.userId}, Comment ID: ${comment.id}`);
-
     if (comment.userRole === 'Client') {
       avatarSrc = CLIENT_AVATAR_URL;
       avatarDataAiHint = "client avatar";
-      console.log(`Comment by Client ${comment.userName}. Using default client avatar: ${avatarSrc}`);
+      console.log(`Comment by Client ${comment.userName}. Using client avatar: ${avatarSrc}`);
     } else if (comment.userId && Array.isArray(allUsersForMentions)) {
       userToDisplay = allUsersForMentions.find(u => u.id === comment.userId);
       console.log(`User lookup for ID ${comment.userId}: Found user - ${userToDisplay?.name}`);
@@ -361,7 +351,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
        console.log(`Comment by ${comment.userName} - No specific user ID or allUsersForMentions not an array or empty. Using fallback avatar.`);
     }
     const avatarFallback = getInitials(comment.userName || "User");
-    console.log(`Final avatarSrc for ${comment.userName}: ${avatarSrc}, Fallback: ${avatarFallback}`);
 
 
     const currentVisibleReplies = (comment.replies || []).filter(reply =>
@@ -384,7 +373,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
         <div className="flex-1">
           <div
             onDoubleClick={() => handleToggleLike(comment.id, isReply, parentCommentId)}
-            className="bg-muted dark:bg-muted/50 px-3.5 py-2.5 rounded-xl shadow-sm group transition-colors"
+            className="bg-muted dark:bg-muted/60 px-3.5 py-2.5 rounded-xl shadow-sm group transition-colors"
           >
             <div className="flex items-baseline space-x-1.5">
               <p className="text-sm font-semibold text-foreground">{comment.userName}</p>
@@ -441,12 +430,12 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             </button>
             <span className="text-muted-foreground">&middot;</span>
             <span className="text-muted-foreground" title={isClient ? formatDate(comment.timestamp) : 'Loading date...'}>
-              {isClient ? formatDistanceToNowStrict(new Date(comment.timestamp)) : <Skeleton className="h-3 w-10 inline-block" />}
+              {isClient ? formatDistanceToNowStrict(new Date(comment.timestamp), { addSuffix: true}) : <Skeleton className="h-3 w-10 inline-block" />}
             </span>
           </div>
 
           {replyingTo?.formUnderId === comment.id && (
-            <Popover open={mentionQuery !== null} onOpenChange={(open) => { if(!open) { setMentionQuery(null); setActiveMentionStartIndex(null); setMentionSuggestions([]);} }}>
+            <Popover open={mentionQuery !== null && mentionSuggestions.length > 0} onOpenChange={(open) => { if(!open) { setMentionQuery(null); setActiveMentionStartIndex(null); setMentionSuggestions([]);} }}>
               <PopoverAnchor asChild>
                 <form onSubmit={(e) => { e.preventDefault(); handleReplySubmit(); }} className="mt-2.5 flex items-start space-x-2.5 pl-0 sm:pl-1">
                   <Avatar className="h-7 w-7 border border-border/40 flex-shrink-0 mt-0.5 shadow-sm">
@@ -543,6 +532,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   const lastStatusUpdateTimestamp = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1].timestamp : order.createdAt;
 
+  const orderSubtotal = Array.isArray(order.orderItems) ? order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0) : 0;
+
   return (
     <main className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
       <Card className="shadow-2xl overflow-hidden border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
@@ -572,48 +563,40 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
           </div>
 
           <Separator className="my-6 sm:my-8 bg-border/30" />
-
-          <div>
-            <h3 className="text-xl font-semibold mb-4 sm:mb-5 text-foreground">Order Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-4 sm:gap-y-5 text-sm sm:text-base">
-               <div className="md:col-span-2">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 sm:gap-x-8 gap-y-4 md:gap-y-0">
-                  <div className="flex items-start space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
-                    <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                        <Building className="h-4 w-4 sm:h-5 sm:w-5 text-primary " />
-                    </div>
-                    <div>
-                      <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Company</span> {order.companyName}
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
-                    <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                        <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                    </div>
-                    <div>
-                      <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Phone</span> {order.phoneNumber}
-                    </div>
-                  </div>
-                </div>
+          
+          {/* Invoice Section */}
+          <div className="border border-border/30 rounded-lg p-6 shadow-sm bg-secondary/20 dark:bg-card-foreground/5">
+            <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30">
+              <div>
+                <h2 className="text-3xl font-bold text-primary mb-2 flex items-center">
+                  <FileText className="h-8 w-8 mr-3" /> INVOICE
+                </h2>
+                <p className="text-muted-foreground">Color Hut Inc.</p>
+                <p className="text-muted-foreground text-sm">123 Creative Lane, Design City, DC 54321</p>
+                <p className="text-muted-foreground text-sm">contact@colorhut.dev | (555) 123-4567</p>
               </div>
-
-              <div className="flex items-start space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20 hover:shadow-md hover:border-primary/30 transition-all md:col-span-2">
-                <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                    <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                </div>
-                <div>
-                  <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Address</span> {order.address}
-                </div>
+              <div className="text-left sm:text-right mt-4 sm:mt-0">
+                <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
+                <p className="text-sm text-muted-foreground">
+                  Date: {isClient ? new Date(order.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : <Skeleton className="h-4 w-32 inline-block" />}
+                </p>
               </div>
+            </div>
 
-              <div className="md:col-span-2">
-                <h3 className="text-xl font-semibold mb-4 sm:mb-5 text-foreground flex items-start">
-                  <Layers className="h-7 w-7 text-primary mr-3 flex-shrink-0 p-1 bg-primary/10 rounded-md border border-primary/20" />
-                  Service Items
+            <div className="mb-6">
+              <h4 className="text-md font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Bill To:</h4>
+              <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
+              <p className="text-foreground/90">{order.address}</p>
+              <p className="text-foreground/90">Phone: {order.phoneNumber}</p>
+            </div>
+            
+            <div className="mb-6">
+                 <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">
+                  <Layers className="h-6 w-6 text-primary mr-2.5 mt-0.5 flex-shrink-0 p-0.5 bg-primary/10 rounded-md border border-primary/20" />
+                  Order Items
                 </h3>
                 {Array.isArray(order.orderItems) && order.orderItems.length > 0 ? (
-                  <div className="overflow-x-auto rounded-lg border border-border/30 bg-secondary/40 dark:bg-secondary/10 shadow-sm">
+                  <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -644,33 +627,38 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                     </div>
                     <div>
                       <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Service Items</span>
-                      Not specified
+                      Not specified for this order.
                     </div>
                   </div>
-                )}
-              </div>
-
-               <div className="flex items-start space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
-                  <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                    <CalendarDays className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                  </div>
-                  <div>
-                    <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Order Placed</span> {isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-32" />}
-                  </div>
-                </div>
-
-                {order.designerRepresentativeName && (
-                    <div className="flex items-start space-x-3 p-3 bg-secondary/40 dark:bg-secondary/10 rounded-lg border border-border/30 dark:border-border/20 hover:shadow-md hover:border-primary/30 transition-all">
-                        <div className="p-1.5 sm:p-2 bg-primary/10 rounded-full border border-primary/20 flex-shrink-0">
-                            <UserCheck className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-                        </div>
-                        <div>
-                            <span className="font-medium text-foreground block text-xs uppercase tracking-wider text-muted-foreground">Assigned Designer</span> {order.designerRepresentativeName}
-                        </div>
-                    </div>
                 )}
             </div>
+
+            <div className="flex justify-end mt-8 pt-6 border-t border-border/30">
+              <div className="w-full max-w-xs sm:max-w-sm">
+                <div className="flex justify-between mb-2">
+                  <span className="text-md font-semibold text-muted-foreground">Subtotal:</span>
+                  <span className="text-md font-bold text-foreground">{formatCurrency(orderSubtotal)}</span>
+                </div>
+                {/* Placeholder for Tax and Grand Total if needed later
+                <div className="flex justify-between mb-2">
+                  <span className="text-md text-muted-foreground">Tax (0%):</span>
+                  <span className="text-md text-foreground">{formatCurrency(0)}</span>
+                </div>
+                <Separator className="my-2 bg-border/40" />
+                <div className="flex justify-between">
+                  <span className="text-lg font-bold text-primary">Grand Total:</span>
+                  <span className="text-lg font-bold text-primary">{formatCurrency(orderSubtotal)}</span>
+                </div>
+                */}
+              </div>
+            </div>
+            {order.designerRepresentativeName && (
+                <div className="mt-6 pt-4 border-t border-border/20 text-sm text-muted-foreground">
+                    <p className="flex items-center"><UserCheck className="h-4 w-4 mr-2 text-green-500" /> Assigned Designer: {order.designerRepresentativeName}</p>
+                </div>
+            )}
           </div>
+          {/* End Invoice Section */}
 
           <Separator className="my-6 sm:my-8 bg-border/30" />
 
@@ -771,4 +759,3 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
-
