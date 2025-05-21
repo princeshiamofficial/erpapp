@@ -1,18 +1,18 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle, Search } from "lucide-react"; // Added Search
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { ServiceModelItem } from "@/types";
 import { getModels } from '@/lib/service-options-service';
 import {
   addModelAction, updateModelAction, deleteModelAction
-} from '../service-management/actions'; // Assuming actions are in service-management folder
+} from '../service-management/actions'; 
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -22,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface ItemToEdit {
   id: string;
   name: string;
-  price: string; // Price as string for input
+  price: string; 
 }
 interface ItemToDelete {
   id: string;
@@ -37,12 +37,13 @@ export default function ModelManagementPage() {
   const [models, setModels] = useState<ServiceModelItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [modelSearchTerm, setModelSearchTerm] = useState(''); // State for search term
 
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const [itemName, setItemName] = useState('');
-  const [itemPrice, setItemPrice] = useState(''); // For new/edit price input
+  const [itemPrice, setItemPrice] = useState(''); 
   const [editingItem, setEditingItem] = useState<ItemToEdit | null>(null);
   const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
 
@@ -67,10 +68,17 @@ export default function ModelManagementPage() {
     }
   }, [currentUser, router, fetchData]);
 
+  const filteredModels = useMemo(() => {
+    if (!modelSearchTerm) return models;
+    return models.filter(model =>
+      model.name.toLowerCase().includes(modelSearchTerm.toLowerCase())
+    );
+  }, [models, modelSearchTerm]);
+
   const openAddDialog = () => {
     setEditingItem(null);
     setItemName('');
-    setItemPrice('0'); // Default price for new item
+    setItemPrice('0'); 
     setIsAddEditDialogOpen(true);
   };
 
@@ -101,12 +109,12 @@ export default function ModelManagementPage() {
     setIsSubmitting(true);
     let result;
 
-    if (editingItem) { // Editing existing item
+    if (editingItem) { 
       result = await updateModelAction(editingItem.id, itemName.trim(), priceValue);
       if (result.success) {
         toast({ title: "Success", description: `Model "${itemName.trim()}" updated.` });
       }
-    } else { // Adding new item
+    } else { 
       result = await addModelAction(itemName.trim(), priceValue);
       if (result.success) {
         toast({ title: "Success", description: `Model "${itemName.trim()}" added.` });
@@ -156,16 +164,27 @@ export default function ModelManagementPage() {
   
   const renderItemList = (items: ServiceModelItem[], title: string, Icon: React.ElementType) => (
     <Card className="shadow-xl border bg-card rounded-lg overflow-hidden flex-1 min-w-[300px]">
-      <CardHeader className="border-b p-5 flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Icon className="h-5 w-5 text-primary"/>{title}</CardTitle>
-          <CardDescription className="text-muted-foreground text-sm mt-0.5">Manage available {title.toLowerCase()} options for orders.</CardDescription>
-        </div>
-         <Button size="sm" onClick={openAddDialog} className="h-9">
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New
+      <CardHeader className="border-b p-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div>
+            <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Icon className="h-5 w-5 text-primary"/>{title}</CardTitle>
+            <CardDescription className="text-muted-foreground text-sm mt-0.5">Manage available {title.toLowerCase()} options for orders.</CardDescription>
+          </div>
+          <Button size="sm" onClick={openAddDialog} className="h-9 w-full sm:w-auto">
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New
           </Button>
+        </div>
+        <div className="relative mt-4">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={`Search ${title}...`}
+            value={modelSearchTerm}
+            onChange={(e) => setModelSearchTerm(e.target.value)}
+            className="pl-9 bg-background/50"
+          />
+        </div>
       </CardHeader>
-      <CardContent className="p-0 max-h-[calc(100vh-300px)] overflow-y-auto">
+      <CardContent className="p-0 max-h-[calc(100vh-350px)] overflow-y-auto"> {/* Adjusted max-height */}
         {isLoading ? (
           <div className="p-4 space-y-3">
             {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-md" />)}
@@ -173,7 +192,7 @@ export default function ModelManagementPage() {
         ) : items.length === 0 ? (
           <div className="p-6 text-center text-muted-foreground">
             <Icon className="mx-auto h-10 w-10 opacity-50 mb-2" />
-            No {title.toLowerCase()} found.
+            No {modelSearchTerm ? `${title.toLowerCase()} found for "${modelSearchTerm}"` : `${title.toLowerCase()} found.`}
           </div>
         ) : (
           <ul className="divide-y divide-border/50">
@@ -181,7 +200,6 @@ export default function ModelManagementPage() {
               <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
                 <div className="flex flex-col">
                   <span className="font-medium text-foreground">{item.name}</span>
-                  {/* Price display removed from here */}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(item)} title={`Edit model`} className="h-8 w-8">
@@ -218,7 +236,7 @@ export default function ModelManagementPage() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {renderItemList(models, 'Models', Layers)}
+        {renderItemList(filteredModels, 'Models', Layers)}
       </div>
 
       {/* Add/Edit Dialog */}

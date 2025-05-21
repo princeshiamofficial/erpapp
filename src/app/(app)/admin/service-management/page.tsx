@@ -1,19 +1,19 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Layers, ShieldHalf, RefreshCw, AlertTriangle, CreditCard } from "lucide-react"; // Added CreditCard
+import { PlusCircle, Edit, Trash2, Layers, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, Search } from "lucide-react"; // Added Search
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem } from "@/types"; // Added ServicePaymentMethodItem
-import { getModels, getLaminations, getPaymentMethods } from '@/lib/service-options-service'; // Added getPaymentMethods
+import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem } from "@/types"; 
+import { getModels, getLaminations, getPaymentMethods } from '@/lib/service-options-service'; 
 import {
   addModelAction, updateModelAction, deleteModelAction,
   addLaminationAction, updateLaminationAction, deleteLaminationAction,
-  addPaymentMethodAction, updatePaymentMethodAction, deletePaymentMethodAction // Added PaymentMethod actions
+  addPaymentMethodAction, updatePaymentMethodAction, deletePaymentMethodAction 
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -21,7 +21,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 
-type ItemType = 'model' | 'lamination' | 'paymentMethod'; // Added paymentMethod
+type ItemType = 'model' | 'lamination' | 'paymentMethod'; 
 interface ItemToEdit {
   id: string;
   name: string;
@@ -41,9 +41,10 @@ export default function ServiceManagementPage() {
 
   const [models, setModels] = useState<ServiceModelItem[]>([]);
   const [laminations, setLaminations] = useState<ServiceLaminationItem[]>([]);
-  const [paymentMethods, setPaymentMethods] = useState<ServicePaymentMethodItem[]>([]); // Added state for payment methods
+  const [paymentMethods, setPaymentMethods] = useState<ServicePaymentMethodItem[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [modelSearchTerm, setModelSearchTerm] = useState(''); // State for model search term
 
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -58,14 +59,14 @@ export default function ServiceManagementPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedModels, fetchedLaminations, fetchedPaymentMethods] = await Promise.all([ // Fetch payment methods
+      const [fetchedModels, fetchedLaminations, fetchedPaymentMethods] = await Promise.all([ 
         getModels(),
         getLaminations(),
         getPaymentMethods(),
       ]);
       setModels(fetchedModels);
       setLaminations(fetchedLaminations);
-      setPaymentMethods(fetchedPaymentMethods); // Set payment methods state
+      setPaymentMethods(fetchedPaymentMethods); 
     } catch (error) {
       console.error("Error fetching service options:", error);
       toast({ title: "Error", description: "Could not load service options.", variant: "destructive" });
@@ -81,6 +82,13 @@ export default function ServiceManagementPage() {
       router.replace('/dashboard');
     }
   }, [currentUser, router, fetchData]);
+
+  const filteredModels = useMemo(() => {
+    if (!modelSearchTerm) return models;
+    return models.filter(model =>
+      model.name.toLowerCase().includes(modelSearchTerm.toLowerCase())
+    );
+  }, [models, modelSearchTerm]);
 
   const openAddDialog = (type: ItemType) => {
     setEditingItem(null);
@@ -128,7 +136,7 @@ export default function ServiceManagementPage() {
       }
     }
 
-    if (editingItem) { // Editing existing item
+    if (editingItem) { 
       if (currentType === 'model') {
         result = await updateModelAction(editingItem.id, itemName.trim(), priceValue);
       } else if (currentType === 'lamination') {
@@ -139,7 +147,7 @@ export default function ServiceManagementPage() {
       if (result?.success) {
         toast({ title: "Success", description: `${currentType === 'model' ? 'Model' : currentType === 'lamination' ? 'Lamination' : 'Payment Method'} "${itemName.trim()}" updated.` });
       }
-    } else if (itemTypeToAdd) { // Adding new item
+    } else if (itemTypeToAdd) { 
        if (currentType === 'model') {
         result = await addModelAction(itemName.trim(), priceValue);
       } else if (currentType === 'lamination') {
@@ -204,14 +212,27 @@ export default function ServiceManagementPage() {
   
   const renderItemList = (items: (ServiceModelItem | ServiceLaminationItem | ServicePaymentMethodItem)[], type: ItemType, title: string, Icon: React.ElementType) => (
     <Card className="shadow-xl border bg-card rounded-lg overflow-hidden w-full">
-      <CardHeader className="border-b p-5 flex flex-row items-center justify-between">
-        <div>
-          <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Icon className="h-5 w-5 text-primary"/>{title}</CardTitle>
-          <CardDescription className="text-muted-foreground text-sm mt-0.5">Manage available {title.toLowerCase()} options for orders.</CardDescription>
-        </div>
-         <Button size="sm" onClick={() => openAddDialog(type)} className="h-9">
-            <PlusCircle className="mr-2 h-4 w-4" /> Add New
+      <CardHeader className="border-b p-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div>
+            <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Icon className="h-5 w-5 text-primary"/>{title}</CardTitle>
+            <CardDescription className="text-muted-foreground text-sm mt-0.5">Manage available {title.toLowerCase()} options for orders.</CardDescription>
+          </div>
+          <Button size="sm" onClick={() => openAddDialog(type)} className="h-9 w-full sm:w-auto">
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New
           </Button>
+        </div>
+        {type === 'model' && (
+          <div className="relative mt-4">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={`Search ${title}...`}
+              value={modelSearchTerm}
+              onChange={(e) => setModelSearchTerm(e.target.value)}
+              className="pl-9 bg-background/50"
+            />
+          </div>
+        )}
       </CardHeader>
       <CardContent className="p-0 max-h-[400px] overflow-y-auto">
         {isLoading ? (
@@ -221,7 +242,7 @@ export default function ServiceManagementPage() {
         ) : items.length === 0 ? (
           <div className="p-6 text-center text-muted-foreground">
             <Icon className="mx-auto h-10 w-10 opacity-50 mb-2" />
-            No {title.toLowerCase()} found.
+            No {modelSearchTerm && type === 'model' ? `${title.toLowerCase()} found for "${modelSearchTerm}"` : `${title.toLowerCase()} found.`}
           </div>
         ) : (
           <ul className="divide-y divide-border/50">
@@ -229,7 +250,6 @@ export default function ServiceManagementPage() {
               <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
                 <div className="flex flex-col">
                   <span className="font-medium text-foreground">{item.name}</span>
-                  {/* Price display removed for models in list view */}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(item, type)} title={`Edit ${type}`} className="h-8 w-8">
@@ -266,7 +286,7 @@ export default function ServiceManagementPage() {
       </div>
 
       <div className="flex flex-col space-y-6">
-        {renderItemList(models, 'model', 'Models', Layers)}
+        {renderItemList(filteredModels, 'model', 'Models', Layers)}
         {renderItemList(laminations, 'lamination', 'Laminations', ShieldHalf)}
         {renderItemList(paymentMethods, 'paymentMethod', 'Payment Methods', CreditCard)} 
       </div>
