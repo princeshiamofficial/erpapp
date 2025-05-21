@@ -178,6 +178,7 @@ export default function AdminStatusesPage() {
   const renderAllowedRolesCheckboxes = (isEditingDialog: boolean) => {
     const currentSelectedRoles = isEditingDialog && editingStatus ? newStatusAllowedRoles : newStatusAllowedRoles;
     const isSystemStatusBeingEdited = isEditingDialog && editingStatus?.isSystemStatus;
+    // System Admins can always edit system status roles. Regular Admins cannot.
     const disabledForNonSysAdminOnSystemStatus = isSystemStatusBeingEdited && currentUser?.role !== 'SYSTEM_ADMIN';
 
     return (
@@ -283,11 +284,11 @@ export default function AdminStatusesPage() {
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button 
-                        variant="destructive" 
+                        variant="ghost" 
                         size="icon" 
                         onClick={() => openDeleteDialog(status)} 
                         title="Delete Status" 
-                        className="h-9 w-9"
+                        className="h-9 w-9 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
                         disabled={status.isSystemStatus}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -397,3 +398,4 @@ export default function AdminStatusesPage() {
     </div>
   );
 }
+

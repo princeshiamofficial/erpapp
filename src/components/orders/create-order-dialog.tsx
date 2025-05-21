@@ -12,10 +12,10 @@ import { useToast } from '@/hooks/use-toast';
 import { createOrderAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getModels, getLaminations } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check } from 'lucide-react'; // Added ChevronsUpDown, Check
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"; // Added Popover
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"; // Added Command
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from '@/lib/utils';
 
 interface CreateOrderDialogProps {
@@ -27,7 +27,7 @@ interface CreateOrderDialogProps {
 
 interface DialogOrderItem {
   id: string;
-  model: string; // Store the selected model name
+  model: string;
   quantity: string;
   lamination: string;
   unitPrice: number | null;
@@ -70,8 +70,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setAddress('');
     setPhoneNumber('');
     setInitialStatusId('');
-    const newId = uuidv4();
-    setOrderItems([{ ...initialOrderItemState, id: newId }]);
+    setOrderItems([{ ...initialOrderItemState, id: uuidv4() }]);
     setPopoverOpenStates({});
   }, []);
 
@@ -95,8 +94,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   useEffect(() => {
     if (isOpen) {
       fetchOptions();
-      const orderSubmittedStatus = availableStatuses.find(s => s.id === "order-submitted");
-      if (!initialStatusId || !availableStatuses.some(s => s.id === initialStatusId)) {
+      // Ensure initialStatusId is valid or set to a default
+      const isCurrentStatusValid = initialStatusId && availableStatuses.some(s => s.id === initialStatusId);
+      if (!isCurrentStatusValid) {
+        const orderSubmittedStatus = availableStatuses.find(s => s.id === "order-submitted");
         if (orderSubmittedStatus) {
           setInitialStatusId(orderSubmittedStatus.id);
         } else if (availableStatuses.length > 0 && availableStatuses[0]) {
@@ -106,7 +107,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         }
       }
     }
-  }, [isOpen, availableStatuses, initialStatusId, fetchOptions]);
+  }, [isOpen, availableStatuses, initialStatusId, fetchOptions]); // Added initialStatusId as dep
 
 
   const calculateLineItemTotal = (unitPrice: number | null, quantityStr: string): number | null => {
@@ -137,8 +138,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   };
   
   const handleAddItem = () => {
-    const newId = uuidv4();
-    setOrderItems([...orderItems, { ...initialOrderItemState, id: newId }]);
+    setOrderItems([...orderItems, { ...initialOrderItemState, id: uuidv4() }]);
   };
 
   const handleRemoveItem = (id: string) => {
@@ -162,16 +162,16 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       return;
     }
 
-    if (orderItems.some(item => !item.model || !item.quantity || !item.lamination || item.unitPrice === null || item.lineItemTotalPrice === null)) {
+    if (orderItems.some(item => !item.model || !item.quantity || !item.lamination)) {
       toast({
         title: "Validation Error",
-        description: "All order items must have Model, Quantity (positive number), Lamination selected, and valid pricing.",
+        description: "All order items must have Model, Quantity, and Lamination selected.",
         variant: "destructive",
       });
       return;
     }
     
-    const parsedOrderItems: Omit<OrderItem, 'id'>[] = [];
+    const parsedOrderItems: Array<Omit<OrderItem, 'id'>> = [];
     for (const item of orderItems) {
       const quantity = parseInt(item.quantity, 10);
       if (isNaN(quantity) || quantity < 1) {
@@ -179,7 +179,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         return;
       }
        if (item.unitPrice === null || item.lineItemTotalPrice === null) {
-        toast({ title: "Price Error", description: `Pricing information is missing or invalid for model "${item.model}".`, variant: "destructive" });
+        toast({ title: "Price Error", description: `Pricing information is missing for model "${item.model}". Ensure models have prices set in admin settings.`, variant: "destructive" });
         return;
       }
 
@@ -231,13 +231,20 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   };
   
   const canSubmit = !isSubmitting && 
-                    initialStatusId && 
+                    companyName && address && phoneNumber && initialStatusId &&
                     (availableStatuses.length > 0 || !!initialStatusId) &&
                     modelOptions.length > 0 && 
                     laminationOptions.length > 0 &&
                     !isLoadingOptions &&
                     orderItems.length > 0 &&
-                    orderItems.every(item => item.model && item.quantity && parseInt(item.quantity) > 0 && item.lamination && item.unitPrice !== null && item.lineItemTotalPrice !== null);
+                    orderItems.every(item => 
+                      item.model && 
+                      item.quantity && 
+                      parseInt(item.quantity) > 0 && 
+                      item.lamination &&
+                      item.unitPrice !== null &&
+                      item.lineItemTotalPrice !== null
+                    );
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
@@ -271,7 +278,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_2fr_1.5fr_auto] gap-3 items-end">
                     <div className="space-y-1">
                       <Label htmlFor={`model-${item.id}`}>Model</Label>
-                      <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
+                       <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
                         <PopoverTrigger asChild>
                           <Button
                             variant="outline"
@@ -307,7 +314,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                                         item.model === option.name ? "opacity-100" : "opacity-0"
                                       )}
                                     />
-                                    {option.name} ({formatCurrency(option.price)})
+                                    {option.name} 
                                   </CommandItem>
                                 ))}
                               </CommandGroup>
@@ -341,11 +348,11 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                     {orderItems.length > 1 && (
                       <Button 
                         type="button" 
-                        variant="destructive" 
+                        variant="ghost"
                         size="icon" 
                         onClick={() => handleRemoveItem(item.id)} 
                         disabled={isSubmitting}
-                        className="h-10 w-10" 
+                        className="h-10 w-10 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
                         title="Remove item"
                       >
                         <Trash2 className="h-4 w-4" />

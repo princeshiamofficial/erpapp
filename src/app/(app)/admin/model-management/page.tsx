@@ -12,7 +12,7 @@ import type { ServiceModelItem } from "@/types";
 import { getModels } from '@/lib/service-options-service';
 import {
   addModelAction, updateModelAction, deleteModelAction
-} from '../service-management/actions';
+} from '../service-management/actions'; // Assuming actions are in service-management folder
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -187,7 +187,13 @@ export default function ModelManagementPage() {
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(item)} title={`Edit model`} className="h-8 w-8">
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(item)} title={`Delete model`} className="h-8 w-8">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => openDeleteDialog(item)} 
+                    title={`Delete model`} 
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -201,7 +207,7 @@ export default function ModelManagementPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 page-header">
         <div>
           <h1 className="page-title">Model Management</h1>
           <p className="page-description">Configure Model options (including prices) available for orders.</p>
@@ -279,3 +285,4 @@ export default function ModelManagementPage() {
     </div>
   );
 }
+

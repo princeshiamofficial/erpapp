@@ -225,7 +225,13 @@ export default function ServiceManagementPage() {
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(item, type)} title={`Edit ${type}`} className="h-8 w-8">
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button variant="destructive" size="icon" onClick={() => openDeleteDialog(item, type)} title={`Delete ${type}`} className="h-8 w-8">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => openDeleteDialog(item, type)} 
+                    title={`Delete ${type}`} 
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -239,7 +245,7 @@ export default function ServiceManagementPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 page-header">
         <div>
           <h1 className="page-title">Service Options Management</h1>
           <p className="page-description">Configure Model (with prices) and Lamination options available for orders.</p>
@@ -321,3 +327,4 @@ export default function ServiceManagementPage() {
     </div>
   );
 }
+
