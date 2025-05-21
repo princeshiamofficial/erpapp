@@ -37,19 +37,19 @@ export interface OrderItem {
   model: string;
   quantity: number;
   lamination: string;
-  unitPrice: number; 
-  lineItemTotalPrice: number; 
+  unitPrice: number;
+  lineItemTotalPrice: number;
 }
 
 export interface TrackingLink {
   id: string;
-  customerName?: string | null;
+  customerName?: string | null; // This can be the contact person
   companyName: string;
   address: string;
   phoneNumber: string;
   orderItems: OrderItem[];
   advancePayment?: number | null;
-  paymentMethod?: string | null; 
+  paymentMethod?: string | null;
   crmUserId: string;
   crmUserName: string;
   designerRepresentativeId?: string | null;
@@ -99,4 +99,5 @@ export interface GlobalSettings {
   globalWeeklyOrderTarget: number;
   crmCompletionStatusIds?: string[];
   areCommentsVisibleOnPublicPage?: boolean;
+  isOrderEditingEnabled?: boolean; // true means CRM, DR, Admin can edit. System Admin always can.
 }

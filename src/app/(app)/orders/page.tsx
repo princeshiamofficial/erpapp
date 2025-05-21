@@ -6,16 +6,17 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, AlertTriangle, MoreVertical, Settings2, Layers, Package, Edit3 } from "lucide-react"; 
+import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, AlertTriangle, MoreVertical, Settings2, Layers, Edit3, Package as PackageIcon } from "lucide-react"; 
 import { useAuth } from "@/contexts/auth-context";
 import Link from "next/link";
-import type { TrackingLink, User, CustomStatus } from '@/types';
+import type { TrackingLink, User, CustomStatus, GlobalSettings } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { getContrastTextColor, getStatuses } from '@/lib/status-service'; 
 import { getOrders } from '@/lib/order-service';
+import { getGlobalSettings } from '@/lib/settings-service'; // Import getGlobalSettings
 import { Skeleton } from '@/components/ui/skeleton';
-import { createOrderAction, assignDrToOrderAction, deleteOrderAction } from './actions';
+import { createOrderAction, assignDrToOrderAction, deleteOrderAction, updateOrderAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -34,11 +35,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils"; // Ensure cn is imported if used for dynamic classes
 
 const CreateOrderDialog = dynamic(() => import('@/components/orders/create-order-dialog').then(mod => mod.CreateOrderDialog));
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
 const EditOrderDialog = dynamic(() => import('@/components/orders/edit-order-dialog').then(mod => mod.EditOrderDialog));
-
 
 const formatDate = (dateString: string | undefined) => {
   if (!dateString) return "N/A";
@@ -49,7 +50,6 @@ const formatDate = (dateString: string | undefined) => {
   }
 };
 
-
 export default function OrdersPage() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -58,6 +58,7 @@ export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
+  const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null);
 
   const [selectedOrderForDrAssignment, setSelectedOrderForDrAssignment] = useState<TrackingLink | null>(null);
   const [isAssignDrDialogOpen, setIsAssignDrDialogOpen] = useState(false);
@@ -70,19 +71,20 @@ export default function OrdersPage() {
   const [orderToEdit, setOrderToEdit] = useState<TrackingLink | null>(null);
   const [isEditOrderDialogOpen, setIsEditOrderDialogOpen] = useState(false);
 
-
   const fetchOrderData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedOrders, fetchedStatuses] = await Promise.all([
+      const [fetchedOrders, fetchedStatuses, fetchedSettings] = await Promise.all([
         getOrders(),
-        getStatuses()
+        getStatuses(),
+        getGlobalSettings() // Fetch global settings
       ]);
       setOrders(fetchedOrders);
       setAllStatuses(fetchedStatuses);
+      setGlobalAppSettings(fetchedSettings);
     } catch (error) {
-      console.error("Failed to fetch orders or statuses:", error);
-      toast({ title: "Error", description: "Could not load order data.", variant: "destructive" });
+      console.error("Failed to fetch orders, statuses, or settings:", error);
+      toast({ title: "Error", description: "Could not load order data or settings.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -91,14 +93,14 @@ export default function OrdersPage() {
   useEffect(() => {
     setIsClient(true);
     if (currentUser) {
-        fetchOrderData();
+      fetchOrderData();
     }
   }, [currentUser, fetchOrderData]);
 
   const memoizedAvailableStatusesForDialog = useMemo(() => {
-    return allStatuses.filter(s => s.isVisible !== false && (s.id === "order-submitted" || !s.isSystemStatus));
+    return allStatuses.filter(s => s.isVisible !== false);
   }, [allStatuses]);
-
+  
   const filteredOrders = useMemo(() => {
     let result = orders;
     if (currentUser?.role === 'CRM') {
@@ -106,7 +108,7 @@ export default function OrdersPage() {
     } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
       result = result.filter(order => order.designerRepresentativeId === currentUser.id);
     }
-
+  
     if (!searchTerm) return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     
     const lowerSearchTerm = searchTerm.toLowerCase();
@@ -130,47 +132,47 @@ export default function OrdersPage() {
   }, [allStatuses]);
 
   useEffect(() => {
-    if (allStatuses.length > 0) {
+    if (allStatuses.length > 0 && filteredOrders.length > 0) {
       const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
       const uniqueStatusIdsInScope = new Set<string>();
       filteredOrders.forEach(order => uniqueStatusIdsInScope.add(order.currentStatus));
-
+  
       uniqueStatusIdsInScope.forEach(statusId => {
         newDisplayInfoMap[statusId] = getStatusDisplayInfoCallback(statusId);
       });
       
-      // Only update if the map has actually changed to avoid potential loops
       setOrderStatusDisplay(prevMap => {
           if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(prevMap)) {
               return newDisplayInfoMap;
           }
           return prevMap;
       });
-    } else if (Object.keys(orderStatusDisplay).length > 0) {
-        setOrderStatusDisplay({}); // Clear if no statuses
+    } else if (Object.keys(orderStatusDisplay).length > 0 && (allStatuses.length === 0 || filteredOrders.length === 0)) {
+        setOrderStatusDisplay({}); 
     }
-  }, [filteredOrders, allStatuses, getStatusDisplayInfoCallback]);
-
+  }, [filteredOrders, allStatuses, getStatusDisplayInfoCallback, orderStatusDisplay]);
 
   const canCreateOrder = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
   const canAssignDr = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
-  const canDeleteOrder = currentUser?.role === 'SYSTEM_ADMIN';
-  // All authenticated users can edit basic order details for now
-  const canEditOrder = !!currentUser;
+  
+  const canEditOrder = useMemo(() => {
+    if (!currentUser || !globalAppSettings) return false;
+    if (currentUser.role === 'SYSTEM_ADMIN') return true;
+    return (globalAppSettings.isOrderEditingEnabled ?? true) && ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role);
+  }, [currentUser, globalAppSettings]);
 
+  const canDeleteOrder = currentUser?.role === 'SYSTEM_ADMIN';
 
   const handleOpenAssignDrDialog = useCallback(async (orderToAssign: TrackingLink) => {
-    setIsLoading(true); 
+    setIsLoading(true);
     try {
         const freshStatuses = await getStatuses();
         if (!Array.isArray(freshStatuses)) {
             console.error("OrdersPage/handleOpenAssignDrDialog: getStatuses() did not return an array. Received:", freshStatuses);
-            toast({ title: "Error", description: "Failed to load status configuration. Please try again.", variant: "destructive" });
+            toast({ title: "Error", description: "Failed to load status configuration for DR assignment. Please try again.", variant: "destructive" });
             setIsLoading(false);
             return;
         }
-        console.log("OrdersPage/handleOpenAssignDrDialog: Fresh statuses fetched for dialog. IDs:", freshStatuses.map(s=>({id: s.id, name: s.name})).join(', '));
-        
         const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
         
         if (!rfdCheck) {
@@ -184,10 +186,8 @@ export default function OrdersPage() {
             setIsLoading(false);
             return; 
         }
-        console.log("OrdersPage/handleOpenAssignDrDialog: Found 'ready-for-design' status:", JSON.stringify(rfdCheck));
-
-        setAllStatuses(freshStatuses); 
-        setStatusesForDialog(freshStatuses); 
+        setAllStatuses(freshStatuses);
+        setStatusesForDialog(freshStatuses);
         setSelectedOrderForDrAssignment(orderToAssign);
         setIsAssignDrDialogOpen(true);
     } catch (error) {
@@ -198,15 +198,16 @@ export default function OrdersPage() {
     }
   }, [toast]);
 
-
   const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromAction: TrackingLink) => {
       setOrders(prevOrders =>
         prevOrders.map(o => (o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o))
       );
       toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
-      // await fetchOrderData(); // Re-fetch for full reconciliation, can be optional
+      setIsAssignDrDialogOpen(false);
+      setSelectedOrderForDrAssignment(null);
+      setStatusesForDialog(null);
+      // await fetchOrderData(); // Re-fetch for full reconciliation, might be optional
   }, [toast]);
-
 
   const handleDeleteOrder = async () => {
     if (!orderToDelete || !canDeleteOrder) return;
@@ -224,12 +225,20 @@ export default function OrdersPage() {
   };
 
   const handleOrderUpdated = useCallback(async () => {
-    toast({ title: "Order Updated", description: "Order details have been saved."});
+    if (!currentUser || !currentUser.role) {
+      console.error("OrdersPage/handleOrderUpdated: Current user or role is missing. Aborting update.");
+      toast({ title: "Authentication Error", description: "Your session seems invalid. Please log in again.", variant: "destructive" });
+      return;
+    }
+    console.log("OrdersPage/handleOrderUpdated: Calling updateOrderAction with currentUser (client-side):", JSON.stringify(currentUser));
+
+    // The actual call to updateOrderAction happens within EditOrderDialog's submit.
+    // This function in OrdersPage is now primarily a callback for after the dialog's action succeeds.
+    toast({ title: "Order Updated", description: "Order details have been successfully updated."});
     await fetchOrderData();
     setIsEditOrderDialogOpen(false);
     setOrderToEdit(null);
-  }, [toast, fetchOrderData]);
-
+  }, [currentUser, toast, fetchOrderData]);
 
   if (!currentUser) return (
     <div className="flex h-screen w-full items-center justify-center">
@@ -411,7 +420,7 @@ export default function OrdersPage() {
                 ) : (
                     <TableRow>
                         <TableCell colSpan={7} className="text-center py-12 h-[300px]">
-                            <Package className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
+                            <PackageIcon className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
                             <p className="text-lg text-muted-foreground font-medium">
                               {searchTerm ? "No orders match your search." : 
                                (currentUser.role === 'CRM' ? "You have no orders." : 
@@ -469,7 +478,7 @@ export default function OrdersPage() {
         />
       )}
 
-      {orderToEdit && currentUser && isEditOrderDialogOpen && (
+      {orderToEdit && currentUser && globalAppSettings && isEditOrderDialogOpen && (
         <EditOrderDialog
           isOpen={isEditOrderDialogOpen}
           onOpenChange={(open) => {

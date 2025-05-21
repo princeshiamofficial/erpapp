@@ -3,22 +3,17 @@
 
 import { db } from './firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import type { GlobalSettings } from '@/types';
 
 const GLOBAL_SETTINGS_COLLECTION = 'globalSettings';
-const MAIN_SETTINGS_DOC_ID = 'main'; 
-
-export interface GlobalSettings { // Renamed for clarity
-  globalMonthlyOrderTarget: number;
-  globalWeeklyOrderTarget: number;
-  crmCompletionStatusIds?: string[]; // Array of CustomStatus IDs
-  areCommentsVisibleOnPublicPage?: boolean; // New setting
-}
+const MAIN_SETTINGS_DOC_ID = 'main';
 
 const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   globalMonthlyOrderTarget: 0,
   globalWeeklyOrderTarget: 0,
-  crmCompletionStatusIds: [], 
-  areCommentsVisibleOnPublicPage: true, // Default to true
+  crmCompletionStatusIds: [],
+  areCommentsVisibleOnPublicPage: true,
+  isOrderEditingEnabled: true, // Default to true
 };
 
 // Gets global settings from Firestore
@@ -34,16 +29,16 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         globalWeeklyOrderTarget: data.globalWeeklyOrderTarget ?? DEFAULT_GLOBAL_SETTINGS.globalWeeklyOrderTarget,
         crmCompletionStatusIds: data.crmCompletionStatusIds ?? DEFAULT_GLOBAL_SETTINGS.crmCompletionStatusIds,
         areCommentsVisibleOnPublicPage: data.areCommentsVisibleOnPublicPage ?? DEFAULT_GLOBAL_SETTINGS.areCommentsVisibleOnPublicPage,
+        isOrderEditingEnabled: data.isOrderEditingEnabled ?? DEFAULT_GLOBAL_SETTINGS.isOrderEditingEnabled,
       };
     } else {
       console.log("Global settings document not found, returning defaults. Creating document with defaults.");
-      // Create the document with defaults if it doesn't exist
       await setDoc(settingsDocRef, DEFAULT_GLOBAL_SETTINGS);
       return DEFAULT_GLOBAL_SETTINGS;
     }
   } catch (error) {
     console.error("Error fetching global settings:", error);
-    return DEFAULT_GLOBAL_SETTINGS; 
+    return DEFAULT_GLOBAL_SETTINGS;
   }
 }
 
@@ -55,7 +50,7 @@ export async function updateGlobalSalesTarget(
   try {
     const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
     const fieldToUpdate = targetType === 'monthly' ? 'globalMonthlyOrderTarget' : 'globalWeeklyOrderTarget';
-    
+
     const docSnap = await getDoc(settingsDocRef);
     if (docSnap.exists()) {
       await updateDoc(settingsDocRef, { [fieldToUpdate]: newTarget });
@@ -83,10 +78,9 @@ export async function setCrmCompletionStatusIds(statusIds: string[]): Promise<bo
     if (docSnap.exists()) {
       await updateDoc(settingsDocRef, { crmCompletionStatusIds: statusIds });
     } else {
-      // If the document doesn't exist, create it with these IDs and other defaults
-      const initialData: GlobalSettings = { 
-        ...DEFAULT_GLOBAL_SETTINGS, 
-        crmCompletionStatusIds: statusIds 
+      const initialData: GlobalSettings = {
+        ...DEFAULT_GLOBAL_SETTINGS,
+        crmCompletionStatusIds: statusIds
       };
       await setDoc(settingsDocRef, initialData);
     }
@@ -111,15 +105,36 @@ export async function setCommentsVisibility(isVisible: boolean): Promise<boolean
     if (docSnap.exists()) {
       await updateDoc(settingsDocRef, { areCommentsVisibleOnPublicPage: isVisible });
     } else {
-      const initialData: GlobalSettings = { 
-        ...DEFAULT_GLOBAL_SETTINGS, 
-        areCommentsVisibleOnPublicPage: isVisible 
+      const initialData: GlobalSettings = {
+        ...DEFAULT_GLOBAL_SETTINGS,
+        areCommentsVisibleOnPublicPage: isVisible
       };
       await setDoc(settingsDocRef, initialData);
     }
     return true;
   } catch (error) {
     console.error("Error setting comments visibility:", error);
+    return false;
+  }
+}
+
+// Sets the global order editing enabled flag
+export async function setOrderEditingEnabled(isEnabled: boolean): Promise<boolean> {
+  try {
+    const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+    const docSnap = await getDoc(settingsDocRef);
+    if (docSnap.exists()) {
+      await updateDoc(settingsDocRef, { isOrderEditingEnabled: isEnabled });
+    } else {
+      const initialData: GlobalSettings = {
+        ...DEFAULT_GLOBAL_SETTINGS,
+        isOrderEditingEnabled: isEnabled
+      };
+      await setDoc(settingsDocRef, initialData);
+    }
+    return true;
+  } catch (error) {
+    console.error("Error setting order editing enabled flag:", error);
     return false;
   }
 }
