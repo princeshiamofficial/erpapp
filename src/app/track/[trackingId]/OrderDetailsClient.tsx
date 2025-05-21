@@ -6,13 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Edit, UserCog, ThumbsUp, Loader2 } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2 } from "lucide-react";
 import Image from "next/image";
-import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types";
+import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types"; // Ensure OrderItem is imported
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Label } from '@/components/ui/label';
-import { getContrastTextColor } from '@/lib/status-service';
+import { getStatusById, getContrastTextColor } from '@/lib/status-service';
 import { submitCommentAction, submitClientReplyAction, toggleOrderCommentReactionAction, submitReplyAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -68,6 +68,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const [mentionSuggestions, setMentionSuggestions] = useState<Array<User | { id: string, name: string, role: 'Client' }>>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const invoiceRef = useRef<HTMLDivElement>(null); // Ref for the invoice content div
+
 
   useEffect(() => {
     console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
@@ -250,6 +252,14 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     });
   };
 
+  useEffect(() => {
+    if (Array.isArray(allUsersForMentions)) {
+      console.log("OrderDetailsClient: Received allUsersForMentions (first 5):", allUsersForMentions.slice(0, 5).map(u => ({id: u.id, name: u.name, role: u.role, avatarUrl: u.avatarUrl ? 'Exists' : 'None'})));
+    } else {
+      console.warn("OrderDetailsClient: allUsersForMentions prop is not an array. Received:", allUsersForMentions);
+    }
+  }, [allUsersForMentions]);
+
 
   const handleReplyTextChangeForMention = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
@@ -312,7 +322,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     // Ensure we only replace the part after @ up to the cursor
     const textBeforeAt = text.substring(0, activeMentionStartIndex);
     // The part that was typed after @ and matched
-    const currentPartialMention = text.substring(activeMentionStartIndex + 1, activeMentionStartIndex + 1 + queryLength);
+    // const currentPartialMention = text.substring(activeMentionStartIndex + 1, activeMentionStartIndex + 1 + queryLength);
     // Text after the partial mention (if any)
     const textAfterMentionEnd = text.substring(activeMentionStartIndex + 1 + queryLength);
 
@@ -548,43 +558,40 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const lastEditTimestamp = order.updatedAt || order.createdAt;
 
 
+  // Invoice Div Ref is used by Download Invoice Button
   return (
     <main className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
-      <Card className="shadow-2xl overflow-hidden border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
+      <Card className="shadow-xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
         <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6">
-            <Package className="h-16 w-16 sm:h-20 sm:w-20 text-primary mb-4 sm:mb-0 flex-shrink-0 p-3 bg-primary/10 rounded-lg border border-primary/20" />
-            <div>
-              <CardTitle className="text-2xl sm:text-3xl md:text-4xl font-semibold text-card-foreground">Order ID: <span className="text-primary font-bold">{order.id}</span></CardTitle>
-              <CardDescription className="text-md text-muted-foreground mt-1 sm:mt-1.5">
-                Tracking information for {order.companyName}
-              </CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center space-x-4 mb-4 sm:mb-0">
+              <Package className="h-10 w-10 sm:h-12 sm:w-12 text-primary flex-shrink-0 p-2 bg-primary/10 rounded-lg border border-primary/20" />
+              <div>
+                <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Order ID: <span className="text-primary font-bold">{order.id}</span></CardTitle>
+                <CardDescription className="text-sm text-muted-foreground mt-0.5">
+                  Tracking information for {order.companyName}
+                </CardDescription>
+              </div>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="p-6 sm:p-8 space-y-6">
-          <div>
-            <h3 className="text-xl font-semibold mb-2 text-foreground flex items-center">
-              {getStatusIcon(order.currentStatus, "h-8 w-8")}
-              Current Status
+           <div className="mt-4 pt-4 border-t border-border/30">
+            <h3 className="text-lg font-semibold mb-1 text-foreground flex items-center">
+              {getStatusIcon(order.currentStatus, "h-7 w-7")}
+              Current Status: <span className="ml-2 text-2xl font-bold" style={{ color: currentStatusInfo.color }}>{currentStatusInfo.name}</span>
             </h3>
-            <div className="text-3xl sm:text-4xl font-bold ml-[40px] mt-1" style={{ color: currentStatusInfo.color }}>
-              {currentStatusInfo.name}
-            </div>
-            <div className="text-sm text-muted-foreground mt-1.5 ml-[40px]">
+            <div className="text-xs text-muted-foreground ml-[36px]">
               {isClient ? `Last status update: ${formatDate(lastStatusUpdateTimestamp, true)}` : <Skeleton className="h-4 w-48 inline-block" />}
             </div>
           </div>
-
-          <Separator className="my-6 sm:my-8 bg-border/30" />
-
-          <div className="border border-border/30 rounded-lg p-6 shadow-sm bg-secondary/20 dark:bg-card-foreground/5">
+        </CardHeader>
+        <CardContent className="p-0">
+          <div ref={invoiceRef} className="p-6 sm:p-8 bg-background">
             <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30">
               <div>
                 <h2 className="text-3xl font-bold text-primary mb-2 flex items-center">
                   <FileText className="h-8 w-8 mr-3" /> INVOICE
                 </h2>
-                <p className="text-muted-foreground">Color Hut</p>
+                <p className="font-bold text-foreground">Color Hut</p>
                 <p className="text-muted-foreground text-sm">9/A Kajla Bus Stand, Donia,Jatrabari,Dhaka- 1236</p>
                 <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
               </div>
@@ -593,19 +600,28 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 <div className="text-sm text-muted-foreground">
                   Date: {isClient ? new Date(order.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : <Skeleton className="h-4 w-32 inline-block" />}
                 </div>
-                <div className="text-sm text-muted-foreground mt-0.5">
-                    {isClient ? `Last Updated: ${lastEditorName} ${formatDate(lastEditTimestamp)}` : <Skeleton className="h-4 w-48 inline-block" />}
+                 <div className="text-sm text-muted-foreground mt-0.5">
+                  Last Updated: {order.updatedByUserName ? `${order.updatedByUserName} ${formatDate(lastEditTimestamp, false)}` : "N/A"}
                 </div>
               </div>
             </div>
 
-            <div className="mb-6">
-              <h4 className="text-md font-semibold text-muted-foreground mb-1 uppercase tracking-wider">Bill To:</h4>
-              <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
-              <p className="text-foreground/90">{order.address}</p>
-              <p className="text-foreground/90">Phone: {order.phoneNumber}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
+                <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Bill To:</h4>
+                <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
+                <p className="text-foreground/90 text-sm">{order.address}</p>
+                <p className="text-foreground/90 text-sm">Phone: {order.phoneNumber}</p>
+              </div>
+              {order.designerRepresentativeName && (
+                  <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
+                    <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Project Contact:</h4>
+                    <p className="text-lg font-semibold text-foreground flex items-center"><UserCheck className="h-5 w-5 mr-2 text-green-500" /> {order.designerRepresentativeName}</p>
+                    <p className="text-muted-foreground text-sm">Assigned Designer Representative</p>
+                  </div>
+                )}
             </div>
-
+            
             {Array.isArray(order.orderItems) && order.orderItems.length > 0 && (
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">
@@ -677,18 +693,20 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 )}
               </div>
             </div>
-            {order.designerRepresentativeName && (
-              <div className="mt-6 pt-4 border-t border-border/20 text-sm text-muted-foreground">
-                <p className="flex items-center"><UserCheck className="h-4 w-4 mr-2 text-green-500" /> Assigned Designer: {order.designerRepresentativeName}</p>
-              </div>
-            )}
           </div>
+        </CardContent>
+      </Card>
 
-          <Separator className="my-6 sm:my-8 bg-border/30" />
-
-          <div>
-            <h3 className="text-xl font-semibold mb-5 sm:mb-6 text-foreground">Status History</h3>
-            <div className="space-y-6 sm:space-y-8 relative pl-5 sm:pl-6 border-l-2 border-primary/30 ml-2 sm:ml-3">
+      <Card className="shadow-xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
+        <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            <Clock className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" />
+            <CardTitle className="text-xl sm:text-2xl font-semibold text-card-foreground">Status History</CardTitle>
+          </div>
+          <CardDescription className="text-muted-foreground mt-1 ml-[44px] sm:ml-[56px]">Timeline of order progress and updates.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 sm:p-8">
+          <div className="space-y-6 sm:space-y-8 relative pl-5 sm:pl-6 border-l-2 border-primary/30 ml-2 sm:ml-3">
               {order.statusHistory.slice().reverse().map((entry, index) => {
                 const entryStatusInfo = getStatusDisplayInfo(entry.status);
                 return (
@@ -713,7 +731,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 );
               })}
             </div>
-          </div>
         </CardContent>
       </Card>
 
@@ -766,7 +783,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                   >
                     {isSubmittingComment ? (
                       <>
-                        <Clock className="mr-2 h-4 w-4 animate-spin" /> Posting...
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Posting...
                       </>
                     ) : (
                       <>
@@ -783,8 +800,3 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
-
-
-
-
-
