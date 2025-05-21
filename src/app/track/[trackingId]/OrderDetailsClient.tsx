@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Edit } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Edit, UserCog, ThumbsUp, Loader2 } from "lucide-react";
 import Image from "next/image";
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -70,18 +70,18 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
+    console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
     if (Array.isArray(allUsersForMentions)) {
         // console.log("OrderDetailsClient: Received allUsersForMentions (first 5):", allUsersForMentions.slice(0, 5).map(u => ({id: u.id, name: u.name, role: u.role, avatarUrl: u.avatarUrl ? 'Exists' : 'None'})));
     } else {
         console.warn("OrderDetailsClient: allUsersForMentions prop is not an array. Received:", allUsersForMentions);
     }
-  }, [allUsersForMentions]);
+  }, [allUsersForMentions, initialOrder]);
 
 
   useEffect(() => {
     setIsClient(true);
     setOrder(initialOrder);
-    console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
 
 
     let storedReactorId = localStorage.getItem('CLIENT_REACTOR_ID_KEY');
@@ -170,7 +170,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
         order.id,
         replyingTo.parentId,
         currentReplyText,
-        false, 
+        false, // isInternal for public replies
         currentUser
       );
     } else {
@@ -254,38 +254,45 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const handleReplyTextChangeForMention = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
     setCurrentReplyText(text);
+    console.log("OrderDetailsClient: handleReplyTextChangeForMention - Text changed:", text);
 
     const cursorPosition = e.target.selectionStart;
     if (cursorPosition === null) {
+      console.log("OrderDetailsClient: handleReplyTextChangeForMention - Cursor position is null. Clearing mention state.");
       setMentionQuery(null);
       setActiveMentionStartIndex(null);
       setMentionSuggestions([]);
       return;
     }
-    
+
     const textBeforeCursor = text.substring(0, cursorPosition);
     const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@');
+    console.log("OrderDetailsClient: handleReplyTextChangeForMention - Last @ index:", lastAtSymbolIndex);
+
 
     if (lastAtSymbolIndex !== -1) {
-        const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
-        
-        if (/^[a-zA-Z0-9_]*$/.test(potentialQuery)) { 
-            setMentionQuery(potentialQuery);
-            setActiveMentionStartIndex(lastAtSymbolIndex);
-            
-            const clientOption = { id: 'client-mention', name: (order.companyName || "Client"), role: 'Client' as 'Client' };
-            const usersToSearchFromProp = Array.isArray(allUsersForMentions) ? allUsersForMentions : [];
-            const usersToSearch = [clientOption, ...usersToSearchFromProp];
-            
-            const filtered = usersToSearch.filter(user =>
-                (user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
-                 (user.role && user.role.toLowerCase().replace(/_/g, ' ').includes(potentialQuery.toLowerCase())))
-            ).slice(0, 7);
-            setMentionSuggestions(filtered);
-            console.log("OrderDetailsClient: Mention suggestions for query '", potentialQuery, "':", filtered.map(u => u.name));
-            return;
-        }
+      const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
+      // Allow empty query (just "@" typed) or alphanumeric query
+      if (/^[a-zA-Z0-9_]*$/.test(potentialQuery)) {
+        console.log("OrderDetailsClient: handleReplyTextChangeForMention - Potential query:", potentialQuery);
+        setMentionQuery(potentialQuery);
+        setActiveMentionStartIndex(lastAtSymbolIndex);
+
+        const clientOption = { id: 'client-mention', name: (order.companyName || "Client"), role: 'Client' as 'Client' };
+        const usersToSearchFromProp = Array.isArray(allUsersForMentions) ? allUsersForMentions : [];
+        const usersToSearch = [clientOption, ...usersToSearchFromProp];
+        console.log("OrderDetailsClient: handleReplyTextChangeForMention - Users to search:", usersToSearch.map(u => u.name));
+
+        const filtered = usersToSearch.filter(user =>
+            (user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
+             (user.role && user.role.toLowerCase().replace(/_/g, ' ').includes(potentialQuery.toLowerCase())))
+        ).slice(0, 7);
+        console.log("OrderDetailsClient: Mention suggestions for query '", potentialQuery, "':", filtered.map(u => u.name));
+        setMentionSuggestions(filtered);
+        return;
+      }
     }
+    console.log("OrderDetailsClient: handleReplyTextChangeForMention - No active mention sequence. Clearing mention state.");
     setMentionQuery(null);
     setActiveMentionStartIndex(null);
     setMentionSuggestions([]);
@@ -299,17 +306,21 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     }
 
     const text = currentReplyText;
-    const mentionTag = userNameToInsert.replace(/\s+/g, ''); 
-    
+    const mentionTag = userNameToInsert.replace(/\s+/g, ''); // Remove spaces for the tag part
+    const queryLength = mentionQuery?.length || 0; // Length of the text typed after @
+
+    // Ensure we only replace the part after @ up to the cursor
     const textBeforeAt = text.substring(0, activeMentionStartIndex);
-    const queryLength = mentionQuery?.length || 0;
-    const currentMentionEndIndex = activeMentionStartIndex + 1 + queryLength;
-    const textAfterMentionEnd = text.substring(currentMentionEndIndex);
+    // The part that was typed after @ and matched
+    const currentPartialMention = text.substring(activeMentionStartIndex + 1, activeMentionStartIndex + 1 + queryLength);
+    // Text after the partial mention (if any)
+    const textAfterMentionEnd = text.substring(activeMentionStartIndex + 1 + queryLength);
+
 
     const newText = `${textBeforeAt}@${mentionTag} ${textAfterMentionEnd.trimStart()}`;
     setCurrentReplyText(newText);
-    
-    const newCursorPosition = activeMentionStartIndex + 1 + mentionTag.length + 1; 
+
+    const newCursorPosition = activeMentionStartIndex + 1 + mentionTag.length + 1; // +1 for space
 
     setTimeout(() => {
       if (replyTextareaRef.current) {
@@ -407,12 +418,12 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               onClick={() => {
                 const isOpeningNewReplyForm = !replyingTo || replyingTo.formUnderId !== comment.id;
                 const targetNameForMention = comment.userName;
-                const parentIdForReply = isReply ? parentCommentId! : comment.id; 
-                
+                const parentIdForReply = isReply ? parentCommentId! : comment.id;
+
                 setReplyingTo(isOpeningNewReplyForm ? {
                     parentId: parentIdForReply,
                     targetName: targetNameForMention,
-                    formUnderId: comment.id 
+                    formUnderId: comment.id
                 } : null);
 
                 if (isOpeningNewReplyForm) {
@@ -454,7 +465,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                       {mentionQuery !== null && mentionSuggestions.length === 0 && activeMentionStartIndex !== null && <span className="text-xs text-muted-foreground mr-auto">No matches found</span>}
                       <Button type="button" variant="ghost" size="sm" className="text-xs h-7 px-2.5 mr-1.5 text-muted-foreground hover:text-foreground" onClick={() => { setReplyingTo(null); setCurrentReplyText(''); }} disabled={isSubmittingReply}>Cancel</Button>
                       <Button type="submit" size="sm" disabled={isSubmittingReply || !currentReplyText.trim()} className="bg-primary hover:bg-primary/90 text-primary-foreground text-xs h-7 px-3 rounded-md">
-                        {isSubmittingReply ? "Sending..." : "Send Reply"}
+                        {isSubmittingReply ? <><Loader2 className="mr-2 h-3 w-3 animate-spin"/>Sending...</> : "Send Reply"}
                       </Button>
                     </div>
                   </div>
@@ -527,10 +538,15 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     }
     return acc;
   }, 0);
-  
+
   const orderSubtotal = Array.isArray(order.orderItems) ? order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0) : 0;
   const effectiveAdvancePayment = order.advancePayment || 0;
   const amountDue = orderSubtotal - effectiveAdvancePayment;
+
+  const lastStatusUpdateTimestamp = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1].timestamp : order.createdAt;
+  const lastEditorName = order.updatedByUserName || order.crmUserName;
+  const lastEditTimestamp = order.updatedAt || order.createdAt;
+
 
   return (
     <main className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
@@ -556,12 +572,12 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               {currentStatusInfo.name}
             </div>
             <div className="text-sm text-muted-foreground mt-1.5 ml-[40px]">
-              Last status update: {isClient && order.statusHistory.length > 0 ? formatDate(order.statusHistory[order.statusHistory.length -1].timestamp, true) : <Skeleton className="h-4 w-24 inline-block" />}
+              {isClient ? `Last status update: ${formatDate(lastStatusUpdateTimestamp, true)}` : <Skeleton className="h-4 w-48 inline-block" />}
             </div>
           </div>
 
           <Separator className="my-6 sm:my-8 bg-border/30" />
-          
+
           <div className="border border-border/30 rounded-lg p-6 shadow-sm bg-secondary/20 dark:bg-card-foreground/5">
             <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30">
               <div>
@@ -577,11 +593,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 <div className="text-sm text-muted-foreground">
                   Date: {isClient ? new Date(order.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : <Skeleton className="h-4 w-32 inline-block" />}
                 </div>
-                 {order.updatedAt && order.updatedByUserName && (
-                  <div className="text-xs text-muted-foreground mt-0.5">
-                    Details Last Updated: {isClient ? `${order.updatedByUserName} on ${formatDate(order.updatedAt, true)}` : <Skeleton className="h-3 w-28" />}
-                  </div>
-                )}
+                <div className="text-sm text-muted-foreground mt-0.5">
+                    {isClient ? `Last Updated: ${lastEditorName} ${formatDate(lastEditTimestamp)}` : <Skeleton className="h-4 w-48 inline-block" />}
+                </div>
               </div>
             </div>
 
@@ -591,7 +605,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               <p className="text-foreground/90">{order.address}</p>
               <p className="text-foreground/90">Phone: {order.phoneNumber}</p>
             </div>
-            
+
             {Array.isArray(order.orderItems) && order.orderItems.length > 0 && (
               <div className="mb-6">
                 <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">
@@ -689,7 +703,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                       <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
                       <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5">
                         <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" />
-                        {isClient ? formatDate(entry.timestamp, true) : <Skeleton className="h-4 w-32" />}
+                        {isClient ? formatDate(entry.timestamp, false) : <Skeleton className="h-4 w-48" />}
                         <span className="mx-1.5 hidden sm:inline">&bull;</span>
                         <span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span>
                       </div>
@@ -769,6 +783,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
+
 
 
 
