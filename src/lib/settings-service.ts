@@ -3,7 +3,7 @@
 
 import { db } from './firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import type { GlobalSettings } from '@/types';
+import type { GlobalSettings, UserRole } from '@/types';
 
 const GLOBAL_SETTINGS_COLLECTION = 'globalSettings';
 const MAIN_SETTINGS_DOC_ID = 'main';
@@ -13,7 +13,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   globalWeeklyOrderTarget: 0,
   crmCompletionStatusIds: [],
   areCommentsVisibleOnPublicPage: true,
-  isOrderEditingEnabled: true, // Default to true
+  rolesAllowedToEditOrders: ['SYSTEM_ADMIN', 'ADMIN'], // Default: Admins and System Admins can edit
 };
 
 // Gets global settings from Firestore
@@ -29,7 +29,7 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         globalWeeklyOrderTarget: data.globalWeeklyOrderTarget ?? DEFAULT_GLOBAL_SETTINGS.globalWeeklyOrderTarget,
         crmCompletionStatusIds: data.crmCompletionStatusIds ?? DEFAULT_GLOBAL_SETTINGS.crmCompletionStatusIds,
         areCommentsVisibleOnPublicPage: data.areCommentsVisibleOnPublicPage ?? DEFAULT_GLOBAL_SETTINGS.areCommentsVisibleOnPublicPage,
-        isOrderEditingEnabled: data.isOrderEditingEnabled ?? DEFAULT_GLOBAL_SETTINGS.isOrderEditingEnabled,
+        rolesAllowedToEditOrders: data.rolesAllowedToEditOrders ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToEditOrders,
       };
     } else {
       console.log("Global settings document not found, returning defaults. Creating document with defaults.");
@@ -118,23 +118,23 @@ export async function setCommentsVisibility(isVisible: boolean): Promise<boolean
   }
 }
 
-// Sets the global order editing enabled flag
-export async function setOrderEditingEnabled(isEnabled: boolean): Promise<boolean> {
+// Sets the roles allowed to edit orders
+export async function setRolesAllowedToEditOrders(roles: UserRole[]): Promise<boolean> {
   try {
     const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
     const docSnap = await getDoc(settingsDocRef);
     if (docSnap.exists()) {
-      await updateDoc(settingsDocRef, { isOrderEditingEnabled: isEnabled });
+      await updateDoc(settingsDocRef, { rolesAllowedToEditOrders: roles });
     } else {
       const initialData: GlobalSettings = {
         ...DEFAULT_GLOBAL_SETTINGS,
-        isOrderEditingEnabled: isEnabled
+        rolesAllowedToEditOrders: roles
       };
       await setDoc(settingsDocRef, initialData);
     }
     return true;
   } catch (error) {
-    console.error("Error setting order editing enabled flag:", error);
+    console.error("Error setting roles allowed to edit orders:", error);
     return false;
   }
 }

@@ -99,5 +99,5 @@ export interface GlobalSettings {
   globalWeeklyOrderTarget: number;
   crmCompletionStatusIds?: string[];
   areCommentsVisibleOnPublicPage?: boolean;
-  isOrderEditingEnabled?: boolean; // true means CRM, DR, Admin can edit. System Admin always can.
+  rolesAllowedToEditOrders?: UserRole[]; // Reverted: This will store roles like 'CRM', 'ADMIN', 'DESIGNER_REPRESENTATIVE'
 }

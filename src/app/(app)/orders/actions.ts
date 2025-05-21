@@ -2,9 +2,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { TrackingLink, User, OrderItem, GlobalSettings } from "@/types";
+import type { TrackingLink, User, OrderItem, GlobalSettings, UserRole } from "@/types";
 import { addOrder, getOrderById, deleteOrder as deleteOrderFromDb, updateOrder } from "@/lib/order-service";
-import { getGlobalSettings } from "@/lib/settings-service"; // Import getGlobalSettings
+import { getGlobalSettings } from "@/lib/settings-service"; 
 import { v4 as uuidv4 } from 'uuid';
 
 interface CreateOrderDialogFormData {
@@ -46,22 +46,22 @@ export async function createOrderAction(
 
     const processedOrderItems: OrderItem[] = [];
     for (const item of data.orderItems) {
-      if (!item.model?.trim()) throw new Error("Model is required for all order items.");
+      if (!item.model?.trim()) return { error: `Model is required for all order items. Problem with item ID: ${item.id}` };
       
       const quantity = parseInt(item.quantity, 10);
       if (isNaN(quantity) || quantity < 1) {
-        throw new Error(`Invalid quantity for model "${item.model}". Quantity must be a positive number.`);
+        return { error: `Invalid quantity for model "${item.model}". Quantity must be a positive number. Problem with item ID: ${item.id}` };
       }
       
       if (!item.lamination?.trim()) {
-        throw new Error(`Lamination is required for model "${item.model}".`);
+        return { error: `Lamination is required for model "${item.model}". Problem with item ID: ${item.id}` };
       }
 
       if (item.unitPrice === undefined || item.unitPrice === null || isNaN(Number(item.unitPrice)) || Number(item.unitPrice) < 0) {
-        throw new Error(`Unit price is missing or invalid for model "${item.model}". Please ensure a model with a price is selected.`);
+        return { error: `Unit price is missing or invalid for model "${item.model}". Please ensure a model with a price is selected. Problem with item ID: ${item.id}` };
       }
       if (item.lineItemTotalPrice === undefined || item.lineItemTotalPrice === null || isNaN(Number(item.lineItemTotalPrice)) || Number(item.lineItemTotalPrice) < 0) {
-        throw new Error(`Line item total price is missing or invalid for model "${item.model}". This should be calculated automatically.`);
+         return { error: `Line item total price is missing or invalid for model "${item.model}". This should be calculated automatically. Problem with item ID: ${item.id}` };
       }
 
       processedOrderItems.push({
@@ -136,24 +136,17 @@ export async function updateOrderAction(
   currentUser: User 
 ): Promise<{ success: boolean; error?: string; order?: TrackingLink }> {
   console.log("updateOrderAction: Received currentUser (server-side):", JSON.stringify(currentUser));
+  if (!currentUser || !currentUser.role) {
+    return { success: false, error: "User authentication error. Please log in again." };
+  }
+
   try {
-    if (!currentUser || !currentUser.role) {
-      return { success: false, error: "User authentication error. Please log in again." };
-    }
-
     const globalSettings = await getGlobalSettings();
-    const rolesAllowed = globalSettings.isOrderEditingEnabled ?? true; // true if rolesAllowedToEditOrders is undefined
-                                                                      // but now it's isOrderEditingEnabled
+    const isAllowedByRoleSetting = globalSettings.rolesAllowedToEditOrders?.includes(currentUser.role) ?? false;
 
-    if (currentUser.role !== 'SYSTEM_ADMIN' && !rolesAllowed) {
-      return { success: false, error: "Order editing is currently disabled by an administrator." };
+    if (currentUser.role !== 'SYSTEM_ADMIN' && !isAllowedByRoleSetting) {
+      return { success: false, error: "You do not have permission to edit orders." };
     }
-    
-    if (currentUser.role !== 'SYSTEM_ADMIN' && rolesAllowed && !['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role)) {
-        // This case should be rare if UI hides button, but good server-side check
-        return { success: false, error: "You do not have permission to edit orders."};
-    }
-
 
     if (!orderId) return { success: false, error: "Order ID is required." };
     if (Object.keys(updates).length === 0) return { success: false, error: "No updates provided." };
