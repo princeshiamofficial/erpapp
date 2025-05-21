@@ -11,14 +11,14 @@ interface CreateOrderDialogFormData {
   address: string;
   phoneNumber: string;
   orderItems: Array<{
-    id: string;
+    id: string; // Client-generated ID for React key prop, will be replaced by server
     model: string;
     quantity: string;
     lamination: string;
     unitPrice: number | null;
     lineItemTotalPrice: number | null;
   }>;
-  advancePayment?: string; // Still received as string from form
+  advancePayment?: string; 
   paymentMethod?: string;
   customPaymentMethodText?: string;
   initialStatusId: string;
@@ -41,7 +41,6 @@ export async function createOrderAction(
       return { error: "At least one order item is required." };
     }
 
-    // Validate and process orderItems
     const processedOrderItems: OrderItem[] = [];
     for (const item of data.orderItems) {
       if (!item.model?.trim()) throw new Error("Model is required for all order items.");
@@ -63,7 +62,7 @@ export async function createOrderAction(
       }
 
       processedOrderItems.push({
-        id: item.id, // Use the client-generated ID
+        id: uuidv4(), // Generate a new UUID for server-side consistency for each item
         model: item.model.trim(),
         quantity: quantity,
         lamination: item.lamination.trim(),
@@ -72,10 +71,9 @@ export async function createOrderAction(
       });
     }
 
-    // Validate advancePayment if provided
     let parsedAdvancePayment: number | null = null;
     if (data.advancePayment !== undefined && data.advancePayment !== null) {
-      const advancePaymentStr = String(data.advancePayment); // Ensure it's a string
+      const advancePaymentStr = String(data.advancePayment);
       if (advancePaymentStr.trim() !== '') {
         const numAdvancePayment = Number(advancePaymentStr);
         if (isNaN(numAdvancePayment) || numAdvancePayment < 0) {
@@ -85,8 +83,6 @@ export async function createOrderAction(
       }
     }
 
-
-    // Validate and process paymentMethod
     let finalPaymentMethod: string | null = null;
     if (data.paymentMethod && typeof data.paymentMethod === 'string' && data.paymentMethod.trim() !== '') {
       if (data.paymentMethod.toLowerCase() === 'other') {
@@ -99,10 +95,9 @@ export async function createOrderAction(
       }
     }
 
-
     const newOrderData = {
       companyName: data.companyName.trim(),
-      customerName: data.companyName.trim(), // Default customerName to companyName
+      customerName: data.companyName.trim(), 
       address: data.address.trim(),
       phoneNumber: data.phoneNumber.trim(),
       orderItems: processedOrderItems,
@@ -132,6 +127,55 @@ export async function createOrderAction(
   }
 }
 
+export async function updateOrderAction(
+  orderId: string,
+  updates: Partial<Pick<TrackingLink, 'companyName' | 'address' | 'phoneNumber' | 'advancePayment' | 'paymentMethod'>>
+): Promise<{ success: boolean; error?: string; order?: TrackingLink }> {
+  try {
+    if (!orderId) return { success: false, error: "Order ID is required." };
+    if (Object.keys(updates).length === 0) return { success: false, error: "No updates provided." };
+
+    // Basic validation for updates
+    if (updates.companyName !== undefined && !updates.companyName.trim()) return { success: false, error: "Company Name cannot be empty."};
+    if (updates.address !== undefined && !updates.address.trim()) return { success: false, error: "Address cannot be empty."};
+    if (updates.phoneNumber !== undefined && !updates.phoneNumber.trim()) return { success: false, error: "Phone Number cannot be empty."};
+    
+    if (updates.advancePayment !== undefined && updates.advancePayment !== null) {
+        if (isNaN(Number(updates.advancePayment)) || Number(updates.advancePayment) < 0) {
+            return { success: false, error: "Advance Payment must be a non-negative number."};
+        }
+    }
+     if (updates.paymentMethod === '') { // Treat empty string as wanting to clear the payment method
+        updates.paymentMethod = null;
+    }
+
+
+    const success = await updateOrder(orderId, updates);
+    if (!success) {
+      return { success: false, error: "Failed to update order in database." };
+    }
+
+    const updatedOrder = await getOrderById(orderId);
+    if (!updatedOrder) {
+      return { success: false, error: "Failed to retrieve updated order after update." };
+    }
+
+    revalidatePath("/(app)/orders");
+    revalidatePath(`/track/${orderId}`);
+    revalidatePath("/(app)/dashboard");
+    revalidatePath("/(app)/active-orders");
+    revalidatePath("/(app)/orders/monthly");
+    // Add other paths that might show this order's details
+
+    return { success: true, order: updatedOrder };
+  } catch (error: any) {
+    console.error("Unexpected error in updateOrderAction:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unexpected server error occurred while updating order.";
+    return { success: false, error: errorMessage };
+  }
+}
+
+
 export async function assignDrToOrderAction(
   orderId: string,
   designerRepresentativeId: string,
@@ -148,7 +192,6 @@ export async function assignDrToOrderAction(
       console.error("assignDrToOrderAction: Invalid readyForDesignStatusId received. Expected 'ready-for-design', got:", readyForDesignStatusId);
       return { error: "Invalid target status ID for DR assignment. Configuration error." };
     }
-
 
     const currentOrder = await getOrderById(orderId);
     if (!currentOrder) {
@@ -176,7 +219,6 @@ export async function assignDrToOrderAction(
     
     console.log("assignDrToOrderAction: Data being sent to updateOrder service:", JSON.stringify(updatedOrderData));
 
-
     const success = await updateOrder(orderId, updatedOrderData);
     if (!success) { 
       console.error("assignDrToOrderAction: updateOrderService returned false for orderId:", orderId);
@@ -190,7 +232,6 @@ export async function assignDrToOrderAction(
     revalidatePath("/(app)/deliveries/monthly");
     revalidatePath("/(app)/deliveries/weekly");
     revalidatePath("/(app)/orders/monthly");
-
 
     const updatedOrder = await getOrderById(orderId);
     if (!updatedOrder) {

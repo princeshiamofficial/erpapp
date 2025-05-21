@@ -6,13 +6,13 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, AlertTriangle, MoreVertical, Settings2, Layers, Package } from "lucide-react"; // Added Package
+import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, AlertTriangle, MoreVertical, Settings2, Layers, Package, Edit3 } from "lucide-react"; 
 import { useAuth } from "@/contexts/auth-context";
 import Link from "next/link";
 import type { TrackingLink, User, CustomStatus } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { getStatusById, getContrastTextColor, getStatuses } from '@/lib/status-service';
+import { getContrastTextColor, getStatuses } from '@/lib/status-service'; 
 import { getOrders } from '@/lib/order-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createOrderAction, assignDrToOrderAction, deleteOrderAction } from './actions';
@@ -31,11 +31,13 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 const CreateOrderDialog = dynamic(() => import('@/components/orders/create-order-dialog').then(mod => mod.CreateOrderDialog));
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
+const EditOrderDialog = dynamic(() => import('@/components/orders/edit-order-dialog').then(mod => mod.EditOrderDialog));
 
 
 const formatDate = (dateString: string | undefined) => {
@@ -64,6 +66,9 @@ export default function OrdersPage() {
   const [orderToDelete, setOrderToDelete] = useState<TrackingLink | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeletingOrder, setIsDeletingOrder] = useState(false);
+
+  const [orderToEdit, setOrderToEdit] = useState<TrackingLink | null>(null);
+  const [isEditOrderDialogOpen, setIsEditOrderDialogOpen] = useState(false);
 
 
   const fetchOrderData = useCallback(async () => {
@@ -102,7 +107,6 @@ export default function OrdersPage() {
       result = result.filter(order => order.designerRepresentativeId === currentUser.id);
     }
 
-
     if (!searchTerm) return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     
     const lowerSearchTerm = searchTerm.toLowerCase();
@@ -134,15 +138,16 @@ export default function OrdersPage() {
       uniqueStatusIdsInScope.forEach(statusId => {
         newDisplayInfoMap[statusId] = getStatusDisplayInfoCallback(statusId);
       });
-
+      
+      // Only update if the map has actually changed to avoid potential loops
       setOrderStatusDisplay(prevMap => {
-        if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(prevMap)) {
-          return newDisplayInfoMap;
-        }
-        return prevMap;
+          if (JSON.stringify(newDisplayInfoMap) !== JSON.stringify(prevMap)) {
+              return newDisplayInfoMap;
+          }
+          return prevMap;
       });
     } else if (Object.keys(orderStatusDisplay).length > 0) {
-      setOrderStatusDisplay({});
+        setOrderStatusDisplay({}); // Clear if no statuses
     }
   }, [filteredOrders, allStatuses, getStatusDisplayInfoCallback]);
 
@@ -150,6 +155,9 @@ export default function OrdersPage() {
   const canCreateOrder = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
   const canAssignDr = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
   const canDeleteOrder = currentUser?.role === 'SYSTEM_ADMIN';
+  // All authenticated users can edit basic order details for now
+  const canEditOrder = !!currentUser;
+
 
   const handleOpenAssignDrDialog = useCallback(async (orderToAssign: TrackingLink) => {
     setIsLoading(true); 
@@ -161,7 +169,7 @@ export default function OrdersPage() {
             setIsLoading(false);
             return;
         }
-        console.log("OrdersPage/handleOpenAssignDrDialog: Fresh statuses fetched for dialog, count:", freshStatuses.length, "IDs:", freshStatuses.map(s=>s.id).join(','));
+        console.log("OrdersPage/handleOpenAssignDrDialog: Fresh statuses fetched for dialog. IDs:", freshStatuses.map(s=>({id: s.id, name: s.name})).join(', '));
         
         const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
         
@@ -178,7 +186,7 @@ export default function OrdersPage() {
         }
         console.log("OrdersPage/handleOpenAssignDrDialog: Found 'ready-for-design' status:", JSON.stringify(rfdCheck));
 
-        setAllStatuses(freshStatuses); // Update the main page's status list as well
+        setAllStatuses(freshStatuses); 
         setStatusesForDialog(freshStatuses); 
         setSelectedOrderForDrAssignment(orderToAssign);
         setIsAssignDrDialogOpen(true);
@@ -196,7 +204,7 @@ export default function OrdersPage() {
         prevOrders.map(o => (o.id === updatedOrderFromAction.id ? updatedOrderFromAction : o))
       );
       toast({ title: "DR Assigned", description: `${updatedOrderFromAction.designerRepresentativeName} assigned to order ${updatedOrderFromAction.id}.` });
-      // await fetchOrderData(); // Re-fetch for full reconciliation, can be optional if optimistic update is trusted
+      // await fetchOrderData(); // Re-fetch for full reconciliation, can be optional
   }, [toast]);
 
 
@@ -215,6 +223,13 @@ export default function OrdersPage() {
     setOrderToDelete(null);
   };
 
+  const handleOrderUpdated = useCallback(async () => {
+    toast({ title: "Order Updated", description: "Order details have been saved."});
+    await fetchOrderData();
+    setIsEditOrderDialogOpen(false);
+    setOrderToEdit(null);
+  }, [toast, fetchOrderData]);
+
 
   if (!currentUser) return (
     <div className="flex h-screen w-full items-center justify-center">
@@ -232,7 +247,7 @@ export default function OrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-            {currentUser.role === 'SYSTEM_ADMIN' && (
+            {(currentUser.role === 'SYSTEM_ADMIN') && (
               <Link href="/admin/service-management" passHref>
                 <Button variant="outline" size="lg" className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow">
                   <Settings2 className="mr-2 h-4 w-4" /> Configure Options
@@ -257,14 +272,14 @@ export default function OrdersPage() {
                 <Button
                 size="lg"
                 className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow font-semibold h-10"
-                disabled={isLoading || (allStatuses.length === 0)}
+                disabled={isLoading || (allStatuses.length === 0 && memoizedAvailableStatusesForDialog.length === 0)}
                 >
-                {(isLoading && allStatuses.length === 0) ? (
+                {(isLoading && allStatuses.length === 0 && memoizedAvailableStatusesForDialog.length === 0) ? (
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                 ) : (
                     <PlusCircle className="mr-2 h-5 w-5" />
                 )}
-                {(isLoading && allStatuses.length === 0) ? "Loading Data..." : "Create New Order"}
+                {(isLoading && allStatuses.length === 0 && memoizedAvailableStatusesForDialog.length === 0) ? "Loading Data..." : "Create New Order"}
                 </Button>
             </CreateOrderDialog>
             )}
@@ -351,6 +366,14 @@ export default function OrdersPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              {canEditOrder && (
+                                <DropdownMenuItem
+                                  onSelect={() => { setOrderToEdit(order); setIsEditOrderDialogOpen(true); }}
+                                  className="cursor-pointer"
+                                >
+                                  <Edit3 className="mr-2 h-4 w-4" /> Edit Order
+                                </DropdownMenuItem>
+                              )}
                               {canAssignDr && (
                                 <DropdownMenuItem
                                   onSelect={() => handleOpenAssignDrDialog(order)}
@@ -366,6 +389,8 @@ export default function OrdersPage() {
                                 </Link>
                               </DropdownMenuItem>
                               {canDeleteOrder && (
+                                <>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   onSelect={() => {
                                     setOrderToDelete(order);
@@ -375,6 +400,7 @@ export default function OrdersPage() {
                                 >
                                   <Trash2 className="mr-2 h-4 w-4" /> Delete Order
                                 </DropdownMenuItem>
+                                </>
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -443,6 +469,19 @@ export default function OrdersPage() {
         />
       )}
 
+      {orderToEdit && currentUser && isEditOrderDialogOpen && (
+        <EditOrderDialog
+          isOpen={isEditOrderDialogOpen}
+          onOpenChange={(open) => {
+            setIsEditOrderDialogOpen(open);
+            if (!open) setOrderToEdit(null);
+          }}
+          order={orderToEdit}
+          currentUser={currentUser}
+          onOrderUpdated={handleOrderUpdated}
+        />
+      )}
+
       {orderToDelete && isDeleteDialogOpen && (
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
@@ -471,4 +510,3 @@ export default function OrdersPage() {
     </div>
   );
 }
-
