@@ -26,6 +26,7 @@ import { Command, CommandEmpty, CommandItem, CommandList } from '@/components/ui
 
 const CLIENT_AVATAR_URL = 'https://i.ibb.co/7dphf0LX/avatar-with-a-young-face-pictures-of-men-vector-46356734.jpg';
 
+
 const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
   const names = name.split(' ');
@@ -54,6 +55,13 @@ const formatDate = (dateString: string | undefined, relative: boolean = false) =
 
 const MAX_INITIAL_REPLIES_TO_SHOW = 1;
 
+interface OrderDetailsClientProps {
+  order: TrackingLink;
+  allStatuses: CustomStatus[];
+  allUsersForMentions?: User[];
+  areCommentsVisible: boolean;
+}
+
 
 export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersForMentions = [], areCommentsVisible }: OrderDetailsClientProps) {
   const { currentUser } = useAuth();
@@ -79,13 +87,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
 
   useEffect(() => {
-    console.log('OrderDetailsClient received order:', JSON.stringify(initialOrder, null, 2));
-    if (Array.isArray(allUsersForMentions)) {
-        // console.log("OrderDetailsClient: Received allUsersForMentions (first 5):", allUsersForMentions.slice(0, 5).map(u => ({id: u.id, name: u.name, role: u.role, avatarUrl: u.avatarUrl ? 'Exists' : 'None'})));
-    } else {
-        console.warn("OrderDetailsClient: allUsersForMentions prop is not an array. Received:", allUsersForMentions);
-    }
-  }, [allUsersForMentions, initialOrder]);
+    console.log("OrderDetailsClient: Received allUsersForMentions (first 5):", Array.isArray(allUsersForMentions) ? allUsersForMentions.slice(0, 5).map(u => ({id: u.id, name: u.name, role: u.role, avatarUrl: u.avatarUrl ? 'Exists' : 'None'})) : "Not an array or undefined");
+  }, [allUsersForMentions]);
 
 
   useEffect(() => {
@@ -102,6 +105,11 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   }, [initialOrder]);
 
+  const barcodeSrc = `https://placehold.co/200x50.png?text=BARCODE+${order.id}`;
+  useEffect(() => {
+    console.log("OrderDetailsClient - Barcode source URL:", barcodeSrc);
+  }, [barcodeSrc]);
+
   const getReactorId = useCallback(() => {
     return currentUser?.id || clientReactorId;
   }, [currentUser, clientReactorId]);
@@ -115,16 +123,17 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   }, [allStatuses]);
 
   const currentStatusInfo = getStatusDisplayInfo(order.currentStatus);
+  const lastStatusUpdateEntry = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1] : null;
 
   const getStatusIcon = (statusId: string, sizeClass = "h-6 w-6") => {
-    const statusInfo = getStatusDisplayInfo(statusId);
+    const statusInfoToUse = getStatusDisplayInfo(statusId);
     const commonClasses = `${sizeClass} mr-2 flex-shrink-0`;
 
-    if (statusInfo.name.toLowerCase().includes("delivered") || statusInfo.name.toLowerCase().includes("shipped") || statusInfo.name.toLowerCase().includes("approved")) return <CheckCircle className={`${commonClasses} text-green-500`} />;
-    if (statusInfo.name.toLowerCase().includes("design")) return <Info className={`${commonClasses} text-teal-500`} />;
-    if (statusInfo.name.toLowerCase().includes("production")) return <Info className={`${commonClasses} text-blue-500`} />;
-    if (statusInfo.name.toLowerCase().includes("pending") || statusInfo.name.toLowerCase().includes("changes")) return <Clock className={`${commonClasses} text-yellow-600`} />;
-    if (statusInfo.name.toLowerCase().includes("cancelled")) return <Info className={`${commonClasses} text-red-500`} />;
+    if (statusInfoToUse.name.toLowerCase().includes("delivered") || statusInfoToUse.name.toLowerCase().includes("shipped") || statusInfoToUse.name.toLowerCase().includes("approved")) return <CheckCircle className={`${commonClasses} text-green-500`} />;
+    if (statusInfoToUse.name.toLowerCase().includes("design")) return <Info className={`${commonClasses} text-teal-500`} />;
+    if (statusInfoToUse.name.toLowerCase().includes("production")) return <Info className={`${commonClasses} text-blue-500`} />;
+    if (statusInfoToUse.name.toLowerCase().includes("pending") || statusInfoToUse.name.toLowerCase().includes("changes")) return <Clock className={`${commonClasses} text-yellow-600`} />;
+    if (statusInfoToUse.name.toLowerCase().includes("cancelled")) return <Info className={`${commonClasses} text-red-500`} />;
     return <Info className={`${commonClasses} text-gray-500`} />;
   };
 
@@ -149,7 +158,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setOrder(result);
       setNewComment('');
       toast({ title: "Success", description: "Your comment has been submitted." });
-      showBrowserNotification("Comment Posted", "Your comment has been successfully posted.");
+      // showBrowserNotification("Comment Posted", "Your comment has been successfully posted.");
     }
     setIsSubmittingComment(false);
   };
@@ -167,7 +176,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
         order.id,
         replyingTo.parentId,
         currentReplyText,
-        false, 
+        false,
         currentUser
       );
     } else {
@@ -186,7 +195,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setCurrentReplyText('');
       setReplyingTo(null);
       toast({ title: "Reply submitted" });
-      showBrowserNotification("Reply Submitted", "Your reply has been successfully posted.");
+      // showBrowserNotification("Reply Submitted", "Your reply has been successfully posted.");
     }
   };
 
@@ -235,7 +244,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setOrder(originalOrder);
     } else {
       setOrder(result);
-      showBrowserNotification("Reaction Updated", "Your reaction has been updated.");
+      // showBrowserNotification("Reaction Updated", "Your reaction has been updated.");
     }
   };
 
@@ -265,31 +274,32 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
     const textBeforeCursor = text.substring(0, cursorPosition);
     const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@');
-    console.log("OrderDetailsClient: handleReplyTextChangeForMention - Last @ index:", lastAtSymbolIndex);
+    const lastSpaceBeforeAt = textBeforeCursor.substring(0, lastAtSymbolIndex).lastIndexOf(' ');
+    const isAtStartOfWord = lastAtSymbolIndex === 0 || (lastAtSymbolIndex > 0 && textBeforeCursor[lastAtSymbolIndex - 1] === ' ');
 
 
-    if (lastAtSymbolIndex !== -1) {
-      const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
-      if (/^[a-zA-Z0-9_]*$/.test(potentialQuery)) { // Allow empty or alphanumeric query
-        console.log("OrderDetailsClient: handleReplyTextChangeForMention - Potential query:", potentialQuery);
-        setMentionQuery(potentialQuery);
-        setActiveMentionStartIndex(lastAtSymbolIndex);
+    if (lastAtSymbolIndex !== -1 && isAtStartOfWord) {
+      const potentialQuery = text.substring(lastAtSymbolIndex + 1, cursorPosition);
+      console.log("OrderDetailsClient: handleReplyTextChangeForMention - Potential query:", potentialQuery, "isAtStartOfWord:", isAtStartOfWord);
+        if (/^[a-zA-Z0-9_]*$/.test(potentialQuery)) {
+          setMentionQuery(potentialQuery);
+          setActiveMentionStartIndex(lastAtSymbolIndex);
 
-        const clientOption = { id: 'client-mention', name: (order.companyName || "Client"), role: 'Client' as 'Client' };
-        const usersToSearchFromProp = Array.isArray(allUsersForMentions) ? allUsersForMentions : [];
-        const usersToSearch = [clientOption, ...usersToSearchFromProp];
-        console.log("OrderDetailsClient: handleReplyTextChangeForMention - Users to search:", usersToSearch.map(u => u.name));
+          const clientOption = { id: 'client-mention', name: (order.companyName || "Client"), role: 'Client' as 'Client' };
+          const usersToSearchFromProp = Array.isArray(allUsersForMentions) ? allUsersForMentions : [];
+          const usersToSearch = [clientOption, ...usersToSearchFromProp];
+          // console.log("OrderDetailsClient: handleReplyTextChangeForMention - Users to search:", usersToSearch.map(u => u.name));
 
-        const filtered = usersToSearch.filter(user =>
-            (user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
-             (user.role && user.role.toLowerCase().replace(/_/g, ' ').includes(potentialQuery.toLowerCase())))
-        ).slice(0, 7);
-        console.log("OrderDetailsClient: Mention suggestions for query '", potentialQuery, "':", filtered.map(u => u.name));
-        setMentionSuggestions(filtered);
-        return;
-      }
+          const filtered = usersToSearch.filter(user =>
+              (user.name.toLowerCase().includes(potentialQuery.toLowerCase()) ||
+              (user.role && user.role.toLowerCase().replace(/_/g, ' ').includes(potentialQuery.toLowerCase())))
+          ).slice(0, 7);
+          // console.log("OrderDetailsClient: Mention suggestions for query '", potentialQuery, "':", filtered.map(u => u.name));
+          setMentionSuggestions(filtered);
+          return;
+        }
     }
-    console.log("OrderDetailsClient: handleReplyTextChangeForMention - No active mention sequence. Clearing mention state.");
+    // console.log("OrderDetailsClient: handleReplyTextChangeForMention - No active mention sequence. Clearing mention state.");
     setMentionQuery(null);
     setActiveMentionStartIndex(null);
     setMentionSuggestions([]);
@@ -303,17 +313,17 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     }
 
     const text = currentReplyText;
-    const mentionTag = userNameToInsert.replace(/\s+/g, ''); 
-    const queryLength = mentionQuery?.length || 0; 
+    const mentionTag = userNameToInsert.replace(/\s+/g, '');
+    const queryLength = mentionQuery?.length || 0;
 
     const textBeforeAt = text.substring(0, activeMentionStartIndex);
-    const textAfterMentionEnd = text.substring(activeMentionStartIndex + 1 + queryLength);
+    const textAfterMentionQuery = text.substring(activeMentionStartIndex + 1 + queryLength);
 
 
-    const newText = `${textBeforeAt}@${mentionTag} ${textAfterMentionEnd.trimStart()}`;
+    const newText = `${textBeforeAt}@${mentionTag} ${textAfterMentionQuery.startsWith(' ') ? textAfterMentionQuery : textAfterMentionQuery.trimStart()}`;
     setCurrentReplyText(newText);
 
-    const newCursorPosition = activeMentionStartIndex + 1 + mentionTag.length + 1; 
+    const newCursorPosition = activeMentionStartIndex + 1 + mentionTag.length + 1;
 
     setTimeout(() => {
       if (replyTextareaRef.current) {
@@ -372,7 +382,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
         <div className="flex-1">
           <div
             onDoubleClick={() => handleToggleLike(comment.id, isReply, parentCommentId)}
-            className="bg-muted dark:bg-muted/60 px-3.5 py-2.5 rounded-xl shadow-sm group transition-colors border border-transparent"
+            className="bg-muted dark:bg-muted/60 px-3.5 py-2.5 rounded-xl shadow-sm group transition-colors border border-transparent hover:border-primary/30"
           >
             <div className="flex items-baseline space-x-1.5">
               <p className="text-sm font-semibold text-foreground">{comment.userName}</p>
@@ -384,11 +394,11 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             </div>
             <p className="text-sm text-foreground/90 whitespace-pre-wrap mt-0.5">{renderTextWithMentions(comment.text)}</p>
           </div>
-          <div className="flex items-center space-x-2 mt-1.5 pl-1 text-xs">
+          <div className="flex items-center space-x-1 mt-1.5 pl-1 text-xs">
             <motion.button
               whileTap={{ scale: 0.9 }}
               onClick={() => handleToggleLike(comment.id, isReply, parentCommentId)}
-              className={`font-medium px-1.5 py-0.5 rounded-sm transition-colors flex items-center gap-1 group/likebtn ${hasLiked ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20 font-semibold' : 'text-muted-foreground hover:bg-muted/50 hover:text-red-500'
+              className={`font-medium px-1.5 py-0.5 rounded-sm transition-colors flex items-center gap-1 group/likebtn ${hasLiked ? 'text-red-500 bg-red-500/10 hover:bg-red-500/20' : 'text-muted-foreground hover:bg-muted/50 hover:text-red-500'
                 }`}
               title={hasLiked ? "Unlike" : "Like"}
               disabled={!reactorId}
@@ -482,7 +492,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                           className="cursor-pointer flex items-center gap-2"
                         >
                           <Avatar className="h-6 w-6 text-xs">
-                            <AvatarImage src={user.role === 'Client' ? CLIENT_AVATAR_URL : (user as User).avatarUrl || undefined} />
+                            <AvatarImage src={user.role === 'Client' ? CLIENT_AVATAR_URL : (Array.isArray(allUsersForMentions) && (allUsersForMentions.find(u => u.id === user.id) as User)?.avatarUrl) || undefined} />
                             <AvatarFallback className="bg-muted text-xs">{getInitials(user.name)}</AvatarFallback>
                           </Avatar>
                           <span className="text-xs font-medium">{user.name}</span>
@@ -536,15 +546,13 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const effectiveAdvancePayment = order.advancePayment || 0;
   const amountDue = orderSubtotal - effectiveAdvancePayment;
 
-  const lastStatusUpdate = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1] : null;
   const lastEditorName = order.updatedByUserName || order.crmUserName;
   const lastEditTimestamp = order.updatedAt || order.createdAt;
 
 
-  // Invoice Div Ref is used by Download Invoice Button
   return (
     <main className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
-      <Card className="shadow-2xl overflow-hidden border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
+       <div className="shadow-2xl overflow-hidden border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
         <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center space-x-4 mb-4 sm:mb-0">
@@ -562,136 +570,150 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               {getStatusIcon(order.currentStatus, "h-7 w-7")}
               Current Status: <span className="ml-2 text-2xl font-bold" style={{ color: currentStatusInfo.color }}>{currentStatusInfo.name}</span>
             </h3>
-            <div className="text-xs text-muted-foreground ml-[36px]">
-                {isClient ? 
-                    (lastStatusUpdate ? `Last status update: ${formatDate(lastStatusUpdate.timestamp)} by ${lastStatusUpdate.changedByUserName}` : "Status pending.")
+            <div className="text-xs text-muted-foreground ml-[36px] sm:ml-[40px]">
+                {isClient ?
+                    (lastStatusUpdateEntry ? `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp, true)} by ${lastStatusUpdateEntry.changedByUserName}` : "Status pending.")
                     : <Skeleton className="h-4 w-48 inline-block" />
                 }
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <div ref={invoiceRef} className="p-6 sm:p-8 bg-background">
-            <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30">
-              <div>
-                <h2 className="text-3xl font-bold text-primary mb-2 flex items-center">
-                  <FileText className="h-8 w-8 mr-3" /> INVOICE
-                </h2>
-                <p className="font-bold text-foreground">Color Hut</p>
-                <p className="text-muted-foreground text-sm">9/A Kajla Bus Stand, Donia,Jatrabari,Dhaka- 1236</p>
-                <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
-                 <div className="text-sm text-muted-foreground mt-1">
-                    Last Updated: {isClient ? `${lastEditorName} ${formatDate(lastEditTimestamp)}` : <Skeleton className="h-4 w-56 inline-block" />}
-                </div>
-              </div>
-              <div className="text-left sm:text-right mt-4 sm:mt-0">
-                <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
-                <div className="text-sm text-muted-foreground">
-                  Date: {isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-48 inline-block" />}
-                </div>
-                <div className="mt-2">
-                  <Image
-                    src={`https://placehold.co/200x50.png?text=BARCODE+${order.id}`}
-                    alt={`Barcode for order ${order.id}`}
-                    width={200}
-                    height={50}
-                    className="object-contain"
-                    data-ai-hint="barcode scan"
-                  />
-                </div>
-              </div>
-            </div>
+      </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
-                <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4"/>Bill To:</h4>
-                <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
-                <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground"/>{order.address}</p>
-                <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground"/>{order.phoneNumber}</p>
-              </div>
-              {order.designerRepresentativeName && (
-                  <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
-                    <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Project Contact:</h4>
-                    <p className="text-lg font-semibold text-foreground flex items-center"><UserCheck className="h-5 w-5 mr-2 text-green-500" /> {order.designerRepresentativeName}</p>
-                    <p className="text-muted-foreground text-sm">Assigned Designer Representative</p>
-                  </div>
-                )}
+
+      <div ref={invoiceRef} className="p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl">
+        <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30">
+          <div>
+            <h2 className="text-3xl font-bold text-primary mb-2 flex items-center">
+              <FileText className="h-8 w-8 mr-3" /> INVOICE
+            </h2>
+            <p className="font-bold text-foreground">Color Hut</p>
+            <p className="text-muted-foreground text-sm">9/A Kajla Bus Stand, Donia,Jatrabari,Dhaka- 1236</p>
+            <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
+              <div className="text-sm text-muted-foreground mt-1.5">
+                {isClient ?
+                    (order.updatedAt && order.updatedByUserName ?
+                    <>Last Updated: {order.updatedByUserName} {formatDate(order.updatedAt, false)}</>
+                    : `Order Placed: ${formatDate(order.createdAt, false)} by ${order.crmUserName}`
+                    )
+                    : <Skeleton className="h-4 w-64 inline-block" />
+                }
             </div>
-            
-            {Array.isArray(order.orderItems) && order.orderItems.length > 0 && (
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">
-                   Order Items
-                </h3>
-                <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Model</TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-center">Quantity</TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Lamination</TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Unit Price</TableHead>
-                        <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Total Price</TableHead>
+          </div>
+          <div className="text-left sm:text-right mt-4 sm:mt-0">
+            <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
+            <div className="text-sm text-muted-foreground">
+              Date: {isClient ? formatDate(order.createdAt, false) : <Skeleton className="h-4 w-56 inline-block" />}
+            </div>
+            <div className="mt-2">
+              <Image
+                src={barcodeSrc}
+                alt={`Barcode for order ${order.id}`}
+                width={200}
+                height={50}
+                className="object-contain border-2 border-red-500"
+                data-ai-hint="barcode scan"
+                priority
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
+            <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4"/>Bill To:</h4>
+            <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
+            <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground"/>{order.address}</p>
+            <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground"/>{order.phoneNumber}</p>
+          </div>
+          {order.designerRepresentativeName && (
+              <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
+                <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Project Contact:</h4>
+                <p className="text-lg font-semibold text-foreground flex items-center"><UserCheck className="h-5 w-5 mr-2 text-green-500" /> {order.designerRepresentativeName}</p>
+                <p className="text-muted-foreground text-sm">Assigned Designer Representative</p>
+              </div>
+            )}
+        </div>
+
+        {Array.isArray(order.orderItems) && order.orderItems.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">
+                  Order Items
+              </h3>
+              <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Model</TableHead>
+                      <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-center">Quantity</TableHead>
+                      <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Lamination</TableHead>
+                      <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Unit Price</TableHead>
+                      <TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Total Price</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {order.orderItems.map((item, index) => (
+                      <TableRow key={item.id || index} className="hover:bg-muted/50 transition-colors">
+                        <TableCell className="font-medium text-card-foreground">{item.model}</TableCell>
+                        <TableCell className="text-center text-card-foreground">{item.quantity}</TableCell>
+                        <TableCell className="text-card-foreground">{item.lamination}</TableCell>
+                        <TableCell className="text-right text-card-foreground">{formatCurrency(item.unitPrice)}</TableCell>
+                        <TableCell className="text-right font-semibold text-card-foreground">{formatCurrency(item.lineItemTotalPrice)}</TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {order.orderItems.map((item, index) => (
-                        <TableRow key={item.id || index} className="hover:bg-muted/50 transition-colors">
-                          <TableCell className="font-medium text-card-foreground">{item.model}</TableCell>
-                          <TableCell className="text-center text-card-foreground">{item.quantity}</TableCell>
-                          <TableCell className="text-card-foreground">{item.lamination}</TableCell>
-                          <TableCell className="text-right text-card-foreground">{formatCurrency(item.unitPrice)}</TableCell>
-                          <TableCell className="text-right font-semibold text-card-foreground">{formatCurrency(item.lineItemTotalPrice)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+           {(!Array.isArray(order.orderItems) || order.orderItems.length === 0) && (
+            <div className="mb-6 p-4 text-center text-muted-foreground border border-dashed border-border/40 rounded-md bg-secondary/30">
+                <Layers className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                No service items specified for this order.
+            </div>
+          )}
+
+
+        <div className="flex justify-end mt-8 pt-6 border-t border-border/30">
+          <div className="w-full max-w-xs sm:max-w-sm relative">
+            <div className="flex justify-between mb-2">
+              <span className="text-md font-semibold text-muted-foreground">Subtotal:</span>
+              <span className="text-md font-bold text-foreground">{formatCurrency(orderSubtotal)}</span>
+            </div>
+            {(order.advancePayment && order.advancePayment > 0) && (
+              <div className="flex justify-between mb-2">
+                <span className="text-md text-muted-foreground">Advance Payment:</span>
+                <span className="text-md text-foreground">{formatCurrency(order.advancePayment)}</span>
               </div>
             )}
 
-            <div className="flex justify-end mt-8 pt-6 border-t border-border/30">
-              <div className="w-full max-w-xs sm:max-w-sm relative">
-                <div className="flex justify-between mb-2">
-                  <span className="text-md font-semibold text-muted-foreground">Subtotal:</span>
-                  <span className="text-md font-bold text-foreground">{formatCurrency(orderSubtotal)}</span>
+            {orderSubtotal > 0 && amountDue <= 0 ? (
+               <div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end">
+                <div className="absolute -left-8 -top-4 sm:-left-12 sm:-top-6 transform -rotate-[15deg] border-4 border-green-500 text-green-500 font-bold uppercase text-3xl sm:text-4xl px-3 py-1 rounded-md shadow-lg bg-white/80 dark:bg-black/80 backdrop-blur-sm">
+                  PAID
                 </div>
-                {(order.advancePayment && order.advancePayment > 0) && (
-                  <div className="flex justify-between mb-2">
-                    <span className="text-md text-muted-foreground">Advance Payment:</span>
-                    <span className="text-md text-foreground">{formatCurrency(order.advancePayment)}</span>
-                  </div>
-                )}
-
-                {orderSubtotal > 0 && amountDue <= 0 ? (
-                   <div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end">
-                    <div className="absolute -left-8 -top-4 sm:-left-12 sm:-top-6 transform -rotate-[15deg] border-4 border-green-500 text-green-500 font-bold uppercase text-3xl sm:text-4xl px-3 py-1 rounded-md shadow-lg bg-white/80 dark:bg-black/80 backdrop-blur-sm">
-                      PAID
-                    </div>
-                  </div>
-                ) : (orderSubtotal > 0 && amountDue > 0 ) && (
-                  <>
-                    <Separator className="my-2 bg-border/50" />
-                    <div className="flex justify-between">
-                      <span className="text-lg font-bold text-primary">Amount Due:</span>
-                      <span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span>
-                    </div>
-                  </>
-                )}
-
-                 {(order.paymentMethod && (effectiveAdvancePayment > 0 || (orderSubtotal > 0 && amountDue > 0) || (orderSubtotal > 0 && amountDue <=0 && effectiveAdvancePayment > 0 ) )) && (
-                  <div className={`flex justify-between mt-2 pt-2 ${ (orderSubtotal > 0 && amountDue <= 0 && effectiveAdvancePayment > 0) ? 'border-transparent' : 'border-t border-dashed border-border/40'}`}>
-                    <span className="text-md text-muted-foreground">Payment Method:</span>
-                    <span className="text-md text-foreground flex items-center gap-1.5">
-                      <Landmark className="h-4 w-4 text-muted-foreground/80" />{order.paymentMethod}
-                    </span>
-                  </div>
-                )}
               </div>
-            </div>
+            ) : (orderSubtotal > 0 && amountDue > 0 ) && (
+              <>
+                <Separator className="my-2 bg-border/50" />
+                <div className="flex justify-between">
+                  <span className="text-lg font-bold text-primary">Amount Due:</span>
+                  <span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span>
+                </div>
+              </>
+            )}
+
+             {(order.paymentMethod && (effectiveAdvancePayment > 0 || (orderSubtotal > 0 && amountDue > 0) || (orderSubtotal > 0 && amountDue <=0 && effectiveAdvancePayment > 0 ) )) && (
+              <div className={`flex justify-between mt-2 pt-2 ${ (orderSubtotal > 0 && amountDue <= 0 && effectiveAdvancePayment > 0) ? 'border-transparent' : 'border-t border-dashed border-border/40'}`}>
+                <span className="text-md text-muted-foreground">Payment Method:</span>
+                <span className="text-md text-foreground flex items-center gap-1.5">
+                  <Landmark className="h-4 w-4 text-muted-foreground/80" />{order.paymentMethod}
+                </span>
+              </div>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <Separator className="my-6 sm:my-8 bg-border/30" />
 
@@ -719,7 +741,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                       <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
                       <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5">
                         <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" />
-                        {isClient ? formatDate(entry.timestamp) : <Skeleton className="h-4 w-48" />}
+                        {isClient ? formatDate(entry.timestamp, false) : <Skeleton className="h-4 w-48" />}
                         <span className="mx-1.5 hidden sm:inline">&bull;</span>
                         <span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span>
                       </div>
@@ -798,3 +820,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
+
+
+    
