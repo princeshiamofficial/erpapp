@@ -64,6 +64,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const [laminationOptions, setLaminationOptions] = useState<ServiceLaminationItem[]>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [popoverOpenStates, setPopoverOpenStates] = useState<Record<string, boolean>>({});
+  const [isPaymentMethodPopoverOpen, setIsPaymentMethodPopoverOpen] = useState(false);
 
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -100,13 +101,18 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       const hasOtherOption = paymentMethodOptions.some(opt => opt.name.toLowerCase() === 'other');
 
       if (currentPM && !isStandardOption && hasOtherOption) {
-        setPaymentMethod("Other");
+        setPaymentMethod("Other"); // Select "Other" in dropdown
         setShowCustomPaymentInput(true);
-        setCustomPaymentMethodText(currentPM);
+        setCustomPaymentMethodText(currentPM); // Set the actual custom text
+      } else if (currentPM.toLowerCase() === 'other' && isStandardOption) {
+        // If "Other" itself is a standard option but no custom text was saved.
+        setPaymentMethod(currentPM);
+        setShowCustomPaymentInput(true);
+        setCustomPaymentMethodText(''); // Empty custom text as "Other" itself is selected
       } else {
         setPaymentMethod(currentPM);
-        setShowCustomPaymentInput(currentPM.toLowerCase() === 'other' && hasOtherOption);
-        setCustomPaymentMethodText( (currentPM.toLowerCase() === 'other' && isStandardOption) ? '' : (isStandardOption ? '' : currentPM) );
+        setShowCustomPaymentInput(false);
+        setCustomPaymentMethodText('');
       }
 
       setOrderItems(order.orderItems.map(item => ({
@@ -117,6 +123,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       })));
     }
      setPopoverOpenStates({});
+     setIsPaymentMethodPopoverOpen(false);
   }, [order, paymentMethodOptions]);
 
 
@@ -192,12 +199,23 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setPaymentMethod(value);
     if (value.toLowerCase() === 'other') {
       setShowCustomPaymentInput(true);
-      setCustomPaymentMethodText('');
+      setCustomPaymentMethodText(''); // Clear custom text when "Other" is selected
     } else {
       setShowCustomPaymentInput(false);
       setCustomPaymentMethodText('');
     }
   };
+
+  const advancePaymentValue = parseFloat(advancePayment);
+  const isAdvancePaymentEntered = !isNaN(advancePaymentValue) && advancePaymentValue > 0;
+
+  useEffect(() => {
+    if (!isAdvancePaymentEntered) {
+        setPaymentMethod('');
+        setCustomPaymentMethodText('');
+        setShowCustomPaymentInput(false);
+    }
+  }, [isAdvancePaymentEntered]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -221,34 +239,26 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
         return;
       }
     }
-
-    if (parsedAdvancePayment && parsedAdvancePayment > 0 && !paymentMethod.trim()) {
-      toast({
-        title: "Validation Error",
-        description: "Payment Method is required when Advance Payment is entered.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    
+    const currentIsAdvancePaymentEntered = parsedAdvancePayment !== null && parsedAdvancePayment > 0;
     let finalPaymentMethod = paymentMethod.trim() || null;
-    if (paymentMethod.toLowerCase() === 'other') {
-      if (!customPaymentMethodText.trim()) {
-        toast({ title: "Validation Error", description: "Please specify the 'Other' payment method.", variant: "destructive" });
-        return;
-      }
-      finalPaymentMethod = customPaymentMethodText.trim();
+
+    if (currentIsAdvancePaymentEntered) {
+        if (!paymentMethod.trim()) {
+            toast({ title: "Validation Error", description: "Payment Method is required when Advance Payment is entered.", variant: "destructive" });
+            return;
+        }
+        if (paymentMethod.toLowerCase() === 'other') {
+          if (!customPaymentMethodText.trim()) {
+            toast({ title: "Validation Error", description: "Please specify the 'Other' payment method.", variant: "destructive" });
+            return;
+          }
+          finalPaymentMethod = customPaymentMethodText.trim();
+        }
+    } else {
+        finalPaymentMethod = null; // No advance payment, so no payment method needed
     }
     
-    if (parsedAdvancePayment && parsedAdvancePayment > 0 && paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) {
-        toast({
-          title: "Validation Error",
-          description: "Please specify the 'Other' payment method when Advance Payment is entered.",
-          variant: "destructive",
-        });
-        return;
-    }
-
     for (const item of orderItems) {
       if (!item.model || !item.quantity || !item.lamination) {
         toast({ title: "Validation Error", description: "All order items must have Model, Quantity, and Lamination selected.", variant: "destructive" });
@@ -298,8 +308,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     }
   };
 
-  const advancePaymentValue = parseFloat(advancePayment);
-  const isAdvancePaymentEntered = !isNaN(advancePaymentValue) && advancePaymentValue > 0;
 
   const canSubmit = !isSubmitting &&
     companyName.trim() && address.trim() && phoneNumber.trim() &&
@@ -313,7 +321,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       item.unitPrice !== null &&
       item.lineItemTotalPrice !== null
     ) &&
-    !(paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
     !(isAdvancePaymentEntered && !paymentMethod.trim()) &&
     !(isAdvancePaymentEntered && paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
     currentUser && currentUser.role;
@@ -349,26 +356,61 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                   <Label htmlFor="edit-advancePayment">Advance Payment (BDT - Optional)</Label>
                   <Input id="edit-advancePayment" type="number" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)} placeholder="e.g., 500.00" min="0" step="0.01" disabled={isSubmitting} />
                 </div>
+                {isAdvancePaymentEntered && (
                 <div className="space-y-1">
-                  <Label htmlFor="edit-paymentMethod">
-                    Payment Method
-                    {isAdvancePaymentEntered && <span className="text-destructive"> *</span>}
-                    {!isAdvancePaymentEntered && " (Optional)"}
+                   <Label htmlFor="edit-paymentMethod">
+                      Payment Method
+                      {isAdvancePaymentEntered && <span className="text-destructive"> *</span>}
                   </Label>
-                  <Select value={paymentMethod} onValueChange={handlePaymentMethodChange} disabled={isLoadingOptions || paymentMethodOptions.length === 0 || isSubmitting}>
-                    <SelectTrigger id="edit-paymentMethod">
-                      <SelectValue placeholder={isLoadingOptions ? "Loading..." : (paymentMethodOptions.length === 0 ? "No methods" : "Select payment method")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {paymentMethodOptions.map(option => (
-                        <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
-                      ))}
-                      {paymentMethodOptions.length === 0 && !isLoadingOptions && <div className="p-2 text-sm text-muted-foreground text-center">No payment methods available.</div>}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={isPaymentMethodPopoverOpen} onOpenChange={setIsPaymentMethodPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={isPaymentMethodPopoverOpen}
+                        className="w-full justify-between bg-background"
+                        disabled={isLoadingOptions || paymentMethodOptions.length === 0 || isSubmitting}
+                      >
+                         <span className="flex-1 text-left whitespace-nowrap">
+                          {paymentMethod
+                            ? paymentMethodOptions.find((option) => option.name === paymentMethod)?.name || paymentMethod // Show custom if not in options
+                            : (isLoadingOptions ? "Loading..." : (paymentMethodOptions.length === 0 ? "No methods" : "Select method..."))}
+                         </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-md p-0">
+                      <Command>
+                        <CommandInput placeholder="Search method..." />
+                        <CommandList>
+                          <CommandEmpty>No payment method found.</CommandEmpty>
+                          <CommandGroup>
+                            {paymentMethodOptions.map((option) => (
+                              <CommandItem
+                                key={option.id}
+                                value={option.name}
+                                onSelect={(currentValue) => {
+                                  handlePaymentMethodChange(paymentMethodOptions.find(o => o.name.toLowerCase() === currentValue.toLowerCase())?.name || currentValue);
+                                  setIsPaymentMethodPopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    paymentMethod === option.name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                 <span className="whitespace-nowrap">{option.name}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                   {showCustomPaymentInput && (
                     <div className="mt-2 space-y-1">
-                      <Label htmlFor="edit-customPaymentMethodText">
+                       <Label htmlFor="edit-customPaymentMethodText">
                         Specify Other Payment Method
                         {isAdvancePaymentEntered && <span className="text-destructive"> *</span>}
                       </Label>
@@ -383,6 +425,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                     </div>
                   )}
                 </div>
+                )}
               </div>
 
               <div className="space-y-3 mt-4 border-t border-border pt-4">
