@@ -6,9 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, CornerDownRight, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2 } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2, AlertTriangle } from "lucide-react";
 import Image from "next/image";
-import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types"; // Ensure OrderItem is imported
+import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Label } from '@/components/ui/label';
@@ -21,15 +21,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { motion } from 'framer-motion';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Command, CommandEmpty, CommandItem, CommandList } from '@/components/ui/command';
 
-
-interface OrderDetailsClientProps {
-  order: TrackingLink;
-  allStatuses: CustomStatus[];
-  allUsersForMentions?: User[];
-  areCommentsVisible: boolean;
-}
 
 const CLIENT_AVATAR_URL = 'https://i.ibb.co/7dphf0LX/avatar-with-a-young-face-pictures-of-men-vector-46356734.jpg';
 
@@ -44,6 +37,20 @@ const formatCurrency = (value: number | null | undefined): string => {
   if (value === null || value === undefined) return 'N/A';
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
 };
+
+const formatDate = (dateString: string | undefined, relative: boolean = false) => {
+  if (!dateString) return "Loading date...";
+  try {
+    const date = new Date(dateString);
+    if (relative) {
+      return formatDistanceToNowStrict(date, { addSuffix: true });
+    }
+    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+  } catch (e) {
+    return "Invalid Date";
+  }
+};
+
 
 const MAX_INITIAL_REPLIES_TO_SHOW = 1;
 
@@ -68,7 +75,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const [mentionSuggestions, setMentionSuggestions] = useState<Array<User | { id: string, name: string, role: 'Client' }>>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const invoiceRef = useRef<HTMLDivElement>(null); // Ref for the invoice content div
+  const invoiceRef = useRef<HTMLDivElement>(null);
 
 
   useEffect(() => {
@@ -109,19 +116,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   const currentStatusInfo = getStatusDisplayInfo(order.currentStatus);
 
-  const formatDate = (dateString: string | undefined, relative: boolean = false) => {
-    if (!isClient || !dateString) return "Loading date...";
-    try {
-      const date = new Date(dateString);
-      if (relative) {
-        return formatDistanceToNowStrict(date, { addSuffix: true });
-      }
-      return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
-    } catch (e) {
-      return "Invalid Date";
-    }
-  };
-
   const getStatusIcon = (statusId: string, sizeClass = "h-6 w-6") => {
     const statusInfo = getStatusDisplayInfo(statusId);
     const commonClasses = `${sizeClass} mr-2 flex-shrink-0`;
@@ -155,6 +149,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setOrder(result);
       setNewComment('');
       toast({ title: "Success", description: "Your comment has been submitted." });
+      showBrowserNotification("Comment Posted", "Your comment has been successfully posted.");
     }
     setIsSubmittingComment(false);
   };
@@ -172,7 +167,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
         order.id,
         replyingTo.parentId,
         currentReplyText,
-        false, // isInternal for public replies
+        false, 
         currentUser
       );
     } else {
@@ -191,6 +186,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setCurrentReplyText('');
       setReplyingTo(null);
       toast({ title: "Reply submitted" });
+      showBrowserNotification("Reply Submitted", "Your reply has been successfully posted.");
     }
   };
 
@@ -239,6 +235,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       setOrder(originalOrder);
     } else {
       setOrder(result);
+      showBrowserNotification("Reaction Updated", "Your reaction has been updated.");
     }
   };
 
@@ -251,15 +248,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       return part;
     });
   };
-
-  useEffect(() => {
-    if (Array.isArray(allUsersForMentions)) {
-      console.log("OrderDetailsClient: Received allUsersForMentions (first 5):", allUsersForMentions.slice(0, 5).map(u => ({id: u.id, name: u.name, role: u.role, avatarUrl: u.avatarUrl ? 'Exists' : 'None'})));
-    } else {
-      console.warn("OrderDetailsClient: allUsersForMentions prop is not an array. Received:", allUsersForMentions);
-    }
-  }, [allUsersForMentions]);
-
 
   const handleReplyTextChangeForMention = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
@@ -282,8 +270,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
     if (lastAtSymbolIndex !== -1) {
       const potentialQuery = textBeforeCursor.substring(lastAtSymbolIndex + 1);
-      // Allow empty query (just "@" typed) or alphanumeric query
-      if (/^[a-zA-Z0-9_]*$/.test(potentialQuery)) {
+      if (/^[a-zA-Z0-9_]*$/.test(potentialQuery)) { // Allow empty or alphanumeric query
         console.log("OrderDetailsClient: handleReplyTextChangeForMention - Potential query:", potentialQuery);
         setMentionQuery(potentialQuery);
         setActiveMentionStartIndex(lastAtSymbolIndex);
@@ -316,21 +303,17 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     }
 
     const text = currentReplyText;
-    const mentionTag = userNameToInsert.replace(/\s+/g, ''); // Remove spaces for the tag part
-    const queryLength = mentionQuery?.length || 0; // Length of the text typed after @
+    const mentionTag = userNameToInsert.replace(/\s+/g, ''); 
+    const queryLength = mentionQuery?.length || 0; 
 
-    // Ensure we only replace the part after @ up to the cursor
     const textBeforeAt = text.substring(0, activeMentionStartIndex);
-    // The part that was typed after @ and matched
-    // const currentPartialMention = text.substring(activeMentionStartIndex + 1, activeMentionStartIndex + 1 + queryLength);
-    // Text after the partial mention (if any)
     const textAfterMentionEnd = text.substring(activeMentionStartIndex + 1 + queryLength);
 
 
     const newText = `${textBeforeAt}@${mentionTag} ${textAfterMentionEnd.trimStart()}`;
     setCurrentReplyText(newText);
 
-    const newCursorPosition = activeMentionStartIndex + 1 + mentionTag.length + 1; // +1 for space
+    const newCursorPosition = activeMentionStartIndex + 1 + mentionTag.length + 1; 
 
     setTimeout(() => {
       if (replyTextareaRef.current) {
@@ -413,7 +396,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               <motion.span
                 animate={{ scale: hasLiked && reactorId ? [1, 1.4, 1, 1.2, 1] : 1 }}
                 transition={{ duration: 0.4, ease: "easeInOut" }}
-                key={`${comment.id}-${hasLiked ? 'liked' : 'unliked'}`}
+                key={`${comment.id}-${hasLiked ? 'liked' : 'unliked'}-${comment.likes?.count || 0}`}
               >
                 <Heart className={`h-4 w-4 ${hasLiked ? 'fill-red-500 text-red-500' : 'fill-transparent text-muted-foreground group-hover/likebtn:text-red-500'}`} />
               </motion.span>
@@ -553,7 +536,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const effectiveAdvancePayment = order.advancePayment || 0;
   const amountDue = orderSubtotal - effectiveAdvancePayment;
 
-  const lastStatusUpdateTimestamp = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1].timestamp : order.createdAt;
+  const lastStatusUpdate = order.statusHistory.length > 0 ? order.statusHistory[order.statusHistory.length - 1] : null;
   const lastEditorName = order.updatedByUserName || order.crmUserName;
   const lastEditTimestamp = order.updatedAt || order.createdAt;
 
@@ -561,7 +544,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   // Invoice Div Ref is used by Download Invoice Button
   return (
     <main className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
-      <Card className="shadow-xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
+      <Card className="shadow-2xl overflow-hidden border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
         <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center space-x-4 mb-4 sm:mb-0">
@@ -580,7 +563,10 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               Current Status: <span className="ml-2 text-2xl font-bold" style={{ color: currentStatusInfo.color }}>{currentStatusInfo.name}</span>
             </h3>
             <div className="text-xs text-muted-foreground ml-[36px]">
-              {isClient ? `Last status update: ${formatDate(lastStatusUpdateTimestamp, true)}` : <Skeleton className="h-4 w-48 inline-block" />}
+                {isClient ? 
+                    (lastStatusUpdate ? `Last status update: ${formatDate(lastStatusUpdate.timestamp)} by ${lastStatusUpdate.changedByUserName}` : "Status pending.")
+                    : <Skeleton className="h-4 w-48 inline-block" />
+                }
             </div>
           </div>
         </CardHeader>
@@ -594,24 +580,34 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 <p className="font-bold text-foreground">Color Hut</p>
                 <p className="text-muted-foreground text-sm">9/A Kajla Bus Stand, Donia,Jatrabari,Dhaka- 1236</p>
                 <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
+                 <div className="text-sm text-muted-foreground mt-1">
+                    Last Updated: {isClient ? `${lastEditorName} ${formatDate(lastEditTimestamp)}` : <Skeleton className="h-4 w-56 inline-block" />}
+                </div>
               </div>
               <div className="text-left sm:text-right mt-4 sm:mt-0">
                 <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
                 <div className="text-sm text-muted-foreground">
-                  Date: {isClient ? new Date(order.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : <Skeleton className="h-4 w-32 inline-block" />}
+                  Date: {isClient ? formatDate(order.createdAt) : <Skeleton className="h-4 w-48 inline-block" />}
                 </div>
-                 <div className="text-sm text-muted-foreground mt-0.5">
-                  Last Updated: {order.updatedByUserName ? `${order.updatedByUserName} ${formatDate(lastEditTimestamp, false)}` : "N/A"}
+                <div className="mt-2">
+                  <Image
+                    src={`https://placehold.co/200x50.png?text=BARCODE+${order.id}`}
+                    alt={`Barcode for order ${order.id}`}
+                    width={200}
+                    height={50}
+                    className="object-contain"
+                    data-ai-hint="barcode scan"
+                  />
                 </div>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
               <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
-                <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Bill To:</h4>
+                <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4"/>Bill To:</h4>
                 <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
-                <p className="text-foreground/90 text-sm">{order.address}</p>
-                <p className="text-foreground/90 text-sm">Phone: {order.phoneNumber}</p>
+                <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground"/>{order.address}</p>
+                <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground"/>{order.phoneNumber}</p>
               </div>
               {order.designerRepresentativeName && (
                   <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
@@ -660,10 +656,10 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                   <span className="text-md font-semibold text-muted-foreground">Subtotal:</span>
                   <span className="text-md font-bold text-foreground">{formatCurrency(orderSubtotal)}</span>
                 </div>
-                {(effectiveAdvancePayment > 0) && (
+                {(order.advancePayment && order.advancePayment > 0) && (
                   <div className="flex justify-between mb-2">
                     <span className="text-md text-muted-foreground">Advance Payment:</span>
-                    <span className="text-md text-foreground">{formatCurrency(effectiveAdvancePayment)}</span>
+                    <span className="text-md text-foreground">{formatCurrency(order.advancePayment)}</span>
                   </div>
                 )}
 
@@ -697,7 +693,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
         </CardContent>
       </Card>
 
-      <Card className="shadow-xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
+      <Separator className="my-6 sm:my-8 bg-border/30" />
+
+      <Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
         <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
           <div className="flex items-center space-x-3 sm:space-x-4">
             <Clock className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" />
@@ -721,7 +719,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                       <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
                       <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5">
                         <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" />
-                        {isClient ? formatDate(entry.timestamp, false) : <Skeleton className="h-4 w-48" />}
+                        {isClient ? formatDate(entry.timestamp) : <Skeleton className="h-4 w-48" />}
                         <span className="mx-1.5 hidden sm:inline">&bull;</span>
                         <span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span>
                       </div>
@@ -735,7 +733,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       </Card>
 
       {areCommentsVisible && (
-        <Card className="shadow-xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
+        <Card className="shadow-2xl border border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
           <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
             <div className="flex items-center space-x-3 sm:space-x-4">
               <MessageCircle className="h-8 w-8 sm:h-10 sm:w-10 text-primary flex-shrink-0 p-1.5 bg-primary/10 rounded-lg border border-primary/20" />
