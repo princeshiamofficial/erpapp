@@ -29,7 +29,7 @@ interface EditOrderDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   order: TrackingLink;
-  currentUser: User; 
+  currentUser: User;
   onOrderUpdated: () => void;
 }
 
@@ -112,7 +112,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       setOrderItems(order.orderItems.map(item => ({
         ...item,
         quantity: item.quantity.toString(),
-        unitPrice: item.unitPrice, 
+        unitPrice: item.unitPrice,
         lineItemTotalPrice: item.lineItemTotalPrice,
       })));
     }
@@ -192,7 +192,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setPaymentMethod(value);
     if (value.toLowerCase() === 'other') {
       setShowCustomPaymentInput(true);
-      setCustomPaymentMethodText(''); 
+      setCustomPaymentMethodText('');
     } else {
       setShowCustomPaymentInput(false);
       setCustomPaymentMethodText('');
@@ -213,6 +213,42 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       return;
     }
 
+    let parsedAdvancePayment: number | null = null;
+    if (advancePayment.trim() !== '') {
+      parsedAdvancePayment = parseFloat(advancePayment);
+      if (isNaN(parsedAdvancePayment) || parsedAdvancePayment < 0) {
+        toast({ title: "Validation Error", description: "Advance Payment must be a non-negative number.", variant: "destructive" });
+        return;
+      }
+    }
+
+    if (parsedAdvancePayment && parsedAdvancePayment > 0 && !paymentMethod.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Payment Method is required when Advance Payment is entered.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    let finalPaymentMethod = paymentMethod.trim() || null;
+    if (paymentMethod.toLowerCase() === 'other') {
+      if (!customPaymentMethodText.trim()) {
+        toast({ title: "Validation Error", description: "Please specify the 'Other' payment method.", variant: "destructive" });
+        return;
+      }
+      finalPaymentMethod = customPaymentMethodText.trim();
+    }
+    
+    if (parsedAdvancePayment && parsedAdvancePayment > 0 && paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Please specify the 'Other' payment method when Advance Payment is entered.",
+          variant: "destructive",
+        });
+        return;
+    }
+
     for (const item of orderItems) {
       if (!item.model || !item.quantity || !item.lamination) {
         toast({ title: "Validation Error", description: "All order items must have Model, Quantity, and Lamination selected.", variant: "destructive" });
@@ -229,23 +265,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       }
     }
 
-    let finalPaymentMethod = paymentMethod.trim() || null;
-    if (paymentMethod.toLowerCase() === 'other') {
-      if (!customPaymentMethodText.trim()) {
-        toast({ title: "Validation Error", description: "Please specify the 'Other' payment method.", variant: "destructive" });
-        return;
-      }
-      finalPaymentMethod = customPaymentMethodText.trim();
-    }
-
-    let parsedAdvancePayment: number | null = null;
-    if (advancePayment.trim() !== '') {
-      parsedAdvancePayment = parseFloat(advancePayment);
-      if (isNaN(parsedAdvancePayment) || parsedAdvancePayment < 0) {
-        toast({ title: "Validation Error", description: "Advance Payment must be a non-negative number.", variant: "destructive" });
-        return;
-      }
-    }
 
     setIsSubmitting(true);
 
@@ -272,12 +291,15 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setIsSubmitting(false);
 
     if (result.success && result.order) {
-      onOrderUpdated(); 
-      onOpenChange(false); 
+      onOrderUpdated();
+      onOpenChange(false);
     } else {
       toast({ title: "Update Failed", description: result.error || "Could not update order.", variant: "destructive" });
     }
   };
+
+  const advancePaymentValue = parseFloat(advancePayment);
+  const isAdvancePaymentEntered = !isNaN(advancePaymentValue) && advancePaymentValue > 0;
 
   const canSubmit = !isSubmitting &&
     companyName.trim() && address.trim() && phoneNumber.trim() &&
@@ -292,7 +314,9 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       item.lineItemTotalPrice !== null
     ) &&
     !(paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
-    currentUser && currentUser.role; 
+    !(isAdvancePaymentEntered && !paymentMethod.trim()) &&
+    !(isAdvancePaymentEntered && paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
+    currentUser && currentUser.role;
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -326,7 +350,11 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                   <Input id="edit-advancePayment" type="number" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)} placeholder="e.g., 500.00" min="0" step="0.01" disabled={isSubmitting} />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="edit-paymentMethod">Payment Method (Optional)</Label>
+                  <Label htmlFor="edit-paymentMethod">
+                    Payment Method
+                    {isAdvancePaymentEntered && <span className="text-destructive"> *</span>}
+                    {!isAdvancePaymentEntered && " (Optional)"}
+                  </Label>
                   <Select value={paymentMethod} onValueChange={handlePaymentMethodChange} disabled={isLoadingOptions || paymentMethodOptions.length === 0 || isSubmitting}>
                     <SelectTrigger id="edit-paymentMethod">
                       <SelectValue placeholder={isLoadingOptions ? "Loading..." : (paymentMethodOptions.length === 0 ? "No methods" : "Select payment method")} />
@@ -340,13 +368,16 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                   </Select>
                   {showCustomPaymentInput && (
                     <div className="mt-2 space-y-1">
-                      <Label htmlFor="edit-customPaymentMethodText">Specify Other Payment Method *</Label>
+                      <Label htmlFor="edit-customPaymentMethodText">
+                        Specify Other Payment Method
+                        {isAdvancePaymentEntered && <span className="text-destructive"> *</span>}
+                      </Label>
                       <Input
                         id="edit-customPaymentMethodText"
                         value={customPaymentMethodText}
                         onChange={(e) => setCustomPaymentMethodText(e.target.value)}
                         placeholder="e.g., Specific Wallet"
-                        required={paymentMethod.toLowerCase() === 'other'}
+                        required={paymentMethod.toLowerCase() === 'other' && isAdvancePaymentEntered}
                         disabled={isSubmitting}
                       />
                     </div>
@@ -358,7 +389,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                 <Label className="text-lg font-semibold">Order Items *</Label>
                 {orderItems.map((item) => (
                   <div key={item.id} className="p-3 border rounded-md bg-secondary/30 space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_2fr_1.5fr_auto] gap-x-3 gap-y-2 items-end">
+                    <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr_1fr_auto] gap-x-3 gap-y-2 items-end">
                       <div className="space-y-1">
                         <Label htmlFor={`model-${item.id}`}>Model *</Label>
                         <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
@@ -367,16 +398,18 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                               variant="outline"
                               role="combobox"
                               aria-expanded={popoverOpenStates[item.id] || false}
-                              className="w-full justify-between bg-background"
+                              className="w-full justify-between bg-background whitespace-nowrap"
                               disabled={isLoadingOptions || modelOptions.length === 0 || isSubmitting}
                             >
-                              {item.model
-                                ? modelOptions.find((option) => option.name === item.model)?.name
-                                : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
+                              <span className="flex-1 text-left whitespace-nowrap">
+                                {item.model
+                                  ? modelOptions.find((option) => option.name === item.model)?.name
+                                  : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
+                              </span>
                               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                          <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0">
                             <Command>
                               <CommandInput placeholder="Search model..." />
                               <CommandList>
@@ -390,6 +423,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                                         handleItemChange(item.id, 'modelName', currentValue === item.model ? '' : currentValue);
                                         togglePopover(item.id, false);
                                       }}
+                                      className="whitespace-nowrap"
                                     >
                                       <Check
                                         className={cn(
@@ -422,6 +456,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                             {laminationOptions.map(option => (
                               <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
                             ))}
+                             {laminationOptions.length === 0 && !isLoadingOptions && <div className="p-2 text-sm text-muted-foreground text-center">No laminations configured.</div>}
                           </SelectContent>
                         </Select>
                       </div>
