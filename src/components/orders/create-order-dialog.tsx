@@ -105,19 +105,27 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   useEffect(() => {
     if (isOpen) {
       fetchOptions();
-      const isCurrentStatusInAvailable = initialStatusId && availableStatuses.some(s => s.id === initialStatusId);
-      if (!initialStatusId || !isCurrentStatusInAvailable) {
-        const orderSubmittedStatus = availableStatuses.find(s => s.id === "order-submitted");
-        if (orderSubmittedStatus) {
-          setInitialStatusId(orderSubmittedStatus.id);
-        } else if (availableStatuses.length > 0 && availableStatuses[0]) {
-          setInitialStatusId(availableStatuses[0].id);
-        } else {
-          setInitialStatusId('');
-        }
-      }
     }
-  }, [isOpen, availableStatuses, fetchOptions, initialStatusId]);
+  }, [isOpen, fetchOptions]);
+
+  useEffect(() => {
+    if (isOpen && availableStatuses.length > 0) {
+        const isCurrentStatusInAvailable = initialStatusId && availableStatuses.some(s => s.id === initialStatusId);
+        if (!initialStatusId || !isCurrentStatusInAvailable) {
+            const orderSubmittedStatus = availableStatuses.find(s => s.id === "order-submitted");
+            if (orderSubmittedStatus) {
+                setInitialStatusId(orderSubmittedStatus.id);
+            } else if (availableStatuses.length > 0 && availableStatuses[0]) {
+                setInitialStatusId(availableStatuses[0].id);
+            } else {
+                setInitialStatusId('');
+            }
+        }
+    } else if (isOpen && availableStatuses.length === 0) {
+        setInitialStatusId('');
+    }
+  }, [isOpen, availableStatuses, initialStatusId]);
+
 
   const calculateLineItemTotal = (unitPrice: number | null, quantityStr: string): number | null => {
     if (unitPrice === null) return null;
@@ -184,34 +192,36 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       return;
     }
 
+    if (orderItems.length === 0 || orderItems.some(item => !item.model || !item.quantity || !item.lamination)) {
+      toast({
+        title: "Validation Error",
+        description: "All order items must have Model, Quantity, and Lamination selected.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const parsedOrderItems: OrderItem[] = [];
     for (const item of orderItems) {
-      if (!item.model || !item.quantity || !item.lamination) {
-        toast({
-          title: "Validation Error",
-          description: "All order items must have Model, Quantity, and Lamination selected.",
-          variant: "destructive",
-        });
-        return;
-      }
       const quantityNum = parseInt(item.quantity, 10);
       if (isNaN(quantityNum) || quantityNum < 1) {
         toast({ title: "Validation Error", description: `Invalid quantity for model "${item.model}". Quantity must be a positive number.`, variant: "destructive" });
         return;
       }
       if (item.unitPrice === null || item.lineItemTotalPrice === null) {
-        toast({ title: "Price Error", description: `Pricing information is missing for model "${item.model}". Ensure models have prices set.`, variant: "destructive" });
+        toast({ title: "Price Error", description: `Pricing information is missing for model "${item.model}". Ensure model is selected and has a price.`, variant: "destructive" });
         return;
       }
+      parsedOrderItems.push({
+        id: item.id, 
+        model: item.model,
+        quantity: quantityNum,
+        lamination: item.lamination,
+        unitPrice: item.unitPrice,
+        lineItemTotalPrice: item.lineItemTotalPrice,
+      });
     }
 
-    const parsedOrderItems: OrderItem[] = orderItems.map(item => ({
-      id: item.id,
-      model: item.model,
-      quantity: parseInt(item.quantity, 10),
-      lamination: item.lamination,
-      unitPrice: item.unitPrice!,
-      lineItemTotalPrice: item.lineItemTotalPrice!,
-    }));
 
     let finalPaymentMethod = paymentMethod.trim() || null;
     if (paymentMethod.toLowerCase() === 'other') {
@@ -226,10 +236,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       finalPaymentMethod = customPaymentMethodText.trim();
     }
 
-
     let parsedAdvancePayment: number | null = null;
-    if (advancePayment.trim() !== '') {
-      parsedAdvancePayment = parseFloat(advancePayment);
+    const advancePaymentStr = String(advancePayment || '');
+    if (advancePaymentStr.trim() !== '') {
+      parsedAdvancePayment = parseFloat(advancePaymentStr);
       if (isNaN(parsedAdvancePayment) || parsedAdvancePayment < 0) {
         toast({ title: "Validation Error", description: "Advance Payment must be a non-negative number.", variant: "destructive" });
         return;
@@ -246,7 +256,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
     setIsSubmitting(true);
 
-    const orderData = {
+    const orderDataForAction = {
       companyName,
       address,
       phoneNumber,
@@ -256,7 +266,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       initialStatusId,
     };
 
-    const result = await createOrderAction(orderData, currentUser);
+    const result = await createOrderAction(orderDataForAction, currentUser);
 
     if ('error' in result) {
       toast({
@@ -275,7 +285,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
     setIsSubmitting(false);
   };
-
+  
   const canSubmit = !isSubmitting &&
     companyName && address && phoneNumber && initialStatusId &&
     (availableStatuses.length > 0 || !!initialStatusId) &&
@@ -368,9 +378,11 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                             className="w-full justify-between bg-background"
                             disabled={isLoadingOptions || modelOptions.length === 0}
                           >
+                            <span className="truncate">
                             {item.model
                               ? modelOptions.find((option) => option.name === item.model)?.name
                               : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
+                            </span>
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
@@ -395,7 +407,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                                         item.model === option.name ? "opacity-100" : "opacity-0"
                                       )}
                                     />
-                                    {option.name}
+                                    <span className="truncate">{option.name}</span>
                                   </CommandItem>
                                 ))}
                               </CommandGroup>
@@ -479,4 +491,3 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
-
