@@ -183,7 +183,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!companyName || !address || !phoneNumber || !initialStatusId) {
+    if (!companyName.trim() || !address.trim() || !phoneNumber.trim() || !initialStatusId) {
       toast({
         title: "Validation Error",
         description: "Company Name, Address, Phone Number, and Initial Status are required.",
@@ -257,9 +257,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setIsSubmitting(true);
 
     const orderDataForAction = {
-      companyName,
-      address,
-      phoneNumber,
+      companyName: companyName.trim(),
+      address: address.trim(),
+      phoneNumber: phoneNumber.trim(),
       orderItems: parsedOrderItems,
       advancePayment: parsedAdvancePayment,
       paymentMethod: finalPaymentMethod,
@@ -287,7 +287,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   };
   
   const canSubmit = !isSubmitting &&
-    companyName && address && phoneNumber && initialStatusId &&
+    companyName.trim() && address.trim() && phoneNumber.trim() && initialStatusId &&
     (availableStatuses.length > 0 || !!initialStatusId) &&
     modelOptions.length > 0 &&
     laminationOptions.length > 0 &&
@@ -378,7 +378,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                             className="w-full justify-between bg-background"
                             disabled={isLoadingOptions || modelOptions.length === 0}
                           >
-                            <span className="truncate">
+                            <span className="flex-1 text-left break-words whitespace-normal">
                             {item.model
                               ? modelOptions.find((option) => option.name === item.model)?.name
                               : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
@@ -407,7 +407,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                                         item.model === option.name ? "opacity-100" : "opacity-0"
                                       )}
                                     />
-                                    <span className="truncate">{option.name}</span>
+                                    <span className="break-words whitespace-normal">{option.name}</span>
                                   </CommandItem>
                                 ))}
                               </CommandGroup>
@@ -467,8 +467,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
             <div className="space-y-1 mt-4 border-t border-border pt-4">
               <Label htmlFor="initialStatus">Initial Status *</Label>
-              <Select value={initialStatusId} onValueChange={setInitialStatusId} required>
-                <SelectTrigger id="initialStatus" disabled={availableStatuses.length === 0}>
+              <Select value={initialStatusId} onValueChange={setInitialStatusId} required disabled={availableStatuses.length === 0}>
+                <SelectTrigger id="initialStatus">
                   <SelectValue placeholder={availableStatuses.length === 0 ? "Loading statuses..." : "Select initial status"} />
                 </SelectTrigger>
                 <SelectContent>
@@ -491,3 +491,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
+
+
+    
