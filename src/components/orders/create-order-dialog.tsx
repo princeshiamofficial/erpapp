@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -61,6 +61,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [orderItems, setOrderItems] = useState<DialogOrderItem[]>([{ ...initialOrderItemState, id: uuidv4() }]);
+  const [totalOrderPrice, setTotalOrderPrice] = useState<number>(0);
 
   const [modelOptions, setModelOptions] = useState<ServiceModelItem[]>([]);
   const [laminationOptions, setLaminationOptions] = useState<ServiceLaminationItem[]>([]);
@@ -83,6 +84,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setOrderItems([{ ...initialOrderItemState, id: uuidv4() }]);
     setPopoverOpenStates({});
     setIsPaymentMethodPopoverOpen(false);
+    setTotalOrderPrice(0);
+    setIsSubmitting(false);
   }, []);
 
   const fetchOptions = useCallback(async () => {
@@ -128,6 +131,11 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
   }, [isOpen, availableStatuses, initialStatusId]);
 
+  useEffect(() => {
+    const currentTotal = orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+    setTotalOrderPrice(currentTotal);
+  }, [orderItems]);
+
   const advancePaymentValue = parseFloat(advancePayment);
   const isAdvancePaymentEntered = !isNaN(advancePaymentValue) && advancePaymentValue > 0;
 
@@ -138,7 +146,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         setShowCustomPaymentInput(false);
     }
   }, [isAdvancePaymentEntered]);
-
 
   const calculateLineItemTotal = (unitPrice: number | null, quantityStr: string): number | null => {
     if (unitPrice === null) return null;
@@ -195,6 +202,43 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
   };
 
+  const handleAdvancePaymentChange = (value: string) => {
+    setAdvancePayment(value);
+    const numericValue = parseFloat(value);
+    if (!isNaN(numericValue) && numericValue > totalOrderPrice && totalOrderPrice > 0) {
+      toast({
+        title: "Validation Error",
+        description: `Advance payment cannot exceed total order price of ${formatCurrency(totalOrderPrice)}.`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const canSubmit = useMemo(() => {
+    const parsedAdvPayment = parseFloat(advancePayment);
+    const isAdvPaymentValid = isNaN(parsedAdvPayment) || parsedAdvPayment <= totalOrderPrice || totalOrderPrice === 0;
+
+    return !isSubmitting &&
+      companyName.trim() && address.trim() && phoneNumber.trim() && initialStatusId &&
+      (availableStatuses.length > 0 || !!initialStatusId) &&
+      modelOptions.length > 0 &&
+      laminationOptions.length > 0 &&
+      !isLoadingOptions &&
+      orderItems.length > 0 &&
+      orderItems.every(item =>
+        item.model &&
+        item.quantity &&
+        parseInt(item.quantity) > 0 &&
+        item.lamination &&
+        item.unitPrice !== null &&
+        item.lineItemTotalPrice !== null
+      ) &&
+      !(isAdvancePaymentEntered && !paymentMethod.trim()) &&
+      !(isAdvancePaymentEntered && paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
+      isAdvPaymentValid;
+  }, [isSubmitting, companyName, address, phoneNumber, initialStatusId, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, paymentMethod, customPaymentMethodText, advancePayment, totalOrderPrice]);
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -223,6 +267,15 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         setIsSubmitting(false);
         return;
       }
+      if (parsedAdvancePayment > totalOrderPrice && totalOrderPrice > 0) {
+        toast({
+          title: "Validation Error",
+          description: `Advance payment (${formatCurrency(parsedAdvancePayment)}) cannot exceed total order price of ${formatCurrency(totalOrderPrice)}.`,
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
     }
     
     const currentIsAdvancePaymentEntered = parsedAdvancePayment !== null && parsedAdvancePayment > 0;
@@ -243,7 +296,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
           finalPaymentMethod = customPaymentMethodText.trim();
         }
     } else {
-        finalPaymentMethod = null; // No advance payment, so no payment method needed
+        finalPaymentMethod = null;
     }
 
 
@@ -310,25 +363,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
   };
   
-  const canSubmit = !isSubmitting &&
-    companyName.trim() && address.trim() && phoneNumber.trim() && initialStatusId &&
-    (availableStatuses.length > 0 || !!initialStatusId) &&
-    modelOptions.length > 0 &&
-    laminationOptions.length > 0 &&
-    !isLoadingOptions &&
-    orderItems.length > 0 &&
-    orderItems.every(item =>
-      item.model &&
-      item.quantity &&
-      parseInt(item.quantity) > 0 &&
-      item.lamination &&
-      item.unitPrice !== null &&
-      item.lineItemTotalPrice !== null
-    ) &&
-    !(isAdvancePaymentEntered && !paymentMethod.trim()) &&
-    !(isAdvancePaymentEntered && paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim());
-
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
       <DialogTrigger asChild>
@@ -361,9 +395,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                     id="advancePayment" 
                     type="number" 
                     value={advancePayment} 
-                    onChange={(e) => {
-                        setAdvancePayment(e.target.value);
-                    }}
+                    onChange={(e) => handleAdvancePaymentChange(e.target.value)}
                     placeholder="e.g., 500.00" 
                     min="0" 
                     step="0.01" 
@@ -373,7 +405,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   <div className="space-y-1">
                     <Label htmlFor="paymentMethod">
                       Payment Method 
-                      {isAdvancePaymentEntered && <span className="text-destructive"> *</span>}
+                      <span className="text-destructive"> *</span>
                     </Label>
                      <Popover open={isPaymentMethodPopoverOpen} onOpenChange={setIsPaymentMethodPopoverOpen}>
                       <PopoverTrigger asChild>
@@ -403,7 +435,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                                   key={option.id}
                                   value={option.name}
                                   onSelect={(currentValue) => {
-                                    handlePaymentMethodChange(currentValue === paymentMethod ? '' : currentValue);
+                                    handlePaymentMethodChange(paymentMethodOptions.find(o => o.name.toLowerCase() === currentValue.toLowerCase())?.name || currentValue);
                                     setIsPaymentMethodPopoverOpen(false);
                                   }}
                                 >
@@ -425,14 +457,14 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                       <div className="mt-2 space-y-1">
                         <Label htmlFor="customPaymentMethodText">
                           Specify Other Payment Method 
-                          {isAdvancePaymentEntered && <span className="text-destructive"> *</span>}
+                          <span className="text-destructive"> *</span>
                         </Label>
                         <Input
                           id="customPaymentMethodText"
                           value={customPaymentMethodText}
                           onChange={(e) => setCustomPaymentMethodText(e.target.value)}
                           placeholder="e.g., Specific Mobile Wallet"
-                          required={paymentMethod.toLowerCase() === 'other' && isAdvancePaymentEntered}
+                          required={paymentMethod.toLowerCase() === 'other'}
                         />
                       </div>
                     )}
