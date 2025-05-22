@@ -59,7 +59,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [showCustomPaymentInput, setShowCustomPaymentInput] = useState(false);
   const [customPaymentMethodText, setCustomPaymentMethodText] = useState('');
 
-  const [orderItems, setOrderItems] = useState<DialogOrderItem[]>([{ ...initialOrderItemState }]);
+  const [orderItems, setOrderItems] = useState<DialogOrderItem[]>([{ ...initialOrderItemState, id: uuidv4() }]);
 
   const [modelOptions, setModelOptions] = useState<ServiceModelItem[]>([]);
   const [laminationOptions, setLaminationOptions] = useState<ServiceLaminationItem[]>([]);
@@ -197,6 +197,48 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
        return;
     }
 
+    let parsedAdvancePayment: number | null = null;
+    const advancePaymentStr = String(advancePayment || '');
+    if (advancePaymentStr.trim() !== '') {
+      parsedAdvancePayment = parseFloat(advancePaymentStr);
+      if (isNaN(parsedAdvancePayment) || parsedAdvancePayment < 0) {
+        toast({ title: "Validation Error", description: "Advance Payment must be a non-negative number.", variant: "destructive" });
+        return;
+      }
+    }
+
+    if (parsedAdvancePayment && parsedAdvancePayment > 0 && !paymentMethod.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Payment Method is required when Advance Payment is entered.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    let finalPaymentMethod = paymentMethod.trim() || null;
+    if (paymentMethod.toLowerCase() === 'other') {
+      if (!customPaymentMethodText.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Please specify the 'Other' payment method.",
+          variant: "destructive",
+        });
+        return;
+      }
+      finalPaymentMethod = customPaymentMethodText.trim();
+    }
+    
+    if (parsedAdvancePayment && parsedAdvancePayment > 0 && paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Please specify the 'Other' payment method when Advance Payment is entered.",
+          variant: "destructive",
+        });
+        return;
+    }
+
+
     const parsedOrderItems: OrderItem[] = [];
     for (const item of orderItems) {
       if (!item.model || !item.lamination) {
@@ -205,7 +247,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       }
       const quantityNum = parseInt(item.quantity, 10);
       if (isNaN(quantityNum) || quantityNum < 1) {
-        toast({ title: "Validation Error", description: `Invalid quantity for model "${item.model}". Quantity must be a positive number.`, variant: "destructive" });
+        toast({ title: "Validation Error", description: `Invalid quantity "${item.quantity}" for model "${item.model}". Quantity must be a positive number.`, variant: "destructive" });
         return;
       }
       if (item.unitPrice === null || item.lineItemTotalPrice === null) {
@@ -220,30 +262,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         unitPrice: item.unitPrice,
         lineItemTotalPrice: item.lineItemTotalPrice,
       });
-    }
-
-
-    let finalPaymentMethod = paymentMethod.trim() || null;
-    if (paymentMethod.toLowerCase() === 'other') {
-      if (!customPaymentMethodText.trim()) {
-        toast({
-          title: "Validation Error",
-          description: "Please specify the 'Other' payment method.",
-          variant: "destructive",
-        });
-        return;
-      }
-      finalPaymentMethod = customPaymentMethodText.trim();
-    }
-
-    let parsedAdvancePayment: number | null = null;
-    const advancePaymentStr = String(advancePayment || '');
-    if (advancePaymentStr.trim() !== '') {
-      parsedAdvancePayment = parseFloat(advancePaymentStr);
-      if (isNaN(parsedAdvancePayment) || parsedAdvancePayment < 0) {
-        toast({ title: "Validation Error", description: "Advance Payment must be a non-negative number.", variant: "destructive" });
-        return;
-      }
     }
 
     if (availableStatuses.length === 0 && !initialStatusId) {
@@ -286,6 +304,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
   };
   
+  const advancePaymentValue = parseFloat(advancePayment);
+  const isAdvancePaymentEntered = !isNaN(advancePaymentValue) && advancePaymentValue > 0;
+
   const canSubmit = !isSubmitting &&
     companyName.trim() && address.trim() && phoneNumber.trim() && initialStatusId &&
     (availableStatuses.length > 0 || !!initialStatusId) &&
@@ -301,7 +322,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       item.unitPrice !== null &&
       item.lineItemTotalPrice !== null
     ) &&
-    !(paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim());
+    !(paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
+    !(isAdvancePaymentEntered && !paymentMethod.trim()) &&
+    !(isAdvancePaymentEntered && paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim());
 
 
   return (
@@ -335,7 +358,11 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                 <Input id="advancePayment" type="number" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)} placeholder="e.g., 500.00" min="0" step="0.01" />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="paymentMethod">Payment Method (Optional)</Label>
+                  <Label htmlFor="paymentMethod">
+                    Payment Method 
+                    {isAdvancePaymentEntered && <span className="text-destructive"> *</span>}
+                    {!isAdvancePaymentEntered && " (Optional)"}
+                  </Label>
                   <Select value={paymentMethod} onValueChange={handlePaymentMethodChange} disabled={isLoadingOptions || paymentMethodOptions.length === 0}>
                     <SelectTrigger id="paymentMethod">
                       <SelectValue placeholder={isLoadingOptions ? "Loading..." : (paymentMethodOptions.length === 0 ? "No methods" : "Select payment method")} />
@@ -349,13 +376,16 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   </Select>
                    {showCustomPaymentInput && (
                     <div className="mt-2 space-y-1">
-                      <Label htmlFor="customPaymentMethodText">Specify Other Payment Method *</Label>
+                      <Label htmlFor="customPaymentMethodText">
+                        Specify Other Payment Method 
+                        {isAdvancePaymentEntered && <span className="text-destructive"> *</span>}
+                      </Label>
                       <Input
                         id="customPaymentMethodText"
                         value={customPaymentMethodText}
                         onChange={(e) => setCustomPaymentMethodText(e.target.value)}
                         placeholder="e.g., Specific Mobile Wallet"
-                        required={paymentMethod.toLowerCase() === 'other'}
+                        required={paymentMethod.toLowerCase() === 'other' && isAdvancePaymentEntered}
                       />
                     </div>
                   )}
@@ -366,7 +396,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               <Label className="text-lg font-semibold">Order Items *</Label>
               {orderItems.map((item) => (
                 <div key={item.id} className="p-3 border rounded-md bg-secondary/30 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr_1fr_auto] gap-x-3 gap-y-2 items-end">
+                   <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr_1fr_auto] gap-x-3 gap-y-2 items-end">
                     <div className="space-y-1">
                       <Label htmlFor={`model-${item.id}`}>Model *</Label>
                       <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
@@ -438,20 +468,17 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                       <Label>Total Price</Label>
                       <Input value={formatCurrency(item.lineItemTotalPrice)} readOnly disabled className="bg-muted/50 text-foreground" />
                     </div>
-
-                    
-                       <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveItem(item.id)}
-                        disabled={isSubmitting || orderItems.length <=1}
-                        className="text-destructive hover:bg-destructive/10 hover:text-destructive-foreground h-10 w-10"
-                        title="Remove item"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveItem(item.id)}
+                      disabled={isSubmitting || orderItems.length <=1}
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive-foreground h-10 w-10"
+                      title="Remove item"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -492,6 +519,3 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
-
-
-    
