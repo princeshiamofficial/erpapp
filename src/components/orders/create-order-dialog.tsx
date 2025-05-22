@@ -192,17 +192,17 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       return;
     }
 
-    if (orderItems.length === 0 || orderItems.some(item => !item.model || !item.quantity || !item.lamination)) {
-      toast({
-        title: "Validation Error",
-        description: "All order items must have Model, Quantity, and Lamination selected.",
-        variant: "destructive",
-      });
-      return;
+    if (orderItems.length === 0) {
+       toast({ title: "Validation Error", description: "At least one order item is required.", variant: "destructive" });
+       return;
     }
 
     const parsedOrderItems: OrderItem[] = [];
     for (const item of orderItems) {
+      if (!item.model || !item.lamination) {
+        toast({ title: "Validation Error", description: `Model and Lamination are required for all items. Problem with item for model: ${item.model || "Unnamed"}`, variant: "destructive" });
+        return;
+      }
       const quantityNum = parseInt(item.quantity, 10);
       if (isNaN(quantityNum) || quantityNum < 1) {
         toast({ title: "Validation Error", description: `Invalid quantity for model "${item.model}". Quantity must be a positive number.`, variant: "destructive" });
@@ -267,6 +267,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     };
 
     const result = await createOrderAction(orderDataForAction, currentUser);
+    setIsSubmitting(false);
 
     if ('error' in result) {
       toast({
@@ -283,7 +284,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       setIsOpen(false);
       resetForm();
     }
-    setIsSubmitting(false);
   };
   
   const canSubmit = !isSubmitting &&
@@ -366,7 +366,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               <Label className="text-lg font-semibold">Order Items *</Label>
               {orderItems.map((item) => (
                 <div key={item.id} className="p-3 border rounded-md bg-secondary/30 space-y-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_2fr_1.5fr_auto] gap-x-3 gap-y-2 items-end">
+                  <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr_1fr_auto] gap-x-3 gap-y-2 items-end">
                     <div className="space-y-1">
                       <Label htmlFor={`model-${item.id}`}>Model *</Label>
                       <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
@@ -378,7 +378,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                             className="w-full justify-between bg-background"
                             disabled={isLoadingOptions || modelOptions.length === 0}
                           >
-                            <span className="flex-1 text-left break-words whitespace-normal">
+                            <span className="flex-1 text-left whitespace-nowrap">
                             {item.model
                               ? modelOptions.find((option) => option.name === item.model)?.name
                               : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
@@ -386,7 +386,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-lg p-0">
                           <Command>
                             <CommandInput placeholder="Search model..." />
                             <CommandList>
@@ -407,7 +407,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                                         item.model === option.name ? "opacity-100" : "opacity-0"
                                       )}
                                     />
-                                    <span className="break-words whitespace-normal">{option.name}</span>
+                                    <span className="whitespace-nowrap">{option.name}</span>
                                   </CommandItem>
                                 ))}
                               </CommandGroup>
@@ -430,6 +430,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                           {laminationOptions.map(option => (
                             <SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>
                           ))}
+                           {laminationOptions.length === 0 && !isLoadingOptions && <div className="p-2 text-sm text-muted-foreground text-center">No laminations configured.</div>}
                         </SelectContent>
                       </Select>
                     </div>
@@ -438,19 +439,19 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                       <Input value={formatCurrency(item.lineItemTotalPrice)} readOnly disabled className="bg-muted/50 text-foreground" />
                     </div>
 
-                    {orderItems.length > 1 && (
+                    
                        <Button
                         type="button"
                         variant="ghost"
                         size="icon"
                         onClick={() => handleRemoveItem(item.id)}
-                        disabled={isSubmitting}
-                        className="h-10 w-10 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
+                        disabled={isSubmitting || orderItems.length <=1}
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive-foreground h-10 w-10"
                         title="Remove item"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
-                    )}
+                    
                   </div>
                 </div>
               ))}
@@ -469,7 +470,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               <Label htmlFor="initialStatus">Initial Status *</Label>
               <Select value={initialStatusId} onValueChange={setInitialStatusId} required disabled={availableStatuses.length === 0}>
                 <SelectTrigger id="initialStatus">
-                  <SelectValue placeholder={availableStatuses.length === 0 ? "Loading statuses..." : "Select initial status"} />
+                  <SelectValue placeholder={availableStatuses.length === 0 ? "No statuses available" : "Select initial status"} />
                 </SelectTrigger>
                 <SelectContent>
                   {availableStatuses.map(status => (
