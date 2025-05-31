@@ -2,7 +2,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { updateUserBanStatus, updateUserInfo as updateUserInfoInDb } from "@/lib/user-service"; // Added updateUserInfoInDb
+import { 
+  updateUserBanStatus, 
+  updateUserInfo as updateUserInfoInDb,
+  deleteUserFromFirestore as deleteUserFromDbService // Renamed import for clarity
+} from "@/lib/user-service"; 
 
 export async function toggleUserBanStatusAction(
   userId: string,
@@ -38,3 +42,21 @@ export async function updateUserInfoAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred while updating user information." };
   }
 }
+
+export async function deleteUserAction(userId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Potentially add permission checks here based on currentUser role if needed
+    // For example, ensure the user calling this action has rights to delete users,
+    // and perhaps prevent self-deletion or deletion of higher-privileged users.
+    const success = await deleteUserFromDbService(userId);
+    if (success) {
+      revalidatePath("/(app)/users");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to delete user from database." };
+  } catch (error) {
+    console.error("Error in deleteUserAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+

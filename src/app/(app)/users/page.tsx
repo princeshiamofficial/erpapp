@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlusCircle, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical, KeyRound, Edit, Trash2, RefreshCw } from "lucide-react";
+import { PlusCircle, UserCog, Target, UserX, UserCheck, AlertTriangle, Edit3 as EditInfoIcon, MoreVertical, KeyRound, Edit, Trash2, RefreshCw, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User, UserRole } from "@/types";
@@ -25,12 +25,12 @@ import {
 import { 
   getUsers, 
   updateUserRoleInFirestore, 
-  deleteUserFromFirestore, 
+  // deleteUserFromFirestore, // This will be called via server action
   updateUserPasswordInFirestore, 
   updateUserAvatarInFirestore, 
   updateUserTargetsInFirestore,
 } from '@/lib/user-service';
-import { toggleUserBanStatusAction, updateUserInfoAction } from './actions'; 
+import { toggleUserBanStatusAction, updateUserInfoAction, deleteUserAction } from './actions'; 
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -76,6 +76,7 @@ export default function UsersPage() {
 
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleteUserDialogOpen, setIsDeleteUserDialogOpen] = useState(false);
+  const [isDeletingUser, setIsDeletingUser] = useState(false);
 
 
   const fetchUsers = useCallback(async () => {
@@ -113,13 +114,6 @@ export default function UsersPage() {
     }
     setIsEditRoleDialogOpen(false);
     setUserToEditRole(null);
-  };
-
-  const handleUserDeleted = async () => {
-    toast({ title: "User Deleted", description: `User has been deleted.`});
-    await fetchUsers();
-    setIsDeleteUserDialogOpen(false);
-    setUserToDelete(null);
   };
 
   const handlePasswordChanged = async () => {
@@ -185,6 +179,32 @@ export default function UsersPage() {
     }
     setIsEditInfoDialogOpen(false); 
     setUserToEditInfo(null); 
+  };
+
+  const handleConfirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    setIsDeletingUser(true);
+
+    const result = await deleteUserAction(userToDelete.id);
+    setIsDeletingUser(false);
+
+    if (result.success) {
+      toast({
+        title: "User Deleted",
+        description: `User ${userToDelete.name} has been successfully deleted.`,
+      });
+      await fetchUsers();
+      setIsDeleteUserDialogOpen(false);
+      setUserToDelete(null);
+    } else {
+      toast({
+        title: "Deletion Failed",
+        description: result.error || "Could not delete the user.",
+        variant: "destructive",
+      });
+      // Optionally keep dialog open:
+      // setIsDeleteUserDialogOpen(true); 
+    }
   };
 
 
@@ -557,7 +577,11 @@ export default function UsersPage() {
       {isSetAvatarDialogOpen && userToSetAvatar && (
         <SetUserAvatarDialog 
           user={userToSetAvatar} 
-          onAvatarChanged={handleUserAvatarSetByAdmin}
+          onAvatarChanged={async (userId, avatarUrl) => {
+            const success = await updateUserAvatarInFirestore(userId, avatarUrl);
+            if (success) handleUserAvatarSetByAdmin();
+            return success;
+          }}
           isOpen={isSetAvatarDialogOpen}
           onOpenChange={(open) => {
             setIsSetAvatarDialogOpen(open);
@@ -569,7 +593,11 @@ export default function UsersPage() {
       {isChangePasswordDialogOpen && userToChangePassword && (
         <ChangePasswordDialog 
           user={userToChangePassword} 
-          onPasswordChanged={handlePasswordChanged}
+          onPasswordChanged={async (userId, newPassword) => {
+            const success = await updateUserPasswordInFirestore(userId, newPassword);
+            if (success) handlePasswordChanged();
+            return success;
+          }}
           isOpen={isChangePasswordDialogOpen}
           onOpenChange={(open) => {
             setIsChangePasswordDialogOpen(open);
@@ -582,7 +610,11 @@ export default function UsersPage() {
         <EditUserRoleDialog 
           user={userToEditRole} 
           currentUser={currentUser} 
-          onUserRoleUpdated={handleUserRoleUpdated}
+          onUserRoleUpdated={async (userId, newRole) => {
+            const success = await updateUserRoleInFirestore(userId, newRole);
+            if (success) handleUserRoleUpdated();
+            // Parent handles toast & re-fetch. No need to return boolean here explicitly.
+          }}
           isOpen={isEditRoleDialogOpen}
           onOpenChange={(open) => {
             setIsEditRoleDialogOpen(open);
@@ -594,7 +626,11 @@ export default function UsersPage() {
       {isSetTargetsDialogOpen && userToSetTargets && userToSetTargets.role === 'CRM' && (
          <SetUserSalesTargetDialog 
             user={userToSetTargets} 
-            onTargetsSet={handleUserTargetsSetByAdmin}
+            onTargetsSet={async (userId, monthlyTarget, weeklyTarget) => {
+                const success = await updateUserTargetsInFirestore(userId, monthlyTarget, weeklyTarget);
+                if (success) handleUserTargetsSetByAdmin();
+                return success;
+            }}
             isOpen={isSetTargetsDialogOpen}
             onOpenChange={(open) => {
               setIsSetTargetsDialogOpen(open);
@@ -603,15 +639,17 @@ export default function UsersPage() {
           />
       )}
 
-      {isDeleteUserDialogOpen && userToDelete && currentUser && (
+      {isDeleteUserDialogOpen && userToDelete && (
         <DeleteUserDialog 
           user={userToDelete} 
-          currentUser={currentUser}
-          onUserDeleted={handleUserDeleted}
+          onConfirmDelete={handleConfirmDeleteUser}
+          isDeleting={isDeletingUser}
           isOpen={isDeleteUserDialogOpen}
           onOpenChange={(open) => {
-            setIsDeleteUserDialogOpen(open);
-            if (!open) setUserToDelete(null);
+            if (!isDeletingUser) {
+                setIsDeleteUserDialogOpen(open);
+                if (!open) setUserToDelete(null);
+            }
           }}
         />
       )}

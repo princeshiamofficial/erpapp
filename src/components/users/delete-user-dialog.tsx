@@ -1,36 +1,39 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from "@/components/ui/button";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
 import type { User } from "@/types";
+import { Loader2 } from 'lucide-react';
 
 interface DeleteUserDialogProps {
   user: User;
-  onUserDeleted: (userId: string) => Promise<void>;
+  onConfirmDelete: () => Promise<void>; // Callback to trigger deletion logic in parent
+  isDeleting: boolean; // To show loading state on the button
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function DeleteUserDialog({ user, onUserDeleted, isOpen, onOpenChange }: DeleteUserDialogProps) {
-  const [isDeleting, setIsDeleting] = useState(false);
-
+export function DeleteUserDialog({ user, onConfirmDelete, isDeleting, isOpen, onOpenChange }: DeleteUserDialogProps) {
+  
   const handleDelete = async () => {
-    setIsDeleting(true);
-    try {
-      await onUserDeleted(user.id);
-      // Parent (UsersPage) will handle toast and closing via onOpenChange
-    } catch (error) {
-      console.error("Error in DeleteUserDialog handleDelete:", error);
-      // Parent (UsersPage) should ideally handle error toasts if the promise rejects
-    } finally {
-      setIsDeleting(false);
-    }
+    // The actual deletion logic (calling server action, toast, re-fetch)
+    // is now handled by `onConfirmDelete` which points to `handleConfirmDeleteUser` in UsersPage.
+    await onConfirmDelete(); 
   };
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+    <AlertDialog open={isOpen} onOpenChange={(open) => { if (!isDeleting) onOpenChange(open)}}>
       {/* DialogTrigger is handled by parent controlling isOpen */}
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -40,12 +43,22 @@ export function DeleteUserDialog({ user, onUserDeleted, isOpen, onOpenChange }: 
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => onOpenChange(false)} disabled={isDeleting}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={isDeleting}>
-            {isDeleting ? "Deleting..." : "Delete User"}
+          <AlertDialogCancel onClick={() => { if (!isDeleting) onOpenChange(false) }} disabled={isDeleting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={handleDelete} 
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90" 
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : "Delete User"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );
 }
+
