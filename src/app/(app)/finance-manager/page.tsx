@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/contexts/auth-context";
 import type { Transaction, User, TransactionType } from "@/types";
 import { getTransactionsForUser, getAllTransactions } from "@/lib/personal-finance-service";
-import { getUsers } from '@/lib/user-service'; // Added getUsers import
+import { getUsers } from '@/lib/user-service';
 import { deleteTransactionAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,8 +16,20 @@ import { PlusCircle, ArrowDownCircle, ArrowUpCircle, DollarSign, Wallet, AlertTr
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const AddTransactionDialog = dynamic(() => import('@/components/finance-manager/add-transaction-dialog').then(mod => mod.AddTransactionDialog));
+const EditTransactionDialog = dynamic(() => import('@/components/finance-manager/edit-transaction-dialog').then(mod => mod.EditTransactionDialog));
+
 
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
@@ -29,10 +41,17 @@ export default function FinanceManagerPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'personal' | 'global'>('personal');
-  const [userMap, setUserMap] = useState<Map<string, string>>(new Map()); // For global view user names
+  const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
 
   const [isClient, setIsClient] = useState(false);
   useEffect(() => setIsClient(true), []);
+
+  const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
+  const [isEditDialogVisible, setIsEditDialogVisible] = useState(false);
 
 
   const fetchTransactions = useCallback(async () => {
@@ -67,22 +86,36 @@ export default function FinanceManagerPage() {
     fetchTransactions();
   }, [fetchTransactions]);
 
-  const handleDeleteTransaction = async (transactionId: string) => {
-    if (!currentUser) return;
-    if (!confirm("Are you sure you want to delete this transaction? This action cannot be undone.")) {
-      return;
-    }
-    const result = await deleteTransactionAction(transactionId, currentUser.id);
+  const handleDeleteRequest = (transaction: Transaction) => {
+    setTransactionToDelete(transaction);
+    setIsDeleteAlertOpen(true);
+  };
+
+  const confirmDeleteTransaction = async () => {
+    if (!transactionToDelete || !currentUser) return;
+    setIsDeleting(true);
+    const result = await deleteTransactionAction(transactionToDelete.id, currentUser.id);
+    setIsDeleting(false);
+    setIsDeleteAlertOpen(false);
     if (result.success) {
       toast({ title: "Transaction Deleted", description: "The transaction has been removed." });
       fetchTransactions();
     } else {
       toast({ title: "Deletion Failed", description: result.error || "Could not delete transaction.", variant: "destructive" });
     }
+    setTransactionToDelete(null);
+  };
+  
+  const handleOpenEditDialog = (transaction: Transaction) => {
+    setTransactionToEdit(transaction);
+    setIsEditDialogVisible(true);
   };
 
-  const handleEditTransaction = (transaction: Transaction) => {
-    toast({ title: "Edit (Soon)", description: `Editing transaction ${transaction.id} - to be implemented.`});
+  const handleTransactionUpdated = () => {
+    setIsEditDialogVisible(false);
+    setTransactionToEdit(null);
+    fetchTransactions();
+    toast({title: "Transaction Updated", description: "The transaction has been successfully updated."})
   };
 
 
@@ -194,8 +227,8 @@ export default function FinanceManagerPage() {
                     key={t.id} 
                     transaction={t} 
                     currentUser={currentUser}
-                    onDelete={handleDeleteTransaction} 
-                    onEdit={handleEditTransaction} 
+                    onDelete={() => handleDeleteRequest(t)} 
+                    onEdit={() => handleOpenEditDialog(t)} 
                     userName={viewMode === 'global' ? userMap.get(t.userId) : undefined}
                   />
                 ))}
@@ -254,6 +287,42 @@ export default function FinanceManagerPage() {
               </Button>
           </div>
         </div>
+
+      {isDeleteAlertOpen && transactionToDelete && (
+        <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-6 w-6 text-destructive" /> Are you sure?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This action will permanently delete the transaction for "<span className="font-semibold">{transactionToDelete.category}</span>" of {formatCurrency(transactionToDelete.amount)}.
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIsDeleteAlertOpen(false)} disabled={isDeleting}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDeleteTransaction}
+                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                disabled={isDeleting}
+              >
+                {isDeleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting...</> : "Yes, delete it"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
+      {isEditDialogVisible && transactionToEdit && currentUser && (
+        <EditTransactionDialog
+          isOpen={isEditDialogVisible}
+          onOpenChange={setIsEditDialogVisible}
+          transaction={transactionToEdit}
+          currentUser={currentUser}
+          onTransactionUpdated={handleTransactionUpdated}
+        />
+      )}
     </div>
   );
 }
@@ -261,3 +330,6 @@ export default function FinanceManagerPage() {
 
     
 
+
+
+    

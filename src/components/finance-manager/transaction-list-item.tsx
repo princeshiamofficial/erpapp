@@ -11,9 +11,9 @@ import { cn } from '@/lib/utils';
 interface TransactionListItemProps {
   transaction: Transaction;
   currentUser: User | null;
-  onDelete: (transactionId: string) => void;
+  onDelete: (transaction: Transaction) => void; // Pass the whole transaction for confirm dialog
   onEdit: (transaction: Transaction) => void;
-  userName?: string; // Optional userName prop
+  userName?: string; 
 }
 
 const formatCurrency = (value: number): string => {
@@ -24,10 +24,12 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
   const isIncome = transaction.type === 'income';
   const isPurchase = transaction.type === 'purchase';
   const isExpense = transaction.type === 'expense';
-  const canModify = currentUser?.id === transaction.userId || currentUser?.role === 'SYSTEM_ADMIN';
+  
+  const canModify = currentUser?.role === 'SYSTEM_ADMIN' || (currentUser?.id === transaction.userId);
+
 
   let IconComponent = TrendingUp;
-  let iconColorClass = "bg-green-500/10 text-green-600"; // Default to income
+  let iconColorClass = "bg-green-500/10 text-green-600";
 
   if (isPurchase) {
     IconComponent = ShoppingBag;
@@ -77,7 +79,6 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
               className="h-7 w-7 text-muted-foreground hover:text-primary"
               onClick={() => onEdit(transaction)}
               title="Edit Transaction"
-              disabled // Edit functionality to be implemented
             >
               <Edit3 className="h-4 w-4" />
             </Button>
@@ -85,7 +86,7 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-muted-foreground hover:text-destructive"
-              onClick={() => onDelete(transaction.id)}
+              onClick={() => onDelete(transaction)} // Pass the full transaction object
               title="Delete Transaction"
             >
               <Trash2 className="h-4 w-4" />
@@ -96,3 +97,6 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
     </div>
   );
 }
+
+
+    
