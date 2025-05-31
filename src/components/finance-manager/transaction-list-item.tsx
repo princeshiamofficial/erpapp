@@ -4,7 +4,7 @@
 import React from 'react';
 import type { Transaction, User } from '@/types';
 import { format, parseISO } from 'date-fns';
-import { TrendingUp, TrendingDown, Trash2, Edit3, UserCircle } from 'lucide-react'; // Added UserCircle
+import { TrendingUp, TrendingDown, Trash2, Edit3, UserCircle, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -20,18 +20,42 @@ const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
+// Case-insensitive list of categories that indicate a purchase
+const PURCHASE_CATEGORIES = [
+  "shopping", "purchase", "inventory", "supplies", "order", 
+  "clothing", "electronics", "books", "groceries", "subscriptions", 
+  "gifts", "household items", "software", "tools", "equipment",
+  "office supplies", "raw materials", "services" // Added common business purchase categories
+];
+
+const isPurchaseCategory = (category: string): boolean => {
+  if (!category) return false;
+  return PURCHASE_CATEGORIES.includes(category.toLowerCase());
+};
+
 export function TransactionListItem({ transaction, currentUser, onDelete, onEdit, userName }: TransactionListItemProps) {
   const isIncome = transaction.type === 'income';
+  const isConsideredPurchase = transaction.type === 'expense' && isPurchaseCategory(transaction.category);
   const canModify = currentUser?.id === transaction.userId || currentUser?.role === 'SYSTEM_ADMIN';
+
+  let IconComponent = TrendingUp;
+  let iconColorClass = "bg-green-500/10 text-green-600";
+
+  if (!isIncome) {
+    if (isConsideredPurchase) {
+      IconComponent = ShoppingBag;
+      iconColorClass = "bg-sky-500/10 text-sky-600"; // Different color for purchases
+    } else {
+      IconComponent = TrendingDown;
+      iconColorClass = "bg-red-500/10 text-red-600";
+    }
+  }
 
   return (
     <div className="flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
       <div className="flex items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
-        <div className={cn(
-          "p-2 rounded-full",
-          isIncome ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"
-        )}>
-          {isIncome ? <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" /> : <TrendingDown className="h-5 w-5 sm:h-6 sm:w-6" />}
+        <div className={cn("p-2 rounded-full", iconColorClass)}>
+          <IconComponent className="h-5 w-5 sm:h-6 sm:w-6" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm sm:text-md font-semibold text-foreground truncate" title={transaction.category}>
@@ -54,7 +78,7 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
       <div className="flex flex-col items-end ml-2 sm:ml-4">
         <p className={cn(
           "text-md sm:text-lg font-bold",
-          isIncome ? "text-green-600" : "text-red-600"
+          isIncome ? "text-green-600" : (isConsideredPurchase ? "text-sky-600" : "text-red-600")
         )}>
           {isIncome ? '+' : '-'} {formatCurrency(transaction.amount)}
         </p>
@@ -85,4 +109,3 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
     </div>
   );
 }
-
