@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle, Search } from "lucide-react"; // Added Search
+import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle, Search, DollarSign } from "lucide-react"; // Added DollarSign
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { ServiceModelItem } from "@/types";
@@ -37,7 +37,7 @@ export default function ModelManagementPage() {
   const [models, setModels] = useState<ServiceModelItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [modelSearchTerm, setModelSearchTerm] = useState(''); // State for search term
+  const [modelSearchTerm, setModelSearchTerm] = useState(''); 
 
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -151,7 +151,7 @@ export default function ModelManagementPage() {
   
   const formatCurrency = (value?: number) => {
     if (value === undefined || value === null) return 'N/A';
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
+    return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
   };
 
   if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
@@ -184,7 +184,7 @@ export default function ModelManagementPage() {
           />
         </div>
       </CardHeader>
-      <CardContent className="p-0 max-h-[calc(100vh-350px)] overflow-y-auto"> {/* Adjusted max-height */}
+      <CardContent className="p-0 max-h-[calc(100vh-350px)] overflow-y-auto">
         {isLoading ? (
           <div className="p-4 space-y-3">
             {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-md" />)}
@@ -200,6 +200,10 @@ export default function ModelManagementPage() {
               <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
                 <div className="flex flex-col">
                   <span className="font-medium text-foreground">{item.name}</span>
+                  <span className="text-xs text-muted-foreground flex items-center">
+                    <DollarSign className="h-3 w-3 mr-1 opacity-70" />
+                    {formatCurrency(item.price)}
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(item)} title={`Edit model`} className="h-8 w-8">
@@ -239,7 +243,6 @@ export default function ModelManagementPage() {
         {renderItemList(filteredModels, 'Models', Layers)}
       </div>
 
-      {/* Add/Edit Dialog */}
       <Dialog open={isAddEditDialogOpen} onOpenChange={setIsAddEditDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -278,7 +281,6 @@ export default function ModelManagementPage() {
         </DialogContent>
       </Dialog>
       
-      {/* Delete Confirmation Dialog */}
       {itemToDelete && (
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
