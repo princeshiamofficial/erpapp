@@ -11,7 +11,7 @@ import { getTransactionsForUser, getAllTransactions } from "@/lib/personal-finan
 import { deleteTransactionAction } from './actions'; // Import the server action
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, DollarSign, Wallet, AlertTriangle, ListFilter, Calculator, NotebookPen, RefreshCw, Loader2, ShoppingBag } from 'lucide-react';
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, DollarSign, Wallet, AlertTriangle, ListFilter, Calculator, NotebookPen, RefreshCw, Loader2, ShoppingBag, Minus } from 'lucide-react';
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'; // For Personal/Global toggle
 import { Separator } from '@/components/ui/separator';
@@ -253,6 +253,6 @@ export default function FinanceManagerPage() {
     </div>
   );
 }
-
+    
 
     
