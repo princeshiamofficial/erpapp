@@ -77,7 +77,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
 
     setIsSubmitting(true);
     const transactionData = {
-      type, // Use the current 'type' state, which might have been set by defaultType
+      type, 
       amount: numericAmount,
       category: category.trim(),
       description: description.trim() || undefined,
@@ -88,7 +88,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
     setIsSubmitting(false);
 
     if (result.success && result.transaction) {
-      toast({ title: "Transaction Added", description: `${type === 'income' ? 'Income' : 'Expense'} of ${numericAmount} added for ${category}.` });
+      toast({ title: "Transaction Added", description: `${type.charAt(0).toUpperCase() + type.slice(1)} of ${numericAmount} added for ${category}.` });
       onTransactionAdded();
       setIsOpen(false);
       resetForm();
@@ -96,6 +96,13 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
       toast({ title: "Error", description: result.error || "Could not add transaction.", variant: "destructive" });
     }
   };
+  
+  const getCategoryPlaceholder = () => {
+    if (type === 'income') return "e.g., Salary, Sales";
+    if (type === 'purchase') return "e.g., Inventory, Supplies, Groceries";
+    return "e.g., Utilities, Rent";
+  }
+
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
@@ -103,7 +110,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add New Transaction</DialogTitle>
-          <DialogDescription>Log a new {defaultType || 'transaction'} entry.</DialogDescription>
+          <DialogDescription>Log a new {type} entry.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -114,8 +121,9 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="expense">Expense</SelectItem>
                   <SelectItem value="income">Income</SelectItem>
+                  <SelectItem value="expense">Expense</SelectItem>
+                  <SelectItem value="purchase">Purchase</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -125,7 +133,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
             </div>
             <div className="space-y-1">
               <Label htmlFor="transaction-category">Category *</Label>
-              <Input id="transaction-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder={type === 'income' ? "e.g., Salary, Sales" : (defaultType === 'expense' && children?.toString().toLowerCase().includes('purchase')) ? "e.g., Inventory, Supplies" : "e.g., Groceries, Utilities"} required />
+              <Input id="transaction-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder={getCategoryPlaceholder()} required />
             </div>
              <div className="space-y-1">
               <Label htmlFor="transaction-date">Date *</Label>
@@ -165,6 +173,3 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
     </Dialog>
   );
 }
-
-
-    

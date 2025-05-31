@@ -130,7 +130,7 @@ export interface Appointment {
   userId: string; // User this appointment belongs to, or a general ID if for the business
 }
 
-export type TransactionType = 'income' | 'expense';
+export type TransactionType = 'income' | 'expense' | 'purchase';
 
 export interface Transaction {
   id: string;
@@ -151,3 +151,4 @@ export interface PersonalNote {
   createdAt: string; // ISO string
   updatedAt: string; // ISO string
 }
+

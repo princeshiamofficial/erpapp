@@ -88,17 +88,17 @@ export default function FinanceManagerPage() {
 
   const { totalIncome, totalExpenses, availableBalance } = useMemo(() => {
     let income = 0;
-    let expenses = 0;
+    let expensesSum = 0;
     transactions.forEach(t => {
       if (t.type === 'income') income += t.amount;
-      else expenses += t.amount;
+      else if (t.type === 'expense' || t.type === 'purchase') expensesSum += t.amount;
     });
-    return { totalIncome: income, totalExpenses: expenses, availableBalance: income - expenses };
+    return { totalIncome: income, totalExpenses: expensesSum, availableBalance: income - expensesSum };
   }, [transactions]);
 
   const summaryCards = [
     { title: "Total Income", value: totalIncome, icon: ArrowUpCircle, color: "text-green-600", hint: "green money" },
-    { title: "Total Expenses", value: totalExpenses, icon: ArrowDownCircle, color: "text-red-600", hint: "red money" },
+    { title: "Total Expenses & Purchases", value: totalExpenses, icon: ArrowDownCircle, color: "text-red-600", hint: "red money" },
     { title: "Available Balance", value: availableBalance, icon: Wallet, color: availableBalance >= 0 ? "text-blue-600" : "text-orange-600", hint: "wallet coins" },
   ];
 
@@ -134,7 +134,7 @@ export default function FinanceManagerPage() {
               <Minus className="mr-2 h-5 w-5" /> Add Expense
             </Button>
           </AddTransactionDialog>
-           <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions} defaultType="expense">
+           <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions} defaultType="purchase">
             <Button size="default" className="bg-sky-600 hover:bg-sky-700 text-white h-10">
               <ShoppingBag className="mr-2 h-5 w-5" /> Add Purchase
             </Button>
@@ -165,7 +165,7 @@ export default function FinanceManagerPage() {
                 <div className="text-3xl sm:text-4xl font-bold text-card-foreground">{formatCurrency(card.value)}</div>
               )}
               <p className="text-xs text-muted-foreground mt-1">
-                {card.title === "Available Balance" ? "Your current financial standing" : `Total ${card.title.toLowerCase()} recorded`}
+                {card.title === "Available Balance" ? "Your current financial standing" : `Total ${card.title.toLowerCase().replace(' & purchases','')} recorded`}
               </p>
             </CardContent>
           </Card>
@@ -178,7 +178,7 @@ export default function FinanceManagerPage() {
             <div>
               <CardTitle className="text-card-foreground text-xl">Recent Transactions</CardTitle>
               <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                Your latest income and expense entries.
+                Your latest income, expense and purchase entries.
               </CardDescription>
             </div>
           </CardHeader>
@@ -260,3 +260,4 @@ export default function FinanceManagerPage() {
     
 
     
+

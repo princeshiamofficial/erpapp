@@ -20,36 +20,23 @@ const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
-// Case-insensitive list of categories that indicate a purchase
-const PURCHASE_CATEGORIES = [
-  "shopping", "purchase", "inventory", "supplies", "order", 
-  "clothing", "electronics", "books", "groceries", "subscriptions", 
-  "gifts", "household items", "software", "tools", "equipment",
-  "office supplies", "raw materials", "services" // Added common business purchase categories
-];
-
-const isPurchaseCategory = (category: string): boolean => {
-  if (!category) return false;
-  return PURCHASE_CATEGORIES.includes(category.toLowerCase());
-};
-
 export function TransactionListItem({ transaction, currentUser, onDelete, onEdit, userName }: TransactionListItemProps) {
   const isIncome = transaction.type === 'income';
-  const isConsideredPurchase = transaction.type === 'expense' && isPurchaseCategory(transaction.category);
+  const isPurchase = transaction.type === 'purchase';
+  const isExpense = transaction.type === 'expense';
   const canModify = currentUser?.id === transaction.userId || currentUser?.role === 'SYSTEM_ADMIN';
 
   let IconComponent = TrendingUp;
-  let iconColorClass = "bg-green-500/10 text-green-600";
+  let iconColorClass = "bg-green-500/10 text-green-600"; // Default to income
 
-  if (!isIncome) {
-    if (isConsideredPurchase) {
-      IconComponent = ShoppingBag;
-      iconColorClass = "bg-sky-500/10 text-sky-600"; // Different color for purchases
-    } else {
-      IconComponent = TrendingDown;
-      iconColorClass = "bg-red-500/10 text-red-600";
-    }
+  if (isPurchase) {
+    IconComponent = ShoppingBag;
+    iconColorClass = "bg-sky-500/10 text-sky-600"; 
+  } else if (isExpense) {
+    IconComponent = TrendingDown;
+    iconColorClass = "bg-red-500/10 text-red-600";
   }
+
 
   return (
     <div className="flex items-center justify-between p-3 sm:p-4 rounded-lg border bg-card hover:shadow-md transition-shadow">
@@ -78,7 +65,7 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
       <div className="flex flex-col items-end ml-2 sm:ml-4">
         <p className={cn(
           "text-md sm:text-lg font-bold",
-          isIncome ? "text-green-600" : (isConsideredPurchase ? "text-sky-600" : "text-red-600")
+          isIncome ? "text-green-600" : (isPurchase ? "text-sky-600" : "text-red-600")
         )}>
           {isIncome ? '+' : '-'} {formatCurrency(transaction.amount)}
         </p>
