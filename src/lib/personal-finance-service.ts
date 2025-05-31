@@ -1,4 +1,5 @@
 
+
 import { db } from './firebase';
 import {
   collection,
@@ -13,6 +14,7 @@ import {
   Timestamp,
   serverTimestamp,
   writeBatch,
+  setDoc, // Added setDoc to imports
 } from 'firebase/firestore';
 import type { Transaction, TransactionType } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -42,14 +44,22 @@ export async function addTransaction(
       type: transactionData.type,
       amount: transactionData.amount,
       category: transactionData.category,
-      description: transactionData.description || '',
-      date: transactionData.date, // Store date provided by user
-      createdAt: Timestamp.now().toMillis().toString(), // Use server timestamp for creation
+      description: transactionData.description || null, // Ensure description is string or null
+      date: transactionData.date, // User-provided date
+      createdAt: new Date().toISOString(), // Changed to toISOString()
     };
     await setDoc(newTransactionRef, newTransaction);
     return newTransaction;
   } catch (error) {
     console.error("Error adding transaction to Firestore:", error);
+    // Log more detailed error information
+    if (error instanceof Error) {
+        console.error("Error name:", error.name);
+        console.error("Error message:", error.message);
+        console.error("Error stack:", error.stack);
+    } else {
+        console.error("Non-Error object thrown:", error);
+    }
     return null;
   }
 }
@@ -118,3 +128,4 @@ export async function deleteTransaction(transactionId: string): Promise<boolean>
 // export async function getNotesForUser(...) {}
 // export async function updateNote(...) {}
 // export async function deleteNote(...) {}
+
