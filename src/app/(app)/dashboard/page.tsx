@@ -1,726 +1,267 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import dynamic from 'next/dynamic';
-import Link from "next/link";
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Package, MessageSquare, PlusCircle, UserCircle, Edit3, CalendarDays, CalendarClock, Target, TrendingUp, ListChecks, Edit, PackageCheck, Truck, TrendingDown, Minus, RefreshCw, Loader2 } from 'lucide-react';
-import { formatDistanceToNow, startOfMonth, endOfMonth, isWithinInterval, startOfWeek, endOfWeek, parseISO } from 'date-fns';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { User, TrackingLink, CustomStatus, OrderLogEntry, Comment as OrderComment } from '@/types';
-import { getOrders } from '@/lib/order-service';
-import { getStatuses } from '@/lib/status-service';
-import { getGlobalSettings, type GlobalSettings } from '@/lib/settings-service';
-import { setGlobalTargetAction } from './actions';
-import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { 
+  Hand, 
+  ShoppingCart, 
+  BadgeDollarSign, 
+  FileText, 
+  Undo2, 
+  Download, 
+  AlertTriangle, 
+  Redo2, 
+  Receipt, 
+  LineChart,
+  MapPin,
+  CalendarDays as CalendarIcon, // Renamed to avoid conflict with Calendar component
+  BarChartBig
+} from 'lucide-react';
+import {
+  ResponsiveContainer,
+  LineChart as RechartsLineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 
-const SetSalesTargetDialog = dynamic(() => import('@/components/dashboard/set-sales-target-dialog').then(mod => mod.SetSalesTargetDialog));
+const mockSalesData = [
+  { date: '2 May 2025', sales: 0 }, { date: '3 May 2025', sales: 0 },
+  { date: '4 May 2025', sales: 0 }, { date: '5 May 2025', sales: 0 },
+  { date: '6 May 2025', sales: 0 }, { date: '7 May 2025', sales: 0 },
+  { date: '8 May 2025', sales: 0 }, { date: '9 May 2025', sales: 0 },
+  { date: '10 May 2025', sales: 0 }, { date: '11 May 2025', sales: 0 },
+  { date: '12 May 2025', sales: 0 }, { date: '13 May 2025', sales: 0 },
+  { date: '14 May 2025', sales: 0 }, { date: '15 May 2025', sales: 0 },
+  { date: '16 May 2025', sales: 0 }, { date: '17 May 2025', sales: 0 },
+  { date: '18 May 2025', sales: 0 }, { date: '19 May 2025', sales: 0 },
+  { date: '20 May 2025', sales: 0 }, { date: '21 May 2025', sales: 0 },
+  { date: '22 May 2025', sales: 0 }, { date: '23 May 2025', sales: 0 },
+  { date: '24 May 2025', sales: 0 }, { date: '25 May 2025', sales: 0 },
+  { date: '26 May 2025', sales: 0 }, { date: '27 May 2025', sales: 0 },
+  { date: '28 May 2025', sales: 0 }, { date: '29 May 2025', sales: 0 },
+  { date: '30 May 2025', sales: 0 }, { date: '31 May 2025', sales: 0 },
+];
 
+const chartConfig = {
+  sales: {
+    label: "Total Sales (BDT)",
+    color: "hsl(var(--chart-1))",
+  },
+};
 
-interface ActivityItem {
-  id: string;
-  type: 'status_update' | 'new_comment' | 'order_created' | 'dr_assigned';
-  orderId: string;
+interface SummaryCardProps {
   title: string;
-  details: string;
-  userName: string;
-  userAvatar?: string;
-  timestamp: string;
+  value: string;
+  icon: React.ElementType;
+  iconColorClass?: string;
+  isLoading?: boolean;
 }
 
-const getActivityIcon = (type: ActivityItem['type']) => {
-  switch (type) {
-    case 'status_update':
-      return <ListChecks className="h-5 w-5 text-primary" />;
-    case 'new_comment':
-      return <MessageSquare className="h-5 w-5 text-green-500" />;
-    case 'order_created':
-      return <PlusCircle className="h-5 w-5 text-accent" />;
-    case 'dr_assigned':
-      return <UserCircle className="h-5 w-5 text-purple-500" />;
-    default:
-      return <UserCircle className="h-5 w-5 text-muted-foreground" />;
+const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, iconColorClass = "text-primary", isLoading }) => {
+  if (isLoading) {
+    return (
+      <Card className="shadow-md hover:shadow-lg transition-shadow bg-card">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
+          <CardTitle className="text-sm font-medium text-muted-foreground"><Skeleton className="h-4 w-24" /></CardTitle>
+          <Skeleton className="h-8 w-8 rounded-full" />
+        </CardHeader>
+        <CardContent className="pb-4 px-4">
+          <div className="text-2xl font-bold"><Skeleton className="h-8 w-32" /></div>
+        </CardContent>
+      </Card>
+    );
   }
+  return (
+    <Card className="shadow-md hover:shadow-lg transition-shadow bg-card">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <div className={`p-1.5 bg-primary/10 rounded-md ${iconColorClass} opacity-80`}>
+          <Icon className="h-5 w-5" />
+        </div>
+      </CardHeader>
+      <CardContent className="pb-4 px-4">
+        <div className="text-2xl font-bold text-foreground">{value}</div>
+      </CardContent>
+    </Card>
+  );
 };
-
-const getInitials = (name: string) => {
-    if (!name) return '??';
-    const names = name.split(' ');
-    if (names.length === 1) return names[0].charAt(0).toUpperCase();
-    return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
-}
-
-const DEFAULT_GLOBAL_SETTINGS_STATE: GlobalSettings = {
-  globalMonthlyOrderTarget: 0,
-  globalWeeklyOrderTarget: 0,
-  crmCompletionStatusIds: [],
-  areCommentsVisibleOnPublicPage: true,
-};
-
-
-const getProgressColorClass = (percentage: number): string => {
-  if (percentage < 0) percentage = 0;
-  const colorPercentage = Math.min(percentage, 100);
-  if (colorPercentage < 33) return 'bg-red-500 dark:bg-red-600';
-  if (colorPercentage < 67) return 'bg-yellow-500 dark:bg-yellow-400';
-  return 'bg-green-500 dark:bg-green-600';
-};
-
-const MAX_RECENT_ACTIVITIES_DISPLAY = 15;
-const ORDERS_TO_SCAN_FOR_ACTIVITY = 10;
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
-  const { toast } = useToast();
-  const [isClient, setIsClient] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [recentActivities, setRecentActivities] = useState<ActivityItem[]>([]);
-  const [isLoadingActivities, setIsLoadingActivities] = useState(true);
-  const [isLoadingGlobalTargets, setIsLoadingGlobalTargets] = useState(true);
-  
-  const [activeOrdersCount, setActiveOrdersCount] = useState<number | null>(null);
-  const [isLoadingActiveOrders, setIsLoadingActiveOrders] = useState(true);
-  const [activeOrdersPercentageChange, setActiveOrdersPercentageChange] = useState<number | null>(null);
-  
-  const [monthlyDeliveriesCount, setMonthlyDeliveriesCount] = useState<number | null>(null);
-  const [isLoadingMonthlyDeliveries, setIsLoadingMonthlyDeliveries] = useState(true);
-
-
-  const [weeklyDeliveriesCount, setWeeklyDeliveriesCount] = useState<number | null>(null);
-  const [isLoadingWeeklyDeliveries, setIsLoadingWeeklyDeliveries] = useState(true);
-  
-  const [monthlyOrdersCreatedCount, setMonthlyOrdersCreatedCount] = useState<number | null>(null);
-  const [isLoadingMonthlyOrdersCreated, setIsLoadingMonthlyOrdersCreated] = useState(true);
-
-
-  const [globalTargets, setGlobalTargets] = useState<GlobalSettings>(DEFAULT_GLOBAL_SETTINGS_STATE);
-
-  const [isSetGlobalMonthlyTargetDialogOpen, setIsSetGlobalMonthlyTargetDialogOpen] = useState(false);
-  const [isSetGlobalWeeklyTargetDialogOpen, setIsSetGlobalWeeklyTargetDialogOpen] = useState(false);
-
-  const [crmMonthlyOrdersCompleted, setCrmMonthlyOrdersCompleted] = useState(0);
-  const [crmWeeklyOrdersCompleted, setCrmWeeklyOrdersCompleted] = useState(0);
-
-
-  const fetchGlobalTargets = useCallback(async () => {
-    setIsLoadingGlobalTargets(true);
-    try {
-      const targets = await getGlobalSettings();
-      setGlobalTargets(targets);
-    } catch (error) {
-      console.error("Failed to fetch global sales targets:", error);
-      toast({ title: "Error", description: "Could not load global sales targets.", variant: "destructive" });
-      setGlobalTargets(DEFAULT_GLOBAL_SETTINGS_STATE); 
-    } finally {
-      setIsLoadingGlobalTargets(false);
-    }
-  }, [toast]);
-
-
-  const fetchDashboardData = useCallback(async () => {
-    if (!currentUser) return;
-
-    setIsLoadingActivities(true);
-    setIsLoadingActiveOrders(true);
-    setActiveOrdersPercentageChange(null);
-    setIsLoadingMonthlyDeliveries(true);
-    setIsLoadingWeeklyDeliveries(true);
-    setIsLoadingMonthlyOrdersCreated(true);
-
-
-    try {
-      const [fetchedOrdersUnfiltered, allStatuses, fetchedGlobalSettings] = await Promise.all([
-        getOrders(),
-        getStatuses(),
-        getGlobalSettings() 
-      ]);
-      
-      const statusMap = new Map(allStatuses.map(s => [s.id, s.name]));
-      const activities: ActivityItem[] = [];
-
-      let ordersForActivity: TrackingLink[];
-      if (currentUser.role === 'CRM') {
-        ordersForActivity = fetchedOrdersUnfiltered.filter(order => order.crmUserId === currentUser.id);
-      } else if (currentUser.role === 'DESIGNER_REPRESENTATIVE') {
-        ordersForActivity = fetchedOrdersUnfiltered.filter(order => order.designerRepresentativeId === currentUser.id);
-      } else { 
-        ordersForActivity = fetchedOrdersUnfiltered;
-      }
-      
-      const sortedOrdersForActivity = [...ordersForActivity].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      const ordersToProcessForActivity = sortedOrdersForActivity.slice(0, ORDERS_TO_SCAN_FOR_ACTIVITY);
-
-
-      for (const order of ordersToProcessForActivity) {
-        activities.push({
-          id: `order-created-${order.id}`,
-          type: 'order_created',
-          orderId: order.id,
-          title: `New Order: ${order.id}`,
-          details: `For ${order.companyName}`,
-          userName: order.crmUserName,
-          timestamp: order.createdAt,
-        });
-
-        let drAssignedForThisOrder = false;
-        for (const log of order.statusHistory) {
-          const statusName = statusMap.get(log.status) || log.status;
-          activities.push({
-            id: log.id,
-            type: 'status_update',
-            orderId: order.id,
-            title: `Status: ${order.id} to ${statusName}`,
-            details: log.notes || `Order status changed to ${statusName}`,
-            userName: log.changedByUserName,
-            timestamp: log.timestamp,
-          });
-
-          if (!drAssignedForThisOrder && order.designerRepresentativeName && log.notes?.toLowerCase().includes(`assigned to designer: ${order.designerRepresentativeName.toLowerCase()}`)) {
-            activities.push({
-              id: `dr-assigned-${order.id}-${log.id}`,
-              type: 'dr_assigned',
-              orderId: order.id,
-              title: `Designer Assigned: ${order.id}`,
-              details: `${order.designerRepresentativeName} assigned by ${log.changedByUserName}.`,
-              userName: log.changedByUserName,
-              timestamp: log.timestamp,
-            });
-            drAssignedForThisOrder = true;
-          }
-        }
-
-        if (!drAssignedForThisOrder && order.designerRepresentativeName) {
-            const readyForDesignLog = order.statusHistory.find(log => statusMap.get(log.status)?.toLowerCase() === 'ready for design');
-            activities.push({
-              id: `dr-assigned-${order.id}-fallback`,
-              type: 'dr_assigned',
-              orderId: order.id,
-              title: `Designer Assigned: ${order.id}`,
-              details: `${order.designerRepresentativeName} assigned.`,
-              userName: readyForDesignLog?.changedByUserName || order.crmUserName, 
-              timestamp: readyForDesignLog?.timestamp || order.createdAt, 
-            });
-        }
-
-        for (const comment of order.comments) {
-          if (comment.isInternal && currentUser?.role !== 'ADMIN' && currentUser?.role !== 'SYSTEM_ADMIN' && currentUser?.id !== order.crmUserId && currentUser?.id !== order.designerRepresentativeId) {
-            continue;
-          }
-          activities.push({
-            id: comment.id,
-            type: 'new_comment',
-            orderId: order.id,
-            title: `New Comment on ${order.id}`,
-            details: comment.text.substring(0, 100) + (comment.text.length > 100 ? '...' : ''),
-            userName: comment.userName,
-            timestamp: comment.timestamp,
-          });
-        }
-      }
-
-      const sortedActivities = activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      setRecentActivities(sortedActivities.slice(0, MAX_RECENT_ACTIVITIES_DISPLAY));
-
-      const deliveredStatusId = allStatuses.find(s => s.name.toLowerCase() === 'delivered')?.id;
-      const cancelledStatusId = allStatuses.find(s => s.name.toLowerCase() === 'cancelled')?.id;
-      
-      let ordersForScopedCounts: TrackingLink[];
-       if (currentUser.role === 'CRM') {
-        ordersForScopedCounts = fetchedOrdersUnfiltered.filter(order => order.crmUserId === currentUser.id);
-      } else if (currentUser.role === 'DESIGNER_REPRESENTATIVE') {
-        ordersForScopedCounts = fetchedOrdersUnfiltered.filter(order => order.designerRepresentativeId === currentUser.id);
-      } else { 
-        ordersForScopedCounts = fetchedOrdersUnfiltered;
-      }
-
-
-      let currentActiveOrdersCount = ordersForScopedCounts.filter(order => {
-        return order.currentStatus !== deliveredStatusId && order.currentStatus !== cancelledStatusId;
-      }).length;
-      setActiveOrdersCount(currentActiveOrdersCount);
-
-      const now = new Date();
-      const startOfCurrentMonth = startOfMonth(now);
-      let activeOrdersAtStartOfMonthCount = 0;
-
-      if (deliveredStatusId || cancelledStatusId) {
-          ordersForScopedCounts.forEach(order => {
-              const orderCreatedAt = new Date(order.createdAt);
-              if (orderCreatedAt < startOfCurrentMonth) { 
-                  let lastKnownStatusBeforeThisMonth = '';
-                  let mostRecentLogTimestamp = new Date(0); 
-                  order.statusHistory.forEach(log => {
-                      const logTimestamp = new Date(log.timestamp);
-                      if (logTimestamp < startOfCurrentMonth) {
-                          if (logTimestamp > mostRecentLogTimestamp) {
-                              mostRecentLogTimestamp = logTimestamp;
-                              lastKnownStatusBeforeThisMonth = log.status;
-                          }
-                      }
-                  });
-                  
-                  if (lastKnownStatusBeforeThisMonth) {
-                      if (lastKnownStatusBeforeThisMonth !== deliveredStatusId && lastKnownStatusBeforeThisMonth !== cancelledStatusId) {
-                          activeOrdersAtStartOfMonthCount++;
-                      }
-                  } else if (order.statusHistory.length > 0) { 
-                         const initialStatusWasTerminal = order.statusHistory[0]?.status === deliveredStatusId || order.statusHistory[0]?.status === cancelledStatusId;
-                         if (!initialStatusWasTerminal) {
-                            activeOrdersAtStartOfMonthCount++;
-                         }
-                  } else if (order.currentStatus !== deliveredStatusId && order.currentStatus !== cancelledStatusId) {
-                      activeOrdersAtStartOfMonthCount++;
-                  }
-              }
-          });
-      }
-      
-      if (activeOrdersAtStartOfMonthCount > 0) {
-          setActiveOrdersPercentageChange(((currentActiveOrdersCount - activeOrdersAtStartOfMonthCount) / activeOrdersAtStartOfMonthCount) * 100);
-      } else if (currentActiveOrdersCount > 0) { 
-          setActiveOrdersPercentageChange(100); 
-      } else { 
-          setActiveOrdersPercentageChange(0); 
-      }
-
-
-      if (deliveredStatusId) {
-        const monthStart = startOfMonth(now);
-        const monthEnd = endOfMonth(now);
-        const weekStart = startOfWeek(now, { weekStartsOn: 1 }); 
-        const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
-        
-        let deliveriesThisMonth = 0;
-        let deliveriesThisWeek = 0;
-        let crmMonthCompleted = 0;
-        let crmWeekCompleted = 0;
-        let ordersCreatedThisMonth = 0;
-
-
-        const crmCompletionStatusSet = new Set(fetchedGlobalSettings.crmCompletionStatusIds || []);
-
-        fetchedOrdersUnfiltered.forEach(order => { 
-          const isOrderDeliveredThisMonth = order.statusHistory.some(
-            log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: monthStart, end: monthEnd })
-          );
-          const isOrderDeliveredThisWeek = order.statusHistory.some(
-            log => log.status === deliveredStatusId && isWithinInterval(parseISO(log.timestamp), { start: weekStart, end: weekEnd })
-          );
-          
-          if (isWithinInterval(parseISO(order.createdAt), { start: monthStart, end: monthEnd })) {
-            ordersCreatedThisMonth++;
-          }
-
-          if (isOrderDeliveredThisMonth) deliveriesThisMonth++;
-          if (isOrderDeliveredThisWeek) deliveriesThisWeek++;
-          
-          if (currentUser.role === 'CRM' && order.crmUserId === currentUser.id) {
-            let orderCompletedForCRMThisMonth = false;
-            let orderCompletedForCRMThisWeek = false;
-
-            for (const log of order.statusHistory) {
-              if (crmCompletionStatusSet.has(log.status)) {
-                const logDate = parseISO(log.timestamp);
-                if (isWithinInterval(logDate, { start: monthStart, end: monthEnd })) {
-                  orderCompletedForCRMThisMonth = true;
-                }
-                if (isWithinInterval(logDate, { start: weekStart, end: weekEnd })) {
-                  orderCompletedForCRMThisWeek = true;
-                }
-              }
-            }
-            if (orderCompletedForCRMThisMonth) crmMonthCompleted++;
-            if (orderCompletedForCRMThisWeek) crmWeekCompleted++;
-          }
-        });
-        setMonthlyOrdersCreatedCount(ordersCreatedThisMonth);
-        setMonthlyDeliveriesCount(deliveriesThisMonth);
-        setWeeklyDeliveriesCount(deliveriesThisWeek);
-        setCrmMonthlyOrdersCompleted(crmMonthCompleted);
-        setCrmWeeklyOrdersCompleted(crmWeekCompleted);
-
-      } else {
-        setMonthlyOrdersCreatedCount(0);
-        setMonthlyDeliveriesCount(0); 
-        setWeeklyDeliveriesCount(0);
-        setCrmMonthlyOrdersCompleted(0);
-        setCrmWeeklyOrdersCompleted(0);
-      }
-
-
-    } catch (error) {
-      console.error("Failed to fetch dashboard data:", error);
-      toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive" });
-      setActiveOrdersCount(0); 
-      setActiveOrdersPercentageChange(0);
-      setMonthlyOrdersCreatedCount(0);
-      setMonthlyDeliveriesCount(0);
-      setWeeklyDeliveriesCount(0);
-      setCrmMonthlyOrdersCompleted(0);
-      setCrmWeeklyOrdersCompleted(0);
-    } finally {
-      setIsLoadingActivities(false);
-      setIsLoadingActiveOrders(false);
-      setIsLoadingMonthlyOrdersCreated(false);
-      setIsLoadingMonthlyDeliveries(false);
-      setIsLoadingWeeklyDeliveries(false);
-    }
-  }, [currentUser, toast]);
-
+  // Mock data states
+  const [totalSales, setTotalSales] = useState("৳ 0.00");
+  const [netValue, setNetValue] = useState("৳ 0.00");
+  const [invoiceDue, setInvoiceDue] = useState("৳ 0.00");
+  const [totalSellReturn, setTotalSellReturn] = useState("৳ 0.00");
+  const [totalPurchase, setTotalPurchase] = useState("৳ 0.00");
+  const [purchaseDue, setPurchaseDue] = useState("৳ 0.00");
+  const [totalPurchaseReturn, setTotalPurchaseReturn] = useState("৳ 0.00");
+  const [expense, setExpense] = useState("৳ 0.00");
 
   useEffect(() => {
-    setIsClient(true);
-    fetchGlobalTargets(); 
     if (currentUser) {
-        fetchDashboardData();
-    }
-  }, [fetchDashboardData, currentUser, fetchGlobalTargets]);
-
-  const crmEffectiveMonthlyTarget = currentUser?.role === 'CRM' ? (currentUser.monthlyOrderTarget ?? globalTargets.globalMonthlyOrderTarget) : globalTargets.globalMonthlyOrderTarget;
-  const crmEffectiveWeeklyTarget = currentUser?.role === 'CRM' ? (currentUser.weeklyOrderTarget ?? globalTargets.globalWeeklyOrderTarget) : globalTargets.globalWeeklyOrderTarget;
-
-  const handleSetGlobalMonthlyOrderTarget = async (newTarget: number) => {
-    const result = await setGlobalTargetAction('monthly', newTarget);
-    if (result.success) {
-      toast({ title: "Global Monthly Target Updated", description: `Global monthly order target set to ${newTarget} orders.`, });
-      await fetchGlobalTargets(); 
+      // Simulate data fetching
+      setTimeout(() => {
+        // In a real app, fetch data here and set states
+        setIsLoading(false);
+      }, 1000);
     } else {
-      toast({ title: "Error", description: result.error || "Could not update global monthly target.", variant: "destructive" });
+      setIsLoading(false); // If no user, stop loading
     }
-    setIsSetGlobalMonthlyTargetDialogOpen(false);
-  };
+  }, [currentUser]);
 
-  const handleSetGlobalWeeklyOrderTarget = async (newTarget: number) => {
-    const result = await setGlobalTargetAction('weekly', newTarget);
-     if (result.success) {
-      toast({ title: "Global Weekly Target Updated", description: `Global weekly order target set to ${newTarget} orders.`, });
-      await fetchGlobalTargets(); 
-    } else {
-      toast({ title: "Error", description: result.error || "Could not update global weekly target.", variant: "destructive" });
-    }
-    setIsSetGlobalWeeklyTargetDialogOpen(false);
-  };
-
-  if (!currentUser) {
+  if (!currentUser && !isLoading) {
+    // This case should ideally be handled by the layout, but good for robustness
     return (
-      <div className="space-y-8 p-4 sm:p-6 lg:p-8">
-        <Skeleton className="h-40 w-full rounded-xl" />
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-xl" />)}
-        </div>
-        <Skeleton className="h-80 w-full rounded-xl" />
+      <div className="flex h-screen w-full items-center justify-center">
+        <p>Redirecting to login...</p>
       </div>
     );
   }
-
-  let summaryCards: any[] = [];
   
-  let activeOrderCardData: any = {
-      title: (currentUser.role === 'CRM' || currentUser.role === 'DESIGNER_REPRESENTATIVE') ? "Your Active Orders" : "Active Orders",
-      value: isLoadingActiveOrders || activeOrdersCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : activeOrdersCount.toString(),
-      icon: Package,
-      dataAiHint: "delivery boxes",
-      type: "info" as const,
-      href: "/active-orders",
-      trend: "neutral" as "up" | "down" | "neutral", 
-      changeText: isLoadingActiveOrders || activeOrdersPercentageChange === null ? <Skeleton className="h-4 w-24" /> : ''
-  };
+  const summaryCardData = useMemo(() => [
+    { title: "Total Sales", value: totalSales, icon: ShoppingCart, isLoading },
+    { title: "Net", value: netValue, icon: BadgeDollarSign, isLoading },
+    { title: "Invoice due", value: invoiceDue, icon: FileText, isLoading },
+    { title: "Total Sell Return", value: totalSellReturn, icon: Undo2, isLoading },
+    { title: "Total purchase", value: totalPurchase, icon: Download, isLoading },
+    { title: "Purchase due", value: purchaseDue, icon: AlertTriangle, isLoading },
+    { title: "Total Purchase Return", value: totalPurchaseReturn, icon: Redo2, isLoading },
+    { title: "Expense", value: expense, icon: Receipt, isLoading },
+  ], [isLoading, totalSales, netValue, invoiceDue, totalSellReturn, totalPurchase, purchaseDue, totalPurchaseReturn, expense]);
 
-  if (!isLoadingActiveOrders && activeOrdersPercentageChange !== null) {
-      if (activeOrdersPercentageChange > 0) {
-          activeOrderCardData.trend = "up";
-          activeOrderCardData.changeText = `+${activeOrdersPercentageChange.toFixed(0)}% this month`;
-      } else if (activeOrdersPercentageChange < 0) {
-          activeOrderCardData.trend = "down";
-          activeOrderCardData.changeText = `${activeOrdersPercentageChange.toFixed(0)}% this month`;
-      } else {
-          activeOrderCardData.trend = "neutral";
-          activeOrderCardData.changeText = `0% change this month`;
-      }
-  }
-  summaryCards.push(activeOrderCardData);
-
-
-  if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
-    summaryCards.push(
-      {
-        title: "Monthly Orders Created",
-        value: isLoadingMonthlyOrdersCreated || monthlyOrdersCreatedCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : monthlyOrdersCreatedCount.toString(),
-        icon: Package,
-        changeText: "This month",
-        dataAiHint: "calendar orders",
-        type: "info" as const,
-        trend: "neutral" as "up" | "down" | "neutral",
-        href: "/orders/monthly", 
-      },
-      {
-        title: "Monthly Deliveries",
-        value: isLoadingMonthlyDeliveries || monthlyDeliveriesCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : monthlyDeliveriesCount.toString(),
-        icon: PackageCheck,
-        changeText: "This month",
-        dataAiHint: "calendar checkmark",
-        type: "info" as const,
-        trend: "neutral" as "up" | "down" | "neutral",
-        href: "/deliveries/monthly", 
-      },
-      {
-        title: "Weekly Deliveries",
-        value: isLoadingWeeklyDeliveries || weeklyDeliveriesCount === null ? <Skeleton className="h-10 w-16 inline-block" /> : weeklyDeliveriesCount.toString(),
-        icon: Truck,
-        changeText: "This week",
-        dataAiHint: "delivery van calendar",
-        type: "info" as const,
-        trend: "neutral" as "up" | "down" | "neutral",
-        href: "/deliveries/weekly", 
-      }
-    );
-  } else if (currentUser.role === 'CRM') {
-    summaryCards.push(
-      {
-        title: "Your Monthly Orders",
-        value: `${crmMonthlyOrdersCompleted} / ${crmEffectiveMonthlyTarget} Orders`, 
-        icon: CalendarDays,
-        currentCompleted: crmMonthlyOrdersCompleted, 
-        targetValue: crmEffectiveMonthlyTarget,       
-        dataAiHint: "monthly calendar checklist",
-        type: "progress" as const,
-        isLoadingTargetValue: isLoadingGlobalTargets && currentUser.monthlyOrderTarget === undefined,
-      },
-      {
-        title: "Your Weekly Orders",
-        value: `${crmWeeklyOrdersCompleted} / ${crmEffectiveWeeklyTarget} Orders`, 
-        icon: CalendarClock,
-        currentCompleted: crmWeeklyOrdersCompleted, 
-        targetValue: crmEffectiveWeeklyTarget,       
-        dataAiHint: "weekly calendar tasks",
-        type: "progress" as const,
-        isLoadingTargetValue: isLoadingGlobalTargets && currentUser.weeklyOrderTarget === undefined,
-      }
-    );
-  }
-
-  if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
-    summaryCards.push(
-        {
-          title: "Global Monthly Order Target",
-          value: isLoadingGlobalTargets ? <Skeleton className="h-10 w-16 inline-block" /> : globalTargets.globalMonthlyOrderTarget.toString(),
-          icon: Target,
-          changeText: "Set global default for CRMs",
-          dataAiHint: "target goal setting",
-          type: "target" as const,
-          actionType: "global_monthly",
-        },
-        {
-          title: "Global Weekly Order Target",
-          value: isLoadingGlobalTargets ? <Skeleton className="h-10 w-16 inline-block" /> : globalTargets.globalWeeklyOrderTarget.toString(),
-          icon: Target,
-          changeText: "Set global default for CRMs",
-          dataAiHint: "weekly target goal",
-          type: "target" as const,
-          actionType: "global_weekly",
-        }
-    );
-  }
 
   return (
-    <div className="space-y-6 sm:space-y-8 p-1 sm:p-0">
-      <Card className="shadow-2xl bg-gradient-to-br from-primary/90 via-primary to-orange-500 dark:from-primary/80 dark:via-primary dark:to-orange-400 border-none text-primary-foreground rounded-xl overflow-hidden transform hover:shadow-primary/30 transition-shadow duration-300">
-        <CardHeader className="pb-4 p-6 sm:p-8">
-          <CardTitle className="text-3xl sm:text-4xl font-bold">Welcome, {currentUser.name.split(' ')[0]}!</CardTitle>
-          <CardDescription className="text-md sm:text-lg text-primary-foreground/90">
-            You are logged in as <span className="font-semibold text-white">{currentUser.role.replace(/_/g, ' ')}</span>. Here's your workspace overview.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-6 sm:p-8 pt-0">
-          <p className="text-primary-foreground/95 max-w-3xl text-sm sm:text-md">This is your central hub for managing orders and tracking progress. Use the sidebar to navigate and stay on top of your tasks and key metrics.</p>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-        {summaryCards.map((card) => {
-          let progressPercentage = 0;
-          let progressColorClass = '';
-          const targetValue = card.type === 'progress' ? card.targetValue : (card.type === 'target' ? (card.actionType === 'global_weekly' ? globalTargets.globalWeeklyOrderTarget : globalTargets.globalMonthlyOrderTarget) : undefined);
-          const currentCompleted = card.type === 'progress' ? card.currentCompleted : undefined;
-
-
-          if (card.type === 'progress' && targetValue && targetValue > 0) {
-            progressPercentage = ( (currentCompleted ?? 0) / targetValue) * 100;
-            progressColorClass = getProgressColorClass(progressPercentage);
-          }
-
-          const cardInnerContent = (
-            <Card
-              className="shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out border bg-card relative flex flex-col group hover:scale-[1.02] rounded-xl overflow-hidden border-border/30 h-full"
-            >
-              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 pt-4 sm:pt-5 px-4 sm:px-5">
-                <CardTitle className="text-md sm:text-lg font-semibold text-card-foreground">{card.title}</CardTitle>
-                <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
-                  <card.icon className="h-5 w-5 sm:h-6 sm:w-6 text-primary group-hover:scale-110 transition-transform" />
-                </div>
-              </CardHeader>
-              <CardContent className="flex-grow flex flex-col justify-between px-4 sm:px-5 pb-4 sm:pb-5">
-                <div>
-                  {card.type === 'progress' ? (
-                     card.isLoadingTargetValue ? <Skeleton className="h-12 w-3/4 mb-3" /> : (
-                      <>
-                        <div className="text-2xl sm:text-3xl font-bold text-card-foreground">
-                          {currentCompleted} <span className="text-lg sm:text-xl text-muted-foreground">/ {targetValue}</span>
-                        </div>
-                         <p className="text-xs sm:text-sm text-muted-foreground mt-1 mb-2">
-                          Orders ({progressPercentage.toFixed(0)}% complete)
-                        </p>
-                        <Progress value={Math.min(progressPercentage, 100)} indicatorClassName={progressColorClass} className="h-2 sm:h-2.5 rounded-full mb-3" aria-label={`${card.title} progress ${progressPercentage.toFixed(0)}%`} />
-                      </>
-                     )
-                  ) : card.type === 'target' ? (
-                     isLoadingGlobalTargets ? <Skeleton className="h-10 w-32" /> : <div className="text-3xl sm:text-4xl font-bold text-card-foreground">{card.value}</div>
-                  ) : (
-                    <div className="text-3xl sm:text-4xl font-bold text-card-foreground">{card.value}</div>
-                  )}
-                  {card.type === 'info' && card.changeText && (
-                    <div className={`text-xs sm:text-sm flex items-center mt-1 ${
-                      card.trend === 'up' ? 'text-green-600 dark:text-green-400' :
-                      card.trend === 'down' ? 'text-red-600 dark:text-red-400' :
-                      'text-muted-foreground'
-                    }`}>
-                      {card.trend === 'up' && <TrendingUp className="h-4 w-4 mr-1"/>}
-                      {card.trend === 'down' && <TrendingDown className="h-4 w-4 mr-1"/>}
-                      {card.trend === 'neutral' && card.title !== "Active Orders" && card.title !== "Your Active Orders" && card.changeText !== "0% change this month" && <Minus className="h-4 w-4 mr-1"/> }
-                      {card.changeText}
-                    </div>
-                  )}
-                   {card.type === 'target' && card.changeText && (
-                     <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                        {card.changeText}
-                     </p>
-                   )}
-                </div>
-                {(card.type === 'target' && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-3 sm:mt-4 self-start transition-all group-hover:border-primary group-hover:text-primary group-hover:bg-primary/5 text-xs py-1.5 px-3 h-auto border-border/80 hover:bg-primary/10 rounded-md shadow-sm hover:shadow-md"
-                    onClick={() => {
-                      if (card.actionType === 'global_monthly') setIsSetGlobalMonthlyTargetDialogOpen(true);
-                      if (card.actionType === 'global_weekly') setIsSetGlobalWeeklyTargetDialogOpen(true);
-                    }}
-                    disabled={isLoadingGlobalTargets}
-                  >
-                    <Edit className="mr-1.5 h-3.5 w-3.5" /> Edit Global Target
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          );
-          
-          if (card.href) {
-            return (
-              <Link href={card.href} key={card.title} className="block hover:no-underline focus:outline-none focus:ring-2 focus:ring-primary rounded-xl h-full">
-                {cardInnerContent}
-              </Link>
-            );
-          }
-          return <div key={card.title} className="h-full">{cardInnerContent}</div>;
-
-        })}
+    <div className="space-y-6 p-1 sm:p-0">
+      {/* Welcome Banner */}
+      <div className="bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--primary))] text-primary-foreground p-6 sm:p-8 rounded-xl shadow-xl">
+        <h1 className="text-3xl sm:text-4xl font-bold flex items-center">
+          Welcome {currentUser?.name.split(' ')[0] || 'User'}
+          <Hand className="ml-2 h-8 w-8 transform rotate-[20deg] text-yellow-300" />
+        </h1>
+        <p className="text-md sm:text-lg text-primary-foreground/90 mt-1">
+          Here's an overview of your business activity.
+        </p>
       </div>
 
-      {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && isClient && (
-        <>
-        {isSetGlobalMonthlyTargetDialogOpen && (
-          <SetSalesTargetDialog
-            isOpen={isSetGlobalMonthlyTargetDialogOpen}
-            onOpenChange={setIsSetGlobalMonthlyTargetDialogOpen}
-            currentTarget={globalTargets.globalMonthlyOrderTarget}
-            onSetTarget={handleSetGlobalMonthlyOrderTarget}
-            targetType="monthly"
-          />
-        )}
-        {isSetGlobalWeeklyTargetDialogOpen && (
-          <SetSalesTargetDialog
-            isOpen={isSetGlobalWeeklyTargetDialogOpen}
-            onOpenChange={setIsSetGlobalWeeklyTargetDialogOpen}
-            currentTarget={globalTargets.globalWeeklyOrderTarget}
-            onSetTarget={handleSetGlobalWeeklyOrderTarget}
-            targetType="weekly"
-          />
-        )}
-        </>
-      )}
-
-      <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
-        <Card className="shadow-lg bg-card h-[350px] sm:h-[400px] transition-shadow duration-300 ease-in-out hover:shadow-xl rounded-xl border-border/30">
-          <CardHeader className="border-b border-border/50 py-3 sm:py-4 px-4 sm:px-6 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-lg sm:text-xl font-semibold text-foreground">Recent Activity</CardTitle>
-              <CardDescription className="text-muted-foreground text-xs sm:text-sm">Latest order updates and comments.</CardDescription>
+      {/* Placeholder for Header Controls like "Select Location" and "Filter by Date" */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+        <Card className="shadow-sm bg-card">
+          <CardContent className="p-3 sm:p-4 flex items-center justify-between">
+            <div className="flex items-center text-sm text-muted-foreground">
+              <MapPin className="h-5 w-5 mr-2 text-primary/80" />
+              <span>Select Location</span>
             </div>
-            <Button variant="ghost" size="icon" onClick={fetchDashboardData} className="text-muted-foreground hover:text-primary h-8 w-8 sm:h-9 sm:w-9" title="Refresh Activity" disabled={isLoadingActivities}>
-                <RefreshCw className={`h-4 w-4 sm:h-5 sm:w-5 ${isLoadingActivities ? 'animate-spin': ''}`} />
+            <Button variant="outline" size="sm" className="text-xs h-8" disabled>
+              All Locations <CalendarIcon className="ml-1.5 h-3.5 w-3.5 opacity-70" />
             </Button>
-          </CardHeader>
-          <CardContent className="h-[calc(100%-72px)] sm:h-[calc(100%-80px)] p-0">
-            <ScrollArea className="h-full">
-              <div className="p-2 sm:p-4 space-y-2 sm:space-y-3">
-                {isLoadingActivities ? (
-                  [...Array(5)].map((_, i) => (
-                    <div key={`skel-activity-${i}`} className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-3.5 rounded-lg border border-transparent">
-                      <Skeleton className="h-5 w-5 sm:h-6 sm:w-6 rounded-md mt-1 sm:mt-1.5" />
-                      <div className="flex-1 space-y-1.5">
-                        <Skeleton className="h-4 w-3/4 rounded" />
-                        <Skeleton className="h-3 w-1/2 rounded" />
-                         <div className="flex items-center space-x-2 mt-1.5 sm:mt-2">
-                           <Skeleton className="h-6 w-6 sm:h-7 sm:w-7 rounded-full" />
-                           <Skeleton className="h-3 w-24 rounded" />
-                         </div>
-                      </div>
-                    </div>
-                  ))
-                ) : recentActivities.length > 0 ? recentActivities.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-3.5 rounded-lg hover:bg-primary/5 transition-colors border border-transparent hover:border-primary/20 cursor-pointer group">
-                    <div className="flex-shrink-0 pt-1 sm:pt-1.5 text-primary">
-                      {getActivityIcon(activity.type)}
-                    </div>
-                    <div className="flex-1">
-                      <Link href={`/track/${activity.orderId}`} className="group">
-                        <p className="text-xs sm:text-sm font-medium text-foreground leading-tight group-hover:text-primary transition-colors group-hover:underline">{activity.title}</p>
-                      </Link>
-                      <p className="text-xs text-muted-foreground">{activity.details}</p>
-                      <div className="flex items-center space-x-2 mt-1.5 sm:mt-2">
-                        <Avatar className="h-6 w-6 sm:h-7 sm:w-7 border border-border/50">
-                           <AvatarImage src={activity.userAvatar || undefined} alt={activity.userName} data-ai-hint="user avatar"/>
-                          <AvatarFallback className="text-xs bg-primary/10 text-primary">{getInitials(activity.userName)}</AvatarFallback>
-                        </Avatar>
-                        <div className="text-xs text-muted-foreground">
-                          {isClient ? (
-                            <>
-                              {activity.userName} &bull; {formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })}
-                            </>
-                          ) : <div className="h-3 w-32"><Skeleton className="h-full w-full" /></div> }
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )) : (
-                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-10">
-                    <ListChecks className="w-16 h-16 sm:w-20 sm:h-20 mb-4 opacity-20" />
-                    <p className="text-md sm:text-lg">No recent activity.</p>
-                    <p className="text-xs text-muted-foreground">Updates will appear here as they happen.</p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
+          </CardContent>
+        </Card>
+        <Card className="shadow-sm bg-card">
+          <CardContent className="p-3 sm:p-4 flex items-center justify-between">
+            <div className="flex items-center text-sm text-muted-foreground">
+              <CalendarIcon className="h-5 w-5 mr-2 text-primary/80" />
+              <span>Filter by Date</span>
+            </div>
+            <Button variant="outline" size="sm" className="text-xs h-8" disabled>
+              Last 30 Days <CalendarIcon className="ml-1.5 h-3.5 w-3.5 opacity-70" />
+            </Button>
           </CardContent>
         </Card>
       </div>
+      
+      {/* Summary Cards Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+        {summaryCardData.map((card) => (
+          <SummaryCard
+            key={card.title}
+            title={card.title}
+            value={card.value}
+            icon={card.icon}
+            isLoading={card.isLoading}
+          />
+        ))}
+      </div>
+
+      {/* Sales Chart */}
+      <Card className="shadow-xl bg-card">
+        <CardHeader>
+          <CardTitle className="flex items-center text-xl text-foreground">
+            <BarChartBig className="mr-2 h-6 w-6 text-primary" />
+            Sales Last 30 Days
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full">
+              <Skeleton className="h-full w-full" />
+            </div>
+          ) : (
+            <ChartContainer config={chartConfig} className="w-full h-full">
+              <RechartsLineChart
+                data={mockSalesData}
+                margin={{
+                  top: 5,
+                  right: 10,
+                  left: -25, // Adjusted for BDT symbol
+                  bottom: 0,
+                }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border)/0.5)" />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tickFormatter={(value) => value.slice(0, 6)} // Shorten date display
+                  className="text-xs"
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tickFormatter={(value) => `৳${value}`}
+                  className="text-xs"
+                />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent indicator="line" />}
+                />
+                <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '10px'}} />
+                <Line
+                  dataKey="sales"
+                  type="monotone"
+                  stroke="var(--color-sales)"
+                  strokeWidth={2}
+                  dot={{
+                    r: 4,
+                    fill: "var(--color-sales)",
+                    strokeWidth: 2,
+                    stroke: "hsl(var(--background))",
+                  }}
+                  activeDot={{
+                     r: 6,
+                     fill: "var(--color-sales)",
+                     strokeWidth: 2,
+                     stroke: "hsl(var(--background))",
+                  }}
+                />
+              </RechartsLineChart>
+            </ChartContainer>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
-    
