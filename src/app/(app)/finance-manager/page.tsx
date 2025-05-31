@@ -8,19 +8,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useAuth } from "@/contexts/auth-context";
 import type { Transaction, User, TransactionType } from "@/types";
 import { getTransactionsForUser, getAllTransactions } from "@/lib/personal-finance-service";
-import { deleteTransactionAction } from './actions'; // Import the server action
+import { getUsers } from '@/lib/user-service'; // Added getUsers import
+import { deleteTransactionAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlusCircle, ArrowDownCircle, ArrowUpCircle, DollarSign, Wallet, AlertTriangle, ListFilter, Calculator, NotebookPen, RefreshCw, Loader2, ShoppingBag, Minus } from 'lucide-react';
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'; // For Personal/Global toggle
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 
 const AddTransactionDialog = dynamic(() => import('@/components/finance-manager/add-transaction-dialog').then(mod => mod.AddTransactionDialog));
-// Placeholder for future components:
-// const EditTransactionDialog = dynamic(() => import('@/components/finance-manager/edit-transaction-dialog').then(mod => mod.EditTransactionDialog));
-// const NotesSection = dynamic(() => import('@/components/finance-manager/notes-section').then(mod => mod.NotesSection));
-// const FinanceCalculator = dynamic(() => import('@/components/finance-manager/finance-calculator').then(mod => mod.FinanceCalculator));
 
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
@@ -31,7 +28,8 @@ export default function FinanceManagerPage() {
   const { toast } = useToast();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'personal' | 'global'>('personal'); // For System Admin
+  const [viewMode, setViewMode] = useState<'personal' | 'global'>('personal');
+  const [userMap, setUserMap] = useState<Map<string, string>>(new Map()); // For global view user names
 
   const [isClient, setIsClient] = useState(false);
   useEffect(() => setIsClient(true), []);
@@ -43,15 +41,23 @@ export default function FinanceManagerPage() {
     try {
       let fetchedTransactions: Transaction[];
       if (currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global') {
-        fetchedTransactions = await getAllTransactions();
+        const [allTrans, allUsers] = await Promise.all([
+          getAllTransactions(),
+          getUsers()
+        ]);
+        fetchedTransactions = allTrans;
+        const newUserMap = new Map(allUsers.map(user => [user.id, user.name]));
+        setUserMap(newUserMap);
       } else {
         fetchedTransactions = await getTransactionsForUser(currentUser.id);
+        setUserMap(new Map()); // Clear map if not in global view
       }
       setTransactions(fetchedTransactions);
     } catch (error) {
       console.error("Failed to fetch transactions:", error);
       toast({ title: "Error", description: "Could not load transactions.", variant: "destructive" });
       setTransactions([]);
+      setUserMap(new Map());
     } finally {
       setIsLoading(false);
     }
@@ -63,21 +69,19 @@ export default function FinanceManagerPage() {
 
   const handleDeleteTransaction = async (transactionId: string) => {
     if (!currentUser) return;
-    // Basic confirmation, can be enhanced with AlertDialog
     if (!confirm("Are you sure you want to delete this transaction? This action cannot be undone.")) {
       return;
     }
     const result = await deleteTransactionAction(transactionId, currentUser.id);
     if (result.success) {
       toast({ title: "Transaction Deleted", description: "The transaction has been removed." });
-      fetchTransactions(); // Refresh list
+      fetchTransactions();
     } else {
       toast({ title: "Deletion Failed", description: result.error || "Could not delete transaction.", variant: "destructive" });
     }
   };
 
   const handleEditTransaction = (transaction: Transaction) => {
-    // Placeholder for opening an edit dialog
     toast({ title: "Edit (Soon)", description: `Editing transaction ${transaction.id} - to be implemented.`});
   };
 
@@ -177,7 +181,6 @@ export default function FinanceManagerPage() {
                 Your latest income and expense entries.
               </CardDescription>
             </div>
-            {/* <Button variant="outline" size="sm"><ListFilter className="mr-2 h-4 w-4"/>Filter (Soon)</Button> */}
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
             {isLoading ? (
@@ -193,6 +196,7 @@ export default function FinanceManagerPage() {
                     currentUser={currentUser}
                     onDelete={handleDeleteTransaction} 
                     onEdit={handleEditTransaction} 
+                    userName={viewMode === 'global' ? userMap.get(t.userId) : undefined}
                   />
                 ))}
               </div>

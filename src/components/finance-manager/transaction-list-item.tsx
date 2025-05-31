@@ -4,7 +4,7 @@
 import React from 'react';
 import type { Transaction, User } from '@/types';
 import { format, parseISO } from 'date-fns';
-import { TrendingUp, TrendingDown, Trash2, Edit3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Trash2, Edit3, UserCircle } from 'lucide-react'; // Added UserCircle
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -12,14 +12,15 @@ interface TransactionListItemProps {
   transaction: Transaction;
   currentUser: User | null;
   onDelete: (transactionId: string) => void;
-  onEdit: (transaction: Transaction) => void; // Placeholder for edit functionality
+  onEdit: (transaction: Transaction) => void;
+  userName?: string; // Optional userName prop
 }
 
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
-export function TransactionListItem({ transaction, currentUser, onDelete, onEdit }: TransactionListItemProps) {
+export function TransactionListItem({ transaction, currentUser, onDelete, onEdit, userName }: TransactionListItemProps) {
   const isIncome = transaction.type === 'income';
   const canModify = currentUser?.id === transaction.userId || currentUser?.role === 'SYSTEM_ADMIN';
 
@@ -36,6 +37,12 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
           <p className="text-sm sm:text-md font-semibold text-foreground truncate" title={transaction.category}>
             {transaction.category}
           </p>
+          {userName && (
+            <div className="flex items-center text-xs text-primary truncate mt-0.5" title={`User: ${userName}`}>
+              <UserCircle className="h-3.5 w-3.5 mr-1 opacity-80" />
+              {userName}
+            </div>
+          )}
           <p className="text-xs text-muted-foreground truncate" title={transaction.description}>
             {transaction.description || 'No description'}
           </p>
@@ -78,3 +85,4 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
     </div>
   );
 }
+
