@@ -105,3 +105,49 @@ export interface GlobalSettings {
   rolesAllowedToEditOrders?: UserRole[];
 }
 
+// --- ERP & Finance Manager Specific Types ---
+export interface RevenueEntry {
+  id: string;
+  description: string;
+  amount: number;
+  date: string; // ISO string
+  userId: string; // Associate with the user who logged it for the ERP
+}
+
+export interface ExpenseEntry {
+  id: string;
+  description: string;
+  amount: number;
+  date: string; // ISO string
+  userId: string; // Associate with the user who logged it for the ERP
+}
+
+export interface Appointment {
+  id: string;
+  title: string;
+  date: string; // ISO string for full datetime
+  description?: string;
+  userId: string; // User this appointment belongs to, or a general ID if for the business
+}
+
+export type TransactionType = 'income' | 'expense';
+
+export interface Transaction {
+  id: string;
+  userId: string; // ID of the user this transaction belongs to
+  type: TransactionType;
+  amount: number;
+  category: string; // User-defined category
+  description?: string;
+  date: string; // ISO string
+  createdAt: string; // ISO string
+}
+
+export interface PersonalNote {
+  id: string;
+  userId: string;
+  title: string;
+  content: string;
+  createdAt: string; // ISO string
+  updatedAt: string; // ISO string
+}
