@@ -6,12 +6,12 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth-context";
-import type { Transaction, User } from "@/types";
+import type { Transaction, User, TransactionType } from "@/types";
 import { getTransactionsForUser, getAllTransactions } from "@/lib/personal-finance-service";
 import { deleteTransactionAction } from './actions'; // Import the server action
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, DollarSign, Wallet, AlertTriangle, ListFilter, Calculator, NotebookPen, RefreshCw, Loader2 } from 'lucide-react';
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, DollarSign, Wallet, AlertTriangle, ListFilter, Calculator, NotebookPen, RefreshCw, Loader2, ShoppingBag } from 'lucide-react';
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'; // For Personal/Global toggle
 import { Separator } from '@/components/ui/separator';
@@ -116,13 +116,23 @@ export default function FinanceManagerPage() {
             {currentUser.role === 'SYSTEM_ADMIN' && ` (Viewing: ${viewMode === 'personal' ? 'Personal' : 'Global'} Data)`}
           </p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
            <Button variant="outline" size="icon" onClick={fetchTransactions} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
               <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
-          <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions}>
-            <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground h-10">
-              <PlusCircle className="mr-2 h-5 w-5" /> Add Transaction
+          <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions} defaultType="income">
+            <Button size="default" className="bg-green-600 hover:bg-green-700 text-white h-10">
+              <PlusCircle className="mr-2 h-5 w-5" /> Add Income
+            </Button>
+          </AddTransactionDialog>
+          <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions} defaultType="expense">
+            <Button size="default" className="bg-red-600 hover:bg-red-700 text-white h-10">
+              <Minus className="mr-2 h-5 w-5" /> Add Expense
+            </Button>
+          </AddTransactionDialog>
+           <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions} defaultType="expense">
+            <Button size="default" className="bg-sky-600 hover:bg-sky-700 text-white h-10">
+              <ShoppingBag className="mr-2 h-5 w-5" /> Add Purchase
             </Button>
           </AddTransactionDialog>
         </div>
@@ -243,3 +253,6 @@ export default function FinanceManagerPage() {
     </div>
   );
 }
+
+
+    

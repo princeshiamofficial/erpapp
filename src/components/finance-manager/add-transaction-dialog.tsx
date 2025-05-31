@@ -27,11 +27,12 @@ interface AddTransactionDialogProps {
   currentUser: User;
   onTransactionAdded: () => void; // Callback to refresh parent list
   children: React.ReactNode; // For DialogTrigger
+  defaultType?: TransactionType; // New prop
 }
 
-export function AddTransactionDialog({ currentUser, onTransactionAdded, children }: AddTransactionDialogProps) {
+export function AddTransactionDialog({ currentUser, onTransactionAdded, children, defaultType }: AddTransactionDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [type, setType] = useState<TransactionType>('expense');
+  const [type, setType] = useState<TransactionType>(defaultType || 'expense');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
@@ -39,8 +40,22 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (isOpen) {
+      // When dialog opens, set type based on defaultType if provided
+      setType(defaultType || 'expense');
+      // Reset other fields only if not pre-filling based on defaultType logic,
+      // or if explicitly resetting is desired. For now, simple reset.
+      setAmount('');
+      setCategory('');
+      setDescription('');
+      setDate(new Date());
+    }
+  }, [isOpen, defaultType]);
+
+
   const resetForm = () => {
-    setType('expense');
+    setType(defaultType || 'expense'); // Reset to default or 'expense'
     setAmount('');
     setCategory('');
     setDescription('');
@@ -62,7 +77,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
 
     setIsSubmitting(true);
     const transactionData = {
-      type,
+      type, // Use the current 'type' state, which might have been set by defaultType
       amount: numericAmount,
       category: category.trim(),
       description: description.trim() || undefined,
@@ -88,7 +103,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add New Transaction</DialogTitle>
-          <DialogDescription>Log a new income or expense entry.</DialogDescription>
+          <DialogDescription>Log a new {defaultType || 'transaction'} entry.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -110,7 +125,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
             </div>
             <div className="space-y-1">
               <Label htmlFor="transaction-category">Category *</Label>
-              <Input id="transaction-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="e.g., Groceries, Salary" required />
+              <Input id="transaction-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder={type === 'income' ? "e.g., Salary, Sales" : (defaultType === 'expense' && children?.toString().toLowerCase().includes('purchase')) ? "e.g., Inventory, Supplies" : "e.g., Groceries, Utilities"} required />
             </div>
              <div className="space-y-1">
               <Label htmlFor="transaction-date">Date *</Label>
@@ -150,3 +165,6 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
     </Dialog>
   );
 }
+
+
+    
