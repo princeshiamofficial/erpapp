@@ -85,7 +85,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
         </div>
         <div>
           <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-2xl font-bold text-foreground">{value}</p>
+          <p className="text-2xl font-bold text-foreground font-mono">{value}</p>
         </div>
       </div>
     </Card>
