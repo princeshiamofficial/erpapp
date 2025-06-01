@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // CardHeader, CardTitle might not be directly used in SummaryCard anymore
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { DateRangePicker } from '@/components/dashboard/date-range-picker';
@@ -47,11 +47,11 @@ const chartConfig = {
 };
 
 const formatCurrency = (value: number): string => {
-  const numberPart = value.toLocaleString('en-US', {
+  const numberPart = value.toLocaleString('en-US', { // Use en-US for Latin numerals
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  return `৳${numberPart}`;
+  return `৳${numberPart}`; // Prepend Taka symbol
 };
 
 interface SummaryCardProps {
@@ -173,13 +173,12 @@ export default function DashboardPage() {
 
     if (selectedDateRange?.from && selectedDateRange?.to) {
       const dailySales = new Map<string, number>();
-      let currentDatePointer = new Date(selectedDateRange.from);
-      const toDate = new Date(selectedDateRange.to);
-      toDate.setHours(23,59,59,999); // include the whole "to" day
-
-      while (currentDatePointer <= toDate) {
-        dailySales.set(format(currentDatePointer, 'yyyy-MM-dd'), 0);
-        currentDatePointer = addDays(currentDatePointer, 1);
+      let tempDatePointerForInit = new Date(selectedDateRange.from);
+      const endDateForInit = new Date(selectedDateRange.to); 
+      
+      while (tempDatePointerForInit <= endDateForInit) { 
+          dailySales.set(format(tempDatePointerForInit, 'yyyy-MM-dd'), 0);
+          tempDatePointerForInit = addDays(tempDatePointerForInit, 1);
       }
 
       filteredOrders.forEach(order => {
@@ -205,7 +204,7 @@ export default function DashboardPage() {
       setSalesChartData([]);
     }
 
-  }, [isLoadingData, filteredOrders, selectedDateRange]);
+  }, [isLoadingData, allOrders, filteredOrders, selectedDateRange]); // Added allOrders to dependency array
 
 
   const handleDateRangeChange = (range: DateRange | undefined, label: string) => {
@@ -323,7 +322,7 @@ export default function DashboardPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">
-          {isLoadingData && salesChartData.length === 0 ? ( // Show skeleton only if data is loading AND chart data isn't ready
+          {isLoadingData && salesChartData.length === 0 ? ( 
             <div className="flex items-center justify-center h-full">
               <Skeleton className="h-full w-full" />
             </div>
