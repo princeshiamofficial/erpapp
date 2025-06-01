@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Layers, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, Search, DollarSign } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Layers, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, Search } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem } from "@/types"; 
@@ -279,14 +279,14 @@ export default function ServiceManagementPage() {
                       </span>
                       <span className="font-bold text-[hsl(var(--chart-1))] flex items-center justify-between min-w-[7rem] md:min-w-[7.5rem] py-1">
                         <span className="flex items-center">
-                          <DollarSign className="h-3.5 w-3.5 mr-1 opacity-80 flex-shrink-0" />
+                          
                           <span className="text-muted-foreground/90 text-[0.75rem] sm:text-xs w-9 text-right mr-1.5 flex-shrink-0">Buy:</span>
                         </span>
                         <span className="font-mono text-sm sm:text-base">{formatCurrency((item as ServiceModelItem).buyingPrice)}</span>
                       </span>
                       <span className="font-bold text-[hsl(var(--chart-2))] flex items-center justify-between min-w-[7rem] md:min-w-[7.5rem] py-1">
                         <span className="flex items-center">
-                          <DollarSign className="h-3.5 w-3.5 mr-1 opacity-80 flex-shrink-0" />
+                          
                           <span className="text-muted-foreground/90 text-[0.75rem] sm:text-xs w-9 text-right mr-1.5 flex-shrink-0">Sell:</span>
                         </span>
                         <span className="font-mono text-sm sm:text-base">{formatCurrency((item as ServiceModelItem).sellingPrice)}</span>
