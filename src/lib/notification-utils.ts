@@ -74,6 +74,7 @@ export const initializeFCM = async (): Promise<string | null> => {
 
     if (currentToken) {
       console.log('[NotificationUtils] >>> FCM TOKEN ACQUIRED (USE THIS FOR TESTING):', currentToken);
+      // Removed "Notifications Active" toast from here
     } else {
       console.warn('[NotificationUtils] No registration token available. Check VAPID key in Firebase project and SW console for errors. Ensure SW is active.');
       toast({ title: "Token Error", description: "Could not get notification token. Check VAPID key & SW. See console.", variant: "destructive", duration: 10000 });
@@ -115,8 +116,9 @@ export const initializeFCM = async (): Promise<string | null> => {
           ...notificationData
         },
         tag: notificationData.tag || fcmNotification.tag || payload.messageId || 'colorhut-fg-notif-' + Date.now(),
+        renotify: true, // Added renotify for foreground
+        requireInteraction: true, // Added requireInteraction
       };
-      console.log("[NotificationUtils] Foreground notification options prepared (before custom sound):", JSON.stringify(notificationOptions, null, 2));
       
       // Handle custom sound for foreground notification
       const customSoundUrl = notificationData.customSoundUrl;
@@ -125,15 +127,15 @@ export const initializeFCM = async (): Promise<string | null> => {
           try {
             const audio = new Audio(customSoundUrl as string);
             audio.play().catch(e => console.warn("[NotificationUtils] Foreground custom sound playback failed:", e));
-            // Note: Playing audio here might not be tied to the notification display itself.
-            // If `showNotification` also has a sound option, it might play too.
-            // If the custom sound plays here, you might not need/want to set notificationOptions.sound.
+             notificationOptions.sound = customSoundUrl; // Also add to notification options for SW
           } catch (e) {
             console.error("[NotificationUtils] Error playing foreground custom sound:", e);
           }
       } else {
-        console.log("[NotificationUtils] No customSoundUrl in foreground data. Default sound behavior will apply if triggered by FCM `webpush.notification.sound`.");
+        console.log("[NotificationUtils] No customSoundUrl in foreground data. Browser default sound may apply if notification is shown.");
       }
+      
+      console.log("[NotificationUtils] Foreground notification options prepared (after custom sound handling):", JSON.stringify(notificationOptions, null, 2));
       
       navigator.serviceWorker.ready.then(registration => {
         console.log("[NotificationUtils] Attempting to show foreground notification via SW registration's showNotification method with options:", JSON.stringify(notificationOptions));

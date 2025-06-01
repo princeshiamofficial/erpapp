@@ -35,13 +35,14 @@ export function NotificationBell() {
         console.log(`[NotificationBell] FCM token ${token} obtained for user ${currentUser.id}. Storing...`);
         const result = await storeUserFCMTokenAction(currentUser.id, token);
         if (result.success) {
-          toast({ title: "Notifications Active", description: "Ready to receive push notifications. Token stored." });
+          // Removed "Notifications Active" toast that previously said "Ready to receive push notifications. Token stored."
+          console.log("[NotificationBell] FCM token stored successfully.");
         } else {
           toast({ title: "Token Storage Failed", description: result.error || "Could not store FCM token.", variant: "destructive" });
         }
       } else if (token) {
          console.log(`[NotificationBell] FCM token ${token} obtained, but no current user to associate with.`);
-         toast({ title: "Notifications Active", description: "Ready to receive push notifications. (User not logged in for token storage)." });
+         // Removed "Notifications Active" toast for non-logged-in users
       }
     }
   }, [currentUser, toast]);
@@ -56,7 +57,8 @@ export function NotificationBell() {
     if (!isClient) return;
 
     if (permission === 'granted') {
-      toast({ title: "Notifications Active", description: "You are set to receive notifications." });
+      // Removed "Notifications Active" toast that previously said "You are set to receive notifications."
+      console.log("[NotificationBell] Clicked, permission already granted. Re-running FCM setup.");
       await setupFCMAndStoreToken(); // Re-run to ensure token is fresh and stored
     } else if (permission === 'denied') {
       toast({
