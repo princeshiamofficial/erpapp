@@ -4,6 +4,7 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getAnalytics, isSupported as isAnalyticsSupported } from "firebase/analytics";
+import { getMessaging, isSupported as isMessagingSupported } from "firebase/messaging"; // Added for FCM
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -37,5 +38,20 @@ if (typeof window !== 'undefined') {
   });
 }
 
+// Initialize Firebase Messaging
+let messagingInstance = null;
+if (typeof window !== 'undefined') {
+  isMessagingSupported().then(supported => {
+    if (supported) {
+      messagingInstance = getMessaging(app);
+      console.log("Firebase Messaging initialized.");
+    } else {
+      console.log("Firebase Messaging is not supported in this browser.");
+    }
+  }).catch(err => {
+    console.error("Error checking messaging support:", err);
+  });
+}
 
-export { app, db, auth, analytics };
+
+export { app, db, auth, analytics, messagingInstance as messaging }; // Export messaging

@@ -5,6 +5,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { UserNav } from "./UserNav";
 import Link from "next/link";
 import { Logo } from '@/components/layout/Logo';
+import { NotificationBell } from '@/components/layout/NotificationBell'; // Added NotificationBell
 
 export function AppHeader() {
   return (
@@ -20,8 +21,8 @@ export function AppHeader() {
           </Link>
         </div>
         
-        <div className="flex items-center space-x-4">
-          {/* Add other header items like notifications here if needed */}
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          <NotificationBell /> {/* Added NotificationBell component */}
           <UserNav />
         </div>
       </div>

@@ -13,6 +13,7 @@ const geistSans = GeistSans;
 export const metadata: Metadata = {
   title: 'Color Hut',
   description: 'Seamless Order Tracking and Management',
+  manifest: '/manifest.json', // Added manifest link
 };
 
 export default function RootLayout({
@@ -24,6 +25,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <Head>
         <link rel="preload" href="/globals.css" as="style" />
+        <link rel="manifest" href="/manifest.json" /> {/* Ensure manifest is linked */}
+        <meta name="theme-color" content="#EF6C00" /> {/* Theme color for PWA */}
       </Head>
       <body className={`${geistSans.variable} font-sans antialiased`}> {/* Removed geistMono.variable */}
         <AuthProvider>
