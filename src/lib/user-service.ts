@@ -51,7 +51,8 @@ export const addUser = async (userData: Omit<User, 'id'>): Promise<User | null> 
       avatarUrl: userData.avatarUrl || null,
       monthlyOrderTarget: userData.monthlyOrderTarget === undefined ? null : userData.monthlyOrderTarget,
       weeklyOrderTarget: userData.weeklyOrderTarget === undefined ? null : userData.weeklyOrderTarget,
-      isBanned: false, // Initialize isBanned to false for new users
+      isBanned: false, 
+      fcmToken: null, // Initialize fcmToken as null for new users
     };
     const userDocRef = doc(db, USERS_COLLECTION, userId);
     await setDoc(userDocRef, newUser);
@@ -209,6 +210,23 @@ export const updateUserInfo = async (
   }
 };
 
+// Update user's FCM token
+export async function updateUserFCMTokenInFirestore(userId: string, fcmToken: string | null): Promise<boolean> {
+  if (!userId) {
+    console.error("updateUserFCMTokenInFirestore: userId is required.");
+    return false;
+  }
+  try {
+    const userDocRef = doc(db, USERS_COLLECTION, userId);
+    await updateDoc(userDocRef, { fcmToken: fcmToken ?? null }); // Store null if token is null
+    console.log(`[User Service] FCM token for user ${userId} updated to: ${fcmToken}`);
+    return true;
+  } catch (error) {
+    console.error(`[User Service] Error updating FCM token for user ${userId}:`, error);
+    return false;
+  }
+}
+
 
 // Helper to seed initial admin or ensure admin@colorhut.dev is SYSTEM_ADMIN
 export const seedInitialAdminUser = async () => {
@@ -229,6 +247,7 @@ export const seedInitialAdminUser = async () => {
         monthlyOrderTarget: 0,
         weeklyOrderTarget: 0,
         isBanned: false, 
+        fcmToken: null,
       });
       console.log(`Default System Admin user (${adminEmail}) seeded into Firestore.`);
     } else {
@@ -240,6 +259,9 @@ export const seedInitialAdminUser = async () => {
       if (existingAdmin.isBanned === undefined) { 
         updates.isBanned = false;
          console.log(`Setting isBanned to false for ${adminEmail}.`);
+      }
+      if (existingAdmin.fcmToken === undefined) { // Ensure fcmToken field exists
+        updates.fcmToken = null;
       }
       
       if (Object.keys(updates).length > 0) {
@@ -255,3 +277,4 @@ export const seedInitialAdminUser = async () => {
     console.error("Error checking or seeding/updating admin user:", error);
   }
 };
+

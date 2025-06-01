@@ -6,6 +6,8 @@ import { Bell, BellOff, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { initializeFCM, requestNotificationPermission } from '@/lib/notification-utils';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/auth-context'; // Import useAuth
+import { storeUserFCMTokenAction } from '@/app/(app)/users/actions'; // Import server action
 import {
   Tooltip,
   TooltipContent,
@@ -17,6 +19,7 @@ export function NotificationBell() {
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
+  const { currentUser } = useAuth(); // Get currentUser
 
   useEffect(() => {
     setIsClient(true);
@@ -25,25 +28,36 @@ export function NotificationBell() {
     }
   }, []);
 
-  const setupFCM = useCallback(async () => {
+  const setupFCMAndStoreToken = useCallback(async () => {
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-      await initializeFCM();
+      const token = await initializeFCM();
+      if (token && currentUser?.id) {
+        console.log(`[NotificationBell] FCM token ${token} obtained for user ${currentUser.id}. Storing...`);
+        const result = await storeUserFCMTokenAction(currentUser.id, token);
+        if (result.success) {
+          toast({ title: "Notifications Active", description: "Ready to receive push notifications. Token stored." });
+        } else {
+          toast({ title: "Token Storage Failed", description: result.error || "Could not store FCM token.", variant: "destructive" });
+        }
+      } else if (token) {
+         console.log(`[NotificationBell] FCM token ${token} obtained, but no current user to associate with.`);
+         toast({ title: "Notifications Active", description: "Ready to receive push notifications. (User not logged in for token storage)." });
+      }
     }
-  }, []);
+  }, [currentUser, toast]);
 
   useEffect(() => {
     if (permission === 'granted') {
-      setupFCM();
+      setupFCMAndStoreToken();
     }
-  }, [permission, setupFCM]);
+  }, [permission, setupFCMAndStoreToken]);
 
   const handleBellClick = async () => {
     if (!isClient) return;
 
     if (permission === 'granted') {
       toast({ title: "Notifications Active", description: "You are set to receive notifications." });
-      // Optionally, re-run initializeFCM if needed, e.g., to refresh token or re-attach listeners
-      // await initializeFCM(); 
+      await setupFCMAndStoreToken(); // Re-run to ensure token is fresh and stored
     } else if (permission === 'denied') {
       toast({
         title: "Notifications Blocked",
@@ -51,12 +65,18 @@ export function NotificationBell() {
         variant: "destructive",
         duration: 7000,
       });
+      // If permission was denied, try to clear any stored token for this user
+      if (currentUser?.id) {
+        await storeUserFCMTokenAction(currentUser.id, null);
+      }
     } else { // 'default' or null
       const newPermission = await requestNotificationPermission();
       if (newPermission) {
         setPermission(newPermission);
         if (newPermission === 'granted') {
-            await setupFCM(); // Initialize FCM after permission is granted
+            await setupFCMAndStoreToken(); 
+        } else if (newPermission === 'denied' && currentUser?.id) {
+            await storeUserFCMTokenAction(currentUser.id, null); // Clear token if denied
         }
       }
     }
@@ -99,3 +119,4 @@ export function NotificationBell() {
     </TooltipProvider>
   );
 }
+

@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { 
   updateUserBanStatus, 
   updateUserInfo as updateUserInfoInDb,
-  deleteUserFromFirestore as deleteUserFromDbService // Renamed import for clarity
+  deleteUserFromFirestore as deleteUserFromDbService, 
+  updateUserFCMTokenInFirestore // Added import
 } from "@/lib/user-service"; 
 
 export async function toggleUserBanStatusAction(
@@ -45,9 +46,6 @@ export async function updateUserInfoAction(
 
 export async function deleteUserAction(userId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    // Potentially add permission checks here based on currentUser role if needed
-    // For example, ensure the user calling this action has rights to delete users,
-    // and perhaps prevent self-deletion or deletion of higher-privileged users.
     const success = await deleteUserFromDbService(userId);
     if (success) {
       revalidatePath("/(app)/users");
@@ -57,6 +55,28 @@ export async function deleteUserAction(userId: string): Promise<{ success: boole
   } catch (error) {
     console.error("Error in deleteUserAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function storeUserFCMTokenAction(
+  userId: string, 
+  fcmToken: string | null
+): Promise<{ success: boolean; error?: string }> {
+  if (!userId) {
+    return { success: false, error: "User ID is required to store FCM token." };
+  }
+  try {
+    const success = await updateUserFCMTokenInFirestore(userId, fcmToken);
+    if (success) {
+      // Optionally revalidate users path if you display tokens on the users page or admin page
+      // revalidatePath("/(app)/users");
+      revalidatePath("/(app)/admin/crm-target-settings"); // Revalidate settings page where tokens might be displayed
+      return { success: true };
+    }
+    return { success: false, error: "Failed to store FCM token in database." };
+  } catch (error) {
+    console.error("Error in storeUserFCMTokenAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred while storing FCM token." };
   }
 }
 

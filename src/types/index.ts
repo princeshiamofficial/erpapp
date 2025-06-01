@@ -12,6 +12,7 @@ export interface User {
   monthlyOrderTarget?: number | null;
   weeklyOrderTarget?: number | null;
   isBanned?: boolean;
+  fcmToken?: string | null; // Added FCM token field
 }
 
 export interface CustomStatus {
