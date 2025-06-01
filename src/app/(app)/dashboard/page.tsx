@@ -65,7 +65,12 @@ const chartConfig = {
 };
 
 const formatCurrency = (value: number): string => {
-  return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
+  // Use 'en-US' for Latin digits, then manually prepend '৳'
+  const numberPart = value.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return `৳${numberPart}`;
 };
 
 interface SummaryCardProps {
@@ -213,6 +218,39 @@ export default function DashboardPage() {
     );
   }
   
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="rounded-lg border bg-background p-2 shadow-sm">
+          <div className="grid grid-cols-1 gap-2">
+            <div className="flex flex-col">
+              <span className="text-[0.70rem] uppercase text-muted-foreground">
+                Date
+              </span>
+              <span className="font-bold text-muted-foreground">
+                {label}
+              </span>
+            </div>
+            {payload.map((entry: any, index: number) => (
+              <div key={`item-${index}`} className="flex flex-col">
+                 <span className="text-[0.70rem] uppercase text-muted-foreground">
+                  {entry.name === 'sales' ? 'Sales' : entry.name}
+                </span>
+                <span
+                  className="font-bold"
+                  style={{ color: entry.color }}
+                >
+                  {formatCurrency(entry.value as number)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-6 p-1 sm:p-0">
       <div className="bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--primary))] text-primary-foreground p-6 sm:p-8 rounded-xl shadow-xl">
@@ -296,16 +334,17 @@ export default function DashboardPage() {
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  tickFormatter={(value) => `৳${value}`}
+                  tickFormatter={(value) => `৳${Number(value).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})}`}
                   className="text-xs"
                 />
                 <ChartTooltip
                   cursor={false}
-                  content={<ChartTooltipContent indicator="line" />}
+                  content={<CustomTooltip />}
                 />
                 <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '10px'}} />
                 <Line
                   dataKey="sales"
+                  name="Sales" // Added name for tooltip identification
                   type="monotone"
                   stroke="var(--color-sales)"
                   strokeWidth={2}
@@ -330,3 +369,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
