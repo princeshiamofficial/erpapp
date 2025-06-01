@@ -165,6 +165,19 @@ function toast({ ...props }: Toast) {
     },
   })
 
+  // Play toast sound
+  if (typeof window !== 'undefined') {
+    try {
+      // Ensure this path is correct relative to your /public directory
+      const audio = new Audio('/sounds/toast-notification.mp3');
+      audio.play().catch(error => {
+        console.warn("Toast sound playback failed. This might be due to browser autoplay policies. Ensure user has interacted with the page or that the sound file path is correct (/public/sounds/toast-notification.mp3).", error);
+      });
+    } catch (error) {
+      console.error("Error initializing or playing toast sound:", error);
+    }
+  }
+
   return {
     id: id,
     dismiss,
