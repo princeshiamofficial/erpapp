@@ -155,7 +155,7 @@ export interface PersonalNote {
 }
 
 // --- Project Management Types ---
-export type ProjectStatusType = 'Not Started' | 'In Progress' | 'On Hold' | 'Cancelled' | 'Completed';
+export type ProjectStatusType = 'CR Clearance' | 'In Progress' | 'On Hold' | 'Cancelled' | 'Completed';
 
 export interface Project {
   id: string;
