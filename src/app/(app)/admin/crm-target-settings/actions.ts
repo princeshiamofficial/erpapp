@@ -144,25 +144,41 @@ export async function sendPushNotificationAction(
 
       const fcmMessage: messaging.Message = {
         token: user.fcmToken,
-        notification: {
+        notification: { // Standard notification object for general display
           title: personalizedTitle,
           body: personalizedBody,
           ...(iconUrl && { imageUrl: iconUrl })
         },
-        data: { 
-          title: personalizedTitle, 
+        data: { // Data payload for custom handling by client
+          title: personalizedTitle, // Send title/body in data too for client flexibility
           body: personalizedBody,
           ...(iconUrl && { icon: iconUrl, iconUrl: iconUrl }),
           ...(targetUrl && { click_action: targetUrl, targetUrl: targetUrl }),
-          ...(soundUrl && { sound: soundUrl }) 
+          ...(soundUrl && { customSoundUrl: soundUrl }) // Pass custom sound URL in data
         },
-        // Optional webpush config
-        // webpush: {
+        webpush: { // Webpush specific configuration
+          notification: {
+            icon: iconUrl || '/icons/icon-192x192.png', // Default icon for webpush
+            ...(soundUrl ? {} : { sound: "default" }) // If no custom sound, use default system sound for web.
+                                                      // If custom sound, client-side SW will handle it.
+          },
+          fcmOptions: {
+            link: targetUrl || typeof window !== 'undefined' ? window.location.origin : 'https://colorhut-57f5a.web.app' // Sensible default link
+          }
+        },
+        // Optional: Android specific config
+        // android: {
         //   notification: {
-        //     icon: iconUrl || '/default-icon.png',
-        //   },
-        //   fcmOptions: {
-        //     link: targetUrl || 'https://your-app-domain.com'
+        //     sound: soundUrl ? undefined : 'default', // Default or custom for Android if needed differently
+        //     channelId: 'colorhut_notifications', // Example channel
+        //   }
+        // },
+        // Optional: APNS specific config
+        // apns: {
+        //   payload: {
+        //     aps: {
+        //       sound: soundUrl ? undefined : 'default', // Default or custom for iOS
+        //     }
         //   }
         // }
       };
@@ -171,12 +187,12 @@ export async function sendPushNotificationAction(
         // @ts-ignore admin.messaging might be an issue with the type if not fully initialized, but should work if adminApp is valid
         await adminApp.messaging().send(fcmMessage);
         successfulSends++;
-        console.log(`[sendPushNotificationAction] Successfully sent notification to ${user.name} (${user.id}) with token ${user.fcmToken}`);
+        console.log(`[sendPushNotificationAction] Successfully sent notification to ${user.name} (${user.id}) with token ${user.fcmToken}. Message:`, JSON.stringify(fcmMessage));
       } catch (error) {
         failedSends++;
         const firebaseError = error as FirebaseError;
         const errorMessage = firebaseError.message || "Unknown error";
-        console.error(`[sendPushNotificationAction] Failed to send to ${user.name} (${user.id}) with token ${user.fcmToken}: ${errorMessage} (Code: ${firebaseError.code})`);
+        console.error(`[sendPushNotificationAction] Failed to send to ${user.name} (${user.id}) with token ${user.fcmToken}: ${errorMessage} (Code: ${firebaseError.code}). Message attempted:`, JSON.stringify(fcmMessage));
         errors.push(`Failed for ${user.name}: ${errorMessage}`);
       }
     }
@@ -190,7 +206,7 @@ export async function sendPushNotificationAction(
     }
     messageSummary += ` (Target: ${targetDescription})`;
     
-    if(targetType === 'all' && successfulSends > 20) { // Add warning for large "all users" sends
+    if(targetType === 'all' && successfulSends > 20) { 
         messageSummary += " Note: Sending to 'All Users' can be resource-intensive for large user bases. Consider topic messaging for broader reach."
     }
 
@@ -211,3 +227,4 @@ export async function sendPushNotificationAction(
     };
   }
 }
+

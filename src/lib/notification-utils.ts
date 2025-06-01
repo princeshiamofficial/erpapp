@@ -82,9 +82,9 @@ export const initializeFCM = async (): Promise<string | null> => {
 
     // Foreground message listener
     onMessage(fcmMessaging, (payload) => {
-      console.log('[NotificationUtils] === Foreground message received ===. Full payload:', JSON.stringify(payload, null, 2));
+      console.log('[NotificationUtils] === Foreground message received ===. Raw payload:', JSON.stringify(payload, null, 2));
       
-      const notificationData = payload.data || {}; // Prefer data payload
+      const notificationData = payload.data || {}; 
       const fcmNotification = payload.notification || {};
 
       const notificationTitle = notificationData.title || fcmNotification.title || "Color Hut Message";
@@ -116,16 +116,23 @@ export const initializeFCM = async (): Promise<string | null> => {
         },
         tag: notificationData.tag || fcmNotification.tag || payload.messageId || 'colorhut-fg-notif-' + Date.now(),
       };
-      console.log("[NotificationUtils] Foreground notification options prepared:", JSON.stringify(notificationOptions, null, 2));
+      console.log("[NotificationUtils] Foreground notification options prepared (before custom sound):", JSON.stringify(notificationOptions, null, 2));
       
-      const notificationSoundUrl = notificationData.soundUrl || notificationData.sound || 'https://audio-previews.elements.envatousercontent.com/files/393057177/preview.mp3';
-      if (notificationSoundUrl) {
+      // Handle custom sound for foreground notification
+      const customSoundUrl = notificationData.customSoundUrl;
+      if (customSoundUrl) {
+          console.log("[NotificationUtils] Custom sound URL found in foreground data payload:", customSoundUrl);
           try {
-            const audio = new Audio(notificationSoundUrl as string);
-            audio.play().catch(e => console.warn("[NotificationUtils] Foreground notification sound playback failed:", e));
+            const audio = new Audio(customSoundUrl as string);
+            audio.play().catch(e => console.warn("[NotificationUtils] Foreground custom sound playback failed:", e));
+            // Note: Playing audio here might not be tied to the notification display itself.
+            // If `showNotification` also has a sound option, it might play too.
+            // If the custom sound plays here, you might not need/want to set notificationOptions.sound.
           } catch (e) {
-            console.error("[NotificationUtils] Error playing foreground notification sound:", e);
+            console.error("[NotificationUtils] Error playing foreground custom sound:", e);
           }
+      } else {
+        console.log("[NotificationUtils] No customSoundUrl in foreground data. Default sound behavior will apply if triggered by FCM `webpush.notification.sound`.");
       }
       
       navigator.serviceWorker.ready.then(registration => {
@@ -141,7 +148,6 @@ export const initializeFCM = async (): Promise<string | null> => {
         toast({ title: "SW Reg Error", description: `FG (SW Ready): ${err.message}`, variant: "destructive" });
       });
 
-      // Also show an in-app toast as a fallback or supplement
       toast({
         title: `FG: ${notificationTitle}`,
         description: notificationBody,
@@ -172,3 +178,4 @@ export const initializeFCM = async (): Promise<string | null> => {
     return null;
   }
 };
+
