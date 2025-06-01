@@ -102,6 +102,7 @@ export default function DashboardPage() {
     to: new Date(),
   };
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(defaultDateRange);
+  const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Last 30 Days");
 
   const [totalSales, setTotalSales] = useState(formatCurrency(0));
   const [invoiceDue, setInvoiceDue] = useState(formatCurrency(0));
@@ -203,8 +204,9 @@ export default function DashboardPage() {
   }, [isLoadingData, filteredOrders, selectedDateRange]);
 
 
-  const handleDateRangeChange = (range: DateRange | undefined) => {
+  const handleDateRangeChange = (range: DateRange | undefined, label: string) => {
     setSelectedDateRange(range);
+    setCurrentDateRangeLabel(label);
   };
 
   const summaryCardData = useMemo(() => [
@@ -311,7 +313,7 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle className="flex items-center text-xl text-foreground">
             <BarChartBig className="mr-2 h-6 w-6 text-primary" />
-            Sales
+            Sales ({currentDateRangeLabel})
           </CardTitle>
         </CardHeader>
         <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">

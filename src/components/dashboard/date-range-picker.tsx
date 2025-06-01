@@ -45,7 +45,7 @@ type PredefinedRange =
 
 interface DateRangePickerProps {
   initialRange?: DateRange;
-  onDateRangeChange: (range: DateRange | undefined) => void;
+  onDateRangeChange: (range: DateRange | undefined, displayLabel: string) => void;
   align?: "start" | "center" | "end";
 }
 
@@ -84,14 +84,31 @@ export function DateRangePicker({
         }
         return "custom";
       }
-      return "last30Days";
+      return "last30Days"; // Default predefined range
     }
   );
   const [isCustomPopoverOpen, setIsCustomPopoverOpen] = useState(false);
 
+  const displayLabel = useMemo(() => {
+    if (selectedPredefined === "custom") {
+      if (selectedRange?.from && selectedRange?.to) {
+        if (isSameDay(selectedRange.from, selectedRange.to)) {
+          return format(selectedRange.from, "MMM d, yyyy");
+        }
+        return `${format(selectedRange.from, "MMM d")} - ${format(
+          selectedRange.to,
+          "MMM d, yyyy"
+        )}`;
+      }
+      return "Custom Range";
+    }
+    return PREDEFINED_RANGES.find(r => r.value === selectedPredefined)?.label || "Select Date Range";
+  }, [selectedRange, selectedPredefined]);
+  
   useEffect(() => {
-    onDateRangeChange(selectedRange);
-  }, [selectedRange, onDateRangeChange]);
+    onDateRangeChange(selectedRange, displayLabel);
+  }, [selectedRange, displayLabel, onDateRangeChange]);
+
 
   function getDateRangeForPredefined(value: PredefinedRange): DateRange {
     const now = new Date();
@@ -139,21 +156,6 @@ export function DateRangePicker({
     }
   };
   
-  const displayLabel = useMemo(() => {
-    if (selectedPredefined === "custom") {
-      if (selectedRange?.from && selectedRange?.to) {
-        if (isSameDay(selectedRange.from, selectedRange.to)) {
-          return format(selectedRange.from, "MMM d, yyyy");
-        }
-        return `${format(selectedRange.from, "MMM d")} - ${format(
-          selectedRange.to,
-          "MMM d, yyyy"
-        )}`;
-      }
-      return "Custom Range";
-    }
-    return PREDEFINED_RANGES.find(r => r.value === selectedPredefined)?.label || "Select Date Range";
-  }, [selectedRange, selectedPredefined]);
 
   return (
     <DropdownMenu>
