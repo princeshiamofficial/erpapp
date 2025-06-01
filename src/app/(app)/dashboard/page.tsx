@@ -1,14 +1,14 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { DateRangePicker } from '@/components/dashboard/date-range-picker'; // New import
-import type { DateRange } from "react-day-picker"; // For DateRange type
-import { format } from "date-fns"; // For formatting dates
+import { DateRangePicker } from '@/components/dashboard/date-range-picker';
+import type { DateRange } from "react-day-picker";
+import { format, isWithinInterval, parseISO, subDays } from "date-fns";
 import { 
   Hand, 
   ShoppingCart, 
@@ -19,11 +19,10 @@ import {
   AlertTriangle, 
   Redo2, 
   Receipt, 
-  LineChart,
+  BarChartBig,
   MapPin,
   CalendarDays, 
-  BarChartBig,
-  ChevronDown // Added ChevronDown
+  ChevronDown
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -36,6 +35,9 @@ import {
   Legend,
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import type { TrackingLink, OrderItem } from '@/types'; // Ensure OrderItem is imported
+import { getOrders } from '@/lib/order-service';
+import { useToast } from '@/hooks/use-toast';
 
 const mockSalesData = [
   { date: '2 May 2025', sales: 0 }, { date: '3 May 2025', sales: 0 },
@@ -60,6 +62,10 @@ const chartConfig = {
     label: "Total Sales (BDT)",
     color: "hsl(var(--chart-1))",
   },
+};
+
+const formatCurrency = (value: number): string => {
+  return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
 interface SummaryCardProps {
@@ -101,49 +107,108 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
+  const { toast } = useToast();
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
+  
+  const defaultDateRange: DateRange = {
+    from: subDays(new Date(), 29), // Last 30 days
+    to: new Date(),
+  };
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(defaultDateRange);
 
-  // Mock data states
+  // States for calculated values
   const [totalSales, setTotalSales] = useState("৳ 0.00");
-  const [netValue, setNetValue] = useState("৳ 0.00");
   const [invoiceDue, setInvoiceDue] = useState("৳ 0.00");
+
+  // Mock data states for other cards (unchanged)
+  const [netValue, setNetValue] = useState("৳ 0.00");
   const [totalSellReturn, setTotalSellReturn] = useState("৳ 0.00");
   const [totalPurchase, setTotalPurchase] = useState("৳ 0.00");
   const [purchaseDue, setPurchaseDue] = useState("৳ 0.00");
   const [totalPurchaseReturn, setTotalPurchaseReturn] = useState("৳ 0.00");
   const [expense, setExpense] = useState("৳ 0.00");
 
-  useEffect(() => {
-    if (currentUser) {
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 1000);
-    } else {
-      setIsLoading(false); 
+  const fetchDashboardData = useCallback(async () => {
+    if (!currentUser) {
+      setIsLoadingData(false);
+      return;
     }
-  }, [currentUser]);
+    setIsLoadingData(true);
+    try {
+      const fetchedOrders = await getOrders();
+      setAllOrders(fetchedOrders);
+    } catch (error) {
+      console.error("Failed to fetch orders for dashboard:", error);
+      toast({ title: "Error", description: "Could not load order data.", variant: "destructive" });
+      setAllOrders([]);
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [currentUser, toast]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  useEffect(() => {
+    if (allOrders.length === 0 && !isLoadingData) {
+      // Handle no orders case, perhaps set sales/due to 0
+      setTotalSales(formatCurrency(0));
+      setInvoiceDue(formatCurrency(0));
+      return;
+    }
+
+    if (!selectedDateRange?.from || !selectedDateRange?.to) {
+      // If no date range is selected, perhaps show all-time or default to 0
+      setTotalSales(formatCurrency(0)); // Or calculate all-time if desired
+      setInvoiceDue(formatCurrency(0)); // Or calculate all-time if desired
+      return;
+    }
+    
+    const filteredOrders = allOrders.filter(order => 
+      isWithinInterval(parseISO(order.createdAt), {
+        start: selectedDateRange.from as Date, 
+        end: selectedDateRange.to as Date
+      })
+    );
+
+    let currentTotalSales = 0;
+    let currentTotalAdvance = 0;
+
+    filteredOrders.forEach(order => {
+      if (Array.isArray(order.orderItems)) {
+        order.orderItems.forEach((item: OrderItem) => {
+          currentTotalSales += item.lineItemTotalPrice || 0;
+        });
+      }
+      currentTotalAdvance += order.advancePayment || 0;
+    });
+    
+    setTotalSales(formatCurrency(currentTotalSales));
+    setInvoiceDue(formatCurrency(currentTotalSales - currentTotalAdvance));
+
+    // TODO: Logic for other cards and chart if they become dynamic
+  }, [allOrders, selectedDateRange, isLoadingData]);
+
 
   const handleDateRangeChange = (range: DateRange | undefined) => {
     setSelectedDateRange(range);
-    // Here you would typically re-fetch data based on the new range
-    console.log("Selected date range:", range);
-    // For now, we'll just log it.
   };
 
   const summaryCardData = useMemo(() => [
-    { title: "Total Sales", value: totalSales, icon: ShoppingCart, isLoading },
-    { title: "Net", value: netValue, icon: BadgeDollarSign, isLoading },
-    { title: "Invoice due", value: invoiceDue, icon: FileText, isLoading },
-    { title: "Total Sell Return", value: totalSellReturn, icon: Undo2, isLoading },
-    { title: "Total purchase", value: totalPurchase, icon: Download, isLoading },
-    { title: "Purchase due", value: purchaseDue, icon: AlertTriangle, isLoading },
-    { title: "Total Purchase Return", value: totalPurchaseReturn, icon: Redo2, isLoading },
-    { title: "Expense", value: expense, icon: Receipt, isLoading },
-  ], [isLoading, totalSales, netValue, invoiceDue, totalSellReturn, totalPurchase, purchaseDue, totalPurchaseReturn, expense]);
+    { title: "Total Sales", value: totalSales, icon: ShoppingCart, isLoading: isLoadingData },
+    { title: "Net", value: netValue, icon: BadgeDollarSign, isLoading: isLoadingData }, // Remains mock
+    { title: "Invoice due", value: invoiceDue, icon: FileText, isLoading: isLoadingData },
+    { title: "Total Sell Return", value: totalSellReturn, icon: Undo2, isLoading: isLoadingData }, // Remains mock
+    { title: "Total purchase", value: totalPurchase, icon: Download, isLoading: isLoadingData }, // Remains mock
+    { title: "Purchase due", value: purchaseDue, icon: AlertTriangle, isLoading: isLoadingData }, // Remains mock
+    { title: "Total Purchase Return", value: totalPurchaseReturn, icon: Redo2, isLoading: isLoadingData }, // Remains mock
+    { title: "Expense", value: expense, icon: Receipt, isLoading: isLoadingData }, // Remains mock
+  ], [isLoadingData, totalSales, netValue, invoiceDue, totalSellReturn, totalPurchase, purchaseDue, totalPurchaseReturn, expense]);
 
 
-  if (!currentUser && !isLoading) {
+  if (!currentUser && !isLoadingData) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <p>Redirecting to login...</p>
@@ -181,7 +246,7 @@ export default function DashboardPage() {
               <CalendarDays className="h-5 w-5 mr-2 text-primary/80" />
               <span>Filter by Date</span>
             </div>
-            <DateRangePicker onDateRangeChange={handleDateRangeChange} />
+            <DateRangePicker initialRange={defaultDateRange} onDateRangeChange={handleDateRangeChange} />
           </CardContent>
         </Card>
       </div>
@@ -202,11 +267,11 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle className="flex items-center text-xl text-foreground">
             <BarChartBig className="mr-2 h-6 w-6 text-primary" />
-            Sales Last 30 Days
+            Sales Last 30 Days (Mock Data)
           </CardTitle>
         </CardHeader>
         <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">
-          {isLoading ? (
+          {isLoadingData ? (
             <div className="flex items-center justify-center h-full">
               <Skeleton className="h-full w-full" />
             </div>
@@ -268,4 +333,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
