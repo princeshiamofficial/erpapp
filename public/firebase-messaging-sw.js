@@ -1,184 +1,237 @@
 
-// IMPORTANT: Make sure this file is in the public directory and accessible at /firebase-messaging-sw.js
+// Version: 1.0.9 - Explicit SW Registration and Robust Payload Handling
 
-// Give the service worker access to Firebase Messaging.
-// Note that you can only use Firebase Messaging here, other Firebase libraries
-// are not available in the service worker.
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+// Give the service worker a name
+const CACHE_NAME = 'colorhut-cache-v1';
+const urlsToCache = [
+  '/',
+  '/manifest.json',
+  '/icons/icon-192x192.png', // Make sure this path is correct
+  '/icons/icon-512x512.png'  // Make sure this path is correct
+];
 
-console.log('[SW] Service Worker script evaluating...');
+// Install a service worker
+self.addEventListener('install', event => {
+  console.log('[SW] Install event fired. Caching core assets.');
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => {
+        console.log('[SW] Opened cache. Caching URLs:', urlsToCache);
+        return cache.addAll(urlsToCache)
+          .then(() => console.log('[SW] Core assets cached successfully.'))
+          .catch(error => console.error('[SW] Failed to cache core assets:', error));
+      })
+      .catch(error => console.error('[SW] Error opening cache during install:', error))
+  );
+  self.skipWaiting();
+});
 
-// Initialize the Firebase app in the service worker by passing in
-// your app's Firebase config object.
-// THIS MUST EXACTLY MATCH THE CONFIG IN src/lib/firebase.ts
-const firebaseConfig = {
-  apiKey: "AIzaSyA-OULKM7hL85JFSGlNs0BHdIuTOVN73-I",
-  authDomain: "colorhut-57f5a.firebaseapp.com",
-  projectId: "colorhut-57f5a",
-  storageBucket: "colorhut-57f5a.firebasestorage.app",
-  messagingSenderId: "282903959856",
-  appId: "1:282903959856:web:287ace0c706eb0b11990f5",
-  measurementId: "G-57S6VYXE7H"
-};
+// Cache and return requests
+self.addEventListener('fetch', event => {
+  // Let the browser handle requests for Firebase assets and other external resources
+  if (event.request.url.includes('firebase') || event.request.url.startsWith('chrome-extension://')) {
+    return;
+  }
+  event.respondWith(
+    caches.match(event.request)
+      .then(response => {
+        // Cache hit - return response
+        if (response) {
+          return response;
+        }
+        return fetch(event.request).catch(error => {
+          console.error('[SW] Fetch failed; returning offline page instead.', error);
+          // Add offline fallback page if you have one
+        });
+      })
+  );
+});
 
+// Update a service worker
+self.addEventListener('activate', event => {
+  console.log('[SW] Activate event fired. Clearing old caches if any.');
+  const cacheWhitelist = [CACHE_NAME];
+  event.waitUntil(
+    caches.keys().then(cacheNames => {
+      return Promise.all(
+        cacheNames.map(cacheName => {
+          if (cacheWhitelist.indexOf(cacheName) === -1) {
+            console.log('[SW] Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  console.log('[SW] Activated successfully.');
+  event.waitUntil(self.clients.claim());
+});
+
+
+// --- Firebase Push Notification Handling ---
 try {
+  if (typeof firebase === 'undefined') {
+    importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+    importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
+    console.log('[SW] Firebase scripts imported via importScripts.');
+  } else {
+    console.log('[SW] Firebase scripts already available globally.');
+  }
+
+  // IMPORTANT: Replace with your actual Firebase project configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyA-OULKM7hL85JFSGlNs0BHdIuTOVN73-I",
+    authDomain: "colorhut-57f5a.firebaseapp.com",
+    projectId: "colorhut-57f5a",
+    storageBucket: "colorhut-57f5a.firebasestorage.app",
+    messagingSenderId: "282903959856",
+    appId: "1:282903959856:web:287ace0c706eb0b11990f5",
+    measurementId: "G-57S6VYXE7H"
+  };
+
   if (firebase.apps.length === 0) {
     firebase.initializeApp(firebaseConfig);
     console.log('[SW] Firebase app initialized in Service Worker.');
   } else {
     firebase.app(); // if already initialized, use that one
-    console.log('[SW] Firebase app already initialized in Service Worker.');
+    console.log('[SW] Firebase app already initialized.');
   }
-} catch (e) {
-  console.error('[SW] Error initializing Firebase app in Service Worker:', e);
-}
 
-let messaging;
-try {
-  if (firebase.messaging.isSupported()) {
-    messaging = firebase.messaging();
-    console.log('[SW] Firebase Messaging initialized in Service Worker.');
-  } else {
-    console.log('[SW] Firebase Messaging is not supported in this service worker context.');
-  }
-} catch (e) {
-  console.error('[SW] Error initializing Firebase Messaging in Service Worker:', e);
-}
+  const messaging = firebase.messaging();
+  console.log('[SW] Firebase Messaging instance obtained in Service Worker.');
 
-self.addEventListener('push', (event) => {
-  console.log('[SW] === Push event received ===. Raw event object:', event);
+  messaging.onBackgroundMessage(payload => {
+    console.log('[SW] Received background message payload:', JSON.stringify(payload, null, 2));
 
-  let payload;
-  if (event.data) {
-    console.log('[SW] Push event has data. Attempting to parse...');
-    try {
-      payload = event.data.json();
-      console.log('[SW] Push event data (JSON parsed successfully):', JSON.stringify(payload, null, 2));
-    } catch (e) {
-      console.error('[SW] Error parsing push event data as JSON:', e);
-      console.log('[SW] Raw event data (text attempt):', event.data.text ? event.data.text() : 'N/A');
-      // Fallback notification if parsing fails
-      payload = { 
-        notification: { 
-          title: 'Push Data Error', 
-          body: 'Could not parse incoming push data. Check SW console.' 
-        },
-        data: {} // Ensure data object exists
-      };
+    const notificationData = payload.data || {}; // Prefer data payload
+    const fcmNotification = payload.notification || {};
+
+    const notificationTitle = notificationData.title || fcmNotification.title || 'Color Hut Update';
+    const notificationBody = notificationData.body || fcmNotification.body || 'You have a new message.';
+    
+    let notificationIcon = notificationData.iconUrl || notificationData.icon || fcmNotification.icon || '/icons/icon-192x192.png';
+    if (notificationIcon && !notificationIcon.startsWith('http') && !notificationIcon.startsWith('/')) {
+        notificationIcon = self.origin + (notificationIcon.startsWith('.') ? notificationIcon.substring(1) : '/' + notificationIcon);
+    } else if (!notificationIcon.startsWith('http')) {
+        notificationIcon = self.origin + notificationIcon;
     }
-  } else {
-    console.log('[SW] Push event contained NO data. This is unusual for FCM. Displaying generic notification.');
-    payload = { 
-      notification: { 
-        title: 'Generic Push Title', 
-        body: 'You have a new update!' 
+
+    let notificationBadge = notificationData.badgeUrl || notificationData.badge || '/icons/icon-72x72.png';
+     if (notificationBadge && !notificationBadge.startsWith('http') && !notificationBadge.startsWith('/')) {
+        notificationBadge = self.origin + (notificationBadge.startsWith('.') ? notificationBadge.substring(1) : '/' + notificationBadge);
+    } else if (notificationBadge && !notificationBadge.startsWith('http')) {
+        notificationBadge = self.origin + notificationBadge;
+    }
+
+    const clickAction = notificationData.click_action || notificationData.targetUrl || fcmNotification.click_action || self.origin;
+
+    const notificationOptions = {
+      body: notificationBody,
+      icon: notificationIcon,
+      badge: notificationBadge,
+      data: { // Ensure data is an object, even if just for click_action
+        click_action: clickAction,
+        ...notificationData // Pass through other custom data from payload.data
       },
-      data: {} // Ensure data object exists
+      tag: notificationData.tag || fcmNotification.tag || payload.messageId || 'colorhut-sw-notif-' + Date.now(),
     };
-  }
 
-  // Safely access notification properties
-  const notificationData = payload.notification || {};
-  const customData = payload.data || {};
+    console.log('[SW] Preparing to show notification with options:', JSON.stringify(notificationOptions, null, 2));
 
-  const notificationTitle = notificationData.title || customData.title || 'Color Hut Notification';
-  const notificationBody = notificationData.body || customData.body || 'Check for new updates.';
+    try {
+      event.waitUntil(
+        self.registration.showNotification(notificationTitle, notificationOptions)
+          .then(() => console.log('[SW] Notification shown successfully from onBackgroundMessage.'))
+          .catch(err => console.error('[SW] Error showing notification from onBackgroundMessage:', err))
+      );
+    } catch (e) {
+        console.error('[SW] Exception caught trying to show notification:', e);
+    }
+  });
   
-  let notificationIcon = notificationData.icon || customData.iconUrl || customData.icon;
-  if (notificationIcon && !notificationIcon.startsWith('http') && !notificationIcon.startsWith('/')) {
-    notificationIcon = self.origin + (notificationIcon.startsWith('.') ? notificationIcon.substring(1) : '/' + notificationIcon);
-  } else if (!notificationIcon) {
-    notificationIcon = self.origin + '/icons/icon-192x192.png'; // Default icon
-  }
+  self.addEventListener('push', event => {
+    console.log('[SW] Push event received.');
+    let payload;
+    try {
+        payload = event.data ? event.data.json() : { notification: { title: "Fallback Title", body: "Fallback body."}};
+        console.log('[SW] Push event data (JSON parsed):', JSON.stringify(payload, null, 2));
+    } catch (e) {
+        console.error('[SW] Failed to parse push event data as JSON, or no data. Using fallback.', e);
+        payload = { notification: { title: "Error Parsing Notification", body: "Could not read notification content." } };
+    }
 
-  const notificationBadge = customData.badgeUrl || customData.badge || self.origin + '/icons/icon-72x72.png';
-  const notificationSound = customData.soundUrl || customData.sound || 'https://audio-previews.elements.envatousercontent.com/files/393057177/preview.mp3';
-  
-  const clickAction = customData.click_action || notificationData.click_action || customData.targetUrl || self.origin;
+    const notificationData = payload.data || {}; // Prefer data payload
+    const fcmNotification = payload.notification || {};
 
-  const notificationOptions = {
-    body: notificationBody,
-    icon: notificationIcon,
-    badge: notificationBadge,
-    sound: notificationSound, // Note: sound support varies by browser/OS
-    vibrate: [200, 100, 200],
-    data: { // Ensure data is an object for click_action handling
-      click_action: clickAction,
-      ...customData // Spread the rest of customData
-    },
-    tag: notificationData.tag || customData.tag || payload.messageId || 'colorhut-push-' + Date.now()
-  };
+    const title = notificationData.title || fcmNotification.title || 'Color Hut Notification';
+    const body = notificationData.body || fcmNotification.body || 'Check for new updates.';
+    
+    let icon = notificationData.iconUrl || notificationData.icon || fcmNotification.icon || '/icons/icon-192x192.png';
+    if (icon && !icon.startsWith('http') && !icon.startsWith('/')) {
+        icon = self.origin + (icon.startsWith('.') ? icon.substring(1) : '/' + icon);
+    } else if (icon && !icon.startsWith('http')) {
+        icon = self.origin + icon;
+    }
 
-  console.log('[SW] Preparing to show notification. Title:', notificationTitle, 'Options:', JSON.stringify(notificationOptions, null, 2));
+    let badge = notificationData.badgeUrl || notificationData.badge || '/icons/icon-72x72.png';
+    if (badge && !badge.startsWith('http') && !badge.startsWith('/')) {
+        badge = self.origin + (badge.startsWith('.') ? badge.substring(1) : '/' + badge);
+    } else if (badge && !badge.startsWith('http')) {
+        badge = self.origin + badge;
+    }
+    
+    const clickAction = notificationData.click_action || notificationData.targetUrl || fcmNotification.click_action || self.origin;
+    
+    const options = {
+      body: body,
+      icon: icon,
+      badge: badge,
+      data: {
+        click_action: clickAction,
+        ...notificationData
+      },
+      tag: notificationData.tag || fcmNotification.tag || payload.messageId || 'colorhut-push-notif-' + Date.now(),
+    };
 
-  if (!self.registration) {
-    console.error("[SW] self.registration is not available. Cannot show notification.");
-    return;
-  }
+    console.log('[SW] Preparing to show notification from "push" event with options:', JSON.stringify(options, null, 2));
+    try {
+      event.waitUntil(
+        self.registration.showNotification(title, options)
+          .then(() => console.log('[SW] Notification shown successfully from "push" event.'))
+          .catch(err => console.error('[SW] Error showing notification from "push" event:', err))
+      );
+    } catch (e) {
+        console.error('[SW] Exception caught trying to show notification from "push" event:', e);
+    }
+  });
 
-  const notificationPromise = self.registration.showNotification(notificationTitle, notificationOptions)
-    .then(() => {
-      console.log('[SW] Notification shown successfully via self.registration.showNotification.');
-    })
-    .catch((err) => {
-      console.error('[SW] Error showing notification via self.registration.showNotification:', err);
-    });
+  self.addEventListener('notificationclick', event => {
+    console.log('[SW] Notification click Received. Event:', event);
+    event.notification.close();
 
-  event.waitUntil(notificationPromise);
-});
+    const clickAction = event.notification.data?.click_action || event.notification.data?.targetUrl || event.notification.data?.FCM_MSG?.data?.click_action || self.origin;
+    console.log('[SW] Determined click_action:', clickAction);
 
-
-self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] === Notification click Received ===. Event:', event);
-  event.notification.close(); 
-
-  const clickActionUrl = event.notification.data?.click_action || self.origin;
-  console.log(`[SW] Click action URL from notification data: '${clickActionUrl}'`);
-
-  if (clickActionUrl) {
     event.waitUntil(
-      clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-        for (const client of clientList) {
-          // Use new URL(client.url).pathname to compare paths if origins might differ (e.g. dev vs prod)
-          // For simplicity, direct URL check:
-          if (client.url === clickActionUrl && 'focus' in client) {
-            console.log(`[SW] Found existing client with URL ${clickActionUrl}. Focusing it.`);
-            try {
-              return client.focus();
-            } catch (focusError) {
-              console.error(`[SW] Error focusing client:`, focusError);
-              // Fallback to opening new window if focus fails
-              if (clients.openWindow) return clients.openWindow(clickActionUrl);
-            }
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+        for (let i = 0; i < clientList.length; i++) {
+          const client = clientList[i];
+          // Check if the client's URL matches the click_action or if it's a more general app URL.
+          // You might want to refine this logic based on your app's routing.
+          if (client.url === clickAction && 'focus' in client) {
+            return client.focus().then(() => client.navigate(clickAction)); // Navigate even if focused
           }
         }
+        // If no matching client is found or focused, open a new window.
         if (clients.openWindow) {
-          console.log(`[SW] No existing client found or focus failed. Opening new window to: ${clickActionUrl}`);
-          return clients.openWindow(clickActionUrl);
+          return clients.openWindow(clickAction);
         }
-        console.log('[SW] clients.openWindow is not available.');
-        return Promise.resolve();
-      }).catch(err => {
-        console.error('[SW] Error handling notification click:', err);
+      }).catch(error => {
+        console.error('[SW] Error handling notification click:', error);
       })
     );
-  } else {
-    console.log('[SW] No click_action URL found in notification data. Opening origin.');
-    if (clients.openWindow) {
-       event.waitUntil(clients.openWindow(self.origin));
-    }
-  }
-});
+  });
 
-self.addEventListener('install', (event) => {
-  console.log('[SW] Service worker installing...');
-  event.waitUntil(self.skipWaiting()); // Ensures the new service worker activates immediately
-});
-
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Service worker activating...');
-  event.waitUntil(clients.claim()); // Allows an active service worker to take control of current page/clients immediately
-});
-
-console.log('[SW] Service Worker script evaluation complete. Event listeners for push, notificationclick, install, activate are set up.');
+} catch (error) {
+  console.error('[SW] Error setting up Firebase Messaging in Service Worker:', error);
+}
