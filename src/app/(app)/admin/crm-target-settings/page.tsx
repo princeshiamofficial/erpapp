@@ -382,7 +382,7 @@ export default function CrmTargetSettingsPage() {
                             onClick={() => handleCopyFcmToken(user.fcmToken!, user.id)}
                             className="h-8 px-2.5"
                           >
-                            {copiedTokenUserId === user.id ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                            {copiedTokenUserId === user.id ? <CheckIcon className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                             <span className="ml-1.5 text-xs">{copiedTokenUserId === user.id ? "Copied!" : "Copy"}</span>
                           </Button>
                         ) : (
