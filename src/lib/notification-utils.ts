@@ -1,12 +1,11 @@
 
 "use client";
 
-import { messaging } from '@/lib/firebase'; // Ensure messaging is exported from firebase.ts
-import { getToken, onMessage } from 'firebase/messaging';
+import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
+import { app } from '@/lib/firebase'; // Import the initialized app
 import { toast } from '@/hooks/use-toast';
 
-// Use the VAPID key explicitly provided by the user.
-const VAPID_KEY = "BPH3cIN1er99_rQILWB9PQZzeEeo48jPxsS4eS5FzLKws2vBikUBYRnl-xWtm3kWNLj9y-_kerVqJloF9DwTK2U";
+// VAPID_KEY is intentionally omitted. Firebase SDK should fetch it from project config.
 
 export const requestNotificationPermission = async (): Promise<NotificationPermission | null> => {
   if (!('Notification' in window)) {
@@ -18,7 +17,7 @@ export const requestNotificationPermission = async (): Promise<NotificationPermi
     if (permission === 'granted') {
       toast({ title: "Notifications Enabled!", description: "You will now receive updates." });
     } else if (permission === 'denied') {
-      toast({ title: "Notifications Blocked", description: "Please enable notifications in browser settings if you wish to receive them.", variant: "destructive" });
+      toast({ title: "Notifications Blocked", description: "Please enable notifications in browser settings if you wish to receive them.", variant: "destructive", duration: 7000 });
     } else {
       toast({ title: "Notifications Dismissed", description: "You can enable notifications later if you change your mind." });
     }
@@ -31,10 +30,15 @@ export const requestNotificationPermission = async (): Promise<NotificationPermi
 };
 
 export const initializeFCM = async () => {
-  if (!messaging) {
-    console.log("Firebase Messaging not available/initialized.");
+  const messagingSupported = await isSupported();
+  if (!messagingSupported) {
+    console.log("Firebase Messaging not supported in this browser.");
+    toast({ title: "Notifications Not Supported", description: "Push notifications are not supported by your browser.", variant: "destructive" });
     return;
   }
+
+  // Get a fresh messaging instance here, ensuring 'app' from firebase.ts is initialized
+  const fcmMessaging = getMessaging(app);
 
   try {
     const permission = await requestNotificationPermission();
@@ -43,27 +47,36 @@ export const initializeFCM = async () => {
       return;
     }
 
-    console.log("Attempting to get FCM token with VAPID key:", VAPID_KEY);
-    const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
+    console.log("Attempting to register service worker: /firebase-messaging-sw.js with scope: /");
+    const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+    console.log("Service worker registered successfully. Scope:", swRegistration.scope);
+
+    console.log("Attempting to get FCM token using SW registration.");
+    // VAPID key is intentionally OMITTED here.
+    // The Firebase SDK should automatically use the VAPID key from your firebaseConfig if the project is set up correctly.
+    const currentToken = await getToken(fcmMessaging, {
+      serviceWorkerRegistration: swRegistration,
+    });
+
     if (currentToken) {
       console.log('FCM Token:', currentToken);
       // TODO: Send this token to your app server and store it.
-      // For now, we'll just log it.
       // toast({ title: "FCM Token Acquired", description: "Ready for push notifications (token in console)." });
     } else {
-      console.log('No registration token available. This usually means permission was not granted or VAPID key is incorrect.');
-      toast({ title: "FCM Error", description: "Could not get FCM token. Ensure notifications are permitted and VAPID key is correct.", variant: "destructive"});
+      // This typically means permission was denied at a higher level or VAPID key issues in Firebase Project settings.
+      console.log('No registration token available. This can happen if permission was denied at a higher level or if the VAPID key setup in your Firebase project is missing/incorrect.');
+      // A more specific error is usually caught by the catch block if getToken itself throws.
     }
 
-    onMessage(messaging, (payload) => {
+    onMessage(fcmMessaging, (payload) => {
       console.log('Message received in foreground. ', payload);
       const notificationTitle = payload.notification?.title || "New Notification";
       const notificationOptions: NotificationOptions = {
         body: payload.notification?.body || "You have a new update.",
-        icon: payload.notification?.icon || '/icons/icon-192x192.png', // Ensure you have this icon
+        icon: payload.notification?.icon || '/icons/icon-192x192.png',
         sound: payload.data?.soundUrl || 'https://audio-previews.elements.envatousercontent.com/files/393057177/preview.mp3',
-        data: payload.data, // You can pass custom data here
-        tag: payload.notification?.tag || payload.messageId || undefined, // Helps group notifications
+        data: payload.data,
+        tag: payload.notification?.tag || payload.messageId || undefined,
       };
       
       if (notificationOptions.sound) {
@@ -76,7 +89,8 @@ export const initializeFCM = async () => {
       }
 
       navigator.serviceWorker.ready.then(registration => {
-        registration.showNotification(notificationTitle, notificationOptions);
+        registration.showNotification(notificationTitle, notificationOptions)
+         .catch(err => console.error("Error showing foreground notification via SW:", err));
       });
 
       toast({
@@ -87,14 +101,18 @@ export const initializeFCM = async () => {
 
   } catch (error: any) {
     console.error('Error initializing FCM:', error);
-    let description = "Could not set up push notifications.";
-    if (error.code === 'messaging/invalid-vapid-key' || (error.message && error.message.toLowerCase().includes('applicationkey'))) {
-        description = "The VAPID key seems to be invalid or not configured correctly for this project. Please verify it in the Firebase console.";
+    let description = "Could not set up push notifications. Check console for details.";
+    if (error.code === 'messaging/failed-service-worker-registration') {
+        description = "The push notification service worker failed to register. Ensure '/firebase-messaging-sw.js' is accessible at the root and there are no console errors from the service worker itself.";
+    } else if (error.code === 'messaging/invalid-vapid-key' || (error.message && error.message.toLowerCase().includes('applicationserverkey'))) {
+        description = "The VAPID key (application server key) seems to be invalid or not configured correctly in your Firebase project settings. Please verify it in the Firebase console.";
+    } else if (error.code === 'messaging/sw-registration-expected') {
+        description = "Service worker registration was expected but not found. Manual registration might have failed.";
     } else if (error.name === 'InvalidStateError') {
-        description = "Push Manager is in an invalid state. This can happen if the service worker is not registered or active.";
+        description = "Push Manager is in an invalid state. This can happen if the service worker is not registered or active, or if there's an issue with browser profiles.";
     } else if (error.message) {
         description = error.message;
     }
-    toast({ title: "FCM Initialization Error", description: description, variant: "destructive"});
+    toast({ title: "FCM Setup Error", description: description, variant: "destructive", duration: 10000 });
   }
 };
