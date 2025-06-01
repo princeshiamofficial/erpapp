@@ -1,3 +1,4 @@
+
 "use client";
 
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
@@ -6,15 +7,16 @@ import { toast } from '@/hooks/use-toast';
 
 
 export const requestNotificationPermission = async (): Promise<NotificationPermission | null> => {
+  console.log("[NotificationUtils] requestNotificationPermission called");
   if (typeof window === 'undefined' || !('Notification' in window)) {
-    console.warn("requestNotificationPermission: Notifications not supported by this browser.");
+    console.warn("[NotificationUtils] Notifications not supported by this browser.");
     toast({ title: "Notifications Not Supported", description: "This browser does not support desktop notifications.", variant: "destructive" });
     return null;
   }
   try {
-    console.log("requestNotificationPermission: Requesting permission...");
+    console.log("[NotificationUtils] Requesting permission via Notification.requestPermission()...");
     const permission = await Notification.requestPermission();
-    console.log("requestNotificationPermission: Permission result -", permission);
+    console.log("[NotificationUtils] Permission result -", permission);
     if (permission === 'granted') {
       toast({ title: "Notifications Enabled!", description: "You will now receive updates." });
     } else if (permission === 'denied') {
@@ -24,98 +26,106 @@ export const requestNotificationPermission = async (): Promise<NotificationPermi
     }
     return permission;
   } catch (error) {
-    console.error('Error requesting notification permission:', error);
+    console.error('[NotificationUtils] Error requesting notification permission:', error);
     toast({ title: "Permission Error", description: "Could not request notification permission.", variant: "destructive" });
     return null;
   }
 };
 
 export const initializeFCM = async () => {
+  console.log("[NotificationUtils] initializeFCM called");
   if (typeof window === 'undefined') {
-    console.log("initializeFCM: Cannot run in non-browser environment.");
+    console.log("[NotificationUtils] Cannot run in non-browser environment.");
     return;
   }
 
   const messagingSupported = await isSupported();
   if (!messagingSupported) {
-    console.log("Firebase Messaging not supported in this browser.");
+    console.log("[NotificationUtils] Firebase Messaging not supported in this browser.");
     toast({ title: "Notifications Not Supported", description: "Push notifications are not supported by your browser.", variant: "destructive" });
     return;
   }
 
   const fcmMessaging = getMessaging(app);
+  console.log("[NotificationUtils] Firebase Messaging instance obtained.");
 
   try {
     const permission = Notification.permission;
     if (permission !== 'granted') {
-      console.log('initializeFCM: Notification permission not granted yet. User needs to click the bell or grant permission.');
+      console.log('[NotificationUtils] Notification permission not granted yet. User needs to grant permission.');
+      // Do not toast here, let the Bell component handle UI for requesting permission
       return;
     }
+    console.log("[NotificationUtils] Notification permission is granted.");
 
-    console.log("initializeFCM: Attempting to register service worker: /firebase-messaging-sw.js with scope: /");
+    console.log("[NotificationUtils] Attempting to register service worker: /firebase-messaging-sw.js with scope: /");
     const swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
-    console.log("initializeFCM: Service worker registration successful. Scope:", swRegistration.scope);
+    console.log("[NotificationUtils] Service worker registration attempt complete. SW Object:", swRegistration);
 
-    console.log("initializeFCM: Waiting for service worker to become active...");
-    await navigator.serviceWorker.ready; // Wait for the service worker to be active
-    console.log("initializeFCM: Service worker is active and ready. Active SW Registration:", swRegistration.active);
+    console.log("[NotificationUtils] Waiting for service worker to become active using navigator.serviceWorker.ready...");
+    const activeSwRegistration = await navigator.serviceWorker.ready; 
+    console.log("[NotificationUtils] Service worker is active and ready. Active SW Registration:", activeSwRegistration);
     
-    console.log("initializeFCM: Attempting to get FCM token using active SW registration.");
+    console.log("[NotificationUtils] Attempting to get FCM token using active SW registration.");
     // VAPID key is intentionally OMITTED here.
     // The Firebase SDK should automatically use the VAPID key from your firebaseConfig if the project is set up correctly.
     const currentToken = await getToken(fcmMessaging, {
-      serviceWorkerRegistration: swRegistration,
+      serviceWorkerRegistration: activeSwRegistration, // Use the registration from .ready
     });
 
     if (currentToken) {
-      console.log('FCM Token acquired:', currentToken);
+      console.log('[NotificationUtils] FCM Token acquired:', currentToken);
       // TODO: Send this token to your app server and store it.
+      // Consider only toasting this on first acquisition or if it changes.
       // toast({ title: "FCM Token Acquired", description: "Ready for push notifications (token in console)." });
     } else {
-      console.warn('initializeFCM: No registration token available. This can happen if permission was denied at a higher level or VAPID key/project config issues.');
-      // A more specific error is usually caught by the catch block if getToken itself throws.
+      console.warn('[NotificationUtils] No registration token available. This can happen if permission was denied at a higher level or VAPID key/project config issues.');
     }
 
     onMessage(fcmMessaging, (payload) => {
-      console.log('Foreground message received. ', payload);
-      const notificationTitle = payload.notification?.title || "New Notification";
+      console.log('[NotificationUtils] Foreground message received. Payload:', JSON.stringify(payload, null, 2));
+      
+      const notificationTitle = payload.notification?.title || "New Color Hut Message";
       
       let notificationIcon = payload.notification?.icon;
       if (notificationIcon && !notificationIcon.startsWith('http') && !notificationIcon.startsWith('/')) {
         notificationIcon = window.location.origin + (notificationIcon.startsWith('.') ? notificationIcon.substring(1) : '/' + notificationIcon);
       } else if (!notificationIcon) {
-        notificationIcon = window.location.origin + '/icons/icon-192x192.png';
+        notificationIcon = window.location.origin + '/icons/icon-192x192.png'; // Ensure this exists
       }
 
       const notificationOptions: NotificationOptions = {
         body: payload.notification?.body || "You have a new update.",
         icon: notificationIcon,
-        badge: window.location.origin + '/icons/icon-72x72.png', // Ensure this exists
+        badge: window.location.origin + '/icons/icon-72x72.png', 
         sound: payload.data?.soundUrl || 'https://audio-previews.elements.envatousercontent.com/files/393057177/preview.mp3',
         data: {
            click_action: payload.data?.click_action || payload.data?.targetUrl || window.location.origin,
-          ...payload.data
+          ...(payload.data || {})
         },
-        tag: payload.notification?.tag || payload.messageId || 'colorhut-fg-notification',
+        tag: payload.notification?.tag || payload.messageId || 'colorhut-fg-notification-' + Date.now(),
       };
-      console.log("Foreground notification options:", JSON.stringify(notificationOptions));
+      console.log("[NotificationUtils] Foreground notification options prepared:", JSON.stringify(notificationOptions));
       
+      // Play sound if specified
       if (notificationOptions.sound) {
           try {
             const audio = new Audio(notificationOptions.sound as string);
-            audio.play().catch(e => console.warn("Foreground notification sound playback failed:", e));
+            audio.play().catch(e => console.warn("[NotificationUtils] Foreground notification sound playback failed:", e));
           } catch (e) {
-            console.error("Error playing foreground notification sound:", e);
+            console.error("[NotificationUtils] Error playing foreground notification sound:", e);
           }
       }
       
+      // Show the notification using the active service worker registration
       navigator.serviceWorker.ready.then(registration => {
-        console.log("Attempting to show foreground notification via SW registration.");
+        console.log("[NotificationUtils] Attempting to show foreground notification via SW registration's showNotification method.");
         registration.showNotification(notificationTitle, notificationOptions)
-         .then(() => console.log("Foreground notification shown via SW."))
-         .catch(err => console.error("Error showing foreground notification via SW:", err));
-      }).catch(err => console.error("Error getting SW registration for foreground notification:", err));
+         .then(() => console.log("[NotificationUtils] Foreground notification shown via SW registration successfully."))
+         .catch(err => console.error("[NotificationUtils] Error showing foreground notification via SW registration:", err));
+      }).catch(err => console.error("[NotificationUtils] Error getting SW registration for foreground notification:", err));
 
+      // Optionally, also show an in-app toast
       toast({
         title: notificationTitle,
         description: notificationOptions.body as string,
@@ -123,15 +133,19 @@ export const initializeFCM = async () => {
     });
 
   } catch (error: any) {
-    console.error('Error initializing FCM:', error);
+    console.error('[NotificationUtils] Error initializing FCM:', error);
     let description = "Could not set up push notifications. Check console for details.";
-    if (error.code === 'messaging/failed-service-worker-registration' || error.message.includes('ServiceWorker script evaluation failed')) {
-        description = "The push notification service worker failed to register or evaluate. Ensure '/firebase-messaging-sw.js' is accessible at the root and contains valid JavaScript. Check console for errors from the service worker itself.";
+    if (error.code === 'messaging/failed-service-worker-registration' || (error.message && error.message.includes('ServiceWorker script evaluation failed'))) {
+        description = "The push notification service worker failed to register or evaluate. Ensure '/firebase-messaging-sw.js' is accessible at the root and contains valid JavaScript. Check the Service Worker console for errors.";
     } else if (error.code === 'messaging/invalid-vapid-key' || (error.message && (error.message.toLowerCase().includes('applicationserverkey') || error.message.toLowerCase().includes('vapid key')))) {
-        description = "The VAPID key (application server key) seems to be invalid or not configured correctly in your Firebase project settings. Please verify it in the Firebase console.";
+        description = "The VAPID key (application server key) seems to be invalid or not configured correctly in your Firebase project settings. Please verify it in the Firebase console under Project Settings > Cloud Messaging > Web Push certificates.";
     } else if (error.code === 'messaging/sw-registration-expected') {
         description = "Service worker registration was expected but not found. Manual registration might have failed or the SW is not active.";
-    } else if (error.name === 'InvalidStateError' || error.message.includes('no active Service Worker') || error.message.includes('Subscription failed - no active Service Worker')) {
+    } else if (error.code === 'messaging/permission-default') {
+        description = "Notification permission is set to default. Please click the bell icon to grant permission.";
+    } else if (error.code === 'messaging/permission-denied') {
+        description = "Notification permission has been denied. Please enable notifications in your browser settings for this site.";
+    } else if (error.name === 'InvalidStateError' || (error.message && (error.message.includes('no active Service Worker') || error.message.includes('Subscription failed - no active Service Worker')))) {
         description = "Push Manager is in an invalid state, or no service worker is active. This can happen if the service worker is not registered, not active, or if there's an issue with browser profiles. Try clearing site data and re-registering the service worker.";
     } else if (error.message) {
         description = error.message;
@@ -139,4 +153,3 @@ export const initializeFCM = async () => {
     toast({ title: "FCM Initialization Error", description: description, variant: "destructive", duration: 15000 });
   }
 };
-

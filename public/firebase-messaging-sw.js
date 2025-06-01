@@ -1,9 +1,13 @@
-// Import Firebase app and messaging (using compat for service worker)
-importScripts('https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js');
 
-// --- IMPORTANT: CONFIGURATION ---
-// This firebaseConfig MUST match the one in your src/lib/firebase.ts
+// Import the Firebase app and messaging services using importScripts
+try {
+  importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
+  importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
+  console.log('[SW] Firebase scripts imported successfully.');
+} catch (e) {
+  console.error('[SW] Error importing Firebase scripts:', e);
+}
+
 const firebaseConfig = {
   apiKey: "AIzaSyA-OULKM7hL85JFSGlNs0BHdIuTOVN73-I",
   authDomain: "colorhut-57f5a.firebaseapp.com",
@@ -13,180 +17,103 @@ const firebaseConfig = {
   appId: "1:282903959856:web:287ace0c706eb0b11990f5",
   measurementId: "G-57S6VYXE7H"
 };
-// --- END CONFIGURATION ---
 
 try {
-  firebase.initializeApp(firebaseConfig);
-  console.log('[SW] Firebase initialized in Service Worker.');
+  if (typeof firebase !== 'undefined' && firebase.apps.length === 0) {
+    firebase.initializeApp(firebaseConfig);
+    console.log('[SW] Firebase app initialized successfully.');
+  } else if (typeof firebase === 'undefined') {
+    console.error('[SW] Firebase object is not defined. Scripts might not have loaded.');
+  } else {
+    console.log('[SW] Firebase app already initialized or firebase object not ready.');
+  }
 } catch (e) {
-  console.error('[SW] Error initializing Firebase in Service Worker:', e);
+  console.error('[SW] Error initializing Firebase app:', e);
 }
 
 let messaging;
 try {
-  if (firebase.messaging.isSupported()) {
+  if (typeof firebase !== 'undefined' && typeof firebase.messaging === 'function') {
     messaging = firebase.messaging();
-    console.log('[SW] Firebase Messaging initialized in Service Worker.');
+    console.log('[SW] Firebase Messaging initialized.');
   } else {
-    console.log('[SW] Firebase Messaging is not supported in this browser (service worker context).');
+    console.error('[SW] firebase.messaging is not a function or firebase is undefined.');
   }
 } catch (e) {
-  console.error('[SW] Error getting Firebase Messaging instance in Service Worker:', e);
+  console.error('[SW] Error getting Firebase Messaging instance:', e);
 }
-
-
-// Optional: Set a background message handler
-if (messaging) {
-  messaging.onBackgroundMessage((payload) => {
-    console.log('[SW] Received background message (deprecated onBackgroundMessage, use push event): ', payload);
-    // This handler is for when the app is in the background or closed.
-    // It's generally recommended to handle push events directly.
-    // For modern browsers, the 'push' event is preferred.
-  });
-}
-
-self.addEventListener('push', (event) => {
-  console.log('[SW] Push event received:', event);
-  let payload;
-  try {
-    payload = event.data ? event.data.json() : null;
-    console.log('[SW] Push event payload:', payload);
-  } catch (e) {
-    console.error('[SW] Error parsing push event data:', e);
-    payload = { // Fallback payload if parsing fails
-      notification: {
-        title: 'New Notification',
-        body: 'You have a new message.',
-        icon: '/icons/icon-192x192.png',
-      },
-      data: {
-        click_action: '/',
-        soundUrl: 'https://audio-previews.elements.envatousercontent.com/files/393057177/preview.mp3'
-      }
-    };
-  }
-
-  if (!payload || !payload.notification) {
-    console.error('[SW] Push payload or payload.notification is missing. Cannot show notification.');
-    return;
-  }
-
-  const notificationTitle = payload.notification.title || 'Color Hut Notification';
-  const notificationBody = payload.notification.body || 'You have a new update from Color Hut.';
-  
-  // Ensure icon path is absolute or relative to origin
-  let notificationIcon = payload.notification.icon;
-  if (notificationIcon && !notificationIcon.startsWith('http') && !notificationIcon.startsWith('/')) {
-    notificationIcon = self.registration.scope + notificationIcon.replace(/^\.\//, '');
-  } else if (!notificationIcon) {
-    notificationIcon = self.registration.scope + 'icons/icon-192x192.png';
-  }
-   console.log('[SW] Using notification icon:', notificationIcon);
-
-
-  const soundUrl = payload.data?.soundUrl || 'https://audio-previews.elements.envatousercontent.com/files/393057177/preview.mp3';
-  
-  const notificationOptions = {
-    body: notificationBody,
-    icon: notificationIcon,
-    badge: self.registration.scope + 'icons/icon-72x72.png', // Example badge, ensure file exists
-    sound: soundUrl, // This might not work on all browsers/OS from SW directly
-    tag: payload.notification.tag || payload.messageId || 'colorhut-default-tag',
-    data: {
-      click_action: payload.data?.click_action || payload.data?.targetUrl || self.registration.scope, // Default to scope root
-      ...payload.data // Pass through other data
-    }
-  };
-
-  console.log('[SW] Notification options prepared:', JSON.stringify(notificationOptions));
-
-  if (soundUrl) {
-    try {
-      // Note: Playing sound directly from SW before notification is unreliable.
-      // The 'sound' option in notificationOptions is preferred but OS/browser dependent.
-      // const audio = new Audio(soundUrl);
-      // audio.play().catch(e => console.warn('[SW] Sound playback failed in SW:', e));
-      // console.log('[SW] Sound playback attempted from SW.');
-    } catch (e) {
-      console.error('[SW] Error with sound in SW:', e);
-    }
-  }
-
-  const notificationPromise = self.registration.showNotification(notificationTitle, notificationOptions)
-    .then(() => {
-      console.log('[SW] Notification shown successfully.');
-    })
-    .catch((err) => {
-      console.error('[SW] Error showing notification:', err);
-      // Fallback if specific options cause issues (e.g., sound)
-      const fallbackOptions = { ...notificationOptions, sound: undefined };
-      console.log('[SW] Attempting to show notification with fallback options (no sound).');
-      return self.registration.showNotification(notificationTitle, fallbackOptions).catch(e => {
-        console.error('[SW] Error showing notification even with fallback options:', e);
-      });
-    });
-
-  event.waitUntil(notificationPromise);
-});
-
-
-self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification click Received.', event.notification);
-  const clickedNotification = event.notification;
-  clickedNotification.close();
-
-  const targetUrl = clickedNotification.data?.click_action || self.registration.scope;
-  console.log('[SW] Notification click_action URL:', targetUrl);
-
-  // This Lints for Promsie type and CLIENTS is not defined, but it is standard SW API.
-  // eslint-disable-next-line no-undef
-  const promiseChain = clients.matchAll({
-    type: 'window',
-    includeUncontrolled: true
-  }).then((clientList) => {
-    let focusedClient = null;
-    for (let i = 0; i < clientList.length; i++) {
-      const client = clientList[i];
-      // Attempt to match the client URL. Consider more flexible matching if needed.
-      if (client.url === targetUrl && 'focus' in client) {
-        try {
-          client.focus();
-          focusedClient = client;
-          break;
-        } catch (e) {
-          console.warn('[SW] Failed to focus client:', e);
-          // Could be that client.url is an empty string for some clients.
-        }
-      }
-    }
-
-    if (focusedClient) {
-      console.log('[SW] Focused existing client for URL:', targetUrl);
-      return focusedClient;
-    }
-    // eslint-disable-next-line no-undef
-    if (clients.openWindow) {
-      console.log('[SW] Opening new window for URL:', targetUrl);
-      // eslint-disable-next-line no-undef
-      return clients.openWindow(targetUrl);
-    }
-    console.log('[SW] No client focused or new window opened.');
-    return null; // Add a return value for the case where no action is taken
-  }).catch(err => {
-    console.error("[SW] Error during notification click handling:", err);
-  });
-
-  event.waitUntil(promiseChain);
-});
 
 self.addEventListener('install', (event) => {
   console.log('[SW] Service Worker installing.');
-  // event.waitUntil(self.skipWaiting()); // Optional: Activate new SW immediately
+  event.waitUntil(self.skipWaiting()); // Activate worker immediately
 });
 
 self.addEventListener('activate', (event) => {
   console.log('[SW] Service Worker activating.');
-  // event.waitUntil(self.clients.claim()); // Optional: Take control of open clients immediately
+  event.waitUntil(self.clients.claim()); // Become available to all pages
 });
 
-console.log('[SW] Service Worker script loaded and evaluated. Event listeners attached.');
+self.addEventListener('push', (event) => {
+  console.log('[SW] Push event received:', event);
+  let receivedPayload = {};
+  try {
+    if (event.data) {
+      receivedPayload = event.data.json();
+      console.log('[SW] Push event data (JSON parsed):', receivedPayload);
+    } else {
+      console.log('[SW] Push event data is empty.');
+    }
+  } catch (e) {
+    console.error('[SW] Error parsing push event data as JSON:', e);
+    receivedPayload = { notification: { title: "Error", body: "Could not parse push data." } };
+  }
+
+  const notificationTitle = receivedPayload.notification?.title || 'New Color Hut Update';
+  const notificationOptions = {
+    body: receivedPayload.notification?.body || 'You have a new message or update.',
+    icon: receivedPayload.notification?.icon || (self.origin + '/icons/icon-192x192.png'),
+    badge: self.origin + '/icons/icon-72x72.png', // Ensure this badge icon exists
+    sound: receivedPayload.data?.soundUrl || 'https://audio-previews.elements.envatousercontent.com/files/393057177/preview.mp3',
+    data: {
+      click_action: receivedPayload.data?.click_action || receivedPayload.data?.targetUrl || self.origin,
+      ...(receivedPayload.data || {})
+    },
+    tag: receivedPayload.notification?.tag || 'colorhut-notification-' + Date.now()
+  };
+
+  console.log('[SW] Showing notification with title:', notificationTitle, 'and options:', JSON.stringify(notificationOptions));
+
+  event.waitUntil(
+    self.registration.showNotification(notificationTitle, notificationOptions)
+      .then(() => console.log('[SW] Notification shown successfully.'))
+      .catch(err => console.error('[SW] Error showing notification:', err))
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification click received:', event);
+  event.notification.close();
+
+  const clickAction = event.notification.data?.click_action || self.origin;
+  console.log('[SW] Click action URL:', clickAction);
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Check if there's already a window open at the target URL
+      for (const client of clientList) {
+        if (client.url === clickAction && 'focus' in client) {
+          console.log('[SW] Found existing client window for click action. Focusing.');
+          return client.focus();
+        }
+      }
+      // If no existing window, open a new one
+      if (clients.openWindow) {
+        console.log('[SW] No existing client window. Opening new window for:', clickAction);
+        return clients.openWindow(clickAction);
+      }
+      console.log('[SW] clients.openWindow is not available.');
+    }).catch(err => {
+      console.error('[SW] Error handling notification click:', err);
+    })
+  );
+});
