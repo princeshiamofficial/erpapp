@@ -1,19 +1,17 @@
 
-// Import and configure the Firebase SDK
-// These scripts are designed to be imported using importScripts() in a service worker.
-try {
-  self.importScripts(
-    'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
-    'https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js'
-  );
-  console.log('[SW] Firebase SDK scripts imported successfully.');
-} catch (e) {
-  console.error('[SW] Failed to import Firebase SDK scripts:', e);
-  // If scripts fail to import, SW won't work, so further execution is pointless.
-  throw e; 
-}
+// IMPORTANT: Make sure this file is in the public directory and accessible at /firebase-messaging-sw.js
 
-// IMPORTANT: Replace this with your app's Firebase project configuration.
+// Give the service worker access to Firebase Messaging.
+// Note that you can only use Firebase Messaging here, other Firebase libraries
+// are not available in the service worker.
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+
+console.log('[SW] Service Worker script evaluating...');
+
+// Initialize the Firebase app in the service worker by passing in
+// your app's Firebase config object.
+// THIS MUST EXACTLY MATCH THE CONFIG IN src/lib/firebase.ts
 const firebaseConfig = {
   apiKey: "AIzaSyA-OULKM7hL85JFSGlNs0BHdIuTOVN73-I",
   authDomain: "colorhut-57f5a.firebaseapp.com",
@@ -24,129 +22,163 @@ const firebaseConfig = {
   measurementId: "G-57S6VYXE7H"
 };
 
-let app;
-if (firebase.apps.length === 0) {
-  try {
-    app = firebase.initializeApp(firebaseConfig);
-    console.log('[SW] Firebase app initialized successfully.');
-  } catch (e) {
-    console.error('[SW] Firebase app initialization failed:', e);
-    throw e;
+try {
+  if (firebase.apps.length === 0) {
+    firebase.initializeApp(firebaseConfig);
+    console.log('[SW] Firebase app initialized in Service Worker.');
+  } else {
+    firebase.app(); // if already initialized, use that one
+    console.log('[SW] Firebase app already initialized in Service Worker.');
   }
-} else {
-  app = firebase.app();
-  console.log('[SW] Firebase app already initialized.');
+} catch (e) {
+  console.error('[SW] Error initializing Firebase app in Service Worker:', e);
 }
 
 let messaging;
-if (app) {
-  try {
-    messaging = firebase.messaging(app);
-    console.log('[SW] Firebase Messaging initialized successfully.');
-  } catch (e) {
-    console.error('[SW] Firebase Messaging initialization failed:', e);
-    // Messaging might not be critical for SW to load, but push won't work.
+try {
+  if (firebase.messaging.isSupported()) {
+    messaging = firebase.messaging();
+    console.log('[SW] Firebase Messaging initialized in Service Worker.');
+  } else {
+    console.log('[SW] Firebase Messaging is not supported in this service worker context.');
   }
+} catch (e) {
+  console.error('[SW] Error initializing Firebase Messaging in Service Worker:', e);
 }
 
-self.addEventListener('install', (event) => {
-  console.log('[SW] Service Worker installing.');
-  // event.waitUntil(self.skipWaiting()); // Optional: activate new SW immediately
-});
-
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Service Worker activating.');
-  // event.waitUntil(self.clients.claim()); // Optional: take control of open clients immediately
-});
-
 self.addEventListener('push', (event) => {
-  console.log('[SW] Push event received.');
-
-  if (!event.data) {
-    console.warn('[SW] Push event received but no data.');
-    return;
-  }
+  console.log('[SW] === Push event received ===. Raw event object:', event);
 
   let payload;
-  try {
-    payload = event.data.json();
-    console.log('[SW] Push payload (JSON):', JSON.stringify(payload, null, 2));
-  } catch (e) {
-    console.error('[SW] Failed to parse push data as JSON:', e);
-    // Try as text if JSON fails, though Firebase usually sends JSON
-    const textData = event.data.text();
-    console.log('[SW] Push payload (Text):', textData);
-    payload = { notification: { title: "New Message", body: textData || "You have a new update." } };
+  if (event.data) {
+    console.log('[SW] Push event has data. Attempting to parse...');
+    try {
+      payload = event.data.json();
+      console.log('[SW] Push event data (JSON parsed successfully):', JSON.stringify(payload, null, 2));
+    } catch (e) {
+      console.error('[SW] Error parsing push event data as JSON:', e);
+      console.log('[SW] Raw event data (text attempt):', event.data.text ? event.data.text() : 'N/A');
+      // Fallback notification if parsing fails
+      payload = { 
+        notification: { 
+          title: 'Push Data Error', 
+          body: 'Could not parse incoming push data. Check SW console.' 
+        },
+        data: {} // Ensure data object exists
+      };
+    }
+  } else {
+    console.log('[SW] Push event contained NO data. This is unusual for FCM. Displaying generic notification.');
+    payload = { 
+      notification: { 
+        title: 'Generic Push Title', 
+        body: 'You have a new update!' 
+      },
+      data: {} // Ensure data object exists
+    };
   }
 
-  const notificationTitle = payload.notification?.title || 'Color Hut Update';
-  const notificationBody = payload.notification?.body || 'You have a new message from Color Hut.';
+  // Safely access notification properties
+  const notificationData = payload.notification || {};
+  const customData = payload.data || {};
+
+  const notificationTitle = notificationData.title || customData.title || 'Color Hut Notification';
+  const notificationBody = notificationData.body || customData.body || 'Check for new updates.';
   
-  let notificationIcon = payload.notification?.icon;
+  let notificationIcon = notificationData.icon || customData.iconUrl || customData.icon;
   if (notificationIcon && !notificationIcon.startsWith('http') && !notificationIcon.startsWith('/')) {
-    // Relative path from payload, make it absolute
     notificationIcon = self.origin + (notificationIcon.startsWith('.') ? notificationIcon.substring(1) : '/' + notificationIcon);
   } else if (!notificationIcon) {
     notificationIcon = self.origin + '/icons/icon-192x192.png'; // Default icon
   }
 
-  const notificationBadge = self.origin + '/icons/icon-72x72.png'; // Default badge
-
-  // click_action should be in the data payload for background notifications
-  const clickAction = payload.data?.click_action || payload.data?.targetUrl || self.origin;
+  const notificationBadge = customData.badgeUrl || customData.badge || self.origin + '/icons/icon-72x72.png';
+  const notificationSound = customData.soundUrl || customData.sound || 'https://audio-previews.elements.envatousercontent.com/files/393057177/preview.mp3';
+  
+  const clickAction = customData.click_action || notificationData.click_action || customData.targetUrl || self.origin;
 
   const notificationOptions = {
     body: notificationBody,
     icon: notificationIcon,
-    badge: notificationBadge, 
-    sound: payload.data?.soundUrl || 'https://audio-previews.elements.envatousercontent.com/files/393057177/preview.mp3', // Sound URL
-    data: {
+    badge: notificationBadge,
+    sound: notificationSound, // Note: sound support varies by browser/OS
+    vibrate: [200, 100, 200],
+    data: { // Ensure data is an object for click_action handling
       click_action: clickAction,
-      ...(payload.data || {}) 
+      ...customData // Spread the rest of customData
     },
-    tag: payload.notification?.tag || payload.messageId || 'colorhut-notification-' + Date.now(),
+    tag: notificationData.tag || customData.tag || payload.messageId || 'colorhut-push-' + Date.now()
   };
 
-  console.log('[SW] Prepared notification options:', JSON.stringify(notificationOptions, null, 2));
+  console.log('[SW] Preparing to show notification. Title:', notificationTitle, 'Options:', JSON.stringify(notificationOptions, null, 2));
 
-  event.waitUntil(
-    self.registration.showNotification(notificationTitle, notificationOptions)
-      .then(() => console.log('[SW] Notification shown successfully.'))
-      .catch(err => console.error('[SW] Error showing notification:', err))
-  );
+  if (!self.registration) {
+    console.error("[SW] self.registration is not available. Cannot show notification.");
+    return;
+  }
+
+  const notificationPromise = self.registration.showNotification(notificationTitle, notificationOptions)
+    .then(() => {
+      console.log('[SW] Notification shown successfully via self.registration.showNotification.');
+    })
+    .catch((err) => {
+      console.error('[SW] Error showing notification via self.registration.showNotification:', err);
+    });
+
+  event.waitUntil(notificationPromise);
 });
 
-self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification click Received. Event:', event);
-  event.notification.close(); // Close the notification
 
-  const clickActionUrl = event.notification.data?.click_action;
-  console.log('[SW] Click action URL from notification data:', clickActionUrl);
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] === Notification click Received ===. Event:', event);
+  event.notification.close(); 
+
+  const clickActionUrl = event.notification.data?.click_action || self.origin;
+  console.log(`[SW] Click action URL from notification data: '${clickActionUrl}'`);
 
   if (clickActionUrl) {
     event.waitUntil(
       clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-        // Check if there's already a tab open with the target URL
         for (const client of clientList) {
+          // Use new URL(client.url).pathname to compare paths if origins might differ (e.g. dev vs prod)
+          // For simplicity, direct URL check:
           if (client.url === clickActionUrl && 'focus' in client) {
-            console.log('[SW] Found existing client for URL, focusing.');
-            return client.focus();
+            console.log(`[SW] Found existing client with URL ${clickActionUrl}. Focusing it.`);
+            try {
+              return client.focus();
+            } catch (focusError) {
+              console.error(`[SW] Error focusing client:`, focusError);
+              // Fallback to opening new window if focus fails
+              if (clients.openWindow) return clients.openWindow(clickActionUrl);
+            }
           }
         }
-        // If no such tab, open a new one
         if (clients.openWindow) {
-          console.log('[SW] No existing client, opening new window for URL:', clickActionUrl);
+          console.log(`[SW] No existing client found or focus failed. Opening new window to: ${clickActionUrl}`);
           return clients.openWindow(clickActionUrl);
         }
-        console.warn('[SW] clients.openWindow is not available.');
+        console.log('[SW] clients.openWindow is not available.');
         return Promise.resolve();
-      }).catch(err => console.error('[SW] Error handling notification click:', err))
+      }).catch(err => {
+        console.error('[SW] Error handling notification click:', err);
+      })
     );
   } else {
-    console.log('[SW] No click_action URL found in notification data.');
-     // Fallback: open the app's origin if no specific URL
-    event.waitUntil(clients.openWindow(self.origin).catch(err => console.error('[SW] Error opening origin on notification click:', err)));
+    console.log('[SW] No click_action URL found in notification data. Opening origin.');
+    if (clients.openWindow) {
+       event.waitUntil(clients.openWindow(self.origin));
+    }
   }
 });
 
-console.log('[SW] Service Worker script fully evaluated. Event listeners for install, activate, push, notificationclick are set.');
+self.addEventListener('install', (event) => {
+  console.log('[SW] Service worker installing...');
+  event.waitUntil(self.skipWaiting()); // Ensures the new service worker activates immediately
+});
+
+self.addEventListener('activate', (event) => {
+  console.log('[SW] Service worker activating...');
+  event.waitUntil(clients.claim()); // Allows an active service worker to take control of current page/clients immediately
+});
+
+console.log('[SW] Service Worker script evaluation complete. Event listeners for push, notificationclick, install, activate are set up.');
