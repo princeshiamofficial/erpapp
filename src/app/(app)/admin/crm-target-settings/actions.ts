@@ -112,10 +112,14 @@ export async function sendPushNotificationAction(
       tokensToSend = allUsers.filter(u => u.fcmToken && targetRoles.includes(u.role)).map(u => u.fcmToken!);
     } else if (targetType === 'all') {
       targetDescription = "all users";
-      const allUsers = await getAllUsersFromDb();
+      const allUsers = await getAllUsersFromDb(); // Fetch all users
       tokensToSend = allUsers.filter(u => u.fcmToken).map(u => u.fcmToken!);
-      allUsersWarning = " (Warning: Sending to 'all users' by fetching all tokens can be inefficient for large user bases. Consider topic messaging for production.)";
-      console.warn("sendPushNotificationAction: Target 'all' selected. Attempting to send to all users with FCM tokens. This can be resource-intensive for large user bases.");
+      console.log(`[sendPushNotificationAction] Target 'all': Found ${allUsers.length} total users, ${tokensToSend.length} with FCM tokens.`);
+      if (tokensToSend.length === 0) {
+          allUsersWarning = " (No users with FCM tokens found to send to.)";
+      } else {
+          allUsersWarning = ` (Attempting to send to ${tokensToSend.length} users with FCM tokens. For very large user bases, consider topic messaging.)`;
+      }
     } else {
       return { success: false, message: "Invalid targeting information provided.", error: "Invalid target."};
     }
@@ -124,37 +128,51 @@ export async function sendPushNotificationAction(
       return { success: false, message: `No users with FCM tokens found for the selected target: ${targetDescription}.`, error: "No recipients found." };
     }
 
-    const message: messaging.MulticastMessage = {
+    const fcmMessagePayload: messaging.MulticastMessage = {
       notification: {
         title: title,
         body: body,
-        ...(iconUrl && {imageUrl: iconUrl}) 
+        ...(iconUrl && {imageUrl: iconUrl})
       },
-      data: {
+      data: { // Custom data payload for client to handle
         title: title, 
-        body: body,
-        ...(iconUrl && { icon: iconUrl }), 
-        ...(targetUrl && { click_action: targetUrl, targetUrl: targetUrl }),
+        body: body, // Duplicate for easier access on client if notification object isn't parsed directly
+        ...(iconUrl && { icon: iconUrl, iconUrl: iconUrl }), // Send both for flexibility
+        ...(targetUrl && { click_action: targetUrl, targetUrl: targetUrl }), // click_action is standard, targetUrl for custom handling
         ...(soundUrl && { sound: soundUrl }) 
       },
       tokens: tokensToSend,
+      // Optional: Android specific config, APNS specific config, Webpush specific config
+      // Example webpush config (can also be set globally on admin.messaging())
+      // webpush: {
+      //   notification: {
+      //     icon: iconUrl || '/default-icon.png', // Default icon if not provided
+      //   },
+      //   fcmOptions: {
+      //     link: targetUrl || 'https://your-app-domain.com' // Default click action
+      //   }
+      // }
     };
     
-    if (iconUrl && message.notification) { 
-       message.notification.imageUrl = iconUrl; 
+    // If an iconUrl is provided, ensure it's set on the notification part of the payload as imageUrl for FCM
+    if (iconUrl && fcmMessagePayload.notification) { 
+       fcmMessagePayload.notification.imageUrl = iconUrl; 
     }
 
-    console.log(`Attempting to send push notification to ${tokensToSend.length} tokens for target: ${targetDescription}`);
+
+    console.log(`[sendPushNotificationAction] Attempting to send REAL push notification to ${tokensToSend.length} tokens for target: ${targetDescription}`);
+    console.log("[sendPushNotificationAction] FCM Message Payload:", JSON.stringify(fcmMessagePayload, null, 2));
+    
     // @ts-ignore admin.messaging might be an issue with the type if not fully initialized, but should work if adminApp is valid
-    const response = await adminApp.messaging().sendEachForMulticast(message as admin.messaging.MulticastMessage);
+    const response = await adminApp.messaging().sendEachForMulticast(fcmMessagePayload as admin.messaging.MulticastMessage);
     
     const successfulSends = response.successCount;
     const failedSends = response.failureCount;
     
-    console.log(`Push Notification Send Results: ${successfulSends} successful, ${failedSends} failed.`);
+    console.log(`[sendPushNotificationAction] Push Notification Send Results: ${successfulSends} successful, ${failedSends} failed.`);
     response.responses.forEach((resp, idx) => {
       if (!resp.success) {
-        console.error(`Failed to send to token ${tokensToSend[idx]}: ${resp.error?.message} (Code: ${resp.error?.code})`);
+        console.error(`[sendPushNotificationAction] Failed to send to token ${tokensToSend[idx]}: ${resp.error?.message} (Code: ${resp.error?.code})`);
       }
     });
 
@@ -163,7 +181,7 @@ export async function sendPushNotificationAction(
       message: `Notification sent to ${successfulSends} device(s). ${failedSends > 0 ? `${failedSends} failed.` : ''} (Target: ${targetDescription}${allUsersWarning})`
     };
 
-  } catch (error)_ {
+  } catch (error) {
     console.error("Error in sendPushNotificationAction:", error);
     const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred while sending notification.";
     return { 
@@ -173,5 +191,7 @@ export async function sendPushNotificationAction(
     };
   }
 }
+
+    
 
     
