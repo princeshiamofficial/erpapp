@@ -154,3 +154,19 @@ export interface PersonalNote {
   updatedAt: string; // ISO string
 }
 
+// --- Project Management Types ---
+export type ProjectStatusType = 'Not Started' | 'In Progress' | 'On Hold' | 'Cancelled' | 'Completed';
+
+export interface Project {
+  id: string;
+  projectIdDisplay: string; // e.g., "2021", "1010" - visual ID on card
+  name: string; // Actual project name/title
+  status: ProjectStatusType;
+  endDate: string; // Formatted date string like "06/06/2025"
+  assigneeName: string;
+  assigneeInitials: string;
+  categoryTag: string; // e.g., "waqas2", "Walk-In Customer"
+  // Optional fields for filtering, if needed
+  categoryFilterKey?: string; 
+  endDateFilterKey?: string; // e.g., "2025-06-06" for actual date filtering
+}
