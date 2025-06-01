@@ -46,14 +46,14 @@ const statusConfig: Record<ProjectStatusType, { icon: React.ElementType; headerB
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>(mockProjects);
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban'); // Default based on image
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban'); 
   const [endDateFilter, setEndDateFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredProjects = useMemo(() => {
     return projects.filter(project => {
-      const matchesEndDate = endDateFilter === 'all' || project.endDateFilterKey === endDateFilter; // Assuming endDateFilterKey is used for filtering
+      const matchesEndDate = endDateFilter === 'all' || project.endDateFilterKey === endDateFilter; 
       const matchesCategory = categoryFilter === 'all' || project.categoryFilterKey === categoryFilter;
       const matchesSearch = searchTerm === '' || 
                             project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -78,14 +78,13 @@ export default function ProjectsPage() {
     return grouped;
   }, [filteredProjects]);
 
-  // Mock filter options (replace with actual data later)
   const endDateOptions = [
-    { value: 'all', label: 'All' },
-    { value: 'this_week', label: 'This Week' },
-    { value: 'next_week', label: 'Next Week' },
+    { value: 'all', label: 'All End Dates' },
+    { value: 'this_week', label: 'Ending This Week' },
+    { value: 'next_week', label: 'Ending Next Week' },
   ];
   const categoryOptions = [
-    { value: 'all', label: 'All' },
+    { value: 'all', label: 'All Categories' },
     { value: 'cat_a', label: 'Category A (Waqas2/Ruma)' },
     { value: 'cat_b', label: 'Category B (Walk-In/Client X)' },
     { value: 'cat_c', label: 'Category C (Internal/Feature)' },
@@ -95,37 +94,40 @@ export default function ProjectsPage() {
     <div className="flex flex-col h-full p-4 sm:p-6 lg:p-8 space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header pb-2">
         <div className="flex items-baseline gap-2">
+          <Briefcase className="h-7 w-7 text-primary"/>
           <h1 className="page-title text-2xl">Projects</h1>
-          <p className="text-sm text-muted-foreground">All Projects</p>
+          <p className="text-sm text-muted-foreground self-end">All Projects</p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button 
-            variant={viewMode === 'list' ? 'default' : 'outline'} 
-            size="sm" 
-            onClick={() => setViewMode('list')}
-            className="h-9"
-          >
-            <List className="mr-2 h-4 w-4" /> List View
-          </Button>
-          <Button 
-            variant={viewMode === 'kanban' ? 'default' : 'outline'} 
-            size="sm" 
-            onClick={() => setViewMode('kanban')}
-            className="h-9"
-          >
-            <LayoutGrid className="mr-2 h-4 w-4" /> Kanban Board
-          </Button>
-          <Button size="sm" className="h-9 bg-primary hover:bg-primary/90">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button 
+              variant={viewMode === 'list' ? 'default' : 'outline'} 
+              size="sm" 
+              onClick={() => setViewMode('list')}
+              className="h-9 flex-1 sm:flex-initial"
+            >
+              <List className="mr-2 h-4 w-4" /> List View
+            </Button>
+            <Button 
+              variant={viewMode === 'kanban' ? 'default' : 'outline'} 
+              size="sm" 
+              onClick={() => setViewMode('kanban')}
+              className="h-9 flex-1 sm:flex-initial"
+            >
+              <LayoutGrid className="mr-2 h-4 w-4" /> Kanban
+            </Button>
+          </div>
+          <Button size="sm" className="h-9 bg-primary hover:bg-primary/90 w-full sm:w-auto">
             <PlusCircle className="mr-2 h-4 w-4" /> New Project
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-center mb-4 p-4 bg-card border border-border/30 rounded-lg shadow-sm">
-        <div className="flex-1 w-full sm:w-auto space-y-1">
+      <div className="flex flex-col md:flex-row gap-3 md:gap-4 items-center p-3 md:p-4 bg-card border border-border/30 rounded-lg shadow-sm">
+        <div className="w-full md:flex-1 space-y-1">
           <Label htmlFor="endDateFilter" className="text-xs font-medium text-muted-foreground">End Date:</Label>
           <Select value={endDateFilter} onValueChange={setEndDateFilter}>
-            <SelectTrigger id="endDateFilter" className="h-9 bg-background">
+            <SelectTrigger id="endDateFilter" className="h-9 bg-background w-full">
               <SelectValue placeholder="Filter by end date" />
             </SelectTrigger>
             <SelectContent>
@@ -135,10 +137,10 @@ export default function ProjectsPage() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex-1 w-full sm:w-auto space-y-1">
+        <div className="w-full md:flex-1 space-y-1">
           <Label htmlFor="categoryFilter" className="text-xs font-medium text-muted-foreground">Category:</Label>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger id="categoryFilter" className="h-9 bg-background">
+            <SelectTrigger id="categoryFilter" className="h-9 bg-background w-full">
               <SelectValue placeholder="Filter by category" />
             </SelectTrigger>
             <SelectContent>
@@ -148,7 +150,7 @@ export default function ProjectsPage() {
             </SelectContent>
           </Select>
         </div>
-         <div className="flex-1 w-full sm:w-auto space-y-1 self-end">
+         <div className="w-full md:flex-1 space-y-1 self-end">
            <Label htmlFor="projectSearch" className="text-xs font-medium text-muted-foreground sr-only">Search Projects</Label>
            <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -157,7 +159,7 @@ export default function ProjectsPage() {
               placeholder="Search projects..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 h-9 bg-background"
+              className="pl-9 h-9 bg-background w-full"
             />
           </div>
         </div>
@@ -180,11 +182,9 @@ export default function ProjectsPage() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 bg-card border border-border/30 rounded-lg shadow-sm p-6">
+        <div className="flex-1 bg-card border border-border/30 rounded-lg shadow-sm p-4 sm:p-6">
           <h2 className="text-lg font-semibold mb-4">List View (Coming Soon)</h2>
-          <p className="text-muted-foreground">Project list view will be implemented here.</p>
-          {/* Placeholder for list view content */}
-           <div className="text-center py-12">
+          <div className="text-center py-12">
             <List className="mx-auto h-16 w-16 text-muted-foreground opacity-30 mb-4" data-ai-hint="list document" />
             <h3 className="text-xl font-semibold text-foreground mb-2">List View Under Construction</h3>
             <p className="text-muted-foreground">
