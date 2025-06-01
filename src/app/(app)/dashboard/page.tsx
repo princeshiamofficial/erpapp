@@ -6,6 +6,9 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { DateRangePicker } from '@/components/dashboard/date-range-picker'; // New import
+import type { DateRange } from "react-day-picker"; // For DateRange type
+import { format } from "date-fns"; // For formatting dates
 import { 
   Hand, 
   ShoppingCart, 
@@ -18,7 +21,7 @@ import {
   Receipt, 
   LineChart,
   MapPin,
-  CalendarDays as CalendarIcon, // Renamed to avoid conflict with Calendar component
+  CalendarDays, 
   BarChartBig
 } from 'lucide-react';
 import {
@@ -98,6 +101,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
 export default function DashboardPage() {
   const { currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
 
   // Mock data states
   const [totalSales, setTotalSales] = useState("৳ 0.00");
@@ -111,25 +115,21 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (currentUser) {
-      // Simulate data fetching
       setTimeout(() => {
-        // In a real app, fetch data here and set states
         setIsLoading(false);
       }, 1000);
     } else {
-      setIsLoading(false); // If no user, stop loading
+      setIsLoading(false); 
     }
   }, [currentUser]);
 
-  if (!currentUser && !isLoading) {
-    // This case should ideally be handled by the layout, but good for robustness
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <p>Redirecting to login...</p>
-      </div>
-    );
-  }
-  
+  const handleDateRangeChange = (range: DateRange | undefined) => {
+    setSelectedDateRange(range);
+    // Here you would typically re-fetch data based on the new range
+    console.log("Selected date range:", range);
+    // For now, we'll just log it.
+  };
+
   const summaryCardData = useMemo(() => [
     { title: "Total Sales", value: totalSales, icon: ShoppingCart, isLoading },
     { title: "Net", value: netValue, icon: BadgeDollarSign, isLoading },
@@ -142,9 +142,16 @@ export default function DashboardPage() {
   ], [isLoading, totalSales, netValue, invoiceDue, totalSellReturn, totalPurchase, purchaseDue, totalPurchaseReturn, expense]);
 
 
+  if (!currentUser && !isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <p>Redirecting to login...</p>
+      </div>
+    );
+  }
+  
   return (
     <div className="space-y-6 p-1 sm:p-0">
-      {/* Welcome Banner */}
       <div className="bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--primary))] text-primary-foreground p-6 sm:p-8 rounded-xl shadow-xl">
         <h1 className="text-3xl sm:text-4xl font-bold flex items-center">
           Welcome {currentUser?.name.split(' ')[0] || 'User'}
@@ -155,7 +162,6 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Placeholder for Header Controls like "Select Location" and "Filter by Date" */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <Card className="shadow-sm bg-card">
           <CardContent className="p-3 sm:p-4 flex items-center justify-between">
@@ -163,25 +169,22 @@ export default function DashboardPage() {
               <MapPin className="h-5 w-5 mr-2 text-primary/80" />
               <span>Select Location</span>
             </div>
-            <Button variant="outline" size="sm" className="text-xs h-8" disabled>
-              All Locations <CalendarIcon className="ml-1.5 h-3.5 w-3.5 opacity-70" />
+            <Button variant="outline" size="sm" className="text-xs h-9 sm:h-10" disabled>
+              All Locations <ChevronDown className="ml-1.5 h-3.5 w-3.5 opacity-70" />
             </Button>
           </CardContent>
         </Card>
         <Card className="shadow-sm bg-card">
           <CardContent className="p-3 sm:p-4 flex items-center justify-between">
             <div className="flex items-center text-sm text-muted-foreground">
-              <CalendarIcon className="h-5 w-5 mr-2 text-primary/80" />
+              <CalendarDays className="h-5 w-5 mr-2 text-primary/80" />
               <span>Filter by Date</span>
             </div>
-            <Button variant="outline" size="sm" className="text-xs h-8" disabled>
-              Last 30 Days <CalendarIcon className="ml-1.5 h-3.5 w-3.5 opacity-70" />
-            </Button>
+            <DateRangePicker onDateRangeChange={handleDateRangeChange} />
           </CardContent>
         </Card>
       </div>
       
-      {/* Summary Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
         {summaryCardData.map((card) => (
           <SummaryCard
@@ -194,7 +197,6 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* Sales Chart */}
       <Card className="shadow-xl bg-card">
         <CardHeader>
           <CardTitle className="flex items-center text-xl text-foreground">
@@ -214,7 +216,7 @@ export default function DashboardPage() {
                 margin={{
                   top: 5,
                   right: 10,
-                  left: -25, // Adjusted for BDT symbol
+                  left: -25, 
                   bottom: 0,
                 }}
               >
@@ -224,7 +226,7 @@ export default function DashboardPage() {
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  tickFormatter={(value) => value.slice(0, 6)} // Shorten date display
+                  tickFormatter={(value) => value.slice(0, 6)} 
                   className="text-xs"
                 />
                 <YAxis
