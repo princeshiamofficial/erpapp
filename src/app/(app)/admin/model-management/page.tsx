@@ -216,7 +216,7 @@ export default function ModelManagementPage() {
             {items.map((item) => (
               <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
                 <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
-                  <span className="font-medium text-foreground col-span-1 whitespace-nowrap overflow-hidden" title={item.name}>{item.name}</span>
+                  <span className="font-medium text-foreground col-span-1 whitespace-nowrap" title={item.name}>{item.name}</span>
                   <span className="text-xs sm:text-sm font-bold text-[hsl(var(--chart-1))] flex items-center col-span-1">
                     <DollarSign className="h-3 w-3 mr-1 opacity-70" />
                     Buy: {formatCurrency(item.buyingPrice)}
