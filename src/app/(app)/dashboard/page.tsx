@@ -118,16 +118,16 @@ export default function DashboardPage() {
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(defaultDateRange);
 
   // States for calculated values
-  const [totalSales, setTotalSales] = useState("৳ 0.00");
-  const [invoiceDue, setInvoiceDue] = useState("৳ 0.00");
+  const [totalSales, setTotalSales] = useState(formatCurrency(0));
+  const [invoiceDue, setInvoiceDue] = useState(formatCurrency(0));
 
   // Mock data states for other cards (unchanged)
-  const [netValue, setNetValue] = useState("৳ 0.00");
-  const [totalSellReturn, setTotalSellReturn] = useState("৳ 0.00");
-  const [totalPurchase, setTotalPurchase] = useState("৳ 0.00");
-  const [purchaseDue, setPurchaseDue] = useState("৳ 0.00");
-  const [totalPurchaseReturn, setTotalPurchaseReturn] = useState("৳ 0.00");
-  const [expense, setExpense] = useState("৳ 0.00");
+  const [netValue, setNetValue] = useState(formatCurrency(0));
+  const [totalSellReturn, setTotalSellReturn] = useState(formatCurrency(0));
+  const [totalPurchase, setTotalPurchase] = useState(formatCurrency(0));
+  const [purchaseDue, setPurchaseDue] = useState(formatCurrency(0));
+  const [totalPurchaseReturn, setTotalPurchaseReturn] = useState(formatCurrency(0));
+  const [expense, setExpense] = useState(formatCurrency(0));
 
   const fetchDashboardData = useCallback(async () => {
     if (!currentUser) {
@@ -153,16 +153,14 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (allOrders.length === 0 && !isLoadingData) {
-      // Handle no orders case, perhaps set sales/due to 0
       setTotalSales(formatCurrency(0));
       setInvoiceDue(formatCurrency(0));
       return;
     }
 
     if (!selectedDateRange?.from || !selectedDateRange?.to) {
-      // If no date range is selected, perhaps show all-time or default to 0
-      setTotalSales(formatCurrency(0)); // Or calculate all-time if desired
-      setInvoiceDue(formatCurrency(0)); // Or calculate all-time if desired
+      setTotalSales(formatCurrency(0));
+      setInvoiceDue(formatCurrency(0));
       return;
     }
     
@@ -188,7 +186,6 @@ export default function DashboardPage() {
     setTotalSales(formatCurrency(currentTotalSales));
     setInvoiceDue(formatCurrency(currentTotalSales - currentTotalAdvance));
 
-    // TODO: Logic for other cards and chart if they become dynamic
   }, [allOrders, selectedDateRange, isLoadingData]);
 
 
@@ -198,13 +195,13 @@ export default function DashboardPage() {
 
   const summaryCardData = useMemo(() => [
     { title: "Total Sales", value: totalSales, icon: ShoppingCart, isLoading: isLoadingData },
-    { title: "Net", value: netValue, icon: BadgeDollarSign, isLoading: isLoadingData }, // Remains mock
+    { title: "Net", value: netValue, icon: BadgeDollarSign, isLoading: isLoadingData },
     { title: "Invoice due", value: invoiceDue, icon: FileText, isLoading: isLoadingData },
-    { title: "Total Sell Return", value: totalSellReturn, icon: Undo2, isLoading: isLoadingData }, // Remains mock
-    { title: "Total purchase", value: totalPurchase, icon: Download, isLoading: isLoadingData }, // Remains mock
-    { title: "Purchase due", value: purchaseDue, icon: AlertTriangle, isLoading: isLoadingData }, // Remains mock
-    { title: "Total Purchase Return", value: totalPurchaseReturn, icon: Redo2, isLoading: isLoadingData }, // Remains mock
-    { title: "Expense", value: expense, icon: Receipt, isLoading: isLoadingData }, // Remains mock
+    { title: "Total Sell Return", value: totalSellReturn, icon: Undo2, isLoading: isLoadingData },
+    { title: "Total purchase", value: totalPurchase, icon: Download, isLoading: isLoadingData },
+    { title: "Purchase due", value: purchaseDue, icon: AlertTriangle, isLoading: isLoadingData },
+    { title: "Total Purchase Return", value: totalPurchaseReturn, icon: Redo2, isLoading: isLoadingData },
+    { title: "Expense", value: expense, icon: Receipt, isLoading: isLoadingData },
   ], [isLoadingData, totalSales, netValue, invoiceDue, totalSellReturn, totalPurchase, purchaseDue, totalPurchaseReturn, expense]);
 
 
