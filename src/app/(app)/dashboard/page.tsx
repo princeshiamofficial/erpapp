@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { DateRangePicker } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
-import { format, isWithinInterval, parseISO, subDays } from "date-fns";
+import { format, isWithinInterval, parseISO, subDays, addDays } from "date-fns"; // Added addDays
 import { 
   Hand, 
   ShoppingCart, 
@@ -35,27 +35,9 @@ import {
   Legend,
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import type { TrackingLink, OrderItem } from '@/types'; // Ensure OrderItem is imported
+import type { TrackingLink, OrderItem } from '@/types'; 
 import { getOrders } from '@/lib/order-service';
 import { useToast } from '@/hooks/use-toast';
-
-const mockSalesData = [
-  { date: '2 May 2025', sales: 0 }, { date: '3 May 2025', sales: 0 },
-  { date: '4 May 2025', sales: 0 }, { date: '5 May 2025', sales: 0 },
-  { date: '6 May 2025', sales: 0 }, { date: '7 May 2025', sales: 0 },
-  { date: '8 May 2025', sales: 0 }, { date: '9 May 2025', sales: 0 },
-  { date: '10 May 2025', sales: 0 }, { date: '11 May 2025', sales: 0 },
-  { date: '12 May 2025', sales: 0 }, { date: '13 May 2025', sales: 0 },
-  { date: '14 May 2025', sales: 0 }, { date: '15 May 2025', sales: 0 },
-  { date: '16 May 2025', sales: 0 }, { date: '17 May 2025', sales: 0 },
-  { date: '18 May 2025', sales: 0 }, { date: '19 May 2025', sales: 0 },
-  { date: '20 May 2025', sales: 0 }, { date: '21 May 2025', sales: 0 },
-  { date: '22 May 2025', sales: 0 }, { date: '23 May 2025', sales: 0 },
-  { date: '24 May 2025', sales: 0 }, { date: '25 May 2025', sales: 0 },
-  { date: '26 May 2025', sales: 0 }, { date: '27 May 2025', sales: 0 },
-  { date: '28 May 2025', sales: 0 }, { date: '29 May 2025', sales: 0 },
-  { date: '30 May 2025', sales: 0 }, { date: '31 May 2025', sales: 0 },
-];
 
 const chartConfig = {
   sales: {
@@ -65,7 +47,6 @@ const chartConfig = {
 };
 
 const formatCurrency = (value: number): string => {
-  // Use 'en-US' for Latin digits, then manually prepend '৳'
   const numberPart = value.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -117,14 +98,14 @@ export default function DashboardPage() {
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
   
   const defaultDateRange: DateRange = {
-    from: subDays(new Date(), 29), // Last 30 days
+    from: subDays(new Date(), 29), 
     to: new Date(),
   };
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(defaultDateRange);
 
-  // States for calculated values
   const [totalSales, setTotalSales] = useState(formatCurrency(0));
   const [invoiceDue, setInvoiceDue] = useState(formatCurrency(0));
+  const [salesChartData, setSalesChartData] = useState<Array<{ date: string; sales: number }>>([]);
 
   // Mock data states for other cards (unchanged)
   const [netValue, setNetValue] = useState(formatCurrency(0));
@@ -156,26 +137,20 @@ export default function DashboardPage() {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  useEffect(() => {
-    if (allOrders.length === 0 && !isLoadingData) {
-      setTotalSales(formatCurrency(0));
-      setInvoiceDue(formatCurrency(0));
-      return;
-    }
-
-    if (!selectedDateRange?.from || !selectedDateRange?.to) {
-      setTotalSales(formatCurrency(0));
-      setInvoiceDue(formatCurrency(0));
-      return;
-    }
-    
-    const filteredOrders = allOrders.filter(order => 
-      isWithinInterval(parseISO(order.createdAt), {
+  const filteredOrders = useMemo(() => {
+    if (!selectedDateRange?.from || !selectedDateRange?.to) return [];
+    return allOrders.filter(order => 
+      order.createdAt && isWithinInterval(parseISO(order.createdAt), {
         start: selectedDateRange.from as Date, 
         end: selectedDateRange.to as Date
       })
     );
+  }, [allOrders, selectedDateRange]);
 
+  useEffect(() => {
+    if (isLoadingData) return;
+
+    // Calculate Total Sales and Invoice Due from filteredOrders
     let currentTotalSales = 0;
     let currentTotalAdvance = 0;
 
@@ -191,7 +166,41 @@ export default function DashboardPage() {
     setTotalSales(formatCurrency(currentTotalSales));
     setInvoiceDue(formatCurrency(currentTotalSales - currentTotalAdvance));
 
-  }, [allOrders, selectedDateRange, isLoadingData]);
+    // Generate Sales Chart Data
+    if (selectedDateRange?.from && selectedDateRange?.to) {
+      const dailySales = new Map<string, number>();
+      let currentDatePointer = new Date(selectedDateRange.from);
+      const toDate = new Date(selectedDateRange.to);
+
+      while (currentDatePointer <= toDate) {
+        dailySales.set(format(currentDatePointer, 'yyyy-MM-dd'), 0);
+        currentDatePointer = addDays(currentDatePointer, 1);
+      }
+
+      filteredOrders.forEach(order => {
+        if (order.createdAt) {
+          try {
+            const orderDateStr = format(parseISO(order.createdAt), 'yyyy-MM-dd');
+            if (dailySales.has(orderDateStr)) {
+              const orderTotalForChart = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+              dailySales.set(orderDateStr, (dailySales.get(orderDateStr) || 0) + orderTotalForChart);
+            }
+          } catch (e) {
+            console.error("Error processing order for chart:", order.id, e);
+          }
+        }
+      });
+      
+      const chartData = Array.from(dailySales.entries())
+        .map(([date, sales]) => ({ date, sales }))
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
+      setSalesChartData(chartData);
+    } else {
+      setSalesChartData([]);
+    }
+
+  }, [isLoadingData, filteredOrders, selectedDateRange]);
 
 
   const handleDateRangeChange = (range: DateRange | undefined) => {
@@ -228,7 +237,7 @@ export default function DashboardPage() {
                 Date
               </span>
               <span className="font-bold text-muted-foreground">
-                {label}
+                {label ? format(parseISO(label), 'd MMM, yyyy') : 'N/A'}
               </span>
             </div>
             {payload.map((entry: any, index: number) => (
@@ -302,7 +311,7 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle className="flex items-center text-xl text-foreground">
             <BarChartBig className="mr-2 h-6 w-6 text-primary" />
-            Sales Last 30 Days (Mock Data)
+            Sales
           </CardTitle>
         </CardHeader>
         <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">
@@ -313,7 +322,7 @@ export default function DashboardPage() {
           ) : (
             <ChartContainer config={chartConfig} className="w-full h-full">
               <RechartsLineChart
-                data={mockSalesData}
+                data={salesChartData}
                 margin={{
                   top: 5,
                   right: 10,
@@ -327,7 +336,7 @@ export default function DashboardPage() {
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  tickFormatter={(value) => value.slice(0, 6)} 
+                  tickFormatter={(value) => format(parseISO(value), 'd MMM')} 
                   className="text-xs"
                 />
                 <YAxis
@@ -344,7 +353,7 @@ export default function DashboardPage() {
                 <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '10px'}} />
                 <Line
                   dataKey="sales"
-                  name="Sales" // Added name for tooltip identification
+                  name="Sales" 
                   type="monotone"
                   stroke="var(--color-sales)"
                   strokeWidth={2}
