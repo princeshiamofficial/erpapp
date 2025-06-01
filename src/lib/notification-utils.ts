@@ -5,7 +5,8 @@ import { messaging } from '@/lib/firebase'; // Ensure messaging is exported from
 import { getToken, onMessage } from 'firebase/messaging';
 import { toast } from '@/hooks/use-toast';
 
-const VAPID_KEY = "BBi_d4_Ld7_kH3_A6ZJ6L1rO9x8bQ8nC7wY8g3wG0H6wXyP9tD6uC2jJ0S9zQ8f4g7vY7yR3jF2xKk"; // Replace with your actual VAPID key from Firebase Console
+// Use the VAPID key explicitly provided by the user.
+const VAPID_KEY = "BPH3cIN1er99_rQILWB9PQZzeEeo48jPxsS4eS5FzLKws2vBikUBYRnl-xWtm3kWNLj9y-_kerVqJloF9DwTK2U";
 
 export const requestNotificationPermission = async (): Promise<NotificationPermission | null> => {
   if (!('Notification' in window)) {
@@ -42,6 +43,7 @@ export const initializeFCM = async () => {
       return;
     }
 
+    console.log("Attempting to get FCM token with VAPID key:", VAPID_KEY);
     const currentToken = await getToken(messaging, { vapidKey: VAPID_KEY });
     if (currentToken) {
       console.log('FCM Token:', currentToken);
@@ -49,8 +51,8 @@ export const initializeFCM = async () => {
       // For now, we'll just log it.
       // toast({ title: "FCM Token Acquired", description: "Ready for push notifications (token in console)." });
     } else {
-      console.log('No registration token available. Request permission to generate one.');
-      toast({ title: "FCM Error", description: "Could not get FCM token. Ensure notifications are permitted.", variant: "destructive"});
+      console.log('No registration token available. This usually means permission was not granted or VAPID key is incorrect.');
+      toast({ title: "FCM Error", description: "Could not get FCM token. Ensure notifications are permitted and VAPID key is correct.", variant: "destructive"});
     }
 
     onMessage(messaging, (payload) => {
@@ -64,10 +66,6 @@ export const initializeFCM = async () => {
         tag: payload.notification?.tag || payload.messageId || undefined, // Helps group notifications
       };
       
-      // Play sound for foreground notification manually if needed via Notification API
-      // The 'sound' option in Notification API has varying support.
-      // It's more reliable for system sounds or sounds within the service worker scope.
-      // For custom sounds, you might need to play it via an Audio element.
       if (notificationOptions.sound) {
           try {
             const audio = new Audio(notificationOptions.sound as string);
@@ -87,8 +85,16 @@ export const initializeFCM = async () => {
       });
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error initializing FCM:', error);
-    toast({ title: "FCM Initialization Error", description: "Could not set up push notifications.", variant: "destructive"});
+    let description = "Could not set up push notifications.";
+    if (error.code === 'messaging/invalid-vapid-key' || (error.message && error.message.toLowerCase().includes('applicationkey'))) {
+        description = "The VAPID key seems to be invalid or not configured correctly for this project. Please verify it in the Firebase console.";
+    } else if (error.name === 'InvalidStateError') {
+        description = "Push Manager is in an invalid state. This can happen if the service worker is not registered or active.";
+    } else if (error.message) {
+        description = error.message;
+    }
+    toast({ title: "FCM Initialization Error", description: description, variant: "destructive"});
   }
 };
