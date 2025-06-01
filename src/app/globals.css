@@ -15,6 +15,7 @@
     --popover-foreground: 222 47% 11%;
 
     --primary: 25 95% 53%; /* Orange */
+    --primary-hsl: 25 95% 53%; /* Orange HSL for drop shadow */
     --primary-foreground: 0 0% 100%; /* White for text on primary elements */
 
     --secondary: 210 40% 96.1%; /* Lighter Gray for secondary elements */
@@ -64,6 +65,7 @@
     --popover-foreground: 210 40% 98%;
 
     --primary: 25 95% 60%; /* Brighter Orange for dark mode */
+    --primary-hsl: 25 95% 60%; /* Brighter Orange HSL for drop shadow in dark mode */
     --primary-foreground: 222 47% 11%; /* Dark for text on bright orange */
 
     --secondary: 217 33% 17%; /* Dark Gray for secondary */

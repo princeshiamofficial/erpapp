@@ -18,9 +18,11 @@ import {
 import { AppHeader } from '@/components/layout/AppHeader';
 import { SidebarNavigation } from '@/components/layout/SidebarNavigation';
 import { Button } from '@/components/ui/button';
-import { LogOut, Loader2 } from 'lucide-react';
+import { LogOut } from 'lucide-react'; // Loader2 is removed as we create a custom loading screen
 import Link from 'next/link';
 import Image from 'next/image'; 
+import { motion } from 'framer-motion'; // Added for animation
+import { Logo } from '@/components/layout/Logo'; // Added for the loading screen
 
 const AccountSuspendedDialog = dynamic(() => import('@/components/auth/AccountSuspendedDialog').then(mod => mod.AccountSuspendedDialog));
 
@@ -40,8 +42,44 @@ export default function AuthenticatedLayout({
 
   if (isLoading || (!currentUser && !isSuspendedDialogOpen)) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <Loader2 className="h-16 w-16 animate-spin text-primary" />
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-foreground">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <motion.div
+            animate={{
+              scale: [1, 1.1, 1, 1.1, 1],
+              rotate: [0, 5, -5, 5, 0],
+            }}
+            transition={{
+              duration: 2,
+              ease: "easeInOut",
+              repeat: Infinity,
+              repeatDelay: 0.5
+            }}
+          >
+            <Logo className="h-20 w-20 text-primary drop-shadow-[0_5px_15px_rgba(var(--primary-hsl),0.4)]" />
+          </motion.div>
+        </motion.div>
+        <motion.p
+          className="mt-6 text-lg font-semibold text-primary tracking-wider"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          Loading Color Hut...
+        </motion.p>
+         {/* Add primary-hsl to globals.css for the drop shadow if not present */}
+        <style jsx global>{`
+          :root {
+            --primary-hsl: 25 95% 53%; /* Make sure this matches your primary color HSL */
+          }
+          .dark {
+             --primary-hsl: 25 95% 60%; /* For dark mode, if different */
+          }
+        `}</style>
       </div>
     );
   }
