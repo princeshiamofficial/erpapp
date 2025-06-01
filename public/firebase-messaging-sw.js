@@ -1,21 +1,9 @@
+// Import Firebase app and messaging (using compat for service worker)
+importScripts('https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js');
 
-// Import the Firebase SDK for a service worker.
-// Make sure you have these files in your `public` folder or adjust paths.
-// For Firebase v9+, the import paths are different if you are using the compat libraries.
-// This example assumes you are using the compat libraries for easier service worker setup.
-try {
-  importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
-  importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
-  console.log('Firebase SDK scripts imported successfully in service worker.');
-} catch (e) {
-  console.error('Error importing Firebase SDK scripts in service worker:', e);
-  // If imports fail, the SW won't work, so further execution is pointless.
-  // Throwing an error here will make the SW registration fail, which is informative.
-  throw e; 
-}
-
-// Your web app's Firebase configuration
-// THIS MUST EXACTLY MATCH THE CONFIG IN src/lib/firebase.ts
+// --- IMPORTANT: CONFIGURATION ---
+// This firebaseConfig MUST match the one in your src/lib/firebase.ts
 const firebaseConfig = {
   apiKey: "AIzaSyA-OULKM7hL85JFSGlNs0BHdIuTOVN73-I",
   authDomain: "colorhut-57f5a.firebaseapp.com",
@@ -25,83 +13,180 @@ const firebaseConfig = {
   appId: "1:282903959856:web:287ace0c706eb0b11990f5",
   measurementId: "G-57S6VYXE7H"
 };
+// --- END CONFIGURATION ---
 
-let app;
-if (firebase.apps.length === 0) {
-  try {
-    app = firebase.initializeApp(firebaseConfig);
-    console.log('Service Worker: Firebase app initialized successfully.');
-  } catch (e) {
-    console.error('Service Worker: Error initializing Firebase app:', e);
-    throw e; // Fail SW registration if Firebase init fails
-  }
-} else {
-  app = firebase.app(); // if already initialized
-  console.log('Service Worker: Firebase app already initialized.');
+try {
+  firebase.initializeApp(firebaseConfig);
+  console.log('[SW] Firebase initialized in Service Worker.');
+} catch (e) {
+  console.error('[SW] Error initializing Firebase in Service Worker:', e);
 }
-
 
 let messaging;
-if (app) {
-  try {
-    messaging = firebase.messaging(app);
-    console.log('Service Worker: Firebase Messaging initialized successfully.');
-  } catch (e) {
-    console.error('Service Worker: Error initializing Firebase Messaging:', e);
-    // It's possible messaging isn't supported or init failed.
-    // Depending on requirements, you might not want to throw e here if app can function without SW push.
-    // For now, we'll log and continue, as the SW might be used for other things.
+try {
+  if (firebase.messaging.isSupported()) {
+    messaging = firebase.messaging();
+    console.log('[SW] Firebase Messaging initialized in Service Worker.');
+  } else {
+    console.log('[SW] Firebase Messaging is not supported in this browser (service worker context).');
   }
-} else {
-  console.error('Service Worker: Firebase app not available for Messaging initialization.');
+} catch (e) {
+  console.error('[SW] Error getting Firebase Messaging instance in Service Worker:', e);
 }
 
-// Optional: Background message handling
+
+// Optional: Set a background message handler
 if (messaging) {
   messaging.onBackgroundMessage((payload) => {
-    console.log('[firebase-messaging-sw.js] Received background message ', payload);
-    
-    const notificationTitle = payload.notification?.title || "New Background Notification";
-    const notificationOptions = {
-      body: payload.notification?.body || "You have a new update in the background.",
-      icon: payload.notification?.icon || '/icons/icon-192x192.png', // Ensure this icon exists
-      sound: payload.data?.soundUrl || 'https://audio-previews.elements.envatousercontent.com/files/393057177/preview.mp3',
-      data: payload.data,
-      tag: payload.notification?.tag || payload.messageId || undefined,
-    };
-
-    if (notificationOptions.sound) {
-      // In a service worker, you can't directly play sound that the user hears immediately like in the foreground.
-      // The `sound` property of a notification is a browser feature that plays a system sound if supported.
-      // Custom sounds are tricky and often don't work reliably in SW background notifications due to restrictions.
-      // For the sound to work via the notification itself, the browser and OS need to support it.
-      console.log('Service Worker: Attempting to show notification with sound:', notificationOptions.sound);
-    }
-
-    self.registration.showNotification(notificationTitle, notificationOptions)
-      .then(() => console.log('Service Worker: Background notification shown.'))
-      .catch(err => console.error('Service Worker: Error showing background notification:', err));
+    console.log('[SW] Received background message (deprecated onBackgroundMessage, use push event): ', payload);
+    // This handler is for when the app is in the background or closed.
+    // It's generally recommended to handle push events directly.
+    // For modern browsers, the 'push' event is preferred.
   });
-} else {
-  console.warn('Service Worker: Firebase Messaging not initialized, background message handling will not work.');
 }
 
+self.addEventListener('push', (event) => {
+  console.log('[SW] Push event received:', event);
+  let payload;
+  try {
+    payload = event.data ? event.data.json() : null;
+    console.log('[SW] Push event payload:', payload);
+  } catch (e) {
+    console.error('[SW] Error parsing push event data:', e);
+    payload = { // Fallback payload if parsing fails
+      notification: {
+        title: 'New Notification',
+        body: 'You have a new message.',
+        icon: '/icons/icon-192x192.png',
+      },
+      data: {
+        click_action: '/',
+        soundUrl: 'https://audio-previews.elements.envatousercontent.com/files/393057177/preview.mp3'
+      }
+    };
+  }
+
+  if (!payload || !payload.notification) {
+    console.error('[SW] Push payload or payload.notification is missing. Cannot show notification.');
+    return;
+  }
+
+  const notificationTitle = payload.notification.title || 'Color Hut Notification';
+  const notificationBody = payload.notification.body || 'You have a new update from Color Hut.';
+  
+  // Ensure icon path is absolute or relative to origin
+  let notificationIcon = payload.notification.icon;
+  if (notificationIcon && !notificationIcon.startsWith('http') && !notificationIcon.startsWith('/')) {
+    notificationIcon = self.registration.scope + notificationIcon.replace(/^\.\//, '');
+  } else if (!notificationIcon) {
+    notificationIcon = self.registration.scope + 'icons/icon-192x192.png';
+  }
+   console.log('[SW] Using notification icon:', notificationIcon);
+
+
+  const soundUrl = payload.data?.soundUrl || 'https://audio-previews.elements.envatousercontent.com/files/393057177/preview.mp3';
+  
+  const notificationOptions = {
+    body: notificationBody,
+    icon: notificationIcon,
+    badge: self.registration.scope + 'icons/icon-72x72.png', // Example badge, ensure file exists
+    sound: soundUrl, // This might not work on all browsers/OS from SW directly
+    tag: payload.notification.tag || payload.messageId || 'colorhut-default-tag',
+    data: {
+      click_action: payload.data?.click_action || payload.data?.targetUrl || self.registration.scope, // Default to scope root
+      ...payload.data // Pass through other data
+    }
+  };
+
+  console.log('[SW] Notification options prepared:', JSON.stringify(notificationOptions));
+
+  if (soundUrl) {
+    try {
+      // Note: Playing sound directly from SW before notification is unreliable.
+      // The 'sound' option in notificationOptions is preferred but OS/browser dependent.
+      // const audio = new Audio(soundUrl);
+      // audio.play().catch(e => console.warn('[SW] Sound playback failed in SW:', e));
+      // console.log('[SW] Sound playback attempted from SW.');
+    } catch (e) {
+      console.error('[SW] Error with sound in SW:', e);
+    }
+  }
+
+  const notificationPromise = self.registration.showNotification(notificationTitle, notificationOptions)
+    .then(() => {
+      console.log('[SW] Notification shown successfully.');
+    })
+    .catch((err) => {
+      console.error('[SW] Error showing notification:', err);
+      // Fallback if specific options cause issues (e.g., sound)
+      const fallbackOptions = { ...notificationOptions, sound: undefined };
+      console.log('[SW] Attempting to show notification with fallback options (no sound).');
+      return self.registration.showNotification(notificationTitle, fallbackOptions).catch(e => {
+        console.error('[SW] Error showing notification even with fallback options:', e);
+      });
+    });
+
+  event.waitUntil(notificationPromise);
+});
+
+
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification click Received.', event.notification);
+  const clickedNotification = event.notification;
+  clickedNotification.close();
+
+  const targetUrl = clickedNotification.data?.click_action || self.registration.scope;
+  console.log('[SW] Notification click_action URL:', targetUrl);
+
+  // This Lints for Promsie type and CLIENTS is not defined, but it is standard SW API.
+  // eslint-disable-next-line no-undef
+  const promiseChain = clients.matchAll({
+    type: 'window',
+    includeUncontrolled: true
+  }).then((clientList) => {
+    let focusedClient = null;
+    for (let i = 0; i < clientList.length; i++) {
+      const client = clientList[i];
+      // Attempt to match the client URL. Consider more flexible matching if needed.
+      if (client.url === targetUrl && 'focus' in client) {
+        try {
+          client.focus();
+          focusedClient = client;
+          break;
+        } catch (e) {
+          console.warn('[SW] Failed to focus client:', e);
+          // Could be that client.url is an empty string for some clients.
+        }
+      }
+    }
+
+    if (focusedClient) {
+      console.log('[SW] Focused existing client for URL:', targetUrl);
+      return focusedClient;
+    }
+    // eslint-disable-next-line no-undef
+    if (clients.openWindow) {
+      console.log('[SW] Opening new window for URL:', targetUrl);
+      // eslint-disable-next-line no-undef
+      return clients.openWindow(targetUrl);
+    }
+    console.log('[SW] No client focused or new window opened.');
+    return null; // Add a return value for the case where no action is taken
+  }).catch(err => {
+    console.error("[SW] Error during notification click handling:", err);
+  });
+
+  event.waitUntil(promiseChain);
+});
+
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Install event');
-  // Optionally, force the waiting service worker to become the active service worker.
-  // self.skipWaiting(); 
+  console.log('[SW] Service Worker installing.');
+  // event.waitUntil(self.skipWaiting()); // Optional: Activate new SW immediately
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activate event');
-  // Optionally, take control of all clients as soon as the SW activates.
-  // event.waitUntil(self.clients.claim()); 
+  console.log('[SW] Service Worker activating.');
+  // event.waitUntil(self.clients.claim()); // Optional: Take control of open clients immediately
 });
 
-self.addEventListener('push', (event) => {
-  console.log('Service Worker: Push event received (this is raw push, typically handled by onBackgroundMessage if using FCM SDK):', event.data?.text());
-  // This is for raw push events. If you use FCM's onBackgroundMessage, it often handles this.
-  // If you were handling push directly without the FCM onBackgroundMessage handler, you'd do it here.
-});
-
-console.log('Service Worker: Script evaluated. Waiting for events.');
+console.log('[SW] Service Worker script loaded and evaluated. Event listeners attached.');
