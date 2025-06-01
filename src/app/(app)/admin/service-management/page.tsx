@@ -273,17 +273,23 @@ export default function ServiceManagementPage() {
             {items.map((item) => (
               <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
                 {type === 'model' ? (
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-x-4 items-center">
-                      <span className="font-medium text-foreground col-span-1 whitespace-nowrap overflow-hidden" title={item.name}>
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-x-2 sm:gap-x-4 items-center">
+                      <span className="font-medium text-foreground whitespace-nowrap overflow-hidden" title={item.name}>
                         {item.name}
                       </span>
-                      <span className="text-xs sm:text-sm font-bold text-[hsl(var(--chart-1))] flex items-center col-span-1">
-                        <DollarSign className="h-3 w-3 mr-1 opacity-70" />
-                        Buy: {formatCurrency((item as ServiceModelItem).buyingPrice)}
+                      <span className="font-bold text-[hsl(var(--chart-1))] flex items-center justify-between min-w-[7rem] md:min-w-[7.5rem] py-1">
+                        <span className="flex items-center">
+                          <DollarSign className="h-3.5 w-3.5 mr-1 opacity-80 flex-shrink-0" />
+                          <span className="text-muted-foreground/90 text-[0.75rem] sm:text-xs w-9 text-right mr-1.5 flex-shrink-0">Buy:</span>
+                        </span>
+                        <span className="font-mono text-sm sm:text-base">{formatCurrency((item as ServiceModelItem).buyingPrice)}</span>
                       </span>
-                      <span className="text-xs sm:text-sm font-bold text-[hsl(var(--chart-2))] flex items-center col-span-1">
-                        <DollarSign className="h-3 w-3 mr-1 opacity-70" />
-                        Sell: {formatCurrency((item as ServiceModelItem).sellingPrice)}
+                      <span className="font-bold text-[hsl(var(--chart-2))] flex items-center justify-between min-w-[7rem] md:min-w-[7.5rem] py-1">
+                        <span className="flex items-center">
+                          <DollarSign className="h-3.5 w-3.5 mr-1 opacity-80 flex-shrink-0" />
+                          <span className="text-muted-foreground/90 text-[0.75rem] sm:text-xs w-9 text-right mr-1.5 flex-shrink-0">Sell:</span>
+                        </span>
+                        <span className="font-mono text-sm sm:text-base">{formatCurrency((item as ServiceModelItem).sellingPrice)}</span>
                       </span>
                     </div>
                   ) : (
@@ -415,6 +421,8 @@ export default function ServiceManagementPage() {
 }
     
     
+    
+
     
 
     
