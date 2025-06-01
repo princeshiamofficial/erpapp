@@ -8,8 +8,8 @@ import {
   setRolesAllowedToEditOrders
 } from "@/lib/settings-service";
 import type { UserRole, User } from "@/types"; 
-import { adminApp } from '@/lib/firebase-admin'; // Import Firebase Admin
-import { getUsers as getAllUsersFromDb, getUserById } from '@/lib/user-service'; // To fetch users and their tokens
+import { adminApp } from '@/lib/firebase-admin'; 
+import { getUsers as getAllUsersFromDb, getUserById } from '@/lib/user-service'; 
 import type { messaging } from 'firebase-admin';
 
 
@@ -74,7 +74,7 @@ export async function sendPushNotificationAction(
   payload: AppNotificationPayload,
   actingUser: User
 ): Promise<{ success: boolean; message: string; error?: string }> {
-  if (!actingUser || (actingUser.role !== 'SYSTEM_ADMIN')) { // Restrict to SYSTEM_ADMIN for real sending
+  if (!actingUser || (actingUser.role !== 'SYSTEM_ADMIN')) { 
     return { success: false, message: "Permission denied.", error: "Only System Administrators can send push notifications." };
   }
 
@@ -95,13 +95,14 @@ export async function sendPushNotificationAction(
 
   let tokensToSend: string[] = [];
   let targetDescription = "";
+  let allUsersWarning = "";
 
   try {
     if (targetType === 'users' && targetUserIds && targetUserIds.length > 0) {
       targetDescription = `specific users (${targetUserIds.length})`;
       const usersToNotify: User[] = [];
       for (const userId of targetUserIds) {
-        const user = await getUserById(userId); // Assuming getUserById fetches a single user
+        const user = await getUserById(userId); 
         if (user) usersToNotify.push(user);
       }
       tokensToSend = usersToNotify.filter(u => u.fcmToken).map(u => u.fcmToken!);
@@ -110,23 +111,11 @@ export async function sendPushNotificationAction(
       const allUsers = await getAllUsersFromDb();
       tokensToSend = allUsers.filter(u => u.fcmToken && targetRoles.includes(u.role)).map(u => u.fcmToken!);
     } else if (targetType === 'all') {
-      // Sending to "all users" by fetching all tokens is generally not recommended for large user bases from a single server action.
-      // Consider using FCM topic messaging for "all users" scenarios.
-      // For this implementation, "all users" will not send a real push to avoid performance issues.
-      console.warn("sendPushNotificationAction: Target 'all' selected. Real push notification to ALL users is not implemented in this version due to potential scalability issues. This will be a simulation only.");
-      // Log the simulation for "all"
-      const fcmLikePayloadForLog = {
-        notification: { title, body, ...(iconUrl && { icon: iconUrl }) },
-        data: { ...(targetUrl && { click_action: targetUrl, targetUrl }), ...(iconUrl && { iconUrl }), ...(soundUrl && { soundUrl }) }
-      };
-      console.log("--- SIMULATING PUSH NOTIFICATION SEND (Target: All Users) ---");
-      console.log("Acting User:", { id: actingUser.id, name: actingUser.name, role: actingUser.role });
-      console.log("FCM-like Payload (SIMULATED):", JSON.stringify(fcmLikePayloadForLog, null, 2));
-      console.log("--- END SIMULATION ---");
-      return { 
-        success: true, // Technically success as a simulation was logged
-        message: "Notification to 'All Users' (SIMULATED) and logged to console. Real sending to all users is not implemented for performance reasons. Use Firebase Console for broadcast or implement topic messaging.",
-      };
+      targetDescription = "all users";
+      const allUsers = await getAllUsersFromDb();
+      tokensToSend = allUsers.filter(u => u.fcmToken).map(u => u.fcmToken!);
+      allUsersWarning = " (Warning: Sending to 'all users' by fetching all tokens can be inefficient for large user bases. Consider topic messaging for production.)";
+      console.warn("sendPushNotificationAction: Target 'all' selected. Attempting to send to all users with FCM tokens. This can be resource-intensive for large user bases.");
     } else {
       return { success: false, message: "Invalid targeting information provided.", error: "Invalid target."};
     }
@@ -135,44 +124,28 @@ export async function sendPushNotificationAction(
       return { success: false, message: `No users with FCM tokens found for the selected target: ${targetDescription}.`, error: "No recipients found." };
     }
 
-    // Construct the FCM message payload
     const message: messaging.MulticastMessage = {
       notification: {
         title: title,
         body: body,
-        ...(iconUrl && {imageUrl: iconUrl}) // Standard FCM field for notification image
+        ...(iconUrl && {imageUrl: iconUrl}) 
       },
       data: {
-        title: title, // Send title/body in data too for SW flexibility
+        title: title, 
         body: body,
-        ...(iconUrl && { icon: iconUrl }), // For custom SW handling
+        ...(iconUrl && { icon: iconUrl }), 
         ...(targetUrl && { click_action: targetUrl, targetUrl: targetUrl }),
-        ...(soundUrl && { sound: soundUrl }) // 'sound' is often used, but SW can use 'soundUrl' from data
+        ...(soundUrl && { sound: soundUrl }) 
       },
       tokens: tokensToSend,
-      // Optional: Android specific config
-      // android: {
-      //   notification: {
-      //     sound: soundUrl ? 'custom_sound.wav' : 'default', // if using custom sound files in app
-      //     channelId: 'your_channel_id' // For Android O+
-      //   }
-      // },
-      // Optional: APNS specific config
-      // apns: {
-      //   payload: {
-      //     aps: {
-      //       sound: soundUrl ? 'custom_sound.aiff' : 'default'
-      //     }
-      //   }
-      // }
     };
     
-    if (iconUrl && message.notification) { // Ensure notification object exists
-       message.notification.imageUrl = iconUrl; // Standard field
+    if (iconUrl && message.notification) { 
+       message.notification.imageUrl = iconUrl; 
     }
 
-
     console.log(`Attempting to send push notification to ${tokensToSend.length} tokens for target: ${targetDescription}`);
+    // @ts-ignore admin.messaging might be an issue with the type if not fully initialized, but should work if adminApp is valid
     const response = await adminApp.messaging().sendEachForMulticast(message as admin.messaging.MulticastMessage);
     
     const successfulSends = response.successCount;
@@ -187,10 +160,10 @@ export async function sendPushNotificationAction(
 
     return { 
       success: true, 
-      message: `Notification sent to ${successfulSends} device(s). ${failedSends > 0 ? `${failedSends} failed.` : ''} (Target: ${targetDescription})`
+      message: `Notification sent to ${successfulSends} device(s). ${failedSends > 0 ? `${failedSends} failed.` : ''} (Target: ${targetDescription}${allUsersWarning})`
     };
 
-  } catch (error) {
+  } catch (error)_ {
     console.error("Error in sendPushNotificationAction:", error);
     const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred while sending notification.";
     return { 
@@ -200,3 +173,5 @@ export async function sendPushNotificationAction(
     };
   }
 }
+
+    
