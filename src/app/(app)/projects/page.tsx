@@ -11,13 +11,13 @@ import {
   LayoutGrid, 
   List, 
   PlusCircle, 
-  ClipboardCheck, // Changed from AlertCircle
-  RefreshCw, 
+  ClipboardCheck,
   AlertTriangle, 
   XCircle, 
   CheckCircle,
   Search,
-  Briefcase
+  Briefcase,
+  FileX2 // For CR Cancel
 } from 'lucide-react';
 import type { Project, ProjectStatusType } from '@/types';
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
@@ -26,18 +26,18 @@ import { cn } from '@/lib/utils';
 // Mock Data (replace with actual data fetching later)
 const mockProjects: Project[] = [
   { id: 'p1', projectIdDisplay: '2021', name: 'Project Alpha', status: 'CR Clearance', endDate: '06/06/2025', assigneeName: 'Mr Austin Azaria', assigneeInitials: 'AU', categoryTag: 'waqas2', categoryFilterKey: 'cat_a' },
-  { id: 'p2', projectIdDisplay: '1010', name: 'Project Beta', status: 'In Progress', endDate: '06/06/2025', assigneeName: 'Mr ClerkEX', assigneeInitials: 'CL', categoryTag: 'Walk-In Customer', categoryFilterKey: 'cat_b' },
+  { id: 'p2', projectIdDisplay: '1010', name: 'Project Beta', status: 'CR Cancel', endDate: '06/06/2025', assigneeName: 'Mr ClerkEX', assigneeInitials: 'CL', categoryTag: 'Walk-In Customer', categoryFilterKey: 'cat_b' },
   { id: 'p3', projectIdDisplay: '1225', name: 'Project Gamma', status: 'Cancelled', endDate: '05/06/2025', assigneeName: 'Mr ClerkEX', assigneeInitials: 'CL', categoryTag: 'Ruma', categoryFilterKey: 'cat_a' },
   { id: 'p4', projectIdDisplay: '3030', name: 'Project Delta', status: 'Completed', endDate: '01/05/2025', assigneeName: 'Jane Doe', assigneeInitials: 'JD', categoryTag: 'Internal', categoryFilterKey: 'cat_c' },
   { id: 'p5', projectIdDisplay: '4040', name: 'Project Epsilon', status: 'On Hold', endDate: '12/12/2025', assigneeName: 'John Smith', assigneeInitials: 'JS', categoryTag: 'Client X', categoryFilterKey: 'cat_b' },
-  { id: 'p6', projectIdDisplay: '5050', name: 'Project Zeta', status: 'In Progress', endDate: '10/10/2025', assigneeName: 'Alice Brown', assigneeInitials: 'AB', categoryTag: 'Feature Request', categoryFilterKey: 'cat_c' },
+  { id: 'p6', projectIdDisplay: '5050', name: 'Project Zeta', status: 'CR Cancel', endDate: '10/10/2025', assigneeName: 'Alice Brown', assigneeInitials: 'AB', categoryTag: 'Feature Request', categoryFilterKey: 'cat_c' },
 ];
 
-const projectStatuses: ProjectStatusType[] = ['CR Clearance', 'In Progress', 'On Hold', 'Cancelled', 'Completed'];
+const projectStatuses: ProjectStatusType[] = ['CR Clearance', 'CR Cancel', 'On Hold', 'Cancelled', 'Completed'];
 
 const statusConfig: Record<ProjectStatusType, { icon: React.ElementType; headerBgClass: string; headerTextClass?: string; headerIconClass?: string; }> = {
   'CR Clearance': { icon: ClipboardCheck, headerBgClass: 'bg-blue-500', headerTextClass: 'text-white', headerIconClass: 'text-white' },
-  'In Progress': { icon: RefreshCw, headerBgClass: 'bg-sky-500', headerTextClass: 'text-white', headerIconClass: 'text-white' },
+  'CR Cancel': { icon: FileX2, headerBgClass: 'bg-rose-500', headerTextClass: 'text-white', headerIconClass: 'text-white' }, // Replaced In Progress
   'On Hold': { icon: AlertTriangle, headerBgClass: 'bg-amber-400', headerTextClass: 'text-gray-800', headerIconClass: 'text-gray-800' },
   'Cancelled': { icon: XCircle, headerBgClass: 'bg-red-400', headerTextClass: 'text-white', headerIconClass: 'text-white' },
   'Completed': { icon: CheckCircle, headerBgClass: 'bg-green-500', headerTextClass: 'text-white', headerIconClass: 'text-white' },
@@ -67,7 +67,7 @@ export default function ProjectsPage() {
   const projectsByStatus = useMemo(() => {
     const grouped: Record<ProjectStatusType, Project[]> = {
       'CR Clearance': [],
-      'In Progress': [],
+      'CR Cancel': [],
       'On Hold': [],
       'Cancelled': [],
       'Completed': [],
