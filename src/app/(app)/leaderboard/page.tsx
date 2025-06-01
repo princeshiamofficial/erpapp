@@ -4,14 +4,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getUsers } from '@/lib/user-service';
 import { getOrders } from '@/lib/order-service';
-import type { User, TrackingLink, GlobalSalesTargets } from '@/types';
-import { getGlobalSettings } from '@/lib/settings-service'; // Corrected import
-import { LeaderboardClientTabs } from '@/components/leaderboard/LeaderboardClientTabs'; // New Client Component
+import type { User, TrackingLink, GlobalSettings } from '@/types'; // Changed GlobalSalesTargets to GlobalSettings
+import { getGlobalSettings } from '@/lib/settings-service';
+import { LeaderboardClientTabs } from '@/components/leaderboard/LeaderboardClientTabs';
 
-const DEFAULT_GLOBAL_TARGETS_STATE: GlobalSalesTargets = {
+const DEFAULT_GLOBAL_SETTINGS_STATE: GlobalSettings = { // Changed type and variable name
   globalMonthlyOrderTarget: 0,
   globalWeeklyOrderTarget: 0,
-  crmCompletionStatusIds: [], // Ensure this is part of the default
+  crmCompletionStatusIds: [],
+  areCommentsVisibleOnPublicPage: true, // Added missing default fields
+  rolesAllowedToEditOrders: ['SYSTEM_ADMIN', 'ADMIN'], // Added missing default fields
 };
 
 interface CrmPerformanceData {
@@ -23,20 +25,29 @@ interface CrmPerformanceData {
   rank?: number;
 }
 
-// This function can remain server-side as it's pure data transformation
+interface CalculatePerformanceOptions {
+  targetField: 'monthlyOrderTarget' | 'weeklyOrderTarget';
+  crmCompletionStatusIds: string[];
+}
+
 const calculatePerformanceData = (
   crmUsers: User[],
   allOrders: TrackingLink[],
   globalTargetValue: number,
-  targetField: 'monthlyOrderTarget' | 'weeklyOrderTarget',
-  isWeekly: boolean = false // Add a flag for weekly to use a different logic if needed for "ordersCompleted"
+  options: CalculatePerformanceOptions
 ): CrmPerformanceData[] => {
+  const { targetField, crmCompletionStatusIds } = options;
+
   return crmUsers
     .map(user => {
-      // For now, ordersCompleted is total orders. This might need refinement
-      // if "completed" means something specific for weekly vs monthly.
       const userOrders = allOrders.filter(order => order.crmUserId === user.id);
-      const ordersCompleted = userOrders.length;
+      
+      // Calculate completed orders based on crmCompletionStatusIds
+      const completedUserOrders = userOrders.filter(order => 
+        crmCompletionStatusIds.includes(order.currentStatus)
+      );
+      const ordersCompleted = completedUserOrders.length;
+      
       const specificTarget = user[targetField];
 
       return {
@@ -60,38 +71,43 @@ export default async function LeaderboardPage() {
   let crmMonthlyPerformance: CrmPerformanceData[] = [];
   let crmWeeklyPerformance: CrmPerformanceData[] = [];
   let fetchError: string | null = null;
-  let fetchedGlobalSettings: GlobalSalesTargets = DEFAULT_GLOBAL_TARGETS_STATE;
+  let fetchedGlobalSettings: GlobalSettings = DEFAULT_GLOBAL_SETTINGS_STATE; // Use GlobalSettings
 
 
   try {
-    const [globalSettings, allUsers, allOrders] = await Promise.all([
-      getGlobalSettings(), // Corrected function call
+    const [globalSettingsData, allUsers, allOrders] = await Promise.all([
+      getGlobalSettings(),
       getUsers(),
       getOrders(),
     ]);
 
-    fetchedGlobalSettings = globalSettings; // Store the fetched settings
+    fetchedGlobalSettings = globalSettingsData;
 
     const crmUsers = allUsers.filter(user => user.role === 'CRM' && !user.isBanned);
+    const completionStatusIds = fetchedGlobalSettings.crmCompletionStatusIds ?? [];
 
     crmMonthlyPerformance = calculatePerformanceData(
       crmUsers,
       allOrders,
       fetchedGlobalSettings.globalMonthlyOrderTarget,
-      'monthlyOrderTarget'
+      {
+        targetField: 'monthlyOrderTarget',
+        crmCompletionStatusIds: completionStatusIds
+      }
     );
     crmWeeklyPerformance = calculatePerformanceData(
       crmUsers,
       allOrders,
       fetchedGlobalSettings.globalWeeklyOrderTarget,
-      'weeklyOrderTarget',
-      true // Pass true if weekly calculation needs to differ for "ordersCompleted"
+      {
+        targetField: 'weeklyOrderTarget',
+        crmCompletionStatusIds: completionStatusIds
+      }
     );
 
   } catch (error) {
     console.error("Failed to fetch leaderboard data:", error);
     fetchError = "Could not load leaderboard data. Please try again later.";
-    // Return default empty arrays in case of error
     crmMonthlyPerformance = [];
     crmWeeklyPerformance = [];
   }
@@ -101,7 +117,7 @@ export default async function LeaderboardPage() {
       <div className="page-header">
         <h1 className="page-title">CRM Sales Leaderboard</h1>
         <p className="page-description">
-          Ranking of CRM performance based on orders managed. Targets are specific to each CRM or fall back to global defaults.
+          Ranking of CRM performance based on orders completed according to defined target statuses. Targets are specific to each CRM or fall back to global defaults.
         </p>
       </div>
 
