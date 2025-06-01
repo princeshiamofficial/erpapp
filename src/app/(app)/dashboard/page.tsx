@@ -22,7 +22,8 @@ import {
   LineChart,
   MapPin,
   CalendarDays, 
-  BarChartBig
+  BarChartBig,
+  ChevronDown // Added ChevronDown
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -267,3 +268,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
