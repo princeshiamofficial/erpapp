@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 interface ItemToEdit {
   id: string;
@@ -214,14 +215,18 @@ export default function ModelManagementPage() {
           <ul className="divide-y divide-border/50">
             {items.map((item) => (
               <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
-                <div className="flex flex-col">
-                  <span className="font-medium text-foreground">{item.name}</span>
-                  <span className="text-xs text-muted-foreground flex items-center">
+                <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
+                  <span className="font-medium text-foreground truncate col-span-1" title={item.name}>{item.name}</span>
+                  <span className="text-xs sm:text-sm text-muted-foreground flex items-center col-span-1">
                     <DollarSign className="h-3 w-3 mr-1 opacity-70" />
-                    Buy: {formatCurrency(item.buyingPrice)} | Sell: {formatCurrency(item.sellingPrice)}
+                    Buy: {formatCurrency(item.buyingPrice)}
+                  </span>
+                  <span className="text-xs sm:text-sm text-muted-foreground flex items-center col-span-1">
+                    <DollarSign className="h-3 w-3 mr-1 opacity-70" />
+                     Sell: {formatCurrency(item.sellingPrice)}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 ml-4">
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(item)} title={`Edit model`} className="h-8 w-8">
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -260,7 +265,7 @@ export default function ModelManagementPage() {
       </div>
 
       <Dialog open={isAddEditDialogOpen} onOpenChange={setIsAddEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingItem ? 'Edit' : 'Add New'} Model</DialogTitle>
             <DialogDescription>
@@ -268,37 +273,39 @@ export default function ModelManagementPage() {
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
-            <div>
-              <Label htmlFor="itemName">Name</Label>
-              <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
-            </div>
-            <div>
-              <Label htmlFor="itemBuyingPrice">Buying Price (BDT)</Label>
-              <Input 
-                id="itemBuyingPrice" 
-                type="number"
-                value={itemBuyingPrice} 
-                onChange={(e) => setItemBuyingPrice(e.target.value)} 
-                required 
-                disabled={isSubmitting}
-                placeholder="e.g., 1000.00"
-                min="0"
-                step="0.01"
-              />
-            </div>
-            <div>
-              <Label htmlFor="itemSellingPrice">Selling Price (BDT)</Label>
-              <Input 
-                id="itemSellingPrice" 
-                type="number"
-                value={itemSellingPrice} 
-                onChange={(e) => setItemSellingPrice(e.target.value)} 
-                required 
-                disabled={isSubmitting}
-                placeholder="e.g., 1500.00"
-                min="0"
-                step="0.01"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="itemName">Name</Label>
+                <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="itemBuyingPrice">Buying Price (BDT)</Label>
+                <Input 
+                  id="itemBuyingPrice" 
+                  type="number"
+                  value={itemBuyingPrice} 
+                  onChange={(e) => setItemBuyingPrice(e.target.value)} 
+                  required 
+                  disabled={isSubmitting}
+                  placeholder="e.g., 1000.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="itemSellingPrice">Selling Price (BDT)</Label>
+                <Input 
+                  id="itemSellingPrice" 
+                  type="number"
+                  value={itemSellingPrice} 
+                  onChange={(e) => setItemSellingPrice(e.target.value)} 
+                  required 
+                  disabled={isSubmitting}
+                  placeholder="e.g., 1500.00"
+                  min="0"
+                  step="0.01"
+                />
+              </div>
             </div>
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => setIsAddEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
@@ -332,3 +339,5 @@ export default function ModelManagementPage() {
     </div>
   );
 }
+
+    

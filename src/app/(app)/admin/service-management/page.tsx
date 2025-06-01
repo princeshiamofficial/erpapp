@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 type ItemType = 'model' | 'lamination' | 'paymentMethod'; 
 interface ItemToEdit {
@@ -271,16 +272,22 @@ export default function ServiceManagementPage() {
           <ul className="divide-y divide-border/50">
             {items.map((item) => (
               <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
-                <div className="flex flex-col">
-                  <span className="font-medium text-foreground">{item.name}</span>
-                   {type === 'model' && (item as ServiceModelItem).sellingPrice !== undefined && (
-                    <span className="text-xs text-muted-foreground flex items-center">
-                      <DollarSign className="h-3 w-3 mr-1 opacity-70" />
-                      Buy: {formatCurrency((item as ServiceModelItem).buyingPrice)} | Sell: {formatCurrency((item as ServiceModelItem).sellingPrice)}
-                    </span>
+                {type === 'model' ? (
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
+                      <span className="font-medium text-foreground truncate col-span-1" title={item.name}>{item.name}</span>
+                      <span className="text-xs sm:text-sm text-muted-foreground flex items-center col-span-1">
+                        <DollarSign className="h-3 w-3 mr-1 opacity-70" />
+                        Buy: {formatCurrency((item as ServiceModelItem).buyingPrice)}
+                      </span>
+                      <span className="text-xs sm:text-sm text-muted-foreground flex items-center col-span-1">
+                        <DollarSign className="h-3 w-3 mr-1 opacity-70" />
+                        Sell: {formatCurrency((item as ServiceModelItem).sellingPrice)}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="font-medium text-foreground flex-1 truncate" title={item.name}>{item.name}</span>
                   )}
-                </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 ml-4">
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(item, type)} title={`Edit ${type}`} className="h-8 w-8">
                     <Edit className="h-4 w-4" />
                   </Button>
@@ -322,22 +329,21 @@ export default function ServiceManagementPage() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={isAddEditDialogOpen} onOpenChange={setIsAddEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className={cn("sm:max-w-md", (editingItem?.type || itemTypeToAdd) === 'model' && "sm:max-w-2xl")}>
           <DialogHeader>
             <DialogTitle>{editingItem ? 'Edit' : 'Add New'} {(editingItem?.type || itemTypeToAdd) === 'model' ? 'Model' : (editingItem?.type || itemTypeToAdd) === 'lamination' ? 'Lamination' : 'Payment Method'}</DialogTitle>
             <DialogDescription>
-              {editingItem ? 'Update the name of this option.' : 'Enter the name for the new option.'}
-              {(editingItem?.type || itemTypeToAdd) === 'model' && ' Also set its buying and selling prices.'}
+              {editingItem ? 'Update the details of this option.' : 'Enter the details for the new option.'}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
-            <div>
-              <Label htmlFor="itemName">Name</Label>
-              <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
-            </div>
-            {(editingItem?.type || itemTypeToAdd) === 'model' && (
-              <>
-                <div>
+            {(editingItem?.type || itemTypeToAdd) === 'model' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="itemName">Name</Label>
+                  <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
+                </div>
+                <div className="space-y-1">
                   <Label htmlFor="itemBuyingPrice">Buying Price (BDT)</Label>
                   <Input 
                       id="itemBuyingPrice" 
@@ -351,7 +357,7 @@ export default function ServiceManagementPage() {
                       step="0.01"
                   />
                 </div>
-                <div>
+                <div className="space-y-1">
                   <Label htmlFor="itemSellingPrice">Selling Price (BDT)</Label>
                   <Input 
                       id="itemSellingPrice" 
@@ -365,7 +371,12 @@ export default function ServiceManagementPage() {
                       step="0.01"
                   />
                 </div>
-              </>
+              </div>
+            ) : (
+              <div>
+                <Label htmlFor="itemName">Name</Label>
+                <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
+              </div>
             )}
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => setIsAddEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
@@ -400,3 +411,5 @@ export default function ServiceManagementPage() {
     </div>
   );
 }
+
+    
