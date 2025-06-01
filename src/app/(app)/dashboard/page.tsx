@@ -47,11 +47,11 @@ const chartConfig = {
 };
 
 const formatCurrency = (value: number): string => {
-  const numberPart = value.toLocaleString('en-US', { // Use en-US for Latin numerals
+  const numberPart = value.toLocaleString('en-US', { 
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  return `৳${numberPart}`; // Prepend Taka symbol
+  return `৳${numberPart}`; 
 };
 
 interface SummaryCardProps {
@@ -141,13 +141,16 @@ export default function DashboardPage() {
 
   const filteredOrders = useMemo(() => {
     if (!selectedDateRange?.from || !selectedDateRange?.to) return [];
-    // Ensure 'to' date includes the entire day
+    
+    const startDate = new Date(selectedDateRange.from as Date);
+    startDate.setHours(0, 0, 0, 0); 
+
     const endDate = new Date(selectedDateRange.to as Date);
     endDate.setHours(23, 59, 59, 999);
 
     return allOrders.filter(order => 
       order.createdAt && isWithinInterval(parseISO(order.createdAt), {
-        start: selectedDateRange.from as Date, 
+        start: startDate, 
         end: endDate
       })
     );
@@ -173,8 +176,12 @@ export default function DashboardPage() {
 
     if (selectedDateRange?.from && selectedDateRange?.to) {
       const dailySales = new Map<string, number>();
+      
       let tempDatePointerForInit = new Date(selectedDateRange.from);
+      tempDatePointerForInit.setHours(0,0,0,0);
+
       const endDateForInit = new Date(selectedDateRange.to); 
+      endDateForInit.setHours(23,59,59,999);
       
       while (tempDatePointerForInit <= endDateForInit) { 
           dailySales.set(format(tempDatePointerForInit, 'yyyy-MM-dd'), 0);
@@ -184,7 +191,10 @@ export default function DashboardPage() {
       filteredOrders.forEach(order => {
         if (order.createdAt) {
           try {
-            const orderDateStr = format(parseISO(order.createdAt), 'yyyy-MM-dd');
+            const orderDate = parseISO(order.createdAt);
+            orderDate.setHours(0,0,0,0); // Normalize order date to start of day for key matching
+            const orderDateStr = format(orderDate, 'yyyy-MM-dd');
+
             if (dailySales.has(orderDateStr)) {
               const orderTotalForChart = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
               dailySales.set(orderDateStr, (dailySales.get(orderDateStr) || 0) + orderTotalForChart);
@@ -204,7 +214,7 @@ export default function DashboardPage() {
       setSalesChartData([]);
     }
 
-  }, [isLoadingData, allOrders, filteredOrders, selectedDateRange]); // Added allOrders to dependency array
+  }, [isLoadingData, allOrders, filteredOrders, selectedDateRange]);
 
 
   const handleDateRangeChange = (range: DateRange | undefined, label: string) => {
@@ -385,4 +395,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
