@@ -8,6 +8,9 @@ import {
   setRolesAllowedToEditOrders
 } from "@/lib/settings-service";
 import type { UserRole, User } from "@/types"; 
+import { adminApp } from '@/lib/firebase-admin'; // Import Firebase Admin
+import { getUsers as getAllUsersFromDb, getUserById } from '@/lib/user-service'; // To fetch users and their tokens
+import type { messaging } from 'firebase-admin';
 
 
 export async function updateCompletionStatusIdsAction(ids: string[]): Promise<{ success: boolean; error?: string }> {
@@ -56,33 +59,12 @@ export async function updateRolesAllowedToEditOrdersAction(roles: UserRole[]): P
   }
 }
 
-interface PushNotificationPayloadForFCM {
-  notification: {
-    title: string;
-    body: string;
-    icon?: string; // Optional: URL to an icon
-    // sound?: string; // Optional: 'default' or URL to sound file
-    // click_action?: string; // Optional: URL to open on click (often handled by data payload)
-  };
-  data?: {
-    [key: string]: string; // Custom key-value pairs
-    click_action?: string; // Standard key for URL to open
-    targetUrl?: string; // Alternative for URL
-    iconUrl?: string; // For custom icon handling in SW
-    soundUrl?: string; // For custom sound handling in SW
-  };
-  // Targeting (e.g., to a specific token, topic, or condition) would be handled by Admin SDK
-  // For example:
-  // to?: string; // FCM token
-  // topic?: string; // Topic name
-}
-
 interface AppNotificationPayload {
   title: string;
   body: string;
   iconUrl?: string;
   targetUrl?: string;
-  soundUrl?: string; // Added for custom sound
+  soundUrl?: string; 
   targetType: 'all' | 'roles' | 'users';
   targetRoles?: UserRole[];
   targetUserIds?: string[];
@@ -92,8 +74,17 @@ export async function sendPushNotificationAction(
   payload: AppNotificationPayload,
   actingUser: User
 ): Promise<{ success: boolean; message: string; error?: string }> {
-  if (!actingUser || (actingUser.role !== 'SYSTEM_ADMIN' && actingUser.role !== 'ADMIN')) {
-    return { success: false, message: "Permission denied.", error: "User does not have permission to send notifications." };
+  if (!actingUser || (actingUser.role !== 'SYSTEM_ADMIN')) { // Restrict to SYSTEM_ADMIN for real sending
+    return { success: false, message: "Permission denied.", error: "Only System Administrators can send push notifications." };
+  }
+
+  if (!adminApp) {
+    console.error("sendPushNotificationAction: Firebase Admin SDK not initialized. Cannot send real push notifications.");
+    return { 
+      success: false, 
+      message: "Configuration Error: Firebase Admin SDK not initialized. Real push notifications disabled.",
+      error: "Firebase Admin SDK is not configured on the server. Please check server logs and environment variables (GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_SERVICE_ACCOUNT_JSON)."
+    };
   }
 
   const { title, body, iconUrl, targetUrl, soundUrl, targetType, targetRoles, targetUserIds } = payload;
@@ -102,46 +93,110 @@ export async function sendPushNotificationAction(
     return { success: false, message: "Title and body are required for the notification.", error: "Missing title or body."};
   }
 
-  // Construct a payload structure similar to what FCM expects
-  const fcmLikePayload: PushNotificationPayloadForFCM = {
-    notification: {
-      title: title,
-      body: body,
-      ...(iconUrl && { icon: iconUrl }), // Standard FCM notification icon
-      // sound: 'default' // Or a custom sound if supported directly
-    },
-    data: {
-      ...(targetUrl && { click_action: targetUrl, targetUrl: targetUrl }), // click_action for SW, targetUrl for flexibility
-      ...(iconUrl && { iconUrl: iconUrl }), // Custom data for SW to potentially override icon
-      ...(soundUrl && { soundUrl: soundUrl }) // Custom data for SW to play specific sound
+  let tokensToSend: string[] = [];
+  let targetDescription = "";
+
+  try {
+    if (targetType === 'users' && targetUserIds && targetUserIds.length > 0) {
+      targetDescription = `specific users (${targetUserIds.length})`;
+      const usersToNotify: User[] = [];
+      for (const userId of targetUserIds) {
+        const user = await getUserById(userId); // Assuming getUserById fetches a single user
+        if (user) usersToNotify.push(user);
+      }
+      tokensToSend = usersToNotify.filter(u => u.fcmToken).map(u => u.fcmToken!);
+    } else if (targetType === 'roles' && targetRoles && targetRoles.length > 0) {
+      targetDescription = `users with roles: ${targetRoles.join(', ')}`;
+      const allUsers = await getAllUsersFromDb();
+      tokensToSend = allUsers.filter(u => u.fcmToken && targetRoles.includes(u.role)).map(u => u.fcmToken!);
+    } else if (targetType === 'all') {
+      // Sending to "all users" by fetching all tokens is generally not recommended for large user bases from a single server action.
+      // Consider using FCM topic messaging for "all users" scenarios.
+      // For this implementation, "all users" will not send a real push to avoid performance issues.
+      console.warn("sendPushNotificationAction: Target 'all' selected. Real push notification to ALL users is not implemented in this version due to potential scalability issues. This will be a simulation only.");
+      // Log the simulation for "all"
+      const fcmLikePayloadForLog = {
+        notification: { title, body, ...(iconUrl && { icon: iconUrl }) },
+        data: { ...(targetUrl && { click_action: targetUrl, targetUrl }), ...(iconUrl && { iconUrl }), ...(soundUrl && { soundUrl }) }
+      };
+      console.log("--- SIMULATING PUSH NOTIFICATION SEND (Target: All Users) ---");
+      console.log("Acting User:", { id: actingUser.id, name: actingUser.name, role: actingUser.role });
+      console.log("FCM-like Payload (SIMULATED):", JSON.stringify(fcmLikePayloadForLog, null, 2));
+      console.log("--- END SIMULATION ---");
+      return { 
+        success: true, // Technically success as a simulation was logged
+        message: "Notification to 'All Users' (SIMULATED) and logged to console. Real sending to all users is not implemented for performance reasons. Use Firebase Console for broadcast or implement topic messaging.",
+      };
+    } else {
+      return { success: false, message: "Invalid targeting information provided.", error: "Invalid target."};
     }
-  };
+
+    if (tokensToSend.length === 0) {
+      return { success: false, message: `No users with FCM tokens found for the selected target: ${targetDescription}.`, error: "No recipients found." };
+    }
+
+    // Construct the FCM message payload
+    const message: messaging.MulticastMessage = {
+      notification: {
+        title: title,
+        body: body,
+        ...(iconUrl && {imageUrl: iconUrl}) // Standard FCM field for notification image
+      },
+      data: {
+        title: title, // Send title/body in data too for SW flexibility
+        body: body,
+        ...(iconUrl && { icon: iconUrl }), // For custom SW handling
+        ...(targetUrl && { click_action: targetUrl, targetUrl: targetUrl }),
+        ...(soundUrl && { sound: soundUrl }) // 'sound' is often used, but SW can use 'soundUrl' from data
+      },
+      tokens: tokensToSend,
+      // Optional: Android specific config
+      // android: {
+      //   notification: {
+      //     sound: soundUrl ? 'custom_sound.wav' : 'default', // if using custom sound files in app
+      //     channelId: 'your_channel_id' // For Android O+
+      //   }
+      // },
+      // Optional: APNS specific config
+      // apns: {
+      //   payload: {
+      //     aps: {
+      //       sound: soundUrl ? 'custom_sound.aiff' : 'default'
+      //     }
+      //   }
+      // }
+    };
+    
+    if (iconUrl && message.notification) { // Ensure notification object exists
+       message.notification.imageUrl = iconUrl; // Standard field
+    }
 
 
-  console.log("--- SIMULATING PUSH NOTIFICATION SEND ---");
-  console.log("Acting User:", { id: actingUser.id, name: actingUser.name, role: actingUser.role });
-  console.log("FCM-like Payload that WOULD be sent to a backend for FCM delivery:");
-  console.log(JSON.stringify(fcmLikePayload, null, 2));
-  console.log("Targeting Details (for backend to resolve to FCM tokens):");
-  console.log("  Type:", targetType);
+    console.log(`Attempting to send push notification to ${tokensToSend.length} tokens for target: ${targetDescription}`);
+    const response = await adminApp.messaging().sendEachForMulticast(message as admin.messaging.MulticastMessage);
+    
+    const successfulSends = response.successCount;
+    const failedSends = response.failureCount;
+    
+    console.log(`Push Notification Send Results: ${successfulSends} successful, ${failedSends} failed.`);
+    response.responses.forEach((resp, idx) => {
+      if (!resp.success) {
+        console.error(`Failed to send to token ${tokensToSend[idx]}: ${resp.error?.message} (Code: ${resp.error?.code})`);
+      }
+    });
 
-  if (targetType === 'roles' && targetRoles && targetRoles.length > 0) {
-    console.log("  Roles:", targetRoles.join(', '));
-  } else if (targetType === 'users' && targetUserIds && targetUserIds.length > 0) {
-    console.log("  User IDs:", targetUserIds.join(', '));
-  } else if (targetType === 'all') {
-    console.log("  Target: All Users with FCM Tokens");
-  } else {
-    console.log("--- END SIMULATION ---");
-    return { success: false, message: "Invalid targeting information provided.", error: "Invalid target."};
+    return { 
+      success: true, 
+      message: `Notification sent to ${successfulSends} device(s). ${failedSends > 0 ? `${failedSends} failed.` : ''} (Target: ${targetDescription})`
+    };
+
+  } catch (error) {
+    console.error("Error in sendPushNotificationAction:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred while sending notification.";
+    return { 
+      success: false, 
+      message: `Failed to send notifications: ${errorMessage}`,
+      error: errorMessage 
+    };
   }
-  console.log("--- END SIMULATION ---");
-
-  // In a REAL SCENARIO, this action would:
-  // 1. Determine the list of FCM tokens based on targetType, targetRoles, or targetUserIds.
-  // 2. Send the `fcmLikePayload` to those tokens using Firebase Admin SDK (from a backend/Cloud Function).
-  //    Example: await admin.messaging().sendToDevice(tokens, fcmLikePayload);
-  //    OR: await admin.messaging().sendEachForMulticast({ tokens, ...fcmLikePayload });
-
-  return { success: true, message: "Notification (SIMULATED) logged to console. A backend is needed for actual FCM delivery." };
 }
