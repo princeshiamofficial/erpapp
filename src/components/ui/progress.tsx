@@ -20,15 +20,13 @@ const Progress = React.forwardRef<
       "relative h-4 w-full overflow-hidden rounded-full bg-secondary",
       className
     )}
-    // Pass value to ProgressPrimitive.Root if it accepts it, otherwise, it's handled by style on Indicator.
-    // Radix Progress.Root does take a 'value' prop.
     value={value} 
-    {...otherProps} // Spread remaining props (which don't include indicatorClassName, className, or value)
+    {...otherProps}
   >
     <ProgressPrimitive.Indicator
       className={cn(
         "h-full w-full flex-1 bg-primary transition-all",
-        indicatorClassName // Apply indicatorClassName here
+        indicatorClassName 
       )}
       style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
     />

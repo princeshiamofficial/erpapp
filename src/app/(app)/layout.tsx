@@ -1,16 +1,16 @@
 
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { 
-  Sidebar, 
-  SidebarProvider, 
-  SidebarHeader, 
-  SidebarContent, 
-  SidebarFooter, 
+import {
+  Sidebar,
+  SidebarProvider,
+  SidebarHeader,
+  SidebarContent,
+  SidebarFooter,
   SidebarMenu,
   SidebarInset,
   SidebarTrigger
@@ -18,11 +18,12 @@ import {
 import { AppHeader } from '@/components/layout/AppHeader';
 import { SidebarNavigation } from '@/components/layout/SidebarNavigation';
 import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react'; // Loader2 is removed as we create a custom loading screen
+import { LogOut } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image'; 
-import { motion } from 'framer-motion'; // Added for animation
-import { Logo } from '@/components/layout/Logo'; // Added for the loading screen
+import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Logo } from '@/components/layout/Logo';
+import { Progress } from '@/components/ui/progress';
 
 const AccountSuspendedDialog = dynamic(() => import('@/components/auth/AccountSuspendedDialog').then(mod => mod.AccountSuspendedDialog));
 
@@ -33,6 +34,38 @@ export default function AuthenticatedLayout({
 }) {
   const { currentUser, isLoading, logout, isSuspendedDialogOpen } = useAuth();
   const router = useRouter();
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [showLoadingScreen, setShowLoadingScreen] = useState(true);
+
+  useEffect(() => {
+    let progressInterval: NodeJS.Timeout | undefined;
+    if (isLoading) {
+      setShowLoadingScreen(true);
+      setLoadingProgress(0); 
+      let currentProgress = 0;
+      progressInterval = setInterval(() => {
+        currentProgress += Math.random() * 15 + 5; // Simulate variable loading chunks
+        if (currentProgress >= 90) {
+          currentProgress = 90; 
+          clearInterval(progressInterval);
+        }
+        setLoadingProgress(currentProgress);
+      }, 150); 
+    } else {
+      setLoadingProgress(100); 
+      const fadeOutTimer = setTimeout(() => {
+        setShowLoadingScreen(false);
+      }, 300); 
+      return () => clearTimeout(fadeOutTimer);
+    }
+
+    return () => {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+      }
+    };
+  }, [isLoading]);
+
 
   useEffect(() => {
     if (!isLoading && !currentUser && !isSuspendedDialogOpen) {
@@ -40,64 +73,86 @@ export default function AuthenticatedLayout({
     }
   }, [currentUser, isLoading, router, isSuspendedDialogOpen]);
 
-  if (isLoading || (!currentUser && !isSuspendedDialogOpen)) {
+  if ((isLoading || (!currentUser && !isSuspendedDialogOpen)) && showLoadingScreen) {
     return (
-      <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-foreground">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        >
+      <AnimatePresence>
+        {showLoadingScreen && (
           <motion.div
-            animate={{
-              scale: [1, 1.1, 1, 1.1, 1],
-              rotate: [0, 5, -5, 5, 0],
-            }}
-            transition={{
-              duration: 2,
-              ease: "easeInOut",
-              repeat: Infinity,
-              repeatDelay: 0.5
-            }}
+            key="loadingScreen"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.3 } }}
+            className="fixed inset-0 z-50 flex h-screen w-full flex-col items-center justify-center bg-background text-foreground"
           >
-            <Logo className="h-20 w-20 text-primary drop-shadow-[0_5px_15px_rgba(var(--primary-hsl),0.4)]" />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="flex flex-col items-center"
+            >
+              <motion.div
+                animate={{
+                  scale: [1, 1.05, 1, 1.05, 1],
+                  rotate: [0, 2, -2, 2, 0],
+                }}
+                transition={{
+                  duration: 2.5,
+                  ease: "easeInOut",
+                  repeat: Infinity,
+                  repeatDelay: 0.3
+                }}
+              >
+                <Logo className="h-20 w-20 text-primary drop-shadow-[0_5px_15px_rgba(var(--primary-hsl),0.4)]" />
+              </motion.div>
+              <motion.p
+                className="mt-6 text-lg font-semibold text-primary tracking-wider"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+              >
+                Loading Color Hut...
+              </motion.p>
+              <Progress value={loadingProgress} className="w-1/2 max-w-xs mt-4 h-2.5" indicatorClassName="bg-primary" />
+              <motion.p
+                className="mt-2 text-sm text-muted-foreground"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+              >
+                {Math.min(Math.round(loadingProgress), 100)}%
+              </motion.p>
+            </motion.div>
+            <style jsx global>{`
+              :root {
+                --primary-hsl: 25 95% 53%;
+              }
+              .dark {
+                 --primary-hsl: 25 95% 60%;
+              }
+            `}</style>
           </motion.div>
-        </motion.div>
-        <motion.p
-          className="mt-6 text-lg font-semibold text-primary tracking-wider"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          Loading Color Hut...
-        </motion.p>
-         {/* Add primary-hsl to globals.css for the drop shadow if not present */}
-        <style jsx global>{`
-          :root {
-            --primary-hsl: 25 95% 53%; /* Make sure this matches your primary color HSL */
-          }
-          .dark {
-             --primary-hsl: 25 95% 60%; /* For dark mode, if different */
-          }
-        `}</style>
-      </div>
+        )}
+      </AnimatePresence>
     );
   }
-  
+
+  if (!currentUser && !isSuspendedDialogOpen && !isLoading) {
+    return null; 
+  }
+
   return (
     <SidebarProvider defaultOpen={true}>
-      <Sidebar 
-        collapsible="icon" 
+      <Sidebar
+        collapsible="icon"
         className="border-r border-sidebar-border bg-sidebar text-sidebar-foreground shadow-xl"
       >
         <SidebarHeader className="p-4 flex items-center justify-between h-20 border-b border-sidebar-border/70 bg-black text-white">
           <Link href="/dashboard" className="flex items-center group-data-[collapsible=icon]:hidden">
-            <Image 
-              src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" 
-              alt="Color Hut Logo" 
-              width={160} 
-              height={40} 
-              priority 
+            <Image
+              src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+              alt="Color Hut Logo"
+              width={160}
+              height={40}
+              priority
               className="object-contain"
             />
           </Link>
@@ -111,12 +166,12 @@ export default function AuthenticatedLayout({
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter className="p-3.5 border-t border-sidebar-border/70">
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 rounded-md text-sm py-2.5 px-3" 
-            onClick={logout} 
+          <Button
+            variant="ghost"
+            className="w-full justify-start text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 rounded-md text-sm py-2.5 px-3"
+            onClick={logout}
             title="Logout"
-            disabled={isSuspendedDialogOpen} 
+            disabled={isSuspendedDialogOpen}
           >
             <LogOut className="mr-3 h-5 w-5 shrink-0 group-data-[collapsible=icon]:mr-0" />
             <span className="truncate group-data-[collapsible=icon]:hidden font-medium">Logout</span>
@@ -124,16 +179,16 @@ export default function AuthenticatedLayout({
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        {currentUser && !isSuspendedDialogOpen && <AppHeader />} 
+        {currentUser && !isSuspendedDialogOpen && <AppHeader />}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-background min-h-[calc(100vh-4.5rem)] selection:bg-primary/20 selection:text-primary">
           {currentUser && !isSuspendedDialogOpen ? children : null}
         </main>
       </SidebarInset>
-      
+
       {isSuspendedDialogOpen && (
-        <AccountSuspendedDialog 
-          isOpen={isSuspendedDialogOpen} 
-          onConfirmLogout={logout} 
+        <AccountSuspendedDialog
+          isOpen={isSuspendedDialogOpen}
+          onConfirmLogout={logout}
         />
       )}
     </SidebarProvider>
