@@ -274,18 +274,18 @@ export default function ServiceManagementPage() {
               <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
                 {type === 'model' ? (
                     <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
-                      <span className="font-medium text-foreground truncate col-span-1" title={item.name}>{item.name}</span>
-                      <span className="text-xs sm:text-sm text-muted-foreground flex items-center col-span-1">
+                      <span className="font-medium text-foreground col-span-1" title={item.name}>{item.name}</span>
+                      <span className="text-xs sm:text-sm font-bold text-[hsl(var(--chart-1))] flex items-center col-span-1">
                         <DollarSign className="h-3 w-3 mr-1 opacity-70" />
                         Buy: {formatCurrency((item as ServiceModelItem).buyingPrice)}
                       </span>
-                      <span className="text-xs sm:text-sm text-muted-foreground flex items-center col-span-1">
+                      <span className="text-xs sm:text-sm font-bold text-[hsl(var(--chart-2))] flex items-center col-span-1">
                         <DollarSign className="h-3 w-3 mr-1 opacity-70" />
                         Sell: {formatCurrency((item as ServiceModelItem).sellingPrice)}
                       </span>
                     </div>
                   ) : (
-                    <span className="font-medium text-foreground flex-1 truncate" title={item.name}>{item.name}</span>
+                    <span className="font-medium text-foreground flex-1" title={item.name}>{item.name}</span>
                   )}
                 <div className="flex items-center gap-2 ml-4">
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(item, type)} title={`Edit ${type}`} className="h-8 w-8">
@@ -411,5 +411,7 @@ export default function ServiceManagementPage() {
     </div>
   );
 }
+
+    
 
     
