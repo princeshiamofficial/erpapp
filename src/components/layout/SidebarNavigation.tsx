@@ -14,10 +14,11 @@ import {
   FileText,
   Award,
   BarChart3,
-  ListChecks, // Used for general status management
+  ListChecks,
   Layers,
-  Target, // For CRM Target Completion Settings
-  DollarSign // For Finance Manager
+  Target,
+  DollarSign,
+  Briefcase // Added Briefcase icon
 } from "lucide-react";
 import type { UserRole } from "@/types";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,7 @@ const navItems: NavItem[] = [
   { href: "/tracking-links", label: "Tracking Links", icon: Link2, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
   { href: "/finance-manager", label: "Finance Manager", icon: DollarSign, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
   { href: "/leaderboard", label: "Leaderboard", icon: Award, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
+  { href: "/projects", label: "Projects", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] }, // New Projects item
   { href: "/users", label: "User Management", icon: Users, roles: ["SYSTEM_ADMIN", "ADMIN"] },
   { href: "/admin/model-management", label: "Model Management", icon: Layers, roles: ["SYSTEM_ADMIN", "ADMIN"] },
   { href: "/admin/statuses", label: "Status Management", icon: ListChecks, roles: ["SYSTEM_ADMIN"] },
