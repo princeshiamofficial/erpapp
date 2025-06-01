@@ -35,10 +35,10 @@ interface EditOrderDialogProps {
 
 interface DialogOrderItem {
   id: string;
-  model: string;
+  model: string; // Model name
   quantity: string;
   lamination: string;
-  unitPrice: number | null;
+  unitPrice: number | null; // Will be model's sellingPrice
   lineItemTotalPrice: number | null;
 }
 
@@ -119,7 +119,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       setOrderItems(order.orderItems.map(item => ({
         ...item,
         quantity: item.quantity.toString(),
-        unitPrice: item.unitPrice,
+        unitPrice: item.unitPrice, // This should reflect model's selling price from original creation
         lineItemTotalPrice: item.lineItemTotalPrice,
       })));
     }
@@ -159,10 +159,10 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       prevItems.map(item => {
         if (item.id === itemId) {
           let updatedItem = { ...item };
-          if (field === 'modelName') {
+          if (field === 'modelName') { // value is model name
             const selectedModel = modelOptions.find(opt => opt.name === value);
             updatedItem.model = selectedModel ? selectedModel.name : '';
-            updatedItem.unitPrice = selectedModel?.price ?? null;
+            updatedItem.unitPrice = selectedModel?.sellingPrice ?? null; // Use sellingPrice
           } else if (field === 'quantity' || field === 'lamination') {
              updatedItem = { ...item, [field]: value as string };
           }
@@ -206,7 +206,11 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setPaymentMethod(value);
     if (value.toLowerCase() === 'other') {
       setShowCustomPaymentInput(true);
-      setCustomPaymentMethodText(''); 
+      // Only clear custom text if "Other" is newly selected from a different option.
+      // If current method is already "Other" and user re-selects "Other", keep custom text.
+      if (order.paymentMethod?.toLowerCase() !== 'other' || value !== order.paymentMethod ) {
+        setCustomPaymentMethodText(''); 
+      }
     } else {
       setShowCustomPaymentInput(false);
       setCustomPaymentMethodText('');
@@ -333,7 +337,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       model: item.model,
       quantity: parseInt(item.quantity, 10),
       lamination: item.lamination,
-      unitPrice: item.unitPrice!,
+      unitPrice: item.unitPrice!, // This is model's sellingPrice
       lineItemTotalPrice: item.lineItemTotalPrice!,
     }));
 
@@ -511,6 +515,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                                         )}
                                       />
                                       {option.name}
+                                      {option.sellingPrice !== undefined && <span className="ml-auto text-xs text-muted-foreground">({formatCurrency(option.sellingPrice)})</span>}
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>
@@ -576,4 +581,3 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     </Dialog>
   );
 }
-

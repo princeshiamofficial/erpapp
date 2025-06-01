@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Layers, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, Search } from "lucide-react"; // Added Search
+import { PlusCircle, Edit, Trash2, Layers, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, Search, DollarSign } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem } from "@/types"; 
@@ -25,7 +25,8 @@ type ItemType = 'model' | 'lamination' | 'paymentMethod';
 interface ItemToEdit {
   id: string;
   name: string;
-  price?: string; 
+  buyingPrice?: string; 
+  sellingPrice?: string;
   type: ItemType;
 }
 interface ItemToDelete {
@@ -44,13 +45,14 @@ export default function ServiceManagementPage() {
   const [paymentMethods, setPaymentMethods] = useState<ServicePaymentMethodItem[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [modelSearchTerm, setModelSearchTerm] = useState(''); // State for model search term
+  const [modelSearchTerm, setModelSearchTerm] = useState('');
 
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const [itemName, setItemName] = useState('');
-  const [itemPrice, setItemPrice] = useState(''); 
+  const [itemBuyingPrice, setItemBuyingPrice] = useState('');
+  const [itemSellingPrice, setItemSellingPrice] = useState('');
   const [editingItem, setEditingItem] = useState<ItemToEdit | null>(null);
   const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
   const [itemTypeToAdd, setItemTypeToAdd] = useState<ItemType | null>(null);
@@ -94,7 +96,13 @@ export default function ServiceManagementPage() {
     setEditingItem(null);
     setItemTypeToAdd(type);
     setItemName('');
-    setItemPrice(type === 'model' ? '0' : ''); 
+    if (type === 'model') {
+      setItemBuyingPrice('0');
+      setItemSellingPrice('0');
+    } else {
+      setItemBuyingPrice('');
+      setItemSellingPrice('');
+    }
     setIsAddEditDialogOpen(true);
   };
 
@@ -102,12 +110,19 @@ export default function ServiceManagementPage() {
     setEditingItem({ 
       id: item.id, 
       name: item.name, 
-      price: type === 'model' ? ((item as ServiceModelItem).price ?? 0).toString() : undefined,
+      buyingPrice: type === 'model' ? ((item as ServiceModelItem).buyingPrice ?? 0).toString() : undefined,
+      sellingPrice: type === 'model' ? ((item as ServiceModelItem).sellingPrice ?? 0).toString() : undefined,
       type 
     });
     setItemTypeToAdd(null);
     setItemName(item.name);
-    setItemPrice(type === 'model' ? ((item as ServiceModelItem).price ?? 0).toString() : '');
+    if (type === 'model') {
+      setItemBuyingPrice(((item as ServiceModelItem).buyingPrice ?? 0).toString());
+      setItemSellingPrice(((item as ServiceModelItem).sellingPrice ?? 0).toString());
+    } else {
+      setItemBuyingPrice('');
+      setItemSellingPrice('');
+    }
     setIsAddEditDialogOpen(true);
   };
   
@@ -125,12 +140,19 @@ export default function ServiceManagementPage() {
     setIsSubmitting(true);
     let result;
     const currentType = editingItem?.type || itemTypeToAdd;
-    let priceValue: number | undefined = undefined;
+    let buyingPriceValue: number | undefined = undefined;
+    let sellingPriceValue: number | undefined = undefined;
 
     if (currentType === 'model') {
-      priceValue = parseFloat(itemPrice);
-      if (isNaN(priceValue) || priceValue < 0) {
-        toast({ title: "Validation Error", description: "Price for model must be a non-negative number.", variant: "destructive" });
+      buyingPriceValue = parseFloat(itemBuyingPrice);
+      sellingPriceValue = parseFloat(itemSellingPrice);
+      if (isNaN(buyingPriceValue) || buyingPriceValue < 0) {
+        toast({ title: "Validation Error", description: "Buying Price for model must be a non-negative number.", variant: "destructive" });
+        setIsSubmitting(false);
+        return;
+      }
+      if (isNaN(sellingPriceValue) || sellingPriceValue < 0) {
+        toast({ title: "Validation Error", description: "Selling Price for model must be a non-negative number.", variant: "destructive" });
         setIsSubmitting(false);
         return;
       }
@@ -138,7 +160,7 @@ export default function ServiceManagementPage() {
 
     if (editingItem) { 
       if (currentType === 'model') {
-        result = await updateModelAction(editingItem.id, itemName.trim(), priceValue);
+        result = await updateModelAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue);
       } else if (currentType === 'lamination') {
         result = await updateLaminationAction(editingItem.id, itemName.trim());
       } else if (currentType === 'paymentMethod') {
@@ -149,7 +171,7 @@ export default function ServiceManagementPage() {
       }
     } else if (itemTypeToAdd) { 
        if (currentType === 'model') {
-        result = await addModelAction(itemName.trim(), priceValue);
+        result = await addModelAction(itemName.trim(), buyingPriceValue, sellingPriceValue);
       } else if (currentType === 'lamination') {
         result = await addLaminationAction(itemName.trim());
       } else if (currentType === 'paymentMethod') {
@@ -163,7 +185,8 @@ export default function ServiceManagementPage() {
     if (result && result.success) {
       setIsAddEditDialogOpen(false);
       setItemName('');
-      setItemPrice('');
+      setItemBuyingPrice('');
+      setItemSellingPrice('');
       setEditingItem(null);
       setItemTypeToAdd(null);
       await fetchData();
@@ -198,7 +221,7 @@ export default function ServiceManagementPage() {
   
   const formatCurrency = (value?: number) => {
     if (value === undefined || value === null) return 'N/A';
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
+    return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
   };
 
 
@@ -250,6 +273,12 @@ export default function ServiceManagementPage() {
               <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
                 <div className="flex flex-col">
                   <span className="font-medium text-foreground">{item.name}</span>
+                   {type === 'model' && (item as ServiceModelItem).sellingPrice !== undefined && (
+                    <span className="text-xs text-muted-foreground flex items-center">
+                      <DollarSign className="h-3 w-3 mr-1 opacity-70" />
+                      Buy: {formatCurrency((item as ServiceModelItem).buyingPrice)} | Sell: {formatCurrency((item as ServiceModelItem).sellingPrice)}
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(item, type)} title={`Edit ${type}`} className="h-8 w-8">
@@ -298,7 +327,7 @@ export default function ServiceManagementPage() {
             <DialogTitle>{editingItem ? 'Edit' : 'Add New'} {(editingItem?.type || itemTypeToAdd) === 'model' ? 'Model' : (editingItem?.type || itemTypeToAdd) === 'lamination' ? 'Lamination' : 'Payment Method'}</DialogTitle>
             <DialogDescription>
               {editingItem ? 'Update the name of this option.' : 'Enter the name for the new option.'}
-              {(editingItem?.type || itemTypeToAdd) === 'model' && ' Also set its price.'}
+              {(editingItem?.type || itemTypeToAdd) === 'model' && ' Also set its buying and selling prices.'}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
@@ -307,23 +336,36 @@ export default function ServiceManagementPage() {
               <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
             </div>
             {(editingItem?.type || itemTypeToAdd) === 'model' && (
-              <div>
-                <Label htmlFor="itemPrice">Price (BDT)</Label>
-                 <div className="relative mt-1">
-                    <Input 
-                        id="itemPrice" 
-                        type="number"
-                        value={itemPrice} 
-                        onChange={(e) => setItemPrice(e.target.value)} 
-                        required 
-                        disabled={isSubmitting}
-                        placeholder="e.g., 1500.00"
-                        min="0"
-                        step="0.01"
-                        className="pl-3"
-                    />
+              <>
+                <div>
+                  <Label htmlFor="itemBuyingPrice">Buying Price (BDT)</Label>
+                  <Input 
+                      id="itemBuyingPrice" 
+                      type="number"
+                      value={itemBuyingPrice} 
+                      onChange={(e) => setItemBuyingPrice(e.target.value)} 
+                      required 
+                      disabled={isSubmitting}
+                      placeholder="e.g., 1000.00"
+                      min="0"
+                      step="0.01"
+                  />
                 </div>
-              </div>
+                <div>
+                  <Label htmlFor="itemSellingPrice">Selling Price (BDT)</Label>
+                  <Input 
+                      id="itemSellingPrice" 
+                      type="number"
+                      value={itemSellingPrice} 
+                      onChange={(e) => setItemSellingPrice(e.target.value)} 
+                      required 
+                      disabled={isSubmitting}
+                      placeholder="e.g., 1500.00"
+                      min="0"
+                      step="0.01"
+                  />
+                </div>
+              </>
             )}
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => setIsAddEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
@@ -358,4 +400,3 @@ export default function ServiceManagementPage() {
     </div>
   );
 }
-

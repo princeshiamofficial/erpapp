@@ -27,10 +27,10 @@ interface CreateOrderDialogProps {
 
 interface DialogOrderItem {
   id: string;
-  model: string;
+  model: string; // Model name
   quantity: string;
   lamination: string;
-  unitPrice: number | null;
+  unitPrice: number | null; // Will be model's sellingPrice
   lineItemTotalPrice: number | null;
 }
 
@@ -159,10 +159,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       prevItems.map(item => {
         if (item.id === itemId) {
           let updatedItem = { ...item };
-          if (field === 'modelName') {
+          if (field === 'modelName') { // value is the model's name
             const selectedModel = modelOptions.find(opt => opt.name === value);
             updatedItem.model = selectedModel ? selectedModel.name : '';
-            updatedItem.unitPrice = selectedModel?.price ?? null;
+            updatedItem.unitPrice = selectedModel?.sellingPrice ?? null; // Use sellingPrice for unitPrice
           } else if (field === 'quantity' || field === 'lamination') {
              updatedItem = { ...item, [field]: value as string };
           }
@@ -318,7 +318,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         model: item.model,
         quantity: quantityNum,
         lamination: item.lamination,
-        unitPrice: item.unitPrice,
+        unitPrice: item.unitPrice, // This is the model's selling price
         lineItemTotalPrice: item.lineItemTotalPrice,
       });
     }
@@ -519,6 +519,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                                       )}
                                     />
                                     {option.name}
+                                    {option.sellingPrice !== undefined && <span className="ml-auto text-xs text-muted-foreground">({formatCurrency(option.sellingPrice)})</span>}
                                   </CommandItem>
                                 ))}
                               </CommandGroup>
@@ -600,4 +601,3 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
-

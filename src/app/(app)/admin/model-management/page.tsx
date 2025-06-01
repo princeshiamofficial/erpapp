@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle, Search, DollarSign } from "lucide-react"; // Added DollarSign
+import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle, Search, DollarSign } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { ServiceModelItem } from "@/types";
@@ -22,7 +22,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 interface ItemToEdit {
   id: string;
   name: string;
-  price: string; 
+  buyingPrice: string;
+  sellingPrice: string; 
 }
 interface ItemToDelete {
   id: string;
@@ -43,7 +44,8 @@ export default function ModelManagementPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const [itemName, setItemName] = useState('');
-  const [itemPrice, setItemPrice] = useState(''); 
+  const [itemBuyingPrice, setItemBuyingPrice] = useState('');
+  const [itemSellingPrice, setItemSellingPrice] = useState('');
   const [editingItem, setEditingItem] = useState<ItemToEdit | null>(null);
   const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
 
@@ -78,14 +80,21 @@ export default function ModelManagementPage() {
   const openAddDialog = () => {
     setEditingItem(null);
     setItemName('');
-    setItemPrice('0'); 
+    setItemBuyingPrice('0');
+    setItemSellingPrice('0');
     setIsAddEditDialogOpen(true);
   };
 
   const openEditDialog = (item: ServiceModelItem) => {
-    setEditingItem({ id: item.id, name: item.name, price: (item.price ?? 0).toString() });
+    setEditingItem({ 
+      id: item.id, 
+      name: item.name, 
+      buyingPrice: (item.buyingPrice ?? 0).toString(),
+      sellingPrice: (item.sellingPrice ?? 0).toString()
+    });
     setItemName(item.name);
-    setItemPrice((item.price ?? 0).toString());
+    setItemBuyingPrice((item.buyingPrice ?? 0).toString());
+    setItemSellingPrice((item.sellingPrice ?? 0).toString());
     setIsAddEditDialogOpen(true);
   };
   
@@ -100,9 +109,15 @@ export default function ModelManagementPage() {
       toast({ title: "Validation Error", description: "Name cannot be empty.", variant: "destructive" });
       return;
     }
-    const priceValue = parseFloat(itemPrice);
-    if (isNaN(priceValue) || priceValue < 0) {
-      toast({ title: "Validation Error", description: "Price must be a non-negative number.", variant: "destructive" });
+    const buyingPriceValue = parseFloat(itemBuyingPrice);
+    const sellingPriceValue = parseFloat(itemSellingPrice);
+
+    if (isNaN(buyingPriceValue) || buyingPriceValue < 0) {
+      toast({ title: "Validation Error", description: "Buying Price must be a non-negative number.", variant: "destructive" });
+      return;
+    }
+    if (isNaN(sellingPriceValue) || sellingPriceValue < 0) {
+      toast({ title: "Validation Error", description: "Selling Price must be a non-negative number.", variant: "destructive" });
       return;
     }
 
@@ -110,12 +125,12 @@ export default function ModelManagementPage() {
     let result;
 
     if (editingItem) { 
-      result = await updateModelAction(editingItem.id, itemName.trim(), priceValue);
+      result = await updateModelAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue);
       if (result.success) {
         toast({ title: "Success", description: `Model "${itemName.trim()}" updated.` });
       }
     } else { 
-      result = await addModelAction(itemName.trim(), priceValue);
+      result = await addModelAction(itemName.trim(), buyingPriceValue, sellingPriceValue);
       if (result.success) {
         toast({ title: "Success", description: `Model "${itemName.trim()}" added.` });
       }
@@ -124,7 +139,8 @@ export default function ModelManagementPage() {
     if (result && result.success) {
       setIsAddEditDialogOpen(false);
       setItemName('');
-      setItemPrice('');
+      setItemBuyingPrice('');
+      setItemSellingPrice('');
       setEditingItem(null);
       await fetchData();
     } else if (result) {
@@ -202,7 +218,7 @@ export default function ModelManagementPage() {
                   <span className="font-medium text-foreground">{item.name}</span>
                   <span className="text-xs text-muted-foreground flex items-center">
                     <DollarSign className="h-3 w-3 mr-1 opacity-70" />
-                    {formatCurrency(item.price)}
+                    Buy: {formatCurrency(item.buyingPrice)} | Sell: {formatCurrency(item.sellingPrice)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -232,7 +248,7 @@ export default function ModelManagementPage() {
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 page-header">
         <div>
           <h1 className="page-title">Model Management</h1>
-          <p className="page-description">Configure Model options (including prices) available for orders.</p>
+          <p className="page-description">Configure Model options (including buying/selling prices) available for orders.</p>
         </div>
         <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
           <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
@@ -248,7 +264,7 @@ export default function ModelManagementPage() {
           <DialogHeader>
             <DialogTitle>{editingItem ? 'Edit' : 'Add New'} Model</DialogTitle>
             <DialogDescription>
-              {editingItem ? 'Update the name and price of this model.' : 'Enter the name and price for the new model.'}
+              {editingItem ? 'Update the name and prices of this model.' : 'Enter the name and prices for the new model.'}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
@@ -257,21 +273,32 @@ export default function ModelManagementPage() {
               <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
             </div>
             <div>
-              <Label htmlFor="itemPrice">Price (BDT)</Label>
-              <div className="relative mt-1">
-                <Input 
-                  id="itemPrice" 
-                  type="number"
-                  value={itemPrice} 
-                  onChange={(e) => setItemPrice(e.target.value)} 
-                  required 
-                  disabled={isSubmitting}
-                  placeholder="e.g., 1500.00"
-                  min="0"
-                  step="0.01"
-                  className="pl-3"
-                />
-              </div>
+              <Label htmlFor="itemBuyingPrice">Buying Price (BDT)</Label>
+              <Input 
+                id="itemBuyingPrice" 
+                type="number"
+                value={itemBuyingPrice} 
+                onChange={(e) => setItemBuyingPrice(e.target.value)} 
+                required 
+                disabled={isSubmitting}
+                placeholder="e.g., 1000.00"
+                min="0"
+                step="0.01"
+              />
+            </div>
+            <div>
+              <Label htmlFor="itemSellingPrice">Selling Price (BDT)</Label>
+              <Input 
+                id="itemSellingPrice" 
+                type="number"
+                value={itemSellingPrice} 
+                onChange={(e) => setItemSellingPrice(e.target.value)} 
+                required 
+                disabled={isSubmitting}
+                placeholder="e.g., 1500.00"
+                min="0"
+                step="0.01"
+              />
             </div>
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => setIsAddEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
@@ -305,4 +332,3 @@ export default function ModelManagementPage() {
     </div>
   );
 }
-

@@ -10,10 +10,10 @@ const PAYMENT_METHODS_COLLECTION = 'servicePaymentMethods';
 
 // Default options with prices for models
 const defaultModelsData: Array<Omit<ServiceModelItem, 'id'>> = [
-  { name: "Standard Gloss", price: 10.00 },
-  { name: "Premium Matte", price: 15.00 },
-  { name: "Eco-Friendly Recycled", price: 12.50 },
-  { name: "Luxury Silk", price: 18.75 }
+  { name: "Standard Gloss", buyingPrice: 5.00, sellingPrice: 10.00 },
+  { name: "Premium Matte", buyingPrice: 8.00, sellingPrice: 15.00 },
+  { name: "Eco-Friendly Recycled", buyingPrice: 7.00, sellingPrice: 12.50 },
+  { name: "Luxury Silk", buyingPrice: 10.00, sellingPrice: 18.75 }
 ];
 const defaultLaminationsData: string[] = ["None", "Glossy", "Matte", "Soft Touch", "Anti-Scuff Matte"];
 const defaultPaymentMethodsData: string[] = ["Cash", "Card", "Bank Transfer", "Mobile Banking", "Cheque", "Other"];
@@ -27,7 +27,12 @@ const seedDefaultModels = async (): Promise<ServiceModelItem[]> => {
 
   defaultModelsData.forEach(modelData => {
     const id = uuidv4();
-    const newModel: ServiceModelItem = { id, name: modelData.name, price: modelData.price || 0 };
+    const newModel: ServiceModelItem = { 
+      id, 
+      name: modelData.name, 
+      buyingPrice: modelData.buyingPrice ?? 0,
+      sellingPrice: modelData.sellingPrice ?? 0
+    };
     const docRef = doc(modelsRef, id);
     batch.set(docRef, newModel);
     createdModels.push(newModel);
@@ -35,7 +40,7 @@ const seedDefaultModels = async (): Promise<ServiceModelItem[]> => {
 
   try {
     await batch.commit();
-    console.log('Default service models (with prices) seeded in Firestore.');
+    console.log('Default service models (with buying/selling prices) seeded in Firestore.');
     return createdModels;
   } catch (error) {
     console.error("Error seeding default service models:", error);
@@ -57,7 +62,8 @@ export const getModels = async (): Promise<ServiceModelItem[]> => {
       return { 
         id: docSnap.id, 
         name: data.name,
-        price: data.price === undefined ? 0 : data.price 
+        buyingPrice: data.buyingPrice === undefined ? 0 : data.buyingPrice,
+        sellingPrice: data.sellingPrice === undefined ? 0 : data.sellingPrice 
       } as ServiceModelItem;
     });
   } catch (error) {
@@ -66,11 +72,12 @@ export const getModels = async (): Promise<ServiceModelItem[]> => {
   }
 };
 
-export const addModel = async (name: string, price?: number): Promise<ServiceModelItem | null> => {
+export const addModel = async (name: string, buyingPrice?: number, sellingPrice?: number): Promise<ServiceModelItem | null> => {
   if (!name.trim()) {
     throw new Error("Model name cannot be empty.");
   }
-  const numericPrice = price === undefined || isNaN(Number(price)) ? 0 : Number(price);
+  const numBuyingPrice = buyingPrice === undefined || isNaN(Number(buyingPrice)) ? 0 : Number(buyingPrice);
+  const numSellingPrice = sellingPrice === undefined || isNaN(Number(sellingPrice)) ? 0 : Number(sellingPrice);
 
   try {
     const modelsCol = collection(db, MODELS_COLLECTION);
@@ -81,7 +88,7 @@ export const addModel = async (name: string, price?: number): Promise<ServiceMod
     }
 
     const id = uuidv4();
-    const newModel: ServiceModelItem = { id, name: name.trim(), price: numericPrice };
+    const newModel: ServiceModelItem = { id, name: name.trim(), buyingPrice: numBuyingPrice, sellingPrice: numSellingPrice };
     await setDoc(doc(modelsCol, id), newModel);
     return newModel;
   } catch (error) {
@@ -91,11 +98,12 @@ export const addModel = async (name: string, price?: number): Promise<ServiceMod
   }
 };
 
-export const updateModel = async (id: string, name: string, price?: number): Promise<boolean> => {
+export const updateModel = async (id: string, name: string, buyingPrice?: number, sellingPrice?: number): Promise<boolean> => {
   if (!name.trim()) {
     throw new Error("Model name cannot be empty.");
   }
-  const numericPrice = price === undefined || isNaN(Number(price)) ? 0 : Number(price);
+  const numBuyingPrice = buyingPrice === undefined || isNaN(Number(buyingPrice)) ? 0 : Number(buyingPrice);
+  const numSellingPrice = sellingPrice === undefined || isNaN(Number(sellingPrice)) ? 0 : Number(sellingPrice);
 
   try {
     const modelsCol = collection(db, MODELS_COLLECTION);
@@ -106,7 +114,7 @@ export const updateModel = async (id: string, name: string, price?: number): Pro
     }
 
     const modelDoc = doc(db, MODELS_COLLECTION, id);
-    await updateDoc(modelDoc, { name: name.trim(), price: numericPrice });
+    await updateDoc(modelDoc, { name: name.trim(), buyingPrice: numBuyingPrice, sellingPrice: numSellingPrice });
     return true;
   } catch (error) {
     console.error("Error updating service model:", error);

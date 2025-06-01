@@ -37,7 +37,7 @@ export interface OrderItem {
   model: string;
   quantity: number;
   lamination: string;
-  unitPrice: number;
+  unitPrice: number; // This will be derived from model's sellingPrice
   lineItemTotalPrice: number;
 }
 
@@ -83,7 +83,8 @@ export interface Comment {
 export interface ServiceModelItem {
   id: string;
   name: string;
-  price?: number;
+  buyingPrice?: number;
+  sellingPrice?: number;
 }
 
 export interface ServiceLaminationItem {

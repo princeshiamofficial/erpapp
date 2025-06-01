@@ -20,9 +20,9 @@ const MODEL_MANAGEMENT_PATH = "/(app)/admin/model-management";
 const CREATE_ORDER_DIALOG_REVALIDATION_TARGET = "/(app)/orders"; // To refresh CreateOrderDialog options
 
 // Model Actions
-export async function addModelAction(name: string, price?: number): Promise<{ success: boolean; model?: ServiceModelItem; error?: string }> {
+export async function addModelAction(name: string, buyingPrice?: number, sellingPrice?: number): Promise<{ success: boolean; model?: ServiceModelItem; error?: string }> {
   try {
-    const newModel = await addModel(name, price);
+    const newModel = await addModel(name, buyingPrice, sellingPrice);
     if (newModel) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
       revalidatePath(MODEL_MANAGEMENT_PATH);
@@ -36,9 +36,9 @@ export async function addModelAction(name: string, price?: number): Promise<{ su
   }
 }
 
-export async function updateModelAction(id: string, name: string, price?: number): Promise<{ success: boolean; error?: string }> {
+export async function updateModelAction(id: string, name: string, buyingPrice?: number, sellingPrice?: number): Promise<{ success: boolean; error?: string }> {
   try {
-    const success = await updateModel(id, name, price);
+    const success = await updateModel(id, name, buyingPrice, sellingPrice);
     if (success) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
       revalidatePath(MODEL_MANAGEMENT_PATH);
