@@ -10,6 +10,7 @@ import {
 import type { UserRole, User } from "@/types"; 
 import { adminApp } from '@/lib/firebase-admin'; 
 import { getUsers as getAllUsersFromDb, getUserById } from '@/lib/user-service'; 
+import type { FirebaseError } from 'firebase-admin';
 import type { messaging } from 'firebase-admin';
 
 
@@ -87,98 +88,117 @@ export async function sendPushNotificationAction(
     };
   }
 
-  const { title, body, iconUrl, targetUrl, soundUrl, targetType, targetRoles, targetUserIds } = payload;
+  const { title: rawTitle, body: rawBody, iconUrl, targetUrl, soundUrl, targetType, targetRoles, targetUserIds } = payload;
 
-  if (!title || !body) {
+  if (!rawTitle || !rawBody) {
     return { success: false, message: "Title and body are required for the notification.", error: "Missing title or body."};
   }
 
-  let tokensToSend: string[] = [];
+  let targetUsersData: Array<{ id: string; name: string; role: UserRole; fcmToken: string | null }> = [];
   let targetDescription = "";
-  let allUsersWarning = "";
-
+  
   try {
+    const allUsersFromDb = await getAllUsersFromDb();
+
     if (targetType === 'users' && targetUserIds && targetUserIds.length > 0) {
       targetDescription = `specific users (${targetUserIds.length})`;
-      const usersToNotify: User[] = [];
       for (const userId of targetUserIds) {
-        const user = await getUserById(userId); 
-        if (user) usersToNotify.push(user);
+        const user = allUsersFromDb.find(u => u.id === userId);
+        if (user && user.fcmToken) {
+          targetUsersData.push({ id: user.id, name: user.name, role: user.role, fcmToken: user.fcmToken });
+        }
       }
-      tokensToSend = usersToNotify.filter(u => u.fcmToken).map(u => u.fcmToken!);
     } else if (targetType === 'roles' && targetRoles && targetRoles.length > 0) {
       targetDescription = `users with roles: ${targetRoles.join(', ')}`;
-      const allUsers = await getAllUsersFromDb();
-      tokensToSend = allUsers.filter(u => u.fcmToken && targetRoles.includes(u.role)).map(u => u.fcmToken!);
+      targetUsersData = allUsersFromDb
+        .filter(u => u.fcmToken && targetRoles.includes(u.role))
+        .map(u => ({ id: u.id, name: u.name, role: u.role, fcmToken: u.fcmToken }));
     } else if (targetType === 'all') {
       targetDescription = "all users";
-      const allUsers = await getAllUsersFromDb(); // Fetch all users
-      tokensToSend = allUsers.filter(u => u.fcmToken).map(u => u.fcmToken!);
-      console.log(`[sendPushNotificationAction] Target 'all': Found ${allUsers.length} total users, ${tokensToSend.length} with FCM tokens.`);
-      if (tokensToSend.length === 0) {
-          allUsersWarning = " (No users with FCM tokens found to send to.)";
-      } else {
-          allUsersWarning = ` (Attempting to send to ${tokensToSend.length} users with FCM tokens. For very large user bases, consider topic messaging.)`;
-      }
+      targetUsersData = allUsersFromDb
+        .filter(u => u.fcmToken)
+        .map(u => ({ id: u.id, name: u.name, role: u.role, fcmToken: u.fcmToken }));
     } else {
       return { success: false, message: "Invalid targeting information provided.", error: "Invalid target."};
     }
 
-    if (tokensToSend.length === 0) {
+    if (targetUsersData.length === 0) {
       return { success: false, message: `No users with FCM tokens found for the selected target: ${targetDescription}.`, error: "No recipients found." };
     }
 
-    const fcmMessagePayload: messaging.MulticastMessage = {
-      notification: {
-        title: title,
-        body: body,
-        ...(iconUrl && {imageUrl: iconUrl})
-      },
-      data: { // Custom data payload for client to handle
-        title: title, 
-        body: body, // Duplicate for easier access on client if notification object isn't parsed directly
-        ...(iconUrl && { icon: iconUrl, iconUrl: iconUrl }), // Send both for flexibility
-        ...(targetUrl && { click_action: targetUrl, targetUrl: targetUrl }), // click_action is standard, targetUrl for custom handling
-        ...(soundUrl && { sound: soundUrl }) 
-      },
-      tokens: tokensToSend,
-      // Optional: Android specific config, APNS specific config, Webpush specific config
-      // Example webpush config (can also be set globally on admin.messaging())
-      // webpush: {
-      //   notification: {
-      //     icon: iconUrl || '/default-icon.png', // Default icon if not provided
-      //   },
-      //   fcmOptions: {
-      //     link: targetUrl || 'https://your-app-domain.com' // Default click action
-      //   }
-      // }
-    };
+    let successfulSends = 0;
+    let failedSends = 0;
+    const errors: string[] = [];
+
+    console.log(`[sendPushNotificationAction] Preparing to send REAL push notifications to ${targetUsersData.length} user(s) for target: ${targetDescription}`);
+
+    for (const user of targetUsersData) {
+      if (!user.fcmToken) {
+        failedSends++;
+        errors.push(`User ${user.name} (${user.id}) has no FCM token.`);
+        continue;
+      }
+
+      const personalizedTitle = rawTitle.replace(/%name%/g, user.name).replace(/%role%/g, user.role);
+      const personalizedBody = rawBody.replace(/%name%/g, user.name).replace(/%role%/g, user.role);
+
+      const fcmMessage: messaging.Message = {
+        token: user.fcmToken,
+        notification: {
+          title: personalizedTitle,
+          body: personalizedBody,
+          ...(iconUrl && { imageUrl: iconUrl })
+        },
+        data: { 
+          title: personalizedTitle, 
+          body: personalizedBody,
+          ...(iconUrl && { icon: iconUrl, iconUrl: iconUrl }),
+          ...(targetUrl && { click_action: targetUrl, targetUrl: targetUrl }),
+          ...(soundUrl && { sound: soundUrl }) 
+        },
+        // Optional webpush config
+        // webpush: {
+        //   notification: {
+        //     icon: iconUrl || '/default-icon.png',
+        //   },
+        //   fcmOptions: {
+        //     link: targetUrl || 'https://your-app-domain.com'
+        //   }
+        // }
+      };
+      
+      try {
+        // @ts-ignore admin.messaging might be an issue with the type if not fully initialized, but should work if adminApp is valid
+        await adminApp.messaging().send(fcmMessage);
+        successfulSends++;
+        console.log(`[sendPushNotificationAction] Successfully sent notification to ${user.name} (${user.id}) with token ${user.fcmToken}`);
+      } catch (error) {
+        failedSends++;
+        const firebaseError = error as FirebaseError;
+        const errorMessage = firebaseError.message || "Unknown error";
+        console.error(`[sendPushNotificationAction] Failed to send to ${user.name} (${user.id}) with token ${user.fcmToken}: ${errorMessage} (Code: ${firebaseError.code})`);
+        errors.push(`Failed for ${user.name}: ${errorMessage}`);
+      }
+    }
     
-    // If an iconUrl is provided, ensure it's set on the notification part of the payload as imageUrl for FCM
-    if (iconUrl && fcmMessagePayload.notification) { 
-       fcmMessagePayload.notification.imageUrl = iconUrl; 
+    let messageSummary = `Sent to ${successfulSends} device(s). `;
+    if (failedSends > 0) {
+      messageSummary += `${failedSends} failed.`;
+      if (errors.length > 0) {
+          messageSummary += ` Errors: ${errors.slice(0,3).join(', ')}${errors.length > 3 ? '...' : ''}`;
+      }
+    }
+    messageSummary += ` (Target: ${targetDescription})`;
+    
+    if(targetType === 'all' && successfulSends > 20) { // Add warning for large "all users" sends
+        messageSummary += " Note: Sending to 'All Users' can be resource-intensive for large user bases. Consider topic messaging for broader reach."
     }
 
 
-    console.log(`[sendPushNotificationAction] Attempting to send REAL push notification to ${tokensToSend.length} tokens for target: ${targetDescription}`);
-    console.log("[sendPushNotificationAction] FCM Message Payload:", JSON.stringify(fcmMessagePayload, null, 2));
-    
-    // @ts-ignore admin.messaging might be an issue with the type if not fully initialized, but should work if adminApp is valid
-    const response = await adminApp.messaging().sendEachForMulticast(fcmMessagePayload as admin.messaging.MulticastMessage);
-    
-    const successfulSends = response.successCount;
-    const failedSends = response.failureCount;
-    
-    console.log(`[sendPushNotificationAction] Push Notification Send Results: ${successfulSends} successful, ${failedSends} failed.`);
-    response.responses.forEach((resp, idx) => {
-      if (!resp.success) {
-        console.error(`[sendPushNotificationAction] Failed to send to token ${tokensToSend[idx]}: ${resp.error?.message} (Code: ${resp.error?.code})`);
-      }
-    });
-
     return { 
-      success: true, 
-      message: `Notification sent to ${successfulSends} device(s). ${failedSends > 0 ? `${failedSends} failed.` : ''} (Target: ${targetDescription}${allUsersWarning})`
+      success: successfulSends > 0, 
+      message: messageSummary,
+      ...(failedSends > 0 && { error: `Some notifications failed to send. ${errors.join('; ')}` })
     };
 
   } catch (error) {
@@ -191,7 +211,3 @@ export async function sendPushNotificationAction(
     };
   }
 }
-
-    
-
-    

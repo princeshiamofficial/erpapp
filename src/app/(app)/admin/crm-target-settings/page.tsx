@@ -192,7 +192,7 @@ export default function CrmTargetSettingsPage() {
     const result = await sendPushNotificationAction(payload, currentUser);
     setIsSendingNotification(false);
     if (result.success) {
-      toast({ title: "Notification Sent (Simulated)", description: result.message });
+      toast({ title: "Notification Send Attempted", description: result.message }); // Updated toast title
       setNotificationTitle(''); setNotificationBody(''); setNotificationIconUrl(''); setNotificationTargetUrl('');
     } else {
       toast({ title: "Notification Failed", description: result.error || "Could not send notification.", variant: "destructive" });
@@ -407,7 +407,7 @@ export default function CrmTargetSettingsPage() {
             <Send className="h-6 w-6 text-primary" /> Send Push Notification
           </CardTitle>
           <CardDescription className="text-muted-foreground text-sm mt-0.5">
-            Compose and (simulate) sending a push notification to users. Ensure users have granted notification permissions.
+            Compose and send a push notification. Use <code className="bg-muted px-1 py-0.5 rounded text-xs">%name%</code> and <code className="bg-muted px-1 py-0.5 rounded text-xs">%role%</code> for personalization.
              <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline ml-1">
                 Test with Firebase Console <ExternalLink className="inline-block h-3 w-3 ml-0.5"/>
               </a>
@@ -417,11 +417,11 @@ export default function CrmTargetSettingsPage() {
           <CardContent className="p-6 space-y-4">
             <div className="space-y-1">
               <Label htmlFor="notifTitle">Title *</Label>
-              <Input id="notifTitle" value={notificationTitle} onChange={(e) => setNotificationTitle(e.target.value)} placeholder="e.g., New Feature Alert!" required disabled={isSendingNotification}/>
+              <Input id="notifTitle" value={notificationTitle} onChange={(e) => setNotificationTitle(e.target.value)} placeholder="e.g., New Feature for %role%!" required disabled={isSendingNotification}/>
             </div>
             <div className="space-y-1">
               <Label htmlFor="notifBody">Body *</Label>
-              <Textarea id="notifBody" value={notificationBody} onChange={(e) => setNotificationBody(e.target.value)} placeholder="Describe the notification content..." required disabled={isSendingNotification}/>
+              <Textarea id="notifBody" value={notificationBody} onChange={(e) => setNotificationBody(e.target.value)} placeholder="Hi %name%, check out this update..." required disabled={isSendingNotification}/>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
