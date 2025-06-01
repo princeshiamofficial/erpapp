@@ -3,12 +3,12 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // CardHeader, CardTitle might not be directly used in SummaryCard anymore
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { DateRangePicker } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
-import { format, isWithinInterval, parseISO, subDays, addDays } from "date-fns"; // Added addDays
+import { format, isWithinInterval, parseISO, subDays, addDays } from "date-fns"; 
 import { 
   Hand, 
   ShoppingCart, 
@@ -59,34 +59,35 @@ interface SummaryCardProps {
   value: string;
   icon: React.ElementType;
   iconColorClass?: string;
+  circleBgClass?: string;
   isLoading?: boolean;
 }
 
-const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, iconColorClass = "text-primary", isLoading }) => {
+const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, iconColorClass = "text-primary", circleBgClass = "bg-primary/10", isLoading }) => {
   if (isLoading) {
     return (
-      <Card className="shadow-md hover:shadow-lg transition-shadow bg-card">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
-          <CardTitle className="text-sm font-medium text-muted-foreground"><Skeleton className="h-4 w-24" /></CardTitle>
-          <Skeleton className="h-8 w-8 rounded-full" />
-        </CardHeader>
-        <CardContent className="pb-4 px-4">
-          <div className="text-2xl font-bold"><Skeleton className="h-8 w-32" /></div>
-        </CardContent>
+      <Card className="bg-card p-4 shadow-md">
+        <div className="flex items-center space-x-4">
+          <Skeleton className="h-12 w-12 rounded-full" />
+          <div className="space-y-1.5">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-7 w-32" />
+          </div>
+        </div>
       </Card>
     );
   }
   return (
-    <Card className="shadow-md hover:shadow-lg transition-shadow bg-card">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <div className={`p-1.5 bg-primary/10 rounded-md ${iconColorClass} opacity-80`}>
-          <Icon className="h-5 w-5" />
+    <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4">
+      <div className="flex items-center space-x-4">
+        <div className={`p-3 rounded-full ${circleBgClass}`}>
+          <Icon className={`h-6 w-6 ${iconColorClass}`} />
         </div>
-      </CardHeader>
-      <CardContent className="pb-4 px-4">
-        <div className="text-2xl font-bold text-foreground">{value}</div>
-      </CardContent>
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-2xl font-bold text-foreground">{value}</p>
+        </div>
+      </div>
     </Card>
   );
 };
@@ -140,10 +141,14 @@ export default function DashboardPage() {
 
   const filteredOrders = useMemo(() => {
     if (!selectedDateRange?.from || !selectedDateRange?.to) return [];
+    // Ensure 'to' date includes the entire day
+    const endDate = new Date(selectedDateRange.to as Date);
+    endDate.setHours(23, 59, 59, 999);
+
     return allOrders.filter(order => 
       order.createdAt && isWithinInterval(parseISO(order.createdAt), {
         start: selectedDateRange.from as Date, 
-        end: selectedDateRange.to as Date
+        end: endDate
       })
     );
   }, [allOrders, selectedDateRange]);
@@ -151,7 +156,6 @@ export default function DashboardPage() {
   useEffect(() => {
     if (isLoadingData) return;
 
-    // Calculate Total Sales and Invoice Due from filteredOrders
     let currentTotalSales = 0;
     let currentTotalAdvance = 0;
 
@@ -167,11 +171,11 @@ export default function DashboardPage() {
     setTotalSales(formatCurrency(currentTotalSales));
     setInvoiceDue(formatCurrency(currentTotalSales - currentTotalAdvance));
 
-    // Generate Sales Chart Data
     if (selectedDateRange?.from && selectedDateRange?.to) {
       const dailySales = new Map<string, number>();
       let currentDatePointer = new Date(selectedDateRange.from);
       const toDate = new Date(selectedDateRange.to);
+      toDate.setHours(23,59,59,999); // include the whole "to" day
 
       while (currentDatePointer <= toDate) {
         dailySales.set(format(currentDatePointer, 'yyyy-MM-dd'), 0);
@@ -209,15 +213,15 @@ export default function DashboardPage() {
     setCurrentDateRangeLabel(label);
   };
 
-  const summaryCardData = useMemo(() => [
-    { title: "Total Sales", value: totalSales, icon: ShoppingCart, isLoading: isLoadingData },
-    { title: "Net", value: netValue, icon: BadgeDollarSign, isLoading: isLoadingData },
-    { title: "Invoice due", value: invoiceDue, icon: FileText, isLoading: isLoadingData },
-    { title: "Total Sell Return", value: totalSellReturn, icon: Undo2, isLoading: isLoadingData },
-    { title: "Total purchase", value: totalPurchase, icon: Download, isLoading: isLoadingData },
-    { title: "Purchase due", value: purchaseDue, icon: AlertTriangle, isLoading: isLoadingData },
-    { title: "Total Purchase Return", value: totalPurchaseReturn, icon: Redo2, isLoading: isLoadingData },
-    { title: "Expense", value: expense, icon: Receipt, isLoading: isLoadingData },
+ const summaryCardData = useMemo(() => [
+    { title: "Total Sales", value: totalSales, icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
+    { title: "Net", value: netValue, icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData },
+    { title: "Invoice due", value: invoiceDue, icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
+    { title: "Total Sell Return", value: totalSellReturn, icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
+    { title: "Total purchase", value: totalPurchase, icon: Download, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
+    { title: "Purchase due", value: purchaseDue, icon: AlertTriangle, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
+    { title: "Total Purchase Return", value: totalPurchaseReturn, icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
+    { title: "Expense", value: expense, icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
   ], [isLoadingData, totalSales, netValue, invoiceDue, totalSellReturn, totalPurchase, purchaseDue, totalPurchaseReturn, expense]);
 
 
@@ -304,20 +308,22 @@ export default function DashboardPage() {
             title={card.title}
             value={card.value}
             icon={card.icon}
+            iconColorClass={card.iconColorClass}
+            circleBgClass={card.circleBgClass}
             isLoading={card.isLoading}
           />
         ))}
       </div>
 
       <Card className="shadow-xl bg-card">
-        <CardHeader>
+        <CardHeader className="border-b">
           <CardTitle className="flex items-center text-xl text-foreground">
             <BarChartBig className="mr-2 h-6 w-6 text-primary" />
             Sales ({currentDateRangeLabel})
           </CardTitle>
         </CardHeader>
         <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">
-          {isLoadingData ? (
+          {isLoadingData && salesChartData.length === 0 ? ( // Show skeleton only if data is loading AND chart data isn't ready
             <div className="flex items-center justify-center h-full">
               <Skeleton className="h-full w-full" />
             </div>
