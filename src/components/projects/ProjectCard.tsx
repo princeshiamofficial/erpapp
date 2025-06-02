@@ -123,7 +123,7 @@ const calculateProgressInfo = (
     currentIsOverdue = true;
     const timeOver = formatDistanceToNowStrict(effectiveTargetDate, { addSuffix: false });
     currentDisplayText = `Overdue by ${timeOver}`;
-    currentProgressColorClass = 'bg-destructive';
+    progressColorClass = 'bg-destructive'; // Corrected line
     currentPercentage = 100;
   } else if (
     status !== 'CR Clearance' && status !== 'On Design' && status !== 'Logistics' &&
@@ -139,7 +139,7 @@ const calculateProgressInfo = (
       currentDisplayText = (status === 'On Hold') ? "Hold period ended" : "Stage due";
       currentPercentage = 100;
       // If it's exactly due or slightly past but not yet flagged `currentIsOverdue` by `isAfter` (due to precision)
-      currentProgressColorClass = isAfter(now, effectiveTargetDate) ? 'bg-destructive' : 'bg-yellow-500';
+      progressColorClass = isAfter(now, effectiveTargetDate) ? 'bg-destructive' : 'bg-yellow-500';
     } else {
       currentDisplayText = `${formatDurationPrecise(secondsRemaining)} remaining`;
       const totalDurationSeconds = differenceInSeconds(effectiveTargetDate, effectiveStartDate);
@@ -160,7 +160,7 @@ const calculateProgressInfo = (
         currentIsOverdue = true;
         const timeOverHold = formatDistanceToNowStrict(holdTargetDateForDisplay, { addSuffix: false });
         currentDisplayText = `Hold overdue by ${timeOverHold}`;
-        currentProgressColorClass = 'bg-destructive';
+        progressColorClass = 'bg-destructive';
         currentPercentage = 100;
     }
   }
