@@ -51,13 +51,13 @@ const initialOrderItemState: DialogOrderItem = {
 
 export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children }: CreateOrderDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [jobId, setJobId] = useState(''); 
-  const [companyName, setCompanyName] = useState(''); 
+  const [jobId, setJobId] = useState('');
+  const [companyName, setCompanyName] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [initialStatusId, setInitialStatusId] = useState<string>('');
   const [advancePayment, setAdvancePayment] = useState<string>('');
-  const [specialClientDiscount, setSpecialClientDiscount] = useState<string>('');
+  const [specialClientDiscount, setSpecialClientDiscount] = useState<string>(''); // Input as string
   const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [showCustomPaymentInput, setShowCustomPaymentInput] = useState(false);
   const [customPaymentMethodText, setCustomPaymentMethodText] = useState('');
@@ -66,6 +66,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
   const [orderItems, setOrderItems] = useState<DialogOrderItem[]>([{ ...initialOrderItemState, id: uuidv4() }]);
   const [orderItemsTotal, setOrderItemsTotal] = useState<number>(0);
+  const [calculatedDiscountAmount, setCalculatedDiscountAmount] = useState<number>(0);
   const [netPayable, setNetPayable] = useState<number>(0);
   const [amountDue, setAmountDue] = useState<number>(0);
 
@@ -80,7 +81,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const { toast } = useToast();
 
   const resetForm = useCallback(() => {
-    setJobId(''); 
+    setJobId('');
     setCompanyName('');
     setAddress('');
     setPhoneNumber('');
@@ -90,11 +91,12 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setPaymentMethod('');
     setShowCustomPaymentInput(false);
     setCustomPaymentMethodText('');
-    setOrderNotes(''); 
+    setOrderNotes('');
     setOrderItems([{ ...initialOrderItemState, id: uuidv4() }]);
     setPopoverOpenStates({});
     setIsPaymentMethodPopoverOpen(false);
     setOrderItemsTotal(0);
+    setCalculatedDiscountAmount(0);
     setNetPayable(0);
     setAmountDue(0);
     setIsSubmitting(false);
@@ -143,11 +145,28 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
   }, [isOpen, availableStatuses, initialStatusId]);
 
+  // Effect to calculate totals when orderItems or discount changes
   useEffect(() => {
     const currentItemsTotal = orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
     setOrderItemsTotal(currentItemsTotal);
-    
-    const discountNum = parseFloat(specialClientDiscount) || 0;
+
+    let discountNum = 0;
+    const discountStr = specialClientDiscount.trim();
+    if (discountStr.endsWith('%')) {
+        const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
+        if (!isNaN(percentage) && percentage >= 0) {
+            discountNum = (percentage / 100) * currentItemsTotal;
+        }
+    } else {
+        const fixedAmount = parseFloat(discountStr);
+        if (!isNaN(fixedAmount) && fixedAmount >= 0) {
+            discountNum = fixedAmount;
+        }
+    }
+    // Ensure discount does not exceed total
+    discountNum = Math.min(discountNum, currentItemsTotal);
+    setCalculatedDiscountAmount(discountNum);
+
     const currentNetPayable = Math.max(0, currentItemsTotal - discountNum);
     setNetPayable(currentNetPayable);
 
@@ -225,20 +244,34 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const handleAdvancePaymentChange = (value: string) => {
     setAdvancePayment(value);
     const numericValue = parseFloat(value);
-    const currentNetPayable = Math.max(0, orderItemsTotal - (parseFloat(specialClientDiscount) || 0));
-    if (!isNaN(numericValue) && numericValue > currentNetPayable && currentNetPayable > 0) {
+    // Validation against netPayable happens in canSubmit and server-side
+    if (!isNaN(numericValue) && numericValue > netPayable && netPayable > 0) {
       toast({
         title: "Validation Warning",
-        description: `Advance payment cannot exceed net payable amount of ${formatCurrency(currentNetPayable)}.`,
+        description: `Advance payment cannot exceed net payable amount of ${formatCurrency(netPayable)}.`,
         variant: "destructive",
       });
     }
   };
-  
+
   const handleDiscountChange = (value: string) => {
-    setSpecialClientDiscount(value);
-    const numericValue = parseFloat(value);
-    if (!isNaN(numericValue) && numericValue > orderItemsTotal && orderItemsTotal > 0) {
+    setSpecialClientDiscount(value); // Store the raw string
+    // Validation and calculation is handled in the useEffect
+    let discountVal = 0;
+    const discountStr = value.trim();
+    if (discountStr.endsWith('%')) {
+        const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
+        if (!isNaN(percentage) && percentage >= 0) {
+            discountVal = (percentage / 100) * orderItemsTotal;
+        }
+    } else {
+        const fixedAmount = parseFloat(discountStr);
+        if (!isNaN(fixedAmount) && fixedAmount >= 0) {
+            discountVal = fixedAmount;
+        }
+    }
+
+    if (discountVal > orderItemsTotal && orderItemsTotal > 0) {
         toast({
             title: "Validation Warning",
             description: `Discount cannot exceed total items price of ${formatCurrency(orderItemsTotal)}.`,
@@ -250,15 +283,11 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
   const canSubmit = useMemo(() => {
     const parsedAdvPayment = parseFloat(advancePayment) || 0;
-    const parsedDiscount = parseFloat(specialClientDiscount) || 0;
-    const currentNetPayable = Math.max(0, orderItemsTotal - parsedDiscount);
-    
-    const isAdvPaymentValid = parsedAdvPayment <= currentNetPayable || currentNetPayable === 0;
-    const isDiscountValid = parsedDiscount <= orderItemsTotal || orderItemsTotal === 0;
-
+    const isAdvPaymentValid = parsedAdvPayment <= netPayable || netPayable === 0; // Check against calculated netPayable
+    const isDiscountValid = calculatedDiscountAmount <= orderItemsTotal || orderItemsTotal === 0; // Check against calculatedDiscountAmount
 
     return !isSubmitting &&
-      jobId.trim() && 
+      jobId.trim() &&
       companyName.trim() && address.trim() && phoneNumber.trim() && initialStatusId &&
       (availableStatuses.length > 0 || !!initialStatusId) &&
       modelOptions.length > 0 &&
@@ -276,83 +305,35 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       !(isAdvancePaymentEntered && !paymentMethod.trim()) &&
       !(isAdvancePaymentEntered && paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
       isAdvPaymentValid && isDiscountValid;
-  }, [isSubmitting, jobId, companyName, address, phoneNumber, initialStatusId, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, paymentMethod, customPaymentMethodText, advancePayment, specialClientDiscount, orderItemsTotal]);
+  }, [isSubmitting, jobId, companyName, address, phoneNumber, initialStatusId, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, paymentMethod, customPaymentMethodText, advancePayment, netPayable, calculatedDiscountAmount, orderItemsTotal]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    // Basic field validation (already covered by canSubmit mostly)
     if (!jobId.trim() || !companyName.trim() || !address.trim() || !phoneNumber.trim() || !initialStatusId) {
-      toast({
-        title: "Validation Error",
-        description: "Job ID, Company Name, Address, Phone Number, and Initial Status are required.",
-        variant: "destructive",
-      });
-      setIsSubmitting(false);
-      return;
+      toast({ title: "Validation Error", description: "Job ID, Company Name, Address, Phone Number, and Initial Status are required.", variant: "destructive" });
+      setIsSubmitting(false); return;
+    }
+    if (orderItems.length === 0 || orderItems.some(item => !item.model || !item.lamination || parseInt(item.quantity) < 1 || item.unitPrice === null || item.lineItemTotalPrice === null)) {
+       toast({ title: "Validation Error", description: "All order items must be complete with Model, Quantity, Lamination, and valid pricing.", variant: "destructive" });
+       setIsSubmitting(false); return;
     }
 
-    if (orderItems.length === 0 || orderItems.some(item => !item.model || !item.lamination)) {
-       toast({ title: "Validation Error", description: "At least one order item with Model and Lamination is required.", variant: "destructive" });
-       setIsSubmitting(false);
-       return;
-    }
-
-    let parsedAdvancePayment: number | null = null;
-    if (advancePayment.trim() !== '') {
-      parsedAdvancePayment = parseFloat(advancePayment);
-      if (isNaN(parsedAdvancePayment) || parsedAdvancePayment < 0) {
-        toast({ title: "Validation Error", description: "Advance Payment must be a non-negative number.", variant: "destructive" });
-        setIsSubmitting(false);
-        return;
-      }
-    }
-
-    let parsedSpecialClientDiscount: number | null = null;
-    if (specialClientDiscount.trim() !== '') {
-        parsedSpecialClientDiscount = parseFloat(specialClientDiscount);
-        if (isNaN(parsedSpecialClientDiscount) || parsedSpecialClientDiscount < 0) {
-            toast({ title: "Validation Error", description: "Special Client Discount must be a non-negative number.", variant: "destructive" });
-            setIsSubmitting(false);
-            return;
-        }
-        if (parsedSpecialClientDiscount > orderItemsTotal && orderItemsTotal > 0) {
-             toast({
-                title: "Validation Error",
-                description: `Discount (${formatCurrency(parsedSpecialClientDiscount)}) cannot exceed total items price of ${formatCurrency(orderItemsTotal)}.`,
-                variant: "destructive",
-            });
-            setIsSubmitting(false);
-            return;
-        }
-    }
-
-    const currentNetPayable = Math.max(0, orderItemsTotal - (parsedSpecialClientDiscount || 0));
-    if (parsedAdvancePayment && parsedAdvancePayment > currentNetPayable && currentNetPayable > 0) {
-        toast({
-            title: "Validation Error",
-            description: `Advance payment (${formatCurrency(parsedAdvancePayment)}) cannot exceed net payable amount of ${formatCurrency(currentNetPayable)}.`,
-            variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-    }
-    
-    const currentIsAdvancePaymentEnteredLogic = parsedAdvancePayment !== null && parsedAdvancePayment > 0;
-
+    // Advance Payment and Payment Method validation
+    const currentIsAdvancePaymentEnteredLogic = (parseFloat(advancePayment) || 0) > 0;
     let finalPaymentMethod = paymentMethod.trim() || null;
     if (currentIsAdvancePaymentEnteredLogic) {
         if (!paymentMethod.trim()) {
             toast({ title: "Validation Error", description: "Payment Method is required when Advance Payment is entered.", variant: "destructive" });
-            setIsSubmitting(false);
-            return;
+            setIsSubmitting(false); return;
         }
         if (paymentMethod.toLowerCase() === 'other') {
           if (!customPaymentMethodText.trim()) {
             toast({ title: "Validation Error", description: "Please specify the 'Other' payment method.", variant: "destructive" });
-            setIsSubmitting(false);
-            return;
+            setIsSubmitting(false); return;
           }
           finalPaymentMethod = customPaymentMethodText.trim();
         }
@@ -360,52 +341,38 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         finalPaymentMethod = null;
     }
 
+    const parsedAdvPayment = parseFloat(advancePayment) || 0;
+    if (parsedAdvPayment > netPayable && netPayable > 0) { // Check against final netPayable from state
+        toast({ title: "Validation Error", description: `Advance payment (${formatCurrency(parsedAdvPayment)}) cannot exceed net payable amount of ${formatCurrency(netPayable)}.`, variant: "destructive"});
+        setIsSubmitting(false); return;
+    }
+    if (calculatedDiscountAmount > orderItemsTotal && orderItemsTotal > 0) { // Check against final calculatedDiscountAmount from state
+         toast({ title: "Validation Error", description: `Discount (${formatCurrency(calculatedDiscountAmount)}) cannot exceed total items price of ${formatCurrency(orderItemsTotal)}.`, variant: "destructive"});
+        setIsSubmitting(false); return;
+    }
 
-    const parsedOrderItems: OrderItem[] = [];
-    for (const item of orderItems) {
-      const quantityNum = parseInt(item.quantity, 10);
-      if (isNaN(quantityNum) || quantityNum < 1) {
-        toast({ title: "Validation Error", description: `Invalid quantity "${item.quantity}" for model "${item.model}". Quantity must be a positive number.`, variant: "destructive" });
-        setIsSubmitting(false);
-        return;
-      }
-      if (item.unitPrice === null || item.lineItemTotalPrice === null) {
-        toast({ title: "Price Error", description: `Pricing information is missing for model "${item.model}". Ensure model is selected and has a price.`, variant: "destructive" });
-        setIsSubmitting(false);
-        return;
-      }
-      parsedOrderItems.push({
-        id: item.id, 
+
+    const parsedOrderItems: OrderItem[] = orderItems.map(item => ({
+        id: item.id,
         model: item.model,
-        quantity: quantityNum,
+        quantity: parseInt(item.quantity, 10),
         lamination: item.lamination,
-        unitPrice: item.unitPrice, 
-        lineItemTotalPrice: item.lineItemTotalPrice,
-      });
-    }
+        unitPrice: item.unitPrice!,
+        lineItemTotalPrice: item.lineItemTotalPrice!,
+    }));
 
-    if (availableStatuses.length === 0 && !initialStatusId) {
-      toast({
-        title: "Status Error",
-        description: "No order statuses are available or selected. Cannot create order.",
-        variant: "destructive",
-      });
-      setIsSubmitting(false);
-      return;
-    }
-    
     const combinedCompanyName = `${jobId.trim()} • ${companyName.trim()}`;
 
     const orderDataForAction = {
-      jobId: jobId.trim(), 
-      companyName: combinedCompanyName, 
+      jobId: jobId.trim(),
+      companyName: combinedCompanyName,
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
       orderItems: parsedOrderItems,
-      advancePayment: parsedAdvancePayment,
-      specialClientDiscount: parsedSpecialClientDiscount,
+      advancePayment: parsedAdvPayment > 0 ? parsedAdvPayment : null, // Send null if 0 or NaN
+      specialClientDiscount: specialClientDiscount, // Send the string for server-side parsing
       paymentMethod: finalPaymentMethod,
-      orderNotes: orderNotes.trim() || null, // Add orderNotes
+      orderNotes: orderNotes.trim() || null,
       initialStatusId,
     };
 
@@ -413,22 +380,15 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setIsSubmitting(false);
 
     if ('error' in result) {
-      toast({
-        title: "Order Creation Failed",
-        description: result.error,
-        variant: "destructive",
-      });
+      toast({ title: "Order Creation Failed", description: result.error, variant: "destructive" });
     } else {
-      toast({
-        title: "Order Created",
-        description: `Order ${result.id} for ${result.companyName} has been created.`,
-      });
+      toast({ title: "Order Created", description: `Order ${result.id} for ${result.companyName} has been created.` });
       onOrderCreated();
       setIsOpen(false);
       resetForm();
     }
   };
-  
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
       <DialogTrigger asChild>
@@ -459,13 +419,13 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               <Label htmlFor="phoneNumber">Phone Number *</Label>
               <Input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
             </div>
-            
+
             <div className="space-y-1">
               <Label htmlFor="orderNotes">Order Notes (Optional)</Label>
-              <Textarea 
-                id="orderNotes" 
-                value={orderNotes} 
-                onChange={(e) => setOrderNotes(e.target.value)} 
+              <Textarea
+                id="orderNotes"
+                value={orderNotes}
+                onChange={(e) => setOrderNotes(e.target.value)}
                 placeholder="Add any specific instructions or notes for this order..."
                 rows={3}
               />
@@ -578,16 +538,14 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
               <div className="space-y-1">
-                <Label htmlFor="specialClientDiscount">Special Discount (BDT - Optional)</Label>
+                <Label htmlFor="specialClientDiscount">Special Discount (Amount or % - Optional)</Label>
                 <div className="relative">
-                   <Input 
-                    id="specialClientDiscount" 
-                    type="number" 
-                    value={specialClientDiscount} 
+                   <Input
+                    id="specialClientDiscount"
+                    type="text" // Changed to text to allow "%"
+                    value={specialClientDiscount}
                     onChange={(e) => handleDiscountChange(e.target.value)}
-                    placeholder="e.g., 100.00" 
-                    min="0" 
-                    step="0.01"
+                    placeholder="e.g., 100 or 10%"
                     className="pl-7"
                   />
                   <Percent className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -595,20 +553,20 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               </div>
               <div className="space-y-1">
                 <Label htmlFor="advancePayment">Advance Payment (BDT - Optional)</Label>
-                <Input 
-                  id="advancePayment" 
-                  type="number" 
-                  value={advancePayment} 
+                <Input
+                  id="advancePayment"
+                  type="number"
+                  value={advancePayment}
                   onChange={(e) => handleAdvancePaymentChange(e.target.value)}
-                  placeholder="e.g., 500.00" 
-                  min="0" 
-                  step="0.01" 
+                  placeholder="e.g., 500.00"
+                  min="0"
+                  step="0.01"
                 />
               </div>
               {isAdvancePaymentEntered && (
                 <div className="space-y-1">
                   <Label htmlFor="paymentMethod">
-                    Payment Method 
+                    Payment Method
                     <span className="text-destructive"> *</span>
                   </Label>
                    <Popover open={isPaymentMethodPopoverOpen} onOpenChange={setIsPaymentMethodPopoverOpen}>
@@ -660,7 +618,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   {showCustomPaymentInput && (
                     <div className="mt-2 space-y-1">
                       <Label htmlFor="customPaymentMethodText">
-                        Specify Other Payment Method 
+                        Specify Other Payment Method
                         <span className="text-destructive"> *</span>
                       </Label>
                       <Input
@@ -682,10 +640,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                     <span className="text-muted-foreground">Order Items Total:</span>
                     <span className="font-medium text-foreground">{formatCurrency(orderItemsTotal)}</span>
                 </div>
-                {(parseFloat(specialClientDiscount) || 0) > 0 && (
+                {(calculatedDiscountAmount || 0) > 0 && (
                     <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Special Discount:</span>
-                        <span className="font-medium text-red-600">- {formatCurrency(parseFloat(specialClientDiscount))}</span>
+                        <span className="font-medium text-red-600">- {formatCurrency(calculatedDiscountAmount)}</span>
                     </div>
                 )}
                 <div className="flex justify-between text-sm font-semibold">
@@ -731,3 +689,5 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
+
+    
