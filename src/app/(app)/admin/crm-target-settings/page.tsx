@@ -21,20 +21,22 @@ import {
   updateCompletionStatusIdsAction, 
   updateCommentsVisibilityAction,
   updateRolesAllowedToEditOrdersAction,
+  updateToastSoundUrlAction, // Added action
   sendPushNotificationAction
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle } from 'lucide-react'; 
+import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music } from 'lucide-react'; 
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'; // For FCM token display
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'; 
 
 
 const EDITABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
 const NOTIFICATION_TARGET_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
+const TOAST_SOUND_STORAGE_KEY = 'colorHutToastSoundUrl';
 
 
 export default function CrmTargetSettingsPage() {
@@ -47,6 +49,7 @@ export default function CrmTargetSettingsPage() {
   const [selectedStatusIds, setSelectedStatusIds] = useState<Set<string>>(new Set());
   const [areCommentsVisible, setAreCommentsVisible] = useState(true);
   const [rolesAllowedToEdit, setRolesAllowedToEdit] = useState<Set<UserRole>>(new Set(['ADMIN', 'SYSTEM_ADMIN']));
+  const [toastSoundUrl, setToastSoundUrl] = useState<string>(''); // New state for toast sound URL
   
   // Notification states
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -64,8 +67,9 @@ export default function CrmTargetSettingsPage() {
   const [isSubmittingCrmTargets, setIsSubmittingCrmTargets] = useState(false);
   const [isSubmittingCommentsVisibility, setIsSubmittingCommentsVisibility] = useState(false);
   const [isSubmittingOrderEditingPermissions, setIsSubmittingOrderEditingPermissions] = useState(false);
+  const [isSubmittingToastSound, setIsSubmittingToastSound] = useState(false); // New loading state
   const [isSendingNotification, setIsSendingNotification] = useState(false);
-  const [isLoadingUsersForNotifAndTokens, setIsLoadingUsersForNotifAndTokens] = useState(false); // Combined loading state
+  const [isLoadingUsersForNotifAndTokens, setIsLoadingUsersForNotifAndTokens] = useState(false); 
 
   // FCM Token Display State
   const [fcmUserSearchTerm, setFcmUserSearchTerm] = useState('');
@@ -79,17 +83,15 @@ export default function CrmTargetSettingsPage() {
       const [fetchedStatuses, globalSettings, fetchedUsers] = await Promise.all([
         getStatuses(),
         getGlobalSettings(),
-        getUsers(), // This should now include fcmToken if available
+        getUsers(), 
       ]);
       setAllStatuses(fetchedStatuses);
       setSelectedStatusIds(new Set(globalSettings.crmCompletionStatusIds ?? []));
       setAreCommentsVisible(globalSettings.areCommentsVisibleOnPublicPage ?? true);
       setRolesAllowedToEdit(new Set(globalSettings.rolesAllowedToEditOrders ?? ['ADMIN', 'SYSTEM_ADMIN']));
+      setToastSoundUrl(globalSettings.toastSoundUrl ?? ''); // Set toast sound URL from settings
       
-      // For notification target selection, exclude System Admins
       setAllUsers(fetchedUsers.filter(u => u.role !== 'SYSTEM_ADMIN')); 
-      // For FCM token display, we might want all users, or filter based on role visibility
-      // For now, allUsers state is used for both, filtered for notifications, full for token display.
     } catch (error) {
       console.error("Error fetching settings data:", error);
       toast({ title: "Error", description: "Could not load settings or user data.", variant: "destructive" });
@@ -107,7 +109,7 @@ export default function CrmTargetSettingsPage() {
     }
   }, [currentUser, router, fetchData]);
 
-  // --- Settings Handlers (Unchanged) ---
+  // --- Settings Handlers (CRM Targets, Comments, Order Editing - Unchanged) ---
   const handleCrmTargetCheckboxChange = (statusId: string, checked: boolean | "indeterminate") => {
     setSelectedStatusIds(prev => {
       const newSet = new Set(prev);
@@ -155,6 +157,24 @@ export default function CrmTargetSettingsPage() {
     setIsSubmittingOrderEditingPermissions(false);
   };
 
+  // --- New Toast Sound Handler ---
+  const handleSaveToastSoundUrl = async () => {
+    setIsSubmittingToastSound(true);
+    // Allow empty string to disable sound, or null
+    const urlToSave = toastSoundUrl.trim() === '' ? null : toastSoundUrl.trim();
+    const result = await updateToastSoundUrlAction(urlToSave);
+    if (result.success) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(TOAST_SOUND_STORAGE_KEY, urlToSave ?? ''); // Store empty string if null
+      }
+      toast({ title: "Settings Updated", description: "Toast notification sound URL has been saved." });
+    } else {
+      toast({ title: "Update Failed", description: result.error || "Could not save toast sound URL.", variant: "destructive" });
+    }
+    setIsSubmittingToastSound(false);
+  };
+
+
   // --- Notification Handlers (Unchanged) ---
   const handleNotificationRoleCheckboxChange = (role: UserRole, checked: boolean | "indeterminate") => {
     setSelectedNotificationRoles(prev => {
@@ -192,7 +212,7 @@ export default function CrmTargetSettingsPage() {
     const result = await sendPushNotificationAction(payload, currentUser);
     setIsSendingNotification(false);
     if (result.success) {
-      toast({ title: "Notification Send Attempted", description: result.message }); // Updated toast title
+      toast({ title: "Notification Send Attempted", description: result.message }); 
       setNotificationTitle(''); setNotificationBody(''); setNotificationIconUrl(''); setNotificationTargetUrl('');
     } else {
       toast({ title: "Notification Failed", description: result.error || "Could not send notification.", variant: "destructive" });
@@ -205,10 +225,9 @@ export default function CrmTargetSettingsPage() {
     return Array.from(selectedNotificationUserIds).map(id => allUsers.find(u => u.id === id)?.name || id).join(", ");
   }, [selectedNotificationUserIds, allUsers]);
 
-  // --- FCM Token Display Logic ---
+  // --- FCM Token Display Logic (Unchanged) ---
   const filteredFcmUsers = useMemo(() => {
-    // Use all users fetched (including System Admins for token display if desired, or filter as needed)
-    const usersForTokenDisplay = allUsers; // Or filter based on different criteria than notification target
+    const usersForTokenDisplay = allUsers; 
     if (!fcmUserSearchTerm) return usersForTokenDisplay;
     return usersForTokenDisplay.filter(user =>
       user.name.toLowerCase().includes(fcmUserSearchTerm.toLowerCase()) ||
@@ -314,10 +333,51 @@ export default function CrmTargetSettingsPage() {
           <Button onClick={handleSaveOrderEditingPermissions} disabled={isLoading || isSubmittingOrderEditingPermissions}>{isSubmittingOrderEditingPermissions ? "Saving..." : "Save Editing Permissions"}</Button>
         </CardFooter>
       </Card>
+      
+      <Separator className="my-8" />
+
+      {/* Toast Notification Sound Card -- NEW -- */}
+      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+        <CardHeader className="border-b p-5">
+          <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
+            <Music className="h-6 w-6 text-primary" /> Toast Notification Sound
+          </CardTitle>
+          <CardDescription className="text-muted-foreground text-sm mt-0.5">
+            Set a custom sound URL for toast notifications. Leave blank to use default or disable sound if default is none.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6">
+          {isLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-24 rounded" />
+              <Skeleton className="h-10 w-full rounded-md" />
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label htmlFor="toastSoundUrlInput">Sound URL</Label>
+              <Input
+                id="toastSoundUrlInput"
+                value={toastSoundUrl}
+                onChange={(e) => setToastSoundUrl(e.target.value)}
+                placeholder="e.g., https://example.com/sound.mp3 or /sounds/custom-toast.mp3"
+                disabled={isSubmittingToastSound}
+              />
+              <p className="text-xs text-muted-foreground">
+                Provide a full URL or a relative path from the public folder. Ensure the sound file is small for quick loading.
+              </p>
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="border-t p-5 flex justify-end">
+          <Button onClick={handleSaveToastSoundUrl} disabled={isLoading || isSubmittingToastSound}>
+            {isSubmittingToastSound ? "Saving..." : "Save Toast Sound"}
+          </Button>
+        </CardFooter>
+      </Card>
 
       <Separator className="my-8" />
 
-      {/* User FCM Tokens Card -- NEW -- */}
+      {/* User FCM Tokens Card */}
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
@@ -400,7 +460,7 @@ export default function CrmTargetSettingsPage() {
 
       <Separator className="my-8" />
 
-      {/* Send Push Notification Card (Modified for context) */}
+      {/* Send Push Notification Card */}
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2">

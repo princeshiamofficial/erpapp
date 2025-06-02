@@ -10,7 +10,10 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 10000 // Changed from 1000000 to 10000 (10 seconds)
+const TOAST_REMOVE_DELAY = 10000 
+const TOAST_SOUND_STORAGE_KEY = 'colorHutToastSoundUrl'; // Key for localStorage
+const DEFAULT_TOAST_SOUND_URL = 'https://audio-previews.elements.envatousercontent.com/files/225140761/preview.mp3';
+
 
 type ToasterToast = ToastProps & {
   id: string
@@ -165,13 +168,25 @@ function toast({ ...props }: Toast) {
     },
   })
 
-  // Play toast sound
   if (typeof window !== 'undefined') {
     try {
-      const audio = new Audio('https://audio-previews.elements.envatousercontent.com/files/225140761/preview.mp3');
-      audio.play().catch(error => {
-        console.warn("Toast sound: Playback failed.", error);
-      });
+      const storedSoundUrl = localStorage.getItem(TOAST_SOUND_STORAGE_KEY);
+      // Use stored URL if available and not empty, otherwise use default.
+      // If stored URL is explicitly set to an empty string (meaning user wants no sound), this will honor it.
+      // If key is not in localStorage (null), then DEFAULT_TOAST_SOUND_URL is used.
+      const soundUrlToPlay = storedSoundUrl !== null ? storedSoundUrl : DEFAULT_TOAST_SOUND_URL;
+      
+      if (soundUrlToPlay && soundUrlToPlay.trim() !== '') {
+        console.log(`Toast sound: Attempting to play sound from URL: ${soundUrlToPlay}`);
+        const audio = new Audio(soundUrlToPlay);
+        audio.play()
+          .then(() => console.log("Toast sound: Playback initiated."))
+          .catch(error => {
+            console.warn("Toast sound: Playback failed.", error, "URL:", soundUrlToPlay);
+          });
+      } else {
+        console.log("Toast sound: No sound URL configured or sound disabled.");
+      }
     } catch (error) {
       console.error("Toast sound: Error initializing or playing.", error);
     }

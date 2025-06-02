@@ -8,12 +8,15 @@ import type { GlobalSettings, UserRole } from '@/types';
 const GLOBAL_SETTINGS_COLLECTION = 'globalSettings';
 const MAIN_SETTINGS_DOC_ID = 'main';
 
+const DEFAULT_TOAST_SOUND_URL = 'https://audio-previews.elements.envatousercontent.com/files/225140761/preview.mp3';
+
 const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   globalMonthlyOrderTarget: 0,
   globalWeeklyOrderTarget: 0,
   crmCompletionStatusIds: [],
   areCommentsVisibleOnPublicPage: true,
   rolesAllowedToEditOrders: ['SYSTEM_ADMIN', 'ADMIN'], // Default: Admins and System Admins can edit
+  toastSoundUrl: DEFAULT_TOAST_SOUND_URL, // Default toast sound
 };
 
 // Gets global settings from Firestore
@@ -30,6 +33,7 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         crmCompletionStatusIds: data.crmCompletionStatusIds ?? DEFAULT_GLOBAL_SETTINGS.crmCompletionStatusIds,
         areCommentsVisibleOnPublicPage: data.areCommentsVisibleOnPublicPage ?? DEFAULT_GLOBAL_SETTINGS.areCommentsVisibleOnPublicPage,
         rolesAllowedToEditOrders: data.rolesAllowedToEditOrders ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToEditOrders,
+        toastSoundUrl: data.toastSoundUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.toastSoundUrl : data.toastSoundUrl, // Handle undefined, allow null/empty
       };
     } else {
       console.log("Global settings document not found, returning defaults. Creating document with defaults.");
@@ -135,6 +139,27 @@ export async function setRolesAllowedToEditOrders(roles: UserRole[]): Promise<bo
     return true;
   } catch (error) {
     console.error("Error setting roles allowed to edit orders:", error);
+    return false;
+  }
+}
+
+// Sets the toast sound URL
+export async function setToastSoundUrl(soundUrl: string | null): Promise<boolean> {
+  try {
+    const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+    const docSnap = await getDoc(settingsDocRef);
+    if (docSnap.exists()) {
+      await updateDoc(settingsDocRef, { toastSoundUrl: soundUrl });
+    } else {
+      const initialData: GlobalSettings = {
+        ...DEFAULT_GLOBAL_SETTINGS,
+        toastSoundUrl: soundUrl
+      };
+      await setDoc(settingsDocRef, initialData);
+    }
+    return true;
+  } catch (error) {
+    console.error("Error setting toast sound URL:", error);
     return false;
   }
 }

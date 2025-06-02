@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { 
   setCrmCompletionStatusIds, 
   setCommentsVisibility,
-  setRolesAllowedToEditOrders
+  setRolesAllowedToEditOrders,
+  setToastSoundUrl // Added import
 } from "@/lib/settings-service";
 import type { UserRole, User } from "@/types"; 
 import { adminApp } from '@/lib/firebase-admin'; 
@@ -59,6 +60,27 @@ export async function updateRolesAllowedToEditOrdersAction(roles: UserRole[]): P
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
+export async function updateToastSoundUrlAction(soundUrl: string | null): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Basic validation for URL format (optional, can be more strict)
+    if (soundUrl && !soundUrl.startsWith('http://') && !soundUrl.startsWith('https://') && !soundUrl.startsWith('/')) {
+      // Allow relative paths starting with /
+      // return { success: false, error: "Invalid sound URL format. Must be a valid URL or a relative path starting with '/'." };
+    }
+    const success = await setToastSoundUrl(soundUrl);
+    if (success) {
+      revalidatePath("/(app)/admin/crm-target-settings");
+      // No other paths need revalidation as the toast hook will read from localStorage
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update toast sound URL in database." };
+  } catch (error) {
+    console.error("Error in updateToastSoundUrlAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
 
 interface AppNotificationPayload {
   title: string;
@@ -227,4 +249,3 @@ export async function sendPushNotificationAction(
     };
   }
 }
-

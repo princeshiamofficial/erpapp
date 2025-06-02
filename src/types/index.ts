@@ -106,6 +106,7 @@ export interface GlobalSettings {
   crmCompletionStatusIds?: string[];
   areCommentsVisibleOnPublicPage?: boolean;
   rolesAllowedToEditOrders?: UserRole[];
+  toastSoundUrl?: string | null; // Added toast sound URL
 }
 
 // --- ERP & Finance Manager Specific Types ---
