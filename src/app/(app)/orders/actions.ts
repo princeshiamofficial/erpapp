@@ -8,7 +8,8 @@ import { getGlobalSettings } from "@/lib/settings-service";
 import { v4 as uuidv4 } from 'uuid';
 
 interface CreateOrderDialogFormData {
-  companyName: string;
+  companyId: string; // Renamed from jobId, now Company ID
+  companyName: string; // This is for the textual name part
   address: string;
   phoneNumber: string;
   orderItems: Array<{
@@ -33,6 +34,7 @@ export async function createOrderAction(
     if (!currentUser || !currentUser.id || !currentUser.name) {
       return { error: "User information is missing. Please re-authenticate." };
     }
+    if (!data.companyId?.trim()) return { error: "Company ID is required." };
     if (!data.companyName?.trim()) return { error: "Company Name is required." };
     if (!data.address?.trim()) return { error: "Address is required." };
     if (!data.phoneNumber?.trim()) return { error: "Phone Number is required." };
@@ -92,9 +94,12 @@ export async function createOrderAction(
         finalPaymentMethod = data.paymentMethod.trim();
       }
     }
+    
+    // Construct the combined company name
+    const finalCompanyName = `${data.companyId.trim()} • ${data.companyName.trim()}`;
 
     const newOrderData = {
-      companyName: data.companyName.trim(),
+      companyName: finalCompanyName, // Use the combined string
       address: data.address.trim(),
       phoneNumber: data.phoneNumber.trim(),
       orderItems: processedOrderItems,
@@ -137,7 +142,9 @@ export async function updateOrderAction(
     if (!orderId) return { success: false, error: "Order ID is required." };
     if (Object.keys(updates).length === 0) return { success: false, error: "No updates provided." };
 
-    if (updates.companyName !== undefined && !updates.companyName.trim()) return { success: false, error: "Company Name cannot be empty."};
+    // The `companyName` in updates should already be the combined "Company ID • Company Name" string
+    // prepared by the EditOrderDialog.
+    if (updates.companyName !== undefined && !updates.companyName.trim()) return { success: false, error: "Company Name (ID • Name) cannot be empty."};
     if (updates.address !== undefined && !updates.address.trim()) return { success: false, error: "Address cannot be empty."};
     if (updates.phoneNumber !== undefined && !updates.phoneNumber.trim()) return { success: false, error: "Phone Number cannot be empty."};
     

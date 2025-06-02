@@ -48,8 +48,7 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
 
     const firstOrder: TrackingLink = {
       id: firstOrderId,
-      companyName: "Tech Solutions Inc.",
-      customerName: "Tech Solutions Inc.", 
+      companyName: "TS001 • Tech Solutions Inc.", // Updated format
       address: "123 Tech Ave, Silicon Valley, CA 94001",
       phoneNumber: "555-0101", 
       orderItems: firstOrderItems,
@@ -90,8 +89,7 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
 
     const secondOrder: TrackingLink = {
       id: secondOrderId,
-      companyName: "GreenScape Ltd.",
-      customerName: "GreenScape Ltd.", 
+      companyName: "GS002 • GreenScape Ltd.", // Updated format
       address: "456 Green Rd, Meadowville, TX 75001",
       phoneNumber: "555-0102", 
       orderItems: secondOrderItems,
@@ -164,7 +162,7 @@ export const getOrderById = async (id: string): Promise<TrackingLink | undefined
 };
 
 export const addOrder = async (orderData: {
-  companyName: string;
+  companyName: string; // This will be the combined "Company ID • Company Name"
   address: string;
   phoneNumber: string;
   orderItems: OrderItem[];
@@ -217,8 +215,7 @@ export const addOrder = async (orderData: {
 
     const newOrder: TrackingLink = {
       id: orderId,
-      companyName: orderData.companyName,
-      customerName: orderData.companyName, 
+      companyName: orderData.companyName, // Already combined by action
       address: orderData.address,
       phoneNumber: orderData.phoneNumber,
       orderItems: orderData.orderItems, 
@@ -229,9 +226,9 @@ export const addOrder = async (orderData: {
       designerRepresentativeId: null,
       designerRepresentativeName: null,
       createdAt: transactionTime,
-      updatedAt: transactionTime, // Initially set to createdAt
-      updatedByUserId: orderData.crmUserId, // Initially set by creator
-      updatedByUserName: orderData.crmUserName, // Initially set by creator
+      updatedAt: transactionTime, 
+      updatedByUserId: orderData.crmUserId, 
+      updatedByUserName: orderData.crmUserName, 
       isPublic: false,
       currentStatus: orderData.initialStatusId,
       statusHistory: [initialLogEntry],
@@ -380,7 +377,7 @@ export const toggleReaction = async (
   targetCommentId: string,
   isReply: boolean,
   parentCommentIdIfReply: string | undefined,
-  reactorId: string,
+  reactorId: string, 
   reactionType: 'like' 
 ): Promise<TrackingLink | undefined> => {
   try {

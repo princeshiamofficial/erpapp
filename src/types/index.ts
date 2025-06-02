@@ -44,8 +44,8 @@ export interface OrderItem {
 
 export interface TrackingLink {
   id: string;
-  customerName?: string | null; // This can be the contact person
-  companyName: string;
+  // customerName is effectively companyName for B2B or contact person if needed elsewhere
+  companyName: string; // Will store "Company ID • Company Name"
   address: string;
   phoneNumber: string;
   orderItems: OrderItem[];
@@ -156,6 +156,7 @@ export interface PersonalNote {
 
 // --- Project Management Types ---
 export type ProjectStatusType = 'CR Clearance' | 'CR Cancel' | 'On Design' | 'On Hold' | 'Logistics' | 'Courier';
+
 
 export interface Project {
   id: string; // Firestore document ID

@@ -49,7 +49,8 @@ const formatCurrency = (value: number | null | undefined): string => {
 
 
 export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOrderUpdated }: EditOrderDialogProps) {
-  const [companyName, setCompanyName] = useState('');
+  const [companyIdInput, setCompanyIdInput] = useState('');
+  const [companyNameInput, setCompanyNameInput] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [advancePayment, setAdvancePayment] = useState<string>('');
@@ -93,7 +94,14 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
 
   const resetForm = useCallback(() => {
     if (order) {
-      setCompanyName(order.companyName);
+      const parts = order.companyName.split(' • ');
+      if (parts.length >= 2) {
+        setCompanyIdInput(parts[0].trim());
+        setCompanyNameInput(parts.slice(1).join(' • ').trim());
+      } else {
+        setCompanyIdInput('');
+        setCompanyNameInput(order.companyName.trim());
+      }
       setAddress(order.address);
       setPhoneNumber(order.phoneNumber);
       setAdvancePayment(order.advancePayment?.toString() || '');
@@ -119,7 +127,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       setOrderItems(order.orderItems.map(item => ({
         ...item,
         quantity: item.quantity.toString(),
-        unitPrice: item.unitPrice, // This should reflect model's selling price from original creation
+        unitPrice: item.unitPrice,
         lineItemTotalPrice: item.lineItemTotalPrice,
       })));
     }
@@ -136,10 +144,10 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   }, [isOpen, fetchDialogOptions]);
 
   useEffect(() => {
-    if (isOpen && order && (paymentMethodOptions.length > 0 || modelOptions.length > 0 || laminationOptions.length > 0)) {
+    if (isOpen && order && (paymentMethodOptions.length > 0 || modelOptions.length > 0 || laminationOptions.length > 0 || !isLoadingOptions)) {
       resetForm();
     }
-  }, [isOpen, order, paymentMethodOptions, modelOptions, laminationOptions, resetForm]);
+  }, [isOpen, order, paymentMethodOptions, modelOptions, laminationOptions, resetForm, isLoadingOptions]);
 
   useEffect(() => {
     const currentTotal = orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
@@ -206,8 +214,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setPaymentMethod(value);
     if (value.toLowerCase() === 'other') {
       setShowCustomPaymentInput(true);
-      // Only clear custom text if "Other" is newly selected from a different option.
-      // If current method is already "Other" and user re-selects "Other", keep custom text.
       if (order.paymentMethod?.toLowerCase() !== 'other' || value !== order.paymentMethod ) {
         setCustomPaymentMethodText(''); 
       }
@@ -246,7 +252,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     const isAdvPaymentValid = isNaN(parsedAdvPayment) || parsedAdvPayment <= totalOrderPrice || totalOrderPrice === 0;
 
     return !isSubmitting &&
-      companyName.trim() && address.trim() && phoneNumber.trim() &&
+      companyIdInput.trim() && // Check companyIdInput
+      companyNameInput.trim() && address.trim() && phoneNumber.trim() &&
       !isLoadingOptions &&
       orderItems.length > 0 &&
       orderItems.every(item =>
@@ -260,7 +267,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       !(isAdvancePaymentEntered && !paymentMethod.trim()) &&
       !(isAdvancePaymentEntered && paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
       isAdvPaymentValid;
-  }, [isSubmitting, companyName, address, phoneNumber, isLoadingOptions, orderItems, isAdvancePaymentEntered, paymentMethod, customPaymentMethodText, currentUser, advancePayment, totalOrderPrice]);
+  }, [isSubmitting, companyIdInput, companyNameInput, address, phoneNumber, isLoadingOptions, orderItems, isAdvancePaymentEntered, paymentMethod, customPaymentMethodText, currentUser, advancePayment, totalOrderPrice]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -272,8 +279,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
         return;
     }
 
-    if (!companyName.trim() || !address.trim() || !phoneNumber.trim()) {
-      toast({ title: "Validation Error", description: "Company Name, Address, and Phone Number are required.", variant: "destructive" });
+    if (!companyIdInput.trim() || !companyNameInput.trim() || !address.trim() || !phoneNumber.trim()) {
+      toast({ title: "Validation Error", description: "Company ID, Company Name, Address, and Phone Number are required.", variant: "destructive" });
       return;
     }
 
@@ -337,13 +344,14 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       model: item.model,
       quantity: parseInt(item.quantity, 10),
       lamination: item.lamination,
-      unitPrice: item.unitPrice!, // This is model's sellingPrice
+      unitPrice: item.unitPrice!, 
       lineItemTotalPrice: item.lineItemTotalPrice!,
     }));
 
+    const finalCompanyName = `${companyIdInput.trim()} • ${companyNameInput.trim()}`;
 
     const updates: Partial<TrackingLink> = {
-      companyName: companyName.trim(),
+      companyName: finalCompanyName,
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
       advancePayment: parsedAdvancePayment,
@@ -367,8 +375,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Edit Order: <span className="font-mono text-primary">{order?.id}</span></DialogTitle>
-          <DialogDescription>Modify the details and items for this order.</DialogDescription>
+          <DialogTitle>Edit Order: <span className="font-normal">{order?.companyName}</span></DialogTitle>
+          <DialogDescription>Modify the details and items for this order (Internal ID: <span className="font-mono">{order?.id}</span>).</DialogDescription>
         </DialogHeader>
         {isLoadingOptions ? (
           <div className="flex justify-center items-center h-60">
@@ -377,9 +385,15 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
         ) : (
           <form onSubmit={handleSubmit}>
             <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-              <div className="space-y-1">
-                <Label htmlFor="edit-companyName">Company Name *</Label>
-                <Input id="edit-companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required disabled={isSubmitting} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="edit-companyId">Company ID *</Label>
+                  <Input id="edit-companyId" value={companyIdInput} onChange={(e) => setCompanyIdInput(e.target.value)} required placeholder="e.g., CUST101" disabled={isSubmitting} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-companyNamePart">Company Name *</Label>
+                  <Input id="edit-companyNamePart" value={companyNameInput} onChange={(e) => setCompanyNameInput(e.target.value)} required placeholder="e.g., Acme Corp" disabled={isSubmitting} />
+                </div>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="edit-address">Address *</Label>
