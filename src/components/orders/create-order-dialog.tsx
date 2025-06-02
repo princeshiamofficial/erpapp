@@ -50,8 +50,8 @@ const initialOrderItemState: DialogOrderItem = {
 
 export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children }: CreateOrderDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [companyId, setCompanyId] = useState(''); // New state for Company ID input
-  const [companyName, setCompanyName] = useState(''); // State for Company Name part
+  const [jobId, setJobId] = useState(''); // Renamed from companyId
+  const [companyName, setCompanyName] = useState(''); 
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [initialStatusId, setInitialStatusId] = useState<string>('');
@@ -74,7 +74,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const { toast } = useToast();
 
   const resetForm = useCallback(() => {
-    setCompanyId('');
+    setJobId(''); // Reset jobId
     setCompanyName('');
     setAddress('');
     setPhoneNumber('');
@@ -221,7 +221,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     const isAdvPaymentValid = isNaN(parsedAdvPayment) || parsedAdvPayment <= totalOrderPrice || totalOrderPrice === 0;
 
     return !isSubmitting &&
-      companyId.trim() && // Added companyId check
+      jobId.trim() && // Check jobId
       companyName.trim() && address.trim() && phoneNumber.trim() && initialStatusId &&
       (availableStatuses.length > 0 || !!initialStatusId) &&
       modelOptions.length > 0 &&
@@ -239,17 +239,17 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       !(isAdvancePaymentEntered && !paymentMethod.trim()) &&
       !(isAdvancePaymentEntered && paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
       isAdvPaymentValid;
-  }, [isSubmitting, companyId, companyName, address, phoneNumber, initialStatusId, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, paymentMethod, customPaymentMethodText, advancePayment, totalOrderPrice]);
+  }, [isSubmitting, jobId, companyName, address, phoneNumber, initialStatusId, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, paymentMethod, customPaymentMethodText, advancePayment, totalOrderPrice]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    if (!companyId.trim() || !companyName.trim() || !address.trim() || !phoneNumber.trim() || !initialStatusId) {
+    if (!jobId.trim() || !companyName.trim() || !address.trim() || !phoneNumber.trim() || !initialStatusId) {
       toast({
         title: "Validation Error",
-        description: "Company ID, Company Name, Address, Phone Number, and Initial Status are required.",
+        description: "Job ID, Company Name, Address, Phone Number, and Initial Status are required.",
         variant: "destructive",
       });
       setIsSubmitting(false);
@@ -336,11 +336,11 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       return;
     }
     
-    const combinedCompanyName = `${companyId.trim()} • ${companyName.trim()}`;
+    const combinedCompanyName = `${jobId.trim()} • ${companyName.trim()}`;
 
     const orderDataForAction = {
-      companyId: companyId.trim(), // Still pass companyId separately for the action if needed
-      companyName: combinedCompanyName, // Pass the combined string as companyName
+      jobId: jobId.trim(), 
+      companyName: combinedCompanyName, 
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
       orderItems: parsedOrderItems,
@@ -383,8 +383,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label htmlFor="companyId">Company ID *</Label>
-                <Input id="companyId" value={companyId} onChange={(e) => setCompanyId(e.target.value)} required placeholder="e.g., CUST101" />
+                <Label htmlFor="jobId">Job ID *</Label>
+                <Input id="jobId" value={jobId} onChange={(e) => setJobId(e.target.value)} required placeholder="e.g., CUST101, J123" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="companyName">Company Name *</Label>
@@ -613,3 +613,5 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
+
+    

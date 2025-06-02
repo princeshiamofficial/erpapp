@@ -49,7 +49,7 @@ const formatCurrency = (value: number | null | undefined): string => {
 
 
 export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOrderUpdated }: EditOrderDialogProps) {
-  const [companyIdInput, setCompanyIdInput] = useState('');
+  const [jobIdInput, setJobIdInput] = useState(''); // Renamed from companyIdInput
   const [companyNameInput, setCompanyNameInput] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -96,10 +96,10 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     if (order) {
       const parts = order.companyName.split(' • ');
       if (parts.length >= 2) {
-        setCompanyIdInput(parts[0].trim());
+        setJobIdInput(parts[0].trim()); // Set jobIdInput
         setCompanyNameInput(parts.slice(1).join(' • ').trim());
       } else {
-        setCompanyIdInput('');
+        setJobIdInput(''); // Clear jobIdInput
         setCompanyNameInput(order.companyName.trim());
       }
       setAddress(order.address);
@@ -252,7 +252,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     const isAdvPaymentValid = isNaN(parsedAdvPayment) || parsedAdvPayment <= totalOrderPrice || totalOrderPrice === 0;
 
     return !isSubmitting &&
-      companyIdInput.trim() && // Check companyIdInput
+      jobIdInput.trim() && 
       companyNameInput.trim() && address.trim() && phoneNumber.trim() &&
       !isLoadingOptions &&
       orderItems.length > 0 &&
@@ -267,7 +267,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       !(isAdvancePaymentEntered && !paymentMethod.trim()) &&
       !(isAdvancePaymentEntered && paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
       isAdvPaymentValid;
-  }, [isSubmitting, companyIdInput, companyNameInput, address, phoneNumber, isLoadingOptions, orderItems, isAdvancePaymentEntered, paymentMethod, customPaymentMethodText, currentUser, advancePayment, totalOrderPrice]);
+  }, [isSubmitting, jobIdInput, companyNameInput, address, phoneNumber, isLoadingOptions, orderItems, isAdvancePaymentEntered, paymentMethod, customPaymentMethodText, currentUser, advancePayment, totalOrderPrice]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -279,8 +279,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
         return;
     }
 
-    if (!companyIdInput.trim() || !companyNameInput.trim() || !address.trim() || !phoneNumber.trim()) {
-      toast({ title: "Validation Error", description: "Company ID, Company Name, Address, and Phone Number are required.", variant: "destructive" });
+    if (!jobIdInput.trim() || !companyNameInput.trim() || !address.trim() || !phoneNumber.trim()) {
+      toast({ title: "Validation Error", description: "Job ID, Company Name, Address, and Phone Number are required.", variant: "destructive" });
       return;
     }
 
@@ -348,7 +348,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       lineItemTotalPrice: item.lineItemTotalPrice!,
     }));
 
-    const finalCompanyName = `${companyIdInput.trim()} • ${companyNameInput.trim()}`;
+    const finalCompanyName = `${jobIdInput.trim()} • ${companyNameInput.trim()}`;
 
     const updates: Partial<TrackingLink> = {
       companyName: finalCompanyName,
@@ -387,8 +387,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
             <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label htmlFor="edit-companyId">Company ID *</Label>
-                  <Input id="edit-companyId" value={companyIdInput} onChange={(e) => setCompanyIdInput(e.target.value)} required placeholder="e.g., CUST101" disabled={isSubmitting} />
+                  <Label htmlFor="edit-jobId">Job ID *</Label>
+                  <Input id="edit-jobId" value={jobIdInput} onChange={(e) => setJobIdInput(e.target.value)} required placeholder="e.g., CUST101, J123" disabled={isSubmitting} />
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="edit-companyNamePart">Company Name *</Label>
@@ -595,3 +595,5 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     </Dialog>
   );
 }
+
+    

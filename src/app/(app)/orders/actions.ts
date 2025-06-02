@@ -8,7 +8,7 @@ import { getGlobalSettings } from "@/lib/settings-service";
 import { v4 as uuidv4 } from 'uuid';
 
 interface CreateOrderDialogFormData {
-  companyId: string; // Renamed from jobId, now Company ID
+  jobId: string; // Renamed from companyId
   companyName: string; // This is for the textual name part
   address: string;
   phoneNumber: string;
@@ -34,7 +34,7 @@ export async function createOrderAction(
     if (!currentUser || !currentUser.id || !currentUser.name) {
       return { error: "User information is missing. Please re-authenticate." };
     }
-    if (!data.companyId?.trim()) return { error: "Company ID is required." };
+    if (!data.jobId?.trim()) return { error: "Job ID is required." }; // Updated validation message
     if (!data.companyName?.trim()) return { error: "Company Name is required." };
     if (!data.address?.trim()) return { error: "Address is required." };
     if (!data.phoneNumber?.trim()) return { error: "Phone Number is required." };
@@ -95,8 +95,8 @@ export async function createOrderAction(
       }
     }
     
-    // Construct the combined company name
-    const finalCompanyName = `${data.companyId.trim()} • ${data.companyName.trim()}`;
+    // Construct the combined company name using jobId
+    const finalCompanyName = `${data.jobId.trim()} • ${data.companyName.trim()}`;
 
     const newOrderData = {
       companyName: finalCompanyName, // Use the combined string
@@ -142,9 +142,9 @@ export async function updateOrderAction(
     if (!orderId) return { success: false, error: "Order ID is required." };
     if (Object.keys(updates).length === 0) return { success: false, error: "No updates provided." };
 
-    // The `companyName` in updates should already be the combined "Company ID • Company Name" string
+    // The `companyName` in updates should already be the combined "Job ID • Company Name" string
     // prepared by the EditOrderDialog.
-    if (updates.companyName !== undefined && !updates.companyName.trim()) return { success: false, error: "Company Name (ID • Name) cannot be empty."};
+    if (updates.companyName !== undefined && !updates.companyName.trim()) return { success: false, error: "Company Name (Job ID • Name) cannot be empty."};
     if (updates.address !== undefined && !updates.address.trim()) return { success: false, error: "Address cannot be empty."};
     if (updates.phoneNumber !== undefined && !updates.phoneNumber.trim()) return { success: false, error: "Phone Number cannot be empty."};
     
@@ -309,3 +309,4 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
   }
 }
 
+    
