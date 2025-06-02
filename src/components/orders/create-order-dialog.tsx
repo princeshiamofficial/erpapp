@@ -12,12 +12,13 @@ import { useToast } from '@/hooks/use-toast';
 import { createOrderAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getModels, getLaminations, getPaymentMethods } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays } from 'lucide-react'; // Added CalendarDays
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { format, parseISO } from 'date-fns'; // Added date-fns imports
 
 interface CreateOrderDialogProps {
   currentUser: User;
@@ -35,9 +36,19 @@ interface DialogOrderItem {
   lineItemTotalPrice: number | null;
 }
 
-const formatCurrency = (value: number | null | undefined): string => {
+const formatCurrencyBdt = (value: number | null | undefined): string => {
   if (value === null || value === undefined) return 'N/A';
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
+};
+
+const formatDateForDialog = (date: Date | string | undefined): string => {
+  if (!date) return "N/A";
+  try {
+    const d = typeof date === 'string' ? parseISO(date) : date;
+    return format(d, "MMM d, yyyy");
+  } catch (e) {
+    return "Invalid Date";
+  }
 };
 
 const initialOrderItemState: DialogOrderItem = {
@@ -52,12 +63,12 @@ const initialOrderItemState: DialogOrderItem = {
 export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children }: CreateOrderDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [jobId, setJobId] = useState('');
-  const [companyName, setCompanyName] = useState(''); // This is for ACTUAL company name
+  const [companyName, setCompanyName] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [initialStatusId, setInitialStatusId] = useState<string>('');
   const [advancePayment, setAdvancePayment] = useState<string>('');
-  const [specialClientDiscount, setSpecialClientDiscount] = useState<string>(''); // Input as string
+  const [specialClientDiscount, setSpecialClientDiscount] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [showCustomPaymentInput, setShowCustomPaymentInput] = useState(false);
   const [customPaymentMethodText, setCustomPaymentMethodText] = useState('');
@@ -77,6 +88,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [popoverOpenStates, setPopoverOpenStates] = useState<Record<string, boolean>>({});
   const [isPaymentMethodPopoverOpen, setIsPaymentMethodPopoverOpen] = useState(false);
+  const [currentOrderDate, setCurrentOrderDate] = useState(new Date());
+
 
   const { toast } = useToast();
 
@@ -100,6 +113,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setNetPayable(0);
     setAmountDue(0);
     setIsSubmitting(false);
+    setCurrentOrderDate(new Date());
   }, []);
 
   const fetchOptions = useCallback(async () => {
@@ -124,6 +138,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   useEffect(() => {
     if (isOpen) {
       fetchOptions();
+      setCurrentOrderDate(new Date()); // Set current date when dialog opens
     }
   }, [isOpen, fetchOptions]);
 
@@ -145,7 +160,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
   }, [isOpen, availableStatuses, initialStatusId]);
 
-  // Effect to calculate totals when orderItems or discount changes
   useEffect(() => {
     const currentItemsTotal = orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
     setOrderItemsTotal(currentItemsTotal);
@@ -163,7 +177,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             discountNum = fixedAmount;
         }
     }
-    // Ensure discount does not exceed total
     discountNum = Math.min(discountNum, currentItemsTotal);
     setCalculatedDiscountAmount(discountNum);
 
@@ -198,10 +211,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       prevItems.map(item => {
         if (item.id === itemId) {
           let updatedItem = { ...item };
-          if (field === 'modelName') { // value is the model's name
+          if (field === 'modelName') {
             const selectedModel = modelOptions.find(opt => opt.name === value);
             updatedItem.model = selectedModel ? selectedModel.name : '';
-            updatedItem.unitPrice = selectedModel?.sellingPrice ?? null; // Use sellingPrice for unitPrice
+            updatedItem.unitPrice = selectedModel?.sellingPrice ?? null;
           } else if (field === 'quantity' || field === 'lamination') {
              updatedItem = { ...item, [field]: value as string };
           }
@@ -244,19 +257,17 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const handleAdvancePaymentChange = (value: string) => {
     setAdvancePayment(value);
     const numericValue = parseFloat(value);
-    // Validation against netPayable happens in canSubmit and server-side
     if (!isNaN(numericValue) && numericValue > netPayable && netPayable > 0) {
       toast({
         title: "Validation Warning",
-        description: `Advance payment cannot exceed net payable amount of ${formatCurrency(netPayable)}.`,
+        description: `Advance payment cannot exceed net payable amount of ${formatCurrencyBdt(netPayable)}.`,
         variant: "destructive",
       });
     }
   };
 
   const handleDiscountChange = (value: string) => {
-    setSpecialClientDiscount(value); // Store the raw string
-    // Validation and calculation is handled in the useEffect
+    setSpecialClientDiscount(value);
     let discountVal = 0;
     const discountStr = value.trim();
     if (discountStr.endsWith('%')) {
@@ -274,7 +285,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     if (discountVal > orderItemsTotal && orderItemsTotal > 0) {
         toast({
             title: "Validation Warning",
-            description: `Discount cannot exceed total items price of ${formatCurrency(orderItemsTotal)}.`,
+            description: `Discount cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`,
             variant: "destructive"
         });
     }
@@ -283,8 +294,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
   const canSubmit = useMemo(() => {
     const parsedAdvPayment = parseFloat(advancePayment) || 0;
-    const isAdvPaymentValid = parsedAdvPayment <= netPayable || netPayable === 0; // Check against calculated netPayable
-    const isDiscountValid = calculatedDiscountAmount <= orderItemsTotal || orderItemsTotal === 0; // Check against calculatedDiscountAmount
+    const isAdvPaymentValid = parsedAdvPayment <= netPayable || netPayable === 0;
+    const isDiscountValid = calculatedDiscountAmount <= orderItemsTotal || orderItemsTotal === 0;
 
     return !isSubmitting &&
       jobId.trim() &&
@@ -341,11 +352,11 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
     const parsedAdvPayment = parseFloat(advancePayment) || 0;
     if (parsedAdvPayment > netPayable && netPayable > 0) {
-        toast({ title: "Validation Error", description: `Advance payment (${formatCurrency(parsedAdvPayment)}) cannot exceed net payable amount of ${formatCurrency(netPayable)}.`, variant: "destructive"});
+        toast({ title: "Validation Error", description: `Advance payment (${formatCurrencyBdt(parsedAdvPayment)}) cannot exceed net payable amount of ${formatCurrencyBdt(netPayable)}.`, variant: "destructive"});
         setIsSubmitting(false); return;
     }
     if (calculatedDiscountAmount > orderItemsTotal && orderItemsTotal > 0) {
-         toast({ title: "Validation Error", description: `Discount (${formatCurrency(calculatedDiscountAmount)}) cannot exceed total items price of ${formatCurrency(orderItemsTotal)}.`, variant: "destructive"});
+         toast({ title: "Validation Error", description: `Discount (${formatCurrencyBdt(calculatedDiscountAmount)}) cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`, variant: "destructive"});
         setIsSubmitting(false); return;
     }
 
@@ -359,15 +370,14 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         lineItemTotalPrice: item.lineItemTotalPrice!,
     }));
 
-    // Server action will combine Job ID and Company Name
     const orderDataForAction = {
       jobId: jobId.trim(),
-      companyName: companyName.trim(), // Send actual company name
+      companyName: companyName.trim(),
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
       orderItems: parsedOrderItems,
       advancePayment: parsedAdvPayment > 0 ? parsedAdvPayment : null,
-      specialClientDiscount: specialClientDiscount, 
+      specialClientDiscount: specialClientDiscount,
       paymentMethod: finalPaymentMethod,
       orderNotes: orderNotes.trim() || null,
       initialStatusId,
@@ -412,9 +422,19 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               <Label htmlFor="address">Address *</Label>
               <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="phoneNumber">Phone Number *</Label>
-              <Input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="phoneNumber">Phone Number *</Label>
+                <Input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="orderDate">Order Date</Label>
+                <div className="relative">
+                  <Input id="orderDate" type="text" value={formatDateForDialog(currentOrderDate)} readOnly disabled className="bg-muted/50" />
+                  <CalendarDays className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                </div>
+                <p className="text-xs text-muted-foreground">(Auto-set on creation)</p>
+              </div>
             </div>
 
             <div className="space-y-1">
@@ -475,7 +495,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                                       )}
                                     />
                                     {option.name}
-                                    {option.sellingPrice !== undefined && <span className="ml-auto text-xs text-muted-foreground">({formatCurrency(option.sellingPrice)})</span>}
+                                    {option.sellingPrice !== undefined && <span className="ml-auto text-xs text-muted-foreground">({formatCurrencyBdt(option.sellingPrice)})</span>}
                                   </CommandItem>
                                 ))}
                               </CommandGroup>
@@ -504,7 +524,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                     </div>
                     <div className="space-y-1">
                       <Label>Total Price</Label>
-                      <Input value={formatCurrency(item.lineItemTotalPrice)} readOnly disabled className="bg-muted/50 text-foreground" />
+                      <Input value={formatCurrencyBdt(item.lineItemTotalPrice)} readOnly disabled className="bg-muted/50 text-foreground" />
                     </div>
                     <Button
                       type="button"
@@ -539,7 +559,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                 <div className="relative">
                    <Input
                     id="specialClientDiscount"
-                    type="text" 
+                    type="text"
                     value={specialClientDiscount}
                     onChange={(e) => handleDiscountChange(e.target.value)}
                     placeholder="e.g., 100 or 10%"
@@ -635,27 +655,27 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                 <h4 className="text-md font-semibold text-foreground mb-2">Order Summary</h4>
                 <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Order Items Total:</span>
-                    <span className="font-medium text-foreground">{formatCurrency(orderItemsTotal)}</span>
+                    <span className="font-medium text-foreground">{formatCurrencyBdt(orderItemsTotal)}</span>
                 </div>
                 {(calculatedDiscountAmount || 0) > 0 && (
                     <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Special Client Discount:</span>
-                        <span className="font-medium text-red-600">- {formatCurrency(calculatedDiscountAmount)}</span>
+                        <span className="font-medium text-red-600">- {formatCurrencyBdt(calculatedDiscountAmount)}</span>
                     </div>
                 )}
                 <div className="flex justify-between text-sm font-semibold">
                     <span className="text-foreground">Net Payable:</span>
-                    <span className="text-foreground">{formatCurrency(netPayable)}</span>
+                    <span className="text-foreground">{formatCurrencyBdt(netPayable)}</span>
                 </div>
                 {isAdvancePaymentEntered && (
                     <div className="flex justify-between text-sm mt-1 pt-1 border-t border-dashed border-border">
                         <span className="text-muted-foreground">Advance Paid:</span>
-                        <span className="font-medium text-green-600">- {formatCurrency(parseFloat(advancePayment))}</span>
+                        <span className="font-medium text-green-600">- {formatCurrencyBdt(parseFloat(advancePayment))}</span>
                     </div>
                 )}
                  <div className="flex justify-between text-lg font-bold mt-1 pt-1 border-t border-border">
                     <span className="text-primary">Amount Due:</span>
-                    <span className="text-primary">{formatCurrency(amountDue)}</span>
+                    <span className="text-primary">{formatCurrencyBdt(amountDue)}</span>
                 </div>
             </div>
 

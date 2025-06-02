@@ -19,12 +19,13 @@ import type { TrackingLink, User, ServicePaymentMethodItem, OrderItem, ServiceMo
 import { useToast } from '@/hooks/use-toast';
 import { updateOrderAction } from '@/app/(app)/orders/actions';
 import { getPaymentMethods, getModels, getLaminations } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays } from 'lucide-react'; // Added CalendarDays
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { Separator } from '@/components/ui/separator';
+import { format, parseISO } from 'date-fns'; // Added date-fns imports
 
 
 interface EditOrderDialogProps {
@@ -44,9 +45,19 @@ interface DialogOrderItem {
   lineItemTotalPrice: number | null;
 }
 
-const formatCurrency = (value: number | null | undefined): string => {
+const formatCurrencyBdt = (value: number | null | undefined): string => {
   if (value === null || value === undefined) return 'N/A';
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
+};
+
+const formatDateForDialog = (dateString: string | Date | undefined): string => {
+  if (!dateString) return "N/A";
+  try {
+    const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
+    return format(date, "MMM d, yyyy");
+  } catch (e) {
+    return "Invalid Date";
+  }
 };
 
 
@@ -56,7 +67,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [advancePayment, setAdvancePayment] = useState<string>('');
-  const [specialClientDiscount, setSpecialClientDiscount] = useState<string>(''); // Input as string
+  const [specialClientDiscount, setSpecialClientDiscount] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [showCustomPaymentInput, setShowCustomPaymentInput] = useState(false);
   const [customPaymentMethodText, setCustomPaymentMethodText] = useState('');
@@ -117,7 +128,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
           setCompanyNameInput(potentialActualCompanyName);
         }
       } else {
-        setJobIdInput(''); 
+        setJobIdInput('');
         setCompanyNameInput(companyNameString.trim());
       }
 
@@ -125,25 +136,10 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       setPhoneNumber(order.phoneNumber);
       setAdvancePayment(order.advancePayment?.toString() || '');
       
-      // Handle discount string display
       if (order.specialClientDiscount && order.orderItems && order.orderItems.length > 0) {
         const itemsTotalForDiscountCalc = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
         if (itemsTotalForDiscountCalc > 0) {
-            // Check if the discount could be a percentage
-            // This is a heuristic. If discount is 10 and total is 100, it could be "10" or "10%".
-            // For simplicity, we'll assume if it's a clean percentage that matches, we show it as such.
-            // This part can be made more robust if we stored the original input type.
-            const potentialPercentage = (order.specialClientDiscount / itemsTotalForDiscountCalc) * 100;
-            if (Number.isInteger(potentialPercentage) && potentialPercentage > 0 && potentialPercentage <= 100) {
-                 // Heuristic: if discount amount is exactly X% of itemsTotal, display as X%
-                 // This is imperfect. For example, if total is 200 and discount is 20, it could be "20" or "10%".
-                 // For now, prefer fixed amount display unless we store original input type.
-                 // For more precise display of "10%" vs "100", we'd need to store how it was input.
-                 // Defaulting to showing the numeric value as a string.
-                 setSpecialClientDiscount(order.specialClientDiscount.toString());
-            } else {
-                 setSpecialClientDiscount(order.specialClientDiscount.toString());
-            }
+            setSpecialClientDiscount(order.specialClientDiscount.toString());
         } else {
             setSpecialClientDiscount(order.specialClientDiscount.toString());
         }
@@ -213,7 +209,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
             discountNum = fixedAmount;
         }
     }
-    discountNum = Math.min(discountNum, currentItemsTotal); // Ensure discount doesn't exceed total
+    discountNum = Math.min(discountNum, currentItemsTotal);
     setCalculatedDiscountAmount(discountNum);
 
     const currentNetPayable = Math.max(0, currentItemsTotal - discountNum);
@@ -236,10 +232,10 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       prevItems.map(item => {
         if (item.id === itemId) {
           let updatedItem = { ...item };
-          if (field === 'modelName') { // value is model name
+          if (field === 'modelName') {
             const selectedModel = modelOptions.find(opt => opt.name === value);
             updatedItem.model = selectedModel ? selectedModel.name : '';
-            updatedItem.unitPrice = selectedModel?.sellingPrice ?? null; // Use sellingPrice
+            updatedItem.unitPrice = selectedModel?.sellingPrice ?? null;
           } else if (field === 'quantity' || field === 'lamination') {
              updatedItem = { ...item, [field]: value as string };
           }
@@ -309,7 +305,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     if (!isNaN(numericValue) && numericValue > netPayable && netPayable > 0) {
       toast({
         title: "Validation Warning",
-        description: `Advance payment cannot exceed net payable amount of ${formatCurrency(netPayable)}.`,
+        description: `Advance payment cannot exceed net payable amount of ${formatCurrencyBdt(netPayable)}.`,
         variant: "destructive",
       });
     }
@@ -334,7 +330,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     if (discountVal > orderItemsTotal && orderItemsTotal > 0) {
         toast({
             title: "Validation Warning",
-            description: `Discount cannot exceed total items price of ${formatCurrency(orderItemsTotal)}.`,
+            description: `Discount cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`,
             variant: "destructive"
         });
     }
@@ -404,11 +400,11 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
 
     const parsedAdvPayment = parseFloat(advancePayment) || 0;
     if (parsedAdvPayment > netPayable && netPayable > 0) {
-        toast({ title: "Validation Error", description: `Advance payment (${formatCurrency(parsedAdvPayment)}) cannot exceed net payable amount of ${formatCurrency(netPayable)}.`, variant: "destructive"});
+        toast({ title: "Validation Error", description: `Advance payment (${formatCurrencyBdt(parsedAdvPayment)}) cannot exceed net payable amount of ${formatCurrencyBdt(netPayable)}.`, variant: "destructive"});
         return;
     }
     if (calculatedDiscountAmount > orderItemsTotal && orderItemsTotal > 0) {
-         toast({ title: "Validation Error", description: `Discount (${formatCurrency(calculatedDiscountAmount)}) cannot exceed total items price of ${formatCurrency(orderItemsTotal)}.`, variant: "destructive"});
+         toast({ title: "Validation Error", description: `Discount (${formatCurrencyBdt(calculatedDiscountAmount)}) cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`, variant: "destructive"});
         return;
     }
 
@@ -430,7 +426,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
       advancePayment: parsedAdvPayment > 0 ? parsedAdvPayment : null,
-      specialClientDiscountString: specialClientDiscount.trim() || null, 
+      specialClientDiscountString: specialClientDiscount.trim() || null,
       paymentMethod: finalPaymentMethod,
       orderNotes: orderNotes.trim() || null,
       orderItems: processedOrderItems,
@@ -440,7 +436,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setIsSubmitting(false);
 
     if (result.success && result.order) {
-      onOrderUpdated(); 
+      onOrderUpdated();
       onOpenChange(false);
     } else {
       toast({ title: "Update Failed", description: result.error || "Could not update order.", variant: "destructive" });
@@ -476,9 +472,18 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                 <Label htmlFor="edit-address">Address *</Label>
                 <Textarea id="edit-address" value={address} onChange={(e) => setAddress(e.target.value)} required disabled={isSubmitting} />
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="edit-phoneNumber">Phone Number *</Label>
-                <Input id="edit-phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required disabled={isSubmitting} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                    <Label htmlFor="edit-phoneNumber">Phone Number *</Label>
+                    <Input id="edit-phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required disabled={isSubmitting} />
+                </div>
+                <div className="space-y-1">
+                    <Label htmlFor="edit-orderDate">Date Created</Label>
+                    <div className="relative">
+                        <Input id="edit-orderDate" type="text" value={formatDateForDialog(order?.createdAt)} readOnly disabled className="bg-muted/50" />
+                        <CalendarDays className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    </div>
+                </div>
               </div>
               <div className="space-y-1">
                   <Label htmlFor="edit-orderNotes">Order Notes (Optional)</Label>
@@ -539,7 +544,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                                         )}
                                       />
                                       {option.name}
-                                      {option.sellingPrice !== undefined && <span className="ml-auto text-xs text-muted-foreground">({formatCurrency(option.sellingPrice)})</span>}
+                                      {option.sellingPrice !== undefined && <span className="ml-auto text-xs text-muted-foreground">({formatCurrencyBdt(option.sellingPrice)})</span>}
                                     </CommandItem>
                                   ))}
                                 </CommandGroup>
@@ -571,7 +576,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
 
                       <div className="space-y-1">
                         <Label>Total Price</Label>
-                        <Input value={formatCurrency(item.lineItemTotalPrice)} readOnly disabled className="bg-muted/50 text-foreground" />
+                        <Input value={formatCurrencyBdt(item.lineItemTotalPrice)} readOnly disabled className="bg-muted/50 text-foreground" />
                       </div>
 
                       <Button
@@ -601,7 +606,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                   <div className="relative">
                     <Input
                       id="edit-specialClientDiscount"
-                      type="text" 
+                      type="text"
                       value={specialClientDiscount}
                       onChange={(e) => handleDiscountChangeEdit(e.target.value)}
                       placeholder="e.g., 100 or 10%"
@@ -693,27 +698,27 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                   <h4 className="text-md font-semibold text-foreground mb-2">Order Summary</h4>
                   <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Order Items Total:</span>
-                      <span className="font-medium text-foreground">{formatCurrency(orderItemsTotal)}</span>
+                      <span className="font-medium text-foreground">{formatCurrencyBdt(orderItemsTotal)}</span>
                   </div>
                   {(calculatedDiscountAmount || 0) > 0 && (
                       <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Special Client Discount:</span>
-                          <span className="font-medium text-red-600">- {formatCurrency(calculatedDiscountAmount)}</span>
+                          <span className="font-medium text-red-600">- {formatCurrencyBdt(calculatedDiscountAmount)}</span>
                       </div>
                   )}
                   <div className="flex justify-between text-sm font-semibold">
                       <span className="text-foreground">Net Payable:</span>
-                      <span className="text-foreground">{formatCurrency(netPayable)}</span>
+                      <span className="text-foreground">{formatCurrencyBdt(netPayable)}</span>
                   </div>
                   {isAdvancePaymentEntered && (
                       <div className="flex justify-between text-sm mt-1 pt-1 border-t border-dashed border-border">
                           <span className="text-muted-foreground">Advance Paid:</span>
-                          <span className="font-medium text-green-600">- {formatCurrency(parseFloat(advancePayment))}</span>
+                          <span className="font-medium text-green-600">- {formatCurrencyBdt(parseFloat(advancePayment))}</span>
                       </div>
                   )}
                   <div className="flex justify-between text-lg font-bold mt-1 pt-1 border-t border-border">
                       <span className="text-primary">Amount Due:</span>
-                      <span className="text-primary">{formatCurrency(amountDue)}</span>
+                      <span className="text-primary">{formatCurrencyBdt(amountDue)}</span>
                   </div>
               </div>
 
