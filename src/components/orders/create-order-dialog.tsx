@@ -552,7 +552,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                 </div>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="advancePayment">Advance Payment (BDT - Optional)</Label>
+                <Label htmlFor="advancePayment">Advance Payment</Label>
                 <Input
                   id="advancePayment"
                   type="number"

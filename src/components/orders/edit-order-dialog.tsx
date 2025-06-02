@@ -581,7 +581,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                   </div>
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="edit-advancePayment">Advance Payment (BDT - Optional)</Label>
+                  <Label htmlFor="edit-advancePayment">Advance Payment</Label>
                   <Input id="edit-advancePayment" type="number" value={advancePayment}
                     onChange={(e) => handleAdvancePaymentChangeEdit(e.target.value)}
                     placeholder="e.g., 500.00" min="0" step="0.01" disabled={isSubmitting} />
