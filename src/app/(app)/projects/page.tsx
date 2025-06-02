@@ -133,6 +133,7 @@ export default function ProjectsPage() {
     { value: 'next_week', label: 'Ending Next Week' },
     { value: 'this_month', label: 'Ending This Month' },
   ];
+
   const categoryOptions = useMemo(() => {
     const uniqueCategories = Array.from(new Set(projects.map(p => p.categoryTag.trim()).filter(Boolean)));
     const options = [{ value: 'all', label: 'All Categories' }];
@@ -140,6 +141,7 @@ export default function ProjectsPage() {
     return options;
   }, [projects]);
 
+  console.log("About to return JSX for ProjectsPage");
   return (
     <div className="flex flex-col h-full p-0 sm:p-6 lg:p-8 space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header pb-2 px-4 sm:px-0">
