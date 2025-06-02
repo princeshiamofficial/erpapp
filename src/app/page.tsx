@@ -4,8 +4,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-// Loader2 is no longer needed here
-// import { Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react'; // Re-adding Loader2
 
 export default function HomePage() {
   const router = useRouter();
@@ -21,8 +20,16 @@ export default function HomePage() {
     }
   }, [currentUser, isLoading, router]);
 
-  // Return null to show a blank screen during the brief period of redirection.
-  // This can make the app feel like it's opening more instantly.
+  // If AuthContext is still loading, display a spinner on this page.
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'hsl(var(--background))' }}>
+        <Loader2 style={{ height: '2.5rem', width: '2.5rem', animation: 'spin 1s linear infinite', color: 'hsl(var(--primary))' }} />
+      </div>
+    );
+  }
+
+  // Once isLoading is false, the useEffect should have triggered a redirect.
+  // Returning null here is fine as the user shouldn't see this page content for long.
   return null;
 }
-
