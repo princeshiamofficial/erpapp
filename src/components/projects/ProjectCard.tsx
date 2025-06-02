@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Project } from '@/types';
+import type { Project, ProjectStatusType } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { CalendarDays, User, Folder, EllipsisVertical, GripVertical } from 'lucide-react';
@@ -12,12 +12,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress'; // Import Progress component
+import { Progress } from '@/components/ui/progress';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
-import { parseISO, differenceInCalendarDays, isAfter, isBefore } from 'date-fns'; // Import date-fns functions
-import React from 'react'; // Import React for SVG component type
+import { parseISO, differenceInCalendarDays, isAfter, isBefore, addHours, addDays, differenceInSeconds, formatDistanceToNowStrict } from 'date-fns';
+import React from 'react';
 
 // Inline SVG Stopwatch Icon Component
 const StopwatchIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -44,85 +44,113 @@ interface ProjectCardProps {
   project: Project;
 }
 
-// Helper function to calculate progress information
-const calculateProgressInfo = (createdAtIso?: string, endDateIso?: string) => {
-  if (!createdAtIso || !endDateIso) {
-    return { percentage: 0, displayText: "Dates missing", isCompleted: false, isOverdue: false, progressColorClass: 'bg-gray-400' };
+const calculateProgressInfo = (
+  status: ProjectStatusType,
+  createdAtIso: string, 
+  updatedAtIso: string, 
+  endDateIso?: string    
+) => {
+  const now = new Date();
+  let showProgressBar = true;
+  let baseDateForSLA = updatedAtIso ? parseISO(updatedAtIso) : now; // Fallback to now if updatedAt is missing
+
+  // Default values for overall project timeline (if no specific SLA applies)
+  let effectiveStartDate = createdAtIso ? parseISO(createdAtIso) : now; // Fallback to now if createdAt is missing
+  let effectiveTargetDate = endDateIso ? parseISO(endDateIso) : now;   // Fallback to now if endDate is missing
+  
+  let mainDisplayText = ""; 
+  let slaOverrideText = ""; 
+  let progressColorClass = 'progress-indicator-gradient';
+
+  // Handle cases where crucial dates for overall timeline might be missing
+  if ((status !== 'CR Clearance' && status !== 'On Design' && status !== 'Logistics' && status !== 'Courier' && status !== 'On Hold' && status !== 'CR Cancel') && (!createdAtIso || !endDateIso)) {
+    return { showProgressBar: true, percentage: 0, displayText: "Project dates missing", isOverdue: false, progressColorClass: 'bg-gray-400' };
   }
 
-  try {
-    const startDate = parseISO(createdAtIso);
-    const endDate = parseISO(endDateIso);
-    const now = new Date();
+  switch (status) {
+    case 'CR Clearance':
+      effectiveTargetDate = addHours(baseDateForSLA, 24);
+      slaOverrideText = "24H for CR Clearance";
+      effectiveStartDate = baseDateForSLA; 
+      break;
+    case 'CR Cancel':
+      showProgressBar = false;
+      return { showProgressBar, percentage: 0, displayText: "", isOverdue: false, progressColorClass: "" };
+    case 'On Design':
+      effectiveTargetDate = addHours(baseDateForSLA, 48);
+      slaOverrideText = "48H for Design";
+      effectiveStartDate = baseDateForSLA;
+      break;
+    case 'On Hold':
+      effectiveTargetDate = addDays(baseDateForSLA, 15);
+      slaOverrideText = "Max 15 Days on Hold";
+      effectiveStartDate = baseDateForSLA;
+      break;
+    case 'Logistics':
+      effectiveTargetDate = addHours(baseDateForSLA, 24);
+      slaOverrideText = "24H for Logistics";
+      effectiveStartDate = baseDateForSLA;
+      break;
+    case 'Courier':
+      effectiveTargetDate = addHours(baseDateForSLA, 6);
+      slaOverrideText = "6H for Courier";
+      effectiveStartDate = baseDateForSLA;
+      break;
+    default:
+      // Use overall project timeline (effectiveStartDate & effectiveTargetDate already set to overall project dates)
+      // No slaOverrideText, mainDisplayText will be calculated based on overall timeline.
+      break;
+  }
 
-    let percentage = 0;
-    let displayText = "";
-    let isCompleted = false;
-    let isOverdue = false;
-    let progressColorClass = 'progress-indicator-gradient'; // Default gradient
+  let percentage = 0;
+  let isOverdue = false;
 
-    if (isAfter(now, endDate)) {
-      const daysOverdue = differenceInCalendarDays(now, endDate);
-      percentage = 100;
-      displayText = `Overdue by ${daysOverdue} day${daysOverdue === 1 ? '' : 's'}`;
-      isCompleted = true;
-      isOverdue = true;
-      progressColorClass = 'bg-destructive'; // Solid red for overdue
-    } else if (isBefore(now, startDate)) {
-      const daysUntilStart = differenceInCalendarDays(startDate, now);
-      percentage = 0;
-      displayText = `${daysUntilStart} day${daysUntilStart === 1 ? '' : 's'} until start`;
-      // progressColorClass remains gradient or could be specific for 'not started'
-    } else {
-      const totalDuration = differenceInCalendarDays(endDate, startDate);
-      const elapsedDuration = differenceInCalendarDays(now, startDate);
+  if (isAfter(now, effectiveTargetDate)) {
+    percentage = 100;
+    isOverdue = true;
+    progressColorClass = 'bg-destructive';
+    const timeOver = formatDistanceToNowStrict(effectiveTargetDate, { addSuffix: false });
+    mainDisplayText = `Overdue by ${timeOver}`;
+  } else if (isBefore(now, effectiveStartDate) && !(status === 'CR Clearance' || status === 'On Design' || status === 'Logistics' || status === 'Courier' || status === 'On Hold')) {
+    // Only show "Starts in" for overall project timeline if it hasn't started
+    // For SLA stages, effectiveStartDate is usually updatedAt, so this condition is less relevant for them.
+    percentage = 0;
+    const timeUntilStart = formatDistanceToNowStrict(effectiveStartDate, { addSuffix: false });
+    mainDisplayText = `Starts in ${timeUntilStart}`;
+  } else { 
+    const totalDurationSeconds = differenceInSeconds(effectiveTargetDate, effectiveStartDate);
+    const elapsedDurationSeconds = differenceInSeconds(now, effectiveStartDate);
 
-      if (totalDuration <= 0) { // End date is same or before start date
-        percentage = 100;
-        displayText = "Completed";
-        isCompleted = true;
-         progressColorClass = 'bg-green-500'; // Solid green for completed on time
+    if (totalDurationSeconds <= 0) { 
+      percentage = 100; 
+      mainDisplayText = "Due";
+      if (isAfter(now, effectiveTargetDate)) {
+        isOverdue = true;
+        progressColorClass = 'bg-destructive';
+        mainDisplayText = "Overdue";
       } else {
-        percentage = Math.max(0, Math.min(100, (elapsedDuration / totalDuration) * 100));
-        const daysRemaining = differenceInCalendarDays(endDate, now);
-        
-        if (daysRemaining < 0) { // Should be caught by isAfter, but for safety
-             displayText = "Overdue";
-             isOverdue = true;
-             progressColorClass = 'bg-destructive';
-        } else if (daysRemaining === 0) {
-            displayText = "Due today";
-        } else {
-            displayText = `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining`;
-        }
+          progressColorClass = 'bg-green-500'; 
+      }
+    } else {
+      percentage = Math.max(0, Math.min(100, (elapsedDurationSeconds / totalDurationSeconds) * 100));
+      const timeRemaining = formatDistanceToNowStrict(effectiveTargetDate, { addSuffix: false });
+      mainDisplayText = `${timeRemaining} remaining`;
 
-        if (percentage === 100 && !isAfter(now, endDate)) {
-           displayText = "Due today";
-           isCompleted = true; // Mark as completed if progress is 100% and it's the end date
-           progressColorClass = 'bg-green-500';
-        }
+      if (percentage === 100 && !isAfter(now, effectiveTargetDate)) { 
+        mainDisplayText = "Due today";
       }
     }
-    
-    // If not using gradient and want color stages
-    // if (!isOverdue && !isCompleted) {
-    //   if (percentage < 33) progressColorClass = 'bg-red-500';
-    //   else if (percentage < 66) progressColorClass = 'bg-yellow-500';
-    //   else progressColorClass = 'bg-green-500';
-    // }
-
-
-    return {
-      percentage,
-      displayText,
-      isCompleted,
-      isOverdue,
-      progressColorClass
-    };
-  } catch (error) {
-    console.error("Error calculating progress:", error);
-    return { percentage: 0, displayText: "Date error", isCompleted: false, isOverdue: false, progressColorClass: 'bg-gray-400' };
   }
+  
+  const finalDisplayText = isOverdue ? mainDisplayText : (slaOverrideText || mainDisplayText);
+
+  return {
+    showProgressBar,
+    percentage: Math.round(percentage),
+    displayText: finalDisplayText,
+    isOverdue,
+    progressColorClass,
+  };
 };
 
 
@@ -143,7 +171,12 @@ export function ProjectCard({ project }: ProjectCardProps) {
     return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
   };
 
-  const { percentage, displayText, progressColorClass } = calculateProgressInfo(project.createdAt, project.endDate);
+  const { showProgressBar, percentage, displayText, progressColorClass } = calculateProgressInfo(
+    project.status,
+    project.createdAt,
+    project.updatedAt || project.createdAt, // Fallback updatedAt to createdAt if missing
+    project.endDate
+  );
 
   return (
     <Card
@@ -152,13 +185,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
       {...listeners}
       {...attributes}
       className={cn(
-        "mb-3 bg-card shadow-md hover:shadow-lg transition-shadow relative group", // Added group for hover effects
+        "mb-3 bg-card shadow-md hover:shadow-lg transition-shadow relative group",
         isDragging ? "opacity-50 shadow-2xl ring-2 ring-primary z-50" : "cursor-grab active:cursor-grabbing"
       )}
     >
       <CardContent className="p-3 space-y-2.5">
         <div
-          className="absolute top-1/2 -translate-y-1/2 left-1.5 opacity-0 group-hover:opacity-80 transition-opacity p-1" // Hidden by default, shows on hover
+          className="absolute top-1/2 -translate-y-1/2 left-1.5 opacity-0 group-hover:opacity-80 transition-opacity p-1"
           title="Drag to move project"
         >
           <GripVertical className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
@@ -179,9 +212,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
           </DropdownMenu>
         </div>
         
-        {/* Project Name (moved from original, assuming projectIdDisplay is the main title) */}
         <p className="text-xs font-medium text-muted-foreground ml-6 truncate" title={project.name}>{project.name}</p>
-
 
         <div className="inline-flex items-center rounded-md border border-destructive/30 bg-destructive/20 px-2 py-0.5 text-xs font-semibold text-destructive transition-colors ml-6">
           <CalendarDays className="mr-1.5 h-3 w-3" />
@@ -198,17 +229,19 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <span className="truncate" title={project.categoryTag}>{project.categoryTag}</span>
         </div>
         
-        <div className="ml-6 pt-1">
-          <div className="flex items-center space-x-2 mb-1">
-            <StopwatchIcon className="h-4 w-4 text-primary" />
-            <span className="text-xs font-medium text-muted-foreground">{displayText}</span>
-          </div>
-          <Progress 
-            value={percentage} 
-            className="h-2.5 rounded-full bg-secondary shadow-inner" 
-            indicatorClassName={progressColorClass}
-          />
-        </div>
+        {showProgressBar && (
+            <div className="ml-6 pt-1">
+            <div className="flex items-center space-x-2 mb-1">
+                <StopwatchIcon className="h-4 w-4 text-primary" />
+                <span className="text-xs font-medium text-muted-foreground">{displayText}</span>
+            </div>
+            <Progress 
+                value={percentage} 
+                className="h-2.5 rounded-full bg-secondary shadow-inner" 
+                indicatorClassName={progressColorClass}
+            />
+            </div>
+        )}
 
         <div className="flex items-center justify-start mt-2 ml-6">
           <Avatar className="h-7 w-7 text-xs border bg-muted">
@@ -219,4 +252,3 @@ export function ProjectCard({ project }: ProjectCardProps) {
     </Card>
   );
 }
-
