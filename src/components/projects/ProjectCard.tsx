@@ -17,7 +17,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { parseISO, differenceInSeconds, isAfter, isBefore, addHours, addDays, formatDistanceToNowStrict } from 'date-fns';
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 // Inline SVG Stopwatch Icon Component
 const StopwatchIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -50,41 +50,63 @@ function formatDurationPrecise(totalSeconds: number): string {
   const days = Math.floor(totalSeconds / (3600 * 24));
   const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.floor(totalSeconds % 60);
 
   let parts: string[] = [];
-  if (days > 0) parts.push(`${days}d`);
-  if (hours > 0) parts.push(`${hours}h`);
-  if (minutes > 0 && days === 0) parts.push(`${minutes}m`); // Only show minutes if no days are shown
+  if (days > 0) {
+    parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+  } else if (hours > 0) {
+    parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+  } else if (minutes > 0) {
+    parts.push(`${minutes}m`);
+    if (seconds > 0) parts.push(`${seconds}s`);
+  } else if (seconds > 0) {
+    parts.push(`${seconds}s`);
+  }
   
-  if (parts.length === 0) { // Less than a minute remaining
-    if (totalSeconds > 0) return "<1m";
-    return "Due";
+  if (parts.length === 0) { 
+    return "Due"; // Should ideally not be reached if totalSeconds > 0
   }
 
   return parts.join(' ');
 }
 
-const calculateProgressInfo = (
-  status: ProjectStatusType,
-  createdAtIso: string,
-  updatedAtIso: string,
-  endDateIso?: string
-) => {
-  const now = new Date();
-  const baseDateForSLA = updatedAtIso ? parseISO(updatedAtIso) : now;
+interface ProgressInfo {
+  showProgressBar: boolean;
+  percentage: number;
+  displayText: string;
+  isOverdue: boolean;
+  progressColorClass: string;
+}
 
-  let effectiveStartDate = createdAtIso ? parseISO(createdAtIso) : now;
-  let effectiveTargetDate = endDateIso ? parseISO(endDateIso) : now;
+const calculateProgressInfo = (
+  projectStatus: ProjectStatusType,
+  createdAtIso: string | undefined,
+  updatedAtIso: string | undefined,
+  endDateIso: string | undefined,
+  now: Date // Pass current time for consistent calculation
+): ProgressInfo => {
+  
+  if (!createdAtIso || !updatedAtIso) {
+    return { showProgressBar: true, percentage: 0, displayText: "Data missing", isOverdue: false, progressColorClass: "bg-muted" };
+  }
+
+  const baseDateForSLA = parseISO(updatedAtIso);
+
+  let effectiveStartDate = parseISO(createdAtIso);
+  let effectiveTargetDate = endDateIso ? parseISO(endDateIso) : now; // Default target to now if no end date
   let slaStageName: string | null = null;
   let showProgressBar = true;
-  let progressColorClass = 'progress-indicator-gradient'; // Default gradient
+  let progressColorClass = 'progress-indicator-gradient'; 
 
-  if (status === 'CR Cancel') {
+  if (projectStatus === 'CR Cancel') {
     showProgressBar = false;
     return { showProgressBar, percentage: 0, displayText: "", isOverdue: false, progressColorClass: "" };
   }
 
-  switch (status) {
+  switch (projectStatus) {
     case 'CR Clearance':
       effectiveStartDate = baseDateForSLA;
       effectiveTargetDate = addHours(baseDateForSLA, 24);
@@ -97,8 +119,8 @@ const calculateProgressInfo = (
       break;
     case 'On Hold':
       effectiveStartDate = baseDateForSLA;
-      effectiveTargetDate = addDays(baseDateForSLA, 15); // Target for overdue calculation
-      // Display text is handled specially below for On Hold
+      // Target for overdue calculation (15 days from when it went on hold)
+      effectiveTargetDate = addDays(baseDateForSLA, 15); 
       break;
     case 'Logistics':
       effectiveStartDate = baseDateForSLA;
@@ -111,7 +133,8 @@ const calculateProgressInfo = (
       slaStageName = " (6H SLA)";
       break;
     default:
-      // Uses overall project timeline (effectiveStartDate & effectiveTargetDate already set)
+      // Use overall project timeline if no specific SLA for the status
+      // effectiveStartDate & effectiveTargetDate are already set based on createdAt/endDate
       break;
   }
 
@@ -123,11 +146,11 @@ const calculateProgressInfo = (
     currentIsOverdue = true;
     const timeOver = formatDistanceToNowStrict(effectiveTargetDate, { addSuffix: false });
     currentDisplayText = `Overdue by ${timeOver}`;
-    progressColorClass = 'bg-destructive'; // Corrected line
+    progressColorClass = 'bg-destructive';
     currentPercentage = 100;
   } else if (
-    status !== 'CR Clearance' && status !== 'On Design' && status !== 'Logistics' &&
-    status !== 'Courier' && status !== 'On Hold' && // These SLA stages start from updatedAt
+    projectStatus !== 'CR Clearance' && projectStatus !== 'On Design' && projectStatus !== 'Logistics' &&
+    projectStatus !== 'Courier' && projectStatus !== 'On Hold' && // These SLA stages start from updatedAt
     isBefore(now, effectiveStartDate)
   ) {
     const timeUntilStart = formatDistanceToNowStrict(effectiveStartDate, { addSuffix: false });
@@ -136,9 +159,8 @@ const calculateProgressInfo = (
   } else {
     const secondsRemaining = differenceInSeconds(effectiveTargetDate, now);
     if (secondsRemaining <= 0) {
-      currentDisplayText = (status === 'On Hold') ? "Hold period ended" : "Stage due";
+      currentDisplayText = (projectStatus === 'On Hold') ? "Hold period ended" : "Stage due";
       currentPercentage = 100;
-      // If it's exactly due or slightly past but not yet flagged `currentIsOverdue` by `isAfter` (due to precision)
       progressColorClass = isAfter(now, effectiveTargetDate) ? 'bg-destructive' : 'bg-yellow-500';
     } else {
       currentDisplayText = `${formatDurationPrecise(secondsRemaining)} remaining`;
@@ -148,15 +170,13 @@ const calculateProgressInfo = (
     }
   }
 
-  // Special text for "On Hold" if not overdue
-  if (status === 'On Hold' && !currentIsOverdue) {
+  if (projectStatus === 'On Hold' && !currentIsOverdue) {
     currentDisplayText = "Max 15 Days on Hold";
-     // Recalculate percentage specifically for On Hold based on its 15-day target
     const holdTargetDateForDisplay = addDays(baseDateForSLA, 15);
     const totalHoldDurationForDisplay = differenceInSeconds(holdTargetDateForDisplay, baseDateForSLA);
     const elapsedHoldDurationForDisplay = differenceInSeconds(now, baseDateForSLA);
     currentPercentage = totalHoldDurationForDisplay > 0 ? Math.max(0, Math.min(100, (elapsedHoldDurationForDisplay / totalHoldDurationForDisplay) * 100)) : 100;
-     if (isAfter(now, holdTargetDateForDisplay)) { // Ensure overdue status is correct for On Hold display
+     if (isAfter(now, holdTargetDateForDisplay)) {
         currentIsOverdue = true;
         const timeOverHold = formatDistanceToNowStrict(holdTargetDateForDisplay, { addSuffix: false });
         currentDisplayText = `Hold overdue by ${timeOverHold}`;
@@ -165,12 +185,11 @@ const calculateProgressInfo = (
     }
   }
 
-  if (slaStageName && !currentIsOverdue && status !== 'On Hold') {
+  if (slaStageName && !currentIsOverdue && projectStatus !== 'On Hold') {
     currentDisplayText += slaStageName;
-  } else if (currentIsOverdue && slaStageName && status !== 'On Hold') {
+  } else if (currentIsOverdue && slaStageName && projectStatus !== 'On Hold') {
      currentDisplayText += slaStageName;
   }
-
 
   return {
     showProgressBar,
@@ -198,13 +217,37 @@ export function ProjectCard({ project }: ProjectCardProps) {
     if (names.length === 1) return names[0].charAt(0).toUpperCase();
     return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
   };
-
-  const { showProgressBar, percentage, displayText, progressColorClass } = calculateProgressInfo(
-    project.status,
-    project.createdAt,
-    project.updatedAt || project.createdAt, 
-    project.endDate
+  
+  const [progressInfo, setProgressInfo] = useState<ProgressInfo>(() => 
+    calculateProgressInfo(
+        project.status,
+        project.createdAt,
+        project.updatedAt || project.createdAt,
+        project.endDate,
+        new Date() // Initial calculation with current time
+    )
   );
+
+  useEffect(() => {
+    // Initial calculation or when key project dates change
+    const updateInfo = () => {
+        setProgressInfo(calculateProgressInfo(
+            project.status,
+            project.createdAt,
+            project.updatedAt || project.createdAt,
+            project.endDate,
+            new Date()
+        ));
+    };
+    updateInfo(); // Calculate once on mount/project change
+
+    const intervalId = setInterval(() => {
+        updateInfo(); // Recalculate every second
+    }, 1000);
+
+    return () => clearInterval(intervalId); // Cleanup interval on unmount
+  }, [project.status, project.createdAt, project.updatedAt, project.endDate]);
+
 
   return (
     <Card
@@ -257,16 +300,16 @@ export function ProjectCard({ project }: ProjectCardProps) {
           <span className="truncate" title={project.categoryTag}>{project.categoryTag}</span>
         </div>
         
-        {showProgressBar && (
+        {progressInfo.showProgressBar && (
             <div className="ml-6 pt-1">
             <div className="flex items-center space-x-2 mb-1">
                 <StopwatchIcon className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-xs font-medium text-muted-foreground truncate" title={displayText}>{displayText}</span>
+                <span className="text-xs font-medium text-muted-foreground truncate" title={progressInfo.displayText}>{progressInfo.displayText}</span>
             </div>
             <Progress 
-                value={percentage} 
+                value={progressInfo.percentage} 
                 className="h-2.5 rounded-full bg-secondary shadow-inner" 
-                indicatorClassName={progressColorClass}
+                indicatorClassName={progressInfo.progressColorClass}
             />
             </div>
         )}
