@@ -132,13 +132,13 @@ export default function ProjectsPage() {
     { value: 'this_week', label: 'Ending This Week' },
     { value: 'next_week', label: 'Ending Next Week' },
     { value: 'this_month', label: 'Ending This Month' },
-  ]; // Added semicolon
+  ];
   const categoryOptions = useMemo(() => {
     const uniqueCategories = Array.from(new Set(projects.map(p => p.categoryTag.trim()).filter(Boolean)));
     const options = [{ value: 'all', label: 'All Categories' }];
     uniqueCategories.sort().forEach(cat => options.push({ value: cat.toLowerCase(), label: cat }));
     return options;
-  }, [projects]);; // Ensured semicolon
+  }, [projects]);
 
   return (
     <div className="flex flex-col h-full p-0 sm:p-6 lg:p-8 space-y-4">
