@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createOrderAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getModels, getLaminations, getPaymentMethods } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -50,7 +50,7 @@ const initialOrderItemState: DialogOrderItem = {
 
 export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children }: CreateOrderDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [jobId, setJobId] = useState(''); // Renamed from companyId
+  const [jobId, setJobId] = useState(''); 
   const [companyName, setCompanyName] = useState(''); 
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -59,6 +59,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [showCustomPaymentInput, setShowCustomPaymentInput] = useState(false);
   const [customPaymentMethodText, setCustomPaymentMethodText] = useState('');
+  const [orderNotes, setOrderNotes] = useState(''); // Added orderNotes state
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [orderItems, setOrderItems] = useState<DialogOrderItem[]>([{ ...initialOrderItemState, id: uuidv4() }]);
@@ -74,7 +75,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const { toast } = useToast();
 
   const resetForm = useCallback(() => {
-    setJobId(''); // Reset jobId
+    setJobId(''); 
     setCompanyName('');
     setAddress('');
     setPhoneNumber('');
@@ -83,6 +84,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setPaymentMethod('');
     setShowCustomPaymentInput(false);
     setCustomPaymentMethodText('');
+    setOrderNotes(''); // Reset orderNotes
     setOrderItems([{ ...initialOrderItemState, id: uuidv4() }]);
     setPopoverOpenStates({});
     setIsPaymentMethodPopoverOpen(false);
@@ -221,7 +223,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     const isAdvPaymentValid = isNaN(parsedAdvPayment) || parsedAdvPayment <= totalOrderPrice || totalOrderPrice === 0;
 
     return !isSubmitting &&
-      jobId.trim() && // Check jobId
+      jobId.trim() && 
       companyName.trim() && address.trim() && phoneNumber.trim() && initialStatusId &&
       (availableStatuses.length > 0 || !!initialStatusId) &&
       modelOptions.length > 0 &&
@@ -346,6 +348,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       orderItems: parsedOrderItems,
       advancePayment: parsedAdvancePayment,
       paymentMethod: finalPaymentMethod,
+      orderNotes: orderNotes.trim() || null, // Add orderNotes
       initialStatusId,
     };
 
@@ -399,6 +402,18 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               <Label htmlFor="phoneNumber">Phone Number *</Label>
               <Input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
             </div>
+            
+            <div className="space-y-1">
+              <Label htmlFor="orderNotes">Order Notes (Optional)</Label>
+              <Textarea 
+                id="orderNotes" 
+                value={orderNotes} 
+                onChange={(e) => setOrderNotes(e.target.value)} 
+                placeholder="Add any specific instructions or notes for this order..."
+                rows={3}
+              />
+            </div>
+
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                 <div className="space-y-1">
@@ -613,5 +628,3 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
-
-    

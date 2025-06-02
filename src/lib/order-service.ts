@@ -54,6 +54,7 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       orderItems: firstOrderItems,
       advancePayment: 1000,
       paymentMethod: "Bank Transfer",
+      orderNotes: "Client needs a preview by end of week. High priority.",
       crmUserId: "SysAdmin-001",
       crmUserName: "Default Admin",
       designerRepresentativeId: null,
@@ -95,6 +96,7 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       orderItems: secondOrderItems,
       advancePayment: null,
       paymentMethod: "Cash",
+      orderNotes: "Use eco-friendly inks only. Client is very particular about sustainability.",
       crmUserId: "SysAdmin-001",
       crmUserName: "Default Admin",
       createdAt: createdAtSecondOrder,
@@ -118,7 +120,7 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     createdOrders.push(secondOrder);
 
     await batch.commit();
-    console.log('Initial orders seeded in Firestore with updated fields (updatedAt, updatedBy).');
+    console.log('Initial orders seeded in Firestore with updated fields (updatedAt, updatedBy, orderNotes).');
     return createdOrders;
   } catch (error) {
     console.error("Error seeding initial orders:", error);
@@ -162,12 +164,13 @@ export const getOrderById = async (id: string): Promise<TrackingLink | undefined
 };
 
 export const addOrder = async (orderData: {
-  companyName: string; // This will be the combined "Company ID • Company Name"
+  companyName: string; // This will be the combined "Job ID • Company Name"
   address: string;
   phoneNumber: string;
   orderItems: OrderItem[];
   advancePayment?: number | null;
   paymentMethod?: string | null;
+  orderNotes?: string | null;
   initialStatusId: string;
   crmUserId: string;
   crmUserName: string;
@@ -221,6 +224,7 @@ export const addOrder = async (orderData: {
       orderItems: orderData.orderItems, 
       advancePayment: orderData.advancePayment === undefined ? null : orderData.advancePayment,
       paymentMethod: orderData.paymentMethod === undefined ? null : (orderData.paymentMethod || null),
+      orderNotes: orderData.orderNotes || null,
       crmUserId: orderData.crmUserId,
       crmUserName: orderData.crmUserName,
       designerRepresentativeId: null,

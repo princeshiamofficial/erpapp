@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2, AlertTriangle } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2, AlertTriangle, StickyNote } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types"; // Ensure OrderItem is imported
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -683,6 +683,17 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             </div>
           )}
 
+        {order.orderNotes && (
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center"><StickyNote className="mr-2 h-5 w-5 text-primary/80"/>Order Notes:</h3>
+          <Card className="bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700/40 shadow-sm">
+            <CardContent className="p-4 text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">
+              {order.orderNotes}
+            </CardContent>
+          </Card>
+        </div>
+        )}
+
 
         <div className="flex justify-end mt-8 pt-6 border-t border-border/30">
           <div className="w-full max-w-xs sm:max-w-sm relative">
@@ -835,4 +846,3 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
-

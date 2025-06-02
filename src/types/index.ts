@@ -45,12 +45,13 @@ export interface OrderItem {
 export interface TrackingLink {
   id: string;
   // customerName is effectively companyName for B2B or contact person if needed elsewhere
-  companyName: string; // Will store "Company ID • Company Name"
+  companyName: string; // Will store "Job ID • Company Name"
   address: string;
   phoneNumber: string;
   orderItems: OrderItem[];
   advancePayment?: number | null;
   paymentMethod?: string | null;
+  orderNotes?: string | null; // Added order notes field
   crmUserId: string;
   crmUserName: string;
   designerRepresentativeId?: string | null;

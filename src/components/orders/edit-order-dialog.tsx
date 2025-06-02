@@ -19,7 +19,7 @@ import type { TrackingLink, User, ServicePaymentMethodItem, OrderItem, ServiceMo
 import { useToast } from '@/hooks/use-toast';
 import { updateOrderAction } from '@/app/(app)/orders/actions';
 import { getPaymentMethods, getModels, getLaminations } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from '@/lib/utils';
@@ -49,7 +49,7 @@ const formatCurrency = (value: number | null | undefined): string => {
 
 
 export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOrderUpdated }: EditOrderDialogProps) {
-  const [jobIdInput, setJobIdInput] = useState(''); // Renamed from companyIdInput
+  const [jobIdInput, setJobIdInput] = useState(''); 
   const [companyNameInput, setCompanyNameInput] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -57,6 +57,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [showCustomPaymentInput, setShowCustomPaymentInput] = useState(false);
   const [customPaymentMethodText, setCustomPaymentMethodText] = useState('');
+  const [orderNotes, setOrderNotes] = useState(''); // Added orderNotes state
 
   const [orderItems, setOrderItems] = useState<DialogOrderItem[]>([]);
   const [totalOrderPrice, setTotalOrderPrice] = useState<number>(0);
@@ -96,15 +97,16 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     if (order) {
       const parts = order.companyName.split(' • ');
       if (parts.length >= 2) {
-        setJobIdInput(parts[0].trim()); // Set jobIdInput
+        setJobIdInput(parts[0].trim()); 
         setCompanyNameInput(parts.slice(1).join(' • ').trim());
       } else {
-        setJobIdInput(''); // Clear jobIdInput
+        setJobIdInput(''); 
         setCompanyNameInput(order.companyName.trim());
       }
       setAddress(order.address);
       setPhoneNumber(order.phoneNumber);
       setAdvancePayment(order.advancePayment?.toString() || '');
+      setOrderNotes(order.orderNotes || ''); // Initialize orderNotes
 
       const currentPM = order.paymentMethod || '';
       const isStandardOption = paymentMethodOptions.some(opt => opt.name === currentPM);
@@ -356,6 +358,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       phoneNumber: phoneNumber.trim(),
       advancePayment: parsedAdvancePayment,
       paymentMethod: finalPaymentMethod,
+      orderNotes: orderNotes.trim() || null, // Add orderNotes
       orderItems: processedOrderItems,
     };
 
@@ -402,6 +405,17 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
               <div className="space-y-1">
                 <Label htmlFor="edit-phoneNumber">Phone Number *</Label>
                 <Input id="edit-phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required disabled={isSubmitting} />
+              </div>
+              <div className="space-y-1">
+                  <Label htmlFor="edit-orderNotes">Order Notes (Optional)</Label>
+                  <Textarea 
+                    id="edit-orderNotes" 
+                    value={orderNotes} 
+                    onChange={(e) => setOrderNotes(e.target.value)} 
+                    placeholder="Add any specific instructions or notes for this order..."
+                    rows={3}
+                    disabled={isSubmitting}
+                  />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                 <div className="space-y-1">
@@ -595,5 +609,3 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     </Dialog>
   );
 }
-
-    

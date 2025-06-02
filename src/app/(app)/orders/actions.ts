@@ -23,6 +23,7 @@ interface CreateOrderDialogFormData {
   advancePayment?: string | null; 
   paymentMethod?: string | null;
   customPaymentMethodText?: string;
+  orderNotes?: string | null; // Added orderNotes
   initialStatusId: string;
 }
 
@@ -105,6 +106,7 @@ export async function createOrderAction(
       orderItems: processedOrderItems,
       advancePayment: parsedAdvancePayment,
       paymentMethod: finalPaymentMethod,
+      orderNotes: data.orderNotes?.trim() || null,
       crmUserId: currentUser.id,
       crmUserName: currentUser.name,
       initialStatusId: data.initialStatusId,
@@ -156,6 +158,10 @@ export async function updateOrderAction(
     if (updates.paymentMethod === '') { 
         updates.paymentMethod = null;
     }
+    if (updates.orderNotes !== undefined) {
+        updates.orderNotes = updates.orderNotes?.trim() || null;
+    }
+
 
     if (updates.orderItems) {
       if (!Array.isArray(updates.orderItems) || updates.orderItems.length === 0) {
@@ -308,5 +314,3 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
     return { success: false, error: errorMessage };
   }
 }
-
-    
