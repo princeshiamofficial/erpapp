@@ -175,7 +175,7 @@ export interface Project {
 
   // Status-specific timestamps
   crClearanceAt?: string;
-  crCancelAt?: string; // Though cancel might not need SLA tracking
+  crCancelAt?: string; 
   onDesignAt?: string;
   onHoldAt?: string;
   logisticsAt?: string;

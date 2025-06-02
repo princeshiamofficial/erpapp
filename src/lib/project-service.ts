@@ -41,6 +41,12 @@ export const seedDefaultProjects = async (): Promise<Project[]> => {
       ...projectData,
       createdAt: now,
       updatedAt: now,
+      crClearanceAt: undefined,
+      crCancelAt: undefined,
+      onDesignAt: undefined,
+      onHoldAt: undefined,
+      logisticsAt: undefined,
+      courierAt: undefined,
     };
     const initialStatusField = getInitialStatusTimestampField(projectData.status);
     if (initialStatusField) {
@@ -87,6 +93,12 @@ export const addProject = async (projectData: Omit<Project, 'id' | 'createdAt' |
       ...projectData,
       createdAt: now,
       updatedAt: now,
+      crClearanceAt: undefined,
+      crCancelAt: undefined,
+      onDesignAt: undefined,
+      onHoldAt: undefined,
+      logisticsAt: undefined,
+      courierAt: undefined,
     };
     const initialStatusField = getInitialStatusTimestampField(projectData.status);
     if (initialStatusField) {
@@ -108,6 +120,7 @@ export const updateProjectStatus = async (projectId: string, newStatus: ProjectS
       status: newStatus,
       updatedAt: now,
     };
+    // Set the timestamp for the new status
     const newStatusField = getInitialStatusTimestampField(newStatus);
     if (newStatusField) {
       (updates as any)[newStatusField] = now;

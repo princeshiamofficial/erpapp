@@ -56,17 +56,17 @@ function formatDurationPrecise(totalSeconds: number): string {
   if (days > 0) {
     parts.push(`${days}d`);
     if (hours > 0) parts.push(`${hours}h`);
-    if (minutes > 0 && days < 1) parts.push(`${minutes}m`); // Show minutes if less than 1 day
+    if (minutes > 0 && days < 1) parts.push(`${minutes}m`);
   } else if (hours > 0) {
     parts.push(`${hours}h`);
     if (minutes > 0) parts.push(`${minutes}m`);
-    if (seconds > 0 && hours < 1) parts.push(`${seconds}s`); // Show seconds if less than 1 hour
+    if (seconds > 0 && hours < 1) parts.push(`${seconds}s`);
   } else if (minutes > 0) {
     parts.push(`${minutes}m`);
     if (seconds > 0) parts.push(`${seconds}s`);
   } else if (seconds > 0) {
     parts.push(`${seconds}s`);
-  } else { // If totalSeconds was > 0 but all parts are 0 (e.g. < 1s)
+  } else {
      return "<1s";
   }
   
@@ -87,20 +87,26 @@ interface ProgressInfo {
 
 const calculateProgressInfo = (
   project: Project,
-  now: Date // Pass current time for consistent calculation
+  now: Date
 ): ProgressInfo => {
   
   const { status, createdAt, updatedAt, endDate, 
-          crClearanceAt, onDesignAt, onHoldAt, logisticsAt, courierAt } = project;
+          crClearanceAt, onDesignAt, onHoldAt, logisticsAt, courierAt, crCancelAt 
+        } = project;
 
   let effectiveStartDateIso: string | undefined;
-  switch (status) {
-    case 'CR Clearance': effectiveStartDateIso = crClearanceAt || updatedAt || createdAt; break;
-    case 'On Design':    effectiveStartDateIso = onDesignAt    || updatedAt || createdAt; break;
-    case 'On Hold':      effectiveStartDateIso = onHoldAt      || updatedAt || createdAt; break;
-    case 'Logistics':    effectiveStartDateIso = logisticsAt   || updatedAt || createdAt; break;
-    case 'Courier':      effectiveStartDateIso = courierAt     || updatedAt || createdAt; break;
-    default:             effectiveStartDateIso = createdAt; // Fallback for other statuses or if no specific timestamp
+
+  // Prioritize status-specific timestamp for the current status
+  if (status === 'CR Clearance') effectiveStartDateIso = crClearanceAt;
+  else if (status === 'On Design') effectiveStartDateIso = onDesignAt;
+  else if (status === 'On Hold') effectiveStartDateIso = onHoldAt;
+  else if (status === 'Logistics') effectiveStartDateIso = logisticsAt;
+  else if (status === 'Courier') effectiveStartDateIso = courierAt;
+  else if (status === 'CR Cancel') effectiveStartDateIso = crCancelAt;
+
+  // Fallback if specific status timestamp isn't set
+  if (!effectiveStartDateIso) {
+    effectiveStartDateIso = updatedAt || createdAt;
   }
   
   if (!effectiveStartDateIso) {
@@ -128,7 +134,6 @@ const calculateProgressInfo = (
       slaStageName = " (48H SLA)";
       break;
     case 'On Hold':
-      // For 'On Hold', target is 15 days from when it was put on hold
       effectiveTargetDate = addDays(effectiveStartDate, 15); 
       slaStageName = " (Max 15 Days)";
       break;
@@ -141,8 +146,7 @@ const calculateProgressInfo = (
       slaStageName = " (6H SLA)";
       break;
     default:
-      // For other statuses, use project's overall endDate if available
-      if (!endDate) { // If no specific end date for non-SLA status, don't show progress based on arbitrary future time
+      if (!endDate) {
           showProgressBar = false;
           return { showProgressBar, percentage:0, displayText: "No target date", isOverdue: false, progressColorClass:"" };
       }
@@ -161,9 +165,10 @@ const calculateProgressInfo = (
     progressColorClass = 'bg-destructive';
     currentPercentage = 100;
   } else if (
-    status !== 'CR Clearance' && status !== 'On Design' && status !== 'Logistics' &&
-    status !== 'Courier' && status !== 'On Hold' && 
-    isBefore(now, effectiveStartDate) && status !== 'CR Cancel' // Ensure not for CR Cancel
+    isBefore(now, effectiveStartDate) && status !== 'CR Cancel' && status !== 'On Hold' 
+    // For 'On Hold', we always calculate progress towards its own 15-day limit from when it was put on hold.
+    // For other SLA stages, if 'now' is before 'effectiveStartDate' (which is the status entry time), it means it hasn't "started" yet.
+    // This condition primarily applies if a project status is set, but its effective start time (the status entry time) is in the future.
   ) {
     const timeUntilStart = formatDistanceToNowStrict(effectiveStartDate, { addSuffix: false });
     currentDisplayText = `Starts in ${timeUntilStart}`;
@@ -223,10 +228,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
     const updateInfo = () => {
         setProgressInfo(calculateProgressInfo(project, new Date()));
     };
+    // Initial calculation
     updateInfo(); 
 
-    const intervalId = setInterval(updateInfo, 1000); // Update every second
+    // Set up interval to update every second
+    const intervalId = setInterval(updateInfo, 1000);
 
+    // Cleanup interval on component unmount or when project data changes
     return () => clearInterval(intervalId); 
   }, [project]); // Re-run if project data itself changes (e.g., status, updatedAt)
 
