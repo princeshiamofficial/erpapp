@@ -16,9 +16,9 @@ import {
   Search,
   Briefcase,
   FileX2,
-  Palette, // For On Design
-  Truck,   // For Logistics
-  Send     // For Courier
+  Palette, 
+  Truck,   
+  Send     
 } from 'lucide-react';
 import type { Project, ProjectStatusType } from '@/types';
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
@@ -28,24 +28,25 @@ import { cn } from '@/lib/utils';
 const mockProjects: Project[] = [
   { id: 'p1', projectIdDisplay: '2021', name: 'Project Alpha', status: 'CR Clearance', endDate: '06/06/2025', assigneeName: 'Mr Austin Azaria', assigneeInitials: 'AU', categoryTag: 'waqas2', categoryFilterKey: 'cat_a' },
   { id: 'p2', projectIdDisplay: '1010', name: 'Project Beta', status: 'CR Cancel', endDate: '06/06/2025', assigneeName: 'Mr ClerkEX', assigneeInitials: 'CL', categoryTag: 'Walk-In Customer', categoryFilterKey: 'cat_b' },
-  { id: 'p3', projectIdDisplay: '1225', name: 'Project Gamma', status: 'On Hold', endDate: '05/06/2025', assigneeName: 'Mr ClerkEX', assigneeInitials: 'CL', categoryTag: 'Ruma', categoryFilterKey: 'cat_a' }, // Was Cancelled
-  { id: 'p4', projectIdDisplay: '3030', name: 'Project Delta', status: 'Logistics', endDate: '01/05/2025', assigneeName: 'Jane Doe', assigneeInitials: 'JD', categoryTag: 'Internal', categoryFilterKey: 'cat_c' }, // Was Completed
-  { id: 'p5', projectIdDisplay: '4040', name: 'Project Epsilon', status: 'On Design', endDate: '12/12/2025', assigneeName: 'John Smith', assigneeInitials: 'JS', categoryTag: 'Client X', categoryFilterKey: 'cat_b' }, // Was On Hold
+  { id: 'p3', projectIdDisplay: '1225', name: 'Project Gamma', status: 'On Hold', endDate: '05/06/2025', assigneeName: 'Mr ClerkEX', assigneeInitials: 'CL', categoryTag: 'Ruma', categoryFilterKey: 'cat_a' },
+  { id: 'p4', projectIdDisplay: '3030', name: 'Project Delta', status: 'Logistics', endDate: '01/05/2025', assigneeName: 'Jane Doe', assigneeInitials: 'JD', categoryTag: 'Internal', categoryFilterKey: 'cat_c' },
+  { id: 'p5', projectIdDisplay: '4040', name: 'Project Epsilon', status: 'On Design', endDate: '12/12/2025', assigneeName: 'John Smith', assigneeInitials: 'JS', categoryTag: 'Client X', categoryFilterKey: 'cat_b' },
   { id: 'p6', projectIdDisplay: '5050', name: 'Project Zeta', status: 'CR Cancel', endDate: '10/10/2025', assigneeName: 'Alice Brown', assigneeInitials: 'AB', categoryTag: 'Feature Request', categoryFilterKey: 'cat_c' },
   { id: 'p7', projectIdDisplay: '6060', name: 'Project Courier Test', status: 'Courier', endDate: '11/11/2025', assigneeName: 'Courier Guy', assigneeInitials: 'CG', categoryTag: 'Shipping', categoryFilterKey: 'cat_a' },
   { id: 'p8', projectIdDisplay: '7070', name: 'Project Logistics New', status: 'Logistics', endDate: '03/03/2026', assigneeName: 'Logi Stick', assigneeInitials: 'LS', categoryTag: 'Supply Chain', categoryFilterKey: 'cat_b' },
   { id: 'p9', projectIdDisplay: '8080', name: 'Project Design Task', status: 'On Design', endDate: '07/07/2025', assigneeName: 'Des Igner', assigneeInitials: 'DI', categoryTag: 'UI/UX', categoryFilterKey: 'cat_c' },
 ];
 
-const projectStatuses: ProjectStatusType[] = ['CR Clearance', 'On Design', 'Logistics', 'Courier', 'On Hold', 'CR Cancel'];
+// Updated column order
+const projectStatuses: ProjectStatusType[] = ['CR Clearance', 'CR Cancel', 'On Design', 'On Hold', 'Logistics', 'Courier'];
 
 const statusConfig: Record<ProjectStatusType, { icon: React.ElementType; headerBgClass: string; headerTextClass?: string; headerIconClass?: string; }> = {
   'CR Clearance': { icon: ClipboardCheck, headerBgClass: 'bg-blue-500', headerTextClass: 'text-white', headerIconClass: 'text-white' },
-  'On Design': { icon: Palette, headerBgClass: 'bg-purple-500', headerTextClass: 'text-white', headerIconClass: 'text-white' }, // New
-  'Logistics': { icon: Truck, headerBgClass: 'bg-cyan-500', headerTextClass: 'text-white', headerIconClass: 'text-white' },      // New
-  'Courier': { icon: Send, headerBgClass: 'bg-indigo-500', headerTextClass: 'text-white', headerIconClass: 'text-white' },      // New
-  'On Hold': { icon: AlertTriangle, headerBgClass: 'bg-amber-400', headerTextClass: 'text-gray-800', headerIconClass: 'text-gray-800' },
   'CR Cancel': { icon: FileX2, headerBgClass: 'bg-rose-500', headerTextClass: 'text-white', headerIconClass: 'text-white' },
+  'On Design': { icon: Palette, headerBgClass: 'bg-purple-500', headerTextClass: 'text-white', headerIconClass: 'text-white' },
+  'On Hold': { icon: AlertTriangle, headerBgClass: 'bg-amber-400', headerTextClass: 'text-gray-800', headerIconClass: 'text-gray-800' },
+  'Logistics': { icon: Truck, headerBgClass: 'bg-cyan-500', headerTextClass: 'text-white', headerIconClass: 'text-white' },
+  'Courier': { icon: Send, headerBgClass: 'bg-indigo-500', headerTextClass: 'text-white', headerIconClass: 'text-white' },
 };
 
 
@@ -70,16 +71,17 @@ export default function ProjectsPage() {
   }, [projects, endDateFilter, categoryFilter, searchTerm]);
 
   const projectsByStatus = useMemo(() => {
+    // Initialize with all defined statuses to ensure columns appear even if empty
     const grouped: Record<ProjectStatusType, Project[]> = {
       'CR Clearance': [],
+      'CR Cancel': [],
       'On Design': [],
+      'On Hold': [],
       'Logistics': [],
       'Courier': [],
-      'On Hold': [],
-      'CR Cancel': [],
     };
     filteredProjects.forEach(project => {
-      if (grouped[project.status]) { // Check if the status key exists
+      if (grouped[project.status]) {
         grouped[project.status].push(project);
       } else {
         console.warn(`Project with ID ${project.id} has an unrecognized status: ${project.status}`);
@@ -183,7 +185,7 @@ export default function ProjectsPage() {
                 key={status}
                 title={status}
                 icon={statusConfig[status].icon}
-                projects={projectsByStatus[status] || []} // Ensure projects is an array
+                projects={projectsByStatus[status] || []}
                 headerBgClass={statusConfig[status].headerBgClass}
                 headerTextClass={statusConfig[status].headerTextClass}
                 headerIconClass={statusConfig[status].headerIconClass}
@@ -206,4 +208,3 @@ export default function ProjectsPage() {
     </div>
   );
 }
-
