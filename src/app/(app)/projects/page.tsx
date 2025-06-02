@@ -141,10 +141,7 @@ export default function ProjectsPage() {
     return options;
   }, [projects]);
 
-  undefined; // Explicit undefined statement to try and reset parser context
-
-  return (
-    <div className="flex flex-col h-full p-0 sm:p-6 lg:p-8 space-y-4">
+  return (<div className="flex flex-col h-full p-0 sm:p-6 lg:p-8 space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header pb-2 px-4 sm:px-0">
         <div className="flex items-baseline gap-2">
           <Briefcase className="h-7 w-7 text-primary"/>
