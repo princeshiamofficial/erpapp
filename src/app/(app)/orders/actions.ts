@@ -6,12 +6,14 @@ import type { TrackingLink, User, OrderItem, GlobalSettings, UserRole, OrderLogE
 import { addOrder, getOrderById, deleteOrder as deleteOrderFromDb, updateOrder } from "@/lib/order-service";
 import { getGlobalSettings } from "@/lib/settings-service";
 import { v4 as uuidv4 } from 'uuid';
+import { parseISO } from 'date-fns';
 
 interface CreateOrderDialogFormData {
-  jobId: string; // Raw Job ID
-  companyName: string; // Raw actual Company Name
+  jobId: string; 
+  companyName: string; 
   address: string;
   phoneNumber: string;
+  createdAt: string; // Expect ISO string from date picker
   orderItems: Array<{
     id: string;
     model: string;
@@ -21,7 +23,7 @@ interface CreateOrderDialogFormData {
     lineItemTotalPrice: number | null;
   }>;
   advancePayment?: string | null;
-  specialClientDiscount?: string | null; // Input can be "100" or "10%"
+  specialClientDiscount?: string | null; 
   paymentMethod?: string | null;
   customPaymentMethodText?: string;
   orderNotes?: string | null;
@@ -37,10 +39,16 @@ export async function createOrderAction(
       return { error: "User information is missing. Please re-authenticate." };
     }
     if (!data.jobId?.trim()) return { error: "Job ID is required." };
-    if (!data.companyName?.trim()) return { error: "Company Name is required." }; // This is now the actual company name
+    if (!data.companyName?.trim()) return { error: "Company Name is required." };
     if (!data.address?.trim()) return { error: "Address is required." };
     if (!data.phoneNumber?.trim()) return { error: "Phone Number is required." };
     if (!data.initialStatusId) return { error: "Initial status ID is required." };
+    if (!data.createdAt) return { error: "Order creation date is required." };
+    try {
+      parseISO(data.createdAt); // Validate date string
+    } catch (e) {
+      return { error: "Invalid order creation date format." };
+    }
     if (!data.orderItems || data.orderItems.length === 0) {
       return { error: "At least one order item is required." };
     }
@@ -116,13 +124,13 @@ export async function createOrderAction(
         }
     }
 
-    // Combine Job ID and actual Company Name here, once.
     const finalCombinedCompanyName = `${data.jobId.trim()} • ${data.companyName.trim()}`;
 
     const newOrderData = {
-      companyName: finalCombinedCompanyName, // Use the correctly combined name
+      companyName: finalCombinedCompanyName, 
       address: data.address.trim(),
       phoneNumber: data.phoneNumber.trim(),
+      createdAt: data.createdAt, // Pass user-provided createdAt
       orderItems: processedOrderItems,
       advancePayment: parsedAdvancePayment,
       specialClientDiscount: calculatedNumericDiscount,
@@ -170,6 +178,14 @@ export async function updateOrderAction(
     let currentOrderItemsTotal = existingOrder.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
     if (updates.orderItems) { 
         currentOrderItemsTotal = updates.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+    }
+
+    if (updates.createdAt) {
+      try {
+        finalUpdates.createdAt = parseISO(updates.createdAt).toISOString();
+      } catch (e) {
+        return { success: false, error: "Invalid Date Created format." };
+      }
     }
 
 
@@ -355,3 +371,4 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
     return { success: false, error: errorMessage };
   }
 }
+

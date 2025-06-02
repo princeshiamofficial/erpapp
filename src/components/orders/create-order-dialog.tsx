@@ -12,13 +12,14 @@ import { useToast } from '@/hooks/use-toast';
 import { createOrderAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getModels, getLaminations, getPaymentMethods } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays } from 'lucide-react'; // Added CalendarDays
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Calendar } from "@/components/ui/calendar";
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import { format, parseISO } from 'date-fns'; // Added date-fns imports
+import { format, parseISO } from 'date-fns';
 
 interface CreateOrderDialogProps {
   currentUser: User;
@@ -41,11 +42,10 @@ const formatCurrencyBdt = (value: number | null | undefined): string => {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
-const formatDateForDialog = (date: Date | string | undefined): string => {
+const formatDateForDialog = (date: Date | undefined): string => {
   if (!date) return "N/A";
   try {
-    const d = typeof date === 'string' ? parseISO(date) : date;
-    return format(d, "MMM d, yyyy");
+    return format(date, "MMM d, yyyy");
   } catch (e) {
     return "Invalid Date";
   }
@@ -88,7 +88,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
   const [popoverOpenStates, setPopoverOpenStates] = useState<Record<string, boolean>>({});
   const [isPaymentMethodPopoverOpen, setIsPaymentMethodPopoverOpen] = useState(false);
-  const [currentOrderDate, setCurrentOrderDate] = useState(new Date());
+  const [currentOrderDate, setCurrentOrderDate] = useState<Date | undefined>(new Date());
 
 
   const { toast } = useToast();
@@ -138,7 +138,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   useEffect(() => {
     if (isOpen) {
       fetchOptions();
-      setCurrentOrderDate(new Date()); // Set current date when dialog opens
+      setCurrentOrderDate(new Date()); 
     }
   }, [isOpen, fetchOptions]);
 
@@ -285,7 +285,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     if (discountVal > orderItemsTotal && orderItemsTotal > 0) {
         toast({
             title: "Validation Warning",
-            description: `Discount cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`,
+            description: `Special Client Discount cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`,
             variant: "destructive"
         });
     }
@@ -299,7 +299,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
     return !isSubmitting &&
       jobId.trim() &&
-      companyName.trim() && address.trim() && phoneNumber.trim() && initialStatusId &&
+      companyName.trim() && address.trim() && phoneNumber.trim() && initialStatusId && currentOrderDate &&
       (availableStatuses.length > 0 || !!initialStatusId) &&
       modelOptions.length > 0 &&
       laminationOptions.length > 0 &&
@@ -316,15 +316,15 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       !(isAdvancePaymentEntered && !paymentMethod.trim()) &&
       !(isAdvancePaymentEntered && paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
       isAdvPaymentValid && isDiscountValid;
-  }, [isSubmitting, jobId, companyName, address, phoneNumber, initialStatusId, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, paymentMethod, customPaymentMethodText, advancePayment, netPayable, calculatedDiscountAmount, orderItemsTotal]);
+  }, [isSubmitting, jobId, companyName, address, phoneNumber, initialStatusId, currentOrderDate, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, paymentMethod, customPaymentMethodText, advancePayment, netPayable, calculatedDiscountAmount, orderItemsTotal]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    if (!jobId.trim() || !companyName.trim() || !address.trim() || !phoneNumber.trim() || !initialStatusId) {
-      toast({ title: "Validation Error", description: "Job ID, Company Name, Address, Phone Number, and Initial Status are required.", variant: "destructive" });
+    if (!jobId.trim() || !companyName.trim() || !address.trim() || !phoneNumber.trim() || !initialStatusId || !currentOrderDate) {
+      toast({ title: "Validation Error", description: "Job ID, Company Name, Address, Phone Number, Order Date and Initial Status are required.", variant: "destructive" });
       setIsSubmitting(false); return;
     }
     if (orderItems.length === 0 || orderItems.some(item => !item.model || !item.lamination || parseInt(item.quantity) < 1 || item.unitPrice === null || item.lineItemTotalPrice === null)) {
@@ -356,7 +356,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         setIsSubmitting(false); return;
     }
     if (calculatedDiscountAmount > orderItemsTotal && orderItemsTotal > 0) {
-         toast({ title: "Validation Error", description: `Discount (${formatCurrencyBdt(calculatedDiscountAmount)}) cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`, variant: "destructive"});
+         toast({ title: "Validation Error", description: `Special Client Discount (${formatCurrencyBdt(calculatedDiscountAmount)}) cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`, variant: "destructive"});
         setIsSubmitting(false); return;
     }
 
@@ -372,12 +372,13 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
     const orderDataForAction = {
       jobId: jobId.trim(),
-      companyName: companyName.trim(),
+      companyName: companyName.trim(), // Send raw company name
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
+      createdAt: currentOrderDate.toISOString(), // Send selected date as ISO string
       orderItems: parsedOrderItems,
       advancePayment: parsedAdvPayment > 0 ? parsedAdvPayment : null,
-      specialClientDiscount: specialClientDiscount,
+      specialClientDiscount: specialClientDiscount, // Send as string
       paymentMethod: finalPaymentMethod,
       orderNotes: orderNotes.trim() || null,
       initialStatusId,
@@ -428,12 +429,31 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                 <Input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="orderDate">Order Date</Label>
-                <div className="relative">
-                  <Input id="orderDate" type="text" value={formatDateForDialog(currentOrderDate)} readOnly disabled className="bg-muted/50" />
-                  <CalendarDays className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                </div>
-                <p className="text-xs text-muted-foreground">(Auto-set on creation)</p>
+                <Label htmlFor="orderDate">Order Date *</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !currentOrderDate && "text-muted-foreground"
+                      )}
+                      disabled={isSubmitting}
+                    >
+                      <CalendarDays className="mr-2 h-4 w-4" />
+                      {currentOrderDate ? format(currentOrderDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={currentOrderDate}
+                      onSelect={setCurrentOrderDate}
+                      initialFocus
+                      disabled={isSubmitting}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
@@ -706,3 +726,4 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
+

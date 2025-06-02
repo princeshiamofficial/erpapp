@@ -4,7 +4,7 @@ import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, orderBy, wr
 import type { TrackingLink, Comment, OrderLogEntry, CustomStatus, UserRole, OrderItem } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getStatuses, READY_FOR_DESIGN_STATUS_ID } from './status-service';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 const ORDERS_COLLECTION = 'orders';
 
@@ -166,7 +166,7 @@ export const getOrderById = async (id: string): Promise<TrackingLink | undefined
 };
 
 export const addOrder = async (orderData: {
-  companyName: string; // This will be the combined "Job ID • Company Name"
+  companyName: string;
   address: string;
   phoneNumber: string;
   orderItems: OrderItem[];
@@ -177,19 +177,30 @@ export const addOrder = async (orderData: {
   initialStatusId: string;
   crmUserId: string;
   crmUserName: string;
+  createdAt: string; // Expect user-provided ISO string
 }): Promise<TrackingLink | null> => {
-  const transactionTime = new Date().toISOString();
+  const transactionTime = new Date().toISOString(); // For updatedAt
 
   try {
-    const currentDate = new Date();
+    // Validate the provided createdAt string
+    let finalCreatedAt = orderData.createdAt;
+    try {
+      finalCreatedAt = parseISO(orderData.createdAt).toISOString();
+    } catch (e) {
+      console.warn(`Invalid createdAt string received: ${orderData.createdAt}. Defaulting to current time.`);
+      finalCreatedAt = new Date().toISOString();
+    }
+
+
+    const currentDate = parseISO(finalCreatedAt); // Use the provided (or defaulted) creation date for ID generation
     const dateString = format(currentDate, 'yyyyMMdd');
-    const idPrefixForToday = `ORD-${dateString}-`;
+    const idPrefixForDay = `ORD-${dateString}-`;
 
     const ordersRef = collection(db, ORDERS_COLLECTION);
     const q = query(
       ordersRef,
-      where('id', '>=', idPrefixForToday),
-      where('id', '<', idPrefixForToday + '\uffff'), 
+      where('id', '>=', idPrefixForDay),
+      where('id', '<', idPrefixForDay + '\uffff'), 
       orderBy('id', 'desc'),
       limit(1)
     );
@@ -208,11 +219,11 @@ export const addOrder = async (orderData: {
       }
     }
 
-    const orderId = `${idPrefixForToday}${String(newSequence).padStart(3, '0')}`;
+    const orderId = `${idPrefixForDay}${String(newSequence).padStart(3, '0')}`;
 
     const initialLogEntry: OrderLogEntry = {
       id: uuidv4(),
-      timestamp: transactionTime,
+      timestamp: finalCreatedAt, // Log entry should also use the creation date
       status: orderData.initialStatusId,
       changedByUserId: orderData.crmUserId,
       changedByUserName: orderData.crmUserName,
@@ -221,7 +232,7 @@ export const addOrder = async (orderData: {
 
     const newOrder: TrackingLink = {
       id: orderId,
-      companyName: orderData.companyName, // Already combined by action
+      companyName: orderData.companyName,
       address: orderData.address,
       phoneNumber: orderData.phoneNumber,
       orderItems: orderData.orderItems, 
@@ -233,7 +244,7 @@ export const addOrder = async (orderData: {
       crmUserName: orderData.crmUserName,
       designerRepresentativeId: null,
       designerRepresentativeName: null,
-      createdAt: transactionTime,
+      createdAt: finalCreatedAt, // Use validated or defaulted creation date
       updatedAt: transactionTime, 
       updatedByUserId: orderData.crmUserId, 
       updatedByUserName: orderData.crmUserName, 
@@ -263,10 +274,17 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     for (const key in updates) {
       if (Object.prototype.hasOwnProperty.call(updates, key)) {
         const value = updates[key as keyof TrackingLink];
-        // Ensure specialClientDiscount is handled correctly: null or a number
         if (key === 'specialClientDiscount') {
           sanitizedUpdates[key] = (value === undefined || value === '' || isNaN(Number(value))) ? null : Number(value);
-        } else {
+        } else if (key === 'createdAt' && typeof value === 'string') {
+          try {
+            sanitizedUpdates[key] = parseISO(value).toISOString(); // Ensure it's a valid ISO string
+          } catch (e) {
+            console.warn(`Invalid createdAt string in update for order ${id}: ${value}. Skipping update for this field.`);
+            continue; // Skip this field if invalid
+          }
+        }
+        else {
           sanitizedUpdates[key] = value === undefined ? null : value;
         }
       }
@@ -477,3 +495,4 @@ export const incrementOrderViewCount = async (orderId: string): Promise<boolean>
     return false;
   }
 };
+

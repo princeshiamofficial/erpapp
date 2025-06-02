@@ -19,13 +19,14 @@ import type { TrackingLink, User, ServicePaymentMethodItem, OrderItem, ServiceMo
 import { useToast } from '@/hooks/use-toast';
 import { updateOrderAction } from '@/app/(app)/orders/actions';
 import { getPaymentMethods, getModels, getLaminations } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays } from 'lucide-react'; // Added CalendarDays
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Calendar } from "@/components/ui/calendar";
 import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import { Separator } from '@/components/ui/separator';
-import { format, parseISO } from 'date-fns'; // Added date-fns imports
+import { format, parseISO } from 'date-fns';
 
 
 interface EditOrderDialogProps {
@@ -50,11 +51,11 @@ const formatCurrencyBdt = (value: number | null | undefined): string => {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
-const formatDateForDialog = (dateString: string | Date | undefined): string => {
+const formatDateForDialogInput = (dateString: string | Date | undefined): string => {
   if (!dateString) return "N/A";
   try {
     const date = typeof dateString === 'string' ? parseISO(dateString) : dateString;
-    return format(date, "MMM d, yyyy");
+    return format(date, "PPP"); // Format for display e.g., "Jan 1, 2024"
   } catch (e) {
     return "Invalid Date";
   }
@@ -66,6 +67,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const [companyNameInput, setCompanyNameInput] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [createdAt, setCreatedAt] = useState<Date | undefined>(undefined); // For date picker
   const [advancePayment, setAdvancePayment] = useState<string>('');
   const [specialClientDiscount, setSpecialClientDiscount] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('');
@@ -134,6 +136,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
 
       setAddress(order.address);
       setPhoneNumber(order.phoneNumber);
+      setCreatedAt(order.createdAt ? parseISO(order.createdAt) : undefined);
       setAdvancePayment(order.advancePayment?.toString() || '');
       
       if (order.specialClientDiscount && order.orderItems && order.orderItems.length > 0) {
@@ -330,7 +333,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     if (discountVal > orderItemsTotal && orderItemsTotal > 0) {
         toast({
             title: "Validation Warning",
-            description: `Discount cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`,
+            description: `Special Client Discount cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`,
             variant: "destructive"
         });
     }
@@ -344,7 +347,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
 
     return !isSubmitting &&
       jobIdInput.trim() &&
-      companyNameInput.trim() && address.trim() && phoneNumber.trim() &&
+      companyNameInput.trim() && address.trim() && phoneNumber.trim() && createdAt &&
       !isLoadingOptions &&
       orderItems.length > 0 &&
       orderItems.every(item =>
@@ -358,7 +361,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       !(isAdvancePaymentEntered && !paymentMethod.trim()) &&
       !(isAdvancePaymentEntered && paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
       isAdvPaymentValid && isDiscountValid;
-  }, [isSubmitting, jobIdInput, companyNameInput, address, phoneNumber, isLoadingOptions, orderItems, isAdvancePaymentEntered, paymentMethod, customPaymentMethodText, currentUser, advancePayment, netPayable, calculatedDiscountAmount, orderItemsTotal]);
+  }, [isSubmitting, jobIdInput, companyNameInput, address, phoneNumber, createdAt, isLoadingOptions, orderItems, isAdvancePaymentEntered, paymentMethod, customPaymentMethodText, currentUser, advancePayment, netPayable, calculatedDiscountAmount, orderItemsTotal]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -370,8 +373,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
         return;
     }
 
-    if (!jobIdInput.trim() || !companyNameInput.trim() || !address.trim() || !phoneNumber.trim()) {
-      toast({ title: "Validation Error", description: "Job ID, Company Name, Address, and Phone Number are required.", variant: "destructive" });
+    if (!jobIdInput.trim() || !companyNameInput.trim() || !address.trim() || !phoneNumber.trim() || !createdAt) {
+      toast({ title: "Validation Error", description: "Job ID, Company Name, Address, Phone Number, and Date Created are required.", variant: "destructive" });
       return;
     }
 
@@ -404,7 +407,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
         return;
     }
     if (calculatedDiscountAmount > orderItemsTotal && orderItemsTotal > 0) {
-         toast({ title: "Validation Error", description: `Discount (${formatCurrencyBdt(calculatedDiscountAmount)}) cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`, variant: "destructive"});
+         toast({ title: "Validation Error", description: `Special Client Discount (${formatCurrencyBdt(calculatedDiscountAmount)}) cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`, variant: "destructive"});
         return;
     }
 
@@ -425,6 +428,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       companyName: finalCompanyName,
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
+      createdAt: createdAt.toISOString(), // Send updated date
       advancePayment: parsedAdvPayment > 0 ? parsedAdvPayment : null,
       specialClientDiscountString: specialClientDiscount.trim() || null,
       paymentMethod: finalPaymentMethod,
@@ -478,11 +482,31 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                     <Input id="edit-phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required disabled={isSubmitting} />
                 </div>
                 <div className="space-y-1">
-                    <Label htmlFor="edit-orderDate">Date Created</Label>
-                    <div className="relative">
-                        <Input id="edit-orderDate" type="text" value={formatDateForDialog(order?.createdAt)} readOnly disabled className="bg-muted/50" />
-                        <CalendarDays className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    </div>
+                    <Label htmlFor="edit-orderDate">Date Created *</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !createdAt && "text-muted-foreground"
+                          )}
+                          disabled={isSubmitting}
+                        >
+                          <CalendarDays className="mr-2 h-4 w-4" />
+                          {createdAt ? formatDateForDialogInput(createdAt) : <span>Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={createdAt}
+                          onSelect={setCreatedAt}
+                          initialFocus
+                          disabled={isSubmitting}
+                        />
+                      </PopoverContent>
+                    </Popover>
                 </div>
               </div>
               <div className="space-y-1">
@@ -735,3 +759,4 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     </Dialog>
   );
 }
+
