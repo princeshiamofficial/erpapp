@@ -705,7 +705,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             </div>
             {order.specialClientDiscount && order.specialClientDiscount > 0 && (
               <div className="flex justify-between mb-1">
-                <span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500"/>Special Discount:</span>
+                <span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500"/>Special Client Discount:</span>
                 <span className="text-md font-medium text-red-500">- {formatCurrency(order.specialClientDiscount)}</span>
               </div>
             )}

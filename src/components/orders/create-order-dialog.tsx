@@ -642,7 +642,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                 </div>
                 {(calculatedDiscountAmount || 0) > 0 && (
                     <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Special Discount:</span>
+                        <span className="text-muted-foreground">Special Client Discount:</span>
                         <span className="font-medium text-red-600">- {formatCurrency(calculatedDiscountAmount)}</span>
                     </div>
                 )}
