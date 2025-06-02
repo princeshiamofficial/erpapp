@@ -155,19 +155,20 @@ export interface PersonalNote {
 }
 
 // --- Project Management Types ---
-export type ProjectStatusType = 'CR Clearance' | 'On Design' | 'Logistics' | 'Courier' | 'On Hold' | 'CR Cancel';
+export type ProjectStatusType = 'CR Clearance' | 'CR Cancel' | 'On Design' | 'On Hold' | 'Logistics' | 'Courier';
 
 export interface Project {
-  id: string;
-  projectIdDisplay: string; // e.g., "2021", "1010" - visual ID on card
-  name: string; // Actual project name/title
+  id: string; // Firestore document ID
+  projectIdDisplay: string;
+  name: string;
   status: ProjectStatusType;
-  endDate: string; // Formatted date string like "06/06/2025"
+  endDate: string; // Stored as ISO string (e.g., "2025-06-06T00:00:00.000Z") or formatted "MM/DD/YYYY"
   assigneeName: string;
-  assigneeInitials: string;
-  categoryTag: string; // e.g., "waqas2", "Walk-In Customer"
-  // Optional fields for filtering, if needed
-  categoryFilterKey?: string; 
-  endDateFilterKey?: string; // e.g., "2025-06-06" for actual date filtering
+  assigneeInitials?: string;
+  categoryTag: string;
+  createdAt?: string; // ISO string
+  updatedAt?: string; // ISO string
+  // Fields for filtering if not derived client-side
+  // categoryFilterKey?: string; 
+  // endDateFilterKey?: string; 
 }
-
