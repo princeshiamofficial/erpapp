@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from '@/components/ui/label';
-import Link from 'next/link';
 import {
   LayoutGrid,
   List,
@@ -23,14 +22,11 @@ import {
 } from 'lucide-react';
 import type { Project, ProjectStatusType } from '@/types';
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
-import { cn } from '@/lib/utils';
-import { getProjects } from '@/lib/project-service'; // Import the service
+import { getProjects } from '@/lib/project-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, parseISO, isSameWeek, isSameMonth, startOfWeek, endOfWeek, addWeeks } from 'date-fns';
 
-
-// Updated column order based on last request
 const projectStatuses: ProjectStatusType[] = ['CR Clearance', 'CR Cancel', 'On Design', 'On Hold', 'Logistics', 'Courier'];
 
 const statusConfig: Record<ProjectStatusType, { icon: React.ElementType; headerBgClass: string; headerTextClass?: string; headerIconClass?: string; }> = {
@@ -45,7 +41,6 @@ const statusConfig: Record<ProjectStatusType, { icon: React.ElementType; headerB
 const formatDateForDisplay = (dateString: string | undefined): string => {
   if (!dateString) return "N/A";
   try {
-    // Assuming dateString might be ISO or "MM/DD/YYYY"
     const date = dateString.includes('T') ? parseISO(dateString) : new Date(dateString);
     return format(date, 'MM/dd/yyyy');
   } catch (e) {
@@ -83,7 +78,7 @@ export default function ProjectsPage() {
   const filteredProjects = useMemo(() => {
     return projects.filter(project => {
       let matchesEndDate = true;
-      if (endDateFilter !== 'all') {
+      if (endDateFilter !== 'all' && project.endDate) {
         try {
           const projectEndDate = project.endDate.includes('T') ? parseISO(project.endDate) : new Date(project.endDate);
           const now = new Date();
@@ -97,13 +92,12 @@ export default function ProjectsPage() {
              matchesEndDate = isSameMonth(projectEndDate, now);
           }
         } catch (e) {
-          console.warn("Could not parse project end date for filtering:", project.endDate);
+          console.warn("Could not parse project end date for filtering:", project.endDate, e);
           matchesEndDate = false;
         }
       }
 
       const matchesCategory = categoryFilter === 'all' || project.categoryTag.toLowerCase().includes(categoryFilter.toLowerCase());
-
       const matchesSearch = searchTerm === '' ||
                             project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             project.projectIdDisplay.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -141,7 +135,8 @@ export default function ProjectsPage() {
     return options;
   }, [projects]);
 
-  return (<div className="flex flex-col h-full p-0 sm:p-6 lg:p-8 space-y-4">
+  return (
+    <div className="flex flex-col h-full space-y-4 p-0 sm:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header pb-2 px-4 sm:px-0">
         <div className="flex items-baseline gap-2">
           <Briefcase className="h-7 w-7 text-primary"/>
@@ -249,6 +244,15 @@ export default function ProjectsPage() {
                 headerIconClass={statusConfig[status].headerIconClass}
               />
             ))}
+            {(filteredProjects.length === 0 && !isLoading) && (
+                <div className="flex-1 flex items-center justify-center p-10 text-center text-muted-foreground bg-card border rounded-lg shadow-sm min-h-[300px]">
+                    <div>
+                        <Briefcase className="mx-auto h-12 w-12 opacity-30 mb-3" />
+                        <p className="text-lg font-medium">No projects found matching your criteria.</p>
+                        <p className="text-sm">Try adjusting your filters or search term.</p>
+                    </div>
+                </div>
+            )}
           </div>
         </div>
       ) : (
@@ -263,5 +267,8 @@ export default function ProjectsPage() {
           </div>
         </div>
       )}
-    </div>);
+    </div>
+  );
 }
+
+    
