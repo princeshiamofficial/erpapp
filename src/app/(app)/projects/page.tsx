@@ -6,7 +6,7 @@ import type { Project, ProjectStatusType } from '@/types';
 import { getProjects } from '@/lib/project-service';
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Briefcase, ClipboardCheck, ClipboardX, DraftingCompass, PauseCircle, Truck, CheckCircle, GripVertical } from 'lucide-react';
+import { Briefcase, ClipboardCheck, ClipboardX, DraftingCompass, PauseCircle, Truck, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -118,43 +118,61 @@ export default function ProjectsPage() {
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
+    console.log("DragEnd Event Fired. Active:", active, "Over:", over);
 
-    if (over && active.id !== over.id) {
-      const projectId = active.id as string;
-      const newStatus = over.id as ProjectStatusType;
-      const originalStatus = projects.find(p => p.id === projectId)?.status;
+    if (!over) {
+      console.log("Drag ended, but not over a valid droppable target.");
+      return;
+    }
 
-      if (!originalStatus || newStatus === originalStatus) {
-        return; // No actual status change or original status not found
-      }
-      
-      // Optimistic update
-      setProjects(prevProjects =>
-        prevProjects.map(p =>
-          p.id === projectId ? { ...p, status: newStatus } : p
-        )
+    const projectId = active.id as string;
+    const newStatus = over.id as ProjectStatusType; // over.id is the id of the KanbanColumn (which is the status string)
+
+    const project = projects.find(p => p.id === projectId);
+
+    if (!project) {
+      console.error(`Project with ID ${projectId} not found in local state.`);
+      return;
+    }
+    const originalStatus = project.status;
+
+    console.log(`Attempting to move project ID: ${projectId} from status '${originalStatus}' to '${newStatus}'`);
+
+    if (newStatus === originalStatus) {
+      console.log("Project dropped on the same status column. No action needed.");
+      return;
+    }
+
+    // Optimistic update
+    setProjects(prevProjects => {
+      const updated = prevProjects.map(p =>
+        p.id === projectId ? { ...p, status: newStatus } : p
       );
+      console.log("Optimistically updated local projects state.");
+      return updated;
+    });
 
-      const result = await updateProjectStatusAction(projectId, newStatus);
+    const result = await updateProjectStatusAction(projectId, newStatus);
+    console.log("Server action result for updateProjectStatusAction:", result);
 
-      if (result.success) {
-        toast({ title: "Project Updated", description: `Project status changed to ${newStatus}.` });
-        // Optionally re-fetch or rely on revalidatePath from server action
-        fetchProjects(); 
-      } else {
-        toast({ title: "Update Failed", description: result.error || "Could not update project status.", variant: "destructive" });
-        // Revert optimistic update
-        setProjects(prevProjects =>
-          prevProjects.map(p =>
-            p.id === projectId ? { ...p, status: originalStatus } : p
-          )
+    if (result.success) {
+      toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
+      // Optionally re-fetch all projects to ensure consistency, though optimistic update + revalidatePath should handle most cases.
+      // await fetchProjects(); // Uncomment if you find data inconsistencies after drag.
+    } else {
+      toast({ title: "Update Failed", description: result.error || `Could not update status for project '${project.name}'.`, variant: "destructive" });
+      // Revert optimistic update
+      setProjects(prevProjects => {
+        const reverted = prevProjects.map(p =>
+          p.id === projectId ? { ...p, status: originalStatus } : p
         );
-      }
+        console.log("Reverted optimistic update due to server error.");
+        return reverted;
+      });
     }
   };
 
-
-  if (isLoading && projects.length === 0) { // Show full page skeleton only on initial load
+  if (isLoading && projects.length === 0) {
     return (
       <div className="flex flex-col h-full p-0 sm:p-6 lg:p-8 space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header pb-2 px-4 sm:px-0">
@@ -234,7 +252,7 @@ export default function ProjectsPage() {
             {KANBAN_COLUMNS_CONFIG.map((col) => (
               <KanbanColumn
                 key={col.status}
-                id={col.status} // Required for @dnd-kit droppable
+                id={col.status} 
                 title={col.title}
                 icon={col.icon}
                 projects={projectsByStatus[col.status] || []}
@@ -261,3 +279,4 @@ export default function ProjectsPage() {
     </DndContext>
   );
 }
+
