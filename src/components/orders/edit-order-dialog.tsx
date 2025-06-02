@@ -566,11 +566,11 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                 <div className="space-y-1">
-                  <Label htmlFor="edit-specialClientDiscount">Special Discount (Amount or % - Optional)</Label>
+                  <Label htmlFor="edit-specialClientDiscount">Special Client Discount</Label>
                   <div className="relative">
                     <Input
                       id="edit-specialClientDiscount"
-                      type="text" // Changed to text
+                      type="text" 
                       value={specialClientDiscount}
                       onChange={(e) => handleDiscountChangeEdit(e.target.value)}
                       placeholder="e.g., 100 or 10%"
@@ -699,5 +699,3 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     </Dialog>
   );
 }
-
-    
