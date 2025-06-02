@@ -5,35 +5,55 @@ import type { Project } from '@/types';
 import { ProjectCard } from './ProjectCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { LucideIcon } from 'lucide-react';
+import { useDroppable } from '@dnd-kit/core';
+import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface KanbanColumnProps {
+  id: string; // Status string, used as droppable ID
   title: string;
   icon: LucideIcon;
   projects: Project[];
   headerBgClass: string;
   headerTextClass?: string;
   headerIconClass?: string;
+  isLoading?: boolean;
 }
 
 export function KanbanColumn({ 
+  id,
   title, 
   icon: Icon, 
   projects, 
   headerBgClass, 
   headerTextClass = "text-white",
-  headerIconClass = "text-white" 
+  headerIconClass = "text-white",
+  isLoading = false
 }: KanbanColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+
   return (
-    <div className="flex-1 min-w-[280px] max-w-[320px] flex flex-col bg-muted/30 rounded-lg shadow-sm overflow-hidden border border-border/30">
-      <div className={`px-3 py-2.5 flex items-center justify-between ${headerBgClass} ${headerTextClass}`}>
+    <div 
+      ref={setNodeRef}
+      className={cn(
+        "flex-1 min-w-[280px] max-w-[320px] flex flex-col bg-muted/30 rounded-lg shadow-sm overflow-hidden border border-border/30 transition-colors duration-150",
+        isOver ? 'border-primary ring-2 ring-primary shadow-lg' : 'border-border/30'
+      )}
+    >
+      <div className={`px-3 py-2.5 flex items-center justify-between ${headerBgClass} ${headerTextClass} rounded-t-lg`}>
         <div className="flex items-center">
           <Icon className={`mr-2 h-4 w-4 ${headerIconClass}`} />
           <h2 className="font-semibold text-sm tracking-wide">{title}</h2>
         </div>
-        <span className="text-xs px-2 py-0.5 bg-black/20 rounded-full">{projects.length}</span>
+        <span className="text-xs px-2 py-0.5 bg-black/20 rounded-full">{isLoading ? <Skeleton className="h-4 w-4 inline-block" /> : projects.length}</span>
       </div>
       <ScrollArea className="flex-1 p-3 bg-background/10">
-        {projects.length === 0 ? (
+        {isLoading && projects.length === 0 ? (
+          <div className="space-y-3">
+            <Skeleton className="h-20 w-full rounded-md" />
+            <Skeleton className="h-20 w-full rounded-md" />
+          </div>
+        ) : projects.length === 0 ? (
           <div className="flex items-center justify-center h-32">
             <p className="text-xs text-muted-foreground text-center italic">No projects in this stage.</p>
           </div>
