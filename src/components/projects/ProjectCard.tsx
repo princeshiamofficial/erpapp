@@ -16,7 +16,7 @@ import { Progress } from '@/components/ui/progress';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
-import { parseISO, differenceInCalendarDays, isAfter, isBefore, addHours, addDays, differenceInSeconds, formatDistanceToNowStrict } from 'date-fns';
+import { parseISO, differenceInSeconds, isAfter, isBefore, addHours, addDays, formatDistanceToNowStrict } from 'date-fns';
 import React from 'react';
 
 // Inline SVG Stopwatch Icon Component
@@ -44,111 +44,139 @@ interface ProjectCardProps {
   project: Project;
 }
 
+function formatDurationPrecise(totalSeconds: number): string {
+  if (totalSeconds <= 0) return "Due";
+
+  const days = Math.floor(totalSeconds / (3600 * 24));
+  const hours = Math.floor((totalSeconds % (3600 * 24)) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+
+  let parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0 && days === 0) parts.push(`${minutes}m`); // Only show minutes if no days are shown
+  
+  if (parts.length === 0) { // Less than a minute remaining
+    if (totalSeconds > 0) return "<1m";
+    return "Due";
+  }
+
+  return parts.join(' ');
+}
+
 const calculateProgressInfo = (
   status: ProjectStatusType,
-  createdAtIso: string, 
-  updatedAtIso: string, 
-  endDateIso?: string    
+  createdAtIso: string,
+  updatedAtIso: string,
+  endDateIso?: string
 ) => {
   const now = new Date();
+  const baseDateForSLA = updatedAtIso ? parseISO(updatedAtIso) : now;
+
+  let effectiveStartDate = createdAtIso ? parseISO(createdAtIso) : now;
+  let effectiveTargetDate = endDateIso ? parseISO(endDateIso) : now;
+  let slaStageName: string | null = null;
   let showProgressBar = true;
-  let baseDateForSLA = updatedAtIso ? parseISO(updatedAtIso) : now; // Fallback to now if updatedAt is missing
+  let progressColorClass = 'progress-indicator-gradient'; // Default gradient
 
-  // Default values for overall project timeline (if no specific SLA applies)
-  let effectiveStartDate = createdAtIso ? parseISO(createdAtIso) : now; // Fallback to now if createdAt is missing
-  let effectiveTargetDate = endDateIso ? parseISO(endDateIso) : now;   // Fallback to now if endDate is missing
-  
-  let mainDisplayText = ""; 
-  let slaOverrideText = ""; 
-  let progressColorClass = 'progress-indicator-gradient';
-
-  // Handle cases where crucial dates for overall timeline might be missing
-  if ((status !== 'CR Clearance' && status !== 'On Design' && status !== 'Logistics' && status !== 'Courier' && status !== 'On Hold' && status !== 'CR Cancel') && (!createdAtIso || !endDateIso)) {
-    return { showProgressBar: true, percentage: 0, displayText: "Project dates missing", isOverdue: false, progressColorClass: 'bg-gray-400' };
+  if (status === 'CR Cancel') {
+    showProgressBar = false;
+    return { showProgressBar, percentage: 0, displayText: "", isOverdue: false, progressColorClass: "" };
   }
 
   switch (status) {
     case 'CR Clearance':
-      effectiveTargetDate = addHours(baseDateForSLA, 24);
-      slaOverrideText = "24H for CR Clearance";
-      effectiveStartDate = baseDateForSLA; 
-      break;
-    case 'CR Cancel':
-      showProgressBar = false;
-      return { showProgressBar, percentage: 0, displayText: "", isOverdue: false, progressColorClass: "" };
-    case 'On Design':
-      effectiveTargetDate = addHours(baseDateForSLA, 48);
-      slaOverrideText = "48H for Design";
       effectiveStartDate = baseDateForSLA;
+      effectiveTargetDate = addHours(baseDateForSLA, 24);
+      slaStageName = " (24H SLA)";
+      break;
+    case 'On Design':
+      effectiveStartDate = baseDateForSLA;
+      effectiveTargetDate = addHours(baseDateForSLA, 48);
+      slaStageName = " (48H SLA)";
       break;
     case 'On Hold':
-      effectiveTargetDate = addDays(baseDateForSLA, 15);
-      slaOverrideText = "Max 15 Days on Hold";
       effectiveStartDate = baseDateForSLA;
+      effectiveTargetDate = addDays(baseDateForSLA, 15); // Target for overdue calculation
+      // Display text is handled specially below for On Hold
       break;
     case 'Logistics':
-      effectiveTargetDate = addHours(baseDateForSLA, 24);
-      slaOverrideText = "24H for Logistics";
       effectiveStartDate = baseDateForSLA;
+      effectiveTargetDate = addHours(baseDateForSLA, 24);
+      slaStageName = " (24H SLA)";
       break;
     case 'Courier':
-      effectiveTargetDate = addHours(baseDateForSLA, 6);
-      slaOverrideText = "6H for Courier";
       effectiveStartDate = baseDateForSLA;
+      effectiveTargetDate = addHours(baseDateForSLA, 6);
+      slaStageName = " (6H SLA)";
       break;
     default:
-      // Use overall project timeline (effectiveStartDate & effectiveTargetDate already set to overall project dates)
-      // No slaOverrideText, mainDisplayText will be calculated based on overall timeline.
+      // Uses overall project timeline (effectiveStartDate & effectiveTargetDate already set)
       break;
   }
 
-  let percentage = 0;
-  let isOverdue = false;
+  let currentPercentage: number;
+  let currentDisplayText: string;
+  let currentIsOverdue = false;
 
   if (isAfter(now, effectiveTargetDate)) {
-    percentage = 100;
-    isOverdue = true;
-    progressColorClass = 'bg-destructive';
+    currentIsOverdue = true;
     const timeOver = formatDistanceToNowStrict(effectiveTargetDate, { addSuffix: false });
-    mainDisplayText = `Overdue by ${timeOver}`;
-  } else if (isBefore(now, effectiveStartDate) && !(status === 'CR Clearance' || status === 'On Design' || status === 'Logistics' || status === 'Courier' || status === 'On Hold')) {
-    // Only show "Starts in" for overall project timeline if it hasn't started
-    // For SLA stages, effectiveStartDate is usually updatedAt, so this condition is less relevant for them.
-    percentage = 0;
+    currentDisplayText = `Overdue by ${timeOver}`;
+    currentProgressColorClass = 'bg-destructive';
+    currentPercentage = 100;
+  } else if (
+    status !== 'CR Clearance' && status !== 'On Design' && status !== 'Logistics' &&
+    status !== 'Courier' && status !== 'On Hold' && // These SLA stages start from updatedAt
+    isBefore(now, effectiveStartDate)
+  ) {
     const timeUntilStart = formatDistanceToNowStrict(effectiveStartDate, { addSuffix: false });
-    mainDisplayText = `Starts in ${timeUntilStart}`;
-  } else { 
-    const totalDurationSeconds = differenceInSeconds(effectiveTargetDate, effectiveStartDate);
-    const elapsedDurationSeconds = differenceInSeconds(now, effectiveStartDate);
-
-    if (totalDurationSeconds <= 0) { 
-      percentage = 100; 
-      mainDisplayText = "Due";
-      if (isAfter(now, effectiveTargetDate)) {
-        isOverdue = true;
-        progressColorClass = 'bg-destructive';
-        mainDisplayText = "Overdue";
-      } else {
-          progressColorClass = 'bg-green-500'; 
-      }
+    currentDisplayText = `Starts in ${timeUntilStart}`;
+    currentPercentage = 0;
+  } else {
+    const secondsRemaining = differenceInSeconds(effectiveTargetDate, now);
+    if (secondsRemaining <= 0) {
+      currentDisplayText = (status === 'On Hold') ? "Hold period ended" : "Stage due";
+      currentPercentage = 100;
+      // If it's exactly due or slightly past but not yet flagged `currentIsOverdue` by `isAfter` (due to precision)
+      currentProgressColorClass = isAfter(now, effectiveTargetDate) ? 'bg-destructive' : 'bg-yellow-500';
     } else {
-      percentage = Math.max(0, Math.min(100, (elapsedDurationSeconds / totalDurationSeconds) * 100));
-      const timeRemaining = formatDistanceToNowStrict(effectiveTargetDate, { addSuffix: false });
-      mainDisplayText = `${timeRemaining} remaining`;
-
-      if (percentage === 100 && !isAfter(now, effectiveTargetDate)) { 
-        mainDisplayText = "Due today";
-      }
+      currentDisplayText = `${formatDurationPrecise(secondsRemaining)} remaining`;
+      const totalDurationSeconds = differenceInSeconds(effectiveTargetDate, effectiveStartDate);
+      const elapsedDurationSeconds = differenceInSeconds(now, effectiveStartDate);
+      currentPercentage = totalDurationSeconds > 0 ? Math.max(0, Math.min(100, (elapsedDurationSeconds / totalDurationSeconds) * 100)) : (isAfter(now, effectiveStartDate) ? 100 : 0);
     }
   }
-  
-  const finalDisplayText = isOverdue ? mainDisplayText : (slaOverrideText || mainDisplayText);
+
+  // Special text for "On Hold" if not overdue
+  if (status === 'On Hold' && !currentIsOverdue) {
+    currentDisplayText = "Max 15 Days on Hold";
+     // Recalculate percentage specifically for On Hold based on its 15-day target
+    const holdTargetDateForDisplay = addDays(baseDateForSLA, 15);
+    const totalHoldDurationForDisplay = differenceInSeconds(holdTargetDateForDisplay, baseDateForSLA);
+    const elapsedHoldDurationForDisplay = differenceInSeconds(now, baseDateForSLA);
+    currentPercentage = totalHoldDurationForDisplay > 0 ? Math.max(0, Math.min(100, (elapsedHoldDurationForDisplay / totalHoldDurationForDisplay) * 100)) : 100;
+     if (isAfter(now, holdTargetDateForDisplay)) { // Ensure overdue status is correct for On Hold display
+        currentIsOverdue = true;
+        const timeOverHold = formatDistanceToNowStrict(holdTargetDateForDisplay, { addSuffix: false });
+        currentDisplayText = `Hold overdue by ${timeOverHold}`;
+        currentProgressColorClass = 'bg-destructive';
+        currentPercentage = 100;
+    }
+  }
+
+  if (slaStageName && !currentIsOverdue && status !== 'On Hold') {
+    currentDisplayText += slaStageName;
+  } else if (currentIsOverdue && slaStageName && status !== 'On Hold') {
+     currentDisplayText += slaStageName;
+  }
+
 
   return {
     showProgressBar,
-    percentage: Math.round(percentage),
-    displayText: finalDisplayText,
-    isOverdue,
+    percentage: Math.round(currentPercentage),
+    displayText: currentDisplayText,
+    isOverdue: currentIsOverdue,
     progressColorClass,
   };
 };
@@ -174,7 +202,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
   const { showProgressBar, percentage, displayText, progressColorClass } = calculateProgressInfo(
     project.status,
     project.createdAt,
-    project.updatedAt || project.createdAt, // Fallback updatedAt to createdAt if missing
+    project.updatedAt || project.createdAt, 
     project.endDate
   );
 
@@ -232,8 +260,8 @@ export function ProjectCard({ project }: ProjectCardProps) {
         {showProgressBar && (
             <div className="ml-6 pt-1">
             <div className="flex items-center space-x-2 mb-1">
-                <StopwatchIcon className="h-4 w-4 text-primary" />
-                <span className="text-xs font-medium text-muted-foreground">{displayText}</span>
+                <StopwatchIcon className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground truncate" title={displayText}>{displayText}</span>
             </div>
             <Progress 
                 value={percentage} 
@@ -252,3 +280,4 @@ export function ProjectCard({ project }: ProjectCardProps) {
     </Card>
   );
 }
+
