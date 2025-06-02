@@ -56,9 +56,11 @@ function formatDurationPrecise(totalSeconds: number): string {
   if (days > 0) {
     parts.push(`${days}d`);
     if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0 && days < 2) parts.push(`${minutes}m`); // Show minutes if less than 2 days
   } else if (hours > 0) {
     parts.push(`${hours}h`);
     if (minutes > 0) parts.push(`${minutes}m`);
+    if (seconds > 0 && hours < 1) parts.push(`${seconds}s`); // Show seconds if less than 1 hour
   } else if (minutes > 0) {
     parts.push(`${minutes}m`);
     if (seconds > 0) parts.push(`${seconds}s`);
@@ -66,8 +68,11 @@ function formatDurationPrecise(totalSeconds: number): string {
     parts.push(`${seconds}s`);
   }
   
-  if (parts.length === 0) { 
-    return "Due"; // Should ideally not be reached if totalSeconds > 0
+  if (parts.length === 0 && totalSeconds > 0) {
+    return `<1s`; // Catch very small durations
+  }
+  if (parts.length === 0) {
+     return "Due";
   }
 
   return parts.join(' ');
@@ -96,7 +101,7 @@ const calculateProgressInfo = (
   const baseDateForSLA = parseISO(updatedAtIso);
 
   let effectiveStartDate = parseISO(createdAtIso);
-  let effectiveTargetDate = endDateIso ? parseISO(endDateIso) : now; // Default target to now if no end date
+  let effectiveTargetDate = endDateIso ? parseISO(endDateIso) : now; 
   let slaStageName: string | null = null;
   let showProgressBar = true;
   let progressColorClass = 'progress-indicator-gradient'; 
@@ -119,7 +124,6 @@ const calculateProgressInfo = (
       break;
     case 'On Hold':
       effectiveStartDate = baseDateForSLA;
-      // Target for overdue calculation (15 days from when it went on hold)
       effectiveTargetDate = addDays(baseDateForSLA, 15); 
       break;
     case 'Logistics':
@@ -133,8 +137,6 @@ const calculateProgressInfo = (
       slaStageName = " (6H SLA)";
       break;
     default:
-      // Use overall project timeline if no specific SLA for the status
-      // effectiveStartDate & effectiveTargetDate are already set based on createdAt/endDate
       break;
   }
 
@@ -150,7 +152,7 @@ const calculateProgressInfo = (
     currentPercentage = 100;
   } else if (
     projectStatus !== 'CR Clearance' && projectStatus !== 'On Design' && projectStatus !== 'Logistics' &&
-    projectStatus !== 'Courier' && projectStatus !== 'On Hold' && // These SLA stages start from updatedAt
+    projectStatus !== 'Courier' && projectStatus !== 'On Hold' && 
     isBefore(now, effectiveStartDate)
   ) {
     const timeUntilStart = formatDistanceToNowStrict(effectiveStartDate, { addSuffix: false });
@@ -224,12 +226,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
         project.createdAt,
         project.updatedAt || project.createdAt,
         project.endDate,
-        new Date() // Initial calculation with current time
+        new Date() 
     )
   );
 
   useEffect(() => {
-    // Initial calculation or when key project dates change
     const updateInfo = () => {
         setProgressInfo(calculateProgressInfo(
             project.status,
@@ -239,13 +240,13 @@ export function ProjectCard({ project }: ProjectCardProps) {
             new Date()
         ));
     };
-    updateInfo(); // Calculate once on mount/project change
+    updateInfo(); 
 
     const intervalId = setInterval(() => {
-        updateInfo(); // Recalculate every second
+        updateInfo(); 
     }, 1000);
 
-    return () => clearInterval(intervalId); // Cleanup interval on unmount
+    return () => clearInterval(intervalId); 
   }, [project.status, project.createdAt, project.updatedAt, project.endDate]);
 
 
