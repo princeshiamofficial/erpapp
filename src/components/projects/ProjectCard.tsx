@@ -56,7 +56,7 @@ function formatDurationPrecise(totalSeconds: number): string {
   if (days > 0) {
     parts.push(`${days}d`);
     if (hours > 0) parts.push(`${hours}h`);
-    if (minutes > 0 && days < 2) parts.push(`${minutes}m`); // Show minutes if less than 2 days
+    if (minutes > 0 && days < 1) parts.push(`${minutes}m`); // Show minutes if less than 1 day
   } else if (hours > 0) {
     parts.push(`${hours}h`);
     if (minutes > 0) parts.push(`${minutes}m`);
@@ -66,11 +66,10 @@ function formatDurationPrecise(totalSeconds: number): string {
     if (seconds > 0) parts.push(`${seconds}s`);
   } else if (seconds > 0) {
     parts.push(`${seconds}s`);
+  } else { // If totalSeconds was > 0 but all parts are 0 (e.g. < 1s)
+     return "<1s";
   }
   
-  if (parts.length === 0 && totalSeconds > 0) {
-    return `<1s`; // Catch very small durations
-  }
   if (parts.length === 0) {
      return "Due";
   }
@@ -87,56 +86,67 @@ interface ProgressInfo {
 }
 
 const calculateProgressInfo = (
-  projectStatus: ProjectStatusType,
-  createdAtIso: string | undefined,
-  updatedAtIso: string | undefined,
-  endDateIso: string | undefined,
+  project: Project,
   now: Date // Pass current time for consistent calculation
 ): ProgressInfo => {
   
-  if (!createdAtIso || !updatedAtIso) {
-    return { showProgressBar: true, percentage: 0, displayText: "Data missing", isOverdue: false, progressColorClass: "bg-muted" };
+  const { status, createdAt, updatedAt, endDate, 
+          crClearanceAt, onDesignAt, onHoldAt, logisticsAt, courierAt } = project;
+
+  let effectiveStartDateIso: string | undefined;
+  switch (status) {
+    case 'CR Clearance': effectiveStartDateIso = crClearanceAt || updatedAt || createdAt; break;
+    case 'On Design':    effectiveStartDateIso = onDesignAt    || updatedAt || createdAt; break;
+    case 'On Hold':      effectiveStartDateIso = onHoldAt      || updatedAt || createdAt; break;
+    case 'Logistics':    effectiveStartDateIso = logisticsAt   || updatedAt || createdAt; break;
+    case 'Courier':      effectiveStartDateIso = courierAt     || updatedAt || createdAt; break;
+    default:             effectiveStartDateIso = createdAt; // Fallback for other statuses or if no specific timestamp
+  }
+  
+  if (!effectiveStartDateIso) {
+    return { showProgressBar: true, percentage: 0, displayText: "Start date missing", isOverdue: false, progressColorClass: "bg-muted" };
   }
 
-  const baseDateForSLA = parseISO(updatedAtIso);
-
-  let effectiveStartDate = parseISO(createdAtIso);
-  let effectiveTargetDate = endDateIso ? parseISO(endDateIso) : now; 
+  const effectiveStartDate = parseISO(effectiveStartDateIso);
+  let effectiveTargetDate = endDate ? parseISO(endDate) : now; 
   let slaStageName: string | null = null;
   let showProgressBar = true;
   let progressColorClass = 'progress-indicator-gradient'; 
 
-  if (projectStatus === 'CR Cancel') {
+  if (status === 'CR Cancel') {
     showProgressBar = false;
     return { showProgressBar, percentage: 0, displayText: "", isOverdue: false, progressColorClass: "" };
   }
 
-  switch (projectStatus) {
+  switch (status) {
     case 'CR Clearance':
-      effectiveStartDate = baseDateForSLA;
-      effectiveTargetDate = addHours(baseDateForSLA, 24);
+      effectiveTargetDate = addHours(effectiveStartDate, 24);
       slaStageName = " (24H SLA)";
       break;
     case 'On Design':
-      effectiveStartDate = baseDateForSLA;
-      effectiveTargetDate = addHours(baseDateForSLA, 48);
+      effectiveTargetDate = addHours(effectiveStartDate, 48);
       slaStageName = " (48H SLA)";
       break;
     case 'On Hold':
-      effectiveStartDate = baseDateForSLA;
-      effectiveTargetDate = addDays(baseDateForSLA, 15); 
+      // For 'On Hold', target is 15 days from when it was put on hold
+      effectiveTargetDate = addDays(effectiveStartDate, 15); 
+      slaStageName = " (Max 15 Days)";
       break;
     case 'Logistics':
-      effectiveStartDate = baseDateForSLA;
-      effectiveTargetDate = addHours(baseDateForSLA, 24);
+      effectiveTargetDate = addHours(effectiveStartDate, 24);
       slaStageName = " (24H SLA)";
       break;
     case 'Courier':
-      effectiveStartDate = baseDateForSLA;
-      effectiveTargetDate = addHours(baseDateForSLA, 6);
+      effectiveTargetDate = addHours(effectiveStartDate, 6);
       slaStageName = " (6H SLA)";
       break;
     default:
+      // For other statuses, use project's overall endDate if available
+      if (!endDate) { // If no specific end date for non-SLA status, don't show progress based on arbitrary future time
+          showProgressBar = false;
+          return { showProgressBar, percentage:0, displayText: "No target date", isOverdue: false, progressColorClass:"" };
+      }
+      effectiveTargetDate = parseISO(endDate);
       break;
   }
 
@@ -151,9 +161,9 @@ const calculateProgressInfo = (
     progressColorClass = 'bg-destructive';
     currentPercentage = 100;
   } else if (
-    projectStatus !== 'CR Clearance' && projectStatus !== 'On Design' && projectStatus !== 'Logistics' &&
-    projectStatus !== 'Courier' && projectStatus !== 'On Hold' && 
-    isBefore(now, effectiveStartDate)
+    status !== 'CR Clearance' && status !== 'On Design' && status !== 'Logistics' &&
+    status !== 'Courier' && status !== 'On Hold' && 
+    isBefore(now, effectiveStartDate) && status !== 'CR Cancel' // Ensure not for CR Cancel
   ) {
     const timeUntilStart = formatDistanceToNowStrict(effectiveStartDate, { addSuffix: false });
     currentDisplayText = `Starts in ${timeUntilStart}`;
@@ -161,7 +171,7 @@ const calculateProgressInfo = (
   } else {
     const secondsRemaining = differenceInSeconds(effectiveTargetDate, now);
     if (secondsRemaining <= 0) {
-      currentDisplayText = (projectStatus === 'On Hold') ? "Hold period ended" : "Stage due";
+      currentDisplayText = (status === 'On Hold') ? "Hold period ended" : "Stage due";
       currentPercentage = 100;
       progressColorClass = isAfter(now, effectiveTargetDate) ? 'bg-destructive' : 'bg-yellow-500';
     } else {
@@ -172,24 +182,9 @@ const calculateProgressInfo = (
     }
   }
 
-  if (projectStatus === 'On Hold' && !currentIsOverdue) {
-    currentDisplayText = "Max 15 Days on Hold";
-    const holdTargetDateForDisplay = addDays(baseDateForSLA, 15);
-    const totalHoldDurationForDisplay = differenceInSeconds(holdTargetDateForDisplay, baseDateForSLA);
-    const elapsedHoldDurationForDisplay = differenceInSeconds(now, baseDateForSLA);
-    currentPercentage = totalHoldDurationForDisplay > 0 ? Math.max(0, Math.min(100, (elapsedHoldDurationForDisplay / totalHoldDurationForDisplay) * 100)) : 100;
-     if (isAfter(now, holdTargetDateForDisplay)) {
-        currentIsOverdue = true;
-        const timeOverHold = formatDistanceToNowStrict(holdTargetDateForDisplay, { addSuffix: false });
-        currentDisplayText = `Hold overdue by ${timeOverHold}`;
-        progressColorClass = 'bg-destructive';
-        currentPercentage = 100;
-    }
-  }
-
-  if (slaStageName && !currentIsOverdue && projectStatus !== 'On Hold') {
+  if (slaStageName && !currentIsOverdue) {
     currentDisplayText += slaStageName;
-  } else if (currentIsOverdue && slaStageName && projectStatus !== 'On Hold') {
+  } else if (currentIsOverdue && slaStageName) {
      currentDisplayText += slaStageName;
   }
 
@@ -221,33 +216,19 @@ export function ProjectCard({ project }: ProjectCardProps) {
   };
   
   const [progressInfo, setProgressInfo] = useState<ProgressInfo>(() => 
-    calculateProgressInfo(
-        project.status,
-        project.createdAt,
-        project.updatedAt || project.createdAt,
-        project.endDate,
-        new Date() 
-    )
+    calculateProgressInfo(project, new Date())
   );
 
   useEffect(() => {
     const updateInfo = () => {
-        setProgressInfo(calculateProgressInfo(
-            project.status,
-            project.createdAt,
-            project.updatedAt || project.createdAt,
-            project.endDate,
-            new Date()
-        ));
+        setProgressInfo(calculateProgressInfo(project, new Date()));
     };
     updateInfo(); 
 
-    const intervalId = setInterval(() => {
-        updateInfo(); 
-    }, 1000);
+    const intervalId = setInterval(updateInfo, 1000); // Update every second
 
     return () => clearInterval(intervalId); 
-  }, [project.status, project.createdAt, project.updatedAt, project.endDate]);
+  }, [project]); // Re-run if project data itself changes (e.g., status, updatedAt)
 
 
   return (
@@ -324,4 +305,3 @@ export function ProjectCard({ project }: ProjectCardProps) {
     </Card>
   );
 }
-

@@ -7,7 +7,7 @@ import { formatISO, addMonths } from 'date-fns';
 
 const PROJECTS_COLLECTION = 'projects';
 
-const defaultProjectsData: Array<Omit<Project, 'id' | 'createdAt' | 'updatedAt'>> = [
+const defaultProjectsData: Array<Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'crCancelAt' >> = [
   { projectIdDisplay: 'PJ-001', name: 'Alpha Initiative', status: 'CR Clearance', endDate: formatISO(addMonths(new Date(), 2)), assigneeName: 'Austin Azaria', assigneeInitials: 'AU', categoryTag: 'Corporate Client' },
   { projectIdDisplay: 'PJ-002', name: 'Beta Development', status: 'CR Cancel', endDate: formatISO(addMonths(new Date(), 3)), assigneeName: 'Clerk Kent', assigneeInitials: 'CK', categoryTag: 'Walk-In Customer' },
   { projectIdDisplay: 'PJ-003', name: 'Gamma Graphics', status: 'On Design', endDate: formatISO(addMonths(new Date(), 1)), assigneeName: 'Diana Prince', assigneeInitials: 'DP', categoryTag: 'Internal Project' },
@@ -15,6 +15,18 @@ const defaultProjectsData: Array<Omit<Project, 'id' | 'createdAt' | 'updatedAt'>
   { projectIdDisplay: 'PJ-005', name: 'Epsilon Exploration', status: 'Courier', endDate: formatISO(addMonths(new Date(), 4)), assigneeName: 'Hal Jordan', assigneeInitials: 'HJ', categoryTag: 'R&D' },
   { projectIdDisplay: 'PJ-006', name: 'Zeta Zero-Day', status: 'On Hold', endDate: formatISO(addMonths(new Date(), 6)), assigneeName: 'Arthur Curry', assigneeInitials: 'AC', categoryTag: 'Security Audit' },
 ];
+
+const getInitialStatusTimestampField = (status: ProjectStatusType): keyof Project | undefined => {
+  switch (status) {
+    case 'CR Clearance': return 'crClearanceAt';
+    case 'CR Cancel': return 'crCancelAt';
+    case 'On Design': return 'onDesignAt';
+    case 'On Hold': return 'onHoldAt';
+    case 'Logistics': return 'logisticsAt';
+    case 'Courier': return 'courierAt';
+    default: return undefined;
+  }
+};
 
 export const seedDefaultProjects = async (): Promise<Project[]> => {
   const projectsRef = collection(db, PROJECTS_COLLECTION);
@@ -30,6 +42,11 @@ export const seedDefaultProjects = async (): Promise<Project[]> => {
       createdAt: now,
       updatedAt: now,
     };
+    const initialStatusField = getInitialStatusTimestampField(projectData.status);
+    if (initialStatusField) {
+      (newProject as any)[initialStatusField] = now;
+    }
+
     const docRef = doc(projectsRef, id);
     batch.set(docRef, newProject);
     createdProjects.push(newProject);
@@ -37,7 +54,7 @@ export const seedDefaultProjects = async (): Promise<Project[]> => {
 
   try {
     await batch.commit();
-    console.log('Default projects seeded in Firestore.');
+    console.log('Default projects seeded in Firestore with status-specific timestamps.');
     return createdProjects;
   } catch (error) {
     console.error("Error seeding default projects:", error);
@@ -61,7 +78,7 @@ export const getProjects = async (): Promise<Project[]> => {
   }
 };
 
-export const addProject = async (projectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>): Promise<Project | null> => {
+export const addProject = async (projectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'crCancelAt'>): Promise<Project | null> => {
   try {
     const id = uuidv4();
     const now = formatISO(new Date());
@@ -71,6 +88,10 @@ export const addProject = async (projectData: Omit<Project, 'id' | 'createdAt' |
       createdAt: now,
       updatedAt: now,
     };
+    const initialStatusField = getInitialStatusTimestampField(projectData.status);
+    if (initialStatusField) {
+      (newProject as any)[initialStatusField] = now;
+    }
     await setDoc(doc(db, PROJECTS_COLLECTION, id), newProject);
     return newProject;
   } catch (error) {
@@ -82,13 +103,21 @@ export const addProject = async (projectData: Omit<Project, 'id' | 'createdAt' |
 export const updateProjectStatus = async (projectId: string, newStatus: ProjectStatusType): Promise<boolean> => {
   try {
     const projectDoc = doc(db, PROJECTS_COLLECTION, projectId);
-    await updateDoc(projectDoc, { 
+    const now = formatISO(new Date());
+    const updates: Partial<Project> = {
       status: newStatus,
-      updatedAt: formatISO(new Date()),
-    });
+      updatedAt: now,
+    };
+    const newStatusField = getInitialStatusTimestampField(newStatus);
+    if (newStatusField) {
+      (updates as any)[newStatusField] = now;
+    }
+
+    await updateDoc(projectDoc, updates);
     return true;
   } catch (error) {
     console.error("Error updating project status:", error);
     return false;
   }
 };
+

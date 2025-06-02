@@ -171,8 +171,14 @@ export interface Project {
   assigneeInitials?: string;
   categoryTag: string;
   createdAt?: string; // ISO string
-  updatedAt?: string; // ISO string
-  // Fields for filtering if not derived client-side
-  // categoryFilterKey?: string; 
-  // endDateFilterKey?: string; 
+  updatedAt?: string; // ISO string, general update timestamp
+
+  // Status-specific timestamps
+  crClearanceAt?: string;
+  crCancelAt?: string; // Though cancel might not need SLA tracking
+  onDesignAt?: string;
+  onHoldAt?: string;
+  logisticsAt?: string;
+  courierAt?: string;
 }
+
