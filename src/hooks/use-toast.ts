@@ -168,12 +168,12 @@ function toast({ ...props }: Toast) {
   // Play toast sound
   if (typeof window !== 'undefined') {
     try {
-      const audio = new Audio('https://audio-previews.elements.envatousercontent.com/files/393057177/preview.mp3');
+      const audio = new Audio('https://audio-previews.elements.envatousercontent.com/files/225140761/preview.mp3');
       audio.play().catch(error => {
-        console.warn("Toast sound playback failed. This might be due to browser autoplay policies (user interaction might be required first) or an incorrect sound file path. Ensure the URL is correct and accessible.", error);
+        console.warn("Toast sound: Playback failed.", error);
       });
     } catch (error) {
-      console.error("Error initializing or playing toast sound:", error);
+      console.error("Toast sound: Error initializing or playing.", error);
     }
   }
 
