@@ -139,7 +139,7 @@ export default function ProjectsPage() {
     const options = [{ value: 'all', label: 'All Categories' }];
     uniqueCategories.sort().forEach(cat => options.push({ value: cat.toLowerCase(), label: cat }));
     return options;
-  }, [projects]);
+  }, [projects]); // Added semicolon here
 
   console.log("About to return JSX for ProjectsPage");
   return (
@@ -268,3 +268,5 @@ export default function ProjectsPage() {
     </div>
   );
 }
+
+    
