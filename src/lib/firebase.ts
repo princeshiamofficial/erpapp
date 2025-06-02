@@ -3,7 +3,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { getAnalytics, isSupported as isAnalyticsSupported } from "firebase/analytics";
+// import { getAnalytics, isSupported as isAnalyticsSupported } from "firebase/analytics"; // Removed
 import { getMessaging, isSupported as isMessagingSupported } from "firebase/messaging"; // Added for FCM
 
 // Your web app's Firebase configuration
@@ -28,15 +28,7 @@ if (!getApps().length) {
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// Initialize Analytics if supported
-let analytics;
-if (typeof window !== 'undefined') {
-  isAnalyticsSupported().then((supported) => {
-    if (supported) {
-      analytics = getAnalytics(app);
-    }
-  });
-}
+// Analytics initialization removed
 
 // Initialize Firebase Messaging
 let messagingInstance = null;
@@ -54,4 +46,5 @@ if (typeof window !== 'undefined') {
 }
 
 
-export { app, db, auth, analytics, messagingInstance as messaging }; // Export messaging
+export { app, db, auth, /* analytics, */ messagingInstance as messaging }; // Removed analytics from export
+
