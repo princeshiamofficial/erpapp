@@ -19,11 +19,13 @@ import type { TrackingLink, User, ServicePaymentMethodItem, OrderItem, ServiceMo
 import { useToast } from '@/hooks/use-toast';
 import { updateOrderAction } from '@/app/(app)/orders/actions';
 import { getPaymentMethods, getModels, getLaminations } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
+import { Separator } from '@/components/ui/separator';
+
 
 interface EditOrderDialogProps {
   isOpen: boolean;
@@ -54,13 +56,16 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [advancePayment, setAdvancePayment] = useState<string>('');
+  const [specialClientDiscount, setSpecialClientDiscount] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [showCustomPaymentInput, setShowCustomPaymentInput] = useState(false);
   const [customPaymentMethodText, setCustomPaymentMethodText] = useState('');
-  const [orderNotes, setOrderNotes] = useState(''); // Added orderNotes state
+  const [orderNotes, setOrderNotes] = useState('');
 
   const [orderItems, setOrderItems] = useState<DialogOrderItem[]>([]);
-  const [totalOrderPrice, setTotalOrderPrice] = useState<number>(0);
+  const [orderItemsTotal, setOrderItemsTotal] = useState<number>(0);
+  const [netPayable, setNetPayable] = useState<number>(0);
+  const [amountDue, setAmountDue] = useState<number>(0);
 
 
   const [paymentMethodOptions, setPaymentMethodOptions] = useState<ServicePaymentMethodItem[]>([]);
@@ -106,7 +111,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       setAddress(order.address);
       setPhoneNumber(order.phoneNumber);
       setAdvancePayment(order.advancePayment?.toString() || '');
-      setOrderNotes(order.orderNotes || ''); // Initialize orderNotes
+      setSpecialClientDiscount(order.specialClientDiscount?.toString() || '');
+      setOrderNotes(order.orderNotes || '');
 
       const currentPM = order.paymentMethod || '';
       const isStandardOption = paymentMethodOptions.some(opt => opt.name === currentPM);
@@ -152,9 +158,16 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   }, [isOpen, order, paymentMethodOptions, modelOptions, laminationOptions, resetForm, isLoadingOptions]);
 
   useEffect(() => {
-    const currentTotal = orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
-    setTotalOrderPrice(currentTotal);
-  }, [orderItems]);
+    const currentItemsTotal = orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+    setOrderItemsTotal(currentItemsTotal);
+
+    const discountNum = parseFloat(specialClientDiscount) || 0;
+    const currentNetPayable = Math.max(0, currentItemsTotal - discountNum);
+    setNetPayable(currentNetPayable);
+
+    const advanceNum = parseFloat(advancePayment) || 0;
+    setAmountDue(Math.max(0, currentNetPayable - advanceNum));
+  }, [orderItems, specialClientDiscount, advancePayment]);
 
 
   const calculateLineItemTotal = (unitPrice: number | null, quantityStr: string): number | null => {
@@ -239,19 +252,36 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const handleAdvancePaymentChangeEdit = (value: string) => {
     setAdvancePayment(value);
     const numericValue = parseFloat(value);
-    if (!isNaN(numericValue) && numericValue > totalOrderPrice && totalOrderPrice > 0) {
+    const currentNetPayable = Math.max(0, orderItemsTotal - (parseFloat(specialClientDiscount) || 0));
+    if (!isNaN(numericValue) && numericValue > currentNetPayable && currentNetPayable > 0) {
       toast({
-        title: "Validation Error",
-        description: `Advance payment cannot exceed total order price of ${formatCurrency(totalOrderPrice)}.`,
+        title: "Validation Warning",
+        description: `Advance payment cannot exceed net payable amount of ${formatCurrency(currentNetPayable)}.`,
         variant: "destructive",
       });
     }
   };
 
+  const handleDiscountChangeEdit = (value: string) => {
+    setSpecialClientDiscount(value);
+    const numericValue = parseFloat(value);
+    if (!isNaN(numericValue) && numericValue > orderItemsTotal && orderItemsTotal > 0) {
+        toast({
+            title: "Validation Warning",
+            description: `Discount cannot exceed total items price of ${formatCurrency(orderItemsTotal)}.`,
+            variant: "destructive"
+        });
+    }
+  };
+
   const canSubmit = useMemo(() => {
     if (!currentUser || !currentUser.role) return false;
-    const parsedAdvPayment = parseFloat(advancePayment);
-    const isAdvPaymentValid = isNaN(parsedAdvPayment) || parsedAdvPayment <= totalOrderPrice || totalOrderPrice === 0;
+    const parsedAdvPayment = parseFloat(advancePayment) || 0;
+    const parsedDiscount = parseFloat(specialClientDiscount) || 0;
+    const currentNetPayable = Math.max(0, orderItemsTotal - parsedDiscount);
+
+    const isAdvPaymentValid = parsedAdvPayment <= currentNetPayable || currentNetPayable === 0;
+    const isDiscountValid = parsedDiscount <= orderItemsTotal || orderItemsTotal === 0;
 
     return !isSubmitting &&
       jobIdInput.trim() && 
@@ -268,8 +298,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       ) &&
       !(isAdvancePaymentEntered && !paymentMethod.trim()) &&
       !(isAdvancePaymentEntered && paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
-      isAdvPaymentValid;
-  }, [isSubmitting, jobIdInput, companyNameInput, address, phoneNumber, isLoadingOptions, orderItems, isAdvancePaymentEntered, paymentMethod, customPaymentMethodText, currentUser, advancePayment, totalOrderPrice]);
+      isAdvPaymentValid && isDiscountValid;
+  }, [isSubmitting, jobIdInput, companyNameInput, address, phoneNumber, isLoadingOptions, orderItems, isAdvancePaymentEntered, paymentMethod, customPaymentMethodText, currentUser, advancePayment, specialClientDiscount, orderItemsTotal]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -293,20 +323,39 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
         toast({ title: "Validation Error", description: "Advance Payment must be a non-negative number.", variant: "destructive" });
         return;
       }
-      if (parsedAdvancePayment > totalOrderPrice && totalOrderPrice > 0) {
-         toast({
-          title: "Validation Error",
-          description: `Advance payment (${formatCurrency(parsedAdvancePayment)}) cannot exceed total order price of ${formatCurrency(totalOrderPrice)}.`,
-          variant: "destructive",
-        });
-        return;
-      }
+    }
+
+    let parsedSpecialClientDiscount: number | null = null;
+    if (specialClientDiscount.trim() !== '') {
+        parsedSpecialClientDiscount = parseFloat(specialClientDiscount);
+        if (isNaN(parsedSpecialClientDiscount) || parsedSpecialClientDiscount < 0) {
+            toast({ title: "Validation Error", description: "Special Client Discount must be a non-negative number.", variant: "destructive" });
+            return;
+        }
+        if (parsedSpecialClientDiscount > orderItemsTotal && orderItemsTotal > 0) {
+            toast({
+                title: "Validation Error",
+                description: `Discount (${formatCurrency(parsedSpecialClientDiscount)}) cannot exceed total items price of ${formatCurrency(orderItemsTotal)}.`,
+                variant: "destructive",
+            });
+            return;
+        }
     }
     
-    const currentIsAdvancePaymentEntered = parsedAdvancePayment !== null && parsedAdvancePayment > 0;
+    const currentNetPayable = Math.max(0, orderItemsTotal - (parsedSpecialClientDiscount || 0));
+    if (parsedAdvancePayment && parsedAdvancePayment > currentNetPayable && currentNetPayable > 0) {
+        toast({
+            title: "Validation Error",
+            description: `Advance payment (${formatCurrency(parsedAdvancePayment)}) cannot exceed net payable amount of ${formatCurrency(currentNetPayable)}.`,
+            variant: "destructive",
+        });
+        return;
+    }
+
+    const currentIsAdvancePaymentEnteredLogic = parsedAdvancePayment !== null && parsedAdvancePayment > 0;
     let finalPaymentMethod = paymentMethod.trim() || null;
 
-    if (currentIsAdvancePaymentEntered) {
+    if (currentIsAdvancePaymentEnteredLogic) {
         if (!paymentMethod.trim()) {
             toast({ title: "Validation Error", description: "Payment Method is required when Advance Payment is entered.", variant: "destructive" });
             return;
@@ -357,8 +406,9 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
       advancePayment: parsedAdvancePayment,
+      specialClientDiscount: parsedSpecialClientDiscount,
       paymentMethod: finalPaymentMethod,
-      orderNotes: orderNotes.trim() || null, // Add orderNotes
+      orderNotes: orderNotes.trim() || null,
       orderItems: processedOrderItems,
     };
 
@@ -417,85 +467,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                     disabled={isSubmitting}
                   />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                <div className="space-y-1">
-                  <Label htmlFor="edit-advancePayment">Advance Payment (BDT - Optional)</Label>
-                  <Input id="edit-advancePayment" type="number" value={advancePayment} 
-                    onChange={(e) => handleAdvancePaymentChangeEdit(e.target.value)}
-                    placeholder="e.g., 500.00" min="0" step="0.01" disabled={isSubmitting} />
-                </div>
-                {isAdvancePaymentEntered && (
-                <div className="space-y-1">
-                   <Label htmlFor="edit-paymentMethod">
-                      Payment Method
-                      <span className="text-destructive"> *</span>
-                  </Label>
-                  <Popover open={isPaymentMethodPopoverOpen} onOpenChange={setIsPaymentMethodPopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={isPaymentMethodPopoverOpen}
-                        className="w-full justify-between bg-background"
-                        disabled={isLoadingOptions || paymentMethodOptions.length === 0 || isSubmitting}
-                      >
-                         <span className="flex-1 text-left whitespace-nowrap">
-                          {paymentMethod
-                            ? paymentMethodOptions.find((option) => option.name === paymentMethod)?.name || paymentMethod 
-                            : (isLoadingOptions ? "Loading..." : (paymentMethodOptions.length === 0 ? "No methods" : "Select method..."))}
-                         </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-md p-0">
-                      <Command>
-                        <CommandInput placeholder="Search method..." />
-                        <CommandList>
-                          <CommandEmpty>No payment method found.</CommandEmpty>
-                          <CommandGroup>
-                            {paymentMethodOptions.map((option) => (
-                              <CommandItem
-                                key={option.id}
-                                value={option.name}
-                                onSelect={(currentValue) => {
-                                  handlePaymentMethodChange(paymentMethodOptions.find(o => o.name.toLowerCase() === currentValue.toLowerCase())?.name || currentValue);
-                                  setIsPaymentMethodPopoverOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    paymentMethod === option.name ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                 <span className="whitespace-nowrap">{option.name}</span>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
-                  {showCustomPaymentInput && (
-                    <div className="mt-2 space-y-1">
-                       <Label htmlFor="edit-customPaymentMethodText">
-                        Specify Other Payment Method
-                        <span className="text-destructive"> *</span>
-                      </Label>
-                      <Input
-                        id="edit-customPaymentMethodText"
-                        value={customPaymentMethodText}
-                        onChange={(e) => setCustomPaymentMethodText(e.target.value)}
-                        placeholder="e.g., Specific Wallet"
-                        required={paymentMethod.toLowerCase() === 'other'}
-                        disabled={isSubmitting}
-                      />
-                    </div>
-                  )}
-                </div>
-                )}
-              </div>
-
+              
               <div className="space-y-3 mt-4 border-t border-border pt-4">
                 <Label className="text-lg font-semibold">Order Items *</Label>
                 {orderItems.map((item) => (
@@ -596,6 +568,133 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                   <PlusCircle className="mr-2 h-4 w-4" /> Add Another Item
                 </Button>
               </div>
+
+              <Separator className="my-4" />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+                <div className="space-y-1">
+                  <Label htmlFor="edit-specialClientDiscount">Special Discount (BDT - Optional)</Label>
+                  <div className="relative">
+                    <Input 
+                      id="edit-specialClientDiscount" 
+                      type="number" 
+                      value={specialClientDiscount} 
+                      onChange={(e) => handleDiscountChangeEdit(e.target.value)}
+                      placeholder="e.g., 100.00" 
+                      min="0" 
+                      step="0.01"
+                      disabled={isSubmitting}
+                      className="pl-7"
+                    />
+                    <Percent className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-advancePayment">Advance Payment (BDT - Optional)</Label>
+                  <Input id="edit-advancePayment" type="number" value={advancePayment} 
+                    onChange={(e) => handleAdvancePaymentChangeEdit(e.target.value)}
+                    placeholder="e.g., 500.00" min="0" step="0.01" disabled={isSubmitting} />
+                </div>
+                {isAdvancePaymentEntered && (
+                <div className="space-y-1">
+                   <Label htmlFor="edit-paymentMethod">
+                      Payment Method
+                      <span className="text-destructive"> *</span>
+                  </Label>
+                  <Popover open={isPaymentMethodPopoverOpen} onOpenChange={setIsPaymentMethodPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={isPaymentMethodPopoverOpen}
+                        className="w-full justify-between bg-background"
+                        disabled={isLoadingOptions || paymentMethodOptions.length === 0 || isSubmitting}
+                      >
+                         <span className="flex-1 text-left whitespace-nowrap">
+                          {paymentMethod
+                            ? paymentMethodOptions.find((option) => option.name === paymentMethod)?.name || paymentMethod 
+                            : (isLoadingOptions ? "Loading..." : (paymentMethodOptions.length === 0 ? "No methods" : "Select method..."))}
+                         </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-md p-0">
+                      <Command>
+                        <CommandInput placeholder="Search method..." />
+                        <CommandList>
+                          <CommandEmpty>No payment method found.</CommandEmpty>
+                          <CommandGroup>
+                            {paymentMethodOptions.map((option) => (
+                              <CommandItem
+                                key={option.id}
+                                value={option.name}
+                                onSelect={(currentValue) => {
+                                  handlePaymentMethodChange(paymentMethodOptions.find(o => o.name.toLowerCase() === currentValue.toLowerCase())?.name || currentValue);
+                                  setIsPaymentMethodPopoverOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    paymentMethod === option.name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                 <span className="whitespace-nowrap">{option.name}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {showCustomPaymentInput && (
+                    <div className="mt-2 space-y-1">
+                       <Label htmlFor="edit-customPaymentMethodText">
+                        Specify Other Payment Method
+                        <span className="text-destructive"> *</span>
+                      </Label>
+                      <Input
+                        id="edit-customPaymentMethodText"
+                        value={customPaymentMethodText}
+                        onChange={(e) => setCustomPaymentMethodText(e.target.value)}
+                        placeholder="e.g., Specific Wallet"
+                        required={paymentMethod.toLowerCase() === 'other'}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  )}
+                </div>
+                )}
+              </div>
+
+              <div className="mt-4 p-4 border rounded-md bg-muted/30 space-y-2">
+                  <h4 className="text-md font-semibold text-foreground mb-2">Order Summary</h4>
+                  <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Order Items Total:</span>
+                      <span className="font-medium text-foreground">{formatCurrency(orderItemsTotal)}</span>
+                  </div>
+                  {(parseFloat(specialClientDiscount) || 0) > 0 && (
+                      <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Special Discount:</span>
+                          <span className="font-medium text-red-600">- {formatCurrency(parseFloat(specialClientDiscount))}</span>
+                      </div>
+                  )}
+                  <div className="flex justify-between text-sm font-semibold">
+                      <span className="text-foreground">Net Payable:</span>
+                      <span className="text-foreground">{formatCurrency(netPayable)}</span>
+                  </div>
+                  {isAdvancePaymentEntered && (
+                      <div className="flex justify-between text-sm mt-1 pt-1 border-t border-dashed border-border">
+                          <span className="text-muted-foreground">Advance Paid:</span>
+                          <span className="font-medium text-green-600">- {formatCurrency(parseFloat(advancePayment))}</span>
+                      </div>
+                  )}
+                  <div className="flex justify-between text-lg font-bold mt-1 pt-1 border-t border-border">
+                      <span className="text-primary">Amount Due:</span>
+                      <span className="text-primary">{formatCurrency(amountDue)}</span>
+                  </div>
+              </div>
+
             </div>
             <DialogFooter className="pt-4 border-t">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>

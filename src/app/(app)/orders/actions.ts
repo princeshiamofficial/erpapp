@@ -21,6 +21,7 @@ interface CreateOrderDialogFormData {
     lineItemTotalPrice: number | null; 
   }>;
   advancePayment?: string | null; 
+  specialClientDiscount?: string | null; // Added
   paymentMethod?: string | null;
   customPaymentMethodText?: string;
   orderNotes?: string | null; // Added orderNotes
@@ -84,6 +85,22 @@ export async function createOrderAction(
       parsedAdvancePayment = numAdvancePayment;
     }
 
+    let parsedSpecialClientDiscount: number | null = null;
+    const discountStr = String(data.specialClientDiscount ?? '');
+    if (discountStr.trim() !== '') {
+      const numDiscount = Number(discountStr);
+      if (isNaN(numDiscount) || numDiscount < 0) {
+        return { error: "Special Client Discount must be a non-negative number." };
+      }
+      // Optional: Add validation: discount should not exceed total order price
+      // const totalOrderPrice = processedOrderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+      // if (numDiscount > totalOrderPrice) {
+      //   return { error: "Special Client Discount cannot exceed the total order price." };
+      // }
+      parsedSpecialClientDiscount = numDiscount;
+    }
+
+
     let finalPaymentMethod: string | null = null;
     if (data.paymentMethod && typeof data.paymentMethod === 'string' && data.paymentMethod.trim() !== '') {
       if (data.paymentMethod.toLowerCase() === 'other') {
@@ -105,6 +122,7 @@ export async function createOrderAction(
       phoneNumber: data.phoneNumber.trim(),
       orderItems: processedOrderItems,
       advancePayment: parsedAdvancePayment,
+      specialClientDiscount: parsedSpecialClientDiscount,
       paymentMethod: finalPaymentMethod,
       orderNotes: data.orderNotes?.trim() || null,
       crmUserId: currentUser.id,
@@ -155,6 +173,13 @@ export async function updateOrderAction(
             return { success: false, error: "Advance Payment must be a non-negative number."};
         }
     }
+    if (updates.specialClientDiscount !== undefined && updates.specialClientDiscount !== null) {
+      if (isNaN(Number(updates.specialClientDiscount)) || Number(updates.specialClientDiscount) < 0) {
+        return { success: false, error: "Special Client Discount must be a non-negative number." };
+      }
+      // Optional: Validate against total order price if orderItems are also being updated or fetched
+    }
+
     if (updates.paymentMethod === '') { 
         updates.paymentMethod = null;
     }

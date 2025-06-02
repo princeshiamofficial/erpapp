@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2, AlertTriangle, StickyNote } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2, AlertTriangle, StickyNote, Percent } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem } from "@/types"; // Ensure OrderItem is imported
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -564,8 +564,10 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   }, 0);
 
   const orderSubtotal = Array.isArray(order.orderItems) ? order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0) : 0;
+  const effectiveDiscount = order.specialClientDiscount || 0;
+  const netPayable = orderSubtotal - effectiveDiscount;
   const effectiveAdvancePayment = order.advancePayment || 0;
-  const amountDue = orderSubtotal - effectiveAdvancePayment;
+  const amountDue = netPayable - effectiveAdvancePayment;
 
   return (
     <main className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
@@ -697,9 +699,19 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
         <div className="flex justify-end mt-8 pt-6 border-t border-border/30">
           <div className="w-full max-w-xs sm:max-w-sm relative">
-            <div className="flex justify-between mb-2">
-              <span className="text-md font-semibold text-muted-foreground">Subtotal:</span>
-              <span className="text-md font-bold text-foreground">{formatCurrency(orderSubtotal)}</span>
+            <div className="flex justify-between mb-1">
+              <span className="text-md text-muted-foreground">Order Items Total:</span>
+              <span className="text-md font-medium text-foreground">{formatCurrency(orderSubtotal)}</span>
+            </div>
+            {order.specialClientDiscount && order.specialClientDiscount > 0 && (
+              <div className="flex justify-between mb-1">
+                <span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500"/>Special Discount:</span>
+                <span className="text-md font-medium text-red-500">- {formatCurrency(order.specialClientDiscount)}</span>
+              </div>
+            )}
+             <div className="flex justify-between mb-2 pt-1 border-t border-dashed border-border/40">
+              <span className="text-md font-semibold text-foreground">Net Payable:</span>
+              <span className="text-md font-bold text-foreground">{formatCurrency(netPayable)}</span>
             </div>
             {(order.advancePayment && order.advancePayment > 0) && (
               <div className="flex justify-between mb-2">

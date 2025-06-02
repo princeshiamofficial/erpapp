@@ -50,6 +50,7 @@ export interface TrackingLink {
   phoneNumber: string;
   orderItems: OrderItem[];
   advancePayment?: number | null;
+  specialClientDiscount?: number | null; // Added special client discount
   paymentMethod?: string | null;
   orderNotes?: string | null; // Added order notes field
   crmUserId: string;

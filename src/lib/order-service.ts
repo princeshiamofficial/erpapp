@@ -53,6 +53,7 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       phoneNumber: "555-0101", 
       orderItems: firstOrderItems,
       advancePayment: 1000,
+      specialClientDiscount: 200, // Example discount
       paymentMethod: "Bank Transfer",
       orderNotes: "Client needs a preview by end of week. High priority.",
       crmUserId: "SysAdmin-001",
@@ -95,6 +96,7 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       phoneNumber: "555-0102", 
       orderItems: secondOrderItems,
       advancePayment: null,
+      specialClientDiscount: null,
       paymentMethod: "Cash",
       orderNotes: "Use eco-friendly inks only. Client is very particular about sustainability.",
       crmUserId: "SysAdmin-001",
@@ -120,7 +122,7 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     createdOrders.push(secondOrder);
 
     await batch.commit();
-    console.log('Initial orders seeded in Firestore with updated fields (updatedAt, updatedBy, orderNotes).');
+    console.log('Initial orders seeded in Firestore with updated fields (updatedAt, updatedBy, orderNotes, specialClientDiscount).');
     return createdOrders;
   } catch (error) {
     console.error("Error seeding initial orders:", error);
@@ -169,6 +171,7 @@ export const addOrder = async (orderData: {
   phoneNumber: string;
   orderItems: OrderItem[];
   advancePayment?: number | null;
+  specialClientDiscount?: number | null;
   paymentMethod?: string | null;
   orderNotes?: string | null;
   initialStatusId: string;
@@ -223,6 +226,7 @@ export const addOrder = async (orderData: {
       phoneNumber: orderData.phoneNumber,
       orderItems: orderData.orderItems, 
       advancePayment: orderData.advancePayment === undefined ? null : orderData.advancePayment,
+      specialClientDiscount: orderData.specialClientDiscount === undefined ? null : orderData.specialClientDiscount,
       paymentMethod: orderData.paymentMethod === undefined ? null : (orderData.paymentMethod || null),
       orderNotes: orderData.orderNotes || null,
       crmUserId: orderData.crmUserId,
@@ -259,7 +263,12 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     for (const key in updates) {
       if (Object.prototype.hasOwnProperty.call(updates, key)) {
         const value = updates[key as keyof TrackingLink];
-        sanitizedUpdates[key] = value === undefined ? null : value;
+        // Ensure specialClientDiscount is handled correctly: null or a number
+        if (key === 'specialClientDiscount') {
+          sanitizedUpdates[key] = (value === undefined || value === '' || isNaN(Number(value))) ? null : Number(value);
+        } else {
+          sanitizedUpdates[key] = value === undefined ? null : value;
+        }
       }
     }
     
@@ -468,4 +477,3 @@ export const incrementOrderViewCount = async (orderId: string): Promise<boolean>
     return false;
   }
 };
-
