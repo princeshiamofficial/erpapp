@@ -7,17 +7,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { 
-  LayoutGrid, 
-  List, 
-  PlusCircle, 
+import {
+  LayoutGrid,
+  List,
+  PlusCircle,
   ClipboardCheck,
-  AlertTriangle, 
+  AlertTriangle,
   Search,
   Briefcase,
   FileX2,
-  Palette, 
-  Truck,   
+  Palette,
+  Truck,
   Send,
   Loader2
 } from 'lucide-react';
@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 import { getProjects } from '@/lib/project-service'; // Import the service
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format, parseISO, isSameWeek, isSameMonth, startOfWeek, endOfWeek, startOfMonth, endOfMonth, addWeeks } from 'date-fns';
+import { format, parseISO, isSameWeek, isSameMonth, startOfWeek, endOfWeek, addWeeks } from 'date-fns';
 
 
 // Updated column order based on last request
@@ -56,7 +56,7 @@ const formatDateForDisplay = (dateString: string | undefined): string => {
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban'); 
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('kanban');
   const [endDateFilter, setEndDateFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -101,10 +101,10 @@ export default function ProjectsPage() {
           matchesEndDate = false;
         }
       }
-      
+
       const matchesCategory = categoryFilter === 'all' || project.categoryTag.toLowerCase().includes(categoryFilter.toLowerCase());
-      
-      const matchesSearch = searchTerm === '' || 
+
+      const matchesSearch = searchTerm === '' ||
                             project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             project.projectIdDisplay.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             (project.assigneeName && project.assigneeName.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -132,13 +132,13 @@ export default function ProjectsPage() {
     { value: 'this_week', label: 'Ending This Week' },
     { value: 'next_week', label: 'Ending Next Week' },
     { value: 'this_month', label: 'Ending This Month' },
-  ];
+  ]; // Added semicolon
   const categoryOptions = useMemo(() => {
     const uniqueCategories = Array.from(new Set(projects.map(p => p.categoryTag.trim()).filter(Boolean)));
     const options = [{ value: 'all', label: 'All Categories' }];
     uniqueCategories.sort().forEach(cat => options.push({ value: cat.toLowerCase(), label: cat }));
     return options;
-  }, [projects]);
+  }, [projects]);; // Ensured semicolon
 
   return (
     <div className="flex flex-col h-full p-0 sm:p-6 lg:p-8 space-y-4">
@@ -150,17 +150,17 @@ export default function ProjectsPage() {
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button 
-              variant={viewMode === 'list' ? 'default' : 'outline'} 
-              size="sm" 
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'outline'}
+              size="sm"
               onClick={() => setViewMode('list')}
               className="h-9 flex-1 sm:flex-initial"
             >
               <List className="mr-2 h-4 w-4" /> List View
             </Button>
-            <Button 
-              variant={viewMode === 'kanban' ? 'default' : 'outline'} 
-              size="sm" 
+            <Button
+              variant={viewMode === 'kanban' ? 'default' : 'outline'}
+              size="sm"
               onClick={() => setViewMode('kanban')}
               className="h-9 flex-1 sm:flex-initial"
             >
@@ -215,7 +215,7 @@ export default function ProjectsPage() {
           </div>
         </div>
       </div>
-      
+
       {isLoading ? (
           <div className="flex-1 overflow-x-auto pb-4 px-4 sm:px-0">
             <div className="flex gap-4 min-w-max">
