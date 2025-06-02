@@ -155,7 +155,7 @@ export interface PersonalNote {
 }
 
 // --- Project Management Types ---
-export type ProjectStatusType = 'CR Clearance' | 'CR Cancel' | 'On Hold' | 'Cancelled' | 'Completed';
+export type ProjectStatusType = 'CR Clearance' | 'On Design' | 'Logistics' | 'Courier' | 'On Hold' | 'CR Cancel';
 
 export interface Project {
   id: string;
@@ -170,3 +170,4 @@ export interface Project {
   categoryFilterKey?: string; 
   endDateFilterKey?: string; // e.g., "2025-06-06" for actual date filtering
 }
+
