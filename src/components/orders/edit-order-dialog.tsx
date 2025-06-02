@@ -101,20 +101,22 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
 
   const resetForm = useCallback(() => {
     if (order) {
-      const parts = order.companyName.split(' • ');
-      if (parts.length >= 2) {
-        setJobIdInput(parts[0].trim());
-        setCompanyNameInput(parts.slice(1).join(' • ').trim());
+      const companyNameString = order.companyName || "";
+      const separator = " • ";
+      const separatorIndex = companyNameString.indexOf(separator);
+
+      if (separatorIndex !== -1) {
+        setJobIdInput(companyNameString.substring(0, separatorIndex).trim());
+        setCompanyNameInput(companyNameString.substring(separatorIndex + separator.length).trim());
       } else {
-        setJobIdInput('');
-        setCompanyNameInput(order.companyName.trim());
+        setJobIdInput(''); 
+        setCompanyNameInput(companyNameString.trim());
       }
+
       setAddress(order.address);
       setPhoneNumber(order.phoneNumber);
       setAdvancePayment(order.advancePayment?.toString() || '');
-      // For discount, we store the numeric value. If we want to show "10%" if it was entered as %, we'd need to store original string.
-      // For edit, it's simpler to just show the numeric value. User can change to % if they want.
-      setSpecialClientDiscount(order.specialClientDiscount?.toString() || ''); // Display stored numeric as string
+      setSpecialClientDiscount(order.specialClientDiscount?.toString() || '');
       setOrderNotes(order.orderNotes || '');
 
       const currentPM = order.paymentMethod || '';
@@ -394,12 +396,12 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
 
     const finalCompanyName = `${jobIdInput.trim()} • ${companyNameInput.trim()}`;
 
-    const updates: Partial<TrackingLink> = {
+    const updates: Partial<TrackingLink> & { specialClientDiscountString?: string | null } = {
       companyName: finalCompanyName,
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
       advancePayment: parsedAdvPayment > 0 ? parsedAdvPayment : null,
-      specialClientDiscountString: specialClientDiscount.trim() || null, // Send the string for server-side parsing
+      specialClientDiscountString: specialClientDiscount.trim() || null, 
       paymentMethod: finalPaymentMethod,
       orderNotes: orderNotes.trim() || null,
       orderItems: processedOrderItems,
@@ -409,7 +411,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setIsSubmitting(false);
 
     if (result.success && result.order) {
-      onOrderUpdated(); // Parent will handle toast and re-fetch
+      onOrderUpdated(); 
       onOpenChange(false);
     } else {
       toast({ title: "Update Failed", description: result.error || "Could not update order.", variant: "destructive" });
@@ -699,3 +701,5 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     </Dialog>
   );
 }
+
+    
