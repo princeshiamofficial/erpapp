@@ -38,25 +38,27 @@ export function ProjectCard({ project }: ProjectCardProps) {
   };
 
   return (
-    <Card 
+    <Card
       ref={setNodeRef}
       style={style}
+      {...listeners} // Apply listeners to the whole card
+      {...attributes} // Apply attributes to the whole card
       className={cn(
         "mb-3 bg-card shadow-md hover:shadow-lg transition-shadow relative",
         isDragging ? "opacity-50 shadow-2xl ring-2 ring-primary z-50" : "cursor-grab active:cursor-grabbing"
       )}
     >
       <CardContent className="p-3 space-y-2">
-        <div 
-          className="absolute top-1/2 -translate-y-1/2 left-1.5 opacity-30 hover:opacity-80 cursor-grab group p-1"
-          {...listeners} 
-          {...attributes}
+        {/* Optional: Keep a visual drag handle if desired, but the whole card is now draggable */}
+        <div
+          className="absolute top-1/2 -translate-y-1/2 left-1.5 opacity-30 group-hover:opacity-80 p-1"
+          // listeners and attributes are now on the parent Card. This div is just for visual cue.
           title="Drag to move project"
         >
           <GripVertical className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
         </div>
-        
-        <div className="flex justify-between items-start ml-6"> {/* Added ml-6 for drag handle space */}
+
+        <div className="flex justify-between items-start ml-6"> {/* Keep ml-6 if visual handle is kept */}
           <span className="text-sm font-semibold text-foreground">{project.projectIdDisplay}</span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -70,22 +72,22 @@ export function ProjectCard({ project }: ProjectCardProps) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        
+
         <div className="inline-flex items-center rounded-md border border-destructive/30 bg-destructive/20 px-2 py-0.5 text-xs font-semibold text-destructive transition-colors ml-6">
           <CalendarDays className="mr-1.5 h-3 w-3" />
           {project.endDate}
         </div>
-        
+
         <div className="flex items-center space-x-1.5 text-xs text-muted-foreground ml-6">
           <User className="h-3.5 w-3.5" />
           <span className="truncate" title={project.assigneeName}>{project.assigneeName}</span>
         </div>
-        
+
         <div className="flex items-center space-x-1.5 text-xs text-muted-foreground ml-6">
           <Folder className="h-3.5 w-3.5" />
           <span className="truncate" title={project.categoryTag}>{project.categoryTag}</span>
         </div>
-        
+
         <div className="flex items-center justify-start mt-2 ml-6">
           <Avatar className="h-7 w-7 text-xs border bg-muted">
             <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(project.assigneeInitials || project.assigneeName)}</AvatarFallback>
