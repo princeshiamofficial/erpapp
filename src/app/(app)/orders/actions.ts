@@ -8,8 +8,8 @@ import { getGlobalSettings } from "@/lib/settings-service";
 import { v4 as uuidv4 } from 'uuid';
 
 interface CreateOrderDialogFormData {
-  jobId: string;
-  companyName: string;
+  jobId: string; // Raw Job ID
+  companyName: string; // Raw actual Company Name
   address: string;
   phoneNumber: string;
   orderItems: Array<{
@@ -37,7 +37,7 @@ export async function createOrderAction(
       return { error: "User information is missing. Please re-authenticate." };
     }
     if (!data.jobId?.trim()) return { error: "Job ID is required." };
-    if (!data.companyName?.trim()) return { error: "Company Name is required." };
+    if (!data.companyName?.trim()) return { error: "Company Name is required." }; // This is now the actual company name
     if (!data.address?.trim()) return { error: "Address is required." };
     if (!data.phoneNumber?.trim()) return { error: "Phone Number is required." };
     if (!data.initialStatusId) return { error: "Initial status ID is required." };
@@ -103,7 +103,7 @@ export async function createOrderAction(
 
 
     let finalPaymentMethod: string | null = null;
-    if (parsedAdvancePayment !== null && parsedAdvancePayment > 0) { // Payment method only relevant if advance is paid
+    if (parsedAdvancePayment !== null && parsedAdvancePayment > 0) { 
         if (data.paymentMethod && typeof data.paymentMethod === 'string' && data.paymentMethod.trim() !== '') {
           if (data.paymentMethod.toLowerCase() === 'other') {
             if (!data.customPaymentMethodText || !data.customPaymentMethodText.trim()) return { error: "Please specify the 'Other' payment method text." };
@@ -116,16 +116,16 @@ export async function createOrderAction(
         }
     }
 
-
-    const finalCompanyName = `${data.jobId.trim()} • ${data.companyName.trim()}`;
+    // Combine Job ID and actual Company Name here, once.
+    const finalCombinedCompanyName = `${data.jobId.trim()} • ${data.companyName.trim()}`;
 
     const newOrderData = {
-      companyName: finalCompanyName,
+      companyName: finalCombinedCompanyName, // Use the correctly combined name
       address: data.address.trim(),
       phoneNumber: data.phoneNumber.trim(),
       orderItems: processedOrderItems,
       advancePayment: parsedAdvancePayment,
-      specialClientDiscount: calculatedNumericDiscount, // Store the calculated numeric discount
+      specialClientDiscount: calculatedNumericDiscount,
       paymentMethod: finalPaymentMethod,
       orderNotes: data.orderNotes?.trim() || null,
       crmUserId: currentUser.id,
@@ -151,7 +151,7 @@ export async function createOrderAction(
 
 export async function updateOrderAction(
   orderId: string,
-  updates: Partial<TrackingLink> & { specialClientDiscountString?: string | null }, // Accept string for discount input
+  updates: Partial<TrackingLink> & { specialClientDiscountString?: string | null },
   currentUser: User
 ): Promise<{ success: boolean; error?: string; order?: TrackingLink }> {
   if (!currentUser || !currentUser.role) {
@@ -165,10 +165,10 @@ export async function updateOrderAction(
     if (!existingOrder) return { success: false, error: `Order with ID ${orderId} not found.` };
 
     const finalUpdates: Partial<TrackingLink> = { ...updates };
-    delete finalUpdates.specialClientDiscountString; // Remove string version from final updates
+    delete finalUpdates.specialClientDiscountString; 
 
     let currentOrderItemsTotal = existingOrder.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
-    if (updates.orderItems) { // If items are being updated, recalculate total
+    if (updates.orderItems) { 
         currentOrderItemsTotal = updates.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
     }
 
@@ -189,7 +189,7 @@ export async function updateOrderAction(
             if (numericDiscount > currentOrderItemsTotal && currentOrderItemsTotal > 0) return { success: false, error: "Special Client Discount cannot exceed the total order price."};
             finalUpdates.specialClientDiscount = numericDiscount;
         } else {
-            finalUpdates.specialClientDiscount = null; // Clear discount if string is empty
+            finalUpdates.specialClientDiscount = null; 
         }
     }
 
@@ -220,15 +220,14 @@ export async function updateOrderAction(
         if (item.unitPrice === undefined || item.unitPrice === null || isNaN(Number(item.unitPrice)) || Number(item.unitPrice) < 0) return { success: false, error: `Unit price is missing or invalid for item ID ${item.id}.` };
         if (item.lineItemTotalPrice === undefined || item.lineItemTotalPrice === null || isNaN(Number(item.lineItemTotalPrice)) || Number(item.lineItemTotalPrice) < 0) return { success: false, error: `Line item total price is missing or invalid for item ID ${item.id}.` };
       }
-       finalUpdates.orderItems = updates.orderItems; // Ensure processed items are part of final updates
+       finalUpdates.orderItems = updates.orderItems; 
     }
 
-    if (Object.keys(finalUpdates).length === 0 && updates.specialClientDiscountString === undefined) { // Also check if discount string was the only change but resulted in no actual numeric change
+    if (Object.keys(finalUpdates).length === 0 && updates.specialClientDiscountString === undefined) { 
         const noNumericDiscountChange = updates.specialClientDiscountString !== undefined && finalUpdates.specialClientDiscount === existingOrder.specialClientDiscount;
         if (noNumericDiscountChange && Object.keys(finalUpdates).length === 1 && finalUpdates.specialClientDiscount !== undefined) {
-             // If only discount string was sent and it resulted in the same numeric discount, consider no change.
         } else if (Object.keys(finalUpdates).length === 0) {
-            return { success: true, order: existingOrder, error: "No changes detected to save." }; // No actual changes
+            return { success: true, order: existingOrder, error: "No changes detected to save." }; 
         }
     }
 
@@ -356,5 +355,3 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
     return { success: false, error: errorMessage };
   }
 }
-
-    

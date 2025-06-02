@@ -103,11 +103,19 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     if (order) {
       const companyNameString = order.companyName || "";
       const separator = " • ";
-      const separatorIndex = companyNameString.indexOf(separator);
+      const firstSeparatorIndex = companyNameString.indexOf(separator);
 
-      if (separatorIndex !== -1) {
-        setJobIdInput(companyNameString.substring(0, separatorIndex).trim());
-        setCompanyNameInput(companyNameString.substring(separatorIndex + separator.length).trim());
+      if (firstSeparatorIndex !== -1) {
+        const extractedJobId = companyNameString.substring(0, firstSeparatorIndex).trim();
+        setJobIdInput(extractedJobId);
+        
+        let potentialActualCompanyName = companyNameString.substring(firstSeparatorIndex + separator.length).trim();
+        const duplicatePrefix = `${extractedJobId}${separator}`;
+        if (potentialActualCompanyName.startsWith(duplicatePrefix)) {
+          setCompanyNameInput(potentialActualCompanyName.substring(duplicatePrefix.length).trim());
+        } else {
+          setCompanyNameInput(potentialActualCompanyName);
+        }
       } else {
         setJobIdInput(''); 
         setCompanyNameInput(companyNameString.trim());
@@ -116,7 +124,33 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       setAddress(order.address);
       setPhoneNumber(order.phoneNumber);
       setAdvancePayment(order.advancePayment?.toString() || '');
-      setSpecialClientDiscount(order.specialClientDiscount?.toString() || '');
+      
+      // Handle discount string display
+      if (order.specialClientDiscount && order.orderItems && order.orderItems.length > 0) {
+        const itemsTotalForDiscountCalc = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+        if (itemsTotalForDiscountCalc > 0) {
+            // Check if the discount could be a percentage
+            // This is a heuristic. If discount is 10 and total is 100, it could be "10" or "10%".
+            // For simplicity, we'll assume if it's a clean percentage that matches, we show it as such.
+            // This part can be made more robust if we stored the original input type.
+            const potentialPercentage = (order.specialClientDiscount / itemsTotalForDiscountCalc) * 100;
+            if (Number.isInteger(potentialPercentage) && potentialPercentage > 0 && potentialPercentage <= 100) {
+                 // Heuristic: if discount amount is exactly X% of itemsTotal, display as X%
+                 // This is imperfect. For example, if total is 200 and discount is 20, it could be "20" or "10%".
+                 // For now, prefer fixed amount display unless we store original input type.
+                 // For more precise display of "10%" vs "100", we'd need to store how it was input.
+                 // Defaulting to showing the numeric value as a string.
+                 setSpecialClientDiscount(order.specialClientDiscount.toString());
+            } else {
+                 setSpecialClientDiscount(order.specialClientDiscount.toString());
+            }
+        } else {
+            setSpecialClientDiscount(order.specialClientDiscount.toString());
+        }
+      } else {
+        setSpecialClientDiscount('');
+      }
+      
       setOrderNotes(order.orderNotes || '');
 
       const currentPM = order.paymentMethod || '';
@@ -130,7 +164,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       } else if (currentPM.toLowerCase() === 'other' && isStandardOption) {
         setPaymentMethod(currentPM);
         setShowCustomPaymentInput(true);
-        setCustomPaymentMethodText('');
+        setCustomPaymentMethodText(order.paymentMethod === 'Other' ? '' : (order.customPaymentMethodText || ''));
       } else {
         setPaymentMethod(currentPM);
         setShowCustomPaymentInput(false);
@@ -272,7 +306,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const handleAdvancePaymentChangeEdit = (value: string) => {
     setAdvancePayment(value);
     const numericValue = parseFloat(value);
-    // Validation against netPayable happens in canSubmit and server-side
     if (!isNaN(numericValue) && numericValue > netPayable && netPayable > 0) {
       toast({
         title: "Validation Warning",
@@ -284,7 +317,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
 
   const handleDiscountChangeEdit = (value: string) => {
     setSpecialClientDiscount(value);
-    // Validation and calculation is handled in the useEffect
     let discountVal = 0;
     const discountStr = value.trim();
     if (discountStr.endsWith('%')) {
@@ -311,8 +343,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const canSubmit = useMemo(() => {
     if (!currentUser || !currentUser.role) return false;
     const parsedAdvPayment = parseFloat(advancePayment) || 0;
-    const isAdvPaymentValid = parsedAdvPayment <= netPayable || netPayable === 0; // Check against calculated netPayable
-    const isDiscountValid = calculatedDiscountAmount <= orderItemsTotal || orderItemsTotal === 0; // Check against calculatedDiscountAmount
+    const isAdvPaymentValid = parsedAdvPayment <= netPayable || netPayable === 0;
+    const isDiscountValid = calculatedDiscountAmount <= orderItemsTotal || orderItemsTotal === 0;
 
     return !isSubmitting &&
       jobIdInput.trim() &&
@@ -342,19 +374,16 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
         return;
     }
 
-    // Basic field validation
     if (!jobIdInput.trim() || !companyNameInput.trim() || !address.trim() || !phoneNumber.trim()) {
       toast({ title: "Validation Error", description: "Job ID, Company Name, Address, and Phone Number are required.", variant: "destructive" });
       return;
     }
 
-    // Items validation
     if (orderItems.length === 0 || orderItems.some(item => !item.model || !item.lamination || parseInt(item.quantity) < 1 || item.unitPrice === null || item.lineItemTotalPrice === null)) {
        toast({ title: "Validation Error", description: "All order items must be complete with Model, Quantity, Lamination, and valid pricing.", variant: "destructive" });
        return;
     }
 
-    // Payment and Discount Validation Logic (from create dialog, adapted)
     const currentIsAdvancePaymentEnteredLogic = (parseFloat(advancePayment) || 0) > 0;
     let finalPaymentMethod = paymentMethod.trim() || null;
     if (currentIsAdvancePaymentEnteredLogic) {
@@ -701,5 +730,3 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     </Dialog>
   );
 }
-
-    

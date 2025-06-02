@@ -52,7 +52,7 @@ const initialOrderItemState: DialogOrderItem = {
 export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children }: CreateOrderDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [jobId, setJobId] = useState('');
-  const [companyName, setCompanyName] = useState('');
+  const [companyName, setCompanyName] = useState(''); // This is for ACTUAL company name
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [initialStatusId, setInitialStatusId] = useState<string>('');
@@ -312,7 +312,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Basic field validation (already covered by canSubmit mostly)
     if (!jobId.trim() || !companyName.trim() || !address.trim() || !phoneNumber.trim() || !initialStatusId) {
       toast({ title: "Validation Error", description: "Job ID, Company Name, Address, Phone Number, and Initial Status are required.", variant: "destructive" });
       setIsSubmitting(false); return;
@@ -322,7 +321,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
        setIsSubmitting(false); return;
     }
 
-    // Advance Payment and Payment Method validation
     const currentIsAdvancePaymentEnteredLogic = (parseFloat(advancePayment) || 0) > 0;
     let finalPaymentMethod = paymentMethod.trim() || null;
     if (currentIsAdvancePaymentEnteredLogic) {
@@ -342,11 +340,11 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
 
     const parsedAdvPayment = parseFloat(advancePayment) || 0;
-    if (parsedAdvPayment > netPayable && netPayable > 0) { // Check against final netPayable from state
+    if (parsedAdvPayment > netPayable && netPayable > 0) {
         toast({ title: "Validation Error", description: `Advance payment (${formatCurrency(parsedAdvPayment)}) cannot exceed net payable amount of ${formatCurrency(netPayable)}.`, variant: "destructive"});
         setIsSubmitting(false); return;
     }
-    if (calculatedDiscountAmount > orderItemsTotal && orderItemsTotal > 0) { // Check against final calculatedDiscountAmount from state
+    if (calculatedDiscountAmount > orderItemsTotal && orderItemsTotal > 0) {
          toast({ title: "Validation Error", description: `Discount (${formatCurrency(calculatedDiscountAmount)}) cannot exceed total items price of ${formatCurrency(orderItemsTotal)}.`, variant: "destructive"});
         setIsSubmitting(false); return;
     }
@@ -361,16 +359,15 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         lineItemTotalPrice: item.lineItemTotalPrice!,
     }));
 
-    const combinedCompanyName = `${jobId.trim()} • ${companyName.trim()}`;
-
+    // Server action will combine Job ID and Company Name
     const orderDataForAction = {
       jobId: jobId.trim(),
-      companyName: combinedCompanyName,
+      companyName: companyName.trim(), // Send actual company name
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
       orderItems: parsedOrderItems,
-      advancePayment: parsedAdvPayment > 0 ? parsedAdvPayment : null, // Send null if 0 or NaN
-      specialClientDiscount: specialClientDiscount, // Send the string for server-side parsing
+      advancePayment: parsedAdvPayment > 0 ? parsedAdvPayment : null,
+      specialClientDiscount: specialClientDiscount, 
       paymentMethod: finalPaymentMethod,
       orderNotes: orderNotes.trim() || null,
       initialStatusId,
