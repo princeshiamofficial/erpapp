@@ -53,18 +53,18 @@
     --sidebar-border: 220 45% 25%; /* Slightly lighter border for sidebar */
     --sidebar-ring: 25 95% 53%; /* Orange */
 
-    /* Leaderboard specific colors based on image */
-    --leaderboard-bg-dark-purple: 260 50% 18%; /* Approx #3A225D */
-    --leaderboard-podium-bg: 260 45% 28%;   /* Approx #4A326D */
-    --leaderboard-text-light: 0 0% 95%;      /* Off-white for text on dark bg */
-    --leaderboard-list-bg: 0 0% 100%;      /* White for the list area */
-    --leaderboard-list-text: 222 47% 11%;    /* Dark text for list items */
-    --leaderboard-gold: 45 100% 51%;       /* Gold/Yellow: hsl(45, 100%, 51%) */
-    --leaderboard-rank-badge-bg: 190 60% 75%; /* Light Teal/Blue for rank badges */
-    --leaderboard-rank-badge-text: 260 50% 15%; /* Darker text for rank badges */
-    --leaderboard-arrow-up: 135 60% 45%;     /* Greenish */
-    --leaderboard-arrow-down: 0 70% 55%;      /* Reddish */
-    --leaderboard-subtle-border: 260 30% 40%; /* For subtle borders in dark theme */
+    /* Leaderboard specific colors - Orange Theme */
+    --leaderboard-bg-main: 25 30% 15%; /* Very dark, slightly desaturated orange */
+    --leaderboard-podium-bg: 25 35% 25%; /* Slightly lighter dark orange for podium items */
+    --leaderboard-text-light: 35 80% 90%; /* Warm off-white for text on dark bg */
+    --leaderboard-list-bg: 0 0% 100%; /* White for the list area */
+    --leaderboard-list-text: 20 30% 20%; /* Dark brown for list text */
+    --leaderboard-gold: 35 100% 55%; /* Bright, warm yellow-orange accent */
+    --leaderboard-rank-badge-bg: hsl(var(--leaderboard-gold)); /* Use the gold for rank badges */
+    --leaderboard-rank-badge-text: 25 50% 10%; /* Dark brown text for gold badges */
+    --leaderboard-arrow-up: 135 60% 45%;     /* Greenish (unchanged) */
+    --leaderboard-arrow-down: 0 70% 55%;      /* Reddish (unchanged) */
+    --leaderboard-subtle-border: 25 30% 22%; /* Darker orange for subtle borders on dark bg */
   }
 
   .dark {
@@ -114,18 +114,18 @@
     --sidebar-border: 220 45% 20%; 
     --sidebar-ring: 25 95% 65%; /* Brightest Orange */
 
-    /* Leaderboard specific colors for dark mode (can be same as light if it's already dark themed) */
-    --leaderboard-bg-dark-purple: 260 50% 18%;
-    --leaderboard-podium-bg: 260 45% 28%;
-    --leaderboard-text-light: 0 0% 95%;
-    --leaderboard-list-bg: 222 47% 15%; /* Darker card for list in dark mode */
-    --leaderboard-list-text: 210 40% 98%; /* Light text for list items in dark mode */
-    --leaderboard-gold: 45 100% 51%;
-    --leaderboard-rank-badge-bg: 190 60% 75%;
-    --leaderboard-rank-badge-text: 260 50% 15%;
+    /* Leaderboard specific colors for dark mode (Orange Theme) */
+    --leaderboard-bg-main: 25 30% 15%; /* Retain main dark orange bg */
+    --leaderboard-podium-bg: 25 35% 25%; /* Retain podium dark orange bg */
+    --leaderboard-text-light: 35 80% 90%; /* Retain warm off-white */
+    --leaderboard-list-bg: 222 47% 15%; /* Darker card for list in dark mode (already used this logic) */
+    --leaderboard-list-text: 210 40% 98%; /* Light text for list items in dark mode (already used) */
+    --leaderboard-gold: 35 100% 55%; /* Retain bright gold */
+    --leaderboard-rank-badge-bg: hsl(var(--leaderboard-gold));
+    --leaderboard-rank-badge-text: 25 50% 10%;
     --leaderboard-arrow-up: 135 60% 45%;
     --leaderboard-arrow-down: 0 70% 55%;
-    --leaderboard-subtle-border: 217 33% 27%; /* Adjusted for dark mode */
+    --leaderboard-subtle-border: 25 30% 22%; /* Adjusted subtle border for dark theme */
   }
 }
 

@@ -10,8 +10,8 @@ import { getGlobalSettings } from '@/lib/settings-service';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronLeft, Crown } from 'lucide-react';
 import Link from 'next/link';
-import { LeaderboardDisplay } from '@/components/leaderboard/LeaderboardDisplay'; // Updated import
-import type { User, TrackingLink, GlobalSettings, UserRole } from '@/types'; // CrmPerformanceData will be defined in LeaderboardDisplay
+import { LeaderboardDisplay } from '@/components/leaderboard/LeaderboardDisplay'; 
+import type { User, TrackingLink, GlobalSettings, UserRole } from '@/types'; 
 import {
   startOfMonth,
   endOfMonth,
@@ -28,11 +28,11 @@ export interface CrmPerformanceData {
   userName: string;
   userAvatar?: string;
   ordersCompleted: number;
-  target: number; // Target is no longer displayed per image
+  target: number; 
   rank?: number;
   role?: UserRole;
-  trend?: 'up' | 'down' | 'same'; // For +2 ▲
-  pointChange?: number; // e.g. 2 or -1
+  trend?: 'up' | 'down' | 'same'; 
+  pointChange?: number; 
 }
 
 
@@ -94,8 +94,8 @@ export default function LeaderboardPage() {
         ? (crmUser.monthlyOrderTarget ?? globalSettings.globalMonthlyOrderTarget ?? 0)
         : (crmUser.weeklyOrderTarget ?? globalSettings.globalWeeklyOrderTarget ?? 0);
 
-      // Dummy trend and pointChange for now
-      const pointChange = Math.floor(Math.random() * 5) - 2; // Random number between -2 and 2
+      
+      const pointChange = Math.floor(Math.random() * 5) - 2; 
       const trend = pointChange > 0 ? 'up' : pointChange < 0 ? 'down' : 'same';
 
       return {
@@ -136,7 +136,7 @@ export default function LeaderboardPage() {
       const crmUsers = allUsers.filter(user => user.role === 'CRM');
       
       let displayUsers = [...crmUsers];
-      // Modify current user's name to "You" if they are in the list
+      
       const mapDataForCurrentUser = (data: CrmPerformanceData[]): CrmPerformanceData[] => {
         return data.map(d => 
           currentUser && d.userId === currentUser.id 
@@ -170,12 +170,12 @@ export default function LeaderboardPage() {
 
   if (isAuthLoading || isLoadingData) {
     return (
-      <div className="min-h-screen bg-[hsl(var(--leaderboard-bg-dark-purple))] text-[hsl(var(--leaderboard-text-light))] p-4 relative overflow-hidden">
-        {/* Placeholder for background image/pattern */}
+      <div className="min-h-screen bg-[hsl(var(--leaderboard-bg-main))] text-[hsl(var(--leaderboard-text-light))] p-4 relative overflow-hidden">
+        
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-30"
-          style={{backgroundImage: "url('https://placehold.co/1200x800/3A225D/FFFFFF.png?text=Starry+Night+Sky')"}}
-          data-ai-hint="starry night sky"
+          style={{backgroundImage: "url('https://placehold.co/1200x800/FFA500/FFFFFF.png?text=Orange+Theme+Placeholder')"}}
+          data-ai-hint="orange sunset sky"
         ></div>
         <header className="relative z-10 flex items-center justify-between py-3 px-2 mb-6">
             <Link href="/dashboard" className="p-2 -ml-2">
@@ -203,7 +203,7 @@ export default function LeaderboardPage() {
   
   if (fetchError) {
       return (
-        <div className="min-h-screen bg-[hsl(var(--leaderboard-bg-dark-purple))] text-[hsl(var(--leaderboard-text-light))] p-4 flex flex-col items-center justify-center">
+        <div className="min-h-screen bg-[hsl(var(--leaderboard-bg-main))] text-[hsl(var(--leaderboard-text-light))] p-4 flex flex-col items-center justify-center">
             <h1 className="text-xl font-semibold mb-4">Error</h1>
             <p>{fetchError}</p>
         </div>
@@ -211,11 +211,11 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--leaderboard-bg-dark-purple))] text-[hsl(var(--leaderboard-text-light))] p-0 sm:p-0 md:p-0 lg:p-0 relative overflow-x-hidden">
+    <div className="min-h-screen bg-[hsl(var(--leaderboard-bg-main))] text-[hsl(var(--leaderboard-text-light))] p-0 sm:p-0 md:p-0 lg:p-0 relative overflow-x-hidden">
       <div 
         className="absolute inset-0 bg-cover bg-center opacity-30"
-        style={{backgroundImage: "url('https://placehold.co/1200x800/3A225D/FFFFFF.png?text=Starry+Night+Sky')"}}
-        data-ai-hint="starry night sky background"
+        style={{backgroundImage: "url('https://placehold.co/1200x800/FFA500/FFFFFF.png?text=Orange+Theme+Sky')"}}
+        data-ai-hint="orange sunset sky background"
       ></div>
       <header className="relative z-10 flex items-center justify-between py-4 px-4 sm:px-6 mb-4 sm:mb-6">
         <Link href="/dashboard" className="p-2 -ml-2 text-[hsl(var(--leaderboard-text-light))] hover:opacity-80 transition-opacity">
