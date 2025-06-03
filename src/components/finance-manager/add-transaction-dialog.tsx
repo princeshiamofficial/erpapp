@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react'; // Added useMemo
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,11 +20,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { TransactionType, User } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addTransactionAction } from '@/app/(app)/finance-manager/actions';
-import { Loader2, CalendarIcon, Users, ChevronsUpDown, Check } from 'lucide-react'; // Added ChevronsUpDown, Check
+import { Loader2, CalendarIcon, Users, ChevronsUpDown, Check } from 'lucide-react'; 
 import { format } from 'date-fns';
 import { getUsers } from '@/lib/user-service';
-import { Command, CommandEmpty, CommandInput, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"; // Added Command components
-import { cn } from "@/lib/utils"; // Added cn
+import { Command, CommandEmpty, CommandInput, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"; 
+import { cn } from "@/lib/utils"; 
 
 interface AddTransactionDialogProps {
   currentUser: User;
@@ -44,8 +44,8 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [selectedSentToUserId, setSelectedSentToUserId] = useState<string | undefined>(undefined);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
-  const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false); // State for user combobox popover
-  const [userSearchQuery, setUserSearchQuery] = useState(""); // State for user search query
+  const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false); 
+  const [userSearchQuery, setUserSearchQuery] = useState(""); 
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -230,7 +230,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
                           {!isLoadingUsers && filteredUsersForDropdown.map((user) => (
                             <CommandItem
                               key={user.id}
-                              value={user.name + user.id} // Ensure unique value for cmdk
+                              value={user.name + user.id} 
                               onSelect={() => {
                                 setSelectedSentToUserId(user.id);
                                 setIsUserPopoverOpen(false);
