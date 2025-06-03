@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'; // Added useMemo
+import React, { useState, useEffect, useCallback, useMemo } from 'react'; 
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -108,6 +108,10 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
       toast({ title: "Validation Error", description: "Amount, Category, and Date are required.", variant: "destructive" });
       return;
     }
+    if (isSendMoneyFlow && !selectedSentToUserId) {
+      toast({ title: "Validation Error", description: "Please select a recipient user for this payment.", variant: "destructive" });
+      return;
+    }
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
       toast({ title: "Validation Error", description: "Amount must be a positive number.", variant: "destructive" });
@@ -162,6 +166,15 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
     );
   }, [allUsers, userSearchQuery]);
 
+  const canSubmit = useMemo(() => {
+    return !isSubmitting &&
+      amount.trim() && parseFloat(amount) > 0 &&
+      category.trim() &&
+      date &&
+      (!isSendMoneyFlow || (isSendMoneyFlow && selectedSentToUserId));
+  }, [isSubmitting, amount, category, date, isSendMoneyFlow, selectedSentToUserId]);
+
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -197,7 +210,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
             </div>
             {isSendMoneyFlow && (
               <div className="space-y-1">
-                <Label htmlFor="send-to-user">Send To User (Optional)</Label>
+                <Label htmlFor="send-to-user">Send To User *</Label>
                 <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
                   <PopoverTrigger asChild>
                     <Button
@@ -209,7 +222,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
                     >
                       {selectedSentToUserId
                         ? allUsers.find((user) => user.id === selectedSentToUserId)?.name
-                        : (isLoadingUsers ? "Loading users..." : "Select recipient...")}
+                        : (isLoadingUsers ? "Loading users..." : "Select recipient *")}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -282,7 +295,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
           </div>
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={!canSubmit}>
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : (isSendMoneyFlow ? "Record Payment" : "Add Transaction")}
             </Button>
           </DialogFooter>
