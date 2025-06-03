@@ -170,12 +170,12 @@ export default function LeaderboardPage() {
 
   if (isAuthLoading || isLoadingData) {
     return (
-      <div className="min-h-screen bg-[hsl(var(--leaderboard-bg-main))] text-[hsl(var(--leaderboard-text-light))] p-4 relative overflow-hidden">
+      <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--leaderboard-bg-main-start))] to-[hsl(var(--leaderboard-bg-main-end))] text-[hsl(var(--leaderboard-text-light))] p-4 relative overflow-hidden">
         
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-30"
-          style={{backgroundImage: "url('https://placehold.co/1200x800/FFA500/FFFFFF.png?text=Orange+Theme+Placeholder')"}}
-          data-ai-hint="orange sunset sky"
+          style={{backgroundImage: "url('https://placehold.co/1200x800/A04000/FFFFFF.png')"}} // Darker Orange Placeholder
+          data-ai-hint="abstract orange fire particles"
         ></div>
         <header className="relative z-10 flex items-center justify-between py-3 px-2 mb-6">
             <Link href="/dashboard" className="p-2 -ml-2">
@@ -203,7 +203,7 @@ export default function LeaderboardPage() {
   
   if (fetchError) {
       return (
-        <div className="min-h-screen bg-[hsl(var(--leaderboard-bg-main))] text-[hsl(var(--leaderboard-text-light))] p-4 flex flex-col items-center justify-center">
+        <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--leaderboard-bg-main-start))] to-[hsl(var(--leaderboard-bg-main-end))] text-[hsl(var(--leaderboard-text-light))] p-4 flex flex-col items-center justify-center">
             <h1 className="text-xl font-semibold mb-4">Error</h1>
             <p>{fetchError}</p>
         </div>
@@ -211,11 +211,11 @@ export default function LeaderboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--leaderboard-bg-main))] text-[hsl(var(--leaderboard-text-light))] p-0 sm:p-0 md:p-0 lg:p-0 relative overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--leaderboard-bg-main-start))] to-[hsl(var(--leaderboard-bg-main-end))] text-[hsl(var(--leaderboard-text-light))] p-0 sm:p-0 md:p-0 lg:p-0 relative overflow-x-hidden">
       <div 
         className="absolute inset-0 bg-cover bg-center opacity-30"
-        style={{backgroundImage: "url('https://placehold.co/1200x800/FFA500/FFFFFF.png?text=Orange+Theme+Sky')"}}
-        data-ai-hint="orange sunset sky background"
+        style={{backgroundImage: "url('https://placehold.co/1200x800/A04000/FFFFFF.png')"}} // Darker Orange Placeholder
+        data-ai-hint="abstract orange fire particles"
       ></div>
       <header className="relative z-10 flex items-center justify-between py-4 px-4 sm:px-6 mb-4 sm:mb-6">
         <Link href="/dashboard" className="p-2 -ml-2 text-[hsl(var(--leaderboard-text-light))] hover:opacity-80 transition-opacity">
@@ -223,7 +223,7 @@ export default function LeaderboardPage() {
         </Link>
         <h1 className="text-lg sm:text-xl font-semibold tracking-wider text-[hsl(var(--leaderboard-text-light))]">LEADERBOARD</h1>
         <Select value={selectedPeriod} onValueChange={(value) => setSelectedPeriod(value as 'monthly' | 'weekly')}>
-          <SelectTrigger className="w-[120px] sm:w-[140px] bg-white/10 border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))] focus:ring-[hsl(var(--leaderboard-gold))] h-9 text-xs sm:text-sm">
+          <SelectTrigger className="w-[120px] sm:w-[140px] bg-black/20 border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))] focus:ring-[hsl(var(--leaderboard-gold))] h-9 text-xs sm:text-sm">
             <SelectValue placeholder="Select period" />
           </SelectTrigger>
           <SelectContent className="bg-[hsl(var(--leaderboard-podium-bg))] border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))]">
@@ -241,3 +241,4 @@ export default function LeaderboardPage() {
     </div>
   );
 }
+
