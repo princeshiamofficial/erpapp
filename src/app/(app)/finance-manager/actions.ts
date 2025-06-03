@@ -51,8 +51,12 @@ export async function addTransactionAction(
       return { success: false, error: "Failed to add primary transaction to database." };
     }
 
-    // If it's an admin sending money (expense for admin, and has sentToUserId)
+    // If it's an admin sending money (expense for admin, and has sentToUserId),
+    // create a corresponding income transaction for the recipient.
     if (currentUser.role === 'SYSTEM_ADMIN' && transactionData.type === 'expense' && transactionData.sentToUserId) {
+      // This section handles the dual entry:
+      // 1. The `primaryTransaction` (above) is the System Admin's EXPENSE.
+      // 2. The `recipientTransaction` (below) is the recipient staff user's INCOME.
       const recipientIncomePayload = {
         type: 'income' as TransactionType,
         amount: transactionData.amount,
@@ -136,3 +140,4 @@ export async function updateTransactionAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
