@@ -58,13 +58,16 @@ const PodiumItem: React.FC<{ user: CrmPerformanceData; rank: number; isCenter?: 
         {rank}
       </div>
       <Avatar className={cn(
-          "border-4 border-white shadow-xl overflow-hidden",
-          isCenter ? "h-20 w-20 sm:h-24 sm:w-24 mt-3" : "h-16 w-16 sm:h-20 sm:w-20 mt-3"
+          "border-4 shadow-xl overflow-hidden",
+          isCenter ? "h-20 w-20 sm:h-24 sm:w-24 mt-3 border-[hsl(var(--leaderboard-gold))]" : "h-16 w-16 sm:h-20 sm:w-20 mt-3 border-white/70"
       )}>
         <AvatarImage src={user.userAvatar || `https://placehold.co/128x128.png?text=${getInitials(user.userName)}`} alt={user.userName} data-ai-hint="leaderboard user avatar" />
         <AvatarFallback className="bg-gray-700 text-white text-2xl sm:text-3xl">{getInitials(user.userName)}</AvatarFallback>
       </Avatar>
       <p className="font-semibold text-sm sm:text-base mt-2 truncate w-full px-1 text-[hsl(var(--leaderboard-text-light))]">{user.userName}</p>
+      <p className="text-xs text-[hsl(var(--leaderboard-text-light))]/70 mt-0.5 truncate w-full px-1">
+        {user.role?.replace(/_/g, ' ') || 'Member'}
+      </p>
       <p className="text-lg sm:text-xl font-bold mt-0.5 text-[hsl(var(--leaderboard-text-light))]">{user.ordersCompleted.toLocaleString()}</p>
     </motion.div>
   );
@@ -77,21 +80,24 @@ const RankListItem: React.FC<{ user: CrmPerformanceData; index: number }> = ({ u
     animate={{ opacity: 1, x: 0 }}
     exit={{ opacity: 0, x: 20 }}
     transition={{ duration: 0.3, delay: index * 0.05 }}
-    className="flex items-center py-3 px-4 border-b border-[hsl(var(--border))] last:border-b-0 bg-[hsl(var(--leaderboard-list-bg))] relative"
+    className="flex items-center py-3 px-4 border-b border-[hsl(var(--border))] last:border-b-0 bg-[hsl(var(--leaderboard-list-bg))] relative hover:bg-orange-100/50 dark:hover:bg-orange-800/30 transition-colors duration-150"
   >
     {/* Colored bar on the right edge */}
-    {user.trend === 'up' && <div className="absolute right-0 top-0 bottom-0 w-1 bg-[hsl(var(--leaderboard-arrow-up))] rounded-l-sm"></div>}
-    {user.trend === 'down' && <div className="absolute right-0 top-0 bottom-0 w-1 bg-[hsl(var(--leaderboard-arrow-down))] rounded-l-sm"></div>}
-    {user.trend === 'same' && !user.pointChange && <div className="absolute right-0 top-0 bottom-0 w-1 bg-gray-300 dark:bg-gray-600 rounded-l-sm"></div>}
+    {user.trend === 'up' && <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-[hsl(var(--leaderboard-arrow-up))] rounded-l-sm"></div>}
+    {user.trend === 'down' && <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-[hsl(var(--leaderboard-arrow-down))] rounded-l-sm"></div>}
+    {user.trend === 'same' && !user.pointChange && <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-gray-300 dark:bg-gray-600 rounded-l-sm"></div>}
 
 
-    <p className="font-semibold w-8 text-center text-sm text-[hsl(var(--leaderboard-list-text))]">{user.rank}</p>
+    <p className="font-semibold w-8 text-center text-sm text-[hsl(var(--leaderboard-gold))]">{user.rank}</p>
     <Avatar className="mx-3 h-10 w-10 border-2 border-gray-200 dark:border-gray-700">
       <AvatarImage src={user.userAvatar || `https://placehold.co/48x48.png?text=${getInitials(user.userName)}`} alt={user.userName} data-ai-hint="list user avatar" />
       <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{getInitials(user.userName)}</AvatarFallback>
     </Avatar>
     <div className="flex-1 min-w-0">
       <p className="font-medium truncate text-sm text-[hsl(var(--leaderboard-list-text))]">{user.userName}</p>
+       <p className="text-xs text-gray-400 dark:text-gray-500 truncate">
+        {user.role?.replace(/_/g, ' ') || 'Member'}
+      </p>
       <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
         <div className="w-3 h-3 rounded-full bg-[hsl(var(--leaderboard-gold))] mr-1.5"></div>
         {user.ordersCompleted.toLocaleString()} pts
@@ -138,7 +144,16 @@ export function LeaderboardDisplay({ performanceData, currentUser, timePeriodLab
       {/* Podium Section */}
       {topThree.length > 0 && (
         <div className="px-4 pt-8 pb-12 sm:pt-10 sm:pb-16 relative">
-          <Crown className="h-12 w-12 sm:h-16 sm:w-16 text-[hsl(var(--leaderboard-gold))] mx-auto mb-[-20px] sm:mb-[-25px] relative z-20 drop-shadow-lg" />
+           <motion.div
+            initial={{ opacity: 0, scale: 0.5 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, delay: 0.1, type: "spring", stiffness: 120 }}
+            className="relative z-20"
+          >
+            <Crown className="h-12 w-12 sm:h-16 sm:w-16 text-[hsl(var(--leaderboard-gold))] mx-auto mb-[-20px] sm:mb-[-25px] drop-shadow-lg animate-pulse" 
+              style={{ animationDuration: '2s', animationIterationCount: 'infinite', animationTimingFunction: 'ease-in-out' }}
+            />
+          </motion.div>
           <div className="flex justify-around items-end max-w-sm sm:max-w-md mx-auto">
             {podiumUsers.rank2 ? <PodiumItem user={podiumUsers.rank2} rank={2} /> : <div className="w-[110px] sm:w-[130px]"></div>}
             {podiumUsers.rank1 ? <PodiumItem user={podiumUsers.rank1} rank={1} isCenter /> : <div className="w-[130px] sm:w-[150px]"></div>}
