@@ -54,81 +54,65 @@ export function AddTransactionDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const availableUsers = useMemo(() => {
-      return allUsersForDropdown.filter(u => u.id && u.id !== currentUser.id); // Ensure u.id exists
-  }, [allUsersForDropdown, currentUser.id]);
-
   const resetForm = useCallback(() => {
     setType(isSendMoneyFlow ? 'expense' : 'expense');
     setAmount('');
-    // Category is reset based on isSendMoneyFlow and selectedSentToUserId in the useEffect below
     setDescription('');
     setDate(new Date());
     setSelectedSentToUserId(undefined); 
     setIsSubmitting(false);
     setIsUserPopoverOpen(false);
     setUserSearchQuery("");
-    // Set initial category after other states are reset
     setCategory(isSendMoneyFlow ? "Sent Money" : "");
   }, [isSendMoneyFlow]);
 
   useEffect(() => {
     if (isOpen) {
-      // Initialize common fields
       setType(isSendMoneyFlow ? 'expense' : 'expense');
       setAmount('');
       setDescription('');
       setDate(new Date());
-      setSelectedSentToUserId(undefined); // Ensure recipient is cleared on open
+      setSelectedSentToUserId(undefined); 
       setUserSearchQuery("");
       
-      // Initialize category based on flow type
       if (isSendMoneyFlow) {
-        setCategory("Sent Money"); // Default for send money, will update if user is selected
+        setCategory("Sent Money"); 
       } else {
-        setCategory(""); // Blank for other flows
+        setCategory(""); 
       }
     } else {
-      resetForm(); // Reset all fields when dialog closes
+      resetForm(); 
     }
   }, [isOpen, isSendMoneyFlow, resetForm]);
 
 
   useEffect(() => {
-    // This effect updates the category specifically when a user is selected in the "Send Money" flow.
     if (isOpen && isSendMoneyFlow) {
       if (selectedSentToUserId) {
-        const recipient = availableUsers.find(u => u.id === selectedSentToUserId);
+        const recipient = allUsersForDropdown.find(u => u.id === selectedSentToUserId);
         if (recipient) {
           setCategory(`Sent Money to ${recipient.name}`);
         } else {
-          // This case should be rare if selectedSentToUserId is valid and from availableUsers
           setCategory("Sent Money"); 
         }
       } else {
-        // If no user is selected (or selection is cleared), reset to generic "Sent Money"
         setCategory("Sent Money"); 
       }
     }
-    // For non-send-money flows, category is managed manually or by other logic, so no change here.
-  }, [isOpen, isSendMoneyFlow, selectedSentToUserId, availableUsers]); // Only run if these specific states change while dialog is open
+  }, [isOpen, isSendMoneyFlow, selectedSentToUserId, allUsersForDropdown]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || !date ) { // Base validation for all types
+    if (!amount || !date ) { 
       toast({ title: "Validation Error", description: "Amount and Date are required.", variant: "destructive" });
       return;
     }
-    if (isSendMoneyFlow && !selectedSentToUserId) { // Specific for send money
+    if (isSendMoneyFlow && !selectedSentToUserId) { 
         toast({ title: "Validation Error", description: "Recipient is required for sending money.", variant: "destructive" });
         return;
     }
-    if (!isSendMoneyFlow && !category.trim()) { // Specific for other types
-        toast({ title: "Validation Error", description: "Category is required for this transaction type.", variant: "destructive" });
-        return;
-    }
-
+    
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
       toast({ title: "Validation Error", description: "Amount must be a positive number.", variant: "destructive" });
@@ -137,8 +121,6 @@ export function AddTransactionDialog({
 
     setIsSubmitting(true);
     
-    // Category is now reliably set by the useEffect hook for send money flow
-    // or by user input for other flows.
     const finalCategory = category.trim(); 
 
     const transactionPayload = {
@@ -148,7 +130,7 @@ export function AddTransactionDialog({
       description: description.trim() || null,
       date: date.toISOString(),
       sentToUserId: isSendMoneyFlow ? selectedSentToUserId : null,
-      sentToUserName: isSendMoneyFlow && selectedSentToUserId ? availableUsers.find(u => u.id === selectedSentToUserId)?.name || null : null,
+      sentToUserName: isSendMoneyFlow && selectedSentToUserId ? allUsersForDropdown.find(u => u.id === selectedSentToUserId)?.name || null : null,
     };
 
     const result = await addTransactionAction(currentUser, transactionPayload);
@@ -161,7 +143,7 @@ export function AddTransactionDialog({
         toast({ title: "Notice", description: result.error, variant: "default", duration: 7000 });
       }
       onTransactionAdded();
-      setIsOpen(false); // This will trigger the useEffect with isOpen=false, which calls resetForm
+      setIsOpen(false); 
     } else {
       toast({ title: "Error", description: result.error || "Could not add transaction.", variant: "destructive" });
     }
@@ -177,7 +159,11 @@ export function AddTransactionDialog({
   const dialogDescription = isSendMoneyFlow 
     ? "Log an expense for money sent to another user. An income transaction will also be recorded for the recipient." 
     : `Log a new ${type} entry.`;
-
+  
+  const availableUsers = useMemo(() => {
+      return allUsersForDropdown.filter(u => u.id && u.id !== currentUser.id);
+  }, [allUsersForDropdown, currentUser.id]);
+  
   const filteredUsersForDropdown = useMemo(() => {
     if (!userSearchQuery) return availableUsers;
     return availableUsers.filter(user =>
@@ -200,7 +186,7 @@ export function AddTransactionDialog({
 
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); /* resetForm is now handled by useEffect based on isOpen */ }}>
+    <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -254,7 +240,7 @@ export function AddTransactionDialog({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                    <Command>
+                    <Command filter={() => 1}> {/* Disable CMDK's internal filtering */}
                       <CommandInput 
                         placeholder="Search user..." 
                         value={userSearchQuery}
@@ -267,10 +253,10 @@ export function AddTransactionDialog({
                             <CommandItem disabled>No other users available.</CommandItem>
                           )}
                           {filteredUsersForDropdown.map((user) => (
-                            user.id && // Ensure user.id is valid before rendering
+                            user.id && 
                             <CommandItem
                               key={user.id}
-                              value={user.id} // Using user.id for the value prop
+                              value={user.id} 
                               onSelect={() => {
                                 setSelectedSentToUserId(user.id);
                                 setIsUserPopoverOpen(false);
