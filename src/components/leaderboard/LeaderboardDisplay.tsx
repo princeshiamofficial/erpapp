@@ -103,7 +103,7 @@ const RankListItem: React.FC<{ user: CrmPerformanceData; index: number }> = ({ u
       </p>
       <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-0.5">
         <Award className="h-3.5 w-3.5 mr-1 text-[hsl(var(--leaderboard-gold))]" />
-        {user.ordersCompleted.toLocaleString()} pts
+        {user.ordersCompleted.toLocaleString()} Sales
       </div>
     </div>
     {user.pointChange !== undefined && user.pointChange !== 0 && (
@@ -185,4 +185,3 @@ export function LeaderboardDisplay({ performanceData, currentUser, timePeriodLab
     </div>
   );
 }
-
