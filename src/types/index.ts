@@ -107,7 +107,8 @@ export interface GlobalSettings {
   crmCompletionStatusIds?: string[];
   areCommentsVisibleOnPublicPage?: boolean;
   rolesAllowedToEditOrders?: UserRole[];
-  toastSoundUrl?: string | null; // Added toast sound URL
+  toastSoundUrl?: string | null;
+  leaderboardBackgroundImageUrl?: string | null; // Added leaderboard background image URL
 }
 
 // --- ERP & Finance Manager Specific Types ---
@@ -175,7 +176,7 @@ export interface Project {
 
   // Status-specific timestamps
   crClearanceAt?: string;
-  crCancelAt?: string; 
+  crCancelAt?: string;
   onDesignAt?: string;
   onHoldAt?: string;
   logisticsAt?: string;

@@ -9,6 +9,7 @@ const GLOBAL_SETTINGS_COLLECTION = 'globalSettings';
 const MAIN_SETTINGS_DOC_ID = 'main';
 
 const DEFAULT_TOAST_SOUND_URL = 'https://audio-previews.elements.envatousercontent.com/files/225140761/preview.mp3';
+const DEFAULT_LEADERBOARD_BACKGROUND_URL = 'https://i.ibb.co/7S8jCg7/abstract-orange-fire-particles.jpg';
 
 const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   globalMonthlyOrderTarget: 0,
@@ -16,7 +17,8 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   crmCompletionStatusIds: [],
   areCommentsVisibleOnPublicPage: true,
   rolesAllowedToEditOrders: ['SYSTEM_ADMIN', 'ADMIN'], // Default: Admins and System Admins can edit
-  toastSoundUrl: DEFAULT_TOAST_SOUND_URL, // Default toast sound
+  toastSoundUrl: DEFAULT_TOAST_SOUND_URL,
+  leaderboardBackgroundImageUrl: DEFAULT_LEADERBOARD_BACKGROUND_URL, // Default leaderboard background
 };
 
 // Gets global settings from Firestore
@@ -33,7 +35,8 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         crmCompletionStatusIds: data.crmCompletionStatusIds ?? DEFAULT_GLOBAL_SETTINGS.crmCompletionStatusIds,
         areCommentsVisibleOnPublicPage: data.areCommentsVisibleOnPublicPage ?? DEFAULT_GLOBAL_SETTINGS.areCommentsVisibleOnPublicPage,
         rolesAllowedToEditOrders: data.rolesAllowedToEditOrders ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToEditOrders,
-        toastSoundUrl: data.toastSoundUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.toastSoundUrl : data.toastSoundUrl, // Handle undefined, allow null/empty
+        toastSoundUrl: data.toastSoundUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.toastSoundUrl : data.toastSoundUrl,
+        leaderboardBackgroundImageUrl: data.leaderboardBackgroundImageUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.leaderboardBackgroundImageUrl : data.leaderboardBackgroundImageUrl,
       };
     } else {
       console.log("Global settings document not found, returning defaults. Creating document with defaults.");
@@ -160,6 +163,27 @@ export async function setToastSoundUrl(soundUrl: string | null): Promise<boolean
     return true;
   } catch (error) {
     console.error("Error setting toast sound URL:", error);
+    return false;
+  }
+}
+
+// Sets the leaderboard background image URL
+export async function setLeaderboardBackgroundImageUrl(imageUrl: string | null): Promise<boolean> {
+  try {
+    const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+    const docSnap = await getDoc(settingsDocRef);
+    if (docSnap.exists()) {
+      await updateDoc(settingsDocRef, { leaderboardBackgroundImageUrl: imageUrl });
+    } else {
+      const initialData: GlobalSettings = {
+        ...DEFAULT_GLOBAL_SETTINGS,
+        leaderboardBackgroundImageUrl: imageUrl
+      };
+      await setDoc(settingsDocRef, initialData);
+    }
+    return true;
+  } catch (error) {
+    console.error("Error setting leaderboard background image URL:", error);
     return false;
   }
 }

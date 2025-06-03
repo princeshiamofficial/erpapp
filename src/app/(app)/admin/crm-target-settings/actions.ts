@@ -2,15 +2,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { 
-  setCrmCompletionStatusIds, 
+import {
+  setCrmCompletionStatusIds,
   setCommentsVisibility,
   setRolesAllowedToEditOrders,
-  setToastSoundUrl // Added import
+  setToastSoundUrl,
+  setLeaderboardBackgroundImageUrl // Added import
 } from "@/lib/settings-service";
-import type { UserRole, User } from "@/types"; 
-import { adminApp } from '@/lib/firebase-admin'; 
-import { getUsers as getAllUsersFromDb, getUserById } from '@/lib/user-service'; 
+import type { UserRole, User } from "@/types";
+import { adminApp } from '@/lib/firebase-admin';
+import { getUsers as getAllUsersFromDb, getUserById } from '@/lib/user-service';
 import type { FirebaseError } from 'firebase-admin';
 import type { messaging } from 'firebase-admin';
 
@@ -20,8 +21,8 @@ export async function updateCompletionStatusIdsAction(ids: string[]): Promise<{ 
     const success = await setCrmCompletionStatusIds(ids);
     if (success) {
       revalidatePath("/(app)/admin/crm-target-settings");
-      revalidatePath("/(app)/dashboard"); 
-      revalidatePath("/(app)/leaderboard"); 
+      revalidatePath("/(app)/dashboard");
+      revalidatePath("/(app)/leaderboard");
       return { success: true };
     }
     return { success: false, error: "Failed to update CRM completion status settings in database." };
@@ -35,8 +36,8 @@ export async function updateCommentsVisibilityAction(isVisible: boolean): Promis
   try {
     const success = await setCommentsVisibility(isVisible);
     if (success) {
-      revalidatePath("/(app)/admin/crm-target-settings"); 
-      revalidatePath("/track/[trackingId]", "layout"); 
+      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/track/[trackingId]", "layout");
       return { success: true };
     }
     return { success: false, error: "Failed to update comments visibility setting in database." };
@@ -51,7 +52,7 @@ export async function updateRolesAllowedToEditOrdersAction(roles: UserRole[]): P
     const success = await setRolesAllowedToEditOrders(roles);
     if (success) {
       revalidatePath("/(app)/admin/crm-target-settings");
-      revalidatePath("/(app)/orders"); 
+      revalidatePath("/(app)/orders");
       return { success: true };
     }
     return { success: false, error: "Failed to update order editing permissions in database." };
@@ -81,13 +82,31 @@ export async function updateToastSoundUrlAction(soundUrl: string | null): Promis
   }
 }
 
+export async function updateLeaderboardBackgroundImageUrlAction(imageUrl: string | null): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (imageUrl && !imageUrl.startsWith('http://') && !imageUrl.startsWith('https://') && !imageUrl.startsWith('/')) {
+      // return { success: false, error: "Invalid image URL format. Must be a valid URL or a relative path." };
+    }
+    const success = await setLeaderboardBackgroundImageUrl(imageUrl);
+    if (success) {
+      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/leaderboard"); // Revalidate leaderboard to show new image
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update leaderboard background image URL in database." };
+  } catch (error) {
+    console.error("Error in updateLeaderboardBackgroundImageUrlAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
 
 interface AppNotificationPayload {
   title: string;
   body: string;
   iconUrl?: string;
   targetUrl?: string;
-  soundUrl?: string; 
+  soundUrl?: string;
   targetType: 'all' | 'roles' | 'users';
   targetRoles?: UserRole[];
   targetUserIds?: string[];
@@ -97,14 +116,14 @@ export async function sendPushNotificationAction(
   payload: AppNotificationPayload,
   actingUser: User
 ): Promise<{ success: boolean; message: string; error?: string }> {
-  if (!actingUser || (actingUser.role !== 'SYSTEM_ADMIN')) { 
+  if (!actingUser || (actingUser.role !== 'SYSTEM_ADMIN')) {
     return { success: false, message: "Permission denied.", error: "Only System Administrators can send push notifications." };
   }
 
   if (!adminApp) {
     console.error("sendPushNotificationAction: Firebase Admin SDK not initialized. Cannot send real push notifications.");
-    return { 
-      success: false, 
+    return {
+      success: false,
       message: "Configuration Error: Firebase Admin SDK not initialized. Real push notifications disabled.",
       error: "Firebase Admin SDK is not configured on the server. Please check server logs and environment variables (GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_SERVICE_ACCOUNT_JSON)."
     };
@@ -118,7 +137,7 @@ export async function sendPushNotificationAction(
 
   let targetUsersData: Array<{ id: string; name: string; role: UserRole; fcmToken: string | null }> = [];
   let targetDescription = "";
-  
+
   try {
     const allUsersFromDb = await getAllUsersFromDb();
 
@@ -204,7 +223,7 @@ export async function sendPushNotificationAction(
         //   }
         // }
       };
-      
+
       try {
         // @ts-ignore admin.messaging might be an issue with the type if not fully initialized, but should work if adminApp is valid
         await adminApp.messaging().send(fcmMessage);
@@ -218,7 +237,7 @@ export async function sendPushNotificationAction(
         errors.push(`Failed for ${user.name}: ${errorMessage}`);
       }
     }
-    
+
     let messageSummary = `Sent to ${successfulSends} device(s). `;
     if (failedSends > 0) {
       messageSummary += `${failedSends} failed.`;
@@ -227,14 +246,14 @@ export async function sendPushNotificationAction(
       }
     }
     messageSummary += ` (Target: ${targetDescription})`;
-    
-    if(targetType === 'all' && successfulSends > 20) { 
+
+    if(targetType === 'all' && successfulSends > 20) {
         messageSummary += " Note: Sending to 'All Users' can be resource-intensive for large user bases. Consider topic messaging for broader reach."
     }
 
 
-    return { 
-      success: successfulSends > 0, 
+    return {
+      success: successfulSends > 0,
       message: messageSummary,
       ...(failedSends > 0 && { error: `Some notifications failed to send. ${errors.join('; ')}` })
     };
@@ -242,10 +261,10 @@ export async function sendPushNotificationAction(
   } catch (error) {
     console.error("Error in sendPushNotificationAction:", error);
     const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred while sending notification.";
-    return { 
-      success: false, 
+    return {
+      success: false,
       message: `Failed to send notifications: ${errorMessage}`,
-      error: errorMessage 
+      error: errorMessage
     };
   }
 }

@@ -1,5 +1,5 @@
 
-"use client"; 
+"use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
@@ -10,8 +10,8 @@ import { getGlobalSettings } from '@/lib/settings-service';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronLeft, Crown } from 'lucide-react';
 import Link from 'next/link';
-import { LeaderboardDisplay } from '@/components/leaderboard/LeaderboardDisplay'; 
-import type { User, TrackingLink, GlobalSettings, UserRole } from '@/types'; 
+import { LeaderboardDisplay } from '@/components/leaderboard/LeaderboardDisplay';
+import type { User, TrackingLink, GlobalSettings, UserRole } from '@/types';
 import {
   startOfMonth,
   endOfMonth,
@@ -28,11 +28,11 @@ export interface CrmPerformanceData {
   userName: string;
   userAvatar?: string;
   ordersCompleted: number;
-  target: number; 
+  target: number;
   rank?: number;
   role?: UserRole;
-  trend?: 'up' | 'down' | 'same'; 
-  pointChange?: number; 
+  trend?: 'up' | 'down' | 'same';
+  pointChange?: number;
 }
 
 
@@ -44,6 +44,7 @@ export default function LeaderboardPage() {
   const [isLoadingData, setIsLoadingData] = React.useState(true);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState<'monthly' | 'weekly'>('monthly');
+  const [currentLeaderboardBackground, setCurrentLeaderboardBackground] = useState<string | null | undefined>(undefined);
 
   const calculatePerformance = useCallback(async (
     crmUsers: User[],
@@ -89,13 +90,13 @@ export default function LeaderboardPage() {
           ordersCompletedInPeriod++;
         }
       });
-      
-      const target = period === 'monthly' 
+
+      const target = period === 'monthly'
         ? (crmUser.monthlyOrderTarget ?? globalSettings.globalMonthlyOrderTarget ?? 0)
         : (crmUser.weeklyOrderTarget ?? globalSettings.globalWeeklyOrderTarget ?? 0);
 
-      
-      const pointChange = Math.floor(Math.random() * 5) - 2; 
+
+      const pointChange = Math.floor(Math.random() * 5) - 2;
       const trend = pointChange > 0 ? 'up' : pointChange < 0 ? 'down' : 'same';
 
       return {
@@ -133,18 +134,20 @@ export default function LeaderboardPage() {
         getGlobalSettings(),
       ]);
 
+      setCurrentLeaderboardBackground(globalSettings.leaderboardBackgroundImageUrl);
+
       const crmUsers = allUsers.filter(user => user.role === 'CRM');
-      
+
       let displayUsers = [...crmUsers];
-      
+
       const mapDataForCurrentUser = (data: CrmPerformanceData[]): CrmPerformanceData[] => {
-        return data.map(d => 
-          currentUser && d.userId === currentUser.id 
-            ? { ...d, userName: "You", role: currentUser.role as UserRole, userAvatar: currentUser.avatarUrl || d.userAvatar } 
+        return data.map(d =>
+          currentUser && d.userId === currentUser.id
+            ? { ...d, userName: "You", role: currentUser.role as UserRole, userAvatar: currentUser.avatarUrl || d.userAvatar }
             : d
         );
       };
-      
+
       const monthlyData = await calculatePerformance(displayUsers, allOrders, globalSettings, 'monthly');
       const weeklyData = await calculatePerformance(displayUsers, allOrders, globalSettings, 'weekly');
 
@@ -171,8 +174,8 @@ export default function LeaderboardPage() {
   if (isAuthLoading || isLoadingData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--leaderboard-bg-main-start))] to-[hsl(var(--leaderboard-bg-main-end))] text-[hsl(var(--leaderboard-text-light))] p-4 relative overflow-hidden">
-        
-        <div 
+
+        <div
           className="absolute inset-0 bg-cover bg-center opacity-30"
           style={{backgroundImage: "url('https://i.ibb.co/7S8jCg7/abstract-orange-fire-particles.jpg')"}}
           data-ai-hint="abstract orange fire particles"
@@ -200,7 +203,7 @@ export default function LeaderboardPage() {
       </div>
     );
   }
-  
+
   if (fetchError) {
       return (
         <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--leaderboard-bg-main-start))] to-[hsl(var(--leaderboard-bg-main-end))] text-[hsl(var(--leaderboard-text-light))] p-4 flex flex-col items-center justify-center">
@@ -210,12 +213,16 @@ export default function LeaderboardPage() {
       );
   }
 
+  const bgStyle = currentLeaderboardBackground
+    ? { backgroundImage: `url('${currentLeaderboardBackground}')` }
+    : { backgroundImage: "url('https://i.ibb.co/7S8jCg7/abstract-orange-fire-particles.jpg')" };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--leaderboard-bg-main-start))] to-[hsl(var(--leaderboard-bg-main-end))] text-[hsl(var(--leaderboard-text-light))] p-0 sm:p-0 md:p-0 lg:p-0 relative overflow-x-hidden">
-      <div 
+      <div
         className="absolute inset-0 bg-cover bg-center opacity-30"
-        style={{backgroundImage: "url('https://i.ibb.co/7S8jCg7/abstract-orange-fire-particles.jpg')"}}
-        data-ai-hint="abstract orange fire particles"
+        style={bgStyle}
+        data-ai-hint={currentLeaderboardBackground ? "leaderboard background" : "abstract orange fire particles"}
       ></div>
       <header className="relative z-10 flex items-center justify-between py-4 px-4 sm:px-6 mb-4 sm:mb-6">
         <Link href="/dashboard" className="p-2 -ml-2 text-[hsl(var(--leaderboard-text-light))] hover:opacity-80 transition-opacity">
@@ -232,7 +239,7 @@ export default function LeaderboardPage() {
           </SelectContent>
         </Select>
       </header>
-      
+
       <LeaderboardDisplay
         performanceData={selectedPeriod === 'monthly' ? crmMonthlyPerformance : crmWeeklyPerformance}
         currentUser={currentUser}

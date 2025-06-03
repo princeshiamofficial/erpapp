@@ -17,26 +17,29 @@ import type { CustomStatus, UserRole, User } from "@/types";
 import { getStatuses } from '@/lib/status-service';
 import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings, GlobalSettings } from '@/lib/settings-service';
-import { 
-  updateCompletionStatusIdsAction, 
+import {
+  updateCompletionStatusIdsAction,
   updateCommentsVisibilityAction,
   updateRolesAllowedToEditOrdersAction,
-  updateToastSoundUrlAction, // Added action
+  updateToastSoundUrlAction,
+  updateLeaderboardBackgroundImageUrlAction, // Added action
   sendPushNotificationAction
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music } from 'lucide-react'; 
+import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'; 
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import NextImage from 'next/image';
 
 
 const EDITABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
 const NOTIFICATION_TARGET_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
 const TOAST_SOUND_STORAGE_KEY = 'colorHutToastSoundUrl';
+const DEFAULT_LEADERBOARD_BACKGROUND_PLACEHOLDER = 'https://i.ibb.co/7S8jCg7/abstract-orange-fire-particles.jpg';
 
 
 export default function CrmTargetSettingsPage() {
@@ -49,8 +52,9 @@ export default function CrmTargetSettingsPage() {
   const [selectedStatusIds, setSelectedStatusIds] = useState<Set<string>>(new Set());
   const [areCommentsVisible, setAreCommentsVisible] = useState(true);
   const [rolesAllowedToEdit, setRolesAllowedToEdit] = useState<Set<UserRole>>(new Set(['ADMIN', 'SYSTEM_ADMIN']));
-  const [toastSoundUrl, setToastSoundUrl] = useState<string>(''); // New state for toast sound URL
-  
+  const [toastSoundUrl, setToastSoundUrl] = useState<string>('');
+  const [leaderboardBgUrl, setLeaderboardBgUrl] = useState<string>(''); // New state for leaderboard bg
+
   // Notification states
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [notificationTitle, setNotificationTitle] = useState('');
@@ -67,9 +71,10 @@ export default function CrmTargetSettingsPage() {
   const [isSubmittingCrmTargets, setIsSubmittingCrmTargets] = useState(false);
   const [isSubmittingCommentsVisibility, setIsSubmittingCommentsVisibility] = useState(false);
   const [isSubmittingOrderEditingPermissions, setIsSubmittingOrderEditingPermissions] = useState(false);
-  const [isSubmittingToastSound, setIsSubmittingToastSound] = useState(false); // New loading state
+  const [isSubmittingToastSound, setIsSubmittingToastSound] = useState(false);
+  const [isSubmittingLeaderboardBg, setIsSubmittingLeaderboardBg] = useState(false); // New loading state
   const [isSendingNotification, setIsSendingNotification] = useState(false);
-  const [isLoadingUsersForNotifAndTokens, setIsLoadingUsersForNotifAndTokens] = useState(false); 
+  const [isLoadingUsersForNotifAndTokens, setIsLoadingUsersForNotifAndTokens] = useState(false);
 
   // FCM Token Display State
   const [fcmUserSearchTerm, setFcmUserSearchTerm] = useState('');
@@ -83,15 +88,16 @@ export default function CrmTargetSettingsPage() {
       const [fetchedStatuses, globalSettings, fetchedUsers] = await Promise.all([
         getStatuses(),
         getGlobalSettings(),
-        getUsers(), 
+        getUsers(),
       ]);
       setAllStatuses(fetchedStatuses);
       setSelectedStatusIds(new Set(globalSettings.crmCompletionStatusIds ?? []));
       setAreCommentsVisible(globalSettings.areCommentsVisibleOnPublicPage ?? true);
       setRolesAllowedToEdit(new Set(globalSettings.rolesAllowedToEditOrders ?? ['ADMIN', 'SYSTEM_ADMIN']));
-      setToastSoundUrl(globalSettings.toastSoundUrl ?? ''); // Set toast sound URL from settings
-      
-      setAllUsers(fetchedUsers.filter(u => u.role !== 'SYSTEM_ADMIN')); 
+      setToastSoundUrl(globalSettings.toastSoundUrl ?? '');
+      setLeaderboardBgUrl(globalSettings.leaderboardBackgroundImageUrl ?? ''); // Set leaderboard bg URL
+
+      setAllUsers(fetchedUsers.filter(u => u.role !== 'SYSTEM_ADMIN'));
     } catch (error) {
       console.error("Error fetching settings data:", error);
       toast({ title: "Error", description: "Could not load settings or user data.", variant: "destructive" });
@@ -131,7 +137,7 @@ export default function CrmTargetSettingsPage() {
     setIsSubmittingCommentsVisibility(true);
     const result = await updateCommentsVisibilityAction(newVisibility);
     if (result.success) {
-      setAreCommentsVisible(newVisibility); 
+      setAreCommentsVisible(newVisibility);
       toast({ title: "Settings Updated", description: `Public comments section is now ${newVisibility ? 'visible' : 'hidden'}.` });
     } else {
       toast({ title: "Update Failed", description: result.error || "Could not update comments visibility.", variant: "destructive" });
@@ -160,18 +166,30 @@ export default function CrmTargetSettingsPage() {
   // --- New Toast Sound Handler ---
   const handleSaveToastSoundUrl = async () => {
     setIsSubmittingToastSound(true);
-    // Allow empty string to disable sound, or null
     const urlToSave = toastSoundUrl.trim() === '' ? null : toastSoundUrl.trim();
     const result = await updateToastSoundUrlAction(urlToSave);
     if (result.success) {
       if (typeof window !== 'undefined') {
-        localStorage.setItem(TOAST_SOUND_STORAGE_KEY, urlToSave ?? ''); // Store empty string if null
+        localStorage.setItem(TOAST_SOUND_STORAGE_KEY, urlToSave ?? '');
       }
       toast({ title: "Settings Updated", description: "Toast notification sound URL has been saved." });
     } else {
       toast({ title: "Update Failed", description: result.error || "Could not save toast sound URL.", variant: "destructive" });
     }
     setIsSubmittingToastSound(false);
+  };
+
+  // --- New Leaderboard Background Image Handler ---
+  const handleSaveLeaderboardBgUrl = async () => {
+    setIsSubmittingLeaderboardBg(true);
+    const urlToSave = leaderboardBgUrl.trim() === '' ? null : leaderboardBgUrl.trim();
+    const result = await updateLeaderboardBackgroundImageUrlAction(urlToSave);
+    if (result.success) {
+      toast({ title: "Settings Updated", description: "Leaderboard background image URL has been saved." });
+    } else {
+      toast({ title: "Update Failed", description: result.error || "Could not save leaderboard background image URL.", variant: "destructive" });
+    }
+    setIsSubmittingLeaderboardBg(false);
   };
 
 
@@ -205,6 +223,7 @@ export default function CrmTargetSettingsPage() {
     const payload = {
       title: notificationTitle.trim(), body: notificationBody.trim(),
       iconUrl: notificationIconUrl.trim() || undefined, targetUrl: notificationTargetUrl.trim() || undefined,
+      soundUrl: toastSoundUrl.trim() || undefined, // Use the globally set toast sound for notifications too
       targetType: notificationTargetType,
       targetRoles: notificationTargetType === 'roles' ? Array.from(selectedNotificationRoles) : undefined,
       targetUserIds: notificationTargetType === 'users' ? Array.from(selectedNotificationUserIds) : undefined,
@@ -212,13 +231,13 @@ export default function CrmTargetSettingsPage() {
     const result = await sendPushNotificationAction(payload, currentUser);
     setIsSendingNotification(false);
     if (result.success) {
-      toast({ title: "Notification Send Attempted", description: result.message }); 
+      toast({ title: "Notification Send Attempted", description: result.message });
       setNotificationTitle(''); setNotificationBody(''); setNotificationIconUrl(''); setNotificationTargetUrl('');
     } else {
       toast({ title: "Notification Failed", description: result.error || "Could not send notification.", variant: "destructive" });
     }
   };
-  
+
   const selectedUsersDisplay = useMemo(() => {
     if (selectedNotificationUserIds.size === 0) return "Select users...";
     if (selectedNotificationUserIds.size > 2) return `${selectedNotificationUserIds.size} users selected`;
@@ -227,7 +246,7 @@ export default function CrmTargetSettingsPage() {
 
   // --- FCM Token Display Logic (Unchanged) ---
   const filteredFcmUsers = useMemo(() => {
-    const usersForTokenDisplay = allUsers; 
+    const usersForTokenDisplay = allUsers;
     if (!fcmUserSearchTerm) return usersForTokenDisplay;
     return usersForTokenDisplay.filter(user =>
       user.name.toLowerCase().includes(fcmUserSearchTerm.toLowerCase()) ||
@@ -271,7 +290,7 @@ export default function CrmTargetSettingsPage() {
         </Button>
       </div>
 
-      {/* CRM Target Card (Unchanged) */}
+      {/* CRM Target Card */}
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><ListChecks className="h-6 w-6 text-primary" />CRM Target Completion Statuses</CardTitle>
@@ -296,7 +315,7 @@ export default function CrmTargetSettingsPage() {
 
       <Separator className="my-8" />
 
-      {/* Public Page Settings Card (Unchanged) */}
+      {/* Public Page Settings Card */}
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><MessageSquare className="h-6 w-6 text-primary" />Public Tracking Page Settings</CardTitle>
@@ -314,8 +333,8 @@ export default function CrmTargetSettingsPage() {
       </Card>
 
       <Separator className="my-8" />
-      
-      {/* Order Management Permissions Card (Unchanged) */}
+
+      {/* Order Management Permissions Card */}
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><UserCheck className="h-6 w-6 text-primary" /> Order Management Permissions</CardTitle>
@@ -333,10 +352,10 @@ export default function CrmTargetSettingsPage() {
           <Button onClick={handleSaveOrderEditingPermissions} disabled={isLoading || isSubmittingOrderEditingPermissions}>{isSubmittingOrderEditingPermissions ? "Saving..." : "Save Editing Permissions"}</Button>
         </CardFooter>
       </Card>
-      
+
       <Separator className="my-8" />
 
-      {/* Toast Notification Sound Card -- NEW -- */}
+      {/* Toast Notification Sound Card */}
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
@@ -371,6 +390,61 @@ export default function CrmTargetSettingsPage() {
         <CardFooter className="border-t p-5 flex justify-end">
           <Button onClick={handleSaveToastSoundUrl} disabled={isLoading || isSubmittingToastSound}>
             {isSubmittingToastSound ? "Saving..." : "Save Toast Sound"}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <Separator className="my-8" />
+
+      {/* Leaderboard Background Image Card -- NEW -- */}
+      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+        <CardHeader className="border-b p-5">
+          <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
+            <ImageIcon className="h-6 w-6 text-primary" /> Leaderboard Background Image
+          </CardTitle>
+          <CardDescription className="text-muted-foreground text-sm mt-0.5">
+            Set a custom background image URL for the leaderboard page. Leave blank to use the default image.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6">
+          {isLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-5 w-32 rounded" />
+              <Skeleton className="h-10 w-full rounded-md" />
+              <Skeleton className="h-24 w-40 rounded-md mt-2" />
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label htmlFor="leaderboardBgUrlInput">Background Image URL</Label>
+              <Input
+                id="leaderboardBgUrlInput"
+                value={leaderboardBgUrl}
+                onChange={(e) => setLeaderboardBgUrl(e.target.value)}
+                placeholder="e.g., https://example.com/leaderboard-bg.jpg or /images/leaderboard.png"
+                disabled={isSubmittingLeaderboardBg}
+              />
+              <p className="text-xs text-muted-foreground">
+                Provide a full URL or a relative path from the public folder.
+              </p>
+              {leaderboardBgUrl && (
+                <div className="mt-4 p-2 border rounded-md inline-block bg-muted">
+                  <NextImage
+                    src={leaderboardBgUrl}
+                    alt="Leaderboard background preview"
+                    width={200}
+                    height={120}
+                    className="object-cover rounded"
+                    unoptimized={leaderboardBgUrl.startsWith('/')} // For relative paths
+                    onError={(e) => { e.currentTarget.src = DEFAULT_LEADERBOARD_BACKGROUND_PLACEHOLDER; e.currentTarget.alt = 'Error loading image. Default shown.' }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </CardContent>
+        <CardFooter className="border-t p-5 flex justify-end">
+          <Button onClick={handleSaveLeaderboardBgUrl} disabled={isLoading || isSubmittingLeaderboardBg}>
+            {isSubmittingLeaderboardBg ? "Saving..." : "Save Leaderboard Background"}
           </Button>
         </CardFooter>
       </Card>
