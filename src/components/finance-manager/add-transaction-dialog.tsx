@@ -56,24 +56,22 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
       if (isSendMoneyFlow) {
         setIsLoadingUsers(true);
         getUsers().then(fetchedUsers => {
-          setAllUsers(fetchedUsers.filter(u => u.id !== currentUser.id));
+          setAllUsers(fetchedUsers.filter(u => u.id !== currentUser.id)); // Exclude current admin
           setIsLoadingUsers(false);
         }).catch(err => {
           console.error("Failed to fetch users for Send Money dialog:", err);
           toast({ title: "Error", description: "Could not load users.", variant: "destructive" });
           setIsLoadingUsers(false);
         });
-        // Category is set in the other useEffect based on selectedSentToUserId
-      } else {
-        setCategory("");
       }
+      setCategory(isSendMoneyFlow ? (selectedSentToUserId ? `Sent Money to ${allUsers.find(u => u.id === selectedSentToUserId)?.name || 'user'}` : "Sent Money") : "");
       setAmount('');
       setDescription('');
       setDate(new Date());
       setSelectedSentToUserId(undefined);
       setUserSearchQuery("");
     }
-  }, [isOpen, isSendMoneyFlow, currentUser.id, toast]);
+  }, [isOpen, isSendMoneyFlow, currentUser.id, toast, allUsers, selectedSentToUserId]); // Added allUsers and selectedSentToUserId
 
   useEffect(() => {
     if (isSendMoneyFlow) {
@@ -82,10 +80,10 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
         if (recipient) {
           setCategory(`Sent Money to ${recipient.name}`);
         } else {
-          setCategory("Sent Money"); // Fallback if recipient not found (shouldn't happen)
+          setCategory("Sent Money"); 
         }
       } else {
-        setCategory("Sent Money"); // Default category when no user is selected yet
+        setCategory("Sent Money"); 
       }
     }
   }, [isSendMoneyFlow, selectedSentToUserId, allUsers]);
@@ -93,7 +91,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
   const resetForm = () => {
     setType(isSendMoneyFlow ? 'expense' : 'expense');
     setAmount('');
-    // Category reset handled by useEffect above based on isSendMoneyFlow and selectedSentToUserId
+    setCategory(isSendMoneyFlow ? "Sent Money" : ""); // Reset category based on flow
     setDescription('');
     setDate(new Date());
     setSelectedSentToUserId(undefined);
@@ -104,15 +102,15 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Category validation is only needed if not in send money flow, as it's auto-set otherwise
-    if (!amount || (!isSendMoneyFlow && !category) || !date) {
-      toast({ title: "Validation Error", description: "Amount, Date, and Category (if applicable) are required.", variant: "destructive" });
+    if (!amount || !date || (isSendMoneyFlow && !selectedSentToUserId) ) {
+      toast({ title: "Validation Error", description: "Amount, Date, and Recipient (if sending money) are required.", variant: "destructive" });
       return;
     }
-    if (isSendMoneyFlow && !selectedSentToUserId) {
-      toast({ title: "Validation Error", description: "Please select a recipient user for this payment.", variant: "destructive" });
-      return;
+    if (!isSendMoneyFlow && !category.trim()) {
+        toast({ title: "Validation Error", description: "Category is required for this transaction type.", variant: "destructive" });
+        return;
     }
+
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
       toast({ title: "Validation Error", description: "Amount must be a positive number.", variant: "destructive" });
@@ -120,25 +118,26 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
     }
 
     setIsSubmitting(true);
-    const transactionData = {
+    
+    const transactionPayload = {
       type: isSendMoneyFlow ? 'expense' : type, 
       amount: numericAmount,
-      category: category.trim(), // Will use the auto-set category for send money flow
-      description: description.trim() || undefined,
+      category: category.trim(), 
+      description: description.trim() || null, // Ensure null for empty string
       date: date.toISOString(),
-      ...(isSendMoneyFlow && selectedSentToUserId && { 
-          relatedUserId: selectedSentToUserId, 
-          relatedUserName: allUsers.find(u => u.id === selectedSentToUserId)?.name 
-      }),
+      sentToUserId: isSendMoneyFlow ? selectedSentToUserId : null,
+      sentToUserName: isSendMoneyFlow && selectedSentToUserId ? allUsers.find(u => u.id === selectedSentToUserId)?.name || null : null,
     };
 
-    // @ts-ignore
-    const result = await addTransactionAction(currentUser, transactionData);
+    const result = await addTransactionAction(currentUser, transactionPayload);
     setIsSubmitting(false);
 
     if (result.success && result.transaction) {
       const successType = isSendMoneyFlow ? 'Payment' : (type.charAt(0).toUpperCase() + type.slice(1));
       toast({ title: `${successType} Recorded`, description: `${category} of ${numericAmount} recorded.` });
+      if(result.error) { // To show the partial success error from the action
+        toast({ title: "Notice", description: result.error, variant: "default", duration: 7000 });
+      }
       onTransactionAdded();
       setIsOpen(false);
       resetForm();
@@ -148,7 +147,6 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
   };
   
   const getCategoryPlaceholder = () => {
-    // This is not used if isSendMoneyFlow is true, as category input is hidden
     if (type === 'income') return "e.g., Salary, Sales";
     if (type === 'purchase') return "e.g., Inventory, Supplies, Groceries";
     return "e.g., Utilities, Rent";
@@ -156,7 +154,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
 
   const dialogTitle = isSendMoneyFlow ? "Record Payment to User" : "Add New Transaction";
   const dialogDescription = isSendMoneyFlow 
-    ? "Log an expense for money sent to another user." 
+    ? "Log an expense for money sent to another user. An income transaction will also be recorded for the recipient." 
     : `Log a new ${type} entry.`;
 
   const filteredUsersForDropdown = useMemo(() => {
@@ -298,8 +296,8 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
               </Popover>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="transaction-description">Description (Optional)</Label>
-              <Input id="transaction-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g., Weekly supermarket run" />
+              <Label htmlFor="transaction-description">Description / Notes (Optional)</Label>
+              <Input id="transaction-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder={isSendMoneyFlow ? "e.g., Advance salary payment" : "e.g., Weekly supermarket run"} />
             </div>
           </div>
           <DialogFooter className="pt-4 border-t">
@@ -313,4 +311,3 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
     </Dialog>
   );
 }
-

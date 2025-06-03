@@ -1,5 +1,4 @@
 
-
 import { db } from './firebase';
 import {
   collection,
@@ -28,8 +27,12 @@ export async function addTransaction(
     type: TransactionType;
     amount: number;
     category: string;
-    description?: string;
+    description?: string | null; // Allow null
     date: string; // Expect ISO string date from client
+    sentToUserId?: string | null;
+    sentToUserName?: string | null;
+    receivedFromUserId?: string | null;
+    receivedFromUserName?: string | null;
   }
 ): Promise<Transaction | null> {
   if (!userId) {
@@ -44,15 +47,18 @@ export async function addTransaction(
       type: transactionData.type,
       amount: transactionData.amount,
       category: transactionData.category,
-      description: transactionData.description || null, // Ensure description is string or null
-      date: transactionData.date, // User-provided date
-      createdAt: new Date().toISOString(), // Changed to toISOString()
+      description: transactionData.description || null,
+      date: transactionData.date,
+      createdAt: new Date().toISOString(),
+      sentToUserId: transactionData.sentToUserId || null,
+      sentToUserName: transactionData.sentToUserName || null,
+      receivedFromUserId: transactionData.receivedFromUserId || null,
+      receivedFromUserName: transactionData.receivedFromUserName || null,
     };
     await setDoc(newTransactionRef, newTransaction);
     return newTransaction;
   } catch (error) {
     console.error("Error adding transaction to Firestore:", error);
-    // Log more detailed error information
     if (error instanceof Error) {
         console.error("Error name:", error.name);
         console.error("Error message:", error.message);
@@ -101,7 +107,12 @@ export async function updateTransaction(
 ): Promise<boolean> {
   try {
     const transactionDoc = doc(db, TRANSACTIONS_COLLECTION, transactionId);
-    await updateDoc(transactionDoc, updates);
+    // Ensure description is explicitly set to null if empty string, otherwise keep as is
+    const sanitizedUpdates = { ...updates };
+    if (sanitizedUpdates.description === '') {
+        sanitizedUpdates.description = null;
+    }
+    await updateDoc(transactionDoc, sanitizedUpdates);
     return true;
   } catch (error) {
     console.error("Error updating transaction:", error);
@@ -128,4 +139,3 @@ export async function deleteTransaction(transactionId: string): Promise<boolean>
 // export async function getNotesForUser(...) {}
 // export async function updateNote(...) {}
 // export async function deleteNote(...) {}
-

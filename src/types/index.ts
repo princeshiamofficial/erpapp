@@ -108,7 +108,26 @@ export interface GlobalSettings {
   areCommentsVisibleOnPublicPage?: boolean;
   rolesAllowedToEditOrders?: UserRole[];
   toastSoundUrl?: string | null;
-  leaderboardBackgroundImageUrl?: string | null; // Added leaderboard background image URL
+  leaderboardBackgroundImageUrl?: string | null;
+  leaderboardThemeSettings?: LeaderboardThemeSettings | null;
+}
+
+export interface LeaderboardThemeSettings {
+  backgroundMainStart?: string;
+  backgroundMainEnd?: string;
+  podiumBackground?: string;
+  textLight?: string;
+  listAreaBackground?: string;
+  listItemBackground?: string;
+  listItemBackgroundDark?: string;
+  listText?: string;
+  listTextDark?: string;
+  goldColor?: string;
+  rankBadgeBackground?: string;
+  rankBadgeText?: string;
+  arrowUpColor?: string;
+  arrowDownColor?: string;
+  subtleBorderColor?: string;
 }
 
 // --- ERP & Finance Manager Specific Types ---
@@ -144,9 +163,14 @@ export interface Transaction {
   type: TransactionType;
   amount: number;
   category: string; // User-defined category
-  description?: string;
+  description?: string | null; // Made description explicitly nullable
   date: string; // ISO string
   createdAt: string; // ISO string
+  // Fields for tracking transfers
+  sentToUserId?: string | null;
+  sentToUserName?: string | null;
+  receivedFromUserId?: string | null;
+  receivedFromUserName?: string | null;
 }
 
 export interface PersonalNote {
@@ -182,4 +206,3 @@ export interface Project {
   logisticsAt?: string;
   courierAt?: string;
 }
-
