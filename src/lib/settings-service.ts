@@ -19,6 +19,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   rolesAllowedToEditOrders: ['SYSTEM_ADMIN', 'ADMIN'], // Default: Admins and System Admins can edit
   toastSoundUrl: DEFAULT_TOAST_SOUND_URL,
   leaderboardBackgroundImageUrl: DEFAULT_LEADERBOARD_BACKGROUND_URL, // Default leaderboard background
+  canUsersAddExpenses: true, // New setting default
 };
 
 // Gets global settings from Firestore
@@ -37,6 +38,7 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         rolesAllowedToEditOrders: data.rolesAllowedToEditOrders ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToEditOrders,
         toastSoundUrl: data.toastSoundUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.toastSoundUrl : data.toastSoundUrl,
         leaderboardBackgroundImageUrl: data.leaderboardBackgroundImageUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.leaderboardBackgroundImageUrl : data.leaderboardBackgroundImageUrl,
+        canUsersAddExpenses: data.canUsersAddExpenses ?? DEFAULT_GLOBAL_SETTINGS.canUsersAddExpenses, // Handle new setting
       };
     } else {
       console.log("Global settings document not found, returning defaults. Creating document with defaults.");
@@ -184,6 +186,27 @@ export async function setLeaderboardBackgroundImageUrl(imageUrl: string | null):
     return true;
   } catch (error) {
     console.error("Error setting leaderboard background image URL:", error);
+    return false;
+  }
+}
+
+// Sets the canUsersAddExpenses setting
+export async function setCanUsersAddExpenses(canAdd: boolean): Promise<boolean> {
+  try {
+    const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+    const docSnap = await getDoc(settingsDocRef);
+    if (docSnap.exists()) {
+      await updateDoc(settingsDocRef, { canUsersAddExpenses: canAdd });
+    } else {
+      const initialData: GlobalSettings = {
+        ...DEFAULT_GLOBAL_SETTINGS,
+        canUsersAddExpenses: canAdd,
+      };
+      await setDoc(settingsDocRef, initialData);
+    }
+    return true;
+  } catch (error) {
+    console.error("Error setting canUsersAddExpenses:", error);
     return false;
   }
 }

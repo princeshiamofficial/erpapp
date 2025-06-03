@@ -110,6 +110,7 @@ export interface GlobalSettings {
   toastSoundUrl?: string | null;
   leaderboardBackgroundImageUrl?: string | null;
   leaderboardThemeSettings?: LeaderboardThemeSettings | null;
+  canUsersAddExpenses?: boolean; // New setting
 }
 
 export interface LeaderboardThemeSettings {

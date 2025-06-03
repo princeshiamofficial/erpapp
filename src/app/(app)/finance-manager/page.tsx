@@ -6,9 +6,10 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth-context";
-import type { Transaction, User, TransactionType } from "@/types";
+import type { Transaction, User, TransactionType, GlobalSettings } from "@/types"; // Added GlobalSettings
 import { getTransactionsForUser, getAllTransactions } from "@/lib/personal-finance-service";
 import { getUsers } from '@/lib/user-service';
+import { getGlobalSettings } from '@/lib/settings-service'; // Added
 import { deleteTransactionAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,6 +44,7 @@ export default function FinanceManagerPage() {
   const [viewMode, setViewMode] = useState<'personal' | 'global'>('personal');
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
   const [allUsersForDialog, setAllUsersForDialog] = useState<User[]>([]);
+  const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null); // New state for global settings
 
   const [isClient, setIsClient] = useState(false);
   useEffect(() => setIsClient(true), []);
@@ -63,33 +65,40 @@ export default function FinanceManagerPage() {
       let fetchedUsersForMap: User[] = [];
       let fetchedUsersForDialogLocal: User[] = [];
 
+      // Fetch global settings along with other data
+      const [settings, ...otherData] = await Promise.all([
+        getGlobalSettings(),
+        ...(currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global'
+          ? [getAllTransactions(), getUsers()]
+          : [getTransactionsForUser(currentUser.id), getUsers()]) // Fetch users even for personal view if admin for Send Money
+      ]);
+      setGlobalAppSettings(settings);
+
       if (currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global') {
-        const [allTrans, allSystemUsers] = await Promise.all([
-          getAllTransactions(),
-          getUsers()
-        ]);
-        fetchedTransactions = allTrans;
-        fetchedUsersForMap = allSystemUsers;
-        fetchedUsersForDialogLocal = allSystemUsers.filter(u => u.id !== currentUser.id && u.role !== 'SYSTEM_ADMIN'); // Exclude current admin and other sys admins for Send Money
-        
+        fetchedTransactions = otherData[0] as Transaction[];
+        fetchedUsersForMap = otherData[1] as User[];
+        fetchedUsersForDialogLocal = fetchedUsersForMap.filter(u => u.id !== currentUser.id && u.role !== 'SYSTEM_ADMIN');
         const newUserMap = new Map(fetchedUsersForMap.map(user => [user.id, user.name]));
         setUserMap(newUserMap);
-      } else { // Personal view for all users, or if admin selects personal
-        fetchedTransactions = await getTransactionsForUser(currentUser.id);
-        setUserMap(new Map()); // Clear map if not in global view
-        if (currentUser.role === 'SYSTEM_ADMIN') { // Still need users for Send Money if admin is in personal view
-            const allSystemUsers = await getUsers();
+      } else {
+        fetchedTransactions = otherData[0] as Transaction[];
+        const allSystemUsers = otherData[1] as User[];
+        setUserMap(new Map());
+         if (currentUser.role === 'SYSTEM_ADMIN') {
             fetchedUsersForDialogLocal = allSystemUsers.filter(u => u.id !== currentUser.id && u.role !== 'SYSTEM_ADMIN');
+        } else {
+           fetchedUsersForDialogLocal = []; // Non-admins don't need this for "Send Money"
         }
       }
       setAllUsersForDialog(fetchedUsersForDialogLocal);
-      setTransactions(fetchedTransactions);
+      setTransactions(fetchedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch (error) {
-      console.error("Failed to fetch financial data or users:", error);
-      toast({ title: "Error", description: "Could not load transactions or user data.", variant: "destructive" });
+      console.error("Failed to fetch financial data, users, or settings:", error);
+      toast({ title: "Error", description: "Could not load financial data, users, or settings.", variant: "destructive" });
       setTransactions([]);
       setUserMap(new Map());
       setAllUsersForDialog([]);
+      setGlobalAppSettings(null);
     } finally {
       setIsLoading(false);
     }
@@ -159,6 +168,9 @@ export default function FinanceManagerPage() {
     );
   }
 
+  const canUserAddExpense = currentUser.role === 'SYSTEM_ADMIN' || (globalAppSettings?.canUsersAddExpenses ?? true);
+
+
   return (
     <div className="space-y-6 p-1 sm:p-0">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
@@ -180,11 +192,13 @@ export default function FinanceManagerPage() {
               </Button>
             </AddTransactionDialog>
           )}
-          <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData}>
-            <Button size="default" className="bg-red-600 hover:bg-red-700 text-white h-10">
-              <Minus className="mr-2 h-5 w-5" /> Add Expense
-            </Button>
-          </AddTransactionDialog>
+          {canUserAddExpense && (
+            <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData}>
+              <Button size="default" className="bg-red-600 hover:bg-red-700 text-white h-10">
+                <Minus className="mr-2 h-5 w-5" /> Add Expense
+              </Button>
+            </AddTransactionDialog>
+          )}
           {currentUser.role === 'SYSTEM_ADMIN' && (
             <AddTransactionDialog
                 currentUser={currentUser}
@@ -262,7 +276,9 @@ export default function FinanceManagerPage() {
               <div className="text-center py-10 text-muted-foreground">
                 <DollarSign className="h-16 w-16 mx-auto opacity-30 mb-3" />
                 <p className="text-lg font-medium">No transactions yet.</p>
-                <p className="text-sm">Add your first income or expense to get started!</p>
+                <p className="text-sm">
+                  {canUserAddExpense || currentUser.role === 'SYSTEM_ADMIN' ? "Add your first income or expense to get started!" : "Expense logging may be disabled for your role."}
+                </p>
               </div>
             )}
           </CardContent>

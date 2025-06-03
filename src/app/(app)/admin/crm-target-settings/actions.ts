@@ -7,7 +7,8 @@ import {
   setCommentsVisibility,
   setRolesAllowedToEditOrders,
   setToastSoundUrl,
-  setLeaderboardBackgroundImageUrl // Added import
+  setLeaderboardBackgroundImageUrl,
+  setCanUsersAddExpenses // Added import
 } from "@/lib/settings-service";
 import type { UserRole, User } from "@/types";
 import { adminApp } from '@/lib/firebase-admin';
@@ -96,6 +97,21 @@ export async function updateLeaderboardBackgroundImageUrlAction(imageUrl: string
     return { success: false, error: "Failed to update leaderboard background image URL in database." };
   } catch (error) {
     console.error("Error in updateLeaderboardBackgroundImageUrlAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updateCanUsersAddExpensesAction(canAdd: boolean): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setCanUsersAddExpenses(canAdd);
+    if (success) {
+      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/finance-manager"); // Revalidate finance manager page
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update expense logging permission in database." };
+  } catch (error) {
+    console.error("Error in updateCanUsersAddExpensesAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

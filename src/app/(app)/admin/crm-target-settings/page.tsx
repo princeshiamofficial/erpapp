@@ -13,21 +13,22 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { CustomStatus, UserRole, User } from "@/types";
+import type { CustomStatus, UserRole, User, GlobalSettings } from "@/types";
 import { getStatuses } from '@/lib/status-service';
 import { getUsers } from '@/lib/user-service';
-import { getGlobalSettings, GlobalSettings } from '@/lib/settings-service';
+import { getGlobalSettings as fetchGlobalSettings } from '@/lib/settings-service';
 import {
   updateCompletionStatusIdsAction,
   updateCommentsVisibilityAction,
   updateRolesAllowedToEditOrdersAction,
   updateToastSoundUrlAction,
-  updateLeaderboardBackgroundImageUrlAction, // Added action
+  updateLeaderboardBackgroundImageUrlAction,
+  updateCanUsersAddExpensesAction, // Added action
   sendPushNotificationAction
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon } from 'lucide-react';
+import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon, DollarSign } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
@@ -53,7 +54,8 @@ export default function CrmTargetSettingsPage() {
   const [areCommentsVisible, setAreCommentsVisible] = useState(true);
   const [rolesAllowedToEdit, setRolesAllowedToEdit] = useState<Set<UserRole>>(new Set(['ADMIN', 'SYSTEM_ADMIN']));
   const [toastSoundUrl, setToastSoundUrl] = useState<string>('');
-  const [leaderboardBgUrl, setLeaderboardBgUrl] = useState<string>(''); // New state for leaderboard bg
+  const [leaderboardBgUrl, setLeaderboardBgUrl] = useState<string>('');
+  const [canUsersAddExpensesSetting, setCanUsersAddExpensesSetting] = useState(true); // New setting state
 
   // Notification states
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -72,7 +74,8 @@ export default function CrmTargetSettingsPage() {
   const [isSubmittingCommentsVisibility, setIsSubmittingCommentsVisibility] = useState(false);
   const [isSubmittingOrderEditingPermissions, setIsSubmittingOrderEditingPermissions] = useState(false);
   const [isSubmittingToastSound, setIsSubmittingToastSound] = useState(false);
-  const [isSubmittingLeaderboardBg, setIsSubmittingLeaderboardBg] = useState(false); // New loading state
+  const [isSubmittingLeaderboardBg, setIsSubmittingLeaderboardBg] = useState(false);
+  const [isSubmittingCanUsersAddExpenses, setIsSubmittingCanUsersAddExpenses] = useState(false); // New loading state
   const [isSendingNotification, setIsSendingNotification] = useState(false);
   const [isLoadingUsersForNotifAndTokens, setIsLoadingUsersForNotifAndTokens] = useState(false);
 
@@ -87,7 +90,7 @@ export default function CrmTargetSettingsPage() {
     try {
       const [fetchedStatuses, globalSettings, fetchedUsers] = await Promise.all([
         getStatuses(),
-        getGlobalSettings(),
+        fetchGlobalSettings(),
         getUsers(),
       ]);
       setAllStatuses(fetchedStatuses);
@@ -95,7 +98,8 @@ export default function CrmTargetSettingsPage() {
       setAreCommentsVisible(globalSettings.areCommentsVisibleOnPublicPage ?? true);
       setRolesAllowedToEdit(new Set(globalSettings.rolesAllowedToEditOrders ?? ['ADMIN', 'SYSTEM_ADMIN']));
       setToastSoundUrl(globalSettings.toastSoundUrl ?? '');
-      setLeaderboardBgUrl(globalSettings.leaderboardBackgroundImageUrl ?? ''); // Set leaderboard bg URL
+      setLeaderboardBgUrl(globalSettings.leaderboardBackgroundImageUrl ?? '');
+      setCanUsersAddExpensesSetting(globalSettings.canUsersAddExpenses ?? true); // Set new setting
 
       setAllUsers(fetchedUsers.filter(u => u.role !== 'SYSTEM_ADMIN'));
     } catch (error) {
@@ -190,6 +194,19 @@ export default function CrmTargetSettingsPage() {
       toast({ title: "Update Failed", description: result.error || "Could not save leaderboard background image URL.", variant: "destructive" });
     }
     setIsSubmittingLeaderboardBg(false);
+  };
+
+  // --- New Expense Logging Permission Handler ---
+  const handleToggleCanUsersAddExpenses = async (canAdd: boolean) => {
+    setIsSubmittingCanUsersAddExpenses(true);
+    const result = await updateCanUsersAddExpensesAction(canAdd);
+    if (result.success) {
+      setCanUsersAddExpensesSetting(canAdd);
+      toast({ title: "Settings Updated", description: `Non-admin expense logging is now ${canAdd ? 'enabled' : 'disabled'}.` });
+    } else {
+      toast({ title: "Update Failed", description: result.error || "Could not update expense logging permission.", variant: "destructive" });
+    }
+    setIsSubmittingCanUsersAddExpenses(false);
   };
 
 
@@ -315,22 +332,46 @@ export default function CrmTargetSettingsPage() {
 
       <Separator className="my-8" />
 
-      {/* Public Page Settings Card */}
+      {/* Feature Visibility Settings Card */}
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
-          <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><MessageSquare className="h-6 w-6 text-primary" />Public Tracking Page Settings</CardTitle>
-          <CardDescription className="text-muted-foreground text-sm mt-0.5">Control features on the public order tracking view.</CardDescription>
+          <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Settings2 className="h-6 w-6 text-primary" />Feature Visibility & Permissions</CardTitle>
+          <CardDescription className="text-muted-foreground text-sm mt-0.5">Control features on public pages and define editing rights.</CardDescription>
         </CardHeader>
-        <CardContent className="p-6">
-          {isLoading ? <div className="flex items-center space-x-2"><Skeleton className="h-6 w-6 rounded" /><Skeleton className="h-5 w-48 rounded" /></div>
-          : <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-              <Label htmlFor="commentsVisibilitySwitch" className="flex flex-col space-y-1 cursor-pointer">
-                <span>Comments Section Visibility</span><span className="font-normal leading-snug text-muted-foreground text-xs">Show or hide the comments section on public tracking pages.</span>
-              </Label>
-              <Switch id="commentsVisibilitySwitch" checked={areCommentsVisible} onCheckedChange={handleToggleCommentsVisibility} disabled={isSubmittingCommentsVisibility} aria-label="Toggle comments section visibility"/>
-            </div>}
+        <CardContent className="p-6 space-y-4">
+          {isLoading ? (
+            <>
+              <div className="flex items-center space-x-2"><Skeleton className="h-6 w-6 rounded" /><Skeleton className="h-5 w-48 rounded" /></div>
+              <div className="flex items-center space-x-2"><Skeleton className="h-6 w-6 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                <Label htmlFor="commentsVisibilitySwitch" className="flex flex-col space-y-1 cursor-pointer">
+                  <span>Comments Section Visibility (Public Tracking)</span><span className="font-normal leading-snug text-muted-foreground text-xs">Show or hide comments on public order tracking pages.</span>
+                </Label>
+                <Switch id="commentsVisibilitySwitch" checked={areCommentsVisible} onCheckedChange={handleToggleCommentsVisibility} disabled={isSubmittingCommentsVisibility} aria-label="Toggle comments section visibility"/>
+              </div>
+              <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                <Label htmlFor="canUsersAddExpensesSwitch" className="flex flex-col space-y-1 cursor-pointer">
+                  <span>Enable Expense Logging for Non-Admins</span>
+                  <span className="font-normal leading-snug text-muted-foreground text-xs">
+                    Allows CRM, Admin, and Designer Representative roles to add their own expenses. System Admins can always log expenses.
+                  </span>
+                </Label>
+                <Switch
+                  id="canUsersAddExpensesSwitch"
+                  checked={canUsersAddExpensesSetting}
+                  onCheckedChange={handleToggleCanUsersAddExpenses}
+                  disabled={isSubmittingCanUsersAddExpenses}
+                  aria-label="Toggle non-admin expense logging"
+                />
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
+
 
       <Separator className="my-8" />
 
@@ -396,7 +437,7 @@ export default function CrmTargetSettingsPage() {
 
       <Separator className="my-8" />
 
-      {/* Leaderboard Background Image Card -- NEW -- */}
+      {/* Leaderboard Background Image Card */}
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
