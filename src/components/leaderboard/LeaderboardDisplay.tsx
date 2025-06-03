@@ -4,7 +4,7 @@
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Crown, ArrowUp, ArrowDown } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { User, UserRole } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -64,8 +64,8 @@ const PodiumItem: React.FC<{ user: CrmPerformanceData; rank: number; isCenter?: 
         <AvatarImage src={user.userAvatar || `https://placehold.co/128x128.png?text=${getInitials(user.userName)}`} alt={user.userName} data-ai-hint="leaderboard user avatar" />
         <AvatarFallback className="bg-gray-700 text-white text-2xl sm:text-3xl">{getInitials(user.userName)}</AvatarFallback>
       </Avatar>
-      <p className="font-semibold text-sm sm:text-base mt-2 truncate w-full px-1">{user.userName}</p>
-      <p className="text-lg sm:text-xl font-bold mt-0.5">{user.ordersCompleted.toLocaleString()}</p>
+      <p className="font-semibold text-sm sm:text-base mt-2 truncate w-full px-1 text-[hsl(var(--leaderboard-text-light))]">{user.userName}</p>
+      <p className="text-lg sm:text-xl font-bold mt-0.5 text-[hsl(var(--leaderboard-text-light))]">{user.ordersCompleted.toLocaleString()}</p>
     </motion.div>
   );
 };
@@ -82,7 +82,8 @@ const RankListItem: React.FC<{ user: CrmPerformanceData; index: number }> = ({ u
     {/* Colored bar on the right edge */}
     {user.trend === 'up' && <div className="absolute right-0 top-0 bottom-0 w-1 bg-[hsl(var(--leaderboard-arrow-up))] rounded-l-sm"></div>}
     {user.trend === 'down' && <div className="absolute right-0 top-0 bottom-0 w-1 bg-[hsl(var(--leaderboard-arrow-down))] rounded-l-sm"></div>}
-    {user.trend === 'same' && <div className="absolute right-0 top-0 bottom-0 w-1 bg-gray-300 dark:bg-gray-600 rounded-l-sm"></div>}
+    {user.trend === 'same' && !user.pointChange && <div className="absolute right-0 top-0 bottom-0 w-1 bg-gray-300 dark:bg-gray-600 rounded-l-sm"></div>}
+
 
     <p className="font-semibold w-8 text-center text-sm text-[hsl(var(--leaderboard-list-text))]">{user.rank}</p>
     <Avatar className="mx-3 h-10 w-10 border-2 border-gray-200 dark:border-gray-700">
@@ -147,12 +148,12 @@ export function LeaderboardDisplay({ performanceData, currentUser, timePeriodLab
       )}
       
       {/* List Section */}
-      {performanceData.length > 0 && ( // Changed to check performanceData for the whole list container
-        <div className="bg-[hsl(var(--leaderboard-list-bg))] rounded-t-[30px] sm:rounded-t-[40px] shadow-2xl pt-4 pb-8 min-h-[300px] mt-[-50px] sm:mt-[-60px]">
+      {performanceData.length > 0 && ( 
+        <div className="bg-[hsl(var(--leaderboard-list-bg))] rounded-t-[30px] sm:rounded-t-[40px] shadow-2xl pt-4 pb-8 min-h-[300px] mt-[-50px] sm:mt-[-60px] mx-0 sm:mx-2 md:mx-4 lg:mx-auto lg:max-w-2xl">
           <AnimatePresence>
             {rest.map((user, index) => (
               <RankListItem
-                key={user.userId}
+                key={user.userId + (user.rank || index)} // Ensure key is unique
                 user={user}
                 index={index}
               />
@@ -161,7 +162,7 @@ export function LeaderboardDisplay({ performanceData, currentUser, timePeriodLab
           {rest.length === 0 && topThree.length > 0 && (
              <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-8">Only podium members this period.</p>
           )}
-           {performanceData.length === 0 && (
+           {performanceData.length === 0 && ( // This condition will likely not be met if outer condition is true
              <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-8">No one on the leaderboard yet for {timePeriodLabel}.</p>
           )}
         </div>
@@ -169,3 +170,4 @@ export function LeaderboardDisplay({ performanceData, currentUser, timePeriodLab
     </div>
   );
 }
+

@@ -2,14 +2,16 @@
 "use client"; 
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { LeaderboardClientTabs } from '@/components/leaderboard/LeaderboardClientTabs';
-import type { User, TrackingLink, GlobalSettings, UserRole, OrderLogEntry } from '@/types';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getUsers } from '@/lib/user-service';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChevronLeft, Crown } from 'lucide-react';
+import Link from 'next/link';
+import { LeaderboardDisplay } from '@/components/leaderboard/LeaderboardDisplay'; // Updated import
+import type { User, TrackingLink, GlobalSettings, UserRole } from '@/types'; // CrmPerformanceData will be defined in LeaderboardDisplay
 import {
   startOfMonth,
   endOfMonth,
@@ -20,16 +22,19 @@ import {
 } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
-interface CrmPerformanceData {
+// CrmPerformanceData type might be better defined within LeaderboardDisplay or a shared types file if complex
+export interface CrmPerformanceData {
   userId: string;
   userName: string;
   userAvatar?: string;
   ordersCompleted: number;
-  target: number;
+  target: number; // Target is no longer displayed per image
   rank?: number;
   role?: UserRole;
-  trend?: 'up' | 'down' | 'same';
+  trend?: 'up' | 'down' | 'same'; // For +2 ▲
+  pointChange?: number; // e.g. 2 or -1
 }
+
 
 export default function LeaderboardPage() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
@@ -38,6 +43,7 @@ export default function LeaderboardPage() {
   const [crmWeeklyPerformance, setCrmWeeklyPerformance] = React.useState<CrmPerformanceData[]>([]);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
+  const [selectedPeriod, setSelectedPeriod] = useState<'monthly' | 'weekly'>('monthly');
 
   const calculatePerformance = useCallback(async (
     crmUsers: User[],
@@ -53,13 +59,13 @@ export default function LeaderboardPage() {
       periodStart = startOfMonth(now);
       periodEnd = endOfMonth(now);
     } else { // weekly
-      periodStart = startOfWeek(now, { weekStartsOn: 1 }); // Assuming week starts on Monday
+      periodStart = startOfWeek(now, { weekStartsOn: 1 });
       periodEnd = endOfWeek(now, { weekStartsOn: 1 });
     }
 
     const completionStatusIds = globalSettings.crmCompletionStatusIds || [];
     if (completionStatusIds.length === 0) {
-        console.warn(`Leaderboard: No CRM completion status IDs configured in global settings. Performance will be 0 for all.`);
+        console.warn(`Leaderboard: No CRM completion status IDs configured. Performance will be 0.`);
     }
 
     const performanceData = crmUsers.map(crmUser => {
@@ -88,6 +94,10 @@ export default function LeaderboardPage() {
         ? (crmUser.monthlyOrderTarget ?? globalSettings.globalMonthlyOrderTarget ?? 0)
         : (crmUser.weeklyOrderTarget ?? globalSettings.globalWeeklyOrderTarget ?? 0);
 
+      // Dummy trend and pointChange for now
+      const pointChange = Math.floor(Math.random() * 5) - 2; // Random number between -2 and 2
+      const trend = pointChange > 0 ? 'up' : pointChange < 0 ? 'down' : 'same';
+
       return {
         userId: crmUser.id,
         userName: crmUser.name,
@@ -95,11 +105,11 @@ export default function LeaderboardPage() {
         ordersCompleted: ordersCompletedInPeriod,
         target: target,
         role: crmUser.role,
-        trend: 'same' as 'same', // Placeholder trend
+        trend,
+        pointChange: Math.abs(pointChange),
       };
     });
 
-    // Rank users
     performanceData.sort((a, b) => b.ordersCompleted - a.ordersCompleted || a.userName.localeCompare(b.userName));
     performanceData.forEach((user, index) => {
       user.rank = index + 1;
@@ -125,19 +135,8 @@ export default function LeaderboardPage() {
 
       const crmUsers = allUsers.filter(user => user.role === 'CRM');
       
-      // Include current user if they are not CRM but for some reason might have data (e.g. admin testing)
-      // Or if they are a CRM, they are already in crmUsers.
-      // This mainly ensures the "You" highlight works correctly if the current user is among the CRMs.
       let displayUsers = [...crmUsers];
-      if (currentUser && !crmUsers.find(u => u.id === currentUser.id)) {
-        // If current user is not CRM, but we want to show them if they had data (scenario unlikely for CRM-specific leaderboard)
-        // For now, we will only show CRM users, and highlight the current user if they are one of them.
-      }
-      
-      const monthlyData = await calculatePerformance(displayUsers, allOrders, globalSettings, 'monthly');
-      const weeklyData = await calculatePerformance(displayUsers, allOrders, globalSettings, 'weekly');
-      
-      // Update "You" for the current user
+      // Modify current user's name to "You" if they are in the list
       const mapDataForCurrentUser = (data: CrmPerformanceData[]): CrmPerformanceData[] => {
         return data.map(d => 
           currentUser && d.userId === currentUser.id 
@@ -145,6 +144,9 @@ export default function LeaderboardPage() {
             : d
         );
       };
+      
+      const monthlyData = await calculatePerformance(displayUsers, allOrders, globalSettings, 'monthly');
+      const weeklyData = await calculatePerformance(displayUsers, allOrders, globalSettings, 'weekly');
 
       setCrmMonthlyPerformance(mapDataForCurrentUser(monthlyData));
       setCrmWeeklyPerformance(mapDataForCurrentUser(weeklyData));
@@ -168,28 +170,31 @@ export default function LeaderboardPage() {
 
   if (isAuthLoading || isLoadingData) {
     return (
-      <div className="space-y-8 p-4 sm:p-6 lg:p-8 bg-background min-h-screen">
-        <div className="flex flex-col sm:flex-row items-center justify-between">
-           <h1 className="text-3xl sm:text-4xl font-extrabold text-center sm:text-left text-transparent bg-clip-text bg-gradient-to-r from-primary via-orange-500 to-red-500 mb-2 sm:mb-0">
-            Leaderboard
-          </h1>
+      <div className="min-h-screen bg-[hsl(var(--leaderboard-bg-dark-purple))] text-[hsl(var(--leaderboard-text-light))] p-4 relative overflow-hidden">
+        {/* Placeholder for background image/pattern */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center opacity-30"
+          style={{backgroundImage: "url('https://placehold.co/1200x800/3A225D/FFFFFF.png?text=Starry+Night+Sky')"}}
+          data-ai-hint="starry night sky"
+        ></div>
+        <header className="relative z-10 flex items-center justify-between py-3 px-2 mb-6">
+            <Link href="/dashboard" className="p-2 -ml-2">
+                <ChevronLeft className="h-6 w-6" />
+            </Link>
+            <h1 className="text-xl font-semibold tracking-wider">LEADERBOARD</h1>
+            <Skeleton className="h-9 w-28 rounded-md bg-white/10" />
+        </header>
+        <div className="relative z-10 text-center mb-8">
+          <Crown className="h-10 w-10 text-[hsl(var(--leaderboard-gold))] mx-auto mb-2 opacity-50" />
+          <div className="flex justify-around items-end max-w-md mx-auto">
+            <Skeleton className="h-40 w-24 rounded-t-full bg-[hsl(var(--leaderboard-podium-bg))] opacity-50" />
+            <Skeleton className="h-48 w-28 rounded-t-full bg-[hsl(var(--leaderboard-podium-bg))] opacity-50" />
+            <Skeleton className="h-40 w-24 rounded-t-full bg-[hsl(var(--leaderboard-podium-bg))] opacity-50" />
+          </div>
         </div>
-        <Skeleton className="h-10 w-full sm:w-1/3 mx-auto rounded-md" /> {/* TabsList Skeleton */}
-        <Skeleton className="h-6 w-1/4 mx-auto rounded-md mt-2 mb-4" /> {/* Period Label Skeleton */}
-        <div className="flex flex-col sm:flex-row justify-around items-end gap-3 sm:gap-2 md:gap-0 mt-4 sm:mt-8 px-2 sm:px-0">
-          {[...Array(3)].map((_, i) => (
-            <Card key={`podium-skel-${i}`} className="flex-1 w-full sm:w-auto flex flex-col items-center p-3 sm:p-4 md:p-6 rounded-2xl shadow-xl">
-              <Skeleton className="h-6 w-8 mb-2 sm:mb-3 rounded" />
-              <Skeleton className="h-16 w-16 sm:h-20 md:h-24 sm:w-20 md:w-24 rounded-full mb-2 sm:mb-3 md:mb-4" />
-              <Skeleton className="h-5 w-24 mb-1 rounded" />
-              <Skeleton className="h-4 w-16 rounded" />
-              <Skeleton className="h-3 w-12 mt-1 rounded" />
-            </Card>
-          ))}
-        </div>
-        <div className="space-y-2 sm:space-y-2.5 md:space-y-3 mt-6 sm:mt-8">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={`list-skel-${i}`} className="h-16 w-full rounded-lg" />
+        <div className="relative z-10 bg-[hsl(var(--leaderboard-list-bg))] p-4 rounded-t-3xl mt-[-30px] shadow-2xl">
+          {[...Array(5)].map((_, i) => (
+            <Skeleton key={`list-skel-${i}`} className="h-16 w-full rounded-lg mb-2 bg-gray-200" />
           ))}
         </div>
       </div>
@@ -198,32 +203,41 @@ export default function LeaderboardPage() {
   
   if (fetchError) {
       return (
-        <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-background min-h-screen">
-            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400">Leaderboard</h1>
-             <Card className="shadow-xl bg-destructive/10 border-destructive/30">
-              <CardContent className="p-6">
-                <p className="text-destructive text-center">{fetchError}</p>
-              </CardContent>
-            </Card>
+        <div className="min-h-screen bg-[hsl(var(--leaderboard-bg-dark-purple))] text-[hsl(var(--leaderboard-text-light))] p-4 flex flex-col items-center justify-center">
+            <h1 className="text-xl font-semibold mb-4">Error</h1>
+            <p>{fetchError}</p>
         </div>
       );
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-background min-h-screen">
-       <div className="flex flex-col sm:flex-row items-center justify-between">
-         <h1 className="text-3xl sm:text-4xl font-extrabold text-center sm:text-left text-transparent bg-clip-text bg-gradient-to-r from-primary via-orange-500 to-red-500 mb-2 sm:mb-0">
-            Leaderboard
-          </h1>
-          {/* Placeholder for future actions like "Export" or "Settings" */}
-      </div>
+    <div className="min-h-screen bg-[hsl(var(--leaderboard-bg-dark-purple))] text-[hsl(var(--leaderboard-text-light))] p-0 sm:p-0 md:p-0 lg:p-0 relative overflow-x-hidden">
+      <div 
+        className="absolute inset-0 bg-cover bg-center opacity-30"
+        style={{backgroundImage: "url('https://placehold.co/1200x800/3A225D/FFFFFF.png?text=Starry+Night+Sky')"}}
+        data-ai-hint="starry night sky background"
+      ></div>
+      <header className="relative z-10 flex items-center justify-between py-4 px-4 sm:px-6 mb-4 sm:mb-6">
+        <Link href="/dashboard" className="p-2 -ml-2 text-[hsl(var(--leaderboard-text-light))] hover:opacity-80 transition-opacity">
+          <ChevronLeft className="h-6 w-6" />
+        </Link>
+        <h1 className="text-lg sm:text-xl font-semibold tracking-wider text-[hsl(var(--leaderboard-text-light))]">LEADERBOARD</h1>
+        <Select value={selectedPeriod} onValueChange={(value) => setSelectedPeriod(value as 'monthly' | 'weekly')}>
+          <SelectTrigger className="w-[120px] sm:w-[140px] bg-white/10 border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))] focus:ring-[hsl(var(--leaderboard-gold))] h-9 text-xs sm:text-sm">
+            <SelectValue placeholder="Select period" />
+          </SelectTrigger>
+          <SelectContent className="bg-[hsl(var(--leaderboard-podium-bg))] border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))]">
+            <SelectItem value="monthly" className="focus:bg-white/20">Monthly</SelectItem>
+            <SelectItem value="weekly" className="focus:bg-white/20">Weekly</SelectItem>
+          </SelectContent>
+        </Select>
+      </header>
       
-      <LeaderboardClientTabs
-        monthlyPerformanceData={crmMonthlyPerformance}
-        weeklyPerformanceData={crmWeeklyPerformance}
+      <LeaderboardDisplay
+        performanceData={selectedPeriod === 'monthly' ? crmMonthlyPerformance : crmWeeklyPerformance}
         currentUser={currentUser}
+        timePeriodLabel={selectedPeriod === 'monthly' ? 'This Month' : 'This Week'}
       />
     </div>
   );
 }
-
