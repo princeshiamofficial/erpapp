@@ -38,19 +38,19 @@ const PodiumItem: React.FC<{ user: CrmPerformanceData; isCenter?: boolean; anima
   <motion.div
     initial={{ opacity: 0, y: 30, scale: 0.9 }}
     animate={{ opacity: 1, y: 0, scale: 1 }}
-    transition={{ duration: 0.5, delay: (isCenter ? animationDelay : animationDelay + (user.rank === 2 ? 0.1 : 0.2)) + (user.rank || 0) * 0.05 }}
+    transition={{ duration: 0.5, delay: (isCenter ? animationDelay : animationDelay + (user.rank === 2 ? 0.1 : 0.2)) + ((user.rank || 0) * 0.05) }}
     whileHover={{ scale: isCenter ? 1.15 : 1.05, y: isCenter ? -15 : -10, boxShadow: "0 25px 50px -12px hsl(var(--primary-hsl)/0.4)" }}
     className={cn(
-      "flex-1 w-full sm:w-auto flex flex-col items-center p-3 sm:p-4 md:p-6 rounded-2xl shadow-xl bg-card border transform transition-all duration-300 ease-out",
-      isCenter ? "border-primary shadow-primary/20" : "border-border/50", // Base border & shadow for #1
-      isCenter && "sm:scale-110 sm:z-10", // Responsive scaling for #1 on sm+
+      "flex-1 w-full sm:w-auto flex flex-col items-center p-3 sm:p-4 md:p-6 rounded-2xl shadow-xl bg-card transform transition-all duration-300 ease-out",
+      isCenter ? "border-primary shadow-primary/30" : "border-border/50",
+      isCenter && "sm:scale-110 sm:z-10",
       !isCenter && "sm:scale-100"
     )}
   >
     <p className="text-lg sm:text-xl md:text-2xl font-bold text-primary mb-1 sm:mb-2 md:mb-3 text-center">#{user.rank}</p>
     <div className="relative mb-2 sm:mb-3 md:mb-4">
       <Avatar className={cn(
-        "h-16 w-16 sm:h-20 md:h-24 sm:w-20 md:w-24 border-4 shadow-lg", // Adjusted base size
+        "h-16 w-16 sm:h-20 md:h-24 sm:w-20 md:w-24 border-4 shadow-lg",
         isCenter ? "border-primary" : "border-muted"
       )}>
         <AvatarImage src={user.userAvatar || `https://placehold.co/128x128.png?text=${getInitials(user.userName)}`} alt={user.userName} data-ai-hint="user portrait" />
@@ -133,13 +133,9 @@ const LeaderboardContent: React.FC<{
       {topThree.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-around items-end gap-3 sm:gap-2 md:gap-0 mt-4 sm:mt-8 px-2 sm:px-0">
           {/* Order for vertical stack: #1, #2, #3. For horizontal: #2, #1, #3 */}
-          {isCenterPodiumFirst => ( /* This is a conceptual flag, actual logic below */
-            <>
-              {topThree.find(u => u.rank === 2) && <PodiumItem user={topThree.find(u => u.rank === 2)!} animationDelay={0.1} />}
-              {topThree.find(u => u.rank === 1) && <PodiumItem user={topThree.find(u => u.rank === 1)!} isCenter animationDelay={0} />}
-              {topThree.find(u => u.rank === 3) && <PodiumItem user={topThree.find(u => u.rank === 3)!} animationDelay={0.2} />}
-            </>
-          )()}
+          {topThree.find(u => u.rank === 2) && <PodiumItem user={topThree.find(u => u.rank === 2)!} animationDelay={0.1} />}
+          {topThree.find(u => u.rank === 1) && <PodiumItem user={topThree.find(u => u.rank === 1)!} isCenter animationDelay={0} />}
+          {topThree.find(u => u.rank === 3) && <PodiumItem user={topThree.find(u => u.rank === 3)!} animationDelay={0.2} />}
         </div>
       )}
       
