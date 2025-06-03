@@ -4,7 +4,7 @@
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LeaderboardClientTabs } from '@/components/leaderboard/LeaderboardClientTabs';
-import type { User, TrackingLink, GlobalSettings } from '@/types';
+import type { User, TrackingLink, GlobalSettings, UserRole } from '@/types';
 import { useAuth } from '@/contexts/auth-context'; // Import useAuth to get currentUser
 import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 
@@ -19,29 +19,29 @@ interface CrmPerformanceData {
   ordersCompleted: number;
   target: number;
   rank?: number;
-  // Add a trend field for visual purposes, actual logic would be elsewhere
+  role?: UserRole; // Added role for clarity in dummy data
   trend?: 'up' | 'down' | 'same'; 
 }
 
 // Dummy data for demonstration purposes, replace with actual data fetching
 const DUMMY_MONTHLY_DATA: CrmPerformanceData[] = [
-  { userId: 'user1', userName: 'Anna D.', ordersCompleted: 832, target: 800, rank: 1, userAvatar: 'https://placehold.co/128x128/A8D8EA/333333.png?text=AD', trend: 'up' },
-  { userId: 'user2', userName: 'Mike L.', ordersCompleted: 640, target: 700, rank: 2, userAvatar: 'https://placehold.co/112x112/C1E1C1/333333.png?text=ML', trend: 'up' },
-  { userId: 'user3', userName: 'Joe H.', ordersCompleted: 599, target: 600, rank: 3, userAvatar: 'https://placehold.co/112x112/D8D8D8/333333.png?text=JH', trend: 'down' },
-  { userId: 'user4', userName: 'Lea L.', ordersCompleted: 530, target: 550, rank: 4, userAvatar: 'https://placehold.co/40x40/FFDBDB/333333.png?text=LL', trend: 'down' },
-  { userId: 'currentUser', userName: 'You', ordersCompleted: 420, target: 500, rank: 5, userAvatar: 'https://placehold.co/40x40/E0E7FF/333333.png?text=YOU', trend: 'up' },
-  { userId: 'user6', userName: 'Sebastian M.', ordersCompleted: 410, target: 400, rank: 6, userAvatar: 'https://placehold.co/40x40/4A4A4A/ffffff.png?text=SM', trend: 'up' },
-  { userId: 'user7', userName: 'Garfielda C.', ordersCompleted: 390, target: 450, rank: 7, userAvatar: 'https://placehold.co/40x40/purple/white.png?text=GC', trend: 'down' },
-  { userId: 'user8', userName: 'Olivia P.', ordersCompleted: 350, target: 380, rank: 8, userAvatar: 'https://placehold.co/40x40/FFC0CB/333333.png?text=OP', trend: 'same' },
+  { userId: 'user1', userName: 'Anna D.', ordersCompleted: 832, target: 800, rank: 1, userAvatar: 'https://placehold.co/128x128/A8D8EA/333333.png?text=AD', trend: 'up', role: 'CRM' },
+  { userId: 'user2', userName: 'Mike L.', ordersCompleted: 640, target: 700, rank: 2, userAvatar: 'https://placehold.co/112x112/C1E1C1/333333.png?text=ML', trend: 'up', role: 'ADMIN' },
+  { userId: 'user3', userName: 'Joe H.', ordersCompleted: 599, target: 600, rank: 3, userAvatar: 'https://placehold.co/112x112/D8D8D8/333333.png?text=JH', trend: 'down', role: 'CRM' },
+  { userId: 'user4', userName: 'Lea L.', ordersCompleted: 530, target: 550, rank: 4, userAvatar: 'https://placehold.co/40x40/FFDBDB/333333.png?text=LL', trend: 'down', role: 'DESIGNER_REPRESENTATIVE' },
+  { userId: 'currentUser', userName: 'You', ordersCompleted: 420, target: 500, rank: 5, userAvatar: 'https://placehold.co/40x40/E0E7FF/333333.png?text=YOU', trend: 'up', role: 'CRM' }, // Assuming current user could be CRM
+  { userId: 'user6', userName: 'Sebastian M.', ordersCompleted: 410, target: 400, rank: 6, userAvatar: 'https://placehold.co/40x40/4A4A4A/ffffff.png?text=SM', trend: 'up', role: 'ADMIN' },
+  { userId: 'user7', userName: 'Garfielda C.', ordersCompleted: 390, target: 450, rank: 7, userAvatar: 'https://placehold.co/40x40/purple/white.png?text=GC', trend: 'down', role: 'CRM' },
+  { userId: 'user8', userName: 'Olivia P.', ordersCompleted: 350, target: 380, rank: 8, userAvatar: 'https://placehold.co/40x40/FFC0CB/333333.png?text=OP', trend: 'same', role: 'DESIGNER_REPRESENTATIVE' },
 ];
 
 const DUMMY_WEEKLY_DATA: CrmPerformanceData[] = [
- { userId: 'user2', userName: 'Mike L.', ordersCompleted: 160, target: 150, rank: 1, userAvatar: 'https://placehold.co/128x128/C1E1C1/333333.png?text=ML', trend: 'up' },
-  { userId: 'user1', userName: 'Anna D.', ordersCompleted: 155, target: 180, rank: 2, userAvatar: 'https://placehold.co/112x112/A8D8EA/333333.png?text=AD', trend: 'down' },
-  { userId: 'currentUser', userName: 'You', ordersCompleted: 150, target: 120, rank: 3, userAvatar: 'https://placehold.co/112x112/E0E7FF/333333.png?text=YOU', trend: 'up' },
-  { userId: 'user4', userName: 'Lea L.', ordersCompleted: 130, target: 140, rank: 4, userAvatar: 'https://placehold.co/40x40/FFDBDB/333333.png?text=LL', trend: 'same' },
-  { userId: 'user3', userName: 'Joe H.', ordersCompleted: 120, target: 130, rank: 5, userAvatar: 'https://placehold.co/40x40/D8D8D8/333333.png?text=JH', trend: 'down' },
-  { userId: 'user6', userName: 'Sebastian M.', ordersCompleted: 100, target: 100, rank: 6, userAvatar: 'https://placehold.co/40x40/4A4A4A/ffffff.png?text=SM', trend: 'up' },
+ { userId: 'user2', userName: 'Mike L.', ordersCompleted: 160, target: 150, rank: 1, userAvatar: 'https://placehold.co/128x128/C1E1C1/333333.png?text=ML', trend: 'up', role: 'ADMIN' },
+  { userId: 'user1', userName: 'Anna D.', ordersCompleted: 155, target: 180, rank: 2, userAvatar: 'https://placehold.co/112x112/A8D8EA/333333.png?text=AD', trend: 'down', role: 'CRM' },
+  { userId: 'currentUser', userName: 'You', ordersCompleted: 150, target: 120, rank: 3, userAvatar: 'https://placehold.co/112x112/E0E7FF/333333.png?text=YOU', trend: 'up', role: 'CRM' }, // Assuming current user could be CRM
+  { userId: 'user4', userName: 'Lea L.', ordersCompleted: 130, target: 140, rank: 4, userAvatar: 'https://placehold.co/40x40/FFDBDB/333333.png?text=LL', trend: 'same', role: 'DESIGNER_REPRESENTATIVE' },
+  { userId: 'user3', userName: 'Joe H.', ordersCompleted: 120, target: 130, rank: 5, userAvatar: 'https://placehold.co/40x40/D8D8D8/333333.png?text=JH', trend: 'down', role: 'CRM' },
+  { userId: 'user6', userName: 'Sebastian M.', ordersCompleted: 100, target: 100, rank: 6, userAvatar: 'https://placehold.co/40x40/4A4A4A/ffffff.png?text=SM', trend: 'up', role: 'ADMIN' },
 ];
 
 
@@ -66,10 +66,10 @@ export default function LeaderboardPage() {
       // For now, just set dummy data.
       // Make sure 'currentUser' is part of the dummy data if you want to test the "You" highlight
       const updatedMonthlyData = DUMMY_MONTHLY_DATA.map(d => 
-        d.userId === 'currentUser' && currentUser ? { ...d, userId: currentUser.id, userName: "You" } : d
+        d.userId === 'currentUser' && currentUser ? { ...d, userId: currentUser.id, userName: "You", role: currentUser.role as UserRole } : d
       );
       const updatedWeeklyData = DUMMY_WEEKLY_DATA.map(d => 
-        d.userId === 'currentUser' && currentUser ? { ...d, userId: currentUser.id, userName: "You" } : d
+        d.userId === 'currentUser' && currentUser ? { ...d, userId: currentUser.id, userName: "You", role: currentUser.role as UserRole } : d
       );
 
       setCrmMonthlyPerformance(updatedMonthlyData);
