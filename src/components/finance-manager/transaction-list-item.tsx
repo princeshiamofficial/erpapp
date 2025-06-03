@@ -25,19 +25,20 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
   const isPurchase = transaction.type === 'purchase';
   const isExpense = transaction.type === 'expense';
 
-  // Determine if the current user can modify this transaction.
-  // General rule: System Admins can modify anything. Other users can only modify their own transactions.
-  const generalCanModify = currentUser?.role === 'SYSTEM_ADMIN' || (currentUser?.id === transaction.userId);
-
-  // Specific rule: Recipients cannot edit/delete income transactions received from a system transfer (admin send money).
-  const isSystemGeneratedReceivedIncomeForRecipient =
-    transaction.type === 'income' &&
-    !!transaction.receivedFromUserId && // Indicates it was received from someone
-    currentUser?.id === transaction.userId && // Current user is the recipient
-    currentUser?.role !== 'SYSTEM_ADMIN';   // And current user is NOT a System Admin (who could be viewing their own received test tx)
-
-  const finalCanModify = generalCanModify && !isSystemGeneratedReceivedIncomeForRecipient;
-
+  let finalCanModify = false;
+  if (currentUser?.role === 'SYSTEM_ADMIN') {
+    finalCanModify = true; // System admin can always modify
+  } else if (currentUser?.id === transaction.userId) {
+    // It's the owner. Can they modify?
+    // They cannot modify if it's an income transaction received from someone else (a system transfer)
+    const isReceivedSystemIncome = transaction.type === 'income' && !!transaction.receivedFromUserId;
+    if (isReceivedSystemIncome) {
+      finalCanModify = false; // Recipient cannot modify system-generated income
+    } else {
+      finalCanModify = true; // Owner can modify their own regular transactions
+    }
+  }
+  // If not System Admin and not owner, finalCanModify remains false.
 
   let IconComponent = TrendingUp;
   let iconColorClass = "bg-green-500/10 text-green-600";
