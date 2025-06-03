@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'; 
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'; 
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -63,7 +63,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
           toast({ title: "Error", description: "Could not load users.", variant: "destructive" });
           setIsLoadingUsers(false);
         });
-        setCategory("Sent Money");
+        // Category is set in the other useEffect based on selectedSentToUserId
       } else {
         setCategory("");
       }
@@ -82,10 +82,10 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
         if (recipient) {
           setCategory(`Sent Money to ${recipient.name}`);
         } else {
-          setCategory("Sent Money");
+          setCategory("Sent Money"); // Fallback if recipient not found (shouldn't happen)
         }
       } else {
-        setCategory("Sent Money");
+        setCategory("Sent Money"); // Default category when no user is selected yet
       }
     }
   }, [isSendMoneyFlow, selectedSentToUserId, allUsers]);
@@ -93,7 +93,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
   const resetForm = () => {
     setType(isSendMoneyFlow ? 'expense' : 'expense');
     setAmount('');
-    setCategory(isSendMoneyFlow ? 'Sent Money' : '');
+    // Category reset handled by useEffect above based on isSendMoneyFlow and selectedSentToUserId
     setDescription('');
     setDate(new Date());
     setSelectedSentToUserId(undefined);
@@ -104,8 +104,9 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || !category || !date) {
-      toast({ title: "Validation Error", description: "Amount, Category, and Date are required.", variant: "destructive" });
+    // Category validation is only needed if not in send money flow, as it's auto-set otherwise
+    if (!amount || (!isSendMoneyFlow && !category) || !date) {
+      toast({ title: "Validation Error", description: "Amount, Date, and Category (if applicable) are required.", variant: "destructive" });
       return;
     }
     if (isSendMoneyFlow && !selectedSentToUserId) {
@@ -122,7 +123,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
     const transactionData = {
       type: isSendMoneyFlow ? 'expense' : type, 
       amount: numericAmount,
-      category: category.trim(),
+      category: category.trim(), // Will use the auto-set category for send money flow
       description: description.trim() || undefined,
       date: date.toISOString(),
       ...(isSendMoneyFlow && selectedSentToUserId && { 
@@ -147,7 +148,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
   };
   
   const getCategoryPlaceholder = () => {
-    if (isSendMoneyFlow) return "e.g., Payment for Services";
+    // This is not used if isSendMoneyFlow is true, as category input is hidden
     if (type === 'income') return "e.g., Salary, Sales";
     if (type === 'purchase') return "e.g., Inventory, Supplies, Groceries";
     return "e.g., Utilities, Rent";
@@ -167,11 +168,15 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
   }, [allUsers, userSearchQuery]);
 
   const canSubmit = useMemo(() => {
-    return !isSubmitting &&
+    const baseValid = !isSubmitting &&
       amount.trim() && parseFloat(amount) > 0 &&
-      category.trim() &&
-      date &&
-      (!isSendMoneyFlow || (isSendMoneyFlow && selectedSentToUserId));
+      date;
+    
+    if (isSendMoneyFlow) {
+      return baseValid && selectedSentToUserId;
+    } else {
+      return baseValid && category.trim();
+    }
   }, [isSubmitting, amount, category, date, isSendMoneyFlow, selectedSentToUserId]);
 
 
@@ -204,10 +209,14 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
               <Label htmlFor="transaction-amount">Amount (BDT) *</Label>
               <Input id="transaction-amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g., 50.00" min="0.01" step="0.01" required />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="transaction-category">Category *</Label>
-              <Input id="transaction-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder={getCategoryPlaceholder()} required />
-            </div>
+            
+            {!isSendMoneyFlow && (
+              <div className="space-y-1">
+                <Label htmlFor="transaction-category">Category *</Label>
+                <Input id="transaction-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder={getCategoryPlaceholder()} required />
+              </div>
+            )}
+
             {isSendMoneyFlow && (
               <div className="space-y-1">
                 <Label htmlFor="send-to-user">Send To User *</Label>
@@ -304,3 +313,4 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
     </Dialog>
   );
 }
+
