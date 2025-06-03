@@ -110,7 +110,7 @@ export default function LeaderboardPage() {
   if (fetchError) {
       return (
         <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-background min-h-screen">
-            <h1 className="text-4xl font-extrabold text-foreground" style={{color: 'hsl(250, 60%, 25%)'}}>Leaderboard</h1>
+            <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400">Leaderboard</h1>
              <Card className="shadow-xl bg-destructive/10 border-destructive/30">
               <CardHeader>
                 <CardTitle className="text-destructive">Error Loading Data</CardTitle>
@@ -126,7 +126,9 @@ export default function LeaderboardPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-background min-h-screen">
-      <h1 className="text-4xl font-extrabold text-foreground text-center sm:text-left" style={{color: 'hsl(250, 60%, 25%)'}}>Leaderboard</h1>
+      <h1 className="text-4xl font-extrabold text-center sm:text-left text-transparent bg-clip-text bg-gradient-to-r from-primary via-orange-500 to-red-500">
+        Leaderboard
+      </h1>
       
       <LeaderboardClientTabs
         monthlyPerformanceData={crmMonthlyPerformance}
