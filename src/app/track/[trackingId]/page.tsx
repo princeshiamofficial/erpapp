@@ -1,13 +1,13 @@
 
 import { Suspense } from 'react';
 import { OrderDetailsClient } from './OrderDetailsClient';
-import { getOrderById, incrementOrderViewCount } from '@/lib/order-service'; 
+import { getOrderById, incrementOrderViewCount } from '@/lib/order-service';
 import { getStatuses } from '@/lib/status-service';
-import { getGlobalSettings } from '@/lib/settings-service'; 
+import { getGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service';
 import { notFound } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
-import Image from 'next/image'; 
+import Image from 'next/image';
 import { Package } from 'lucide-react';
 
 interface PublicTrackingPageProps {
@@ -16,44 +16,51 @@ interface PublicTrackingPageProps {
 
 export default async function PublicTrackingPage({ params }: PublicTrackingPageProps) {
   const trackingId = params.trackingId;
-  
+
   if (trackingId) {
     await incrementOrderViewCount(trackingId);
   }
 
-  const [orderData, allStatuses, globalSettings, allUsers] = await Promise.all([ 
+  const [orderDataResult, allStatusesResult, globalSettingsResult, allUsersResult] = await Promise.all([
     getOrderById(trackingId),
     getStatuses(),
     getGlobalSettings(),
-    getUsers() 
+    getUsers()
   ]);
 
-  if (!orderData) {
-    notFound(); 
+  if (!orderDataResult) {
+    notFound();
   }
 
-  const areCommentsVisible = globalSettings.areCommentsVisibleOnPublicPage ?? true;
+  // Ensure data is plain before passing to Client Component
+  // This helps avoid issues with Next.js's handling of props derived from server-side dynamic APIs.
+  const plainOrderData = JSON.parse(JSON.stringify(orderDataResult));
+  const plainAllStatuses = JSON.parse(JSON.stringify(allStatusesResult));
+  const plainGlobalSettings = JSON.parse(JSON.stringify(globalSettingsResult));
+  const plainAllUsers = JSON.parse(JSON.stringify(allUsersResult));
+
+  const areCommentsVisible = plainGlobalSettings.areCommentsVisibleOnPublicPage ?? true;
 
   return (
     <div className="min-h-screen bg-background py-6 sm:py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary">
-       <header className="text-center mb-8 sm:mb-12 bg-black"> 
+       <header className="text-center mb-8 sm:mb-12 bg-black">
         <div className="inline-block mb-2">
-            <Image 
-              src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" 
-              alt="Color Hut Logo" 
-              width={253} 
-              height={64} 
-              priority 
+            <Image
+              src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+              alt="Color Hut Logo"
+              width={253}
+              height={64}
+              priority
               className="object-contain mx-auto"
             />
         </div>
       </header>
-      
+
       <Suspense fallback={<TrackingPageSkeleton />}>
-        <OrderDetailsClient 
-            order={orderData} 
-            allStatuses={allStatuses} 
-            allUsersForMentions={allUsers} 
+        <OrderDetailsClient
+            order={plainOrderData}
+            allStatuses={plainAllStatuses}
+            allUsersForMentions={plainAllUsers}
             areCommentsVisible={areCommentsVisible}
         />
       </Suspense>
