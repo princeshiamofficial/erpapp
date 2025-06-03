@@ -1,4 +1,5 @@
 
+
 import { db } from './firebase';
 import { collection, getDocs, doc, setDoc, updateDoc, query, orderBy, writeBatch } from 'firebase/firestore';
 import type { Project, ProjectStatusType } from '@/types';
@@ -80,11 +81,11 @@ export const seedDefaultProjects = async (): Promise<Project[]> => {
 export const getProjects = async (): Promise<Project[]> => {
   console.log('[getProjects] Function called.');
   const projectsCol = collection(db, PROJECTS_COLLECTION);
-  const q = query(projectsCol, orderBy("createdAt", "desc"));
+  const qActualProjects = query(projectsCol, orderBy("createdAt", "desc")); // Sort by createdAt initially
   let actualProjects: Project[] = [];
 
   try {
-    const projectSnapshot = await getDocs(q);
+    const projectSnapshot = await getDocs(qActualProjects);
     if (projectSnapshot.empty) {
       console.log("[getProjects] No actual projects found in Firestore, attempting to seed defaults.");
       actualProjects = await seedDefaultProjects();
@@ -94,7 +95,6 @@ export const getProjects = async (): Promise<Project[]> => {
     }
   } catch (error) {
     console.error("[getProjects] Error fetching actual projects:", error);
-    // Continue to try and fetch orders even if projects fail
   }
 
   const existingProjectIds = new Set(actualProjects.map(p => p.projectIdDisplay));
@@ -102,10 +102,9 @@ export const getProjects = async (): Promise<Project[]> => {
 
   let ordersToDisplayAsProjects: Project[] = [];
   try {
-    const allOrders = await getOrders();
+    const allOrders = await getOrders(); // Assuming getOrders fetches sorted by createdAt desc
     console.log(`[getProjects] Fetched ${allOrders.length} total orders.`);
-    console.log(`[getProjects] Filtering orders with currentStatus === '${ORDER_SUBMITTED_ID}'`);
-
+    
     const orderSubmittedOrders = allOrders.filter(
       (order) => order.currentStatus === ORDER_SUBMITTED_ID
     );
@@ -114,7 +113,6 @@ export const getProjects = async (): Promise<Project[]> => {
     if (orderSubmittedOrders.length > 0) {
         console.log('[getProjects] Details of "order-submitted" orders:', orderSubmittedOrders.map(o => ({id: o.id, companyName: o.companyName, currentStatus: o.currentStatus, createdAt: o.createdAt })));
     }
-
 
     const dynamicProjectsFromOrders = orderSubmittedOrders
       .filter(order => {
@@ -126,10 +124,10 @@ export const getProjects = async (): Promise<Project[]> => {
       })
       .map(order => {
         const projectCreatedAt = order.createdAt || formatISO(new Date());
-        const projectEndDate = formatISO(addDays(new Date(projectCreatedAt), 2)); // Default +2 days for CR Clearance visual
+        const projectEndDate = formatISO(addDays(new Date(projectCreatedAt), 2)); 
 
         const dynamicProject: Project = {
-          id: order.id, // Use order ID as the draggable ID
+          id: order.id, 
           projectIdDisplay: order.id,
           name: order.companyName,
           status: 'CR Clearance',
@@ -138,9 +136,8 @@ export const getProjects = async (): Promise<Project[]> => {
           categoryTag: 'From Order',
           createdAt: projectCreatedAt,
           updatedAt: order.updatedAt || projectCreatedAt,
-          crClearanceAt: projectCreatedAt, // Set for SLA calculation
+          crClearanceAt: projectCreatedAt, 
           endDate: projectEndDate,
-          // Ensure other status timestamps are undefined
           crCancelAt: undefined,
           onDesignAt: undefined,
           onHoldAt: undefined,
@@ -159,22 +156,31 @@ export const getProjects = async (): Promise<Project[]> => {
   }
   
   const combinedProjects = [...actualProjects, ...ordersToDisplayAsProjects];
-  console.log(`[getProjects] Total projects to display (actual + dynamic): ${combinedProjects.length}`);
+  console.log(`[getProjects] Total projects before final sort: ${combinedProjects.length}`);
   
-  return combinedProjects.sort((a,b) => {
-      const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
-      const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
-      return dateB - dateA; // Sort by most recently updated/created first
+  // Sort the combined list: primary by createdAt descending, secondary by updatedAt descending
+  return combinedProjects.sort((a, b) => {
+    const dateACreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const dateBCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+    if (dateBCreated !== dateACreated) {
+      return dateBCreated - dateACreated;
+    }
+
+    // If createdAt is the same, sort by updatedAt descending
+    const dateAUpdated = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+    const dateBUpdated = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+    return dateBUpdated - dateAUpdated;
   });
 };
 
 export const addProject = async (projectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'crCancelAt'>): Promise<Project | null> => {
   try {
-    const id = uuidv4(); // Generate a unique ID for the project document itself
+    const id = uuidv4(); 
     const now = formatISO(new Date());
     const newProject: Project = {
-      id, // This is the Firestore document ID
-      ...projectData, // This includes projectIdDisplay, name, status, endDate etc.
+      id, 
+      ...projectData, 
       createdAt: now,
       updatedAt: now,
       crClearanceAt: undefined,
@@ -199,7 +205,6 @@ export const addProject = async (projectData: Omit<Project, 'id' | 'createdAt' |
 
 export const updateProjectStatus = async (projectId: string, newStatus: ProjectStatusType): Promise<boolean> => {
   try {
-    // Here, projectId is the Firestore document ID of the project
     const projectDoc = doc(db, PROJECTS_COLLECTION, projectId);
     const now = formatISO(new Date());
     const updates: Partial<Project> = {
@@ -219,9 +224,4 @@ export const updateProjectStatus = async (projectId: string, newStatus: ProjectS
     return false;
   }
 };
-
-// Ensure this service correctly handles orders and maps them to projects if their currentStatus is 'order-submitted'
-// And actual projects from the 'projects' collection.
-// The combination and duplicate prevention should work as intended.
-// The logging will help confirm if orders are being fetched, filtered, and mapped correctly.
     
