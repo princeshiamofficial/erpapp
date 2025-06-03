@@ -160,6 +160,16 @@ export default function FinanceManagerPage() {
     { title: "Available Balance", value: availableBalance, icon: Wallet, color: availableBalance >= 0 ? "text-blue-600" : "text-orange-600", hint: "wallet coins" },
   ];
 
+  const pageDescription = useMemo(() => {
+    if (!currentUser) return "Manage your finances.";
+    if (currentUser.role === 'SYSTEM_ADMIN') {
+      return viewMode === 'global' 
+        ? "View and manage all user financial transactions."
+        : "Track your personal income, expenses, and send money to staff.";
+    }
+    return "Track your personal income, expenses, and purchases.";
+  }, [currentUser, viewMode]);
+
   if (!currentUser) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -177,8 +187,9 @@ export default function FinanceManagerPage() {
         <div>
           <h1 className="page-title">Finance Manager</h1>
           <p className="page-description">
-            Track your income, expenses, and manage your personal finances.
-            {currentUser.role === 'SYSTEM_ADMIN' && ` (Viewing: ${viewMode === 'personal' ? 'Personal' : 'Global'} Data)`}
+            {pageDescription}
+            {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'personal' && ` (Viewing: Personal Data)`}
+            {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' && ` (Viewing: Global Data)`}
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
@@ -238,6 +249,8 @@ export default function FinanceManagerPage() {
               )}
               <p className="text-xs text-muted-foreground mt-1">
                 {card.title === "Available Balance" ? "Your current financial standing" : `Total ${card.title.toLowerCase().replace(' & purchases','')} recorded`}
+                 {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' && card.title === "Available Balance" && " (All Users Combined)"}
+                 {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' && card.title !== "Available Balance" && " (All Users)"}
               </p>
             </CardContent>
           </Card>
@@ -250,7 +263,7 @@ export default function FinanceManagerPage() {
             <div>
               <CardTitle className="text-card-foreground text-xl">Recent Transactions</CardTitle>
               <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                Your latest income, expense and purchase entries.
+                {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' ? "Latest transactions from all users." : "Your latest income, expense and purchase entries."}
               </CardDescription>
             </div>
           </CardHeader>
