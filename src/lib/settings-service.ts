@@ -3,7 +3,7 @@
 
 import { db } from './firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import type { GlobalSettings, UserRole } from '@/types';
+import type { GlobalSettings, UserRole, ExpenseLoggingPermissions } from '@/types';
 
 const GLOBAL_SETTINGS_COLLECTION = 'globalSettings';
 const MAIN_SETTINGS_DOC_ID = 'main';
@@ -11,15 +11,21 @@ const MAIN_SETTINGS_DOC_ID = 'main';
 const DEFAULT_TOAST_SOUND_URL = 'https://audio-previews.elements.envatousercontent.com/files/225140761/preview.mp3';
 const DEFAULT_LEADERBOARD_BACKGROUND_URL = 'https://i.ibb.co/PGBMbxBc/360-F-338486227-q-Qit-Uvh3n-ILq-Yiu-QOUGxdfindo-NMbtp-H.jpg';
 
+const DEFAULT_EXPENSE_LOGGING_PERMISSIONS: ExpenseLoggingPermissions = {
+  mode: "all", // By default, all non-System Admins can log expenses
+  allowedRoles: [],
+  allowedUserIds: []
+};
+
 const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   globalMonthlyOrderTarget: 0,
   globalWeeklyOrderTarget: 0,
   crmCompletionStatusIds: [],
   areCommentsVisibleOnPublicPage: true,
-  rolesAllowedToEditOrders: ['SYSTEM_ADMIN', 'ADMIN'], // Default: Admins and System Admins can edit
+  rolesAllowedToEditOrders: ['SYSTEM_ADMIN', 'ADMIN'], 
   toastSoundUrl: DEFAULT_TOAST_SOUND_URL,
-  leaderboardBackgroundImageUrl: DEFAULT_LEADERBOARD_BACKGROUND_URL, // Default leaderboard background
-  canUsersAddExpenses: true, // New setting default
+  leaderboardBackgroundImageUrl: DEFAULT_LEADERBOARD_BACKGROUND_URL,
+  expenseLoggingPermissions: DEFAULT_EXPENSE_LOGGING_PERMISSIONS,
 };
 
 // Gets global settings from Firestore
@@ -30,6 +36,14 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
 
     if (docSnap.exists()) {
       const data = docSnap.data();
+      // Ensure expenseLoggingPermissions has all its fields, defaulting if necessary
+      const expensePerms = data.expenseLoggingPermissions || {};
+      const fullExpensePerms: ExpenseLoggingPermissions = {
+        mode: expensePerms.mode ?? DEFAULT_EXPENSE_LOGGING_PERMISSIONS.mode,
+        allowedRoles: expensePerms.allowedRoles ?? DEFAULT_EXPENSE_LOGGING_PERMISSIONS.allowedRoles,
+        allowedUserIds: expensePerms.allowedUserIds ?? DEFAULT_EXPENSE_LOGGING_PERMISSIONS.allowedUserIds,
+      };
+
       return {
         globalMonthlyOrderTarget: data.globalMonthlyOrderTarget ?? DEFAULT_GLOBAL_SETTINGS.globalMonthlyOrderTarget,
         globalWeeklyOrderTarget: data.globalWeeklyOrderTarget ?? DEFAULT_GLOBAL_SETTINGS.globalWeeklyOrderTarget,
@@ -38,7 +52,7 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         rolesAllowedToEditOrders: data.rolesAllowedToEditOrders ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToEditOrders,
         toastSoundUrl: data.toastSoundUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.toastSoundUrl : data.toastSoundUrl,
         leaderboardBackgroundImageUrl: data.leaderboardBackgroundImageUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.leaderboardBackgroundImageUrl : data.leaderboardBackgroundImageUrl,
-        canUsersAddExpenses: data.canUsersAddExpenses ?? DEFAULT_GLOBAL_SETTINGS.canUsersAddExpenses, // Handle new setting
+        expenseLoggingPermissions: fullExpensePerms,
       };
     } else {
       console.log("Global settings document not found, returning defaults. Creating document with defaults.");
@@ -190,23 +204,29 @@ export async function setLeaderboardBackgroundImageUrl(imageUrl: string | null):
   }
 }
 
-// Sets the canUsersAddExpenses setting
-export async function setCanUsersAddExpenses(canAdd: boolean): Promise<boolean> {
+// Sets the expense logging permissions
+export async function setExpenseLoggingPermissions(permissions: ExpenseLoggingPermissions): Promise<boolean> {
   try {
     const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
     const docSnap = await getDoc(settingsDocRef);
+    const dataToSet: ExpenseLoggingPermissions = {
+        mode: permissions.mode,
+        allowedRoles: permissions.mode === 'specificRoles' ? (permissions.allowedRoles || []) : [],
+        allowedUserIds: permissions.mode === 'specificUsers' ? (permissions.allowedUserIds || []) : [],
+    };
+
     if (docSnap.exists()) {
-      await updateDoc(settingsDocRef, { canUsersAddExpenses: canAdd });
+      await updateDoc(settingsDocRef, { expenseLoggingPermissions: dataToSet });
     } else {
       const initialData: GlobalSettings = {
         ...DEFAULT_GLOBAL_SETTINGS,
-        canUsersAddExpenses: canAdd,
+        expenseLoggingPermissions: dataToSet,
       };
       await setDoc(settingsDocRef, initialData);
     }
     return true;
   } catch (error) {
-    console.error("Error setting canUsersAddExpenses:", error);
+    console.error("Error setting expense logging permissions:", error);
     return false;
   }
 }

@@ -6,10 +6,10 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth-context";
-import type { Transaction, User, TransactionType, GlobalSettings } from "@/types"; // Added GlobalSettings
+import type { Transaction, User, TransactionType, GlobalSettings, ExpenseLoggingPermissions } from "@/types"; 
 import { getTransactionsForUser, getAllTransactions } from "@/lib/personal-finance-service";
 import { getUsers } from '@/lib/user-service';
-import { getGlobalSettings } from '@/lib/settings-service'; // Added
+import { getGlobalSettings } from '@/lib/settings-service'; 
 import { deleteTransactionAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -44,7 +44,7 @@ export default function FinanceManagerPage() {
   const [viewMode, setViewMode] = useState<'personal' | 'global'>('personal');
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
   const [allUsersForDialog, setAllUsersForDialog] = useState<User[]>([]);
-  const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null); // New state for global settings
+  const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null); 
 
   const [isClient, setIsClient] = useState(false);
   useEffect(() => setIsClient(true), []);
@@ -65,31 +65,36 @@ export default function FinanceManagerPage() {
       let fetchedUsersForMap: User[] = [];
       let fetchedUsersForDialogLocal: User[] = [];
 
-      // Fetch global settings along with other data
-      const [settings, ...otherData] = await Promise.all([
-        getGlobalSettings(),
-        ...(currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global'
-          ? [getAllTransactions(), getUsers()]
-          : [getTransactionsForUser(currentUser.id), getUsers()]) // Fetch users even for personal view if admin for Send Money
-      ]);
+      const settings = await getGlobalSettings();
       setGlobalAppSettings(settings);
 
+      const dataPromises: any[] = [];
       if (currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global') {
-        fetchedTransactions = otherData[0] as Transaction[];
-        fetchedUsersForMap = otherData[1] as User[];
+        dataPromises.push(getAllTransactions(), getUsers());
+      } else {
+        dataPromises.push(getTransactionsForUser(currentUser.id));
+        if (currentUser.role === 'SYSTEM_ADMIN') { // SysAdmin in personal view still needs all users for "Send Money"
+            dataPromises.push(getUsers());
+        }
+      }
+      
+      const results = await Promise.all(dataPromises);
+
+      fetchedTransactions = results[0] as Transaction[];
+      if (currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global') {
+        fetchedUsersForMap = results[1] as User[];
         fetchedUsersForDialogLocal = fetchedUsersForMap.filter(u => u.id !== currentUser.id && u.role !== 'SYSTEM_ADMIN');
         const newUserMap = new Map(fetchedUsersForMap.map(user => [user.id, user.name]));
         setUserMap(newUserMap);
-      } else {
-        fetchedTransactions = otherData[0] as Transaction[];
-        const allSystemUsers = otherData[1] as User[];
+      } else if (currentUser.role === 'SYSTEM_ADMIN') { // Personal view for SysAdmin
+        fetchedUsersForMap = results[1] as User[]; // all users
+        fetchedUsersForDialogLocal = fetchedUsersForMap.filter(u => u.id !== currentUser.id && u.role !== 'SYSTEM_ADMIN');
+        setUserMap(new Map()); // No user map needed for personal view display, but keep users for dialog
+      } else { // Non-SysAdmin users
         setUserMap(new Map());
-         if (currentUser.role === 'SYSTEM_ADMIN') {
-            fetchedUsersForDialogLocal = allSystemUsers.filter(u => u.id !== currentUser.id && u.role !== 'SYSTEM_ADMIN');
-        } else {
-           fetchedUsersForDialogLocal = []; // Non-admins don't need this for "Send Money"
-        }
+        fetchedUsersForDialogLocal = []; 
       }
+
       setAllUsersForDialog(fetchedUsersForDialogLocal);
       setTransactions(fetchedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch (error) {
@@ -167,7 +172,7 @@ export default function FinanceManagerPage() {
         ? "View and manage all user financial transactions."
         : "Track your personal income, expenses, and send money to staff.";
     }
-    return "Track your personal income, expenses, and purchases.";
+    return `Track your personal income, expenses, and purchases.`;
   }, [currentUser, viewMode]);
 
   if (!currentUser) {
@@ -178,7 +183,19 @@ export default function FinanceManagerPage() {
     );
   }
 
-  const canUserAddExpense = currentUser.role === 'SYSTEM_ADMIN' || (globalAppSettings?.canUsersAddExpenses ?? true);
+  const canUserAddExpense = useMemo(() => {
+    if (!currentUser || !globalAppSettings?.expenseLoggingPermissions) return false;
+    if (currentUser.role === 'SYSTEM_ADMIN') return true;
+
+    const perms = globalAppSettings.expenseLoggingPermissions;
+    switch (perms.mode) {
+      case 'all': return true;
+      case 'none': return false;
+      case 'specificRoles': return perms.allowedRoles.includes(currentUser.role);
+      case 'specificUsers': return perms.allowedUserIds.includes(currentUser.id);
+      default: return false;
+    }
+  }, [currentUser, globalAppSettings]);
 
 
   return (
@@ -206,7 +223,7 @@ export default function FinanceManagerPage() {
           {canUserAddExpense && (
             <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData}>
               <Button size="default" className="bg-red-600 hover:bg-red-700 text-white h-10">
-                <Minus className="mr-2 h-5 w-5" /> Add Expense
+                <Minus className="mr-2 h-5 w-5" /> Add Expense/Purchase
               </Button>
             </AddTransactionDialog>
           )}
@@ -290,7 +307,7 @@ export default function FinanceManagerPage() {
                 <DollarSign className="h-16 w-16 mx-auto opacity-30 mb-3" />
                 <p className="text-lg font-medium">No transactions yet.</p>
                 <p className="text-sm">
-                  {canUserAddExpense || currentUser.role === 'SYSTEM_ADMIN' ? "Add your first income or expense to get started!" : "Expense logging may be disabled for your role."}
+                  {canUserAddExpense ? "Add your first income or expense to get started!" : "Expense logging may be disabled for your role."}
                 </p>
               </div>
             )}

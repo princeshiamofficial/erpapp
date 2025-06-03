@@ -44,15 +44,14 @@ export interface OrderItem {
 
 export interface TrackingLink {
   id: string;
-  // customerName is effectively companyName for B2B or contact person if needed elsewhere
-  companyName: string; // Will store "Job ID • Company Name"
+  companyName: string; 
   address: string;
   phoneNumber: string;
   orderItems: OrderItem[];
   advancePayment?: number | null;
-  specialClientDiscount?: number | null; // Added special client discount
+  specialClientDiscount?: number | null; 
   paymentMethod?: string | null;
-  orderNotes?: string | null; // Added order notes field
+  orderNotes?: string | null; 
   crmUserId: string;
   crmUserName: string;
   designerRepresentativeId?: string | null;
@@ -79,7 +78,7 @@ export interface Comment {
   replies?: Comment[];
   likes?: {
     count: number;
-    reactedBy: string[]; // Array of user IDs or client-generated IDs
+    reactedBy: string[]; 
   };
 }
 
@@ -100,7 +99,14 @@ export interface ServicePaymentMethodItem {
   name: string;
 }
 
-// For settings-service
+export type ExpenseLoggingMode = "all" | "none" | "specificRoles" | "specificUsers";
+
+export interface ExpenseLoggingPermissions {
+  mode: ExpenseLoggingMode;
+  allowedRoles: UserRole[];
+  allowedUserIds: string[];
+}
+
 export interface GlobalSettings {
   globalMonthlyOrderTarget: number;
   globalWeeklyOrderTarget: number;
@@ -110,7 +116,7 @@ export interface GlobalSettings {
   toastSoundUrl?: string | null;
   leaderboardBackgroundImageUrl?: string | null;
   leaderboardThemeSettings?: LeaderboardThemeSettings | null;
-  canUsersAddExpenses?: boolean; // New setting
+  expenseLoggingPermissions?: ExpenseLoggingPermissions; // Updated from canUsersAddExpenses
 }
 
 export interface LeaderboardThemeSettings {
@@ -131,13 +137,12 @@ export interface LeaderboardThemeSettings {
   subtleBorderColor?: string;
 }
 
-// --- ERP & Finance Manager Specific Types ---
 export interface RevenueEntry {
   id: string;
   description: string;
   amount: number;
   date: string; // ISO string
-  userId: string; // Associate with the user who logged it for the ERP
+  userId: string; 
 }
 
 export interface ExpenseEntry {
@@ -145,7 +150,7 @@ export interface ExpenseEntry {
   description: string;
   amount: number;
   date: string; // ISO string
-  userId: string; // Associate with the user who logged it for the ERP
+  userId: string; 
 }
 
 export interface Appointment {
@@ -153,21 +158,20 @@ export interface Appointment {
   title: string;
   date: string; // ISO string for full datetime
   description?: string;
-  userId: string; // User this appointment belongs to, or a general ID if for the business
+  userId: string; 
 }
 
 export type TransactionType = 'income' | 'expense' | 'purchase';
 
 export interface Transaction {
   id: string;
-  userId: string; // ID of the user this transaction belongs to
+  userId: string; 
   type: TransactionType;
   amount: number;
-  category: string; // User-defined category
-  description?: string | null; // Made description explicitly nullable
+  category: string; 
+  description?: string | null; 
   date: string; // ISO string
   createdAt: string; // ISO string
-  // Fields for tracking transfers
   sentToUserId?: string | null;
   sentToUserName?: string | null;
   receivedFromUserId?: string | null;
@@ -183,23 +187,21 @@ export interface PersonalNote {
   updatedAt: string; // ISO string
 }
 
-// --- Project Management Types ---
 export type ProjectStatusType = 'CR Clearance' | 'CR Cancel' | 'On Design' | 'On Hold' | 'Logistics' | 'Courier';
 
 
 export interface Project {
-  id: string; // Firestore document ID
+  id: string; 
   projectIdDisplay: string;
   name: string;
   status: ProjectStatusType;
-  endDate: string; // Stored as ISO string (e.g., "2025-06-06T00:00:00.000Z") or formatted "MM/DD/YYYY"
+  endDate: string; 
   assigneeName: string;
   assigneeInitials?: string;
   categoryTag: string;
-  createdAt?: string; // ISO string
-  updatedAt?: string; // ISO string, general update timestamp
+  createdAt?: string; 
+  updatedAt?: string; 
 
-  // Status-specific timestamps
   crClearanceAt?: string;
   crCancelAt?: string;
   onDesignAt?: string;

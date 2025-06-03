@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { CustomStatus, UserRole, User, GlobalSettings } from "@/types";
+import type { CustomStatus, UserRole, User, GlobalSettings, ExpenseLoggingPermissions, ExpenseLoggingMode } from "@/types";
 import { getStatuses } from '@/lib/status-service';
 import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings as fetchGlobalSettings } from '@/lib/settings-service';
@@ -23,12 +23,12 @@ import {
   updateRolesAllowedToEditOrdersAction,
   updateToastSoundUrlAction,
   updateLeaderboardBackgroundImageUrlAction,
-  updateCanUsersAddExpensesAction, // Added action
+  updateExpenseLoggingPermissionsAction, 
   sendPushNotificationAction
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon, DollarSign, Settings2 } from 'lucide-react'; // Added Settings2
+import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon, Settings2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
@@ -38,6 +38,7 @@ import NextImage from 'next/image';
 
 
 const EDITABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
+const EXPENSE_LOGGING_TARGET_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE']; // Roles that can be targeted for expense logging
 const NOTIFICATION_TARGET_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
 const TOAST_SOUND_STORAGE_KEY = 'colorHutToastSoundUrl';
 const DEFAULT_LEADERBOARD_BACKGROUND_PLACEHOLDER = 'https://i.ibb.co/PGBMbxBc/360-F-338486227-q-Qit-Uvh3n-ILq-Yiu-QOUGxdfindo-NMbtp-H.jpg';
@@ -55,10 +56,13 @@ export default function CrmTargetSettingsPage() {
   const [rolesAllowedToEdit, setRolesAllowedToEdit] = useState<Set<UserRole>>(new Set(['ADMIN', 'SYSTEM_ADMIN']));
   const [toastSoundUrl, setToastSoundUrl] = useState<string>('');
   const [leaderboardBgUrl, setLeaderboardBgUrl] = useState<string>('');
-  const [canUsersAddExpensesSetting, setCanUsersAddExpensesSetting] = useState(true); // New setting state
+  const [expenseLoggingPerms, setExpenseLoggingPerms] = useState<ExpenseLoggingPermissions>({
+    mode: 'all', allowedRoles: [], allowedUserIds: []
+  });
 
   // Notification states
-  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]); // Users excluding System_Admin for targeting
+  const [allTargetableUsersForExpensePerms, setAllTargetableUsersForExpensePerms] = useState<User[]>([]); // For expense perm user picker
   const [notificationTitle, setNotificationTitle] = useState('');
   const [notificationBody, setNotificationBody] = useState('');
   const [notificationIconUrl, setNotificationIconUrl] = useState('');
@@ -66,7 +70,9 @@ export default function CrmTargetSettingsPage() {
   const [notificationTargetType, setNotificationTargetType] = useState<'all' | 'roles' | 'users'>('all');
   const [selectedNotificationRoles, setSelectedNotificationRoles] = useState<Set<UserRole>>(new Set());
   const [selectedNotificationUserIds, setSelectedNotificationUserIds] = useState<Set<string>>(new Set());
-  const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false);
+  const [isNotifUserPopoverOpen, setIsNotifUserPopoverOpen] = useState(false);
+  const [isExpenseUserPopoverOpen, setIsExpenseUserPopoverOpen] = useState(false);
+
 
   // Loading states
   const [isLoading, setIsLoading] = useState(true);
@@ -75,7 +81,7 @@ export default function CrmTargetSettingsPage() {
   const [isSubmittingOrderEditingPermissions, setIsSubmittingOrderEditingPermissions] = useState(false);
   const [isSubmittingToastSound, setIsSubmittingToastSound] = useState(false);
   const [isSubmittingLeaderboardBg, setIsSubmittingLeaderboardBg] = useState(false);
-  const [isSubmittingCanUsersAddExpenses, setIsSubmittingCanUsersAddExpenses] = useState(false); // New loading state
+  const [isSubmittingExpensePerms, setIsSubmittingExpensePerms] = useState(false);
   const [isSendingNotification, setIsSendingNotification] = useState(false);
   const [isLoadingUsersForNotifAndTokens, setIsLoadingUsersForNotifAndTokens] = useState(false);
 
@@ -88,10 +94,10 @@ export default function CrmTargetSettingsPage() {
     setIsLoading(true);
     setIsLoadingUsersForNotifAndTokens(true);
     try {
-      const [fetchedStatuses, globalSettings, fetchedUsers] = await Promise.all([
+      const [fetchedStatuses, globalSettings, fetchedUsersDb] = await Promise.all([
         getStatuses(),
         fetchGlobalSettings(),
-        getUsers(),
+        getUsers(), // Fetch all users once from DB
       ]);
       setAllStatuses(fetchedStatuses);
       setSelectedStatusIds(new Set(globalSettings.crmCompletionStatusIds ?? []));
@@ -99,9 +105,10 @@ export default function CrmTargetSettingsPage() {
       setRolesAllowedToEdit(new Set(globalSettings.rolesAllowedToEditOrders ?? ['ADMIN', 'SYSTEM_ADMIN']));
       setToastSoundUrl(globalSettings.toastSoundUrl ?? '');
       setLeaderboardBgUrl(globalSettings.leaderboardBackgroundImageUrl ?? '');
-      setCanUsersAddExpensesSetting(globalSettings.canUsersAddExpenses ?? true); // Set new setting
+      setExpenseLoggingPerms(globalSettings.expenseLoggingPermissions ?? { mode: 'all', allowedRoles: [], allowedUserIds: []});
 
-      setAllUsers(fetchedUsers.filter(u => u.role !== 'SYSTEM_ADMIN'));
+      setAllUsers(fetchedUsersDb.filter(u => u.role !== 'SYSTEM_ADMIN')); // For notification targeting and FCM token list
+      setAllTargetableUsersForExpensePerms(fetchedUsersDb.filter(u => u.role !== 'SYSTEM_ADMIN')); // For expense perm specific user picker
     } catch (error) {
       console.error("Error fetching settings data:", error);
       toast({ title: "Error", description: "Could not load settings or user data.", variant: "destructive" });
@@ -119,7 +126,6 @@ export default function CrmTargetSettingsPage() {
     }
   }, [currentUser, router, fetchData]);
 
-  // --- Settings Handlers (CRM Targets, Comments, Order Editing - Unchanged) ---
   const handleCrmTargetCheckboxChange = (statusId: string, checked: boolean | "indeterminate") => {
     setSelectedStatusIds(prev => {
       const newSet = new Set(prev);
@@ -167,7 +173,6 @@ export default function CrmTargetSettingsPage() {
     setIsSubmittingOrderEditingPermissions(false);
   };
 
-  // --- New Toast Sound Handler ---
   const handleSaveToastSoundUrl = async () => {
     setIsSubmittingToastSound(true);
     const urlToSave = toastSoundUrl.trim() === '' ? null : toastSoundUrl.trim();
@@ -183,7 +188,6 @@ export default function CrmTargetSettingsPage() {
     setIsSubmittingToastSound(false);
   };
 
-  // --- New Leaderboard Background Image Handler ---
   const handleSaveLeaderboardBgUrl = async () => {
     setIsSubmittingLeaderboardBg(true);
     const urlToSave = leaderboardBgUrl.trim() === '' ? null : leaderboardBgUrl.trim();
@@ -196,21 +200,38 @@ export default function CrmTargetSettingsPage() {
     setIsSubmittingLeaderboardBg(false);
   };
 
-  // --- New Expense Logging Permission Handler ---
-  const handleToggleCanUsersAddExpenses = async (canAdd: boolean) => {
-    setIsSubmittingCanUsersAddExpenses(true);
-    const result = await updateCanUsersAddExpensesAction(canAdd);
+  const handleExpensePermsModeChange = (newMode: ExpenseLoggingMode) => {
+    setExpenseLoggingPerms(prev => ({ ...prev, mode: newMode, allowedRoles: [], allowedUserIds: [] }));
+  };
+
+  const handleExpensePermsRoleChange = (role: UserRole, checked: boolean | "indeterminate") => {
+    setExpenseLoggingPerms(prev => {
+      const newRoles = new Set(prev.allowedRoles);
+      if (checked) newRoles.add(role); else newRoles.delete(role);
+      return { ...prev, allowedRoles: Array.from(newRoles) };
+    });
+  };
+
+  const handleExpensePermsUserSelect = (userId: string) => {
+    setExpenseLoggingPerms(prev => {
+      const newUserIds = new Set(prev.allowedUserIds);
+      if (newUserIds.has(userId)) newUserIds.delete(userId); else newUserIds.add(userId);
+      return { ...prev, allowedUserIds: Array.from(newUserIds) };
+    });
+  };
+
+  const handleSaveExpensePermissions = async () => {
+    setIsSubmittingExpensePerms(true);
+    const result = await updateExpenseLoggingPermissionsAction(expenseLoggingPerms);
     if (result.success) {
-      setCanUsersAddExpensesSetting(canAdd);
-      toast({ title: "Settings Updated", description: `Non-admin expense logging is now ${canAdd ? 'enabled' : 'disabled'}.` });
+      toast({ title: "Settings Updated", description: "Expense logging permissions saved." });
     } else {
-      toast({ title: "Update Failed", description: result.error || "Could not update expense logging permission.", variant: "destructive" });
+      toast({ title: "Update Failed", description: result.error || "Could not save expense logging permissions.", variant: "destructive" });
     }
-    setIsSubmittingCanUsersAddExpenses(false);
+    setIsSubmittingExpensePerms(false);
   };
 
 
-  // --- Notification Handlers (Unchanged) ---
   const handleNotificationRoleCheckboxChange = (role: UserRole, checked: boolean | "indeterminate") => {
     setSelectedNotificationRoles(prev => {
       const newSet = new Set(prev);
@@ -240,7 +261,7 @@ export default function CrmTargetSettingsPage() {
     const payload = {
       title: notificationTitle.trim(), body: notificationBody.trim(),
       iconUrl: notificationIconUrl.trim() || undefined, targetUrl: notificationTargetUrl.trim() || undefined,
-      soundUrl: toastSoundUrl.trim() || undefined, // Use the globally set toast sound for notifications too
+      soundUrl: toastSoundUrl.trim() || undefined, 
       targetType: notificationTargetType,
       targetRoles: notificationTargetType === 'roles' ? Array.from(selectedNotificationRoles) : undefined,
       targetUserIds: notificationTargetType === 'users' ? Array.from(selectedNotificationUserIds) : undefined,
@@ -255,17 +276,22 @@ export default function CrmTargetSettingsPage() {
     }
   };
 
-  const selectedUsersDisplay = useMemo(() => {
+  const selectedNotifUsersDisplay = useMemo(() => {
     if (selectedNotificationUserIds.size === 0) return "Select users...";
     if (selectedNotificationUserIds.size > 2) return `${selectedNotificationUserIds.size} users selected`;
     return Array.from(selectedNotificationUserIds).map(id => allUsers.find(u => u.id === id)?.name || id).join(", ");
   }, [selectedNotificationUserIds, allUsers]);
 
-  // --- FCM Token Display Logic (Unchanged) ---
+  const selectedExpenseUsersDisplay = useMemo(() => {
+    if (expenseLoggingPerms.allowedUserIds.length === 0) return "Select users...";
+    if (expenseLoggingPerms.allowedUserIds.length > 2) return `${expenseLoggingPerms.allowedUserIds.length} users selected`;
+    return expenseLoggingPerms.allowedUserIds.map(id => allTargetableUsersForExpensePerms.find(u => u.id === id)?.name || id).join(", ");
+  }, [expenseLoggingPerms.allowedUserIds, allTargetableUsersForExpensePerms]);
+
+
   const filteredFcmUsers = useMemo(() => {
-    const usersForTokenDisplay = allUsers;
-    if (!fcmUserSearchTerm) return usersForTokenDisplay;
-    return usersForTokenDisplay.filter(user =>
+    if (!fcmUserSearchTerm) return allUsers; // Show all targetable users for FCM
+    return allUsers.filter(user =>
       user.name.toLowerCase().includes(fcmUserSearchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(fcmUserSearchTerm.toLowerCase()) ||
       user.role.toLowerCase().includes(fcmUserSearchTerm.toLowerCase())
@@ -307,7 +333,6 @@ export default function CrmTargetSettingsPage() {
         </Button>
       </div>
 
-      {/* CRM Target Card */}
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><ListChecks className="h-6 w-6 text-primary" />CRM Target Completion Statuses</CardTitle>
@@ -332,17 +357,16 @@ export default function CrmTargetSettingsPage() {
 
       <Separator className="my-8" />
 
-      {/* Feature Visibility Settings Card */}
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Settings2 className="h-6 w-6 text-primary" />Feature Visibility & Permissions</CardTitle>
-          <CardDescription className="text-muted-foreground text-sm mt-0.5">Control features on public pages and define editing rights.</CardDescription>
+          <CardDescription className="text-muted-foreground text-sm mt-0.5">Control features like public comments and expense logging.</CardDescription>
         </CardHeader>
-        <CardContent className="p-6 space-y-4">
+        <CardContent className="p-6 space-y-6">
           {isLoading ? (
             <>
               <div className="flex items-center space-x-2"><Skeleton className="h-6 w-6 rounded" /><Skeleton className="h-5 w-48 rounded" /></div>
-              <div className="flex items-center space-x-2"><Skeleton className="h-6 w-6 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>
+              <Skeleton className="h-24 w-full rounded-md" />
             </>
           ) : (
             <>
@@ -352,20 +376,67 @@ export default function CrmTargetSettingsPage() {
                 </Label>
                 <Switch id="commentsVisibilitySwitch" checked={areCommentsVisible} onCheckedChange={handleToggleCommentsVisibility} disabled={isSubmittingCommentsVisibility} aria-label="Toggle comments section visibility"/>
               </div>
-              <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                <Label htmlFor="canUsersAddExpensesSwitch" className="flex flex-col space-y-1 cursor-pointer">
-                  <span>Enable Expense Logging for Non-Admins</span>
+
+              <div className="p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                <Label className="text-md font-medium flex flex-col space-y-1">
+                  <span>Expense Logging for Non-System Admins</span>
                   <span className="font-normal leading-snug text-muted-foreground text-xs">
-                    Allows CRM, Admin, and Designer Representative roles to add their own expenses. System Admins can always log expenses.
+                    Control who can log expenses. System Admins always can.
                   </span>
                 </Label>
-                <Switch
-                  id="canUsersAddExpensesSwitch"
-                  checked={canUsersAddExpensesSetting}
-                  onCheckedChange={handleToggleCanUsersAddExpenses}
-                  disabled={isSubmittingCanUsersAddExpenses}
-                  aria-label="Toggle non-admin expense logging"
-                />
+                <RadioGroup value={expenseLoggingPerms.mode} onValueChange={handleExpensePermsModeChange} className="mt-3 flex flex-col sm:flex-row gap-2 sm:gap-4">
+                  {([
+                    { value: 'all', label: 'Allow All Staff' },
+                    { value: 'specificRoles', label: 'Specific Roles' },
+                    { value: 'specificUsers', label: 'Specific Users' },
+                    { value: 'none', label: 'Disable for All Staff' }
+                  ] as Array<{value: ExpenseLoggingMode, label: string}>).map(opt => (
+                    <div key={opt.value} className="flex items-center space-x-2"><RadioGroupItem value={opt.value} id={`expense-mode-${opt.value}`} /><Label htmlFor={`expense-mode-${opt.value}`}>{opt.label}</Label></div>
+                  ))}
+                </RadioGroup>
+
+                {expenseLoggingPerms.mode === 'specificRoles' && (
+                  <div className="mt-3 p-3 border rounded-md bg-secondary/30">
+                    <Label className="mb-2 block text-sm font-medium">Select Roles *</Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                      {EXPENSE_LOGGING_TARGET_ROLES.map(role => (
+                        <div key={`expense-role-${role}`} className="flex items-center space-x-2 p-2 border rounded-md hover:bg-muted/50 bg-background">
+                          <Checkbox id={`expense-role-perm-${role}`} checked={expenseLoggingPerms.allowedRoles.includes(role)} onCheckedChange={(checked) => handleExpensePermsRoleChange(role, checked)} />
+                          <Label htmlFor={`expense-role-perm-${role}`} className="text-sm font-normal cursor-pointer">{role.replace(/_/g, ' ')}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {expenseLoggingPerms.mode === 'specificUsers' && (
+                  <div className="mt-3 p-3 border rounded-md bg-secondary/30">
+                    <Label className="mb-2 block text-sm font-medium">Select Users *</Label>
+                    {isLoadingUsersForNotifAndTokens ? <Skeleton className="h-10 w-full rounded-md" /> : (
+                      <Popover open={isExpenseUserPopoverOpen} onOpenChange={setIsExpenseUserPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" role="combobox" aria-expanded={isExpenseUserPopoverOpen} className="w-full justify-between bg-background">
+                            <span className="truncate">{selectedExpenseUsersDisplay}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                          <Command><CommandInput placeholder="Search user..." />
+                            <CommandList><CommandEmpty>No user found.</CommandEmpty>
+                              <CommandGroup>
+                                {allTargetableUsersForExpensePerms.map((user) => (
+                                  <CommandItem key={`expense-user-${user.id}`} value={`${user.name} ${user.email} ${user.role}`} onSelect={() => handleExpensePermsUserSelect(user.id)} className="cursor-pointer">
+                                    <CheckIcon className={cn("mr-2 h-4 w-4", expenseLoggingPerms.allowedUserIds.includes(user.id) ? "opacity-100" : "opacity-0")}/>
+                                    {user.name} <span className="text-xs text-muted-foreground ml-1">({user.role.replace(/_/g, ' ')})</span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup></CommandList></Command>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+                )}
+                 <Button onClick={handleSaveExpensePermissions} disabled={isSubmittingExpensePerms} className="mt-4">
+                    {isSubmittingExpensePerms ? "Saving..." : "Save Expense Permissions"}
+                  </Button>
               </div>
             </>
           )}
@@ -375,7 +446,6 @@ export default function CrmTargetSettingsPage() {
 
       <Separator className="my-8" />
 
-      {/* Order Management Permissions Card */}
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><UserCheck className="h-6 w-6 text-primary" /> Order Management Permissions</CardTitle>
@@ -396,7 +466,6 @@ export default function CrmTargetSettingsPage() {
 
       <Separator className="my-8" />
 
-      {/* Toast Notification Sound Card */}
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
@@ -437,7 +506,6 @@ export default function CrmTargetSettingsPage() {
 
       <Separator className="my-8" />
 
-      {/* Leaderboard Background Image Card */}
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
@@ -475,7 +543,7 @@ export default function CrmTargetSettingsPage() {
                     width={200}
                     height={120}
                     className="object-cover rounded"
-                    unoptimized={leaderboardBgUrl.startsWith('/')} // For relative paths
+                    unoptimized={leaderboardBgUrl.startsWith('/')} 
                     onError={(e) => { e.currentTarget.src = DEFAULT_LEADERBOARD_BACKGROUND_PLACEHOLDER; e.currentTarget.alt = 'Error loading image. Default shown.' }}
                   />
                 </div>
@@ -492,7 +560,6 @@ export default function CrmTargetSettingsPage() {
 
       <Separator className="my-8" />
 
-      {/* User FCM Tokens Card */}
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
@@ -575,7 +642,6 @@ export default function CrmTargetSettingsPage() {
 
       <Separator className="my-8" />
 
-      {/* Send Push Notification Card */}
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
@@ -632,16 +698,16 @@ export default function CrmTargetSettingsPage() {
               <div className="p-4 border rounded-md bg-secondary/30 mt-2">
                 <Label className="mb-2 block text-sm font-medium">Select Users *</Label>
                 {isLoadingUsersForNotifAndTokens ? <Skeleton className="h-10 w-full rounded-md" />
-                : <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
+                : <Popover open={isNotifUserPopoverOpen} onOpenChange={setIsNotifUserPopoverOpen}>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" role="combobox" aria-expanded={isUserPopoverOpen} className="w-full justify-between bg-background" disabled={isSendingNotification || allUsers.filter(u => u.role !== 'SYSTEM_ADMIN').length === 0}>
-                        <span className="truncate">{selectedUsersDisplay}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button>
+                      <Button variant="outline" role="combobox" aria-expanded={isNotifUserPopoverOpen} className="w-full justify-between bg-background" disabled={isSendingNotification || allUsers.length === 0}>
+                        <span className="truncate">{selectedNotifUsersDisplay}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
                       <Command><CommandInput placeholder="Search user..." disabled={isSendingNotification}/>
                         <CommandList><CommandEmpty>No user found.</CommandEmpty>
                           <CommandGroup>
-                            {allUsers.filter(u => u.role !== 'SYSTEM_ADMIN').map((user) => (<CommandItem key={user.id} value={`${user.name} ${user.email} ${user.role}`} onSelect={() => handleNotificationUserSelect(user.id)} disabled={isSendingNotification} className="cursor-pointer">
+                            {allUsers.map((user) => (<CommandItem key={user.id} value={`${user.name} ${user.email} ${user.role}`} onSelect={() => handleNotificationUserSelect(user.id)} disabled={isSendingNotification} className="cursor-pointer">
                                 <CheckIcon className={cn("mr-2 h-4 w-4", selectedNotificationUserIds.has(user.id) ? "opacity-100" : "opacity-0")}/>
                                 {user.name} <span className="text-xs text-muted-foreground ml-1">({user.role.replace(/_/g, ' ')})</span></CommandItem>))}
                           </CommandGroup></CommandList></Command></PopoverContent></Popover>}

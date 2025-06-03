@@ -8,9 +8,9 @@ import {
   setRolesAllowedToEditOrders,
   setToastSoundUrl,
   setLeaderboardBackgroundImageUrl,
-  setCanUsersAddExpenses // Added import
+  setExpenseLoggingPermissions // Changed from setCanUsersAddExpenses
 } from "@/lib/settings-service";
-import type { UserRole, User } from "@/types";
+import type { UserRole, User, ExpenseLoggingPermissions } from "@/types"; // Added ExpenseLoggingPermissions
 import { adminApp } from '@/lib/firebase-admin';
 import { getUsers as getAllUsersFromDb, getUserById } from '@/lib/user-service';
 import type { FirebaseError } from 'firebase-admin';
@@ -65,15 +65,12 @@ export async function updateRolesAllowedToEditOrdersAction(roles: UserRole[]): P
 
 export async function updateToastSoundUrlAction(soundUrl: string | null): Promise<{ success: boolean; error?: string }> {
   try {
-    // Basic validation for URL format (optional, can be more strict)
     if (soundUrl && !soundUrl.startsWith('http://') && !soundUrl.startsWith('https://') && !soundUrl.startsWith('/')) {
-      // Allow relative paths starting with /
       // return { success: false, error: "Invalid sound URL format. Must be a valid URL or a relative path starting with '/'." };
     }
     const success = await setToastSoundUrl(soundUrl);
     if (success) {
       revalidatePath("/(app)/admin/crm-target-settings");
-      // No other paths need revalidation as the toast hook will read from localStorage
       return { success: true };
     }
     return { success: false, error: "Failed to update toast sound URL in database." };
@@ -91,7 +88,7 @@ export async function updateLeaderboardBackgroundImageUrlAction(imageUrl: string
     const success = await setLeaderboardBackgroundImageUrl(imageUrl);
     if (success) {
       revalidatePath("/(app)/admin/crm-target-settings");
-      revalidatePath("/(app)/leaderboard"); // Revalidate leaderboard to show new image
+      revalidatePath("/(app)/leaderboard"); 
       return { success: true };
     }
     return { success: false, error: "Failed to update leaderboard background image URL in database." };
@@ -101,17 +98,28 @@ export async function updateLeaderboardBackgroundImageUrlAction(imageUrl: string
   }
 }
 
-export async function updateCanUsersAddExpensesAction(canAdd: boolean): Promise<{ success: boolean; error?: string }> {
+export async function updateExpenseLoggingPermissionsAction(permissions: ExpenseLoggingPermissions): Promise<{ success: boolean; error?: string }> {
   try {
-    const success = await setCanUsersAddExpenses(canAdd);
+    // Validate permissions structure
+    if (!permissions || !permissions.mode) {
+        return { success: false, error: "Invalid permission structure provided." };
+    }
+    if (permissions.mode === 'specificRoles' && (!Array.isArray(permissions.allowedRoles) || permissions.allowedRoles.some(r => !['ADMIN','CRM','DESIGNER_REPRESENTATIVE'].includes(r)))) {
+        return { success: false, error: "Invalid roles specified for expense logging." };
+    }
+    if (permissions.mode === 'specificUsers' && !Array.isArray(permissions.allowedUserIds)) {
+        return { success: false, error: "Allowed user IDs must be an array for expense logging." };
+    }
+
+    const success = await setExpenseLoggingPermissions(permissions);
     if (success) {
       revalidatePath("/(app)/admin/crm-target-settings");
-      revalidatePath("/(app)/finance-manager"); // Revalidate finance manager page
+      revalidatePath("/(app)/finance-manager"); 
       return { success: true };
     }
-    return { success: false, error: "Failed to update expense logging permission in database." };
+    return { success: false, error: "Failed to update expense logging permissions in database." };
   } catch (error) {
-    console.error("Error in updateCanUsersAddExpensesAction:", error);
+    console.error("Error in updateExpenseLoggingPermissionsAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
@@ -201,43 +209,27 @@ export async function sendPushNotificationAction(
 
       const fcmMessage: messaging.Message = {
         token: user.fcmToken,
-        notification: { // Standard notification object for general display
+        notification: { 
           title: personalizedTitle,
           body: personalizedBody,
           ...(iconUrl && { imageUrl: iconUrl })
         },
-        data: { // Data payload for custom handling by client
-          title: personalizedTitle, // Send title/body in data too for client flexibility
+        data: { 
+          title: personalizedTitle, 
           body: personalizedBody,
           ...(iconUrl && { icon: iconUrl, iconUrl: iconUrl }),
           ...(targetUrl && { click_action: targetUrl, targetUrl: targetUrl }),
-          ...(soundUrl && { customSoundUrl: soundUrl }) // Pass custom sound URL in data
+          ...(soundUrl && { customSoundUrl: soundUrl }) 
         },
-        webpush: { // Webpush specific configuration
+        webpush: { 
           notification: {
-            icon: iconUrl || '/icons/icon-192x192.png', // Default icon for webpush
-            ...(soundUrl ? {} : { sound: "default" }) // If no custom sound, use default system sound for web.
-                                                      // If custom sound, client-side SW will handle it.
+            icon: iconUrl || '/icons/icon-192x192.png', 
+            ...(soundUrl ? {} : { sound: "default" }) 
           },
           fcmOptions: {
-            link: targetUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://colorhut-57f5a.web.app') // Sensible default link
+            link: targetUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://colorhut-57f5a.web.app') 
           }
         },
-        // Optional: Android specific config
-        // android: {
-        //   notification: {
-        //     sound: soundUrl ? undefined : 'default', // Default or custom for Android if needed differently
-        //     channelId: 'colorhut_notifications', // Example channel
-        //   }
-        // },
-        // Optional: APNS specific config
-        // apns: {
-        //   payload: {
-        //     aps: {
-        //       sound: soundUrl ? undefined : 'default', // Default or custom for iOS
-        //     }
-        //   }
-        // }
       };
 
       try {
@@ -284,4 +276,3 @@ export async function sendPushNotificationAction(
     };
   }
 }
-
