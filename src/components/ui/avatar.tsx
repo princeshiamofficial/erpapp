@@ -13,12 +13,12 @@ const Avatar = React.forwardRef<
   <AvatarPrimitive.Root
     ref={ref}
     className={cn(
-      "relative flex h-10 w-10 shrink-0 rounded-full", // overflow-hidden removed from here
+      "relative flex h-10 w-10 shrink-0 rounded-full", // Base styles, overflow-hidden might be added via className prop
       className
     )}
     {...props}
   >
-    {/* New inner div for clipping content */}
+    {/* Inner div for clipping content, ensuring it's also round and clips */}
     <div className="h-full w-full rounded-full overflow-hidden">
       {children}
     </div>
@@ -32,7 +32,7 @@ const AvatarImage = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AvatarPrimitive.Image
     ref={ref}
-    className={cn("h-full w-full object-cover", className)} // rounded-full removed from here
+    className={cn("h-full w-full object-cover rounded-full", className)} // Added rounded-full
     {...props}
   />
 ))
@@ -45,7 +45,7 @@ const AvatarFallback = React.forwardRef<
   <AvatarPrimitive.Fallback
     ref={ref}
     className={cn(
-      "flex h-full w-full items-center justify-center rounded-full bg-muted", // rounded-full might be redundant if inner div clips, but harmless
+      "flex h-full w-full items-center justify-center rounded-full bg-muted", // Fallback is already round
       className
     )}
     {...props}
