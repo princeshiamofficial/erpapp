@@ -42,6 +42,7 @@ export default function FinanceManagerPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'personal' | 'global'>('personal');
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
+  const [allUsersForDialog, setAllUsersForDialog] = useState<User[]>([]); // For Send Money Dialog
 
   const [isClient, setIsClient] = useState(false);
   useEffect(() => setIsClient(true), []);
@@ -54,37 +55,56 @@ export default function FinanceManagerPage() {
   const [isEditDialogVisible, setIsEditDialogVisible] = useState(false);
 
 
-  const fetchTransactions = useCallback(async () => {
+  const fetchFinancialData = useCallback(async () => {
     if (!currentUser) return;
     setIsLoading(true);
     try {
       let fetchedTransactions: Transaction[];
-      if (currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global') {
-        const [allTrans, allUsers] = await Promise.all([
+      let fetchedUsersForMap: User[] = [];
+      let fetchedUsersForDialog: User[] = [];
+
+      if (currentUser.role === 'SYSTEM_ADMIN') {
+        const [allTrans, allSystemUsers] = await Promise.all([
           getAllTransactions(),
-          getUsers()
+          getUsers() 
         ]);
         fetchedTransactions = allTrans;
-        const newUserMap = new Map(allUsers.map(user => [user.id, user.name]));
+        fetchedUsersForMap = allSystemUsers;
+        fetchedUsersForDialog = allSystemUsers.filter(u => u.id !== currentUser.id); // Exclude current admin for Send Money
+        
+        const newUserMap = new Map(fetchedUsersForMap.map(user => [user.id, user.name]));
         setUserMap(newUserMap);
+        setAllUsersForDialog(fetchedUsersForDialog);
       } else {
         fetchedTransactions = await getTransactionsForUser(currentUser.id);
         setUserMap(new Map()); // Clear map if not in global view
+        setAllUsersForDialog([]); // No users needed for non-admin dialog
       }
       setTransactions(fetchedTransactions);
     } catch (error) {
-      console.error("Failed to fetch transactions:", error);
-      toast({ title: "Error", description: "Could not load transactions.", variant: "destructive" });
+      console.error("Failed to fetch financial data or users:", error);
+      toast({ title: "Error", description: "Could not load transactions or user data.", variant: "destructive" });
       setTransactions([]);
       setUserMap(new Map());
+      setAllUsersForDialog([]);
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser, viewMode, toast]);
+  }, [currentUser, viewMode, toast]); // viewMode removed from deps as it's handled by effect below
 
   useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
+    fetchFinancialData();
+  }, [fetchFinancialData]); // Re-fetch if viewMode changes
+
+  useEffect(() => {
+    // This effect ensures that if viewMode changes, data is refetched.
+    // The fetchFinancialData itself is memoized, so it will only re-run if its dependencies change.
+    // This setup handles the switch between personal and global views.
+    if (currentUser) {
+      fetchFinancialData();
+    }
+  }, [currentUser, viewMode, fetchFinancialData]);
+
 
   const handleDeleteRequest = (transaction: Transaction) => {
     setTransactionToDelete(transaction);
@@ -99,7 +119,7 @@ export default function FinanceManagerPage() {
     setIsDeleteAlertOpen(false);
     if (result.success) {
       toast({ title: "Transaction Deleted", description: "The transaction has been removed." });
-      fetchTransactions();
+      fetchFinancialData();
     } else {
       toast({ title: "Deletion Failed", description: result.error || "Could not delete transaction.", variant: "destructive" });
     }
@@ -114,7 +134,7 @@ export default function FinanceManagerPage() {
   const handleTransactionUpdated = () => {
     setIsEditDialogVisible(false);
     setTransactionToEdit(null);
-    fetchTransactions();
+    fetchFinancialData();
     toast({title: "Transaction Updated", description: "The transaction has been successfully updated."})
   };
 
@@ -154,23 +174,28 @@ export default function FinanceManagerPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
-           <Button variant="outline" size="icon" onClick={fetchTransactions} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
+           <Button variant="outline" size="icon" onClick={fetchFinancialData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
               <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
           {currentUser.role === 'SYSTEM_ADMIN' && (
-            <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions}>
+            <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData}>
               <Button size="default" className="bg-green-600 hover:bg-green-700 text-white h-10">
                 <PlusCircle className="mr-2 h-5 w-5" /> Add Income
               </Button>
             </AddTransactionDialog>
           )}
-          <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions}>
+          <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData}>
             <Button size="default" className="bg-red-600 hover:bg-red-700 text-white h-10">
               <Minus className="mr-2 h-5 w-5" /> Add Expense
             </Button>
           </AddTransactionDialog>
           {currentUser.role === 'SYSTEM_ADMIN' && (
-            <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions} isSendMoneyFlow={true}>
+            <AddTransactionDialog 
+                currentUser={currentUser} 
+                onTransactionAdded={fetchFinancialData} 
+                isSendMoneyFlow={true}
+                allUsersForDropdown={allUsersForDialog}
+            >
             <Button size="default" className="bg-blue-600 hover:bg-blue-700 text-white h-10">
               <Send className="mr-2 h-5 w-5" /> Send Money
             </Button>

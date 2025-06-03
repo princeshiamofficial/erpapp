@@ -22,7 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { addTransactionAction } from '@/app/(app)/finance-manager/actions';
 import { Loader2, CalendarIcon, Users, ChevronsUpDown, Check } from 'lucide-react'; 
 import { format } from 'date-fns';
-import { getUsers } from '@/lib/user-service';
+// getUsers import removed as users are now passed as props
 import { Command, CommandEmpty, CommandInput, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"; 
 import { cn } from "@/lib/utils"; 
 
@@ -31,9 +31,16 @@ interface AddTransactionDialogProps {
   onTransactionAdded: () => void;
   children: React.ReactNode;
   isSendMoneyFlow?: boolean;
+  allUsersForDropdown?: User[]; // New prop for pre-fetched users
 }
 
-export function AddTransactionDialog({ currentUser, onTransactionAdded, children, isSendMoneyFlow = false }: AddTransactionDialogProps) {
+export function AddTransactionDialog({ 
+  currentUser, 
+  onTransactionAdded, 
+  children, 
+  isSendMoneyFlow = false,
+  allUsersForDropdown = [] // Default to empty array
+}: AddTransactionDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [type, setType] = useState<TransactionType>(isSendMoneyFlow ? 'expense' : 'expense');
   const [amount, setAmount] = useState('');
@@ -41,42 +48,41 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
   const [description, setDescription] = useState('');
   const [date, setDate] = useState<Date | undefined>(new Date());
   
-  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [selectedSentToUserId, setSelectedSentToUserId] = useState<string | undefined>(undefined);
-  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false); 
   const [userSearchQuery, setUserSearchQuery] = useState(""); 
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
+  const availableUsers = useMemo(() => {
+      return allUsersForDropdown.filter(u => u.id !== currentUser.id);
+  }, [allUsersForDropdown, currentUser.id]);
+
   useEffect(() => {
     if (isOpen) {
       setType(isSendMoneyFlow ? 'expense' : 'expense');
+      // No longer need to fetch users here, they are passed via props
+      // Category setting logic for Send Money flow
       if (isSendMoneyFlow) {
-        setIsLoadingUsers(true);
-        getUsers().then(fetchedUsers => {
-          setAllUsers(fetchedUsers.filter(u => u.id !== currentUser.id)); // Exclude current admin
-          setIsLoadingUsers(false);
-        }).catch(err => {
-          console.error("Failed to fetch users for Send Money dialog:", err);
-          toast({ title: "Error", description: "Could not load users.", variant: "destructive" });
-          setIsLoadingUsers(false);
-        });
+        const recipient = availableUsers.find(u => u.id === selectedSentToUserId);
+        setCategory(recipient ? `Sent Money to ${recipient.name}` : "Sent Money");
+      } else {
+        setCategory(""); // Reset category for other flows
       }
-      setCategory(isSendMoneyFlow ? (selectedSentToUserId ? `Sent Money to ${allUsers.find(u => u.id === selectedSentToUserId)?.name || 'user'}` : "Sent Money") : "");
       setAmount('');
       setDescription('');
       setDate(new Date());
       setSelectedSentToUserId(undefined);
       setUserSearchQuery("");
     }
-  }, [isOpen, isSendMoneyFlow, currentUser.id, toast, allUsers, selectedSentToUserId]); // Added allUsers and selectedSentToUserId
+  }, [isOpen, isSendMoneyFlow, selectedSentToUserId, availableUsers]);
+
 
   useEffect(() => {
     if (isSendMoneyFlow) {
       if (selectedSentToUserId) {
-        const recipient = allUsers.find(u => u.id === selectedSentToUserId);
+        const recipient = availableUsers.find(u => u.id === selectedSentToUserId);
         if (recipient) {
           setCategory(`Sent Money to ${recipient.name}`);
         } else {
@@ -86,12 +92,12 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
         setCategory("Sent Money"); 
       }
     }
-  }, [isSendMoneyFlow, selectedSentToUserId, allUsers]);
+  }, [isSendMoneyFlow, selectedSentToUserId, availableUsers]);
 
   const resetForm = () => {
     setType(isSendMoneyFlow ? 'expense' : 'expense');
     setAmount('');
-    setCategory(isSendMoneyFlow ? "Sent Money" : ""); // Reset category based on flow
+    setCategory(isSendMoneyFlow ? "Sent Money" : "");
     setDescription('');
     setDate(new Date());
     setSelectedSentToUserId(undefined);
@@ -106,6 +112,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
       toast({ title: "Validation Error", description: "Amount, Date, and Recipient (if sending money) are required.", variant: "destructive" });
       return;
     }
+    // Category is now auto-set for send money flow, so this check is only for other types
     if (!isSendMoneyFlow && !category.trim()) {
         toast({ title: "Validation Error", description: "Category is required for this transaction type.", variant: "destructive" });
         return;
@@ -119,14 +126,18 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
 
     setIsSubmitting(true);
     
+    const finalCategory = isSendMoneyFlow 
+        ? (selectedSentToUserId ? `Sent Money to ${availableUsers.find(u => u.id === selectedSentToUserId)?.name || 'user'}` : "Sent Money")
+        : category.trim();
+
     const transactionPayload = {
       type: isSendMoneyFlow ? 'expense' : type, 
       amount: numericAmount,
-      category: category.trim(), 
-      description: description.trim() || null, // Ensure null for empty string
+      category: finalCategory, 
+      description: description.trim() || null,
       date: date.toISOString(),
       sentToUserId: isSendMoneyFlow ? selectedSentToUserId : null,
-      sentToUserName: isSendMoneyFlow && selectedSentToUserId ? allUsers.find(u => u.id === selectedSentToUserId)?.name || null : null,
+      sentToUserName: isSendMoneyFlow && selectedSentToUserId ? availableUsers.find(u => u.id === selectedSentToUserId)?.name || null : null,
     };
 
     const result = await addTransactionAction(currentUser, transactionPayload);
@@ -134,8 +145,8 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
 
     if (result.success && result.transaction) {
       const successType = isSendMoneyFlow ? 'Payment' : (type.charAt(0).toUpperCase() + type.slice(1));
-      toast({ title: `${successType} Recorded`, description: `${category} of ${numericAmount} recorded.` });
-      if(result.error) { // To show the partial success error from the action
+      toast({ title: `${successType} Recorded`, description: `${finalCategory} of ${numericAmount} recorded.` });
+      if(result.error) { 
         toast({ title: "Notice", description: result.error, variant: "default", duration: 7000 });
       }
       onTransactionAdded();
@@ -158,12 +169,12 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
     : `Log a new ${type} entry.`;
 
   const filteredUsersForDropdown = useMemo(() => {
-    if (!userSearchQuery) return allUsers;
-    return allUsers.filter(user =>
+    if (!userSearchQuery) return availableUsers;
+    return availableUsers.filter(user =>
       user.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(userSearchQuery.toLowerCase())
     );
-  }, [allUsers, userSearchQuery]);
+  }, [availableUsers, userSearchQuery]);
 
   const canSubmit = useMemo(() => {
     const baseValid = !isSubmitting &&
@@ -173,7 +184,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
     if (isSendMoneyFlow) {
       return baseValid && selectedSentToUserId;
     } else {
-      return baseValid && category.trim();
+      return baseValid && category.trim(); // Category is now auto-set for send money
     }
   }, [isSubmitting, amount, category, date, isSendMoneyFlow, selectedSentToUserId]);
 
@@ -225,11 +236,10 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
                       role="combobox"
                       aria-expanded={isUserPopoverOpen}
                       className="w-full justify-between"
-                      disabled={isLoadingUsers}
                     >
                       {selectedSentToUserId
-                        ? allUsers.find((user) => user.id === selectedSentToUserId)?.name
-                        : (isLoadingUsers ? "Loading users..." : "Select recipient *")}
+                        ? availableUsers.find((user) => user.id === selectedSentToUserId)?.name
+                        : ("Select recipient *")}
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
@@ -241,13 +251,12 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
                         onValueChange={setUserSearchQuery}
                       />
                       <CommandList>
-                        <CommandEmpty>{isLoadingUsers ? "Loading..." : "No user found."}</CommandEmpty>
+                        <CommandEmpty>No user found.</CommandEmpty>
                         <CommandGroup>
-                          {isLoadingUsers && <CommandItem disabled>Loading users...</CommandItem>}
-                          {!isLoadingUsers && filteredUsersForDropdown.length === 0 && !userSearchQuery && (
+                          {availableUsers.length === 0 && !userSearchQuery && (
                             <CommandItem disabled>No other users available.</CommandItem>
                           )}
-                          {!isLoadingUsers && filteredUsersForDropdown.map((user) => (
+                          {filteredUsersForDropdown.map((user) => (
                             <CommandItem
                               key={user.id}
                               value={user.name + user.id} 
@@ -311,3 +320,4 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
     </Dialog>
   );
 }
+
