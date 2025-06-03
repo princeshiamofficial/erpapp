@@ -4,7 +4,7 @@
 import React from 'react';
 import type { Transaction, User } from '@/types';
 import { format, parseISO } from 'date-fns';
-import { TrendingUp, TrendingDown, Trash2, Edit3, UserCircle, ShoppingBag } from 'lucide-react';
+import { TrendingUp, TrendingDown, Trash2, Edit3, UserCircle, ShoppingBag, SendHorizonal, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -27,28 +27,44 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
 
   let finalCanModify = false;
   if (currentUser?.role === 'SYSTEM_ADMIN') {
-    finalCanModify = true; // System admin can always modify
+    finalCanModify = true;
   } else if (currentUser?.id === transaction.userId) {
-    // It's the owner. Can they modify?
-    // They cannot modify if it's an income transaction received from someone else (a system transfer)
     const isReceivedSystemIncome = transaction.type === 'income' && !!transaction.receivedFromUserId;
-    if (isReceivedSystemIncome) {
-      finalCanModify = false; // Recipient cannot modify system-generated income
-    } else {
-      finalCanModify = true; // Owner can modify their own regular transactions
+    if (!isReceivedSystemIncome) {
+      finalCanModify = true;
     }
   }
-  // If not System Admin and not owner, finalCanModify remains false.
 
-  let IconComponent = TrendingUp;
-  let iconColorClass = "bg-green-500/10 text-green-600";
+  let IconComponent;
+  let iconColorClass;
+  let amountPrefix = '';
+  let amountColorClass = '';
 
-  if (isPurchase) {
+  if (isIncome) {
+    if (transaction.receivedFromUserId) { // Money Received from a transfer
+      IconComponent = Download;
+      iconColorClass = "bg-purple-500/10 text-purple-600"; // Distinct color for received funds
+    } else { // Regular income
+      IconComponent = TrendingUp;
+      iconColorClass = "bg-green-500/10 text-green-600";
+    }
+    amountPrefix = '+';
+    amountColorClass = "text-green-600";
+  } else if (isExpense) {
+    if (transaction.sentToUserId) { // Money Sent via transfer
+      IconComponent = SendHorizonal;
+      iconColorClass = "bg-blue-500/10 text-blue-600"; // Distinct color for sent funds
+    } else { // Regular expense
+      IconComponent = TrendingDown;
+      iconColorClass = "bg-red-500/10 text-red-600";
+    }
+    amountPrefix = '-';
+    amountColorClass = "text-red-600";
+  } else { // Purchase
     IconComponent = ShoppingBag;
     iconColorClass = "bg-sky-500/10 text-sky-600";
-  } else if (isExpense) {
-    IconComponent = TrendingDown;
-    iconColorClass = "bg-red-500/10 text-red-600";
+    amountPrefix = '-';
+    amountColorClass = "text-sky-600";
   }
 
 
@@ -62,7 +78,7 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
           <p className="text-sm sm:text-md font-semibold text-foreground truncate" title={transaction.category}>
             {transaction.category}
           </p>
-          {userName && (currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.id !== transaction.userId) && ( // Show username if global view or not own transaction
+          {userName && (currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.id !== transaction.userId) && (
             <div className="flex items-center text-xs text-primary truncate mt-0.5" title={`User: ${userName}`}>
               <UserCircle className="h-3.5 w-3.5 mr-1 opacity-80" />
               {userName}
@@ -79,9 +95,9 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
       <div className="flex flex-col items-end ml-2 sm:ml-4">
         <p className={cn(
           "text-md sm:text-lg font-bold",
-          isIncome ? "text-green-600" : (isPurchase ? "text-sky-600" : "text-red-600")
+          amountColorClass
         )}>
-          {isIncome ? '+' : '-'} {formatCurrency(transaction.amount)}
+          {amountPrefix} {formatCurrency(transaction.amount)}
         </p>
         {finalCanModify && (
           <div className="flex items-center space-x-1 mt-1">
@@ -109,3 +125,4 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
     </div>
   );
 }
+
