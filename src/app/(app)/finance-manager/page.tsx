@@ -157,11 +157,13 @@ export default function FinanceManagerPage() {
            <Button variant="outline" size="icon" onClick={fetchTransactions} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
               <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
-          <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions}>
-            <Button size="default" className="bg-green-600 hover:bg-green-700 text-white h-10">
-              <PlusCircle className="mr-2 h-5 w-5" /> Add Income
-            </Button>
-          </AddTransactionDialog>
+          {currentUser.role === 'SYSTEM_ADMIN' && (
+            <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions}>
+              <Button size="default" className="bg-green-600 hover:bg-green-700 text-white h-10">
+                <PlusCircle className="mr-2 h-5 w-5" /> Add Income
+              </Button>
+            </AddTransactionDialog>
+          )}
           <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions}>
             <Button size="default" className="bg-red-600 hover:bg-red-700 text-white h-10">
               <Minus className="mr-2 h-5 w-5" /> Add Expense
@@ -336,3 +338,6 @@ export default function FinanceManagerPage() {
 
     
 
+
+
+    
