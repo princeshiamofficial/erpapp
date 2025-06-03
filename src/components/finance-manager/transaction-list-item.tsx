@@ -11,9 +11,9 @@ import { cn } from '@/lib/utils';
 interface TransactionListItemProps {
   transaction: Transaction;
   currentUser: User | null;
-  onDelete: (transaction: Transaction) => void; // Pass the whole transaction for confirm dialog
+  onDelete: (transaction: Transaction) => void;
   onEdit: (transaction: Transaction) => void;
-  userName?: string; 
+  userName?: string;
 }
 
 const formatCurrency = (value: number): string => {
@@ -24,8 +24,19 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
   const isIncome = transaction.type === 'income';
   const isPurchase = transaction.type === 'purchase';
   const isExpense = transaction.type === 'expense';
-  
-  const canModify = currentUser?.role === 'SYSTEM_ADMIN' || (currentUser?.id === transaction.userId);
+
+  // Determine if the current user can modify this transaction.
+  // General rule: System Admins can modify anything. Other users can only modify their own transactions.
+  const generalCanModify = currentUser?.role === 'SYSTEM_ADMIN' || (currentUser?.id === transaction.userId);
+
+  // Specific rule: Recipients cannot edit/delete income transactions received from a system transfer (admin send money).
+  const isSystemGeneratedReceivedIncomeForRecipient =
+    transaction.type === 'income' &&
+    !!transaction.receivedFromUserId && // Indicates it was received from someone
+    currentUser?.id === transaction.userId && // Current user is the recipient
+    currentUser?.role !== 'SYSTEM_ADMIN';   // And current user is NOT a System Admin (who could be viewing their own received test tx)
+
+  const finalCanModify = generalCanModify && !isSystemGeneratedReceivedIncomeForRecipient;
 
 
   let IconComponent = TrendingUp;
@@ -33,7 +44,7 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
 
   if (isPurchase) {
     IconComponent = ShoppingBag;
-    iconColorClass = "bg-sky-500/10 text-sky-600"; 
+    iconColorClass = "bg-sky-500/10 text-sky-600";
   } else if (isExpense) {
     IconComponent = TrendingDown;
     iconColorClass = "bg-red-500/10 text-red-600";
@@ -50,13 +61,13 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
           <p className="text-sm sm:text-md font-semibold text-foreground truncate" title={transaction.category}>
             {transaction.category}
           </p>
-          {userName && (
+          {userName && (currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.id !== transaction.userId) && ( // Show username if global view or not own transaction
             <div className="flex items-center text-xs text-primary truncate mt-0.5" title={`User: ${userName}`}>
               <UserCircle className="h-3.5 w-3.5 mr-1 opacity-80" />
               {userName}
             </div>
           )}
-          <p className="text-xs text-muted-foreground truncate" title={transaction.description}>
+          <p className="text-xs text-muted-foreground truncate" title={transaction.description || undefined}>
             {transaction.description || 'No description'}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">
@@ -71,7 +82,7 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
         )}>
           {isIncome ? '+' : '-'} {formatCurrency(transaction.amount)}
         </p>
-        {canModify && (
+        {finalCanModify && (
           <div className="flex items-center space-x-1 mt-1">
             <Button
               variant="ghost"
@@ -86,7 +97,7 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
               variant="ghost"
               size="icon"
               className="h-7 w-7 text-muted-foreground hover:text-destructive"
-              onClick={() => onDelete(transaction)} // Pass the full transaction object
+              onClick={() => onDelete(transaction)}
               title="Delete Transaction"
             >
               <Trash2 className="h-4 w-4" />
@@ -97,6 +108,3 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
     </div>
   );
 }
-
-
-    

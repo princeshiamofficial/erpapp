@@ -13,7 +13,8 @@ import {
   Timestamp,
   serverTimestamp,
   writeBatch,
-  setDoc, // Added setDoc to imports
+  setDoc,
+  getDoc, // Added getDoc
 } from 'firebase/firestore';
 import type { Transaction, TransactionType } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
@@ -27,8 +28,8 @@ export async function addTransaction(
     type: TransactionType;
     amount: number;
     category: string;
-    description?: string | null; // Allow null
-    date: string; // Expect ISO string date from client
+    description?: string | null;
+    date: string;
     sentToUserId?: string | null;
     sentToUserName?: string | null;
     receivedFromUserId?: string | null;
@@ -100,6 +101,22 @@ export async function getAllTransactions(): Promise<Transaction[]> {
   }
 }
 
+// Get a single transaction by ID
+export async function getTransactionById(transactionId: string): Promise<Transaction | null> {
+  if (!transactionId) return null;
+  const transactionDocRef = doc(db, TRANSACTIONS_COLLECTION, transactionId);
+  try {
+    const docSnap = await getDoc(transactionDocRef);
+    if (docSnap.exists()) {
+      return { ...docSnap.data(), id: docSnap.id } as Transaction;
+    }
+    return null;
+  } catch (error) {
+    console.error(`Error fetching transaction by ID "${transactionId}":`, error);
+    return null;
+  }
+}
+
 // Update a transaction
 export async function updateTransaction(
   transactionId: string,
@@ -107,7 +124,6 @@ export async function updateTransaction(
 ): Promise<boolean> {
   try {
     const transactionDoc = doc(db, TRANSACTIONS_COLLECTION, transactionId);
-    // Ensure description is explicitly set to null if empty string, otherwise keep as is
     const sanitizedUpdates = { ...updates };
     if (sanitizedUpdates.description === '') {
         sanitizedUpdates.description = null;
@@ -131,11 +147,3 @@ export async function deleteTransaction(transactionId: string): Promise<boolean>
     return false;
   }
 }
-
-// --- Personal Notes Service (Basic implementation for now) ---
-// This can be expanded later. For now, just structure placeholders.
-// const NOTES_COLLECTION = 'personalNotes';
-// export async function addNote(...) {}
-// export async function getNotesForUser(...) {}
-// export async function updateNote(...) {}
-// export async function deleteNote(...) {}

@@ -12,7 +12,7 @@ import { getUsers } from '@/lib/user-service';
 import { deleteTransactionAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, DollarSign, Wallet, AlertTriangle, ListFilter, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send } from 'lucide-react'; 
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, DollarSign, Wallet, AlertTriangle, ListFilter, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send } from 'lucide-react';
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
@@ -42,7 +42,7 @@ export default function FinanceManagerPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'personal' | 'global'>('personal');
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
-  const [allUsersForDialog, setAllUsersForDialog] = useState<User[]>([]); // For Send Money Dialog
+  const [allUsersForDialog, setAllUsersForDialog] = useState<User[]>([]);
 
   const [isClient, setIsClient] = useState(false);
   useEffect(() => setIsClient(true), []);
@@ -61,25 +61,28 @@ export default function FinanceManagerPage() {
     try {
       let fetchedTransactions: Transaction[];
       let fetchedUsersForMap: User[] = [];
-      let fetchedUsersForDialog: User[] = [];
+      let fetchedUsersForDialogLocal: User[] = [];
 
-      if (currentUser.role === 'SYSTEM_ADMIN') {
+      if (currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global') {
         const [allTrans, allSystemUsers] = await Promise.all([
           getAllTransactions(),
-          getUsers() 
+          getUsers()
         ]);
         fetchedTransactions = allTrans;
         fetchedUsersForMap = allSystemUsers;
-        fetchedUsersForDialog = allSystemUsers.filter(u => u.id !== currentUser.id); // Exclude current admin for Send Money
+        fetchedUsersForDialogLocal = allSystemUsers.filter(u => u.id !== currentUser.id && u.role !== 'SYSTEM_ADMIN'); // Exclude current admin and other sys admins for Send Money
         
         const newUserMap = new Map(fetchedUsersForMap.map(user => [user.id, user.name]));
         setUserMap(newUserMap);
-        setAllUsersForDialog(fetchedUsersForDialog);
-      } else {
+      } else { // Personal view for all users, or if admin selects personal
         fetchedTransactions = await getTransactionsForUser(currentUser.id);
         setUserMap(new Map()); // Clear map if not in global view
-        setAllUsersForDialog([]); // No users needed for non-admin dialog
+        if (currentUser.role === 'SYSTEM_ADMIN') { // Still need users for Send Money if admin is in personal view
+            const allSystemUsers = await getUsers();
+            fetchedUsersForDialogLocal = allSystemUsers.filter(u => u.id !== currentUser.id && u.role !== 'SYSTEM_ADMIN');
+        }
       }
+      setAllUsersForDialog(fetchedUsersForDialogLocal);
       setTransactions(fetchedTransactions);
     } catch (error) {
       console.error("Failed to fetch financial data or users:", error);
@@ -90,16 +93,9 @@ export default function FinanceManagerPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser, viewMode, toast]); // viewMode removed from deps as it's handled by effect below
+  }, [currentUser, viewMode, toast]);
 
   useEffect(() => {
-    fetchFinancialData();
-  }, [fetchFinancialData]); // Re-fetch if viewMode changes
-
-  useEffect(() => {
-    // This effect ensures that if viewMode changes, data is refetched.
-    // The fetchFinancialData itself is memoized, so it will only re-run if its dependencies change.
-    // This setup handles the switch between personal and global views.
     if (currentUser) {
       fetchFinancialData();
     }
@@ -114,7 +110,7 @@ export default function FinanceManagerPage() {
   const confirmDeleteTransaction = async () => {
     if (!transactionToDelete || !currentUser) return;
     setIsDeleting(true);
-    const result = await deleteTransactionAction(transactionToDelete.id, currentUser.id);
+    const result = await deleteTransactionAction(transactionToDelete.id, currentUser.id, currentUser.role);
     setIsDeleting(false);
     setIsDeleteAlertOpen(false);
     if (result.success) {
@@ -125,7 +121,7 @@ export default function FinanceManagerPage() {
     }
     setTransactionToDelete(null);
   };
-  
+
   const handleOpenEditDialog = (transaction: Transaction) => {
     setTransactionToEdit(transaction);
     setIsEditDialogVisible(true);
@@ -190,9 +186,9 @@ export default function FinanceManagerPage() {
             </Button>
           </AddTransactionDialog>
           {currentUser.role === 'SYSTEM_ADMIN' && (
-            <AddTransactionDialog 
-                currentUser={currentUser} 
-                onTransactionAdded={fetchFinancialData} 
+            <AddTransactionDialog
+                currentUser={currentUser}
+                onTransactionAdded={fetchFinancialData}
                 isSendMoneyFlow={true}
                 allUsersForDropdown={allUsersForDialog}
             >
@@ -212,7 +208,7 @@ export default function FinanceManagerPage() {
           </TabsList>
         </Tabs>
       )}
-      
+
       <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
         {summaryCards.map(card => (
           <Card key={card.title} className="shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out border bg-card rounded-xl overflow-hidden transform hover:scale-[1.02]">
@@ -252,13 +248,13 @@ export default function FinanceManagerPage() {
             ) : transactions.length > 0 ? (
               <div className="space-y-3 sm:space-y-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
                 {transactions.map(t => (
-                  <TransactionListItem 
-                    key={t.id} 
-                    transaction={t} 
+                  <TransactionListItem
+                    key={t.id}
+                    transaction={t}
                     currentUser={currentUser}
-                    onDelete={() => handleDeleteRequest(t)} 
-                    onEdit={() => handleOpenEditDialog(t)} 
-                    userName={viewMode === 'global' ? userMap.get(t.userId) : undefined}
+                    onDelete={() => handleDeleteRequest(t)}
+                    onEdit={() => handleOpenEditDialog(t)}
+                    userName={(viewMode === 'global' && userMap.get(t.userId)) || undefined}
                   />
                 ))}
               </div>
@@ -271,7 +267,7 @@ export default function FinanceManagerPage() {
             )}
           </CardContent>
         </Card>
-        
+
         <div className="space-y-6">
           <Card className="shadow-xl border bg-card rounded-lg">
             <CardHeader>
@@ -284,7 +280,7 @@ export default function FinanceManagerPage() {
               </div>
             </CardContent>
           </Card>
-          
+
            <Card className="shadow-xl border bg-card rounded-lg">
             <CardHeader>
               <CardTitle className="text-card-foreground text-xl flex items-center"><NotebookPen className="mr-2 h-5 w-5 text-primary"/>Notes</CardTitle>
@@ -355,14 +351,3 @@ export default function FinanceManagerPage() {
     </div>
   );
 }
-    
-
-    
-
-
-
-    
-
-
-
-    
