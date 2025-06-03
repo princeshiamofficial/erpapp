@@ -68,7 +68,7 @@ export async function addTransactionAction(
       const recipientIncomePayload = {
         type: 'income' as TransactionType,
         amount: transactionData.amount,
-        category: `Received from ${currentUser.name}`,
+        category: `Funds from ${currentUser.name}`, // Clarified category
         description: `Payment from ${currentUser.name}. Notes: ${transactionData.description || 'N/A'}`,
         date: transactionData.date,
         receivedFromUserId: currentUser.id,
@@ -90,55 +90,60 @@ export async function addTransactionAction(
         try {
           const recipientUser = await getUserById(transactionData.sentToUserId);
           if (recipientUser && recipientUser.fcmToken) {
-            console.log(`[addTransactionAction] Recipient ${recipientUser.name} has FCM token. Attempting to send push notification.`);
+            console.log(`[addTransactionAction - Send Money] Recipient ${recipientUser.name} has FCM token. Attempting to send push notification.`);
 
             const globalSettings = await getGlobalSettings();
             const customSoundUrl = globalSettings.toastSoundUrl;
 
             const notificationTitle = "Funds Received!";
             const notificationBody = `You have received ${formatAmountForNotification(transactionData.amount)} from ${currentUser.name}.`;
+            const targetUrl = '/finance-manager'; // Target URL for notification click
 
             const fcmMessage: messaging.Message = {
               token: recipientUser.fcmToken,
+              // `notification` payload is primarily for system tray when app is backgrounded/closed (handled by browser/OS if SW doesn't intervene)
               notification: {
                 title: notificationTitle,
                 body: notificationBody,
-                icon: '/icons/icon-192x192.png'
+                icon: '/icons/icon-192x192.png', // Default icon
               },
+              // `data` payload is always delivered to the app (SW for background, onMessage for foreground)
+              // The Service Worker should use this data payload to construct and display the notification.
               data: { 
                 title: notificationTitle,
                 body: notificationBody,
-                icon: '/icons/icon-192x192.png',
-                iconUrl: '/icons/icon-192x192.png',
-                targetUrl: '/finance-manager',
-                click_action: '/finance-manager',
-                ...(customSoundUrl && { customSoundUrl: customSoundUrl })
+                iconUrl: '/icons/icon-192x192.png', // More specific for SW
+                targetUrl: targetUrl, 
+                click_action: targetUrl, // Standard field often used by SW
+                ...(customSoundUrl && { customSoundUrl: customSoundUrl }),
+                // You can add more custom data here if needed by your SW or client app
               },
-              webpush: {
-                notification: {
+              webpush: { // Webpush specific configuration
+                notification: { // This can influence how FCM constructs the web push notification if SW doesn't fully override
                   icon: '/icons/icon-192x192.png',
+                  badge: '/icons/icon-72x72.png', // Optional: for Android PWA notifications
                   ...(customSoundUrl ? {} : { sound: "default" }) 
                 },
-                fcmOptions: {
-                  link: '/finance-manager'
+                fcmOptions: { // fcmOptions.link is used if the SW doesn't handle the click
+                  link: targetUrl 
                 }
               },
             };
             
             if (adminApp && typeof adminApp.messaging === 'function') {
                 await adminApp.messaging().send(fcmMessage);
-                console.log(`[addTransactionAction] Push notification sent to ${recipientUser.name} for received funds.`);
+                console.log(`[addTransactionAction - Send Money] Push notification sent to ${recipientUser.name} for received funds.`);
             } else {
-                console.warn("[addTransactionAction] Firebase Admin SDK not properly initialized. Cannot send push notification for received funds.");
+                console.warn("[addTransactionAction - Send Money] Firebase Admin SDK not properly initialized. Cannot send push notification for received funds.");
             }
 
           } else if (recipientUser) {
-            console.log(`[addTransactionAction] Recipient ${recipientUser.name} does not have an FCM token. Skipping push notification.`);
+            console.log(`[addTransactionAction - Send Money] Recipient ${recipientUser.name} does not have an FCM token. Skipping push notification.`);
           } else {
-            console.warn(`[addTransactionAction] Could not fetch recipient user details for ID ${transactionData.sentToUserId}. Skipping push notification.`);
+            console.warn(`[addTransactionAction - Send Money] Could not fetch recipient user details for ID ${transactionData.sentToUserId}. Skipping push notification.`);
           }
         } catch (notifError) {
-          console.error(`[addTransactionAction] Error sending push notification for received funds to user ${transactionData.sentToUserId}:`, notifError);
+          console.error(`[addTransactionAction - Send Money] Error sending push notification for received funds to user ${transactionData.sentToUserId}:`, notifError);
         }
         // ---- END: Send Push Notification to Recipient ----
       }
@@ -183,7 +188,8 @@ export async function deleteTransactionAction(
     if (
       transaction.type === 'income' &&
       transaction.receivedFromUserId && // It was received from someone
-      userIdVerifying === transaction.userId // User trying to delete IS the recipient
+      userIdVerifying === transaction.userId && // User trying to delete IS the recipient
+      userRoleVerifying !== 'SYSTEM_ADMIN' // And they are not a system admin
     ) {
       return { success: false, error: "Cannot delete income transactions received from system transfers." };
     }
@@ -241,7 +247,8 @@ export async function updateTransactionAction(
     if (
       transaction.type === 'income' &&
       transaction.receivedFromUserId && 
-      userIdVerifying === transaction.userId
+      userIdVerifying === transaction.userId &&
+      userRoleVerifying !== 'SYSTEM_ADMIN'
     ) {
       return { success: false, error: "Cannot edit income transactions received from system transfers." };
     }

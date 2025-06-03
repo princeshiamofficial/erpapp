@@ -1,18 +1,20 @@
 
-// firebase-messaging-sw.js
+// Import and initialize the Firebase SDK
+// Ensure you have firebase-app.js and firebase-messaging.js available in this path
+// Or use ES6 modules if your bundler supports it for service workers
+try {
+  self.importScripts(
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js',
+    'https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js'
+  );
+} catch (e) {
+  console.error("Failed to import Firebase scripts in Service Worker:", e);
+  // If importScripts fails, it often means the paths are incorrect or the files are not accessible.
+}
 
-// IMPORTANT: THIS FILE SHOULD BE IN YOUR `public` DIRECTORY
 
-// Give the service worker access to Firebase Messaging.
-// Note that you can only use Firebase Messaging here, other Firebase libraries
-// are not available in the service worker.
-self.importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js');
-self.importScripts('https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js');
-
-// Initialize the Firebase app in the service worker by passing in
-// your app's Firebase config object.
-// https://firebase.google.com/docs/web/setup#config-object
-// IMPORTANT: Replace with your actual Firebase project configuration
+// Initialize Firebase
+// IMPORTANT: Replace with your app's Firebase config object
 const firebaseConfig = {
   apiKey: "AIzaSyA-OULKM7hL85JFSGlNs0BHdIuTOVN73-I",
   authDomain: "colorhut-57f5a.firebaseapp.com",
@@ -23,116 +25,114 @@ const firebaseConfig = {
   measurementId: "G-57S6VYXE7H"
 };
 
-firebase.initializeApp(firebaseConfig);
-
-// Retrieve an instance of Firebase Messaging so that it can handle background
-// messages.
-const messaging = firebase.messaging();
-
-console.log('[SW] Firebase Messaging Service Worker V3 registered and initialized.');
-console.log('[SW] Firebase App Config Project ID:', firebase.app().options.projectId);
-
-
-messaging.onBackgroundMessage((payload) => {
-  console.log('[SW] === Background message received ===. Raw payload:', JSON.stringify(payload, null, 2));
-
-  // Customize notification here
-  const notificationData = payload.data || {}; // Prefer data payload
-  const fcmNotification = payload.notification || {}; // Fallback to standard notification payload
-
-  const notificationTitle = notificationData.title || fcmNotification.title || "Color Hut Update";
-  const notificationBody = notificationData.body || fcmNotification.body || "You have a new message.";
-  
-  // Icon handling: Prefer data.iconUrl, then data.icon, then notification.icon, then default.
-  let iconUrl = notificationData.iconUrl || notificationData.icon || fcmNotification.icon || '/icons/icon-192x192.png';
-  // Ensure icon URL is absolute if it's a relative path from public
-  if (iconUrl && !iconUrl.startsWith('http') && !iconUrl.startsWith('/')) {
-      iconUrl = self.registration.scope + (iconUrl.startsWith('.') ? iconUrl.substring(1) : iconUrl);
-  } else if (iconUrl && !iconUrl.startsWith('http')) {
-      iconUrl = self.registration.scope.slice(0, -1) + iconUrl; // registration.scope might end with '/'
+let app;
+if (firebase.apps.length === 0) {
+  try {
+    app = firebase.initializeApp(firebaseConfig);
+    console.log("Firebase app initialized in Service Worker.");
+  } catch (e) {
+    console.error("Error initializing Firebase app in Service Worker:", e);
   }
+} else {
+  app = firebase.app(); // if already initialized, use that one
+  console.log("Firebase app already initialized in Service Worker.");
+}
 
-  // Badge handling: Prefer data.badgeUrl, then data.badge, then default.
-  let badgeUrl = notificationData.badgeUrl || notificationData.badge || '/icons/icon-72x72.png';
-   if (badgeUrl && !badgeUrl.startsWith('http') && !badgeUrl.startsWith('/')) {
-      badgeUrl = self.registration.scope + (badgeUrl.startsWith('.') ? badgeUrl.substring(1) : badgeUrl);
-  } else if (badgeUrl && !badgeUrl.startsWith('http')) {
-      badgeUrl = self.registration.scope.slice(0, -1) + badgeUrl;
+let messaging;
+if (app && typeof firebase.messaging === 'function') {
+  try {
+    messaging = firebase.messaging(app);
+    console.log("Firebase Messaging initialized in Service Worker.");
+  } catch (e) {
+    console.error("Error initializing Firebase Messaging in Service Worker:", e);
   }
+} else {
+  console.error("Firebase Messaging is not available in Service Worker (app or firebase.messaging is undefined).");
+}
 
-  const clickAction = notificationData.click_action || notificationData.targetUrl || fcmNotification.click_action || self.registration.scope;
+// Optional: Handle background messages
+if (messaging) {
+  messaging.onBackgroundMessage((payload) => {
+    console.log(
+      "[firebase-messaging-sw.js] Received background message ",
+      payload
+    );
 
-  const notificationOptions = {
-    body: notificationBody,
-    icon: iconUrl,
-    badge: badgeUrl, // For Android PWA behavior mostly
-    data: { // Pass all data fields for click_action handling
-        click_action: clickAction, // Standard field for PWA click handling
-        ...notificationData // Include any other custom data fields
-    },
-    tag: notificationData.tag || fcmNotification.tag || payload.messageId || 'colorhut-bg-notif-' + Date.now(), // Unique tag
-    renotify: notificationData.renotify === 'true' || fcmNotification.renotify === true || false, // Allow re-notification if specified
-    requireInteraction: notificationData.requireInteraction === 'true' || fcmNotification.requireInteraction === true || false,
-    // Custom sound from data payload, if present
-    ...(notificationData.customSoundUrl && { sound: notificationData.customSoundUrl }),
-  };
-  
-  console.log('[SW] Showing notification with Title:', notificationTitle, 'Options:', JSON.stringify(notificationOptions, null, 2));
+    // Customize notification here
+    const notificationTitle = payload.data?.title || payload.notification?.title || "Color Hut Notification";
+    const notificationOptions = {
+      body: payload.data?.body || payload.notification?.body || "You have a new message.",
+      icon: payload.data?.iconUrl || payload.data?.icon || payload.notification?.icon || "/icons/icon-192x192.png",
+      badge: payload.data?.badgeUrl || payload.data?.badge || "/icons/icon-72x72.png", // Optional: for Android
+      data: { 
+        click_action: payload.data?.click_action || payload.data?.targetUrl || self.location.origin, // Default to origin if not specified
+        ...payload.data 
+      },
+      tag: payload.data?.tag || payload.notification?.tag || 'colorhut-bg-notif-' + Date.now(),
+      renotify: payload.data?.renotify === 'true' || true, // Default to true to replace old notifs with same tag
+      requireInteraction: payload.data?.requireInteraction === 'true' || false, // Default to false
+    };
 
-  self.registration.showNotification(notificationTitle, notificationOptions)
-    .then(() => console.log('[SW] Background notification shown successfully.'))
-    .catch(err => console.error('[SW] Error showing background notification:', err));
-});
+    console.log("[firebase-messaging-sw.js] Showing notification with title:", notificationTitle, "and options:", notificationOptions);
+
+    // Attempt to play sound if customSoundUrl is present in data
+    if (payload.data && payload.data.customSoundUrl) {
+        console.log("[firebase-messaging-sw.js] Custom sound URL found in background data payload:", payload.data.customSoundUrl);
+        // Note: Playing sound directly in SW can be unreliable. Better to set sound property in notificationOptions if supported,
+        // or handle sound on client-side when notification is clicked/received.
+        // For simplicity, we're adding to options; actual playback depends on browser support for 'sound' in SW notifications.
+        // notificationOptions.sound = payload.data.customSoundUrl; // This is not standard, but some might try it
+    }
 
 
-// Handle notification click
+    return self.registration.showNotification(notificationTitle, notificationOptions)
+      .then(() => console.log("[firebase-messaging-sw.js] Notification shown successfully."))
+      .catch(err => console.error("[firebase-messaging-sw.js] Error showing notification:", err));
+  });
+} else {
+  console.log("[firebase-messaging-sw.js] Firebase messaging not initialized, background message handler not set.");
+}
+
 self.addEventListener('notificationclick', (event) => {
-  console.log('[SW] Notification click Received. Event:', event);
+  console.log('[firebase-messaging-sw.js] Notification click Received.', event);
   event.notification.close(); // Close the notification
 
-  const notificationData = event.notification.data || {};
-  const clickAction = notificationData.click_action || self.registration.scope;
-
-  console.log('[SW] Click Action URL:', clickAction);
+  const clickAction = event.notification.data?.click_action || '/'; // Default to root if no action defined
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Check if there's already a window/tab open with the target URL
+      // Check if there's already a tab open with the target URL
       for (const client of clientList) {
-        // If client's URL is the base URL and clickAction is also base, or if they match exactly
-        if (client.url === clickAction && 'focus' in client) {
+        // Check if the client URL matches the target URL (ignoring query params/hash for simplicity here)
+        const clientCleanUrl = new URL(client.url).origin + new URL(client.url).pathname;
+        const targetCleanUrl = new URL(clickAction, self.location.origin).origin + new URL(clickAction, self.location.origin).pathname;
+
+        if (clientCleanUrl === targetCleanUrl && 'focus' in client) {
+          console.log('[firebase-messaging-sw.js] Found open tab, focusing:', client.url);
           return client.focus();
         }
       }
-      // If no window is open with the target URL, open a new one
+      // If no open tab is found, open a new one
       if (clients.openWindow) {
+        console.log('[firebase-messaging-sw.js] No open tab found, opening new window to:', clickAction);
         return clients.openWindow(clickAction);
       }
     })
   );
 });
 
+self.addEventListener('pushsubscriptionchange', (event) => {
+  console.log('[firebase-messaging-sw.js] Push subscription changed (e.g., token refreshed).', event);
+  // TODO: Send new subscription to server if needed, or prompt user to re-enable
+  // This event is rare but important for maintaining an active subscription.
+});
+
 self.addEventListener('install', (event) => {
-  console.log('[SW] Service worker installing...');
-  event.waitUntil(self.skipWaiting()); // Activate worker immediately
+  console.log('[firebase-messaging-sw.js] Service worker installing.');
+  // event.waitUntil(self.skipWaiting()); // Optional: force activate new SW immediately
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Service worker activating...');
-  event.waitUntil(self.clients.claim()); // Become available to all pages
-});
-
-
-// Log when push subscription changes
-self.addEventListener('pushsubscriptionchange', (event) => {
-  console.log('[SW] Push subscription changed. Event:', event);
-  // Here you might want to re-send the new subscription to your server
-  // For now, just logging it.
-  if (event.newSubscription) {
-    console.log('[SW] New subscription:', event.newSubscription.endpoint);
-    // TODO: Send event.newSubscription.toJSON() to your server to update the token
-  }
-  if (event.oldSubscription) {
-    console.log('[SW] Old subscription:', event.oldSubscription.endpoint);
-  }
+  console.log('[firebase-messaging-sw.js] Service worker activated.');
+  // event.waitUntil(clients.claim()); // Optional: take control of uncontrolled clients
 });

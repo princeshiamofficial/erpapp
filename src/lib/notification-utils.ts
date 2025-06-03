@@ -41,7 +41,7 @@ export const initializeFCM = async (): Promise<string | null> => {
   const messagingSupported = await isSupported();
   if (!messagingSupported) {
     console.log("[NotificationUtils] Firebase Messaging not supported in this browser.");
-    toast({ title: "Notifications Not Supported", description: "Push notifications are not supported by your browser.", variant: "destructive" });
+    // No toast here, as NotificationBell might call this and want to handle it
     return null;
   }
   
@@ -52,6 +52,7 @@ export const initializeFCM = async (): Promise<string | null> => {
     const permission = Notification.permission;
     if (permission !== 'granted') {
       console.log('[NotificationUtils] Notification permission not granted yet. Token cannot be retrieved.');
+      // No toast here, requestNotificationPermission handles this feedback.
       return null;
     }
     console.log("[NotificationUtils] Notification permission is granted.");
@@ -64,8 +65,8 @@ export const initializeFCM = async (): Promise<string | null> => {
     const activeSwRegistration = await navigator.serviceWorker.ready; 
     console.log("[NotificationUtils] Service worker is active and ready. Active SW Registration:", activeSwRegistration);
     
-    const VAPID_KEY = "BCEAg-Aq5Kb_qJ_9VQNYrMJ2uLC1Aht5gsqfSjfnYkIVjCLAD6Y-HwALizBLvoPT--UApnUeSmr8K1Qc5BcIvrs"; // User-provided VAPID Key
-    console.log("[NotificationUtils] Attempting to get FCM token using active SW registration and VAPID key:", VAPID_KEY);
+    const VAPID_KEY = "BCEAg-Aq5Kb_qJ_9VQNYrMJ2uLC1Aht5gsqfSjfnYkIVjCLAD6Y-HwALizBLvoPT--UApnUeSmr8K1Qc5BcIvrs"; 
+    console.log("[NotificationUtils] Attempting to get FCM token using active SW registration and VAPID key.");
 
     const currentToken = await getToken(fcmMessaging, {
       serviceWorkerRegistration: activeSwRegistration,
@@ -74,10 +75,10 @@ export const initializeFCM = async (): Promise<string | null> => {
 
     if (currentToken) {
       console.log('[NotificationUtils] >>> FCM TOKEN ACQUIRED (USE THIS FOR TESTING):', currentToken);
-      // Removed "Notifications Active" toast from here
+      // No toast here for successful token acquisition as it's a common operation
     } else {
       console.warn('[NotificationUtils] No registration token available. Check VAPID key in Firebase project and SW console for errors. Ensure SW is active.');
-      toast({ title: "Token Error", description: "Could not get notification token. Check VAPID key & SW. See console.", variant: "destructive", duration: 10000 });
+      toast({ title: "Notification Token Error", description: "Could not get notification token. Check VAPID key & SW. See console for details.", variant: "destructive", duration: 10000 });
       return null;
     }
 
@@ -116,18 +117,16 @@ export const initializeFCM = async (): Promise<string | null> => {
           ...notificationData
         },
         tag: notificationData.tag || fcmNotification.tag || payload.messageId || 'colorhut-fg-notif-' + Date.now(),
-        renotify: true, // Added renotify for foreground
-        requireInteraction: true, // Added requireInteraction
+        renotify: true, 
+        requireInteraction: true, 
       };
       
-      // Handle custom sound for foreground notification
       const customSoundUrl = notificationData.customSoundUrl;
       if (customSoundUrl) {
           console.log("[NotificationUtils] Custom sound URL found in foreground data payload:", customSoundUrl);
           try {
             const audio = new Audio(customSoundUrl as string);
             audio.play().catch(e => console.warn("[NotificationUtils] Foreground custom sound playback failed:", e));
-             notificationOptions.sound = customSoundUrl; // Also add to notification options for SW
           } catch (e) {
             console.error("[NotificationUtils] Error playing foreground custom sound:", e);
           }
@@ -143,15 +142,16 @@ export const initializeFCM = async (): Promise<string | null> => {
          .then(() => console.log("[NotificationUtils] Foreground notification shown via SW registration successfully."))
          .catch(err => {
             console.error("[NotificationUtils] Error showing foreground notification via SW registration:", err);
-            toast({ title: "Notification Display Error", description: `FG (SW Show): ${err.message}`, variant: "destructive" });
+            toast({ title: "Notif Display Error", description: `FG (SW Show): ${err.message}`, variant: "destructive" });
          });
       }).catch(err => {
         console.error("[NotificationUtils] Error getting SW registration for foreground notification display:", err);
         toast({ title: "SW Reg Error", description: `FG (SW Ready): ${err.message}`, variant: "destructive" });
       });
 
+      // This toast is for app-level feedback, separate from the actual system notification.
       toast({
-        title: `FG: ${notificationTitle}`,
+        title: `FG Update: ${notificationTitle}`,
         description: notificationBody,
         duration: 10000,
       });
@@ -180,4 +180,3 @@ export const initializeFCM = async (): Promise<string | null> => {
     return null;
   }
 };
-

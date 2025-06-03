@@ -6,8 +6,8 @@ import { Bell, BellOff, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { initializeFCM, requestNotificationPermission } from '@/lib/notification-utils';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/auth-context'; // Import useAuth
-import { storeUserFCMTokenAction } from '@/app/(app)/users/actions'; // Import server action
+import { useAuth } from '@/contexts/auth-context'; 
+import { storeUserFCMTokenAction } from '@/app/(app)/users/actions'; 
 import {
   Tooltip,
   TooltipContent,
@@ -19,7 +19,7 @@ export function NotificationBell() {
   const [permission, setPermission] = useState<NotificationPermission | null>(null);
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
-  const { currentUser } = useAuth(); // Get currentUser
+  const { currentUser } = useAuth(); 
 
   useEffect(() => {
     setIsClient(true);
@@ -30,20 +30,20 @@ export function NotificationBell() {
 
   const setupFCMAndStoreToken = useCallback(async () => {
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-      const token = await initializeFCM();
+      const token = await initializeFCM(); // This function now only returns token or null
       if (token && currentUser?.id) {
         console.log(`[NotificationBell] FCM token ${token} obtained for user ${currentUser.id}. Storing...`);
         const result = await storeUserFCMTokenAction(currentUser.id, token);
         if (result.success) {
-          // Removed "Notifications Active" toast that previously said "Ready to receive push notifications. Token stored."
           console.log("[NotificationBell] FCM token stored successfully.");
+          // No toast here to avoid being too noisy on every load if permission is granted
         } else {
           toast({ title: "Token Storage Failed", description: result.error || "Could not store FCM token.", variant: "destructive" });
         }
       } else if (token) {
          console.log(`[NotificationBell] FCM token ${token} obtained, but no current user to associate with.`);
-         // Removed "Notifications Active" toast for non-logged-in users
       }
+      // If token is null, initializeFCM already showed a toast.
     }
   }, [currentUser, toast]);
 
@@ -57,9 +57,9 @@ export function NotificationBell() {
     if (!isClient) return;
 
     if (permission === 'granted') {
-      // Removed "Notifications Active" toast that previously said "You are set to receive notifications."
-      console.log("[NotificationBell] Clicked, permission already granted. Re-running FCM setup.");
-      await setupFCMAndStoreToken(); // Re-run to ensure token is fresh and stored
+      console.log("[NotificationBell] Clicked, permission already granted. Re-running FCM setup to ensure token freshness and storage.");
+      toast({ title: "Notifications Active", description: "Push notifications are enabled for your account.", duration: 3000});
+      await setupFCMAndStoreToken(); 
     } else if (permission === 'denied') {
       toast({
         title: "Notifications Blocked",
@@ -67,18 +67,17 @@ export function NotificationBell() {
         variant: "destructive",
         duration: 7000,
       });
-      // If permission was denied, try to clear any stored token for this user
       if (currentUser?.id) {
-        await storeUserFCMTokenAction(currentUser.id, null);
+        await storeUserFCMTokenAction(currentUser.id, null); // Clear token if previously granted then denied
       }
     } else { // 'default' or null
-      const newPermission = await requestNotificationPermission();
+      const newPermission = await requestNotificationPermission(); // This shows toasts based on outcome
       if (newPermission) {
-        setPermission(newPermission);
+        setPermission(newPermission); // Update local state
         if (newPermission === 'granted') {
             await setupFCMAndStoreToken(); 
         } else if (newPermission === 'denied' && currentUser?.id) {
-            await storeUserFCMTokenAction(currentUser.id, null); // Clear token if denied
+            await storeUserFCMTokenAction(currentUser.id, null); 
         }
       }
     }
@@ -97,7 +96,7 @@ export function NotificationBell() {
       case 'granted':
         return { icon: <BellRing className="h-5 w-5 text-primary animate-pulse" />, tooltip: "Notifications Enabled" };
       case 'denied':
-        return { icon: <BellOff className="h-5 w-5 text-destructive" />, tooltip: "Notifications Blocked (Click to see instructions)" };
+        return { icon: <BellOff className="h-5 w-5 text-destructive" />, tooltip: "Notifications Blocked (Click for info)" };
       default:
         return { icon: <Bell className="h-5 w-5" />, tooltip: "Enable Notifications" };
     }
@@ -121,4 +120,3 @@ export function NotificationBell() {
     </TooltipProvider>
   );
 }
-
