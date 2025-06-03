@@ -171,9 +171,9 @@ export async function sendPushNotificationAction(
         .filter(u => u.fcmToken && targetRoles.includes(u.role))
         .map(u => ({ id: u.id, name: u.name, role: u.role, fcmToken: u.fcmToken }));
     } else if (targetType === 'all') {
-      targetDescription = "all users";
+      targetDescription = "all users (excluding sender)";
       targetUsersData = allUsersFromDb
-        .filter(u => u.fcmToken)
+        .filter(u => u.fcmToken && u.id !== actingUser.id) // Exclude the sender
         .map(u => ({ id: u.id, name: u.name, role: u.role, fcmToken: u.fcmToken }));
     } else {
       return { success: false, message: "Invalid targeting information provided.", error: "Invalid target."};
@@ -220,7 +220,7 @@ export async function sendPushNotificationAction(
                                                       // If custom sound, client-side SW will handle it.
           },
           fcmOptions: {
-            link: targetUrl || typeof window !== 'undefined' ? window.location.origin : 'https://colorhut-57f5a.web.app' // Sensible default link
+            link: targetUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://colorhut-57f5a.web.app') // Sensible default link
           }
         },
         // Optional: Android specific config
@@ -284,3 +284,4 @@ export async function sendPushNotificationAction(
     };
   }
 }
+
