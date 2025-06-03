@@ -12,7 +12,7 @@ import { getUsers } from '@/lib/user-service';
 import { deleteTransactionAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, DollarSign, Wallet, AlertTriangle, ListFilter, Calculator, NotebookPen, RefreshCw, Loader2, ShoppingBag, Minus } from 'lucide-react';
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, DollarSign, Wallet, AlertTriangle, ListFilter, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send } from 'lucide-react'; // Added Send
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
@@ -167,11 +167,13 @@ export default function FinanceManagerPage() {
               <Minus className="mr-2 h-5 w-5" /> Add Expense
             </Button>
           </AddTransactionDialog>
-           <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions} defaultType="purchase">
-            <Button size="default" className="bg-sky-600 hover:bg-sky-700 text-white h-10">
-              <ShoppingBag className="mr-2 h-5 w-5" /> Add Purchase
+          {currentUser.role === 'SYSTEM_ADMIN' && (
+            <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions} defaultType="expense" isSendMoneyFlow={true}>
+            <Button size="default" className="bg-blue-600 hover:bg-blue-700 text-white h-10">
+              <Send className="mr-2 h-5 w-5" /> Send Money
             </Button>
           </AddTransactionDialog>
+          )}
         </div>
       </div>
 

@@ -9,7 +9,7 @@ const GLOBAL_SETTINGS_COLLECTION = 'globalSettings';
 const MAIN_SETTINGS_DOC_ID = 'main';
 
 const DEFAULT_TOAST_SOUND_URL = 'https://audio-previews.elements.envatousercontent.com/files/225140761/preview.mp3';
-const DEFAULT_LEADERBOARD_BACKGROUND_URL = 'https://i.ibb.co/7S8jCg7/abstract-orange-fire-particles.jpg';
+const DEFAULT_LEADERBOARD_BACKGROUND_URL = 'https://i.ibb.co/PGBMbxBc/360-F-338486227-q-Qit-Uvh3n-ILq-Yiu-QOUGxdfindo-NMbtp-H.jpg';
 
 const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   globalMonthlyOrderTarget: 0,

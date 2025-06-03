@@ -177,7 +177,7 @@ export default function LeaderboardPage() {
 
         <div
           className="absolute inset-0 bg-cover bg-center"
-          style={{backgroundImage: "url('https://i.ibb.co/7S8jCg7/abstract-orange-fire-particles.jpg')"}}
+          style={{backgroundImage: "url('https://i.ibb.co/PGBMbxBc/360-F-338486227-q-Qit-Uvh3n-ILq-Yiu-QOUGxdfindo-NMbtp-H.jpg')"}}
           data-ai-hint="abstract orange fire particles"
         ></div>
         <header className="relative z-10 flex items-center justify-between py-3 px-2 mb-6">
@@ -215,7 +215,7 @@ export default function LeaderboardPage() {
 
   const bgStyle = currentLeaderboardBackground
     ? { backgroundImage: `url('${currentLeaderboardBackground}')` }
-    : { backgroundImage: "url('https://i.ibb.co/7S8jCg7/abstract-orange-fire-particles.jpg')" };
+    : { backgroundImage: "url('https://i.ibb.co/PGBMbxBc/360-F-338486227-q-Qit-Uvh3n-ILq-Yiu-QOUGxdfindo-NMbtp-H.jpg')" };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--leaderboard-bg-main-start))] to-[hsl(var(--leaderboard-bg-main-end))] text-[hsl(var(--leaderboard-text-light))] p-0 sm:p-0 md:p-0 lg:p-0 relative overflow-x-hidden">
