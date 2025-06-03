@@ -12,7 +12,7 @@ import { getUsers } from '@/lib/user-service';
 import { deleteTransactionAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, DollarSign, Wallet, AlertTriangle, ListFilter, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send } from 'lucide-react'; // Added Send
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, DollarSign, Wallet, AlertTriangle, ListFilter, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send } from 'lucide-react'; 
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
@@ -157,18 +157,18 @@ export default function FinanceManagerPage() {
            <Button variant="outline" size="icon" onClick={fetchTransactions} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
               <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
-          <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions} defaultType="income">
+          <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions}>
             <Button size="default" className="bg-green-600 hover:bg-green-700 text-white h-10">
               <PlusCircle className="mr-2 h-5 w-5" /> Add Income
             </Button>
           </AddTransactionDialog>
-          <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions} defaultType="expense">
+          <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions}>
             <Button size="default" className="bg-red-600 hover:bg-red-700 text-white h-10">
               <Minus className="mr-2 h-5 w-5" /> Add Expense
             </Button>
           </AddTransactionDialog>
           {currentUser.role === 'SYSTEM_ADMIN' && (
-            <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions} defaultType="expense" isSendMoneyFlow={true}>
+            <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchTransactions} isSendMoneyFlow={true}>
             <Button size="default" className="bg-blue-600 hover:bg-blue-700 text-white h-10">
               <Send className="mr-2 h-5 w-5" /> Send Money
             </Button>
@@ -335,3 +335,4 @@ export default function FinanceManagerPage() {
 
 
     
+

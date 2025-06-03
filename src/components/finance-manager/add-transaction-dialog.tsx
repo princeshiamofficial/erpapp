@@ -20,46 +20,82 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { TransactionType, User } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addTransactionAction } from '@/app/(app)/finance-manager/actions';
-import { Loader2, CalendarIcon } from 'lucide-react';
+import { Loader2, CalendarIcon, Users } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { getUsers } from '@/lib/user-service'; // To fetch users for recipient dropdown
 
 interface AddTransactionDialogProps {
   currentUser: User;
   onTransactionAdded: () => void; // Callback to refresh parent list
   children: React.ReactNode; // For DialogTrigger
-  defaultType?: TransactionType; // New prop
+  isSendMoneyFlow?: boolean; // New prop to indicate "Send Money" specific flow
 }
 
-export function AddTransactionDialog({ currentUser, onTransactionAdded, children, defaultType }: AddTransactionDialogProps) {
+export function AddTransactionDialog({ currentUser, onTransactionAdded, children, isSendMoneyFlow = false }: AddTransactionDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [type, setType] = useState<TransactionType>(defaultType || 'expense');
+  const [type, setType] = useState<TransactionType>(isSendMoneyFlow ? 'expense' : 'expense'); // Default to 'expense'
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState<Date | undefined>(new Date());
+  
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [selectedSentToUserId, setSelectedSentToUserId] = useState<string | undefined>(undefined);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen) {
-      // When dialog opens, set type based on defaultType if provided
-      setType(defaultType || 'expense');
-      // Reset other fields only if not pre-filling based on defaultType logic,
-      // or if explicitly resetting is desired. For now, simple reset.
+      // When dialog opens, set type based on flow
+      setType(isSendMoneyFlow ? 'expense' : 'expense');
+      
+      if (isSendMoneyFlow) {
+        setIsLoadingUsers(true);
+        getUsers().then(fetchedUsers => {
+          setAllUsers(fetchedUsers.filter(u => u.id !== currentUser.id)); // Exclude current user
+          setIsLoadingUsers(false);
+        }).catch(err => {
+          console.error("Failed to fetch users for Send Money dialog:", err);
+          toast({ title: "Error", description: "Could not load users.", variant: "destructive" });
+          setIsLoadingUsers(false);
+        });
+        setCategory("Sent Money"); // Default category for send money
+      } else {
+        setCategory(""); // Reset category if not send money flow
+      }
+      
       setAmount('');
-      setCategory('');
       setDescription('');
       setDate(new Date());
+      setSelectedSentToUserId(undefined);
     }
-  }, [isOpen, defaultType]);
+  }, [isOpen, isSendMoneyFlow, currentUser.id, toast]);
+
+  useEffect(() => {
+    if (isSendMoneyFlow) {
+      if (selectedSentToUserId) {
+        const recipient = allUsers.find(u => u.id === selectedSentToUserId);
+        if (recipient) {
+          setCategory(`Sent Money to ${recipient.name}`);
+        } else {
+          setCategory("Sent Money");
+        }
+      } else {
+        setCategory("Sent Money");
+      }
+    }
+  }, [isSendMoneyFlow, selectedSentToUserId, allUsers]);
 
 
   const resetForm = () => {
-    setType(defaultType || 'expense'); // Reset to default or 'expense'
+    setType(isSendMoneyFlow ? 'expense' : 'expense');
     setAmount('');
-    setCategory('');
+    setCategory(isSendMoneyFlow ? 'Sent Money' : '');
     setDescription('');
     setDate(new Date());
+    setSelectedSentToUserId(undefined);
     setIsSubmitting(false);
   };
 
@@ -77,18 +113,24 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
 
     setIsSubmitting(true);
     const transactionData = {
-      type, 
+      type: isSendMoneyFlow ? 'expense' : type, 
       amount: numericAmount,
       category: category.trim(),
       description: description.trim() || undefined,
       date: date.toISOString(), // Send as ISO string
+      ...(isSendMoneyFlow && selectedSentToUserId && { 
+          relatedUserId: selectedSentToUserId, 
+          relatedUserName: allUsers.find(u => u.id === selectedSentToUserId)?.name 
+      }),
     };
 
+    // @ts-ignore
     const result = await addTransactionAction(currentUser, transactionData);
     setIsSubmitting(false);
 
     if (result.success && result.transaction) {
-      toast({ title: "Transaction Added", description: `${type.charAt(0).toUpperCase() + type.slice(1)} of ${numericAmount} added for ${category}.` });
+      const successType = isSendMoneyFlow ? 'Payment' : (type.charAt(0).toUpperCase() + type.slice(1));
+      toast({ title: `${successType} Recorded`, description: `${category} of ${numericAmount} recorded.` });
       onTransactionAdded();
       setIsOpen(false);
       resetForm();
@@ -98,10 +140,16 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
   };
   
   const getCategoryPlaceholder = () => {
+    if (isSendMoneyFlow) return "e.g., Payment for Services";
     if (type === 'income') return "e.g., Salary, Sales";
     if (type === 'purchase') return "e.g., Inventory, Supplies, Groceries";
     return "e.g., Utilities, Rent";
   }
+
+  const dialogTitle = isSendMoneyFlow ? "Record Payment to User" : "Add New Transaction";
+  const dialogDescription = isSendMoneyFlow 
+    ? "Log an expense for money sent to another user." 
+    : `Log a new ${type} entry.`;
 
 
   return (
@@ -109,24 +157,26 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New Transaction</DialogTitle>
-          <DialogDescription>Log a new {type} entry.</DialogDescription>
+          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogDescription>{dialogDescription}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-            <div className="space-y-1">
-              <Label htmlFor="transaction-type">Type *</Label>
-              <Select value={type} onValueChange={(value) => setType(value as TransactionType)} required>
-                <SelectTrigger id="transaction-type">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="income">Income</SelectItem>
-                  <SelectItem value="expense">Expense</SelectItem>
-                  <SelectItem value="purchase">Purchase</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {!isSendMoneyFlow && (
+              <div className="space-y-1">
+                <Label htmlFor="transaction-type">Type *</Label>
+                <Select value={type} onValueChange={(value) => setType(value as TransactionType)} required>
+                  <SelectTrigger id="transaction-type">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="income">Income</SelectItem>
+                    <SelectItem value="expense">Expense</SelectItem>
+                    <SelectItem value="purchase">Purchase</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-1">
               <Label htmlFor="transaction-amount">Amount (BDT) *</Label>
               <Input id="transaction-amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g., 50.00" min="0.01" step="0.01" required />
@@ -135,6 +185,25 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
               <Label htmlFor="transaction-category">Category *</Label>
               <Input id="transaction-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder={getCategoryPlaceholder()} required />
             </div>
+            {isSendMoneyFlow && (
+              <div className="space-y-1">
+                <Label htmlFor="send-to-user">Send To User (Optional)</Label>
+                <Select value={selectedSentToUserId} onValueChange={setSelectedSentToUserId} disabled={isLoadingUsers}>
+                  <SelectTrigger id="send-to-user">
+                    <SelectValue placeholder={isLoadingUsers ? "Loading users..." : "Select recipient"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {isLoadingUsers && <SelectItem value="loading" disabled>Loading...</SelectItem>}
+                    {!isLoadingUsers && allUsers.length === 0 && <SelectItem value="no-users" disabled>No other users found</SelectItem>}
+                    {!isLoadingUsers && allUsers.map(user => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name} ({user.role.replace(/_/g, ' ')})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
              <div className="space-y-1">
               <Label htmlFor="transaction-date">Date *</Label>
               <Popover>
@@ -165,7 +234,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Adding...</> : "Add Transaction"}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</> : (isSendMoneyFlow ? "Record Payment" : "Add Transaction")}
             </Button>
           </DialogFooter>
         </form>
