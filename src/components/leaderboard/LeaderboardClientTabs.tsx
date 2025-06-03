@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React from 'react';
@@ -39,33 +38,35 @@ const PodiumItem: React.FC<{ user: CrmPerformanceData; isCenter?: boolean; anima
   <motion.div
     initial={{ opacity: 0, y: 30, scale: 0.9 }}
     animate={{ opacity: 1, y: 0, scale: 1 }}
-    transition={{ duration: 0.5, delay: isCenter ? animationDelay : animationDelay + (user.rank === 2 ? 0.1 : 0.2), ease: "easeOut" }}
-    whileHover={{ scale: isCenter ? 1.15 : 1.05, y: isCenter ? -15 : -10, boxShadow: "0 25px 50px -12px hsl(var(--primary-hsl),0.4)" }}
+    transition={{ duration: 0.5, delay: (isCenter ? animationDelay : animationDelay + (user.rank === 2 ? 0.1 : 0.2)) + (user.rank || 0) * 0.05 }}
+    whileHover={{ scale: isCenter ? 1.15 : 1.05, y: isCenter ? -15 : -10, boxShadow: "0 25px 50px -12px hsl(var(--primary-hsl)/0.4)" }}
     className={cn(
       "flex-1 w-full sm:w-auto flex flex-col items-center p-3 sm:p-4 md:p-6 rounded-2xl shadow-xl bg-card border transform transition-all duration-300 ease-out",
-      isCenter ? "sm:scale-110 sm:z-10 sm:mx-0 border-primary shadow-primary/30" : "sm:scale-100 border-border/50"
+      isCenter ? "border-primary shadow-primary/20" : "border-border/50", // Base border & shadow for #1
+      isCenter && "sm:scale-110 sm:z-10", // Responsive scaling for #1 on sm+
+      !isCenter && "sm:scale-100"
     )}
   >
     <p className="text-lg sm:text-xl md:text-2xl font-bold text-primary mb-1 sm:mb-2 md:mb-3 text-center">#{user.rank}</p>
     <div className="relative mb-2 sm:mb-3 md:mb-4">
       <Avatar className={cn(
-        "h-16 w-16 sm:h-24 md:h-28 sm:w-24 md:w-28 border-4 shadow-lg",
+        "h-16 w-16 sm:h-20 md:h-24 sm:w-20 md:w-24 border-4 shadow-lg", // Adjusted base size
         isCenter ? "border-primary" : "border-muted"
       )}>
         <AvatarImage src={user.userAvatar || `https://placehold.co/128x128.png?text=${getInitials(user.userName)}`} alt={user.userName} data-ai-hint="user portrait" />
-        <AvatarFallback className="text-2xl sm:text-3xl md:text-4xl bg-muted text-muted-foreground">{getInitials(user.userName)}</AvatarFallback>
+        <AvatarFallback className="text-xl sm:text-2xl md:text-3xl bg-muted text-muted-foreground">{getInitials(user.userName)}</AvatarFallback>
       </Avatar>
       {user.rank === 1 && (
         <motion.div
           animate={{ scale: [1, 1.2, 1, 1.1, 1], rotate: [0, -8, 8, -4, 4, 0] }}
           transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", repeatDelay: 0.5 }}
-          className="absolute -bottom-1 -right-1 h-7 w-7 sm:h-8 md:h-10 sm:w-8 md:w-10 rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-600 border-2 border-card flex items-center justify-center shadow-xl"
+          className="absolute -bottom-1 -right-1 h-6 w-6 sm:h-7 md:h-8 sm:w-7 md:w-8 rounded-full bg-gradient-to-br from-yellow-400 via-amber-500 to-orange-600 border-2 border-card flex items-center justify-center shadow-xl"
         >
-          <Trophy className="h-3.5 w-3.5 sm:h-4 md:h-5 sm:w-4 md:w-5 text-white" />
+          <Trophy className="h-3 w-3 sm:h-3.5 md:h-4 sm:w-3.5 md:w-4 text-white" />
         </motion.div>
       )}
     </div>
-    <p className="text-sm sm:text-base md:text-lg font-semibold text-foreground truncate max-w-[100px] sm:max-w-[140px] md:max-w-[160px] text-center">{user.userName}</p>
+    <p className="text-sm sm:text-base md:text-lg font-semibold text-foreground truncate max-w-[100px] sm:max-w-[120px] md:max-w-[140px] text-center">{user.userName}</p>
     <p className="text-xs sm:text-sm text-muted-foreground text-center">{user.ordersCompleted} points</p>
   </motion.div>
 );
@@ -80,11 +81,11 @@ const ListItem: React.FC<{ user: CrmPerformanceData; isCurrentUser: boolean; ind
     whileHover={isCurrentUser ? {} : { scale: 1.02, y: -4, backgroundColor: "hsl(var(--muted)/0.5)" }}
     className={cn(
       "flex items-center p-2.5 sm:p-3 md:p-4 rounded-xl shadow-sm transition-all duration-200 ease-out border",
-      isCurrentUser ? "border-primary/40 shadow-primary/15 animate-pulseBorder" : "bg-card border-border hover:shadow-lg",
+      isCurrentUser ? "border-primary/40 shadow-primary/15 animate-pulseBorder" : "bg-card border-border hover:shadow-lg hover:bg-muted/30 hover:border-border/80",
     )}
   >
     <p className={cn("text-sm sm:text-base md:text-lg font-bold w-7 sm:w-8 md:w-10 text-center", isCurrentUser ? "text-primary" : "text-muted-foreground")}>#{user.rank}</p>
-    <Avatar className="h-8 w-8 sm:h-10 md:h-11 sm:w-10 md:w-11 mx-1.5 sm:mx-2 md:mx-3 border-2 border-border/60 shadow-sm">
+    <Avatar className="h-8 w-8 sm:h-9 md:h-10 sm:w-9 md:w-10 mx-1.5 sm:mx-2 md:mx-3 border-2 border-border/60 shadow-sm">
       <AvatarImage src={user.userAvatar || `https://placehold.co/48x48.png?text=${getInitials(user.userName)}`} alt={user.userName} data-ai-hint="user avatar" />
       <AvatarFallback className="bg-muted text-muted-foreground text-xs sm:text-sm">{getInitials(user.userName)}</AvatarFallback>
     </Avatar>
@@ -131,9 +132,14 @@ const LeaderboardContent: React.FC<{
     >
       {topThree.length > 0 && (
         <div className="flex flex-col sm:flex-row justify-around items-end gap-3 sm:gap-2 md:gap-0 mt-4 sm:mt-8 px-2 sm:px-0">
-          {topThree[1] && <PodiumItem user={topThree[1]} animationDelay={0.1} />}
-          {topThree[0] && <PodiumItem user={topThree[0]} isCenter animationDelay={0} />}
-          {topThree[2] && <PodiumItem user={topThree[2]} animationDelay={0.2} />}
+          {/* Order for vertical stack: #1, #2, #3. For horizontal: #2, #1, #3 */}
+          {isCenterPodiumFirst => ( /* This is a conceptual flag, actual logic below */
+            <>
+              {topThree.find(u => u.rank === 2) && <PodiumItem user={topThree.find(u => u.rank === 2)!} animationDelay={0.1} />}
+              {topThree.find(u => u.rank === 1) && <PodiumItem user={topThree.find(u => u.rank === 1)!} isCenter animationDelay={0} />}
+              {topThree.find(u => u.rank === 3) && <PodiumItem user={topThree.find(u => u.rank === 3)!} animationDelay={0.2} />}
+            </>
+          )()}
         </div>
       )}
       
@@ -166,14 +172,12 @@ const LeaderboardContent: React.FC<{
 
 export function LeaderboardClientTabs({ monthlyPerformanceData, weeklyPerformanceData, currentUser }: LeaderboardClientTabsProps) {
   const [activeTab, setActiveTab] = React.useState<'weekly' | 'monthly'>('weekly');
-  const [currentPeriodOffset, setCurrentPeriodOffset] = React.useState(0); // 0 for current, -1 for last, etc.
+  const [currentPeriodOffset, setCurrentPeriodOffset] = React.useState(0); 
 
-  // Dummy function for period label - replace with actual date logic if needed
   const getPeriodLabel = (tab: 'weekly' | 'monthly', offset: number): string => {
     if (offset === 0) return tab === 'weekly' ? "This Week" : "This Month";
     if (offset === -1) return tab === 'weekly' ? "Last Week" : "Last Month";
-    // Add more logic for other offsets if needed
-    return tab === 'weekly' ? "Custom Week" : "Custom Month"; // Placeholder
+    return tab === 'weekly' ? "Custom Week" : "Custom Month"; 
   }
   
   const currentDisplayLabel = getPeriodLabel(activeTab, currentPeriodOffset);
@@ -181,11 +185,11 @@ export function LeaderboardClientTabs({ monthlyPerformanceData, weeklyPerformanc
   return (
     <Tabs value={activeTab} onValueChange={(value) => {
         setActiveTab(value as 'weekly' | 'monthly');
-        setCurrentPeriodOffset(0); // Reset offset when tab changes
+        setCurrentPeriodOffset(0);
     }} className="w-full">
       <div className="flex flex-col sm:flex-row items-center justify-center my-3 sm:my-4 md:my-6 relative">
-        <Button variant="ghost" size="icon" onClick={() => setCurrentPeriodOffset(p => p - 1)} className="text-primary hover:text-primary/80 absolute left-0 top-1/2 -translate-y-1/2 sm:relative sm:left-auto sm:top-auto disabled:opacity-50" disabled>
-          <ChevronLeft className="h-5 w-5 sm:h-6 md:h-7 sm:w-6 md:w-7" />
+        <Button variant="ghost" size="icon" onClick={() => setCurrentPeriodOffset(p => p - 1)} className="text-primary hover:text-primary/80 absolute left-0 top-1/2 -translate-y-1/2 sm:relative sm:left-auto sm:top-auto disabled:opacity-50 h-7 w-7 sm:h-8 md:h-10 sm:w-8 md:w-10" disabled>
+          <ChevronLeft className="h-4 w-4 sm:h-5 md:h-6 sm:w-5 md:w-6" />
         </Button>
         <TabsList className="mx-auto bg-transparent p-0 h-auto my-1 sm:my-0">
           <TabsTrigger
@@ -202,15 +206,15 @@ export function LeaderboardClientTabs({ monthlyPerformanceData, weeklyPerformanc
             Monthly
           </TabsTrigger>
         </TabsList>
-        <Button variant="ghost" size="icon" onClick={() => setCurrentPeriodOffset(p => p + 1)} className="text-primary hover:text-primary/80 absolute right-0 top-1/2 -translate-y-1/2 sm:relative sm:right-auto sm:top-auto disabled:opacity-50" disabled>
-          <ChevronRight className="h-5 w-5 sm:h-6 md:h-7 sm:w-6 md:w-7" />
+        <Button variant="ghost" size="icon" onClick={() => setCurrentPeriodOffset(p => p + 1)} className="text-primary hover:text-primary/80 absolute right-0 top-1/2 -translate-y-1/2 sm:relative sm:right-auto sm:top-auto disabled:opacity-50 h-7 w-7 sm:h-8 md:h-10 sm:w-8 md:w-10" disabled>
+          <ChevronRight className="h-4 w-4 sm:h-5 md:h-6 sm:w-5 md:w-6" />
         </Button>
       </div>
       <p className="text-center text-xs sm:text-sm md:text-base font-semibold text-foreground/80 mb-4 sm:mb-6 md:mb-8 -mt-0.5 sm:-mt-1">{currentDisplayLabel} Performance</p>
 
       <AnimatePresence mode="wait">
         <motion.div
-          key={activeTab + currentPeriodOffset} // Ensure re-render on period change too
+          key={activeTab + currentPeriodOffset} 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
@@ -218,14 +222,14 @@ export function LeaderboardClientTabs({ monthlyPerformanceData, weeklyPerformanc
         >
           {activeTab === 'weekly' && (
             <LeaderboardContent
-              performanceData={weeklyPerformanceData} // Replace with actual data for the offset
+              performanceData={weeklyPerformanceData} 
               currentUser={currentUser}
               timePeriodLabel="week"
             />
           )}
           {activeTab === 'monthly' && (
             <LeaderboardContent
-              performanceData={monthlyPerformanceData} // Replace with actual data for the offset
+              performanceData={monthlyPerformanceData} 
               currentUser={currentUser}
               timePeriodLabel="month"
             />
@@ -235,4 +239,3 @@ export function LeaderboardClientTabs({ monthlyPerformanceData, weeklyPerformanc
     </Tabs>
   );
 }
-
