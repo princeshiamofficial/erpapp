@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,20 +20,22 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { TransactionType, User } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addTransactionAction } from '@/app/(app)/finance-manager/actions';
-import { Loader2, CalendarIcon, Users } from 'lucide-react';
-import { format, parseISO } from 'date-fns';
-import { getUsers } from '@/lib/user-service'; // To fetch users for recipient dropdown
+import { Loader2, CalendarIcon, Users, ChevronsUpDown, Check } from 'lucide-react'; // Added ChevronsUpDown, Check
+import { format } from 'date-fns';
+import { getUsers } from '@/lib/user-service';
+import { Command, CommandEmpty, CommandInput, CommandGroup, CommandItem, CommandList } from "@/components/ui/command"; // Added Command components
+import { cn } from "@/lib/utils"; // Added cn
 
 interface AddTransactionDialogProps {
   currentUser: User;
-  onTransactionAdded: () => void; // Callback to refresh parent list
-  children: React.ReactNode; // For DialogTrigger
-  isSendMoneyFlow?: boolean; // New prop to indicate "Send Money" specific flow
+  onTransactionAdded: () => void;
+  children: React.ReactNode;
+  isSendMoneyFlow?: boolean;
 }
 
 export function AddTransactionDialog({ currentUser, onTransactionAdded, children, isSendMoneyFlow = false }: AddTransactionDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [type, setType] = useState<TransactionType>(isSendMoneyFlow ? 'expense' : 'expense'); // Default to 'expense'
+  const [type, setType] = useState<TransactionType>(isSendMoneyFlow ? 'expense' : 'expense');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
@@ -42,34 +44,34 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [selectedSentToUserId, setSelectedSentToUserId] = useState<string | undefined>(undefined);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false); // State for user combobox popover
+  const [userSearchQuery, setUserSearchQuery] = useState(""); // State for user search query
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen) {
-      // When dialog opens, set type based on flow
       setType(isSendMoneyFlow ? 'expense' : 'expense');
-      
       if (isSendMoneyFlow) {
         setIsLoadingUsers(true);
         getUsers().then(fetchedUsers => {
-          setAllUsers(fetchedUsers.filter(u => u.id !== currentUser.id)); // Exclude current user
+          setAllUsers(fetchedUsers.filter(u => u.id !== currentUser.id));
           setIsLoadingUsers(false);
         }).catch(err => {
           console.error("Failed to fetch users for Send Money dialog:", err);
           toast({ title: "Error", description: "Could not load users.", variant: "destructive" });
           setIsLoadingUsers(false);
         });
-        setCategory("Sent Money"); // Default category for send money
+        setCategory("Sent Money");
       } else {
-        setCategory(""); // Reset category if not send money flow
+        setCategory("");
       }
-      
       setAmount('');
       setDescription('');
       setDate(new Date());
       setSelectedSentToUserId(undefined);
+      setUserSearchQuery("");
     }
   }, [isOpen, isSendMoneyFlow, currentUser.id, toast]);
 
@@ -88,7 +90,6 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
     }
   }, [isSendMoneyFlow, selectedSentToUserId, allUsers]);
 
-
   const resetForm = () => {
     setType(isSendMoneyFlow ? 'expense' : 'expense');
     setAmount('');
@@ -97,6 +98,8 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
     setDate(new Date());
     setSelectedSentToUserId(undefined);
     setIsSubmitting(false);
+    setIsUserPopoverOpen(false);
+    setUserSearchQuery("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -117,7 +120,7 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
       amount: numericAmount,
       category: category.trim(),
       description: description.trim() || undefined,
-      date: date.toISOString(), // Send as ISO string
+      date: date.toISOString(),
       ...(isSendMoneyFlow && selectedSentToUserId && { 
           relatedUserId: selectedSentToUserId, 
           relatedUserName: allUsers.find(u => u.id === selectedSentToUserId)?.name 
@@ -151,6 +154,13 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
     ? "Log an expense for money sent to another user." 
     : `Log a new ${type} entry.`;
 
+  const filteredUsersForDropdown = useMemo(() => {
+    if (!userSearchQuery) return allUsers;
+    return allUsers.filter(user =>
+      user.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(userSearchQuery.toLowerCase())
+    );
+  }, [allUsers, userSearchQuery]);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
@@ -188,20 +198,59 @@ export function AddTransactionDialog({ currentUser, onTransactionAdded, children
             {isSendMoneyFlow && (
               <div className="space-y-1">
                 <Label htmlFor="send-to-user">Send To User (Optional)</Label>
-                <Select value={selectedSentToUserId} onValueChange={setSelectedSentToUserId} disabled={isLoadingUsers}>
-                  <SelectTrigger id="send-to-user">
-                    <SelectValue placeholder={isLoadingUsers ? "Loading users..." : "Select recipient"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isLoadingUsers && <SelectItem value="loading" disabled>Loading...</SelectItem>}
-                    {!isLoadingUsers && allUsers.length === 0 && <SelectItem value="no-users" disabled>No other users found</SelectItem>}
-                    {!isLoadingUsers && allUsers.map(user => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name} ({user.role.replace(/_/g, ' ')})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={isUserPopoverOpen}
+                      className="w-full justify-between"
+                      disabled={isLoadingUsers}
+                    >
+                      {selectedSentToUserId
+                        ? allUsers.find((user) => user.id === selectedSentToUserId)?.name
+                        : (isLoadingUsers ? "Loading users..." : "Select recipient...")}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput 
+                        placeholder="Search user..." 
+                        value={userSearchQuery}
+                        onValueChange={setUserSearchQuery}
+                      />
+                      <CommandList>
+                        <CommandEmpty>{isLoadingUsers ? "Loading..." : "No user found."}</CommandEmpty>
+                        <CommandGroup>
+                          {isLoadingUsers && <CommandItem disabled>Loading users...</CommandItem>}
+                          {!isLoadingUsers && filteredUsersForDropdown.length === 0 && !userSearchQuery && (
+                            <CommandItem disabled>No other users available.</CommandItem>
+                          )}
+                          {!isLoadingUsers && filteredUsersForDropdown.map((user) => (
+                            <CommandItem
+                              key={user.id}
+                              value={user.name + user.id} // Ensure unique value for cmdk
+                              onSelect={() => {
+                                setSelectedSentToUserId(user.id);
+                                setIsUserPopoverOpen(false);
+                                setUserSearchQuery("");
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedSentToUserId === user.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {user.name} ({user.role.replace(/_/g, ' ')})
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             )}
              <div className="space-y-1">
