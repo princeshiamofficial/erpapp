@@ -175,6 +175,7 @@ export default function LeaderboardPage() {
         <div 
           className="absolute inset-0 bg-cover bg-center opacity-30"
           style={{backgroundImage: "url('https://i.ibb.co/7S8jCg7/abstract-orange-fire-particles.jpg')"}}
+          data-ai-hint="abstract orange fire particles"
         ></div>
         <header className="relative z-10 flex items-center justify-between py-3 px-2 mb-6">
             <Link href="/dashboard" className="p-2 -ml-2">
@@ -191,9 +192,9 @@ export default function LeaderboardPage() {
             <Skeleton className="h-40 w-24 rounded-t-full bg-[hsl(var(--leaderboard-podium-bg))] opacity-50" />
           </div>
         </div>
-        <div className="relative z-10 bg-[hsl(var(--leaderboard-list-bg))] p-4 rounded-t-3xl mt-[-30px] shadow-2xl">
+        <div className="relative z-10 bg-[hsl(var(--leaderboard-list-area-bg))] p-4 rounded-t-3xl mt-[-30px] shadow-2xl">
           {[...Array(5)].map((_, i) => (
-            <Skeleton key={`list-skel-${i}`} className="h-16 w-full rounded-lg mb-2 bg-gray-200" />
+            <Skeleton key={`list-skel-${i}`} className="h-16 w-full rounded-lg mb-2 bg-gray-200/50" />
           ))}
         </div>
       </div>
@@ -214,6 +215,7 @@ export default function LeaderboardPage() {
       <div 
         className="absolute inset-0 bg-cover bg-center opacity-30"
         style={{backgroundImage: "url('https://i.ibb.co/7S8jCg7/abstract-orange-fire-particles.jpg')"}}
+        data-ai-hint="abstract orange fire particles"
       ></div>
       <header className="relative z-10 flex items-center justify-between py-4 px-4 sm:px-6 mb-4 sm:mb-6">
         <Link href="/dashboard" className="p-2 -ml-2 text-[hsl(var(--leaderboard-text-light))] hover:opacity-80 transition-opacity">
