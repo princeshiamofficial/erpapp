@@ -159,11 +159,6 @@ export default function FinanceManagerPage() {
     return { totalIncome: income, totalExpenses: expensesSum, availableBalance: income - expensesSum };
   }, [transactions]);
 
-  const summaryCards = [
-    { title: "Total Income", value: totalIncome, icon: ArrowUpCircle, color: "text-green-600", hint: "green money" },
-    { title: "Total Expenses & Purchases", value: totalExpenses, icon: ArrowDownCircle, color: "text-red-600", hint: "red money" },
-    { title: "Available Balance", value: availableBalance, icon: Wallet, color: availableBalance >= 0 ? "text-blue-600" : "text-orange-600", hint: "wallet coins" },
-  ];
 
   const pageDescription = useMemo(() => {
     if (!currentUser) return "Manage your finances.";
@@ -196,6 +191,25 @@ export default function FinanceManagerPage() {
       default: return false;
     }
   }, [currentUser, globalAppSettings]);
+
+  const summaryCardsToDisplay = useMemo(() => {
+    const allCards = [
+      { title: "Total Income", value: totalIncome, icon: ArrowUpCircle, color: "text-green-600", hint: "green money" },
+      { title: "Total Expenses & Purchases", value: totalExpenses, icon: ArrowDownCircle, color: "text-red-600", hint: "red money" },
+      { title: "Available Balance", value: availableBalance, icon: Wallet, color: availableBalance >= 0 ? "text-blue-600" : "text-orange-600", hint: "wallet coins" },
+    ];
+
+    if (currentUser?.role === 'SYSTEM_ADMIN') {
+      return allCards; // System Admins see all cards
+    }
+
+    if (canUserAddExpense) {
+      return allCards; // Users who can add expenses see all cards
+    }
+    
+    // Users who cannot add expenses only see Total Income
+    return [allCards[0]]; 
+  }, [totalIncome, totalExpenses, availableBalance, canUserAddExpense, currentUser]);
 
 
   return (
@@ -252,7 +266,7 @@ export default function FinanceManagerPage() {
       )}
 
       <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {summaryCards.map(card => (
+        {summaryCardsToDisplay.map(card => (
           <Card key={card.title} className="shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out border bg-card rounded-xl overflow-hidden transform hover:scale-[1.02]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 sm:pt-5 px-4 sm:px-5">
               <CardTitle className="text-md sm:text-lg font-semibold text-card-foreground">{card.title}</CardTitle>
@@ -397,3 +411,4 @@ export default function FinanceManagerPage() {
     </div>
   );
 }
+
