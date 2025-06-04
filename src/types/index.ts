@@ -12,7 +12,7 @@ export interface User {
   monthlyOrderTarget?: number | null;
   weeklyOrderTarget?: number | null;
   isBanned?: boolean;
-  fcmToken?: string | null; // Added FCM token field
+  fcmToken?: string | null;
 }
 
 export interface CustomStatus {
@@ -38,20 +38,32 @@ export interface OrderItem {
   model: string;
   quantity: number;
   lamination: string;
-  unitPrice: number; // This will be derived from model's sellingPrice
+  unitPrice: number;
   lineItemTotalPrice: number;
+}
+
+export interface AdvancePaymentRecord {
+  id: string; // Unique ID for this payment record
+  amount: number;
+  date: string; // ISO string when the payment was recorded
+  paymentMethod?: string | null;
+  notes?: string | null;
+  recordedByUserId: string;
+  recordedByUserName: string;
 }
 
 export interface TrackingLink {
   id: string;
-  companyName: string; 
+  companyName: string;
   address: string;
   phoneNumber: string;
   orderItems: OrderItem[];
+  /** @deprecated Use advancePayments array instead. This field might hold a legacy total or be null. */
   advancePayment?: number | null;
-  specialClientDiscount?: number | null; 
+  specialClientDiscount?: number | null;
+  /** @deprecated Payment method is now part of each AdvancePaymentRecord. This might hold legacy data. */
   paymentMethod?: string | null;
-  orderNotes?: string | null; 
+  orderNotes?: string | null;
   crmUserId: string;
   crmUserName: string;
   designerRepresentativeId?: string | null;
@@ -65,6 +77,7 @@ export interface TrackingLink {
   statusHistory: OrderLogEntry[];
   comments: Comment[];
   viewCount?: number;
+  advancePayments?: AdvancePaymentRecord[]; // New field for payment history
 }
 
 export interface Comment {
@@ -78,7 +91,7 @@ export interface Comment {
   replies?: Comment[];
   likes?: {
     count: number;
-    reactedBy: string[]; 
+    reactedBy: string[];
   };
 }
 
@@ -116,7 +129,7 @@ export interface GlobalSettings {
   toastSoundUrl?: string | null;
   leaderboardBackgroundImageUrl?: string | null;
   leaderboardThemeSettings?: LeaderboardThemeSettings | null;
-  expenseLoggingPermissions?: ExpenseLoggingPermissions; // Updated from canUsersAddExpenses
+  expenseLoggingPermissions?: ExpenseLoggingPermissions;
 }
 
 export interface LeaderboardThemeSettings {
@@ -142,7 +155,7 @@ export interface RevenueEntry {
   description: string;
   amount: number;
   date: string; // ISO string
-  userId: string; 
+  userId: string;
 }
 
 export interface ExpenseEntry {
@@ -150,7 +163,7 @@ export interface ExpenseEntry {
   description: string;
   amount: number;
   date: string; // ISO string
-  userId: string; 
+  userId: string;
 }
 
 export interface Appointment {
@@ -158,18 +171,18 @@ export interface Appointment {
   title: string;
   date: string; // ISO string for full datetime
   description?: string;
-  userId: string; 
+  userId: string;
 }
 
 export type TransactionType = 'income' | 'expense' | 'purchase';
 
 export interface Transaction {
   id: string;
-  userId: string; 
+  userId: string;
   type: TransactionType;
   amount: number;
-  category: string; 
-  description?: string | null; 
+  category: string;
+  description?: string | null;
   date: string; // ISO string
   createdAt: string; // ISO string
   sentToUserId?: string | null;
@@ -189,18 +202,17 @@ export interface PersonalNote {
 
 export type ProjectStatusType = 'CR Clearance' | 'CR Cancel' | 'On Design' | 'On Hold' | 'Logistics' | 'Courier';
 
-
 export interface Project {
-  id: string; 
+  id: string;
   projectIdDisplay: string;
   name: string;
   status: ProjectStatusType;
-  endDate: string; 
+  endDate: string;
   assigneeName: string;
   assigneeInitials?: string;
   categoryTag: string;
-  createdAt?: string; 
-  updatedAt?: string; 
+  createdAt?: string;
+  updatedAt?: string;
 
   crClearanceAt?: string;
   crCancelAt?: string;

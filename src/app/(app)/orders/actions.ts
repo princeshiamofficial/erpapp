@@ -2,18 +2,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { TrackingLink, User, OrderItem, GlobalSettings, UserRole, OrderLogEntry } from "@/types"; // Added OrderLogEntry
-import { addOrder, getOrderById, deleteOrder as deleteOrderFromDb, updateOrder } from "@/lib/order-service";
+import type { TrackingLink, User, OrderItem, GlobalSettings, UserRole, OrderLogEntry, AdvancePaymentRecord } from "@/types";
+import { addOrder as addOrderService, getOrderById, deleteOrder as deleteOrderFromDb, updateOrder as updateOrderService } from "@/lib/order-service"; // Renamed imports for clarity
 import { getGlobalSettings } from "@/lib/settings-service";
 import { v4 as uuidv4 } from 'uuid';
 import { parseISO } from 'date-fns';
 
 interface CreateOrderDialogFormData {
-  jobId: string; 
-  companyName: string; 
+  jobId: string;
+  companyName: string;
   address: string;
   phoneNumber: string;
-  createdAt: string; // Expect ISO string from date picker
+  createdAt: string;
   orderItems: Array<{
     id: string;
     model: string;
@@ -22,10 +22,11 @@ interface CreateOrderDialogFormData {
     unitPrice: number | null;
     lineItemTotalPrice: number | null;
   }>;
-  advancePayment?: string | null;
-  specialClientDiscount?: string | null; 
-  paymentMethod?: string | null;
-  customPaymentMethodText?: string;
+  advancePaymentAmount?: string | null; // Changed from advancePayment
+  advancePaymentMethod?: string | null; // New field
+  specialClientDiscount?: string | null;
+  // paymentMethod field on root is now advancePaymentMethod
+  customPaymentMethodText?: string; // For 'Other' advance payment method
   orderNotes?: string | null;
   initialStatusId: string;
 }
@@ -45,7 +46,7 @@ export async function createOrderAction(
     if (!data.initialStatusId) return { error: "Initial status ID is required." };
     if (!data.createdAt) return { error: "Order creation date is required." };
     try {
-      parseISO(data.createdAt); // Validate date string
+      parseISO(data.createdAt);
     } catch (e) {
       return { error: "Invalid order creation date format." };
     }
@@ -79,45 +80,37 @@ export async function createOrderAction(
         const discountStr = data.specialClientDiscount.trim();
         if (discountStr.endsWith('%')) {
             const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
-            if (isNaN(percentage) || percentage < 0) {
-                return { error: "Invalid percentage for Special Client Discount." };
-            }
+            if (isNaN(percentage) || percentage < 0) return { error: "Invalid percentage for Special Client Discount." };
             calculatedNumericDiscount = (percentage / 100) * orderItemsTotal;
         } else {
             const fixedAmount = parseFloat(discountStr);
-            if (isNaN(fixedAmount) || fixedAmount < 0) {
-                return { error: "Special Client Discount must be a non-negative number." };
-            }
+            if (isNaN(fixedAmount) || fixedAmount < 0) return { error: "Special Client Discount must be a non-negative number." };
             calculatedNumericDiscount = fixedAmount;
         }
-        if (calculatedNumericDiscount > orderItemsTotal && orderItemsTotal > 0) {
-             return { error: "Special Client Discount cannot exceed the total order price." };
-        }
+        if (calculatedNumericDiscount > orderItemsTotal && orderItemsTotal > 0) return { error: "Special Client Discount cannot exceed the total order price." };
     }
 
-
-    let parsedAdvancePayment: number | null = null;
-    const advancePaymentStr = String(data.advancePayment ?? '');
-    if (advancePaymentStr.trim() !== '') {
-      const numAdvancePayment = Number(advancePaymentStr);
-      if (isNaN(numAdvancePayment) || numAdvancePayment < 0) return { error: "Advance Payment must be a non-negative number." };
-      parsedAdvancePayment = numAdvancePayment;
+    let parsedAdvancePaymentAmount: number | null = null;
+    const advancePaymentAmountStr = String(data.advancePaymentAmount ?? '');
+    if (advancePaymentAmountStr.trim() !== '') {
+      const numAdvancePayment = Number(advancePaymentAmountStr);
+      if (isNaN(numAdvancePayment) || numAdvancePayment < 0) return { error: "Advance Payment Amount must be a non-negative number." };
+      parsedAdvancePaymentAmount = numAdvancePayment;
     }
 
     const netPayable = orderItemsTotal - (calculatedNumericDiscount || 0);
-    if (parsedAdvancePayment !== null && parsedAdvancePayment > netPayable && netPayable > 0) {
-        return { error: `Advance payment (${parsedAdvancePayment}) cannot exceed net payable amount (${netPayable}).` };
+    if (parsedAdvancePaymentAmount !== null && parsedAdvancePaymentAmount > netPayable && netPayable > 0) {
+        return { error: `Advance payment (${parsedAdvancePaymentAmount}) cannot exceed net payable amount (${netPayable}).` };
     }
 
-
-    let finalPaymentMethod: string | null = null;
-    if (parsedAdvancePayment !== null && parsedAdvancePayment > 0) { 
-        if (data.paymentMethod && typeof data.paymentMethod === 'string' && data.paymentMethod.trim() !== '') {
-          if (data.paymentMethod.toLowerCase() === 'other') {
-            if (!data.customPaymentMethodText || !data.customPaymentMethodText.trim()) return { error: "Please specify the 'Other' payment method text." };
-            finalPaymentMethod = data.customPaymentMethodText.trim();
+    let finalAdvancePaymentMethod: string | null = null;
+    if (parsedAdvancePaymentAmount !== null && parsedAdvancePaymentAmount > 0) {
+        if (data.advancePaymentMethod && typeof data.advancePaymentMethod === 'string' && data.advancePaymentMethod.trim() !== '') {
+          if (data.advancePaymentMethod.toLowerCase() === 'other') {
+            if (!data.customPaymentMethodText || !data.customPaymentMethodText.trim()) return { error: "Please specify the 'Other' payment method for the advance." };
+            finalAdvancePaymentMethod = data.customPaymentMethodText.trim();
           } else {
-            finalPaymentMethod = data.paymentMethod.trim();
+            finalAdvancePaymentMethod = data.advancePaymentMethod.trim();
           }
         } else {
             return { error: "Payment Method is required when Advance Payment is entered." };
@@ -126,22 +119,22 @@ export async function createOrderAction(
 
     const finalCombinedCompanyName = `${data.jobId.trim()} • ${data.companyName.trim()}`;
 
-    const newOrderData = {
-      companyName: finalCombinedCompanyName, 
+    const newOrderDataForService = {
+      companyName: finalCombinedCompanyName,
       address: data.address.trim(),
       phoneNumber: data.phoneNumber.trim(),
-      createdAt: data.createdAt, // Pass user-provided createdAt
+      createdAt: data.createdAt,
       orderItems: processedOrderItems,
-      advancePayment: parsedAdvancePayment,
-      specialClientDiscount: calculatedNumericDiscount,
-      paymentMethod: finalPaymentMethod,
+      advancePaymentAmount: parsedAdvancePaymentAmount, // Pass amount
+      advancePaymentMethod: finalAdvancePaymentMethod,  // Pass method
+      specialClientDiscount: calculatedNumericDiscount, // Pass calculated numeric discount
       orderNotes: data.orderNotes?.trim() || null,
       crmUserId: currentUser.id,
       crmUserName: currentUser.name,
       initialStatusId: data.initialStatusId,
     };
 
-    const createdOrder = await addOrder(newOrderData);
+    const createdOrder = await addOrderService(newOrderDataForService);
     if (!createdOrder) return { error: "Failed to create order due to a service error." };
 
     revalidatePath("/(app)/orders");
@@ -159,7 +152,12 @@ export async function createOrderAction(
 
 export async function updateOrderAction(
   orderId: string,
-  updates: Partial<TrackingLink> & { specialClientDiscountString?: string | null },
+  updates: Partial<TrackingLink> & {
+    specialClientDiscountString?: string | null;
+    newAdvancePaymentAmount?: number | null;
+    newAdvancePaymentMethod?: string | null;
+    newAdvancePaymentNotes?: string | null;
+  },
   currentUser: User
 ): Promise<{ success: boolean; error?: string; order?: TrackingLink }> {
   if (!currentUser || !currentUser.role) {
@@ -173,12 +171,13 @@ export async function updateOrderAction(
     if (!existingOrder) return { success: false, error: `Order with ID ${orderId} not found.` };
 
     const finalUpdates: Partial<TrackingLink> = { ...updates };
-    delete finalUpdates.specialClientDiscountString; 
+    // Remove fields specific to adding a new advance payment from the main updates object
+    delete finalUpdates.newAdvancePaymentAmount;
+    delete finalUpdates.newAdvancePaymentMethod;
+    delete finalUpdates.newAdvancePaymentNotes;
+    delete finalUpdates.specialClientDiscountString;
 
-    let currentOrderItemsTotal = existingOrder.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
-    if (updates.orderItems) { 
-        currentOrderItemsTotal = updates.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
-    }
+    let currentOrderItemsTotal = (updates.orderItems || existingOrder.orderItems).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
 
     if (updates.createdAt) {
       try {
@@ -187,7 +186,6 @@ export async function updateOrderAction(
         return { success: false, error: "Invalid Date Created format." };
       }
     }
-
 
     if (updates.specialClientDiscountString !== undefined) {
         if (updates.specialClientDiscountString && updates.specialClientDiscountString.trim() !== '') {
@@ -205,25 +203,13 @@ export async function updateOrderAction(
             if (numericDiscount > currentOrderItemsTotal && currentOrderItemsTotal > 0) return { success: false, error: "Special Client Discount cannot exceed the total order price."};
             finalUpdates.specialClientDiscount = numericDiscount;
         } else {
-            finalUpdates.specialClientDiscount = null; 
+            finalUpdates.specialClientDiscount = null;
         }
     }
-
 
     if (updates.companyName !== undefined && !updates.companyName.trim()) return { success: false, error: "Company Name (Job ID • Name) cannot be empty."};
     if (updates.address !== undefined && !updates.address.trim()) return { success: false, error: "Address cannot be empty."};
     if (updates.phoneNumber !== undefined && !updates.phoneNumber.trim()) return { success: false, error: "Phone Number cannot be empty."};
-
-    if (updates.advancePayment !== undefined && updates.advancePayment !== null) {
-        if (isNaN(Number(updates.advancePayment)) || Number(updates.advancePayment) < 0) return { success: false, error: "Advance Payment must be a non-negative number."};
-        const netPayableAfterDiscount = currentOrderItemsTotal - (finalUpdates.specialClientDiscount || existingOrder.specialClientDiscount || 0);
-        if (Number(updates.advancePayment) > netPayableAfterDiscount && netPayableAfterDiscount > 0) {
-            return { success: false, error: `Advance payment (${updates.advancePayment}) cannot exceed net payable amount (${netPayableAfterDiscount}).` };
-        }
-    }
-
-
-    if (updates.paymentMethod === '') finalUpdates.paymentMethod = null;
     if (updates.orderNotes !== undefined) finalUpdates.orderNotes = updates.orderNotes?.trim() || null;
 
     if (updates.orderItems) {
@@ -236,23 +222,45 @@ export async function updateOrderAction(
         if (item.unitPrice === undefined || item.unitPrice === null || isNaN(Number(item.unitPrice)) || Number(item.unitPrice) < 0) return { success: false, error: `Unit price is missing or invalid for item ID ${item.id}.` };
         if (item.lineItemTotalPrice === undefined || item.lineItemTotalPrice === null || isNaN(Number(item.lineItemTotalPrice)) || Number(item.lineItemTotalPrice) < 0) return { success: false, error: `Line item total price is missing or invalid for item ID ${item.id}.` };
       }
-       finalUpdates.orderItems = updates.orderItems; 
+       finalUpdates.orderItems = updates.orderItems;
     }
-
-    if (Object.keys(finalUpdates).length === 0 && updates.specialClientDiscountString === undefined) { 
-        const noNumericDiscountChange = updates.specialClientDiscountString !== undefined && finalUpdates.specialClientDiscount === existingOrder.specialClientDiscount;
-        if (noNumericDiscountChange && Object.keys(finalUpdates).length === 1 && finalUpdates.specialClientDiscount !== undefined) {
-        } else if (Object.keys(finalUpdates).length === 0) {
-            return { success: true, order: existingOrder, error: "No changes detected to save." }; 
+    
+    // Handle new advance payment
+    if (updates.newAdvancePaymentAmount && updates.newAdvancePaymentAmount > 0) {
+        if (!updates.newAdvancePaymentMethod || !updates.newAdvancePaymentMethod.trim()) {
+            return { success: false, error: "Payment method is required for new advance payment." };
         }
+        const newAdvanceRecord: AdvancePaymentRecord = {
+            id: uuidv4(),
+            amount: updates.newAdvancePaymentAmount,
+            date: new Date().toISOString(),
+            paymentMethod: updates.newAdvancePaymentMethod,
+            notes: updates.newAdvancePaymentNotes?.trim() || null,
+            recordedByUserId: currentUser.id,
+            recordedByUserName: currentUser.name,
+        };
+        finalUpdates.advancePayments = [...(existingOrder.advancePayments || []), newAdvanceRecord];
+
+        // Ensure advance payment does not exceed net payable after this new payment
+        const totalAdvanceAfterNew = (finalUpdates.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
+        const currentNetPayable = currentOrderItemsTotal - (finalUpdates.specialClientDiscount ?? existingOrder.specialClientDiscount ?? 0);
+        if (totalAdvanceAfterNew > currentNetPayable && currentNetPayable > 0) {
+           return { success: false, error: `Total advance payments (${totalAdvanceAfterNew}) cannot exceed net payable amount (${currentNetPayable}).` };
+        }
+    } else if (updates.advancePayments) { // If the whole array is being passed (e.g. initial conversion)
+        finalUpdates.advancePayments = updates.advancePayments;
     }
 
+
+    if (Object.keys(finalUpdates).length === 0 && updates.specialClientDiscountString === undefined) {
+        return { success: true, order: existingOrder, error: "No changes detected to save." };
+    }
 
     finalUpdates.updatedAt = new Date().toISOString();
     finalUpdates.updatedByUserId = currentUser.id;
     finalUpdates.updatedByUserName = currentUser.name;
 
-    const success = await updateOrder(orderId, finalUpdates);
+    const success = await updateOrderService(orderId, finalUpdates);
     if (!success) return { success: false, error: "Failed to update order in database." };
 
     const updatedOrder = await getOrderById(orderId);
@@ -283,17 +291,14 @@ export async function assignDrToOrderAction(
 ): Promise<TrackingLink | { error: string }> {
   try {
     if (!actingUser || !actingUser.id || !actingUser.name) {
-      console.error("assignDrToOrderAction: Acting user information is missing.", { actingUser });
       return { error: "Acting user information is missing." };
     }
      if (readyForDesignStatusId !== 'ready-for-design') {
-      console.error("assignDrToOrderAction: Invalid readyForDesignStatusId received. Expected 'ready-for-design', got:", readyForDesignStatusId);
       return { error: "Invalid target status ID for DR assignment. Configuration error." };
     }
 
     const currentOrder = await getOrderById(orderId);
     if (!currentOrder) {
-      console.error(`assignDrToOrderAction: Order ${orderId} not found.`);
       return { error: `Order ${orderId} not found.` };
     }
 
@@ -318,11 +323,8 @@ export async function assignDrToOrderAction(
       updatedByUserName: actingUser.name,
     };
 
-    console.log("assignDrToOrderAction: Data being sent to updateOrder service:", JSON.stringify(updatedOrderData));
-
-    const success = await updateOrder(orderId, updatedOrderData);
+    const success = await updateOrderService(orderId, updatedOrderData);
     if (!success) {
-      console.error("assignDrToOrderAction: updateOrderService returned false for orderId:", orderId);
       return { error: "Failed to update order with DR assignment." };
     }
 
@@ -336,10 +338,8 @@ export async function assignDrToOrderAction(
 
     const updatedOrder = await getOrderById(orderId);
     if (!updatedOrder) {
-      console.error("assignDrToOrderAction: Failed to retrieve updated order after DR assignment for orderId:", orderId);
       return { error: "Failed to retrieve updated order after DR assignment." };
     }
-    console.log("assignDrToOrderAction: Successfully updated and re-fetched order:", JSON.stringify(updatedOrder));
     return updatedOrder;
 
   } catch (error: any) {
@@ -371,4 +371,3 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
     return { success: false, error: errorMessage };
   }
 }
-

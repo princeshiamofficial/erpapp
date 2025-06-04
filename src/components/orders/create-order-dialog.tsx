@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { User, CustomStatus, ServiceModelItem, ServiceLaminationItem, OrderItem, ServicePaymentMethodItem } from "@/types";
+import type { User, CustomStatus, ServiceModelItem, ServiceLaminationItem, OrderItem, ServicePaymentMethodItem, AdvancePaymentRecord } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { createOrderAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,25 +30,16 @@ interface CreateOrderDialogProps {
 
 interface DialogOrderItem {
   id: string;
-  model: string; // Model name
+  model: string;
   quantity: string;
   lamination: string;
-  unitPrice: number | null; // Will be model's sellingPrice
+  unitPrice: number | null;
   lineItemTotalPrice: number | null;
 }
 
 const formatCurrencyBdt = (value: number | null | undefined): string => {
   if (value === null || value === undefined) return 'N/A';
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
-};
-
-const formatDateForDialog = (date: Date | undefined): string => {
-  if (!date) return "N/A";
-  try {
-    return format(date, "MMM d, yyyy");
-  } catch (e) {
-    return "Invalid Date";
-  }
 };
 
 const initialOrderItemState: DialogOrderItem = {
@@ -67,9 +58,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [initialStatusId, setInitialStatusId] = useState<string>('');
-  const [advancePayment, setAdvancePayment] = useState<string>('');
+  const [advancePaymentAmount, setAdvancePaymentAmount] = useState<string>(''); // For the input field
+  const [advancePaymentMethod, setAdvancePaymentMethod] = useState<string>(''); // For the payment method of the initial advance
   const [specialClientDiscount, setSpecialClientDiscount] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<string>('');
   const [showCustomPaymentInput, setShowCustomPaymentInput] = useState(false);
   const [customPaymentMethodText, setCustomPaymentMethodText] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
@@ -90,7 +81,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [isPaymentMethodPopoverOpen, setIsPaymentMethodPopoverOpen] = useState(false);
   const [currentOrderDate, setCurrentOrderDate] = useState<Date | undefined>(new Date());
 
-
   const { toast } = useToast();
 
   const resetForm = useCallback(() => {
@@ -99,9 +89,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setAddress('');
     setPhoneNumber('');
     setInitialStatusId('');
-    setAdvancePayment('');
+    setAdvancePaymentAmount('');
+    setAdvancePaymentMethod('');
     setSpecialClientDiscount('');
-    setPaymentMethod('');
     setShowCustomPaymentInput(false);
     setCustomPaymentMethodText('');
     setOrderNotes('');
@@ -138,7 +128,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   useEffect(() => {
     if (isOpen) {
       fetchOptions();
-      setCurrentOrderDate(new Date()); 
+      setCurrentOrderDate(new Date());
     }
   }, [isOpen, fetchOptions]);
 
@@ -183,17 +173,16 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     const currentNetPayable = Math.max(0, currentItemsTotal - discountNum);
     setNetPayable(currentNetPayable);
 
-    const advanceNum = parseFloat(advancePayment) || 0;
+    const advanceNum = parseFloat(advancePaymentAmount) || 0;
     setAmountDue(Math.max(0, currentNetPayable - advanceNum));
-  }, [orderItems, specialClientDiscount, advancePayment]);
+  }, [orderItems, specialClientDiscount, advancePaymentAmount]);
 
-
-  const advancePaymentValue = parseFloat(advancePayment);
+  const advancePaymentValue = parseFloat(advancePaymentAmount);
   const isAdvancePaymentEntered = !isNaN(advancePaymentValue) && advancePaymentValue > 0;
 
   useEffect(() => {
     if (!isAdvancePaymentEntered) {
-        setPaymentMethod('');
+        setAdvancePaymentMethod('');
         setCustomPaymentMethodText('');
         setShowCustomPaymentInput(false);
     }
@@ -218,7 +207,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
           } else if (field === 'quantity' || field === 'lamination') {
              updatedItem = { ...item, [field]: value as string };
           }
-
           if (field === 'modelName' || field === 'quantity') {
             updatedItem.lineItemTotalPrice = calculateLineItemTotal(updatedItem.unitPrice, updatedItem.quantity);
           }
@@ -243,8 +231,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setPopoverOpenStates(prev => ({ ...prev, [itemId]: open === undefined ? !prev[itemId] : open }));
   };
 
-  const handlePaymentMethodChange = (value: string) => {
-    setPaymentMethod(value);
+  const handleAdvancePaymentMethodChange = (value: string) => {
+    setAdvancePaymentMethod(value);
     if (value.toLowerCase() === 'other') {
       setShowCustomPaymentInput(true);
       setCustomPaymentMethodText('');
@@ -253,9 +241,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       setCustomPaymentMethodText('');
     }
   };
-
-  const handleAdvancePaymentChange = (value: string) => {
-    setAdvancePayment(value);
+  
+  const handleAdvancePaymentAmountChange = (value: string) => {
+    setAdvancePaymentAmount(value);
     const numericValue = parseFloat(value);
     if (!isNaN(numericValue) && numericValue > netPayable && netPayable > 0) {
       toast({
@@ -291,9 +279,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     }
   };
 
-
   const canSubmit = useMemo(() => {
-    const parsedAdvPayment = parseFloat(advancePayment) || 0;
+    const parsedAdvPayment = parseFloat(advancePaymentAmount) || 0;
     const isAdvPaymentValid = parsedAdvPayment <= netPayable || netPayable === 0;
     const isDiscountValid = calculatedDiscountAmount <= orderItemsTotal || orderItemsTotal === 0;
 
@@ -313,11 +300,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         item.unitPrice !== null &&
         item.lineItemTotalPrice !== null
       ) &&
-      !(isAdvancePaymentEntered && !paymentMethod.trim()) &&
-      !(isAdvancePaymentEntered && paymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
+      !(isAdvancePaymentEntered && !advancePaymentMethod.trim()) &&
+      !(isAdvancePaymentEntered && advancePaymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
       isAdvPaymentValid && isDiscountValid;
-  }, [isSubmitting, jobId, companyName, address, phoneNumber, initialStatusId, currentOrderDate, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, paymentMethod, customPaymentMethodText, advancePayment, netPayable, calculatedDiscountAmount, orderItemsTotal]);
-
+  }, [isSubmitting, jobId, companyName, address, phoneNumber, initialStatusId, currentOrderDate, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, advancePaymentMethod, customPaymentMethodText, advancePaymentAmount, netPayable, calculatedDiscountAmount, orderItemsTotal]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -332,25 +318,25 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
        setIsSubmitting(false); return;
     }
 
-    const currentIsAdvancePaymentEnteredLogic = (parseFloat(advancePayment) || 0) > 0;
-    let finalPaymentMethod = paymentMethod.trim() || null;
+    const currentIsAdvancePaymentEnteredLogic = (parseFloat(advancePaymentAmount) || 0) > 0;
+    let finalAdvancePaymentMethod = advancePaymentMethod.trim() || null;
     if (currentIsAdvancePaymentEnteredLogic) {
-        if (!paymentMethod.trim()) {
+        if (!advancePaymentMethod.trim()) {
             toast({ title: "Validation Error", description: "Payment Method is required when Advance Payment is entered.", variant: "destructive" });
             setIsSubmitting(false); return;
         }
-        if (paymentMethod.toLowerCase() === 'other') {
+        if (advancePaymentMethod.toLowerCase() === 'other') {
           if (!customPaymentMethodText.trim()) {
             toast({ title: "Validation Error", description: "Please specify the 'Other' payment method.", variant: "destructive" });
             setIsSubmitting(false); return;
           }
-          finalPaymentMethod = customPaymentMethodText.trim();
+          finalAdvancePaymentMethod = customPaymentMethodText.trim();
         }
     } else {
-        finalPaymentMethod = null;
+        finalAdvancePaymentMethod = null;
     }
 
-    const parsedAdvPayment = parseFloat(advancePayment) || 0;
+    const parsedAdvPayment = parseFloat(advancePaymentAmount) || 0;
     if (parsedAdvPayment > netPayable && netPayable > 0) {
         toast({ title: "Validation Error", description: `Advance payment (${formatCurrencyBdt(parsedAdvPayment)}) cannot exceed net payable amount of ${formatCurrencyBdt(netPayable)}.`, variant: "destructive"});
         setIsSubmitting(false); return;
@@ -359,7 +345,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
          toast({ title: "Validation Error", description: `Special Client Discount (${formatCurrencyBdt(calculatedDiscountAmount)}) cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`, variant: "destructive"});
         setIsSubmitting(false); return;
     }
-
 
     const parsedOrderItems: OrderItem[] = orderItems.map(item => ({
         id: item.id,
@@ -372,16 +357,18 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
     const orderDataForAction = {
       jobId: jobId.trim(),
-      companyName: companyName.trim(), // Send raw company name
+      companyName: companyName.trim(),
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
-      createdAt: currentOrderDate.toISOString(), // Send selected date as ISO string
+      createdAt: currentOrderDate.toISOString(),
       orderItems: parsedOrderItems,
-      advancePayment: parsedAdvPayment > 0 ? parsedAdvPayment : null,
-      specialClientDiscount: specialClientDiscount, // Send as string
-      paymentMethod: finalPaymentMethod,
+      advancePaymentAmount: parsedAdvPayment > 0 ? parsedAdvPayment : null,
+      advancePaymentMethod: finalAdvancePaymentMethod,
+      specialClientDiscount: calculatedDiscountAmount > 0 ? calculatedDiscountAmount : null, // Send numeric discount
       orderNotes: orderNotes.trim() || null,
       initialStatusId,
+      crmUserId: currentUser.id,
+      crmUserName: currentUser.name,
     };
 
     const result = await createOrderAction(orderDataForAction, currentUser);
@@ -589,12 +576,12 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                 </div>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="advancePayment">Advance Payment</Label>
+                <Label htmlFor="advancePaymentAmount">Advance Payment</Label>
                 <Input
-                  id="advancePayment"
+                  id="advancePaymentAmount"
                   type="number"
-                  value={advancePayment}
-                  onChange={(e) => handleAdvancePaymentChange(e.target.value)}
+                  value={advancePaymentAmount}
+                  onChange={(e) => handleAdvancePaymentAmountChange(e.target.value)}
                   placeholder="e.g., 500.00"
                   min="0"
                   step="0.01"
@@ -602,7 +589,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               </div>
               {isAdvancePaymentEntered && (
                 <div className="space-y-1">
-                  <Label htmlFor="paymentMethod">
+                  <Label htmlFor="advancePaymentMethod">
                     Payment Method
                     <span className="text-destructive"> *</span>
                   </Label>
@@ -616,8 +603,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                         disabled={isLoadingOptions || paymentMethodOptions.length === 0}
                       >
                          <span className="flex-1 text-left whitespace-nowrap">
-                          {paymentMethod
-                            ? paymentMethodOptions.find((option) => option.name === paymentMethod)?.name
+                          {advancePaymentMethod
+                            ? paymentMethodOptions.find((option) => option.name === advancePaymentMethod)?.name
                             : (isLoadingOptions ? "Loading..." : (paymentMethodOptions.length === 0 ? "No methods" : "Select method..."))}
                          </span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -634,14 +621,14 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                                 key={option.id}
                                 value={option.name}
                                 onSelect={(currentValue) => {
-                                  handlePaymentMethodChange(paymentMethodOptions.find(o => o.name.toLowerCase() === currentValue.toLowerCase())?.name || currentValue);
+                                  handleAdvancePaymentMethodChange(paymentMethodOptions.find(o => o.name.toLowerCase() === currentValue.toLowerCase())?.name || currentValue);
                                   setIsPaymentMethodPopoverOpen(false);
                                 }}
                               >
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    paymentMethod === option.name ? "opacity-100" : "opacity-0"
+                                    advancePaymentMethod === option.name ? "opacity-100" : "opacity-0"
                                   )}
                                 />
                                  <span className="whitespace-nowrap">{option.name}</span>
@@ -663,7 +650,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                         value={customPaymentMethodText}
                         onChange={(e) => setCustomPaymentMethodText(e.target.value)}
                         placeholder="e.g., Specific Mobile Wallet"
-                        required={paymentMethod.toLowerCase() === 'other'}
+                        required={advancePaymentMethod.toLowerCase() === 'other'}
                       />
                     </div>
                   )}
@@ -690,7 +677,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                 {isAdvancePaymentEntered && (
                     <div className="flex justify-between text-sm mt-1 pt-1 border-t border-dashed border-border">
                         <span className="text-muted-foreground">Advance Paid:</span>
-                        <span className="font-medium text-green-600">- {formatCurrencyBdt(parseFloat(advancePayment))}</span>
+                        <span className="font-medium text-green-600">- {formatCurrencyBdt(parseFloat(advancePaymentAmount))}</span>
                     </div>
                 )}
                  <div className="flex justify-between text-lg font-bold mt-1 pt-1 border-t border-border">
@@ -698,7 +685,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                     <span className="text-primary">{formatCurrencyBdt(amountDue)}</span>
                 </div>
             </div>
-
 
             <div className="space-y-1 mt-4 border-t border-border pt-4">
               <Label htmlFor="initialStatus">Initial Status *</Label>
@@ -726,4 +712,3 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
-

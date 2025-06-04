@@ -1,7 +1,7 @@
 
 import { db } from './firebase';
 import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, orderBy, writeBatch, limit, where, deleteDoc as deleteFirestoreDoc, runTransaction } from 'firebase/firestore';
-import type { TrackingLink, Comment, OrderLogEntry, CustomStatus, UserRole, OrderItem } from '@/types';
+import type { TrackingLink, Comment, OrderLogEntry, CustomStatus, UserRole, OrderItem, AdvancePaymentRecord } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getStatuses, READY_FOR_DESIGN_STATUS_ID } from './status-service';
 import { format, parseISO } from 'date-fns';
@@ -26,9 +26,9 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
   if (!inProductionStatus) missingDetailed.push(`ID: '${IN_PRODUCTION_ID}' (In Production)`);
   if (!pendingApprovalStatus) missingDetailed.push(`ID: '${PENDING_CLIENT_APPROVAL_ID}' (Pending Client Approval)`);
   if (!readyForDesignStatus) missingDetailed.push(`ID: '${READY_FOR_DESIGN_STATUS_ID}' (Ready for Design)`);
-  
+
   if (missingDetailed.length > 0) {
-    console.error(`seedInitialOrders: Critical default statuses not found by ID, cannot seed initial orders properly. Specifically missing: ${missingDetailed.join(', ')}. Please check that these statuses exist in your Firestore 'customOrderStatuses' collection with their correct IDs, or ensure the status seeding process is complete and successful.`);
+    console.error(`seedInitialOrders: Critical default statuses not found by ID, cannot seed initial orders properly. Specifically missing: ${missingDetailed.join(', ')}.`);
     return [];
   }
 
@@ -46,15 +46,23 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       id: uuidv4(), model: "Premium Matte", quantity: 500, lamination: "Soft Touch", unitPrice: 15, lineItemTotalPrice: 7500
     }];
 
+    const firstOrderAdvancePayments: AdvancePaymentRecord[] = [{
+        id: uuidv4(),
+        amount: 1000,
+        date: createdAtFirstOrder,
+        paymentMethod: "Bank Transfer",
+        notes: "Initial advance payment.",
+        recordedByUserId: "SysAdmin-001",
+        recordedByUserName: "Default Admin"
+    }];
+
     const firstOrder: TrackingLink = {
       id: firstOrderId,
-      companyName: "TS001 • Tech Solutions Inc.", // Updated format
+      companyName: "TS001 • Tech Solutions Inc.",
       address: "123 Tech Ave, Silicon Valley, CA 94001",
-      phoneNumber: "555-0101", 
+      phoneNumber: "555-0101",
       orderItems: firstOrderItems,
-      advancePayment: 1000,
-      specialClientDiscount: 200, // Example discount
-      paymentMethod: "Bank Transfer",
+      specialClientDiscount: 200,
       orderNotes: "Client needs a preview by end of week. High priority.",
       crmUserId: "SysAdmin-001",
       crmUserName: "Default Admin",
@@ -74,6 +82,9 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       ],
       isPublic: true,
       viewCount: 0,
+      advancePayments: firstOrderAdvancePayments, // Use new structure
+      advancePayment: null, // Legacy field, set to null
+      paymentMethod: null,  // Legacy field, set to null
     };
     const firstDocRef = doc(ordersRef, firstOrderId);
     batch.set(firstDocRef, firstOrder);
@@ -84,20 +95,28 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
     const secondOrderId = `ORD-${dateStringOneDayAgo}-001`;
     const createdAtSecondOrder = dateOneDayAgo.toISOString();
 
-
     const secondOrderItems: OrderItem[] = [{
       id: uuidv4(), model: "Eco-Friendly Recycled", quantity: 1000, lamination: "None", unitPrice: 12.50, lineItemTotalPrice: 12500
     }];
+    
+    const secondOrderAdvancePayments: AdvancePaymentRecord[] = [{
+      id: uuidv4(),
+      amount: 0, // No advance for this order as per original seed
+      date: createdAtSecondOrder,
+      paymentMethod: "Cash", // Original seed had 'Cash' but amount was null
+      notes: "Payment on delivery.",
+      recordedByUserId: "SysAdmin-001",
+      recordedByUserName: "Default Admin"
+    }];
+
 
     const secondOrder: TrackingLink = {
       id: secondOrderId,
-      companyName: "GS002 • GreenScape Ltd.", // Updated format
+      companyName: "GS002 • GreenScape Ltd.",
       address: "456 Green Rd, Meadowville, TX 75001",
-      phoneNumber: "555-0102", 
+      phoneNumber: "555-0102",
       orderItems: secondOrderItems,
-      advancePayment: null,
       specialClientDiscount: null,
-      paymentMethod: "Cash",
       orderNotes: "Use eco-friendly inks only. Client is very particular about sustainability.",
       crmUserId: "SysAdmin-001",
       crmUserName: "Default Admin",
@@ -116,13 +135,16 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       designerRepresentativeId: "DR-001",
       designerRepresentativeName: "Carol DesignerRep",
       viewCount: 0,
+      advancePayments: secondOrderAdvancePayments,
+      advancePayment: null,
+      paymentMethod: null,
     };
     const secondDocRef = doc(ordersRef, secondOrderId);
     batch.set(secondDocRef, secondOrder);
     createdOrders.push(secondOrder);
 
     await batch.commit();
-    console.log('Initial orders seeded in Firestore with updated fields (updatedAt, updatedBy, orderNotes, specialClientDiscount).');
+    console.log('Initial orders seeded in Firestore with updated advancePayments structure.');
     return createdOrders;
   } catch (error) {
     console.error("Error seeding initial orders:", error);
@@ -137,7 +159,6 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
   try {
     const snapshot = await getDocs(q);
     if (snapshot.empty) {
-      // console.log("No orders found in Firestore, seeding defaults.");
       // orders = await seedInitialOrders(); // Seeding disabled by default
     } else {
       orders = snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as TrackingLink));
@@ -170,29 +191,27 @@ export const addOrder = async (orderData: {
   address: string;
   phoneNumber: string;
   orderItems: OrderItem[];
-  advancePayment?: number | null;
+  advancePaymentAmount?: number | null; // Changed from advancePayment
   specialClientDiscount?: number | null;
-  paymentMethod?: string | null;
+  advancePaymentMethod?: string | null; // New: specific for the initial advance
   orderNotes?: string | null;
   initialStatusId: string;
   crmUserId: string;
   crmUserName: string;
-  createdAt: string; // Expect user-provided ISO string
+  createdAt: string;
 }): Promise<TrackingLink | null> => {
-  const transactionTime = new Date().toISOString(); // For updatedAt
+  const transactionTime = new Date().toISOString();
 
   try {
-    // Validate the provided createdAt string
     let finalCreatedAt = orderData.createdAt;
     try {
       finalCreatedAt = parseISO(orderData.createdAt).toISOString();
     } catch (e) {
-      console.warn(`Invalid createdAt string received: ${orderData.createdAt}. Defaulting to current time.`);
+      console.warn(`Invalid createdAt string: ${orderData.createdAt}. Defaulting to current time.`);
       finalCreatedAt = new Date().toISOString();
     }
 
-
-    const currentDate = parseISO(finalCreatedAt); // Use the provided (or defaulted) creation date for ID generation
+    const currentDate = parseISO(finalCreatedAt);
     const dateString = format(currentDate, 'yyyyMMdd');
     const idPrefixForDay = `ORD-${dateString}-`;
 
@@ -200,14 +219,13 @@ export const addOrder = async (orderData: {
     const q = query(
       ordersRef,
       where('id', '>=', idPrefixForDay),
-      where('id', '<', idPrefixForDay + '\uffff'), 
+      where('id', '<', idPrefixForDay + '\uffff'),
       orderBy('id', 'desc'),
       limit(1)
     );
 
     const querySnapshot = await getDocs(q);
     let newSequence = 1;
-
     if (!querySnapshot.empty) {
       const lastOrderIdToday = querySnapshot.docs[0].id;
       const parts = lastOrderIdToday.split('-');
@@ -218,51 +236,63 @@ export const addOrder = async (orderData: {
         }
       }
     }
-
     const orderId = `${idPrefixForDay}${String(newSequence).padStart(3, '0')}`;
 
     const initialLogEntry: OrderLogEntry = {
       id: uuidv4(),
-      timestamp: finalCreatedAt, // Log entry should also use the creation date
+      timestamp: finalCreatedAt,
       status: orderData.initialStatusId,
       changedByUserId: orderData.crmUserId,
       changedByUserName: orderData.crmUserName,
       notes: "Order created.",
     };
 
+    const initialAdvancePayments: AdvancePaymentRecord[] = [];
+    if (orderData.advancePaymentAmount && orderData.advancePaymentAmount > 0) {
+      initialAdvancePayments.push({
+        id: uuidv4(),
+        amount: orderData.advancePaymentAmount,
+        date: finalCreatedAt, // Payment recorded at order creation time
+        paymentMethod: orderData.advancePaymentMethod || "Unknown",
+        notes: "Initial advance payment.",
+        recordedByUserId: orderData.crmUserId,
+        recordedByUserName: orderData.crmUserName,
+      });
+    }
+
     const newOrder: TrackingLink = {
       id: orderId,
       companyName: orderData.companyName,
       address: orderData.address,
       phoneNumber: orderData.phoneNumber,
-      orderItems: orderData.orderItems, 
-      advancePayment: orderData.advancePayment === undefined ? null : orderData.advancePayment,
+      orderItems: orderData.orderItems,
       specialClientDiscount: orderData.specialClientDiscount === undefined ? null : orderData.specialClientDiscount,
-      paymentMethod: orderData.paymentMethod === undefined ? null : (orderData.paymentMethod || null),
       orderNotes: orderData.orderNotes || null,
       crmUserId: orderData.crmUserId,
       crmUserName: orderData.crmUserName,
       designerRepresentativeId: null,
       designerRepresentativeName: null,
-      createdAt: finalCreatedAt, // Use validated or defaulted creation date
-      updatedAt: transactionTime, 
-      updatedByUserId: orderData.crmUserId, 
-      updatedByUserName: orderData.crmUserName, 
+      createdAt: finalCreatedAt,
+      updatedAt: transactionTime,
+      updatedByUserId: orderData.crmUserId,
+      updatedByUserName: orderData.crmUserName,
       isPublic: false,
       currentStatus: orderData.initialStatusId,
       statusHistory: [initialLogEntry],
       comments: [],
       viewCount: 0,
+      advancePayments: initialAdvancePayments,
+      advancePayment: null, // Legacy field
+      paymentMethod: null, // Legacy field
     };
 
-    console.log('Object being sent to Firestore setDoc:', JSON.stringify(newOrder, null, 2));
     const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
     await setDoc(orderDocRef, newOrder);
     return newOrder;
 
   } catch (error: any) {
     console.error("Error adding order to Firestore in addOrder:", error.message ? error.message : error);
-    return null; 
+    return null;
   }
 };
 
@@ -278,21 +308,27 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
           sanitizedUpdates[key] = (value === undefined || value === '' || isNaN(Number(value))) ? null : Number(value);
         } else if (key === 'createdAt' && typeof value === 'string') {
           try {
-            sanitizedUpdates[key] = parseISO(value).toISOString(); // Ensure it's a valid ISO string
+            sanitizedUpdates[key] = parseISO(value).toISOString();
           } catch (e) {
             console.warn(`Invalid createdAt string in update for order ${id}: ${value}. Skipping update for this field.`);
-            continue; // Skip this field if invalid
+            continue;
           }
+        } else if (key === 'advancePayments' && Array.isArray(value)) {
+            sanitizedUpdates[key] = value; // Store the whole array
+        } else if (key === 'advancePayment' || key === 'paymentMethod') {
+            // Explicitly ignore updates to old advancePayment/paymentMethod fields
+            // New advances are handled via advancePayments array
+            continue;
         }
         else {
           sanitizedUpdates[key] = value === undefined ? null : value;
         }
       }
     }
-    
+
     if (Object.keys(sanitizedUpdates).length === 0) {
       console.log(`updateOrder: No updates to apply for order ${id}.`);
-      return true; 
+      return true;
     }
     console.log(`updateOrder: Updating order ${id} with:`, JSON.stringify(sanitizedUpdates, null, 2));
     await updateDoc(orderDoc, sanitizedUpdates);
@@ -320,10 +356,8 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
     return await runTransaction(db, async (transaction) => {
       const orderDoc = await transaction.get(orderRef);
       if (!orderDoc.exists()) {
-        console.error(`addCommentToOrder: Order ${orderId} not found.`);
         throw new Error(`Order ${orderId} not found.`);
       }
-
       const order = { ...orderDoc.data(), id: orderDoc.id } as TrackingLink;
       const newComment: Comment = {
         id: uuidv4(),
@@ -336,7 +370,6 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
         likes: { count: 0, reactedBy: [] },
         ...(commentData.userId && { userId: commentData.userId }),
       };
-
       const updatedComments = [...(order.comments || []), newComment];
       transaction.update(orderRef, { comments: updatedComments });
       return { ...order, comments: updatedComments };
@@ -360,19 +393,14 @@ export const addReplyToComment = async (
     return await runTransaction(db, async (transaction) => {
       const orderDoc = await transaction.get(orderRef);
       if (!orderDoc.exists()) {
-        console.error(`addReplyToComment: Order ${orderId} not found.`);
         throw new Error(`Order ${orderId} not found.`);
       }
-
       const order = { ...orderDoc.data(), id: orderDoc.id } as TrackingLink;
       const comments = order.comments || [];
       const parentCommentIndex = comments.findIndex(c => c.id === parentCommentId);
-
       if (parentCommentIndex === -1) {
-        console.error(`addReplyToComment: Parent comment ${parentCommentId} not found in order ${orderId}.`);
         throw new Error(`Parent comment ${parentCommentId} not found.`);
       }
-
       const newReply: Comment = {
         id: uuidv4(),
         timestamp: new Date().toISOString(),
@@ -380,17 +408,14 @@ export const addReplyToComment = async (
         userRole: replyData.userRole,
         text: replyData.text,
         isInternal: replyData.isInternal,
-        replies: [], 
+        replies: [],
         likes: { count: 0, reactedBy: [] },
         ...(replyData.userId && { userId: replyData.userId }),
       };
-
       const parentComment = comments[parentCommentIndex];
       parentComment.replies = [...(parentComment.replies || []), newReply];
-
       const updatedComments = [...comments];
       updatedComments[parentCommentIndex] = parentComment;
-
       transaction.update(orderRef, { comments: updatedComments });
       return { ...order, comments: updatedComments };
     }).catch(error => {
@@ -408,22 +433,19 @@ export const toggleReaction = async (
   targetCommentId: string,
   isReply: boolean,
   parentCommentIdIfReply: string | undefined,
-  reactorId: string, 
-  reactionType: 'like' 
+  reactorId: string,
+  reactionType: 'like'
 ): Promise<TrackingLink | undefined> => {
   try {
     const orderRef = doc(db, ORDERS_COLLECTION, orderId);
     return await runTransaction(db, async (transaction) => {
       const orderDoc = await transaction.get(orderRef);
       if (!orderDoc.exists()) {
-        console.error(`toggleReaction: Order ${orderId} not found.`);
         throw new Error(`Order ${orderId} not found.`);
       }
-
       const order = { ...orderDoc.data(), id: orderDoc.id } as TrackingLink;
       let comments = order.comments || [];
       let targetComment: Comment | undefined;
-
       if (isReply) {
         if (!parentCommentIdIfReply) throw new Error("parentCommentIdIfReply is required for a reply reaction.");
         const parentComment = comments.find(c => c.id === parentCommentIdIfReply);
@@ -432,29 +454,24 @@ export const toggleReaction = async (
       } else {
         targetComment = comments.find(c => c.id === targetCommentId);
       }
-
       if (!targetComment) {
-        console.error(`toggleReaction: Target comment/reply ${targetCommentId} not found.`);
         throw new Error(`Target comment/reply ${targetCommentId} not found.`);
       }
-
       targetComment.likes = targetComment.likes || { count: 0, reactedBy: [] };
       const reactedByIndex = targetComment.likes.reactedBy.indexOf(reactorId);
-
-      if (reactedByIndex > -1) { 
+      if (reactedByIndex > -1) {
         targetComment.likes.reactedBy.splice(reactedByIndex, 1);
         targetComment.likes.count = Math.max(0, targetComment.likes.count - 1);
-      } else { 
+      } else {
         targetComment.likes.reactedBy.push(reactorId);
         targetComment.likes.count += 1;
       }
-
       if (isReply && parentCommentIdIfReply) {
         const parentIdx = comments.findIndex(c => c.id === parentCommentIdIfReply);
         if (parentIdx !== -1) {
           const replyIdx = (comments[parentIdx].replies || []).findIndex(r => r.id === targetCommentId);
           if (replyIdx !== -1 && comments[parentIdx].replies) {
-            (comments[parentIdx].replies as Comment[])[replyIdx] = targetComment; 
+            (comments[parentIdx].replies as Comment[])[replyIdx] = targetComment;
           }
         }
       } else {
@@ -463,7 +480,6 @@ export const toggleReaction = async (
           comments[commentIdx] = targetComment;
         }
       }
-
       transaction.update(orderRef, { comments: comments });
       return { ...order, comments: comments };
     }).catch(error => {
@@ -483,7 +499,6 @@ export const incrementOrderViewCount = async (orderId: string): Promise<boolean>
     await runTransaction(db, async (transaction) => {
       const orderDoc = await transaction.get(orderRef);
       if (!orderDoc.exists()) {
-        console.warn(`Order ${orderId} not found for incrementing view count.`);
         return;
       }
       const currentViewCount = orderDoc.data().viewCount || 0;
@@ -495,4 +510,3 @@ export const incrementOrderViewCount = async (orderId: string): Promise<boolean>
     return false;
   }
 };
-
