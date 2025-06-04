@@ -1,7 +1,9 @@
+
 "use client"
 
 import * as React from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+// import { ChevronLeft, ChevronRight } from "lucide-react" // Old import
+import * as LucideIcons from "lucide-react"; // New import
 import { DayPicker } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
@@ -54,12 +56,23 @@ function Calendar({
         ...classNames,
       }}
       components={{
-        IconLeft: ({ className, ...props }) => (
-          <ChevronLeft className={cn("h-4 w-4", className)} {...props} />
-        ),
-        IconRight: ({ className, ...props }) => (
-          <ChevronRight className={cn("h-4 w-4", className)} {...props} />
-        ),
+        IconLeft: ({ className: iconClassName, ...restProps }) => {
+          const IconComponent = LucideIcons.ChevronLeft;
+          if (typeof IconComponent !== 'function') {
+            console.error("LucideIcons.ChevronLeft is not a function:", IconComponent);
+            // Provide a simple fallback visual indicator for debugging if icon fails to load
+            return <div style={{ width: '1rem', height: '1rem', border: '1px solid red', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>!L</div>;
+          }
+          return <IconComponent className={cn("h-4 w-4", iconClassName)} {...restProps} />;
+        },
+        IconRight: ({ className: iconClassName, ...restProps }) => {
+          const IconComponent = LucideIcons.ChevronRight;
+           if (typeof IconComponent !== 'function') {
+            console.error("LucideIcons.ChevronRight is not a function:", IconComponent);
+            return <div style={{ width: '1rem', height: '1rem', border: '1px solid red', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem' }}>!R</div>;
+          }
+          return <IconComponent className={cn("h-4 w-4", iconClassName)} {...restProps} />;
+        },
       }}
       {...props}
     />
