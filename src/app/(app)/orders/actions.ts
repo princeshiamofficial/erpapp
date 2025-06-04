@@ -22,9 +22,9 @@ interface CreateOrderDialogFormData {
     unitPrice: number | null;
     lineItemTotalPrice: number | null;
   }>;
-  advancePaymentAmount?: string | null; // Changed from advancePayment
-  advancePaymentMethod?: string | null; // New field
-  specialClientDiscount?: string | null;
+  advancePaymentAmount?: string | null;
+  advancePaymentMethod?: string | null;
+  specialClientDiscount?: number | null; // Changed from string | null
   // paymentMethod field on root is now advancePaymentMethod
   customPaymentMethodText?: string; // For 'Other' advance payment method
   orderNotes?: string | null;
@@ -75,19 +75,13 @@ export async function createOrderAction(
       orderItemsTotal += Number(item.lineItemTotalPrice);
     }
 
-    let calculatedNumericDiscount: number | null = null;
-    if (data.specialClientDiscount && data.specialClientDiscount.trim() !== '') {
-        const discountStr = data.specialClientDiscount.trim();
-        if (discountStr.endsWith('%')) {
-            const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
-            if (isNaN(percentage) || percentage < 0) return { error: "Invalid percentage for Special Client Discount." };
-            calculatedNumericDiscount = (percentage / 100) * orderItemsTotal;
-        } else {
-            const fixedAmount = parseFloat(discountStr);
-            if (isNaN(fixedAmount) || fixedAmount < 0) return { error: "Special Client Discount must be a non-negative number." };
-            calculatedNumericDiscount = fixedAmount;
-        }
-        if (calculatedNumericDiscount > orderItemsTotal && orderItemsTotal > 0) return { error: "Special Client Discount cannot exceed the total order price." };
+    // data.specialClientDiscount is now number | null, directly use it.
+    // Removed the block that parsed data.specialClientDiscount as a string.
+    if (data.specialClientDiscount !== null && data.specialClientDiscount < 0) {
+      return { error: "Special Client Discount must be a non-negative number." };
+    }
+    if (data.specialClientDiscount !== null && data.specialClientDiscount > orderItemsTotal && orderItemsTotal > 0) {
+      return { error: "Special Client Discount cannot exceed the total order price." };
     }
 
     let parsedAdvancePaymentAmount: number | null = null;
@@ -98,7 +92,7 @@ export async function createOrderAction(
       parsedAdvancePaymentAmount = numAdvancePayment;
     }
 
-    const netPayable = orderItemsTotal - (calculatedNumericDiscount || 0);
+    const netPayable = orderItemsTotal - (data.specialClientDiscount || 0);
     if (parsedAdvancePaymentAmount !== null && parsedAdvancePaymentAmount > netPayable && netPayable > 0) {
         return { error: `Advance payment (${parsedAdvancePaymentAmount}) cannot exceed net payable amount (${netPayable}).` };
     }
@@ -125,9 +119,9 @@ export async function createOrderAction(
       phoneNumber: data.phoneNumber.trim(),
       createdAt: data.createdAt,
       orderItems: processedOrderItems,
-      advancePaymentAmount: parsedAdvancePaymentAmount, // Pass amount
-      advancePaymentMethod: finalAdvancePaymentMethod,  // Pass method
-      specialClientDiscount: calculatedNumericDiscount, // Pass calculated numeric discount
+      advancePaymentAmount: parsedAdvancePaymentAmount, 
+      advancePaymentMethod: finalAdvancePaymentMethod,
+      specialClientDiscount: data.specialClientDiscount, // data.specialClientDiscount is already number | null
       orderNotes: data.orderNotes?.trim() || null,
       crmUserId: currentUser.id,
       crmUserName: currentUser.name,
@@ -371,3 +365,4 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
     return { success: false, error: errorMessage };
   }
 }
+
