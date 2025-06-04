@@ -156,10 +156,21 @@ function toast({ ...props }: Toast) {
     })
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
+  const newToastProps = { ...props };
+  if (typeof props.description === 'string') {
+    if (props.description.includes("An unexpected response was received from the server") || 
+        props.description.toLowerCase().includes("failed to fetch")) {
+      newToastProps.title = "Connection Issue";
+      newToastProps.description = "Internet Connection Disconnected From Server. Please refresh your browser & try again.";
+      newToastProps.variant = "destructive";
+    }
+  }
+
+
   dispatch({
     type: "ADD_TOAST",
     toast: {
-      ...props,
+      ...newToastProps,
       id,
       open: true,
       onOpenChange: (open) => {
@@ -171,9 +182,6 @@ function toast({ ...props }: Toast) {
   if (typeof window !== 'undefined') {
     try {
       const storedSoundUrl = localStorage.getItem(TOAST_SOUND_STORAGE_KEY);
-      // Use stored URL if available and not empty, otherwise use default.
-      // If stored URL is explicitly set to an empty string (meaning user wants no sound), this will honor it.
-      // If key is not in localStorage (null), then DEFAULT_TOAST_SOUND_URL is used.
       const soundUrlToPlay = storedSoundUrl !== null ? storedSoundUrl : DEFAULT_TOAST_SOUND_URL;
       
       if (soundUrlToPlay && soundUrlToPlay.trim() !== '') {
