@@ -35,8 +35,9 @@ import {
   Legend,
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import type { TrackingLink, OrderItem } from '@/types'; 
+import type { TrackingLink, OrderItem, ServiceModelItem } from '@/types'; 
 import { getOrders } from '@/lib/order-service';
+import { getModels } from '@/lib/service-options-service'; // Added getModels
 import { useToast } from '@/hooks/use-toast';
 
 const chartConfig = {
@@ -97,6 +98,7 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
+  const [allModels, setAllModels] = useState<ServiceModelItem[]>([]); // State for models
   
   const defaultDateRange: DateRange = {
     from: subDays(new Date(), 29), 
@@ -108,11 +110,11 @@ export default function DashboardPage() {
   const [totalSales, setTotalSales] = useState(formatCurrency(0));
   const [invoiceDue, setInvoiceDue] = useState(formatCurrency(0));
   const [salesChartData, setSalesChartData] = useState<Array<{ date: string; sales: number }>>([]);
+  const [totalPurchase, setTotalPurchase] = useState(formatCurrency(0)); // This will now be calculated
 
-  // Mock data states for other cards (unchanged)
+  // Mock data states for other cards (some are still mock)
   const [netValue, setNetValue] = useState(formatCurrency(0));
   const [totalSellReturn, setTotalSellReturn] = useState(formatCurrency(0));
-  const [totalPurchase, setTotalPurchase] = useState(formatCurrency(0));
   const [purchaseDue, setPurchaseDue] = useState(formatCurrency(0));
   const [totalPurchaseReturn, setTotalPurchaseReturn] = useState(formatCurrency(0));
   const [expense, setExpense] = useState(formatCurrency(0));
@@ -124,12 +126,17 @@ export default function DashboardPage() {
     }
     setIsLoadingData(true);
     try {
-      const fetchedOrders = await getOrders();
+      const [fetchedOrders, fetchedModels] = await Promise.all([ // Fetch models
+        getOrders(),
+        getModels(),
+      ]);
       setAllOrders(fetchedOrders);
+      setAllModels(fetchedModels); // Store models
     } catch (error) {
-      console.error("Failed to fetch orders for dashboard:", error);
-      toast({ title: "Error", description: "Could not load order data.", variant: "destructive" });
+      console.error("Failed to fetch orders or models for dashboard:", error);
+      toast({ title: "Error", description: "Could not load order or model data.", variant: "destructive" });
       setAllOrders([]);
+      setAllModels([]);
     } finally {
       setIsLoadingData(false);
     }
@@ -161,18 +168,31 @@ export default function DashboardPage() {
 
     let currentTotalSales = 0;
     let currentTotalAdvance = 0;
+    let currentTotalPurchaseValue = 0; // Variable for total purchase calculation
 
     filteredOrders.forEach(order => {
       if (Array.isArray(order.orderItems)) {
         order.orderItems.forEach((item: OrderItem) => {
           currentTotalSales += item.lineItemTotalPrice || 0;
+          
+          // Calculate purchase value for this item
+          const modelDetails = allModels.find(m => m.name === item.model);
+          if (modelDetails && typeof modelDetails.buyingPrice === 'number' && typeof item.quantity === 'number' && item.quantity > 0) {
+            currentTotalPurchaseValue += (modelDetails.buyingPrice * item.quantity);
+          }
         });
       }
-      currentTotalAdvance += order.advancePayment || 0;
+      // Calculate total advance from advancePayments array if it exists, otherwise use legacy field
+      if (Array.isArray(order.advancePayments) && order.advancePayments.length > 0) {
+        currentTotalAdvance += order.advancePayments.reduce((sum, payment) => sum + payment.amount, 0);
+      } else if (order.advancePayment) { // Fallback to legacy field
+        currentTotalAdvance += order.advancePayment;
+      }
     });
     
     setTotalSales(formatCurrency(currentTotalSales));
     setInvoiceDue(formatCurrency(currentTotalSales - currentTotalAdvance));
+    setTotalPurchase(formatCurrency(currentTotalPurchaseValue)); // Update totalPurchase state
 
     if (selectedDateRange?.from && selectedDateRange?.to) {
       const dailySales = new Map<string, number>();
@@ -192,7 +212,7 @@ export default function DashboardPage() {
         if (order.createdAt) {
           try {
             const orderDate = parseISO(order.createdAt);
-            orderDate.setHours(0,0,0,0); // Normalize order date to start of day for key matching
+            orderDate.setHours(0,0,0,0); 
             const orderDateStr = format(orderDate, 'yyyy-MM-dd');
 
             if (dailySales.has(orderDateStr)) {
@@ -214,7 +234,7 @@ export default function DashboardPage() {
       setSalesChartData([]);
     }
 
-  }, [isLoadingData, allOrders, filteredOrders, selectedDateRange]);
+  }, [isLoadingData, allOrders, filteredOrders, selectedDateRange, allModels]); // Added allModels dependency
 
 
   const handleDateRangeChange = (range: DateRange | undefined, label: string) => {
@@ -395,3 +415,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    
