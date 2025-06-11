@@ -307,7 +307,7 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
         <Card className="shadow-sm bg-card">
           <CardContent className="p-3 sm:p-4 flex items-center justify-between">
             <div className="flex items-center text-sm text-muted-foreground">
@@ -330,7 +330,7 @@ export default function DashboardPage() {
         </Card>
       </div>
       
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {summaryCardData.map((card) => (
           <SummaryCard
             key={card.title}
