@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker'; // Import PredefinedRange
+import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { format, isWithinInterval, parseISO, subDays, addDays, getHours } from "date-fns"; 
 import { 
@@ -34,7 +34,7 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import { ChartContainer } from '@/components/ui/chart'; // Removed ChartTooltip, ChartTooltipContent
+import { ChartContainer } from '@/components/ui/chart';
 import type { TrackingLink, OrderItem, ServiceModelItem } from '@/types'; 
 import { getOrders } from '@/lib/order-service';
 import { getModels } from '@/lib/service-options-service'; 
@@ -115,7 +115,7 @@ export default function DashboardPage() {
   const [totalPurchase, setTotalPurchase] = useState(formatCurrency(0)); 
 
   const [netValue, setNetValue] = useState(formatCurrency(0));
-  const [totalSellReturn, setTotalSellReturn] = useState(formatCurrency(0));
+  const [totalSellReturn, setTotalSellReturn] = useState(formatCurrency(0)); // Stays 0 as it's not calculated from data yet
   const [purchaseDue, setPurchaseDue] = useState(formatCurrency(0));
   const [totalPurchaseReturn, setTotalPurchaseReturn] = useState(formatCurrency(0));
   const [expense, setExpense] = useState(formatCurrency(0));
@@ -156,13 +156,20 @@ export default function DashboardPage() {
     const endDate = new Date(selectedDateRange.to as Date);
     endDate.setHours(23, 59, 59, 999);
 
-    return allOrders.filter(order => 
+    let ordersToFilter = allOrders.filter(order => 
       order.createdAt && isWithinInterval(parseISO(order.createdAt), {
         start: startDate, 
         end: endDate
       })
     );
-  }, [allOrders, selectedDateRange]);
+
+    // CRM-specific data filtering:
+    if (currentUser?.role === 'CRM') {
+      ordersToFilter = ordersToFilter.filter(order => order.crmUserId === currentUser.id);
+    }
+    
+    return ordersToFilter;
+  }, [allOrders, selectedDateRange, currentUser]); // currentUser dependency ensures re-filter on user change
 
   useEffect(() => {
     if (isLoadingData) return;
@@ -170,7 +177,11 @@ export default function DashboardPage() {
     let currentTotalSales = 0;
     let currentTotalAdvance = 0;
     let currentTotalPurchaseValue = 0;
+    // Add currentTotalSellReturnValue here if sell returns were tracked on orders
+    // let currentTotalSellReturnValue = 0; 
 
+    // Calculations below are based on `filteredOrders`, which is already
+    // CRM-specific if currentUser.role === 'CRM'.
     filteredOrders.forEach(order => {
       if (Array.isArray(order.orderItems)) {
         order.orderItems.forEach((item: OrderItem) => {
@@ -179,6 +190,8 @@ export default function DashboardPage() {
           if (modelDetails && typeof modelDetails.buyingPrice === 'number' && typeof item.quantity === 'number' && item.quantity > 0) {
             currentTotalPurchaseValue += (modelDetails.buyingPrice * item.quantity);
           }
+          // If sell returns were tracked, e.g., on item:
+          // currentTotalSellReturnValue += (item.returnedAmount || 0);
         });
       }
       if (Array.isArray(order.advancePayments) && order.advancePayments.length > 0) {
@@ -186,17 +199,20 @@ export default function DashboardPage() {
       } else if (order.advancePayment) { 
         currentTotalAdvance += order.advancePayment;
       }
+      // Or if sell return was on order level:
+      // currentTotalSellReturnValue += (order.totalReturnAmount || 0);
     });
     
     setTotalSales(formatCurrency(currentTotalSales));
     setInvoiceDue(formatCurrency(currentTotalSales - currentTotalAdvance));
     setTotalPurchase(formatCurrency(currentTotalPurchaseValue));
+    // setTotalSellReturn(formatCurrency(currentTotalSellReturnValue)); // This would update the sell return card
 
     if (selectedPredefinedValue === 'today' || selectedPredefinedValue === 'yesterday') {
       setChartGranularity('hourly');
-      const hourlySales = new Map<number, number>(); // Key: hour (0-23)
+      const hourlySales = new Map<number, number>(); 
       for (let i = 0; i < 24; i++) {
-        hourlySales.set(i, 0); // Initialize all hours
+        hourlySales.set(i, 0); 
       }
       filteredOrders.forEach(order => {
         if (order.createdAt) {
@@ -211,7 +227,7 @@ export default function DashboardPage() {
         }
       });
       const chartData = Array.from(hourlySales.entries())
-        .map(([hour, sales]) => ({ date: hour.toString(), sales })) // 'date' key will hold hour string
+        .map(([hour, sales]) => ({ date: hour.toString(), sales })) 
         .sort((a, b) => parseInt(a.date) - parseInt(b.date));
       setSalesChartData(chartData);
     } else if (selectedDateRange?.from && selectedDateRange?.to) {
@@ -249,7 +265,7 @@ export default function DashboardPage() {
       setSalesChartData([]);
       setChartGranularity('daily');
     }
-  }, [isLoadingData, filteredOrders, selectedDateRange, allModels, selectedPredefinedValue]);
+  }, [isLoadingData, filteredOrders, selectedDateRange, allModels, selectedPredefinedValue, currentUser]); // Added currentUser for safety, though filteredOrders already depends on it.
 
 
   const handleDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
@@ -291,7 +307,7 @@ export default function DashboardPage() {
                 {label ? (
                   chartGranularity === 'hourly' ? 
                   (() => {
-                      const hour = parseInt(label); // label is hour string "0" to "23"
+                      const hour = parseInt(label); 
                       const nextHour = (hour + 1) % 24;
                       const formatHour = (h: number) => {
                           if (h === 0) return '12 AM';
@@ -379,6 +395,7 @@ export default function DashboardPage() {
           <CardTitle className="flex items-center text-xl text-foreground">
             <BarChartBig className="mr-2 h-6 w-6 text-primary" />
             Sales ({currentDateRangeLabel})
+            {currentUser?.role === 'CRM' && <span className="ml-2 text-sm font-normal text-muted-foreground">(Your Sales)</span>}
           </CardTitle>
         </CardHeader>
         <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">
@@ -406,7 +423,7 @@ export default function DashboardPage() {
                   tickFormatter={(value) => {
                     if (chartGranularity === 'hourly') {
                       const hour = parseInt(value);
-                      if (isNaN(hour)) return value; // Fallback for safety
+                      if (isNaN(hour)) return value; 
                       if (hour === 0) return '12 AM';
                       if (hour === 12) return '12 PM';
                       if (hour < 12) return `${hour} AM`;
@@ -414,10 +431,10 @@ export default function DashboardPage() {
                     }
                     try {
                       return format(parseISO(value), 'd MMM');
-                    } catch (e) { return value; } // Fallback for safety
+                    } catch (e) { return value; } 
                   }}
                   className="text-xs"
-                  interval={chartGranularity === 'hourly' && salesChartData.length > 12 ? 'preserveStartEnd' : undefined} // Adjust interval for hourly
+                  interval={chartGranularity === 'hourly' && salesChartData.length > 12 ? 'preserveStartEnd' : undefined} 
                 />
                 <YAxis
                   tickLine={false}
@@ -458,3 +475,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
