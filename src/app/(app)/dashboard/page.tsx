@@ -296,7 +296,7 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-6 p-1 sm:p-0">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--primary))] text-primary-foreground p-6 sm:p-8 rounded-xl shadow-xl">
         <h1 className="text-3xl sm:text-4xl font-bold flex items-center">
           Welcome {currentUser?.name.split(' ')[0] || 'User'}
