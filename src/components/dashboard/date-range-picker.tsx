@@ -33,7 +33,7 @@ import {
 } from "date-fns";
 import type { DateRange } from "react-day-picker";
 
-type PredefinedRange =
+export type PredefinedRange = // Exported PredefinedRange
   | "today"
   | "yesterday"
   | "last7Days"
@@ -45,11 +45,11 @@ type PredefinedRange =
 
 interface DateRangePickerProps {
   initialRange?: DateRange;
-  onDateRangeChange: (range: DateRange | undefined, displayLabel: string) => void;
+  onDateRangeChange: (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => void; // Updated callback
   align?: "start" | "center" | "end";
 }
 
-const PREDEFINED_RANGES: { label: string; value: PredefinedRange }[] = [
+const PREDEFINED_RANGES_CONFIG: { label: string; value: PredefinedRange }[] = [ // Renamed to avoid conflict
   { label: "Today", value: "today" },
   { label: "Yesterday", value: "yesterday" },
   { label: "Last 7 Days", value: "last7Days" },
@@ -76,7 +76,7 @@ export function DateRangePicker({
   const [selectedPredefined, setSelectedPredefined] = useState<PredefinedRange | "custom" | null>(
     () => {
       if (initialRange) {
-        for (const range of PREDEFINED_RANGES) {
+        for (const range of PREDEFINED_RANGES_CONFIG) {
           const dates = getDateRangeForPredefined(range.value);
           if (dates && initialRange.from && initialRange.to && isSameDay(dates.from, initialRange.from) && isSameDay(dates.to, initialRange.to)) {
             return range.value;
@@ -84,7 +84,7 @@ export function DateRangePicker({
         }
         return "custom";
       }
-      return "last30Days"; // Default predefined range
+      return "last30Days"; 
     }
   );
   const [isCustomPopoverOpen, setIsCustomPopoverOpen] = useState(false);
@@ -102,12 +102,13 @@ export function DateRangePicker({
       }
       return "Custom Range";
     }
-    return PREDEFINED_RANGES.find(r => r.value === selectedPredefined)?.label || "Select Date Range";
+    return PREDEFINED_RANGES_CONFIG.find(r => r.value === selectedPredefined)?.label || "Select Date Range";
   }, [selectedRange, selectedPredefined]);
   
   useEffect(() => {
-    onDateRangeChange(selectedRange, displayLabel);
-  }, [selectedRange, displayLabel, onDateRangeChange]);
+    // Ensure the parent is notified of the initial state or any programmatic changes
+    onDateRangeChange(selectedRange, displayLabel, selectedPredefined);
+  }, [selectedRange, displayLabel, selectedPredefined, onDateRangeChange]);
 
 
   function getDateRangeForPredefined(value: PredefinedRange): DateRange {
@@ -140,8 +141,11 @@ export function DateRangePicker({
   }
 
   const handlePredefinedSelect = (value: PredefinedRange) => {
+    const newRange = getDateRangeForPredefined(value);
+    const newLabel = PREDEFINED_RANGES_CONFIG.find(r => r.value === value)?.label || "Error";
     setSelectedPredefined(value);
-    setSelectedRange(getDateRangeForPredefined(value));
+    setSelectedRange(newRange);
+    onDateRangeChange(newRange, newLabel, value); // Call parent callback
     setIsCustomPopoverOpen(false);
   };
 
@@ -149,7 +153,11 @@ export function DateRangePicker({
     if (range) {
       setSelectedRange(range);
       setSelectedPredefined("custom");
-      // Keep popover open if only one date is selected
+      const newDisplayLabel = (range.from && range.to) ? 
+        (isSameDay(range.from, range.to) ? format(range.from, "MMM d, yyyy") : `${format(range.from, "MMM d")} - ${format(range.to, "MMM d, yyyy")}`)
+        : "Custom Range";
+      onDateRangeChange(range, newDisplayLabel, "custom"); // Call parent callback
+
       if (range.from && range.to) {
         setIsCustomPopoverOpen(false);
       }
@@ -172,7 +180,7 @@ export function DateRangePicker({
       <DropdownMenuContent align={align} className="w-56">
         <DropdownMenuLabel>Filter by Date</DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {PREDEFINED_RANGES.map((range) => (
+        {PREDEFINED_RANGES_CONFIG.map((range) => (
           <DropdownMenuItem
             key={range.value}
             onSelect={() => handlePredefinedSelect(range.value)}
@@ -186,9 +194,9 @@ export function DateRangePicker({
           <PopoverTrigger asChild>
             <DropdownMenuItem
               onSelect={(e) => {
-                e.preventDefault(); // Prevent DropdownMenu from closing
+                e.preventDefault(); 
                 setIsCustomPopoverOpen(true);
-                setSelectedPredefined("custom"); // Indicate that custom is being configured
+                // No need to set selectedPredefined here, it's handled by onSelect of custom calendar
               }}
                className={selectedPredefined === "custom" ? "bg-accent text-accent-foreground" : ""}
             >
@@ -209,9 +217,14 @@ export function DateRangePicker({
                   size="sm"
                   onClick={() => {
                     setIsCustomPopoverOpen(false);
-                    // If no full range selected yet, revert to last valid predefined or default
-                    if (!(selectedRange?.from && selectedRange?.to)) {
-                        handlePredefinedSelect("last30Days"); 
+                    if (selectedRange?.from && selectedRange?.to) {
+                        const newDisplayLabel = isSameDay(selectedRange.from, selectedRange.to) ? 
+                                                format(selectedRange.from, "MMM d, yyyy") : 
+                                                `${format(selectedRange.from, "MMM d")} - ${format(selectedRange.to, "MMM d, yyyy")}`;
+                        onDateRangeChange(selectedRange, newDisplayLabel, "custom");
+                    } else {
+                        // If custom range is incomplete, revert or use a default
+                        handlePredefinedSelect("last30Days");
                     }
                   }}
                 >

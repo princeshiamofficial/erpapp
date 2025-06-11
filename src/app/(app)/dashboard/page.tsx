@@ -6,9 +6,9 @@ import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { DateRangePicker } from '@/components/dashboard/date-range-picker';
+import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker'; // Import PredefinedRange
 import type { DateRange } from "react-day-picker";
-import { format, isWithinInterval, parseISO, subDays, addDays } from "date-fns"; 
+import { format, isWithinInterval, parseISO, subDays, addDays, getHours } from "date-fns"; 
 import { 
   Hand, 
   ShoppingCart, 
@@ -34,10 +34,10 @@ import {
   Tooltip,
   Legend,
 } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { ChartContainer } from '@/components/ui/chart'; // Removed ChartTooltip, ChartTooltipContent
 import type { TrackingLink, OrderItem, ServiceModelItem } from '@/types'; 
 import { getOrders } from '@/lib/order-service';
-import { getModels } from '@/lib/service-options-service'; // Added getModels
+import { getModels } from '@/lib/service-options-service'; 
 import { useToast } from '@/hooks/use-toast';
 
 const chartConfig = {
@@ -98,7 +98,7 @@ export default function DashboardPage() {
   const { toast } = useToast();
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
-  const [allModels, setAllModels] = useState<ServiceModelItem[]>([]); // State for models
+  const [allModels, setAllModels] = useState<ServiceModelItem[]>([]); 
   
   const defaultDateRange: DateRange = {
     from: subDays(new Date(), 29), 
@@ -106,13 +106,14 @@ export default function DashboardPage() {
   };
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(defaultDateRange);
   const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Last 30 Days");
+  const [selectedPredefinedValue, setSelectedPredefinedValue] = useState<PredefinedRange | "custom" | null>("last30Days");
+  const [chartGranularity, setChartGranularity] = useState<'daily' | 'hourly'>('daily');
 
   const [totalSales, setTotalSales] = useState(formatCurrency(0));
   const [invoiceDue, setInvoiceDue] = useState(formatCurrency(0));
   const [salesChartData, setSalesChartData] = useState<Array<{ date: string; sales: number }>>([]);
-  const [totalPurchase, setTotalPurchase] = useState(formatCurrency(0)); // This will now be calculated
+  const [totalPurchase, setTotalPurchase] = useState(formatCurrency(0)); 
 
-  // Mock data states for other cards (some are still mock)
   const [netValue, setNetValue] = useState(formatCurrency(0));
   const [totalSellReturn, setTotalSellReturn] = useState(formatCurrency(0));
   const [purchaseDue, setPurchaseDue] = useState(formatCurrency(0));
@@ -126,12 +127,12 @@ export default function DashboardPage() {
     }
     setIsLoadingData(true);
     try {
-      const [fetchedOrders, fetchedModels] = await Promise.all([ // Fetch models
+      const [fetchedOrders, fetchedModels] = await Promise.all([ 
         getOrders(),
         getModels(),
       ]);
       setAllOrders(fetchedOrders);
-      setAllModels(fetchedModels); // Store models
+      setAllModels(fetchedModels); 
     } catch (error) {
       console.error("Failed to fetch orders or models for dashboard:", error);
       toast({ title: "Error", description: "Could not load order or model data.", variant: "destructive" });
@@ -168,38 +169,56 @@ export default function DashboardPage() {
 
     let currentTotalSales = 0;
     let currentTotalAdvance = 0;
-    let currentTotalPurchaseValue = 0; // Variable for total purchase calculation
+    let currentTotalPurchaseValue = 0;
 
     filteredOrders.forEach(order => {
       if (Array.isArray(order.orderItems)) {
         order.orderItems.forEach((item: OrderItem) => {
           currentTotalSales += item.lineItemTotalPrice || 0;
-          
-          // Calculate purchase value for this item
           const modelDetails = allModels.find(m => m.name === item.model);
           if (modelDetails && typeof modelDetails.buyingPrice === 'number' && typeof item.quantity === 'number' && item.quantity > 0) {
             currentTotalPurchaseValue += (modelDetails.buyingPrice * item.quantity);
           }
         });
       }
-      // Calculate total advance from advancePayments array if it exists, otherwise use legacy field
       if (Array.isArray(order.advancePayments) && order.advancePayments.length > 0) {
         currentTotalAdvance += order.advancePayments.reduce((sum, payment) => sum + payment.amount, 0);
-      } else if (order.advancePayment) { // Fallback to legacy field
+      } else if (order.advancePayment) { 
         currentTotalAdvance += order.advancePayment;
       }
     });
     
     setTotalSales(formatCurrency(currentTotalSales));
     setInvoiceDue(formatCurrency(currentTotalSales - currentTotalAdvance));
-    setTotalPurchase(formatCurrency(currentTotalPurchaseValue)); // Update totalPurchase state
+    setTotalPurchase(formatCurrency(currentTotalPurchaseValue));
 
-    if (selectedDateRange?.from && selectedDateRange?.to) {
+    if (selectedPredefinedValue === 'today' || selectedPredefinedValue === 'yesterday') {
+      setChartGranularity('hourly');
+      const hourlySales = new Map<number, number>(); // Key: hour (0-23)
+      for (let i = 0; i < 24; i++) {
+        hourlySales.set(i, 0); // Initialize all hours
+      }
+      filteredOrders.forEach(order => {
+        if (order.createdAt) {
+          try {
+            const orderDate = parseISO(order.createdAt);
+            const hour = getHours(orderDate);
+            const orderTotalForChart = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+            hourlySales.set(hour, (hourlySales.get(hour) || 0) + orderTotalForChart);
+          } catch (e) {
+            console.error("Error processing order for hourly chart:", order.id, e);
+          }
+        }
+      });
+      const chartData = Array.from(hourlySales.entries())
+        .map(([hour, sales]) => ({ date: hour.toString(), sales })) // 'date' key will hold hour string
+        .sort((a, b) => parseInt(a.date) - parseInt(b.date));
+      setSalesChartData(chartData);
+    } else if (selectedDateRange?.from && selectedDateRange?.to) {
+      setChartGranularity('daily');
       const dailySales = new Map<string, number>();
-      
       let tempDatePointerForInit = new Date(selectedDateRange.from);
       tempDatePointerForInit.setHours(0,0,0,0);
-
       const endDateForInit = new Date(selectedDateRange.to); 
       endDateForInit.setHours(23,59,59,999);
       
@@ -207,39 +226,36 @@ export default function DashboardPage() {
           dailySales.set(format(tempDatePointerForInit, 'yyyy-MM-dd'), 0);
           tempDatePointerForInit = addDays(tempDatePointerForInit, 1);
       }
-
       filteredOrders.forEach(order => {
         if (order.createdAt) {
           try {
             const orderDate = parseISO(order.createdAt);
             orderDate.setHours(0,0,0,0); 
             const orderDateStr = format(orderDate, 'yyyy-MM-dd');
-
             if (dailySales.has(orderDateStr)) {
               const orderTotalForChart = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
               dailySales.set(orderDateStr, (dailySales.get(orderDateStr) || 0) + orderTotalForChart);
             }
           } catch (e) {
-            console.error("Error processing order for chart:", order.id, e);
+            console.error("Error processing order for daily chart:", order.id, e);
           }
         }
       });
-      
       const chartData = Array.from(dailySales.entries())
         .map(([date, sales]) => ({ date, sales }))
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      
       setSalesChartData(chartData);
     } else {
       setSalesChartData([]);
+      setChartGranularity('daily');
     }
+  }, [isLoadingData, filteredOrders, selectedDateRange, allModels, selectedPredefinedValue]);
 
-  }, [isLoadingData, allOrders, filteredOrders, selectedDateRange, allModels]); // Added allModels dependency
 
-
-  const handleDateRangeChange = (range: DateRange | undefined, label: string) => {
+  const handleDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
     setCurrentDateRangeLabel(label);
+    setSelectedPredefinedValue(predefined);
   };
 
  const summaryCardData = useMemo(() => [
@@ -262,22 +278,36 @@ export default function DashboardPage() {
     );
   }
   
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltipContent = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="rounded-lg border bg-background p-2 shadow-sm">
           <div className="grid grid-cols-1 gap-2">
             <div className="flex flex-col">
               <span className="text-[0.70rem] uppercase text-muted-foreground">
-                Date
+                {chartGranularity === 'hourly' ? 'Time' : 'Date'}
               </span>
               <span className="font-bold text-muted-foreground">
-                {label ? format(parseISO(label), 'd MMM, yyyy') : 'N/A'}
+                {label ? (
+                  chartGranularity === 'hourly' ? 
+                  (() => {
+                      const hour = parseInt(label); // label is hour string "0" to "23"
+                      const nextHour = (hour + 1) % 24;
+                      const formatHour = (h: number) => {
+                          if (h === 0) return '12 AM';
+                          if (h === 12) return '12 PM';
+                          if (h < 12) return `${h} AM`;
+                          return `${h - 12} PM`;
+                      };
+                      return `${formatHour(hour)} - ${formatHour(nextHour).replace(/\s(A|P)M/, '')}${nextHour === 0 ? ' AM' : ''}`;
+                  })()
+                  : format(parseISO(label), 'd MMM, yyyy')
+                ) : 'N/A'}
               </span>
             </div>
             {payload.map((entry: any, index: number) => (
               <div key={`item-${index}`} className="flex flex-col">
-                 <span className="text-[0.70rem] uppercase text-muted-foreground">
+                 <span className="text-[0.70rem] uppercase text-muted-foreground" style={{ color: entry.color }}>
                   {entry.name === 'sales' ? 'Sales' : entry.name}
                 </span>
                 <span
@@ -369,12 +399,25 @@ export default function DashboardPage() {
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border)/0.5)" />
                 <XAxis
-                  dataKey="date"
+                  dataKey="date" 
                   tickLine={false}
                   axisLine={false}
                   tickMargin={8}
-                  tickFormatter={(value) => format(parseISO(value), 'd MMM')} 
+                  tickFormatter={(value) => {
+                    if (chartGranularity === 'hourly') {
+                      const hour = parseInt(value);
+                      if (isNaN(hour)) return value; // Fallback for safety
+                      if (hour === 0) return '12 AM';
+                      if (hour === 12) return '12 PM';
+                      if (hour < 12) return `${hour} AM`;
+                      return `${hour - 12} PM`;
+                    }
+                    try {
+                      return format(parseISO(value), 'd MMM');
+                    } catch (e) { return value; } // Fallback for safety
+                  }}
                   className="text-xs"
+                  interval={chartGranularity === 'hourly' && salesChartData.length > 12 ? 'preserveStartEnd' : undefined} // Adjust interval for hourly
                 />
                 <YAxis
                   tickLine={false}
@@ -383,9 +426,9 @@ export default function DashboardPage() {
                   tickFormatter={(value) => `৳${Number(value).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})}`}
                   className="text-xs"
                 />
-                <ChartTooltip
+                <Tooltip
                   cursor={false}
-                  content={<CustomTooltip />}
+                  content={<CustomTooltipContent />}
                 />
                 <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '10px'}} />
                 <Line
@@ -415,5 +458,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
