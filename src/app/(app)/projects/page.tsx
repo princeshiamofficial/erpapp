@@ -18,14 +18,14 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-  type DragStartEvent, // Added DragStartEvent
-  type DragCancelEvent, // Added DragCancelEvent
+  type DragStartEvent, 
+  type DragCancelEvent, 
   closestCorners,
-  DragOverlay, // Added DragOverlay
+  DragOverlay, 
 } from '@dnd-kit/core';
 import { updateProjectStatusAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
-import { ProjectCard } from '@/components/projects/ProjectCard'; // For DragOverlay
+import { ProjectCard } from '@/components/projects/ProjectCard'; 
 
 const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: React.ElementType; headerBgClass: string; headerIconClass?: string; headerTextClass?: string }> = [
   { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, headerBgClass: 'bg-sky-600', headerTextClass: 'text-sky-50' },
@@ -43,7 +43,7 @@ export default function ProjectsPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [endDateFilter, setEndDateFilter] = useState<string>('all');
   const { toast } = useToast();
-  const [activeProject, setActiveProject] = useState<Project | null>(null); // For DragOverlay
+  const [activeProject, setActiveProject] = useState<Project | null>(null); 
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -129,7 +129,7 @@ export default function ProjectsPage() {
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
-    setActiveProject(null); // Clear active project for overlay
+    setActiveProject(null); 
     const { active, over } = event;
 
     if (!over || !active.data.current?.project) {
@@ -137,7 +137,7 @@ export default function ProjectsPage() {
     }
 
     const project = active.data.current.project as Project;
-    const projectId = project.id;
+    // const projectId = project.id; // projectId is now the same as project.id
     const newStatus = over.id as ProjectStatusType;
     const originalStatus = project.status;
 
@@ -147,20 +147,21 @@ export default function ProjectsPage() {
 
     setProjects(prevProjects => {
       return prevProjects.map(p =>
-        p.id === projectId ? { ...p, status: newStatus } : p
+        p.id === project.id ? { ...p, status: newStatus } : p
       );
     });
 
+    // Pass the full project object to the action
     const result = await updateProjectStatusAction(project, newStatus);
 
     if (result.success) {
       toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
-      await fetchProjects(); // Re-fetch for consistency
+      await fetchProjects(); 
     } else {
       toast({ title: "Update Failed", description: result.error || `Could not update status for project '${project.name}'.`, variant: "destructive" });
       setProjects(prevProjects => {
         return prevProjects.map(p =>
-          p.id === projectId ? { ...p, status: originalStatus } : p
+          p.id === project.id ? { ...p, status: originalStatus } : p
         );
       });
     }
