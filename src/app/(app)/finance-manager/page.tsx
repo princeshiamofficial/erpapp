@@ -1,19 +1,17 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth-context";
-import type { Transaction, User, TransactionType, GlobalSettings, ExpenseLoggingPermissions } from "@/types"; 
-import { getTransactionsForUser, getAllTransactions } from "@/lib/personal-finance-service";
+import type { Transaction, User, TransactionType, GlobalSettings, ExpenseLoggingPermissions, PersonalNote } from "@/types"; 
 import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service'; 
-import { deleteTransactionAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, DollarSign, Wallet, AlertTriangle, ListFilter, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send } from 'lucide-react';
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, DollarSign, Wallet, AlertTriangle, ListFilter, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X } from 'lucide-react';
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
@@ -27,14 +25,26 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog as NoteDialog, DialogContent as NoteDialogContent, DialogHeader as NoteDialogHeader, DialogTitle as NoteDialogTitle, DialogDescription as NoteDialogDescription, DialogFooter as NoteDialogFooter } from "@/components/ui/dialog";
+import { addNoteAction, deleteNoteAction, getNotesForUserAction, updateNoteAction } from './actions';
+import { MultiColorCalculatorIcon } from '@/components/icons/MultiColorCalculatorIcon'; 
+import { format, formatDistanceToNowStrict } from 'date-fns';
+import { Banknote } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
 
 const AddTransactionDialog = dynamic(() => import('@/components/finance-manager/add-transaction-dialog').then(mod => mod.AddTransactionDialog));
 const EditTransactionDialog = dynamic(() => import('@/components/finance-manager/edit-transaction-dialog').then(mod => mod.EditTransactionDialog));
+const CalculatorDialog = dynamic(() => import('@/components/layout/CalculatorDialog').then(mod => mod.CalculatorDialog));
 
 
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
+
+const NOTES_STORAGE_KEY = 'COLORHUT_FINANCE_NOTES_LIST_KEY'; // Updated for list
 
 export default function FinanceManagerPage() {
   const { currentUser } = useAuth();
@@ -56,6 +66,16 @@ export default function FinanceManagerPage() {
   const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
   const [isEditDialogVisible, setIsEditDialogVisible] = useState(false);
 
+  // Notes state
+  const [notes, setNotes] = useState<PersonalNote[]>([]);
+  const [isNoteDialogOpen, setIsNoteDialogOpen] = useState(false);
+  const [editingNote, setEditingNote] = useState<PersonalNote | null>(null);
+  const [currentNoteTitle, setCurrentNoteTitle] = useState('');
+  const [currentNoteContent, setCurrentNoteContent] = useState('');
+  const [isSubmittingNote, setIsSubmittingNote] = useState(false);
+  const [noteToDelete, setNoteToDelete] = useState<PersonalNote | null>(null);
+  const [isDeleteNoteAlertOpen, setIsDeleteNoteAlertOpen] = useState(false);
+
 
   const fetchFinancialData = useCallback(async () => {
     if (!currentUser) return;
@@ -64,46 +84,50 @@ export default function FinanceManagerPage() {
       let fetchedTransactions: Transaction[];
       let fetchedUsersForMap: User[] = [];
       let fetchedUsersForDialogLocal: User[] = [];
+      let fetchedNotes: PersonalNote[] = [];
 
       const settings = await getGlobalSettings();
       setGlobalAppSettings(settings);
 
-      const dataPromises: any[] = [];
+      const dataPromises: any[] = [getNotesForUserAction(currentUser.id)]; 
       if (currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global') {
-        dataPromises.push(getAllTransactions(), getUsers());
+        dataPromises.push(addTransactionAction.getAllTransactions(), getUsers()); // Assuming getAllTransactions is on addTransactionAction or similar
       } else {
-        dataPromises.push(getTransactionsForUser(currentUser.id));
-        if (currentUser.role === 'SYSTEM_ADMIN') { // SysAdmin in personal view still needs all users for "Send Money"
+        dataPromises.push(addTransactionAction.getTransactionsForUser(currentUser.id)); // Assuming getTransactionsForUser is on addTransactionAction
+        if (currentUser.role === 'SYSTEM_ADMIN') { 
             dataPromises.push(getUsers());
         }
       }
       
       const results = await Promise.all(dataPromises);
+      fetchedNotes = results[0] as PersonalNote[];
+      fetchedTransactions = results[1] as Transaction[];
 
-      fetchedTransactions = results[0] as Transaction[];
       if (currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global') {
-        fetchedUsersForMap = results[1] as User[];
+        fetchedUsersForMap = results[2] as User[];
         fetchedUsersForDialogLocal = fetchedUsersForMap.filter(u => u.id !== currentUser.id && u.role !== 'SYSTEM_ADMIN');
         const newUserMap = new Map(fetchedUsersForMap.map(user => [user.id, user.name]));
         setUserMap(newUserMap);
-      } else if (currentUser.role === 'SYSTEM_ADMIN') { // Personal view for SysAdmin
-        fetchedUsersForMap = results[1] as User[]; // all users
+      } else if (currentUser.role === 'SYSTEM_ADMIN') { 
+        fetchedUsersForMap = results[2] as User[]; 
         fetchedUsersForDialogLocal = fetchedUsersForMap.filter(u => u.id !== currentUser.id && u.role !== 'SYSTEM_ADMIN');
-        setUserMap(new Map()); // No user map needed for personal view display, but keep users for dialog
-      } else { // Non-SysAdmin users
+        setUserMap(new Map()); 
+      } else { 
         setUserMap(new Map());
         fetchedUsersForDialogLocal = []; 
       }
 
       setAllUsersForDialog(fetchedUsersForDialogLocal);
+      setNotes(fetchedNotes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.createdAt).getTime()));
       setTransactions(fetchedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch (error) {
-      console.error("Failed to fetch financial data, users, or settings:", error);
-      toast({ title: "Error", description: "Could not load financial data, users, or settings.", variant: "destructive" });
+      console.error("Failed to fetch financial data, users, settings, or notes:", error);
+      toast({ title: "Error", description: "Could not load page data. Please try again.", variant: "destructive" });
       setTransactions([]);
       setUserMap(new Map());
       setAllUsersForDialog([]);
       setGlobalAppSettings(null);
+      setNotes([]);
     } finally {
       setIsLoading(false);
     }
@@ -124,7 +148,7 @@ export default function FinanceManagerPage() {
   const confirmDeleteTransaction = async () => {
     if (!transactionToDelete || !currentUser) return;
     setIsDeleting(true);
-    const result = await deleteTransactionAction(transactionToDelete.id, currentUser.id, currentUser.role);
+    const result = await addTransactionAction.deleteTransaction(transactionToDelete.id, currentUser.id, currentUser.role);
     setIsDeleting(false);
     setIsDeleteAlertOpen(false);
     if (result.success) {
@@ -170,6 +194,72 @@ export default function FinanceManagerPage() {
     return `Track your personal income, expenses, and purchases.`;
   }, [currentUser, viewMode]);
 
+  const handleOpenNewNoteDialog = () => {
+    setEditingNote(null);
+    setCurrentNoteTitle('');
+    setCurrentNoteContent('');
+    setIsNoteDialogOpen(true);
+  };
+
+  const handleOpenEditNoteDialog = (note: PersonalNote) => {
+    setEditingNote(note);
+    setCurrentNoteTitle(note.title || '');
+    setCurrentNoteContent(note.content || '');
+    setIsNoteDialogOpen(true);
+  };
+
+  const handleSaveNote = async () => {
+    if (!currentUser) return;
+    if (!currentNoteTitle?.trim()) { // Check if currentNoteTitle is not undefined/null before trimming
+      toast({ title: "Validation Error", description: "Note title is required.", variant: "destructive" });
+      return;
+    }
+    setIsSubmittingNote(true);
+    let result;
+    const noteData = {
+      title: currentNoteTitle.trim(),
+      content: currentNoteContent.trim(),
+      userId: currentUser.id,
+    };
+
+    if (editingNote) {
+      result = await updateNoteAction(editingNote.id, noteData);
+    } else {
+      result = await addNoteAction(noteData);
+    }
+    setIsSubmittingNote(false);
+
+    if (result.success) {
+      toast({ title: editingNote ? "Note Updated" : "Note Added", description: "Your note has been saved." });
+      setIsNoteDialogOpen(false);
+      fetchFinancialData(); 
+    } else {
+      toast({ title: "Error", description: result.error || "Could not save note.", variant: "destructive" });
+    }
+  };
+  
+  const handleDeleteNoteRequest = (note: PersonalNote) => {
+    setNoteToDelete(note);
+    setIsDeleteNoteAlertOpen(true);
+  };
+
+  const confirmDeleteNote = async () => {
+    if (!noteToDelete || !currentUser) return;
+    setIsSubmittingNote(true); // Reuse for delete loading state
+    const result = await deleteNoteAction(noteToDelete.id, currentUser.id);
+    setIsSubmittingNote(false);
+    setIsDeleteNoteAlertOpen(false);
+
+    if (result.success) {
+      toast({ title: "Note Deleted", description: "The note has been removed." });
+      fetchFinancialData();
+    } else {
+      toast({ title: "Deletion Failed", description: result.error || "Could not delete note.", variant: "destructive" });
+    }
+    setNoteToDelete(null);
+  };
+
+
   if (!currentUser) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -207,7 +297,6 @@ export default function FinanceManagerPage() {
     ].filter(card => {
       if (currentUser?.role === 'SYSTEM_ADMIN') return true;
       if (canUserAddExpense) return true;
-      // Users who cannot add expenses only see Total Income
       return card.title === "Total Income";
     });
   }, [totalIncome, totalExpenses, availableBalance, canUserAddExpense, currentUser]);
@@ -318,7 +407,7 @@ export default function FinanceManagerPage() {
               </div>
             ) : (
               <div className="text-center py-10 text-muted-foreground">
-                <DollarSign className="h-16 w-16 mx-auto opacity-30 mb-3" />
+                <Banknote className="h-16 w-16 mx-auto opacity-30 mb-3" />
                 <p className="text-lg font-medium">No transactions yet.</p>
                 <p className="text-sm">
                   {canUserAddExpense ? "Add your first income or expense to get started!" : "Expense logging may be disabled for your role."}
@@ -329,49 +418,72 @@ export default function FinanceManagerPage() {
         </Card>
 
         <div className="space-y-6">
-          <Card className="shadow-xl border bg-card rounded-lg">
-            <CardHeader>
-              <CardTitle className="text-card-foreground text-xl flex items-center"><Calculator className="mr-2 h-5 w-5 text-primary"/>Calculator</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Quick calculations.</CardDescription>
+           <Card className="shadow-xl border bg-card rounded-lg">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-card-foreground text-xl flex items-center"><MultiColorCalculatorIcon className="mr-2 h-5 w-5"/>Calculator</CardTitle>
+                <CardDescription className="text-muted-foreground text-sm mt-0.5">Quick calculations.</CardDescription>
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="p-6 text-center text-muted-foreground border-2 border-dashed border-border/50 rounded-lg">
-                Built-in calculator coming soon!
-              </div>
+                <CalculatorDialog>
+                  <Button variant="outline" className="w-full">
+                    <Calculator className="mr-2 h-4 w-4"/> Open Calculator
+                  </Button>
+                </CalculatorDialog>
             </CardContent>
           </Card>
 
            <Card className="shadow-xl border bg-card rounded-lg">
-            <CardHeader>
-              <CardTitle className="text-card-foreground text-xl flex items-center"><NotebookPen className="mr-2 h-5 w-5 text-primary"/>Notes</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">Jot down financial reminders.</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-card-foreground text-xl flex items-center"><NotebookPen className="mr-2 h-5 w-5 text-primary"/>Notes</CardTitle>
+                <CardDescription className="text-muted-foreground text-sm mt-0.5">Jot down financial reminders.</CardDescription>
+              </div>
+              <Button variant="outline" size="icon" onClick={handleOpenNewNoteDialog} className="h-9 w-9" title="Add New Note">
+                <PlusCircle className="h-5 w-5 text-primary"/>
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="p-6 text-center text-muted-foreground border-2 border-dashed border-border/50 rounded-lg">
-                 Notes section coming soon!
-              </div>
+              {isLoading ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full rounded-md" />
+                  <Skeleton className="h-10 w-full rounded-md" />
+                </div>
+              ) : notes.length > 0 ? (
+                <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                  {notes.map(note => (
+                    <div key={note.id} className="p-3 border rounded-md bg-background/50 hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-sm font-semibold text-foreground truncate" title={note.title}>{note.title}</h4>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => handleOpenEditNoteDialog(note)} title="Edit Note">
+                            <Edit2 className="h-4 w-4"/>
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleDeleteNoteRequest(note)} title="Delete Note">
+                            <Trash2 className="h-4 w-4"/>
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate mt-0.5" title={note.content}>{note.content || "No content"}</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">
+                        Last updated: {formatDistanceToNowStrict(new Date(note.updatedAt), { addSuffix: true })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <NotebookPen className="h-10 w-10 mx-auto opacity-30 mb-2"/>
+                  <p className="text-sm">No notes yet. Click '+' to add one.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
       </div>
        <Separator className="my-8" />
-        <div>
-          <h2 className="text-2xl font-semibold mb-4 text-foreground">Quick Navigation (Coming Soon)</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              <Button variant="outline" size="lg" className="h-auto py-4 flex-col" disabled>
-                  <ListFilter className="h-6 w-6 mb-1.5"/> View All Transactions
-              </Button>
-              <Button variant="outline" size="lg" className="h-auto py-4 flex-col" disabled>
-                  <ArrowUpCircle className="h-6 w-6 mb-1.5 text-green-500"/> Income History
-              </Button>
-              <Button variant="outline" size="lg" className="h-auto py-4 flex-col" disabled>
-                 <ArrowDownCircle className="h-6 w-6 mb-1.5 text-red-500"/> Expense History
-              </Button>
-              <Button variant="outline" size="lg" className="h-auto py-4 flex-col" disabled>
-                <DollarSign className="h-6 w-6 mb-1.5"/> Budgeting Tools
-              </Button>
-          </div>
-        </div>
+       {/* Quick Navigation was removed */}
 
       {isDeleteAlertOpen && transactionToDelete && (
         <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
@@ -407,6 +519,54 @@ export default function FinanceManagerPage() {
           currentUser={currentUser}
           onTransactionUpdated={handleTransactionUpdated}
         />
+      )}
+
+      {isNoteDialogOpen && (
+        <NoteDialog open={isNoteDialogOpen} onOpenChange={setIsNoteDialogOpen}>
+          <NoteDialogContent className="sm:max-w-lg">
+            <NoteDialogHeader>
+              <NoteDialogTitle>{editingNote ? "Edit Note" : "Add New Note"}</NoteDialogTitle>
+              <NoteDialogDescription>
+                {editingNote ? `Update your note titled "${editingNote.title}".` : "Create a new financial note."}
+              </NoteDialogDescription>
+            </NoteDialogHeader>
+            <div className="py-4 space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="noteTitle">Title *</Label>
+                <Input id="noteTitle" value={currentNoteTitle} onChange={(e) => setCurrentNoteTitle(e.target.value)} placeholder="e.g., Q1 Budget Ideas" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="noteContent">Content</Label>
+                <Textarea id="noteContent" value={currentNoteContent} onChange={(e) => setCurrentNoteContent(e.target.value)} placeholder="Write your detailed notes here..." rows={5} className="min-h-[100px]" />
+              </div>
+            </div>
+            <NoteDialogFooter>
+              <Button variant="outline" onClick={() => setIsNoteDialogOpen(false)} disabled={isSubmittingNote}>Cancel</Button>
+              <Button onClick={handleSaveNote} disabled={isSubmittingNote || !currentNoteTitle?.trim()}>
+                {isSubmittingNote ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Saving...</> : (editingNote ? "Save Changes" : "Add Note")}
+              </Button>
+            </NoteDialogFooter>
+          </NoteDialogContent>
+        </NoteDialog>
+      )}
+
+      {isDeleteNoteAlertOpen && noteToDelete && (
+        <AlertDialog open={isDeleteNoteAlertOpen} onOpenChange={setIsDeleteNoteAlertOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-6 w-6 text-destructive" />Confirm Deletion</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete the note "<span className="font-semibold">{noteToDelete.title}</span>"? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIsDeleteNoteAlertOpen(false)} disabled={isSubmittingNote}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteNote} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isSubmittingNote}>
+                {isSubmittingNote ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Deleting...</> : "Yes, Delete Note"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );
