@@ -1,4 +1,5 @@
 
+
 import { db } from './firebase';
 import { collection, getDocs, doc, updateDoc, getDoc, query, where, writeBatch, setDoc, deleteDoc } from 'firebase/firestore';
 import type { CustomStatus, UserRole } from '@/types';
@@ -6,10 +7,11 @@ import { v4 as uuidv4 } from 'uuid';
 
 const STATUSES_COLLECTION = 'customOrderStatuses';
 export const READY_FOR_DESIGN_STATUS_ID = 'ready-for-design';
-export const ORDER_SUBMITTED_ID = 'order-submitted'; // Added export
-export const CANCELLED_STATUS_ID = 'cancelled'; // Exported Cancelled Status ID
-export const ON_HOLD_STATUS_ID = 'on-hold'; // Exported On Hold Status ID
-export const LOGISTICS_STATUS_ID = 'logistics'; // Exported Logistics Status ID
+export const ORDER_SUBMITTED_ID = 'order-submitted'; 
+export const CANCELLED_STATUS_ID = 'cancelled'; 
+export const ON_HOLD_STATUS_ID = 'on-hold'; 
+export const LOGISTICS_STATUS_ID = 'logistics'; 
+export const QUALITY_CHECK_STATUS_ID = 'quality-check'; // Corrected ID
 
 // Default statuses with names, colors, and default allowed roles
 const defaultStatusesData: Array<Omit<CustomStatus, 'id' | 'isSystemStatus' | 'isVisible'> & { defaultName: string, defaultAllowedRoles?: UserRole[] }> = [
@@ -20,8 +22,8 @@ const defaultStatusesData: Array<Omit<CustomStatus, 'id' | 'isSystemStatus' | 'i
   { defaultName: 'Changes Requested', color: '#EF4444', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
   { defaultName: 'Approved for Production', color: '#10B981', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
   { defaultName: 'In Production', color: '#0EA5E9', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
-  { defaultName: 'Quality Check', color: '#F97316', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
-  { defaultName: 'Logistics', color: '#F97316', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] }, // Added Logistics status (Orange-600)
+  { defaultName: 'Quality Check', color: '#F97316', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] }, // ID: quality-check
+  { defaultName: 'Logistics', color: '#F97316', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] }, // ID: logistics
   { defaultName: 'Shipped', color: '#22C55E', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
   { defaultName: 'Delivered', color: '#65A30D', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
   { defaultName: 'Cancelled', color: '#71717A', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
@@ -305,4 +307,5 @@ export const getContrastTextColor = (hexColor: string): string => {
     return '#000000';
   }
 };
+
 

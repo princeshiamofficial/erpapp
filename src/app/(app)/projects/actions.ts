@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -77,17 +78,17 @@ export async function updateProjectStatusAction(
       }
     } else if (newStatus === 'Logistics') { // If project status changed to 'Logistics'
       const order = await getOrderById(project.id);
-      if (order && order.currentStatus !== LOGISTICS_STATUS_ID) {
+      if (order && order.currentStatus !== LOGISTICS_STATUS_ID) { // Use LOGISTICS_STATUS_ID
         const newLogEntry: OrderLogEntry = {
           id: uuidv4(),
           timestamp: new Date().toISOString(),
-          status: LOGISTICS_STATUS_ID,
+          status: LOGISTICS_STATUS_ID, // Use LOGISTICS_STATUS_ID
           changedByUserId: actingUser.id,
           changedByUserName: actingUser.name,
-          notes: `Order moved to logistics from project board by ${actingUser.name}. Project status: Logistics.`,
+          notes: `Order moved to Logistics via project board by ${actingUser.name}. Project status: Logistics.`, // Updated note
         };
         const orderUpdateSuccess = await updateOrder(order.id, {
-          currentStatus: LOGISTICS_STATUS_ID,
+          currentStatus: LOGISTICS_STATUS_ID, // Use LOGISTICS_STATUS_ID
           statusHistory: [...order.statusHistory, newLogEntry],
           updatedAt: new Date().toISOString(),
           updatedByUserId: actingUser.id,
@@ -112,4 +113,5 @@ export async function updateProjectStatusAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
 
