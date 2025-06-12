@@ -3,7 +3,7 @@
 
 import type { Project, ProjectStatusType } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Added AvatarImage
 import { CalendarDays, User, Folder, EllipsisVertical, GripVertical } from 'lucide-react';
 import {
   DropdownMenu,
@@ -43,7 +43,7 @@ const StopwatchIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 interface ProjectCardProps {
   project: Project;
-  isOverlay?: boolean; // New prop for drag overlay
+  isOverlay?: boolean; 
 }
 
 function formatDurationPrecise(totalSeconds: number): string {
@@ -204,7 +204,7 @@ export function ProjectCard({ project, isOverlay = false }: ProjectCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: project.id,
     data: { project },
-    disabled: isOverlay, // Disable dragging for the overlay version
+    disabled: isOverlay, 
   });
 
   const style = !isOverlay && transform ? {
@@ -227,7 +227,7 @@ export function ProjectCard({ project, isOverlay = false }: ProjectCardProps) {
         setProgressInfo(calculateProgressInfo(project, new Date()));
     };
     updateInfo(); 
-    const intervalId = setInterval(updateInfo, 5000); // Changed interval to 5 seconds
+    const intervalId = setInterval(updateInfo, 5000); 
     return () => clearInterval(intervalId); 
   }, [project]);
 
@@ -242,8 +242,8 @@ export function ProjectCard({ project, isOverlay = false }: ProjectCardProps) {
         scale: !isOverlay && isDragging ? 1.05 : (isOverlay ? 0.95 : 1),
         opacity: !isOverlay && isDragging ? 0.4 : 1,
         boxShadow: isOverlay
-          ? "0px 10px 25px -5px rgba(0, 0, 0, 0.2), 0px 5px 10px -6px rgba(0, 0, 0, 0.2)" // Lifted shadow for overlay
-          : "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)", // Standard shadow for original card
+          ? "0px 10px 25px -5px rgba(0, 0, 0, 0.2), 0px 5px 10px -6px rgba(0, 0, 0, 0.2)" 
+          : "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)", 
         rotate: isOverlay ? 2 : 0,
       }}
       transition={{ duration: 0.15, ease: "easeInOut" }}
@@ -254,7 +254,7 @@ export function ProjectCard({ project, isOverlay = false }: ProjectCardProps) {
     >
       <Card
         className={cn(
-          "bg-card w-full shadow-none", // Removed Tailwind shadows, framer-motion will handle it
+          "bg-card w-full shadow-none", 
            isOverlay ? "cursor-grabbing" : (isDragging ? "ring-2 ring-primary cursor-grabbing" : "cursor-grab active:cursor-grabbing")
         )}
       >
@@ -318,6 +318,7 @@ export function ProjectCard({ project, isOverlay = false }: ProjectCardProps) {
 
           <div className={cn("flex items-center justify-start mt-2", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
             <Avatar className="h-7 w-7 text-xs border bg-muted">
+              <AvatarImage src={project.assigneeAvatarUrl || undefined} alt={project.assigneeName} data-ai-hint="assignee avatar" />
               <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(project.assigneeInitials || project.assigneeName)}</AvatarFallback>
             </Avatar>
           </div>

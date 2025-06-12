@@ -1,16 +1,17 @@
 
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, query, orderBy, writeBatch, getDoc as getFirestoreDoc, deleteField } from 'firebase/firestore'; // Added deleteField
+import { collection, getDocs, doc, setDoc, updateDoc, query, orderBy, writeBatch, getDoc as getFirestoreDoc, deleteField } from 'firebase/firestore';
 import type { Project, ProjectStatusType } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { formatISO, addMonths, addDays } from 'date-fns';
 import { getOrders } from './order-service'; 
 import { ORDER_SUBMITTED_ID } from './status-service'; 
+import { getUsers as getAllUsersService } from './user-service'; // Import user service to fetch avatars
 
 const PROJECTS_COLLECTION = 'projects';
 
-const defaultProjectsData: Array<Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'crCancelAt' >> = [
+const defaultProjectsData: Array<Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'crCancelAt' | 'assigneeAvatarUrl' >> = [
   { projectIdDisplay: 'PJ-001', name: 'Alpha Initiative', status: 'CR Clearance', endDate: formatISO(addMonths(new Date(), 2)), assigneeName: 'Austin Azaria', assigneeInitials: 'AU', categoryTag: 'Corporate Client' },
   { projectIdDisplay: 'PJ-002', name: 'Beta Development', status: 'CR Cancel', endDate: formatISO(addMonths(new Date(), 3)), assigneeName: 'Clerk Kent', assigneeInitials: 'CK', categoryTag: 'Walk-In Customer' },
   { projectIdDisplay: 'PJ-003', name: 'Gamma Graphics', status: 'On Design', endDate: formatISO(addMonths(new Date(), 1)), assigneeName: 'Diana Prince', assigneeInitials: 'DP', categoryTag: 'Internal Project' },
@@ -49,9 +50,9 @@ export const seedDefaultProjects = async (): Promise<Project[]> => {
     const newProject: Project = {
       id,
       ...projectData,
+      assigneeAvatarUrl: null, // Default projects have no specific avatar
       createdAt: now,
       updatedAt: now,
-      // Timestamps are initially undefined
     };
     const initialStatusField = getInitialStatusTimestampField(projectData.status);
     if (initialStatusField) {
@@ -97,7 +98,12 @@ export const getProjects = async (): Promise<Project[]> => {
 
   let ordersToDisplayAsProjects: Project[] = [];
   try {
-    const allOrders = await getOrders(); 
+    const [allOrders, allUsers] = await Promise.all([
+      getOrders(),
+      getAllUsersService() // Fetch all users to get avatar URLs
+    ]);
+    const userMap = new Map(allUsers.map(user => [user.id, user]));
+
     console.log(`[getProjects] Fetched ${allOrders.length} total orders.`);
     
     const orderSubmittedOrders = allOrders.filter(
@@ -120,6 +126,7 @@ export const getProjects = async (): Promise<Project[]> => {
       .map(order => {
         const projectCreatedAt = order.createdAt || formatISO(new Date());
         const projectEndDate = formatISO(addDays(new Date(projectCreatedAt), 2)); 
+        const crmUser = userMap.get(order.crmUserId);
 
         const dynamicProject: Project = {
           id: order.id, 
@@ -128,6 +135,7 @@ export const getProjects = async (): Promise<Project[]> => {
           status: 'CR Clearance',
           assigneeName: order.crmUserName,
           assigneeInitials: getInitialsForName(order.crmUserName),
+          assigneeAvatarUrl: crmUser?.avatarUrl || null, // Get CRM user's avatar
           categoryTag: 'From Order',
           createdAt: projectCreatedAt,
           updatedAt: order.updatedAt || projectCreatedAt,
@@ -205,7 +213,6 @@ export const updateProjectStatus = async (
       const currentStatus = docSnap.data().status as ProjectStatusType;
       const currentStatusTimestampField = getInitialStatusTimestampField(currentStatus);
       
-      // Delete the old status timestamp field only if it's different from the new one and exists
       if (currentStatusTimestampField && currentStatusTimestampField !== getInitialStatusTimestampField(newStatus)) {
         updates[currentStatusTimestampField] = deleteField();
       }
@@ -228,14 +235,13 @@ export const updateProjectStatus = async (
       } = projectDataIfCreating;
 
       const newProjectToSet: Partial<Project> = {
-        id: projectId, // Use the doc ID (which is the order.id for dynamic projects)
-        ...restOfProjectData, // Contains projectIdDisplay, name, endDate, etc.
+        id: projectId, 
+        ...restOfProjectData, 
         status: newStatus,
-        createdAt: _oldCreatedAt || now, // Preserve original creation if available
+        createdAt: _oldCreatedAt || now, 
         updatedAt: now,
       };
       
-      // Set the specific timestamp for the new status
       const newStatusTimestampField = getInitialStatusTimestampField(newStatus);
       if (newStatusTimestampField) {
         (newProjectToSet as any)[newStatusTimestampField] = now;

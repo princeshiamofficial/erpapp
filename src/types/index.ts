@@ -210,6 +210,7 @@ export interface Project {
   endDate: string;
   assigneeName: string;
   assigneeInitials?: string;
+  assigneeAvatarUrl?: string | null; // Added optional avatar URL
   categoryTag: string;
   createdAt?: string;
   updatedAt?: string;
@@ -221,3 +222,4 @@ export interface Project {
   logisticsAt?: string;
   courierAt?: string;
 }
+
