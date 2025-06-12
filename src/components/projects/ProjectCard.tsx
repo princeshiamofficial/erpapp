@@ -227,7 +227,7 @@ export function ProjectCard({ project, isOverlay = false }: ProjectCardProps) {
         setProgressInfo(calculateProgressInfo(project, new Date()));
     };
     updateInfo(); 
-    const intervalId = setInterval(updateInfo, 1000);
+    const intervalId = setInterval(updateInfo, 5000); // Changed interval to 5 seconds
     return () => clearInterval(intervalId); 
   }, [project]);
 
@@ -239,12 +239,12 @@ export function ProjectCard({ project, isOverlay = false }: ProjectCardProps) {
       {...(!isOverlay ? listeners : {})}
       {...(!isOverlay ? attributes : {})}
       animate={{
-        scale: !isOverlay && isDragging ? 1.05 : (isOverlay ? 0.95 : 1), // Slightly smaller if overlay
+        scale: !isOverlay && isDragging ? 1.05 : (isOverlay ? 0.95 : 1),
         opacity: !isOverlay && isDragging ? 0.4 : 1,
-        boxShadow: !isOverlay && isDragging
-          ? "0px 10px 25px rgba(0,0,0,0.2), 0px 5px 10px rgba(0,0,0,0.15)"
-          : (isOverlay ? "0px 8px 20px rgba(0,0,0,0.25)" : "0px 1px 3px rgba(0,0,0,0.05), 0px 1px 2px rgba(0,0,0,0.03)"),
-        rotate: isOverlay ? 2 : 0, // Slight rotation for overlay
+        boxShadow: isOverlay
+          ? "0px 10px 25px -5px rgba(0, 0, 0, 0.2), 0px 5px 10px -6px rgba(0, 0, 0, 0.2)" // Lifted shadow for overlay
+          : "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1)", // Standard shadow for original card
+        rotate: isOverlay ? 2 : 0,
       }}
       transition={{ duration: 0.15, ease: "easeInOut" }}
       className={cn(
@@ -254,8 +254,8 @@ export function ProjectCard({ project, isOverlay = false }: ProjectCardProps) {
     >
       <Card
         className={cn(
-          "bg-card hover:shadow-lg transition-shadow w-full", // Ensure card takes full width of motion.div
-           isOverlay ? "cursor-grabbing shadow-xl" : (isDragging ? "ring-2 ring-primary cursor-grabbing shadow-xl" : "cursor-grab active:cursor-grabbing shadow-md")
+          "bg-card w-full shadow-none", // Removed Tailwind shadows, framer-motion will handle it
+           isOverlay ? "cursor-grabbing" : (isDragging ? "ring-2 ring-primary cursor-grabbing" : "cursor-grab active:cursor-grabbing")
         )}
       >
         <CardContent className="p-3 space-y-2.5">
