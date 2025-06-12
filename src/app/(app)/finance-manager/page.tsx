@@ -34,12 +34,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"; // Added Select components
 import {
-  // Note-related actions are no longer directly used in UI for "Coming Soon"
-  // addNoteAction, deleteNoteAction, getNotesForUserAction, updateNoteAction,
   deleteTransactionAction,
   updateTransactionAction,
   getTransactionsForUserAction,
   getAllTransactionsAction,
+  // Note-related actions removed as Notes feature is "Coming Soon"
+  // addNoteAction, deleteNoteAction, getNotesForUserAction, updateNoteAction,
 } from './actions';
 import { MultiColorCalculatorIcon } from '@/components/icons/MultiColorCalculatorIcon';
 import { Banknote } from 'lucide-react';
@@ -56,7 +56,7 @@ const formatCurrency = (value: number): string => {
 const TRANSACTION_TYPES_FOR_FILTER: Array<{ value: string; label: string }> = [
   { value: 'all', label: 'All Transactions' },
   { value: 'income', label: 'Income' },
-  { value: 'expense_only', label: 'Expenses (Direct)' },
+  { value: 'expense_only', label: 'Expenses' },
   { value: 'purchase', label: 'Purchases' },
   { value: 'send_money', label: 'Sent Money' },
 ];
@@ -203,9 +203,9 @@ export default function FinanceManagerPage() {
     if (transactionTypeFilter !== 'all') {
       results = results.filter(t => {
         if (transactionTypeFilter === 'income') return t.type === 'income';
-        if (transactionTypeFilter === 'expense_only') return t.type === 'expense' && !t.sentToUserId; // Direct expenses
+        if (transactionTypeFilter === 'expense_only') return t.type === 'expense' && !t.sentToUserId;
         if (transactionTypeFilter === 'purchase') return t.type === 'purchase';
-        if (transactionTypeFilter === 'send_money') return t.type === 'expense' && !!t.sentToUserId; // Sent money (an expense)
+        if (transactionTypeFilter === 'send_money') return t.type === 'expense' && !!t.sentToUserId;
         return true; 
       });
     }
@@ -498,3 +498,6 @@ export default function FinanceManagerPage() {
 
     
 
+
+
+    
