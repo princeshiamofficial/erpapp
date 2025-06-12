@@ -189,6 +189,7 @@ export interface Transaction {
   sentToUserName?: string | null;
   receivedFromUserId?: string | null;
   receivedFromUserName?: string | null;
+  documentUrl?: string | null; // Added documentUrl for attachments
 }
 
 export interface PersonalNote {
@@ -222,4 +223,3 @@ export interface Project {
   logisticsAt?: string;
   courierAt?: string;
 }
-

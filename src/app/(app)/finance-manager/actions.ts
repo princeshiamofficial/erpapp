@@ -35,6 +35,7 @@ export async function addTransactionAction(
     date: string;
     sentToUserId?: string | null;
     sentToUserName?: string | null;
+    documentUrl?: string | null; // Added documentUrl
   }
 ): Promise<{ success: boolean; transaction?: Transaction; error?: string }> {
   if (!currentUser || !currentUser.id) {
@@ -46,6 +47,10 @@ export async function addTransactionAction(
   if (transactionData.amount <= 0) {
     return { success: false, error: "Amount must be a positive number." };
   }
+  if ((transactionData.type === 'expense' || transactionData.type === 'purchase') && !transactionData.documentUrl && !transactionData.sentToUserId) { // Don't require doc for sent money
+    return { success: false, error: "Document is required for expenses and purchases." };
+  }
+
 
   try {
     const primaryTransactionPayload = {
@@ -56,6 +61,7 @@ export async function addTransactionAction(
       date: transactionData.date,
       sentToUserId: transactionData.sentToUserId || null,
       sentToUserName: transactionData.sentToUserName || null,
+      documentUrl: transactionData.documentUrl || null, // Pass documentUrl
     };
 
     const primaryTransaction = await addTransactionService(currentUser.id, primaryTransactionPayload);
@@ -74,6 +80,8 @@ export async function addTransactionAction(
         date: transactionData.date,
         receivedFromUserId: currentUser.id,
         receivedFromUserName: currentUser.name,
+        // Document URL from the admin's expense transaction is not typically copied to the recipient's income record.
+        // If this is desired, add: documentUrl: transactionData.documentUrl || null,
       };
       const recipientTransaction = await addTransactionService(transactionData.sentToUserId, recipientIncomePayload);
 
@@ -182,9 +190,13 @@ export async function updateTransactionAction(
     if (!transaction) {
       return { success: false, error: "Transaction not found." };
     }
+
+    const sanitizedUpdates = { ...updates };
+    if (sanitizedUpdates.description === '') sanitizedUpdates.description = null;
+    if (sanitizedUpdates.documentUrl === '') sanitizedUpdates.documentUrl = null; // Allow removing documentUrl
+
+
     if (userRoleVerifying === 'SYSTEM_ADMIN') {
-      const sanitizedUpdates = { ...updates };
-      if (sanitizedUpdates.description === '') sanitizedUpdates.description = null;
       const success = await updateTransactionService(transactionId, sanitizedUpdates);
       if (success) {
         revalidatePath("/(app)/finance-manager");
@@ -198,8 +210,16 @@ export async function updateTransactionAction(
      if (transaction.userId !== userIdVerifying) {
         return { success: false, error: "You do not have permission to edit this transaction." };
     }
-    const sanitizedUpdates = { ...updates };
-    if (sanitizedUpdates.description === '') sanitizedUpdates.description = null;
+    
+    // Non-admin can't change type of 'expense' (sent money) to something else if it's a system-generated pair.
+    if (transaction.type === 'expense' && transaction.sentToUserId && updates.type && updates.type !== 'expense') {
+        return { success: false, error: "Cannot change the type of a 'Sent Money' transaction."};
+    }
+    // Similarly for 'income' (received money)
+    if (transaction.type === 'income' && transaction.receivedFromUserId && updates.type && updates.type !== 'income') {
+        return { success: false, error: "Cannot change the type of a 'Received Money' transaction."};
+    }
+
     const success = await updateTransactionService(transactionId, sanitizedUpdates);
     if (success) {
       revalidatePath("/(app)/finance-manager");
@@ -289,5 +309,3 @@ export async function deleteNoteAction(noteId: string, userIdVerifying: string):
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
-
-    

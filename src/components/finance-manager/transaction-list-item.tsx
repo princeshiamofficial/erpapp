@@ -4,9 +4,10 @@
 import React from 'react';
 import type { Transaction, User } from '@/types';
 import { format, parseISO } from 'date-fns';
-import { TrendingUp, TrendingDown, Trash2, Edit3, UserCircle, ShoppingBag, SendHorizonal, Download } from 'lucide-react';
+import { TrendingUp, TrendingDown, Trash2, Edit3, UserCircle, ShoppingBag, SendHorizonal, Download, Paperclip } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import Link from 'next/link'; // Added Link for document
 
 interface TransactionListItemProps {
   transaction: Transaction;
@@ -87,9 +88,15 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
           <p className="text-xs text-muted-foreground truncate" title={transaction.description || undefined}>
             {transaction.description || 'No description'}
           </p>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {format(parseISO(transaction.date), "MMM d, yyyy")}
-          </p>
+          <div className="flex items-center text-xs text-muted-foreground mt-0.5 gap-x-2 flex-wrap">
+            <span>{format(parseISO(transaction.date), "MMM d, yyyy")}</span>
+            {transaction.documentUrl && (
+              <Link href={transaction.documentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-primary hover:underline hover:text-primary/80">
+                <Paperclip className="h-3 w-3 mr-0.5" />
+                View Document
+              </Link>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex flex-col items-end ml-2 sm:ml-4">
@@ -125,4 +132,3 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
     </div>
   );
 }
-

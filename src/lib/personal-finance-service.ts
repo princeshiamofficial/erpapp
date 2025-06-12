@@ -35,6 +35,7 @@ export async function addTransaction(
     sentToUserName?: string | null;
     receivedFromUserId?: string | null;
     receivedFromUserName?: string | null;
+    documentUrl?: string | null; // Added documentUrl
   }
 ): Promise<Transaction | null> {
   if (!userId) {
@@ -60,6 +61,7 @@ export async function addTransaction(
       sentToUserName: transactionData.sentToUserName || null,
       receivedFromUserId: transactionData.receivedFromUserId || null,
       receivedFromUserName: transactionData.receivedFromUserName || null,
+      documentUrl: transactionData.documentUrl || null, // Added documentUrl
     };
     await setDoc(newTransactionRef, newTransaction);
     return newTransaction;
@@ -133,6 +135,10 @@ export async function updateTransaction(
     if (sanitizedUpdates.description === '') {
         sanitizedUpdates.description = null;
     }
+    if (sanitizedUpdates.documentUrl === undefined) { // Ensure if not passed, it's not set to null unintentionally unless explicitly null
+        delete sanitizedUpdates.documentUrl;
+    }
+
     await updateDoc(transactionDoc, sanitizedUpdates);
     return true;
   } catch (error) {
@@ -247,5 +253,3 @@ export async function deletePersonalNote(noteId: string, userIdVerifying: string
     return false;
   }
 }
-
-    

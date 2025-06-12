@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -19,8 +19,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { Transaction, TransactionType, User } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { updateTransactionAction } from '@/app/(app)/finance-manager/actions';
-import { Loader2, CalendarIcon } from 'lucide-react';
+import { Loader2, CalendarIcon, Paperclip, UploadCloud, XCircle, Link as LinkIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import Link from 'next/link';
+
 
 interface EditTransactionDialogProps {
   currentUser: User;
@@ -36,6 +38,11 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
   const [category, setCategory] = useState(transaction.category);
   const [description, setDescription] = useState(transaction.description || '');
   const [date, setDate] = useState<Date | undefined>(parseISO(transaction.date));
+  const [currentDocumentUrl, setCurrentDocumentUrl] = useState<string | null>(transaction.documentUrl || null);
+  const [selectedDocumentFile, setSelectedDocumentFile] = useState<File | null>(null);
+  const [isUploadingDocument, setIsUploadingDocument] = useState(false);
+  const documentFileRef = useRef<HTMLInputElement>(null);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -46,12 +53,38 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
       setCategory(transaction.category);
       setDescription(transaction.description || '');
       setDate(parseISO(transaction.date));
+      setCurrentDocumentUrl(transaction.documentUrl || null);
+      setSelectedDocumentFile(null);
+      if (documentFileRef.current) documentFileRef.current.value = "";
+      setIsUploadingDocument(false);
     }
   }, [isOpen, transaction]);
 
-  const resetForm = () => {
-    // Fields will be reset/updated by useEffect when transaction prop changes or dialog opens
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({ title: "File too large", description: "Please select a file smaller than 5MB.", variant: "destructive" });
+        return;
+      }
+      setSelectedDocumentFile(file);
+      setCurrentDocumentUrl(null); // Clear existing URL if new file is chosen
+    }
   };
+
+  const handleRemoveSelectedFile = () => {
+    setSelectedDocumentFile(null);
+    if (documentFileRef.current) documentFileRef.current.value = "";
+    // Do not reset currentDocumentUrl here, user might want to keep existing if they cancel new selection
+  };
+
+  const handleRemoveExistingDocument = () => {
+    setCurrentDocumentUrl(null); // Mark for removal
+    setSelectedDocumentFile(null); // Ensure no new file is also selected
+    if (documentFileRef.current) documentFileRef.current.value = "";
+    toast({ title: "Document Marked for Removal", description: "The existing document will be removed when you save changes."})
+  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +98,47 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
       return;
     }
 
+    let newUploadedDocumentUrl: string | null = currentDocumentUrl; // Start with existing or null (if removed)
+
+    if (selectedDocumentFile) { // If a new file was selected, upload it
+      setIsUploadingDocument(true);
+      const formData = new FormData();
+      formData.append('file', selectedDocumentFile);
+      try {
+        const response = await fetch('https://erp.colorhutbd.xyz/file/upload.php', {
+          method: 'POST',
+          body: formData,
+        });
+        setIsUploadingDocument(false);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ message: "Upload failed with status: " + response.status }));
+          toast({ title: "Document Upload Failed", description: errorData.message || "Could not upload new document.", variant: "destructive" });
+          return;
+        }
+        const result = await response.json();
+        if (result.success && result.file_url) {
+          newUploadedDocumentUrl = result.file_url;
+          toast({ title: "New Document Uploaded", description: "New document successfully attached." });
+        } else {
+          toast({ title: "Document Upload Failed", description: result.message || "Could not get file URL from server.", variant: "destructive" });
+          return;
+        }
+      } catch (uploadError) {
+        setIsUploadingDocument(false);
+        console.error("Document upload error:", uploadError);
+        toast({ title: "Document Upload Error", description: "An error occurred while uploading the new document.", variant: "destructive" });
+        return;
+      }
+    }
+    
+    // If it's an expense/purchase and no document is present (neither old nor new), and it's not a 'sent money' type expense
+    const isSendMoneyTypeExpense = type === 'expense' && !!transaction.sentToUserId;
+    if ((type === 'expense' || type === 'purchase') && !newUploadedDocumentUrl && !isSendMoneyTypeExpense) {
+      toast({ title: "Validation Error", description: "Document is required for expenses and purchases.", variant: "destructive" });
+      return;
+    }
+
+
     setIsSubmitting(true);
     const updates: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt'>> = {
       type,
@@ -72,13 +146,14 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
       category: category.trim(),
       description: description.trim() || null,
       date: date.toISOString(),
+      documentUrl: newUploadedDocumentUrl, // This will be null if removed, or the new URL
     };
 
     const result = await updateTransactionAction(transaction.id, updates, currentUser.id);
     setIsSubmitting(false);
 
     if (result.success) {
-      onTransactionUpdated(); // Parent handles toast and closes dialog
+      onTransactionUpdated(); // Parent handles main success toast and closes dialog
     } else {
       toast({ title: "Error", description: result.error || "Could not update transaction.", variant: "destructive" });
     }
@@ -89,9 +164,13 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
     if (type === 'purchase') return "e.g., Inventory, Supplies";
     return "e.g., Utilities, Rent";
   };
+  
+  const isDocumentNowRequired = (type === 'expense' || type === 'purchase') && !(type === 'expense' && !!transaction.sentToUserId);
+  const isDocumentMissingForRequiredType = isDocumentNowRequired && !currentDocumentUrl && !selectedDocumentFile;
+
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { onOpenChange(open); if (!open) resetForm(); }}>
+    <Dialog open={isOpen} onOpenChange={(open) => { onOpenChange(open); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edit Transaction</DialogTitle>
@@ -101,7 +180,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="space-y-1">
               <Label htmlFor="edit-transaction-type">Type *</Label>
-              <Select value={type} onValueChange={(value) => setType(value as TransactionType)} required>
+              <Select value={type} onValueChange={(value) => setType(value as TransactionType)} required disabled={isSubmitting || isUploadingDocument || (type === 'expense' && !!transaction.sentToUserId) || (type === 'income' && !!transaction.receivedFromUserId) }>
                 <SelectTrigger id="edit-transaction-type">
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
@@ -111,14 +190,20 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
                   <SelectItem value="purchase">Purchase</SelectItem>
                 </SelectContent>
               </Select>
+              {((type === 'expense' && !!transaction.sentToUserId) || (type === 'income' && !!transaction.receivedFromUserId)) && 
+                <p className="text-xs text-muted-foreground">Type cannot be changed for system-generated transfer records.</p>
+              }
             </div>
             <div className="space-y-1">
               <Label htmlFor="edit-transaction-amount">Amount (BDT) *</Label>
-              <Input id="edit-transaction-amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g., 50.00" min="0.01" step="0.01" required />
+              <Input id="edit-transaction-amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g., 50.00" min="0.01" step="0.01" required disabled={isSubmitting || isUploadingDocument} />
             </div>
             <div className="space-y-1">
               <Label htmlFor="edit-transaction-category">Category *</Label>
-              <Input id="edit-transaction-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder={getCategoryPlaceholder()} required />
+              <Input id="edit-transaction-category" value={category} onChange={(e) => setCategory(e.target.value)} placeholder={getCategoryPlaceholder()} required disabled={isSubmitting || isUploadingDocument || (type === 'expense' && !!transaction.sentToUserId) } />
+               {(type === 'expense' && !!transaction.sentToUserId) && 
+                <p className="text-xs text-muted-foreground">Category is auto-set for 'Sent Money' transactions.</p>
+              }
             </div>
             <div className="space-y-1">
               <Label htmlFor="edit-transaction-date">Date *</Label>
@@ -127,6 +212,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
                   <Button
                     variant={"outline"}
                     className="w-full justify-start text-left font-normal"
+                    disabled={isSubmitting || isUploadingDocument}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {date ? format(date, "PPP") : <span>Pick a date</span>}
@@ -144,13 +230,68 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
             </div>
             <div className="space-y-1">
               <Label htmlFor="edit-transaction-description">Description (Optional)</Label>
-              <Input id="edit-transaction-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g., Weekly supermarket run" />
+              <Input id="edit-transaction-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g., Weekly supermarket run" disabled={isSubmitting || isUploadingDocument} />
             </div>
+            
+            {isDocumentNowRequired && (
+                 <div className="space-y-1">
+                 <Label htmlFor="edit-transaction-document">Document Attachment {isDocumentNowRequired ? "*" : "(Optional)"}</Label>
+                 {currentDocumentUrl && !selectedDocumentFile && (
+                   <div className="flex items-center justify-between p-2 border rounded-md bg-secondary/30">
+                     <Link href={currentDocumentUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate flex items-center">
+                       <LinkIcon className="h-4 w-4 mr-1.5 shrink-0" />
+                       <span className="truncate" title={currentDocumentUrl.split('/').pop() || "View Current Document"}>
+                         {currentDocumentUrl.split('/').pop() || "View Current Document"}
+                       </span>
+                     </Link>
+                     <Button type="button" variant="ghost" size="sm" onClick={handleRemoveExistingDocument} title="Remove existing document" className="text-xs text-destructive hover:text-destructive/80 h-7 px-1.5" disabled={isSubmitting || isUploadingDocument}>
+                        <XCircle className="h-3.5 w-3.5 mr-1"/>Remove
+                     </Button>
+                   </div>
+                 )}
+                <div className="flex items-center gap-2 mt-1">
+                     <Button
+                       type="button"
+                       variant="outline"
+                       onClick={() => documentFileRef.current?.click()}
+                       disabled={isUploadingDocument || isSubmitting}
+                       className="flex-1"
+                     >
+                       <UploadCloud className="mr-2 h-4 w-4" />
+                       {selectedDocumentFile ? "Change File" : (currentDocumentUrl ? "Replace File" : "Upload File")}
+                     </Button>
+                     {selectedDocumentFile && (
+                         <Button type="button" variant="ghost" size="icon" onClick={handleRemoveSelectedFile} title="Clear selection" className="text-muted-foreground hover:text-destructive h-9 w-9" disabled={isSubmitting || isUploadingDocument}>
+                             <XCircle className="h-4 w-4"/>
+                         </Button>
+                     )}
+                 </div>
+                 <Input
+                   id="edit-transaction-document"
+                   type="file"
+                   ref={documentFileRef}
+                   onChange={handleFileChange}
+                   className="hidden"
+                   accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
+                 />
+                  {selectedDocumentFile && (
+                     <div className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1">
+                         <Paperclip className="h-3 w-3"/>
+                         <span>{selectedDocumentFile.name} ({(selectedDocumentFile.size / 1024).toFixed(1)} KB)</span>
+                     </div>
+                 )}
+                  <p className="text-xs text-muted-foreground">Max 5MB. (Images, PDF, DOC, XLS, TXT)</p>
+                  {isDocumentMissingForRequiredType && <p className="text-xs text-destructive">A document is required for this transaction type.</p>}
+               </div>
+            )}
+
+
           </div>
           <DialogFooter className="pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Save Changes"}
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting || isUploadingDocument}>Cancel</Button>
+            <Button type="submit" disabled={isSubmitting || isUploadingDocument || isDocumentMissingForRequiredType}>
+              {isUploadingDocument ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Uploading...</> : 
+               isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : "Save Changes"}
             </Button>
           </DialogFooter>
         </form>
@@ -158,5 +299,3 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
     </Dialog>
   );
 }
-
-    
