@@ -120,23 +120,17 @@ export default function ProjectsPage() {
     const { active, over } = event;
     console.log("DragEnd Event Fired. Active:", active, "Over:", over);
 
-    if (!over) {
-      console.log("Drag ended, but not over a valid droppable target.");
+    if (!over || !active.data.current?.project) { // Ensure project data is available
+      console.log("Drag ended, but not over a valid droppable target or active item has no project data.");
       return;
     }
 
-    const projectId = active.id as string;
-    const newStatus = over.id as ProjectStatusType; // over.id is the id of the KanbanColumn (which is the status string)
-
-    const project = projects.find(p => p.id === projectId);
-
-    if (!project) {
-      console.error(`Project with ID ${projectId} not found in local state.`);
-      return;
-    }
+    const project = active.data.current.project as Project; // The full project object
+    const projectId = project.id; // ID of the dragged item
+    const newStatus = over.id as ProjectStatusType; // ID of the target column (which is the status string)
     const originalStatus = project.status;
 
-    console.log(`Attempting to move project ID: ${projectId} from status '${originalStatus}' to '${newStatus}'`);
+    console.log(`Attempting to move project ID: ${projectId} ('${project.name}') from status '${originalStatus}' to '${newStatus}'`);
 
     if (newStatus === originalStatus) {
       console.log("Project dropped on the same status column. No action needed.");
@@ -152,13 +146,14 @@ export default function ProjectsPage() {
       return updated;
     });
 
-    const result = await updateProjectStatusAction(projectId, newStatus);
+    // Pass the full project object to the action
+    const result = await updateProjectStatusAction(project, newStatus);
     console.log("Server action result for updateProjectStatusAction:", result);
 
     if (result.success) {
       toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
-      // Optionally re-fetch all projects to ensure consistency, though optimistic update + revalidatePath should handle most cases.
-      // await fetchProjects(); // Uncomment if you find data inconsistencies after drag.
+      // Re-fetch to ensure data consistency after potential creation/update
+      await fetchProjects();
     } else {
       toast({ title: "Update Failed", description: result.error || `Could not update status for project '${project.name}'.`, variant: "destructive" });
       // Revert optimistic update

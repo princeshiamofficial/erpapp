@@ -2,15 +2,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { ProjectStatusType } from "@/types";
+import type { Project, ProjectStatusType } from "@/types"; // Added Project
 import { updateProjectStatus as updateProjectStatusInDb } from '@/lib/project-service';
 
 export async function updateProjectStatusAction(
-  projectId: string,
+  project: Project, // Changed from projectId: string to the full Project object
   newStatus: ProjectStatusType
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const success = await updateProjectStatusInDb(projectId, newStatus);
+    // Pass the full project object for potential creation if it doesn't exist
+    const success = await updateProjectStatusInDb(project.id, newStatus, project);
     if (success) {
       revalidatePath("/(app)/projects");
       return { success: true };

@@ -1,12 +1,12 @@
 
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, query, orderBy, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, query, orderBy, writeBatch, getDoc as getFirestoreDoc } from 'firebase/firestore'; // Added getDoc as getFirestoreDoc
 import type { Project, ProjectStatusType } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { formatISO, addMonths, addDays } from 'date-fns';
-import { getOrders } from './order-service'; // Assuming getOrders is here
-import { ORDER_SUBMITTED_ID } from './status-service'; // Import the constant
+import { getOrders } from './order-service'; 
+import { ORDER_SUBMITTED_ID } from './status-service'; 
 
 const PROJECTS_COLLECTION = 'projects';
 
@@ -81,7 +81,7 @@ export const seedDefaultProjects = async (): Promise<Project[]> => {
 export const getProjects = async (): Promise<Project[]> => {
   console.log('[getProjects] Function called.');
   const projectsCol = collection(db, PROJECTS_COLLECTION);
-  const qActualProjects = query(projectsCol, orderBy("createdAt", "desc")); // Sort by createdAt initially
+  const qActualProjects = query(projectsCol, orderBy("createdAt", "desc")); 
   let actualProjects: Project[] = [];
 
   try {
@@ -102,7 +102,7 @@ export const getProjects = async (): Promise<Project[]> => {
 
   let ordersToDisplayAsProjects: Project[] = [];
   try {
-    const allOrders = await getOrders(); // Assuming getOrders fetches sorted by createdAt desc
+    const allOrders = await getOrders(); 
     console.log(`[getProjects] Fetched ${allOrders.length} total orders.`);
     
     const orderSubmittedOrders = allOrders.filter(
@@ -158,7 +158,6 @@ export const getProjects = async (): Promise<Project[]> => {
   const combinedProjects = [...actualProjects, ...ordersToDisplayAsProjects];
   console.log(`[getProjects] Total projects before final sort: ${combinedProjects.length}`);
   
-  // Sort the combined list: primary by createdAt descending, secondary by updatedAt descending
   return combinedProjects.sort((a, b) => {
     const dateACreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
     const dateBCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -167,7 +166,6 @@ export const getProjects = async (): Promise<Project[]> => {
       return dateBCreated - dateACreated;
     }
 
-    // If createdAt is the same, sort by updatedAt descending
     const dateAUpdated = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
     const dateBUpdated = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
     return dateBUpdated - dateAUpdated;
@@ -203,24 +201,86 @@ export const addProject = async (projectData: Omit<Project, 'id' | 'createdAt' |
   }
 };
 
-export const updateProjectStatus = async (projectId: string, newStatus: ProjectStatusType): Promise<boolean> => {
-  try {
-    const projectDoc = doc(db, PROJECTS_COLLECTION, projectId);
-    const now = formatISO(new Date());
-    const updates: Partial<Project> = {
-      status: newStatus,
-      updatedAt: now,
-    };
-    const newStatusField = getInitialStatusTimestampField(newStatus);
-    if (newStatusField) {
-      (updates as any)[newStatusField] = now;
-    }
+export const updateProjectStatus = async (
+  projectId: string, 
+  newStatus: ProjectStatusType,
+  projectDataIfCreating?: Project // Full project data if it's a new creation from a dynamic item
+): Promise<boolean> => {
+  const projectDocRef = doc(db, PROJECTS_COLLECTION, projectId);
+  const now = formatISO(new Date());
 
-    await updateDoc(projectDoc, updates);
-    console.log(`[updateProjectStatus] Successfully updated project doc ID ${projectId} to status ${newStatus}`);
+  try {
+    const docSnap = await getFirestoreDoc(projectDocRef);
+
+    if (docSnap.exists()) {
+      // Project exists, update it
+      const updates: Partial<Project> = {
+        status: newStatus,
+        updatedAt: now,
+      };
+      // Clear old status timestamp if moving to a new specific SLA stage
+      // and set the new one.
+      const currentStatusTimestampField = getInitialStatusTimestampField(docSnap.data().status as ProjectStatusType);
+      if (currentStatusTimestampField) {
+        (updates as any)[currentStatusTimestampField] = undefined; 
+      }
+      const newStatusTimestampField = getInitialStatusTimestampField(newStatus);
+      if (newStatusTimestampField) {
+        (updates as any)[newStatusTimestampField] = now;
+      }
+      await updateDoc(projectDocRef, updates);
+      console.log(`[updateProjectStatus] Successfully updated project doc ID ${projectId} to status ${newStatus}`);
+    } else if (projectDataIfCreating) {
+      // Project does not exist, create it (dynamic order -> real project)
+      console.log(`[updateProjectStatus] Project doc ID ${projectId} not found. Creating new project.`);
+      
+      const { 
+        id: _id, 
+        status: _oldStatus, 
+        updatedAt: _oldUpdatedAt, 
+        crClearanceAt: _crClearanceAt,
+        crCancelAt: _crCancelAt,
+        onDesignAt: _onDesignAt,
+        onHoldAt: _onHoldAt,
+        logisticsAt: _logisticsAt,
+        courierAt: _courierAt,
+        ...restOfProjectData 
+      } = projectDataIfCreating;
+
+      const newProjectToCreate: Project = {
+        id: projectId, // Use the passed projectId (which is the order ID)
+        ...restOfProjectData,
+        status: newStatus,
+        createdAt: projectDataIfCreating.createdAt || now,
+        updatedAt: now,
+        crClearanceAt: undefined,
+        crCancelAt: undefined,
+        onDesignAt: undefined,
+        onHoldAt: undefined,
+        logisticsAt: undefined,
+        courierAt: undefined,
+      };
+
+      const newStatusTimestampField = getInitialStatusTimestampField(newStatus);
+      if (newStatusTimestampField) {
+        (newProjectToCreate as any)[newStatusTimestampField] = now;
+      }
+      
+      await setDoc(projectDocRef, newProjectToCreate);
+      console.log(`[updateProjectStatus] Successfully created new project for doc ID ${projectId} with status ${newStatus}`);
+      
+      // TODO: Optionally, update the original order's status in the 'orders' collection
+      // to reflect it's now being managed as a project. This requires careful status mapping.
+      // Example: await updateOrderStatus(projectId, 'design-phase-project');
+
+    } else {
+      // Document doesn't exist and no data provided to create it
+      console.error(`[updateProjectStatus] Project doc ID ${projectId} not found and no data provided for creation.`);
+      return false;
+    }
     return true;
   } catch (error) {
-    console.error(`[updateProjectStatus] Error updating project status for doc ID ${projectId}:`, error);
+    console.error(`[updateProjectStatus] Error updating/creating project for doc ID ${projectId}:`, error);
     return false;
   }
 };
