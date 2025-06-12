@@ -11,9 +11,10 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction } from 'lucide-react'; // Added Construction
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search } from 'lucide-react'; // Added Search
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input'; // Added Input
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +52,7 @@ export default function FinanceManagerPage() {
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
   const [allUsersForDialog, setAllUsersForDialog] = useState<User[]>([]);
   const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null);
+  const [transactionSearchTerm, setTransactionSearchTerm] = useState(''); // State for search
 
   const [isClient, setIsClient] = useState(false);
   useEffect(() => setIsClient(true), []);
@@ -176,6 +178,23 @@ export default function FinanceManagerPage() {
     return `Track your personal income, expenses, and purchases.`;
   }, [currentUser, viewMode]);
 
+  const filteredTransactions = useMemo(() => {
+    if (!transactionSearchTerm.trim()) {
+      return transactions;
+    }
+    const lowerSearchTerm = transactionSearchTerm.toLowerCase();
+    return transactions.filter(t => {
+      const userName = viewMode === 'global' ? userMap.get(t.userId)?.toLowerCase() : '';
+      return (
+        t.category.toLowerCase().includes(lowerSearchTerm) ||
+        (t.description && t.description.toLowerCase().includes(lowerSearchTerm)) ||
+        t.amount.toString().includes(lowerSearchTerm) ||
+        (userName && userName.includes(lowerSearchTerm)) ||
+        t.type.toLowerCase().includes(lowerSearchTerm)
+      );
+    });
+  }, [transactions, transactionSearchTerm, viewMode, userMap]);
+
 
   if (!currentUser) {
     return (
@@ -213,9 +232,7 @@ export default function FinanceManagerPage() {
       },
     ].filter(card => {
       if (currentUser?.role === 'SYSTEM_ADMIN') return true;
-      if (canUserAddExpense) return true; // Show all cards if user can log expenses
-      // If user CANNOT log expenses (e.g., DESIGNER_REP with perms set to 'none' or not in specific lists)
-      // then only show Total Income.
+      if (canUserAddExpense) return true; 
       return card.title === "Total Income";
     });
   }, [totalIncome, totalExpenses, availableBalance, canUserAddExpense, currentUser]);
@@ -298,12 +315,24 @@ export default function FinanceManagerPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="shadow-xl border bg-card rounded-lg lg:col-span-2">
-          <CardHeader className="border-b p-5 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-card-foreground text-xl">Recent Transactions</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' ? "Latest transactions from all users." : "Your latest income, expense and purchase entries."}
-              </CardDescription>
+          <CardHeader className="border-b p-5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-card-foreground text-xl">Recent Transactions</CardTitle>
+                  <CardDescription className="text-muted-foreground text-sm mt-0.5">
+                    {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' ? "Latest transactions from all users." : "Your latest income, expense and purchase entries."}
+                  </CardDescription>
+                </div>
+                <div className="relative w-full sm:max-w-xs">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search transactions..."
+                    value={transactionSearchTerm}
+                    onChange={(e) => setTransactionSearchTerm(e.target.value)}
+                    className="pl-10 bg-background/50"
+                  />
+                </div>
             </div>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
@@ -311,9 +340,9 @@ export default function FinanceManagerPage() {
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
               </div>
-            ) : transactions.length > 0 ? (
+            ) : filteredTransactions.length > 0 ? (
               <div className="space-y-3 sm:space-y-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
-                {transactions.map(t => (
+                {filteredTransactions.map(t => (
                   <TransactionListItem
                     key={t.id}
                     transaction={t}
@@ -327,9 +356,13 @@ export default function FinanceManagerPage() {
             ) : (
               <div className="text-center py-10 text-muted-foreground">
                 <Banknote className="h-16 w-16 mx-auto opacity-30 mb-3" />
-                <p className="text-lg font-medium">No transactions yet.</p>
+                <p className="text-lg font-medium">
+                  {transactionSearchTerm ? "No transactions match your search." : "No transactions yet."}
+                </p>
                 <p className="text-sm">
-                  {canUserAddExpense ? "Add your first income or expense to get started!" : "Expense logging may be disabled for your role."}
+                  {transactionSearchTerm ? "Try a different search term." : 
+                    (canUserAddExpense ? "Add your first income or expense to get started!" : "Expense logging may be disabled for your role.")
+                  }
                 </p>
               </div>
             )}
@@ -356,13 +389,13 @@ export default function FinanceManagerPage() {
            <Card className="shadow-xl border bg-card rounded-lg">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle className="text-card-foreground text-xl flex items-center"><NotebookPen className="mr-2 h-5 w-5 text-primary"/>Notes</CardTitle>
+                <CardTitle className="text-card-foreground text-xl flex items-center"><NotebookPen className="mr-2 h-5 w-5 text-primary"/>Notes (Coming Soon)</CardTitle>
                 <CardDescription className="text-muted-foreground text-sm mt-0.5">Jot down financial reminders.</CardDescription>
               </div>
             </CardHeader>
             <CardContent className="text-center py-6 text-muted-foreground">
                 <Construction className="h-10 w-10 mx-auto opacity-50 mb-2"/>
-                <p className="text-sm">Notes feature coming soon!</p>
+                <p className="text-sm">This feature will be available soon!</p>
             </CardContent>
           </Card>
         </div>
@@ -406,3 +439,5 @@ export default function FinanceManagerPage() {
     </div>
   );
 }
+
+    
