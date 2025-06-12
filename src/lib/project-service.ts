@@ -1,7 +1,7 @@
 
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, query, orderBy, writeBatch, getDoc as getFirestoreDoc } from 'firebase/firestore'; // Added getDoc as getFirestoreDoc
+import { collection, getDocs, doc, setDoc, updateDoc, query, orderBy, writeBatch, getDoc as getFirestoreDoc, deleteField } from 'firebase/firestore'; // Added deleteField
 import type { Project, ProjectStatusType } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { formatISO, addMonths, addDays } from 'date-fns';
@@ -51,12 +51,7 @@ export const seedDefaultProjects = async (): Promise<Project[]> => {
       ...projectData,
       createdAt: now,
       updatedAt: now,
-      crClearanceAt: undefined,
-      crCancelAt: undefined,
-      onDesignAt: undefined,
-      onHoldAt: undefined,
-      logisticsAt: undefined,
-      courierAt: undefined,
+      // Timestamps are initially undefined
     };
     const initialStatusField = getInitialStatusTimestampField(projectData.status);
     if (initialStatusField) {
@@ -138,11 +133,6 @@ export const getProjects = async (): Promise<Project[]> => {
           updatedAt: order.updatedAt || projectCreatedAt,
           crClearanceAt: projectCreatedAt, 
           endDate: projectEndDate,
-          crCancelAt: undefined,
-          onDesignAt: undefined,
-          onHoldAt: undefined,
-          logisticsAt: undefined,
-          courierAt: undefined,
         };
         console.log(`[getProjects] Dynamically creating project for order ${order.id}:`, dynamicProject);
         return dynamicProject;
@@ -181,12 +171,6 @@ export const addProject = async (projectData: Omit<Project, 'id' | 'createdAt' |
       ...projectData, 
       createdAt: now,
       updatedAt: now,
-      crClearanceAt: undefined,
-      crCancelAt: undefined,
-      onDesignAt: undefined,
-      onHoldAt: undefined,
-      logisticsAt: undefined,
-      courierAt: undefined,
     };
     const initialStatusField = getInitialStatusTimestampField(projectData.status);
     if (initialStatusField) {
@@ -196,15 +180,16 @@ export const addProject = async (projectData: Omit<Project, 'id' | 'createdAt' |
     console.log(`[addProject] Successfully added project: ${newProject.projectIdDisplay}, Doc ID: ${id}`);
     return newProject;
   } catch (error) {
-    console.error("[addProject] Error adding project:", error);
-    return null;
+    const specificError = error instanceof Error ? error.message : "Unknown Firestore error during addProject";
+    console.error("[addProject] Error adding project:", specificError, error);
+    throw new Error(`Firestore operation failed during addProject: ${specificError}`);
   }
 };
 
 export const updateProjectStatus = async (
   projectId: string, 
   newStatus: ProjectStatusType,
-  projectDataIfCreating?: Project // Full project data if it's a new creation from a dynamic item
+  projectDataIfCreating?: Project 
 ): Promise<boolean> => {
   const projectDocRef = doc(db, PROJECTS_COLLECTION, projectId);
   const now = formatISO(new Date());
@@ -213,75 +198,62 @@ export const updateProjectStatus = async (
     const docSnap = await getFirestoreDoc(projectDocRef);
 
     if (docSnap.exists()) {
-      // Project exists, update it
-      const updates: Partial<Project> = {
+      const updates: { [key: string]: any } = {
         status: newStatus,
         updatedAt: now,
       };
-      // Clear old status timestamp if moving to a new specific SLA stage
-      // and set the new one.
-      const currentStatusTimestampField = getInitialStatusTimestampField(docSnap.data().status as ProjectStatusType);
-      if (currentStatusTimestampField) {
-        (updates as any)[currentStatusTimestampField] = undefined; 
+      const currentStatus = docSnap.data().status as ProjectStatusType;
+      const currentStatusTimestampField = getInitialStatusTimestampField(currentStatus);
+      
+      // Delete the old status timestamp field only if it's different from the new one and exists
+      if (currentStatusTimestampField && currentStatusTimestampField !== getInitialStatusTimestampField(newStatus)) {
+        updates[currentStatusTimestampField] = deleteField();
       }
+      
       const newStatusTimestampField = getInitialStatusTimestampField(newStatus);
       if (newStatusTimestampField) {
-        (updates as any)[newStatusTimestampField] = now;
+        updates[newStatusTimestampField] = now;
       }
       await updateDoc(projectDocRef, updates);
       console.log(`[updateProjectStatus] Successfully updated project doc ID ${projectId} to status ${newStatus}`);
     } else if (projectDataIfCreating) {
-      // Project does not exist, create it (dynamic order -> real project)
-      console.log(`[updateProjectStatus] Project doc ID ${projectId} not found. Creating new project.`);
-      
+      console.log(`[updateProjectStatus] Project doc ID ${projectId} not found. Creating new project from dragged data.`);
       const { 
-        id: _id, 
+        id: _oldId, 
         status: _oldStatus, 
         updatedAt: _oldUpdatedAt, 
-        crClearanceAt: _crClearanceAt,
-        crCancelAt: _crCancelAt,
-        onDesignAt: _onDesignAt,
-        onHoldAt: _onHoldAt,
-        logisticsAt: _logisticsAt,
-        courierAt: _courierAt,
+        createdAt: _oldCreatedAt,
+        crClearanceAt, crCancelAt, onDesignAt, onHoldAt, logisticsAt, courierAt, 
         ...restOfProjectData 
       } = projectDataIfCreating;
 
-      const newProjectToCreate: Project = {
-        id: projectId, // Use the passed projectId (which is the order ID)
-        ...restOfProjectData,
+      const newProjectToSet: Partial<Project> = {
+        id: projectId, // Use the doc ID (which is the order.id for dynamic projects)
+        ...restOfProjectData, // Contains projectIdDisplay, name, endDate, etc.
         status: newStatus,
-        createdAt: projectDataIfCreating.createdAt || now,
+        createdAt: _oldCreatedAt || now, // Preserve original creation if available
         updatedAt: now,
-        crClearanceAt: undefined,
-        crCancelAt: undefined,
-        onDesignAt: undefined,
-        onHoldAt: undefined,
-        logisticsAt: undefined,
-        courierAt: undefined,
       };
-
+      
+      // Set the specific timestamp for the new status
       const newStatusTimestampField = getInitialStatusTimestampField(newStatus);
       if (newStatusTimestampField) {
-        (newProjectToCreate as any)[newStatusTimestampField] = now;
+        (newProjectToSet as any)[newStatusTimestampField] = now;
       }
       
-      await setDoc(projectDocRef, newProjectToCreate);
+      await setDoc(projectDocRef, newProjectToSet);
       console.log(`[updateProjectStatus] Successfully created new project for doc ID ${projectId} with status ${newStatus}`);
-      
-      // TODO: Optionally, update the original order's status in the 'orders' collection
-      // to reflect it's now being managed as a project. This requires careful status mapping.
-      // Example: await updateOrderStatus(projectId, 'design-phase-project');
-
     } else {
-      // Document doesn't exist and no data provided to create it
-      console.error(`[updateProjectStatus] Project doc ID ${projectId} not found and no data provided for creation.`);
-      return false;
+      const msg = `Project document ${projectId} not found and no creation data provided. Cannot update status.`;
+      console.error(`[updateProjectStatus] ${msg}`);
+      throw new Error(msg);
     }
     return true;
   } catch (error) {
-    console.error(`[updateProjectStatus] Error updating/creating project for doc ID ${projectId}:`, error);
-    return false;
+    const specificError = error instanceof Error ? error.message : "Unknown Firestore operation error";
+    console.error(`[updateProjectStatus] Error for project ID ${projectId}:`, specificError, error);
+    throw new Error(`Database operation failed for project ${projectId}: ${specificError}`);
   }
 };
     
+
