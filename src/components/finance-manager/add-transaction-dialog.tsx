@@ -119,7 +119,7 @@ export function AddTransactionDialog({
     }
   }, [availableTransactionTypes, type]);
 
-  const processFile = (file: File | null) => {
+  const processFile = useCallback((file: File | null) => {
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
         toast({ title: "File too large", description: "Please select a file smaller than 5MB.", variant: "destructive" });
@@ -133,7 +133,7 @@ export function AddTransactionDialog({
       return true;
     }
     return false;
-  };
+  }, [toast]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -170,9 +170,13 @@ export function AddTransactionDialog({
     }
   };
   
+  const isDocumentRequired = useMemo(() => {
+    return (type === 'expense' || type === 'purchase') && !isSendMoneyFlow;
+  }, [type, isSendMoneyFlow]);
+
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
-      if (!isOpen || !isDocumentRequired) return; // Only handle paste if dialog is open and doc is needed
+      if (!isOpen || !isDocumentRequired) return; 
       
       const items = event.clipboardData?.items;
       if (items) {
@@ -184,7 +188,7 @@ export function AddTransactionDialog({
                if (processed) {
                  toast({title: "Image Pasted", description: "Image from clipboard has been attached."});
                }
-               event.preventDefault(); // Prevent default paste action if we handled it
+               event.preventDefault(); 
                return;
             }
           }
@@ -216,7 +220,7 @@ export function AddTransactionDialog({
     }
 
     let uploadedDocumentUrl: string | null = null;
-    if ((type === 'expense' || type === 'purchase') && !isSendMoneyFlow) {
+    if (isDocumentRequired) { // Use the memoized value here
       if (!selectedDocumentFile) {
         toast({ title: "Validation Error", description: "A document attachment is required for expenses and purchases.", variant: "destructive" });
         return;
@@ -304,7 +308,6 @@ export function AddTransactionDialog({
     );
   }, [availableUsers, userSearchQuery]);
 
-  const isDocumentRequired = (type === 'expense' || type === 'purchase') && !isSendMoneyFlow;
 
   const canSubmit = useMemo(() => {
     const baseValid = !isSubmitting && !isUploadingDocument &&
