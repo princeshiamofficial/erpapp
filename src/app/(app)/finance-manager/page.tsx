@@ -11,9 +11,9 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter } from 'lucide-react'; // Added Filter icon
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide } from 'lucide-react'; // Renamed CalendarIcon to avoid conflict
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Kept for Personal/Global view
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -32,17 +32,18 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"; // Added Select components
+} from "@/components/ui/select";
 import {
   deleteTransactionAction,
   updateTransactionAction,
   getTransactionsForUserAction,
   getAllTransactionsAction,
-  // Note-related actions removed as Notes feature is "Coming Soon"
-  // addNoteAction, deleteNoteAction, getNotesForUserAction, updateNoteAction,
 } from './actions';
 import { MultiColorCalculatorIcon } from '@/components/icons/MultiColorCalculatorIcon';
 import { Banknote } from 'lucide-react';
+import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
+import type { DateRange } from "react-day-picker";
+import { isWithinInterval, parseISO, subDays } from "date-fns";
 
 const AddTransactionDialog = dynamic(() => import('@/components/finance-manager/add-transaction-dialog').then(mod => mod.AddTransactionDialog));
 const EditTransactionDialog = dynamic(() => import('@/components/finance-manager/edit-transaction-dialog').then(mod => mod.EditTransactionDialog));
@@ -72,6 +73,11 @@ export default function FinanceManagerPage() {
   const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null);
   const [transactionSearchTerm, setTransactionSearchTerm] = useState('');
   const [transactionTypeFilter, setTransactionTypeFilter] = useState<string>('all');
+
+  const defaultDateRange: DateRange = { from: subDays(new Date(), 29), to: new Date() };
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(defaultDateRange);
+  // The displayLabel and predefinedValue are managed by the DateRangePicker component itself,
+  // but we receive them in the callback if needed.
 
   const [isClient, setIsClient] = useState(false);
   useEffect(() => setIsClient(true), []);
@@ -176,40 +182,40 @@ export default function FinanceManagerPage() {
   };
 
 
-  const { totalIncome, totalExpenses, availableBalance } = useMemo(() => {
-    let income = 0;
-    let expensesSum = 0;
-    transactions.forEach(t => {
-      if (t.type === 'income') income += t.amount;
-      else if (t.type === 'expense' || t.type === 'purchase') expensesSum += t.amount;
-    });
-    return { totalIncome: income, totalExpenses: expensesSum, availableBalance: income - expensesSum };
-  }, [transactions]);
-
-
-  const pageDescription = useMemo(() => {
-    if (!currentUser) return "Manage your finances.";
-    if (currentUser.role === 'SYSTEM_ADMIN') {
-      return viewMode === 'global'
-        ? "View and manage all user financial transactions."
-        : "Track your personal income, expenses, and send money to staff.";
-    }
-    return `Track your personal income, expenses, and purchases.`;
-  }, [currentUser, viewMode]);
-
   const filteredTransactions = useMemo(() => {
     let results = transactions;
 
+    // Date Range Filter
+    if (selectedDateRange?.from && selectedDateRange?.to) {
+      const startDate = new Date(selectedDateRange.from);
+      startDate.setHours(0, 0, 0, 0);
+
+      const endDate = new Date(selectedDateRange.to);
+      endDate.setHours(23, 59, 59, 999);
+
+      results = results.filter(t => {
+        try {
+          const transactionDate = parseISO(t.date);
+          return isWithinInterval(transactionDate, { start: startDate, end: endDate });
+        } catch (e) {
+          console.error("Error parsing transaction date for filtering:", t.date, e);
+          return false;
+        }
+      });
+    }
+
+    // Transaction Type Filter
     if (transactionTypeFilter !== 'all') {
       results = results.filter(t => {
         if (transactionTypeFilter === 'income') return t.type === 'income';
         if (transactionTypeFilter === 'expense_only') return t.type === 'expense' && !t.sentToUserId;
         if (transactionTypeFilter === 'purchase') return t.type === 'purchase';
         if (transactionTypeFilter === 'send_money') return t.type === 'expense' && !!t.sentToUserId;
-        return true; 
+        return true;
       });
     }
   
+    // Search Term Filter
     if (transactionSearchTerm.trim()) {
       const lowerSearchTerm = transactionSearchTerm.toLowerCase();
       results = results.filter(t => {
@@ -226,17 +232,30 @@ export default function FinanceManagerPage() {
         return matchesSearch;
       });
     }
-    return results; 
-  }, [transactions, transactionSearchTerm, viewMode, userMap, transactionTypeFilter]);
+    return results;
+  }, [transactions, transactionSearchTerm, viewMode, userMap, transactionTypeFilter, selectedDateRange]);
 
+  const { totalIncome, totalExpenses, availableBalance } = useMemo(() => {
+    // Calculations should now use 'filteredTransactions' to reflect date and type filters
+    let income = 0;
+    let expensesSum = 0;
+    filteredTransactions.forEach(t => { // Use filteredTransactions here
+      if (t.type === 'income') income += t.amount;
+      else if (t.type === 'expense' || t.type === 'purchase') expensesSum += t.amount;
+    });
+    return { totalIncome: income, totalExpenses: expensesSum, availableBalance: income - expensesSum };
+  }, [filteredTransactions]); // Depend on filteredTransactions
 
-  if (!currentUser) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
+  const pageDescription = useMemo(() => {
+    if (!currentUser) return "Manage your finances.";
+    if (currentUser.role === 'SYSTEM_ADMIN') {
+      return viewMode === 'global'
+        ? "View and manage all user financial transactions."
+        : "Track your personal income, expenses, and send money to staff.";
+    }
+    return `Track your personal income, expenses, and purchases.`;
+  }, [currentUser, viewMode]);
+
 
   const canUserAddExpense = useMemo(() => {
     if (!currentUser || !globalAppSettings?.expenseLoggingPermissions) return false;
@@ -266,11 +285,29 @@ export default function FinanceManagerPage() {
       },
     ].filter(card => {
       if (currentUser?.role === 'SYSTEM_ADMIN') return true;
-      if (canUserAddExpense) return true; 
+      if (canUserAddExpense) return true;
       return card.title === "Total Income";
     });
   }, [totalIncome, totalExpenses, availableBalance, canUserAddExpense, currentUser]);
 
+  const handleDateRangeChange = (
+    range: DateRange | undefined,
+    label: string, // This label is for display purposes from the picker
+    predefined: PredefinedRange | "custom" | null
+  ) => {
+    setSelectedDateRange(range);
+    // setCurrentDateRangeLabel(label); // Optional: if you want to display the label elsewhere
+    // setSelectedPredefinedValue(predefined); // Optional: if you need the predefined value for other logic
+  };
+
+
+  if (!currentUser) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+         <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-1 sm:p-0">
@@ -316,16 +353,16 @@ export default function FinanceManagerPage() {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center flex-wrap">
         {currentUser.role === 'SYSTEM_ADMIN' && (
-          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'personal' | 'global')} className="w-full sm:w-auto">
+          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'personal' | 'global')} className="w-full sm:w-auto order-1 sm:order-none">
             <TabsList className="grid w-full grid-cols-2 sm:max-w-xs">
               <TabsTrigger value="personal">Personal View</TabsTrigger>
               <TabsTrigger value="global">Global View</TabsTrigger>
             </TabsList>
           </Tabs>
         )}
-        <div className="w-full sm:w-auto sm:min-w-[200px] md:min-w-[240px]">
+        <div className="w-full sm:w-auto grow sm:grow-0 order-2 sm:order-none sm:min-w-[200px] md:min-w-[240px]">
           <Label htmlFor="transaction-type-filter" className="sr-only">Filter by type</Label>
           <Select value={transactionTypeFilter} onValueChange={setTransactionTypeFilter}>
             <SelectTrigger id="transaction-type-filter" className="w-full h-10 bg-card border-border/50">
@@ -342,6 +379,22 @@ export default function FinanceManagerPage() {
               ))}
             </SelectContent>
           </Select>
+        </div>
+         <div className="w-full sm:w-auto grow sm:grow-0 order-3 sm:order-none">
+            <DateRangePicker 
+                initialRange={defaultDateRange} 
+                onDateRangeChange={handleDateRangeChange} 
+            />
+        </div>
+        <div className="relative w-full sm:w-auto grow sm:flex-1 order-4 sm:order-none sm:max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+            type="search"
+            placeholder="Search transactions..."
+            value={transactionSearchTerm}
+            onChange={(e) => setTransactionSearchTerm(e.target.value)}
+            className="pl-10 bg-background/50 h-10"
+            />
         </div>
       </div>
 
@@ -379,16 +432,7 @@ export default function FinanceManagerPage() {
                     {transactionTypeFilter !== 'all' && ` (Filtered by: ${TRANSACTION_TYPES_FOR_FILTER.find(f=>f.value === transactionTypeFilter)?.label})`}
                   </CardDescription>
                 </div>
-                <div className="relative w-full sm:max-w-xs">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Search transactions..."
-                    value={transactionSearchTerm}
-                    onChange={(e) => setTransactionSearchTerm(e.target.value)}
-                    className="pl-10 bg-background/50"
-                  />
-                </div>
+                {/* Search Input moved to the filter row */}
             </div>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
@@ -413,11 +457,14 @@ export default function FinanceManagerPage() {
               <div className="text-center py-10 text-muted-foreground">
                 <Banknote className="h-16 w-16 mx-auto opacity-30 mb-3" />
                 <p className="text-lg font-medium">
-                  {transactionSearchTerm || transactionTypeFilter !== 'all' ? "No transactions match your filters." : "No transactions yet."}
+                  {transactionSearchTerm || transactionTypeFilter !== 'all' || (selectedDateRange && (selectedDateRange.from !== defaultDateRange.from || selectedDateRange.to !== defaultDateRange.to))
+                    ? "No transactions match your filters."
+                    : "No transactions yet."}
                 </p>
                 <p className="text-sm">
-                  {transactionSearchTerm || transactionTypeFilter !== 'all' ? "Try adjusting your search or filter." : 
-                    (canUserAddExpense ? "Add your first income or expense to get started!" : "Expense logging may be disabled for your role.")
+                  {transactionSearchTerm || transactionTypeFilter !== 'all' || (selectedDateRange && (selectedDateRange.from !== defaultDateRange.from || selectedDateRange.to !== defaultDateRange.to))
+                    ? "Try adjusting your search or filters."
+                    : (canUserAddExpense ? "Add your first income or expense to get started!" : "Expense logging may be disabled for your role.")
                   }
                 </p>
               </div>
@@ -495,9 +542,5 @@ export default function FinanceManagerPage() {
     </div>
   );
 }
-
-    
-
-
 
     
