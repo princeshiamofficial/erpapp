@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -60,6 +60,27 @@ const PREDEFINED_RANGES_CONFIG: { label: string; value: PredefinedRange }[] = [
   { label: "Last Year", value: "lastYear" },
 ];
 
+// Helper function to generate display label, can be outside component or memoized
+const getDisplayLabel = (
+  range: DateRange | undefined,
+  predefinedValue: PredefinedRange | "custom" | null
+): string => {
+  if (predefinedValue === "custom") {
+    if (range?.from) {
+      if (range.to) {
+        if (isSameDay(range.from, range.to)) {
+          return format(range.from, "MMM d, yyyy");
+        }
+        return `${format(range.from, "MMM d")} - ${format(range.to, "MMM d, yyyy")}`;
+      }
+      return `${format(range.from, "MMM d")} - Select end date`;
+    }
+    return "Custom Range";
+  }
+  return PREDEFINED_RANGES_CONFIG.find(r => r.value === predefinedValue)?.label || "Select Date Range";
+};
+
+
 export function DateRangePicker({
   initialRange,
   onDateRangeChange,
@@ -89,25 +110,14 @@ export function DateRangePicker({
   );
   const [isCustomPopoverOpen, setIsCustomPopoverOpen] = useState(false);
 
-  const displayLabel = useMemo(() => {
-    if (selectedPredefined === "custom") {
-      if (selectedRange?.from) {
-        if (selectedRange.to) {
-          if (isSameDay(selectedRange.from, selectedRange.to)) {
-            return format(selectedRange.from, "MMM d, yyyy");
-          }
-          return `${format(selectedRange.from, "MMM d")} - ${format(selectedRange.to, "MMM d, yyyy")}`;
-        }
-        return `${format(selectedRange.from, "MMM d")} - Select end date`;
-      }
-      return "Custom Range";
-    }
-    return PREDEFINED_RANGES_CONFIG.find(r => r.value === selectedPredefined)?.label || "Select Date Range";
+  // This label is for the trigger button's display and updates reactively
+  const triggerButtonDisplayLabel = useMemo(() => {
+    return getDisplayLabel(selectedRange, selectedPredefined);
   }, [selectedRange, selectedPredefined]);
 
-  useEffect(() => {
-    onDateRangeChange(selectedRange, displayLabel, selectedPredefined);
-  }, [selectedRange, displayLabel, selectedPredefined, onDateRangeChange]);
+  // useEffect(() => {
+  //   // Original useEffect removed - onDateRangeChange is now called explicitly
+  // }, [selectedRange, displayLabel, selectedPredefined, onDateRangeChange]);
 
 
   function getDateRangeForPredefined(value: PredefinedRange): DateRange {
@@ -143,15 +153,28 @@ export function DateRangePicker({
     const newRange = getDateRangeForPredefined(value);
     setSelectedPredefined(value);
     setSelectedRange(newRange);
-    setIsCustomPopoverOpen(false);
+    const newDisplayLabel = PREDEFINED_RANGES_CONFIG.find(r => r.value === value)?.label || "Error";
+    onDateRangeChange(newRange, newDisplayLabel, value); // Notify parent immediately for predefined
+    setIsCustomPopoverOpen(false); // Ensure custom popover is closed
   };
 
-  const handleCustomRangeSelect = (range: DateRange | undefined) => {
+  const handleCustomDateSelectInCalendar = (range: DateRange | undefined) => {
     setSelectedRange(range);
     if (range?.from) {
-      setSelectedPredefined("custom");
+      setSelectedPredefined("custom"); // Update internal state for label
     }
-    // Popover will not close here automatically; user must click "Apply"
+    // DO NOT call onDateRangeChange here. It will be called on "Apply".
+  };
+  
+  const handleApplyCustomRange = () => {
+    setIsCustomPopoverOpen(false); // Close the popover first
+    let finalRange = selectedRange;
+    if (selectedRange?.from && !selectedRange?.to) { // If only start date selected, make it single day
+      finalRange = { from: selectedRange.from, to: selectedRange.from };
+      setSelectedRange(finalRange); // Update local state to reflect this
+    }
+    const currentCustomDisplayLabel = getDisplayLabel(finalRange, "custom");
+    onDateRangeChange(finalRange, currentCustomDisplayLabel, "custom"); // Notify parent
   };
 
 
@@ -163,7 +186,7 @@ export function DateRangePicker({
           className="w-full justify-start text-left font-normal sm:w-auto h-9 sm:h-10"
         >
           <CalendarDays className="mr-2 h-4 w-4 text-primary/80" />
-          <span className="truncate">{displayLabel}</span>
+          <span className="truncate">{triggerButtonDisplayLabel}</span>
           <ChevronDown className="ml-auto h-4 w-4 opacity-70" />
         </Button>
       </DropdownMenuTrigger>
@@ -180,42 +203,39 @@ export function DateRangePicker({
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <Popover open={isCustomPopoverOpen} onOpenChange={setIsCustomPopoverOpen}>
+        <Popover open={isCustomPopoverOpen} onOpenChange={(open) => {
+            setIsCustomPopoverOpen(open);
+            // If popover is opening, ensure selectedPredefined is 'custom'
+            // This helps if user clicks "Custom Range", then a predefined, then "Custom Range" again.
+            if (open) {
+                setSelectedPredefined("custom");
+            }
+        }}>
           <PopoverTrigger asChild>
             <DropdownMenuItem
               onSelect={(e) => {
-                e.preventDefault();
-                setSelectedPredefined("custom");
-                setIsCustomPopoverOpen(true);
+                e.preventDefault(); // Prevent DropdownMenu from closing
+                // setSelectedPredefined("custom"); // Now set by Popover's onOpenChange
+                setIsCustomPopoverOpen(true); // Open the Popover (calendar)
               }}
                className={selectedPredefined === "custom" ? "bg-accent text-accent-foreground" : ""}
             >
               Custom Range
             </DropdownMenuItem>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
+          <PopoverContent className="w-auto p-0" align={align === "center" ? "center" : "start"} side={align === "end" ? "left" : "right"} sideOffset={5}>
             <Calendar
               initialFocus
               mode="range"
-              defaultMonth={selectedRange?.from}
+              defaultMonth={selectedRange?.from || new Date()}
               selected={selectedRange}
-              onSelect={handleCustomRangeSelect}
+              onSelect={handleCustomDateSelectInCalendar}
               numberOfMonths={2}
             />
              <div className="p-3 border-t border-border flex justify-end">
                 <Button
                   size="sm"
-                  onClick={() => {
-                    setIsCustomPopoverOpen(false);
-                    if (selectedRange?.from && !selectedRange?.to) {
-                      // If only a 'from' date is selected, make it a single-day range
-                      const singleDayRange = { from: selectedRange.from, to: selectedRange.from };
-                      setSelectedRange(singleDayRange); // This will trigger useEffect to call onDateRangeChange
-                    }
-                    // If both 'from' and 'to' are selected, or if the range was cleared,
-                    // the useEffect has already handled calling onDateRangeChange.
-                    // No explicit call to onDateRangeChange here is needed as useEffect handles it.
-                  }}
+                  onClick={handleApplyCustomRange}
                 >
                   Apply
                 </Button>
