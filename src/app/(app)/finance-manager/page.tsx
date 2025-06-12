@@ -39,10 +39,10 @@ import {
   updateTransactionAction,
   getTransactionsForUserAction,
   getAllTransactionsAction,
-  addNoteAction, 
-  deleteNoteAction, 
-  getNotesForUserAction, 
-  updateNoteAction 
+  // addNoteAction, // Notes feature coming soon
+  // deleteNoteAction, 
+  // getNotesForUserAction, 
+  // updateNoteAction 
 } from './actions';
 import { MultiColorCalculatorIcon } from '@/components/icons/MultiColorCalculatorIcon';
 import { Banknote } from 'lucide-react';
@@ -153,17 +153,20 @@ export default function FinanceManagerPage() {
 
   const displayableTransactionTypeFilters = useMemo(() => {
     if (currentUser?.role === 'SYSTEM_ADMIN') {
-      return TRANSACTION_TYPES_FOR_FILTER;
+      return TRANSACTION_TYPES_FOR_FILTER; // Sys admin sees all
     }
+    // Non-SysAdmins: filter out 'send_money' but NOT 'income'
     return TRANSACTION_TYPES_FOR_FILTER.filter(
-      (type) => type.value !== 'income' && type.value !== 'send_money'
+      (type) => type.value !== 'send_money'
     );
   }, [currentUser?.role]);
 
   useEffect(() => {
-    if (currentUser?.role !== 'SYSTEM_ADMIN' && (transactionTypeFilter === 'income' || transactionTypeFilter === 'send_money')) {
+    // If "Sent Money" is selected and user is not System Admin, reset to "All"
+    if (currentUser?.role !== 'SYSTEM_ADMIN' && transactionTypeFilter === 'send_money') {
       setTransactionTypeFilter('all');
     }
+    // No need to reset for "income" anymore as it's available to all users
   }, [currentUser?.role, transactionTypeFilter]);
 
 
