@@ -2,12 +2,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Transaction, TransactionType, User, UserRole } from "@/types";
+import type { Transaction, TransactionType, User, UserRole, PersonalNote } from "@/types";
 import {
   addTransaction as addTransactionService,
   deleteTransaction as deleteTransactionService,
   updateTransaction as updateTransactionService,
-  getTransactionById
+  getTransactionById,
+  getAllTransactions as getAllTransactionsService,
+  getTransactionsForUser as getTransactionsForUserService,
+  addPersonalNote as addPersonalNoteService,
+  getPersonalNotesForUser as getPersonalNotesForUserService,
+  updatePersonalNote as updatePersonalNoteService,
+  deletePersonalNote as deletePersonalNoteService,
 } from "@/lib/personal-finance-service";
 import { adminApp } from '@/lib/firebase-admin';
 import { getUserById } from '@/lib/user-service';
@@ -58,17 +64,12 @@ export async function addTransactionAction(
       return { success: false, error: "Failed to add primary transaction to database." };
     }
 
-    // If it's an admin sending money (expense for admin, and has sentToUserId),
-    // create a corresponding income transaction for the recipient.
-    // This section handles the dual entry:
-    // 1. The `primaryTransaction` (above) is the System Admin's EXPENSE.
-    // 2. The `recipientTransaction` (below) is the recipient staff user's INCOME.
     if (currentUser.role === 'SYSTEM_ADMIN' && transactionData.type === 'expense' && transactionData.sentToUserId) {
       console.log(`Admin ${currentUser.name} sending money to ${transactionData.sentToUserName}. Creating income record for recipient.`);
       const recipientIncomePayload = {
         type: 'income' as TransactionType,
         amount: transactionData.amount,
-        category: `Funds from ${currentUser.name}`, // Clarified category
+        category: `Funds from ${currentUser.name}`,
         description: `Payment from ${currentUser.name}. Notes: ${transactionData.description || 'N/A'}`,
         date: transactionData.date,
         receivedFromUserId: currentUser.id,
@@ -79,64 +80,33 @@ export async function addTransactionAction(
       if (!recipientTransaction) {
         console.error(`Failed to add corresponding income transaction for recipient ${transactionData.sentToUserId}. Admin expense ID: ${primaryTransaction.id}. This is a critical issue and may require manual correction.`);
         return {
-          success: true, 
+          success: true,
           transaction: primaryTransaction,
           error: "Admin expense recorded, but failed to record income for recipient. Please check logs for recipient ID: " + transactionData.sentToUserId
         };
       } else {
         console.log(`Successfully created income transaction ${recipientTransaction.id} for recipient ${transactionData.sentToUserName} (ID: ${transactionData.sentToUserId})`);
-
-        // ---- START: Send Push Notification to Recipient ----
         try {
           const recipientUser = await getUserById(transactionData.sentToUserId);
           if (recipientUser && recipientUser.fcmToken) {
             console.log(`[addTransactionAction - Send Money] Recipient ${recipientUser.name} has FCM token. Attempting to send push notification.`);
-
             const globalSettings = await getGlobalSettings();
             const customSoundUrl = globalSettings.toastSoundUrl;
-
             const notificationTitle = "Funds Received!";
             const notificationBody = `You have received ${formatAmountForNotification(transactionData.amount)} from ${currentUser.name}.`;
-            const targetUrl = '/finance-manager'; // Target URL for notification click
-
+            const targetUrl = '/finance-manager';
             const fcmMessage: messaging.Message = {
               token: recipientUser.fcmToken,
-              // `notification` payload is primarily for system tray when app is backgrounded/closed (handled by browser/OS if SW doesn't intervene)
-              notification: {
-                title: notificationTitle,
-                body: notificationBody,
-                icon: '/icons/icon-192x192.png', // Default icon
-              },
-              // `data` payload is always delivered to the app (SW for background, onMessage for foreground)
-              // The Service Worker should use this data payload to construct and display the notification.
-              data: { 
-                title: notificationTitle,
-                body: notificationBody,
-                iconUrl: '/icons/icon-192x192.png', // More specific for SW
-                targetUrl: targetUrl, 
-                click_action: targetUrl, // Standard field often used by SW
-                ...(customSoundUrl && { customSoundUrl: customSoundUrl }),
-                // You can add more custom data here if needed by your SW or client app
-              },
-              webpush: { // Webpush specific configuration
-                notification: { // This can influence how FCM constructs the web push notification if SW doesn't fully override
-                  icon: '/icons/icon-192x192.png',
-                  badge: '/icons/icon-72x72.png', // Optional: for Android PWA notifications
-                  ...(customSoundUrl ? {} : { sound: "default" }) 
-                },
-                fcmOptions: { // fcmOptions.link is used if the SW doesn't handle the click
-                  link: targetUrl 
-                }
-              },
+              notification: { title: notificationTitle, body: notificationBody, icon: '/icons/icon-192x192.png' },
+              data: { title: notificationTitle, body: notificationBody, iconUrl: '/icons/icon-192x192.png', targetUrl: targetUrl, click_action: targetUrl, ...(customSoundUrl && { customSoundUrl: customSoundUrl }) },
+              webpush: { notification: { icon: '/icons/icon-192x192.png', badge: '/icons/icon-72x72.png', ...(customSoundUrl ? {} : { sound: "default" }) }, fcmOptions: { link: targetUrl } },
             };
-            
             if (adminApp && typeof adminApp.messaging === 'function') {
                 await adminApp.messaging().send(fcmMessage);
                 console.log(`[addTransactionAction - Send Money] Push notification sent to ${recipientUser.name} for received funds.`);
             } else {
                 console.warn("[addTransactionAction - Send Money] Firebase Admin SDK not properly initialized. Cannot send push notification for received funds.");
             }
-
           } else if (recipientUser) {
             console.log(`[addTransactionAction - Send Money] Recipient ${recipientUser.name} does not have an FCM token. Skipping push notification.`);
           } else {
@@ -145,13 +115,10 @@ export async function addTransactionAction(
         } catch (notifError) {
           console.error(`[addTransactionAction - Send Money] Error sending push notification for received funds to user ${transactionData.sentToUserId}:`, notifError);
         }
-        // ---- END: Send Push Notification to Recipient ----
       }
     }
-
     revalidatePath("/(app)/finance-manager");
     return { success: true, transaction: primaryTransaction };
-
   } catch (error) {
     console.error("Error in addTransactionAction:", error);
     const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
@@ -159,11 +126,10 @@ export async function addTransactionAction(
   }
 }
 
-// Action to delete a transaction
 export async function deleteTransactionAction(
   transactionId: string,
   userIdVerifying: string,
-  userRoleVerifying: UserRole 
+  userRoleVerifying: UserRole
 ): Promise<{ success: boolean; error?: string }> {
   if (!userIdVerifying) {
     return { success: false, error: "User not authenticated for deletion." };
@@ -173,8 +139,6 @@ export async function deleteTransactionAction(
     if (!transaction) {
       return { success: false, error: "Transaction not found." };
     }
-
-    // System Admins can delete any transaction.
     if (userRoleVerifying === 'SYSTEM_ADMIN') {
       const success = await deleteTransactionService(transactionId);
       if (success) {
@@ -183,22 +147,12 @@ export async function deleteTransactionAction(
       }
       return { success: false, error: "Failed to delete transaction from database (Admin)." };
     }
-
-    // Prevent recipient from deleting system-generated income
-    if (
-      transaction.type === 'income' &&
-      transaction.receivedFromUserId && // It was received from someone
-      userIdVerifying === transaction.userId && // User trying to delete IS the recipient
-      userRoleVerifying !== 'SYSTEM_ADMIN' // And they are not a system admin
-    ) {
+    if (transaction.type === 'income' && transaction.receivedFromUserId && userIdVerifying === transaction.userId && userRoleVerifying !== 'SYSTEM_ADMIN') {
       return { success: false, error: "Cannot delete income transactions received from system transfers." };
     }
-
-    // Other users can only delete their own transactions (that are not system-generated income)
     if (transaction.userId !== userIdVerifying) {
         return { success: false, error: "You do not have permission to delete this transaction." };
     }
-
     const success = await deleteTransactionService(transactionId);
     if (success) {
       revalidatePath("/(app)/finance-manager");
@@ -211,12 +165,11 @@ export async function deleteTransactionAction(
   }
 }
 
-// Action to update a transaction
 export async function updateTransactionAction(
   transactionId: string,
   updates: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt'>>,
   userIdVerifying: string,
-  userRoleVerifying: UserRole 
+  userRoleVerifying: UserRole
 ): Promise<{ success: boolean; error?: string }> {
   if (!userIdVerifying) {
     return { success: false, error: "User not authenticated for update." };
@@ -224,14 +177,11 @@ export async function updateTransactionAction(
   if (updates.amount !== undefined && updates.amount <= 0) {
     return { success: false, error: "Amount must be a positive number." };
   }
-
   try {
     const transaction = await getTransactionById(transactionId);
     if (!transaction) {
       return { success: false, error: "Transaction not found." };
     }
-
-    // System Admins can edit any transaction.
     if (userRoleVerifying === 'SYSTEM_ADMIN') {
       const sanitizedUpdates = { ...updates };
       if (sanitizedUpdates.description === '') sanitizedUpdates.description = null;
@@ -242,25 +192,14 @@ export async function updateTransactionAction(
       }
       return { success: false, error: "Failed to update transaction (Admin)." };
     }
-    
-    // Prevent recipient from editing system-generated income
-    if (
-      transaction.type === 'income' &&
-      transaction.receivedFromUserId && 
-      userIdVerifying === transaction.userId &&
-      userRoleVerifying !== 'SYSTEM_ADMIN'
-    ) {
+    if (transaction.type === 'income' && transaction.receivedFromUserId && userIdVerifying === transaction.userId && userRoleVerifying !== 'SYSTEM_ADMIN') {
       return { success: false, error: "Cannot edit income transactions received from system transfers." };
     }
-
-    // Other users can only edit their own transactions (that are not system-generated income)
      if (transaction.userId !== userIdVerifying) {
         return { success: false, error: "You do not have permission to edit this transaction." };
     }
-
     const sanitizedUpdates = { ...updates };
     if (sanitizedUpdates.description === '') sanitizedUpdates.description = null;
-
     const success = await updateTransactionService(transactionId, sanitizedUpdates);
     if (success) {
       revalidatePath("/(app)/finance-manager");
@@ -272,3 +211,83 @@ export async function updateTransactionAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
+// Server action to get transactions for the current user
+export async function getTransactionsForUserAction(userId: string): Promise<Transaction[]> {
+  return getTransactionsForUserService(userId);
+}
+
+// Server action to get all transactions (for admin)
+export async function getAllTransactionsAction(): Promise<Transaction[]> {
+  return getAllTransactionsService();
+}
+
+
+// Note Actions
+export async function addNoteAction(
+  noteData: Omit<PersonalNote, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<{ success: boolean; note?: PersonalNote; error?: string }> {
+  if (!noteData.userId) {
+    return { success: false, error: "User ID is required to add a note." };
+  }
+  if (!noteData.title?.trim()) {
+    return { success: false, error: "Note title cannot be empty." };
+  }
+  try {
+    const newNote = await addPersonalNoteService(noteData);
+    if (newNote) {
+      revalidatePath("/(app)/finance-manager");
+      return { success: true, note: newNote };
+    }
+    return { success: false, error: "Failed to add note to database." };
+  } catch (error) {
+    console.error("Error in addNoteAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function getNotesForUserAction(userId: string): Promise<PersonalNote[]> {
+  if (!userId) {
+    console.error("getNotesForUserAction: userId is required.");
+    return [];
+  }
+  return getPersonalNotesForUserService(userId);
+}
+
+export async function updateNoteAction(
+  noteId: string,
+  updates: Partial<Omit<PersonalNote, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>
+): Promise<{ success: boolean; error?: string }> {
+  if (!updates.title?.trim()) {
+    return { success: false, error: "Note title cannot be empty." };
+  }
+  try {
+    const success = await updatePersonalNoteService(noteId, updates);
+    if (success) {
+      revalidatePath("/(app)/finance-manager");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update note in database." };
+  } catch (error) {
+    console.error("Error in updateNoteAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function deleteNoteAction(noteId: string, userIdVerifying: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Optional: Verify if the user owns the note before deleting, if needed.
+    // For now, assuming deletion is allowed if the action is called.
+    const success = await deletePersonalNoteService(noteId, userIdVerifying); // Pass userIdVerifying
+    if (success) {
+      revalidatePath("/(app)/finance-manager");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to delete note from database or permission denied." };
+  } catch (error) {
+    console.error("Error in deleteNoteAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+    

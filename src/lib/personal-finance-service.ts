@@ -14,12 +14,13 @@ import {
   serverTimestamp,
   writeBatch,
   setDoc,
-  getDoc, // Added getDoc
+  getDoc,
 } from 'firebase/firestore';
-import type { Transaction, TransactionType } from '@/types';
+import type { Transaction, TransactionType, PersonalNote } from '@/types'; // Added PersonalNote
 import { v4 as uuidv4 } from 'uuid';
 
 const TRANSACTIONS_COLLECTION = 'personalTransactions';
+const NOTES_COLLECTION = 'personalUserNotes'; // New collection for notes
 
 // Add a new transaction
 export async function addTransaction(
@@ -42,6 +43,10 @@ export async function addTransaction(
   }
   try {
     const newTransactionRef = doc(collection(db, TRANSACTIONS_COLLECTION));
+    if (!newTransactionRef || !newTransactionRef.id) {
+        console.error("addTransaction: Failed to generate a valid document reference for new transaction.");
+        throw new Error("Failed to generate a valid document reference for new transaction.");
+    }
     const newTransaction: Transaction = {
       id: newTransactionRef.id,
       userId,
@@ -147,3 +152,100 @@ export async function deleteTransaction(transactionId: string): Promise<boolean>
     return false;
   }
 }
+
+// --- Personal Notes Functions ---
+
+export async function addPersonalNote(
+  noteData: Omit<PersonalNote, 'id' | 'createdAt' | 'updatedAt'>
+): Promise<PersonalNote | null> {
+  if (!noteData.userId) {
+    console.error("addPersonalNote: userId is required.");
+    return null;
+  }
+  if (!noteData.title?.trim()) {
+    console.error("addPersonalNote: title is required.");
+    return null;
+  }
+  try {
+    const newNoteRef = doc(collection(db, NOTES_COLLECTION));
+    if (!newNoteRef || !newNoteRef.id) {
+        console.error("addPersonalNote: Failed to generate a valid document reference for new note.");
+        throw new Error("Failed to generate a valid document reference for new note.");
+    }
+    const now = new Date().toISOString();
+    const newNote: PersonalNote = {
+      id: newNoteRef.id,
+      userId: noteData.userId,
+      title: noteData.title.trim(),
+      content: noteData.content?.trim() || "",
+      createdAt: now,
+      updatedAt: now,
+    };
+    await setDoc(newNoteRef, newNote);
+    return newNote;
+  } catch (error) {
+    console.error("Error adding personal note to Firestore:", error);
+    return null;
+  }
+}
+
+export async function getPersonalNotesForUser(userId: string): Promise<PersonalNote[]> {
+  if (!userId) {
+    console.error("getPersonalNotesForUser: userId is required.");
+    return [];
+  }
+  try {
+    const notesCol = collection(db, NOTES_COLLECTION);
+    // Fetch notes and sort them by `updatedAt` in descending order in the application code.
+    const q = query(notesCol, where("userId", "==", userId));
+    const snapshot = await getDocs(q);
+    const notes = snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as PersonalNote));
+    // Sort on the client-side (or server-side after fetching if this is a server action)
+    return notes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  } catch (error) {
+    console.error("Error fetching personal notes for user:", error);
+    return [];
+  }
+}
+
+export async function updatePersonalNote(
+  noteId: string,
+  updates: Partial<Omit<PersonalNote, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>
+): Promise<boolean> {
+  if (!updates.title?.trim()) {
+    console.error("updatePersonalNote: title cannot be empty.");
+    return false; // Or throw an error
+  }
+  try {
+    const noteDocRef = doc(db, NOTES_COLLECTION, noteId);
+    const dataToUpdate = {
+      ...updates,
+      title: updates.title.trim(),
+      content: updates.content?.trim() || "",
+      updatedAt: new Date().toISOString(),
+    };
+    await updateDoc(noteDocRef, dataToUpdate);
+    return true;
+  } catch (error) {
+    console.error("Error updating personal note:", error);
+    return false;
+  }
+}
+
+export async function deletePersonalNote(noteId: string, userIdVerifying: string): Promise<boolean> {
+  try {
+    const noteDocRef = doc(db, NOTES_COLLECTION, noteId);
+    // Optional: Verify ownership before deleting if necessary, though server actions should handle this.
+    // const noteDoc = await getDoc(noteDocRef);
+    // if (noteDoc.exists() && noteDoc.data().userId === userIdVerifying) {
+    await deleteFirestoreDoc(noteDocRef);
+    return true;
+    // }
+    // return false; // If ownership check fails
+  } catch (error) {
+    console.error("Error deleting personal note:", error);
+    return false;
+  }
+}
+
+    
