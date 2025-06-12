@@ -11,7 +11,7 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service'; 
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, DollarSign, Wallet, AlertTriangle, ListFilter, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X } from 'lucide-react';
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X } from 'lucide-react';
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
@@ -27,7 +27,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog as NoteDialog, DialogContent as NoteDialogContent, DialogHeader as NoteDialogHeader, DialogTitle as NoteDialogTitle, DialogDescription as NoteDialogDescription, DialogFooter as NoteDialogFooter } from "@/components/ui/dialog";
-import { addNoteAction, deleteNoteAction, getNotesForUserAction, updateNoteAction } from './actions';
+import { 
+  addTransactionAction,
+  deleteTransactionAction,
+  updateTransactionAction,
+  getTransactionsForUserAction,
+  getAllTransactionsAction,
+  addNoteAction, 
+  deleteNoteAction, 
+  getNotesForUserAction, 
+  updateNoteAction 
+} from './actions';
 import { MultiColorCalculatorIcon } from '@/components/icons/MultiColorCalculatorIcon'; 
 import { format, formatDistanceToNowStrict } from 'date-fns';
 import { Banknote } from 'lucide-react';
@@ -43,8 +53,6 @@ const CalculatorDialog = dynamic(() => import('@/components/layout/CalculatorDia
 const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
-
-const NOTES_STORAGE_KEY = 'COLORHUT_FINANCE_NOTES_LIST_KEY'; // Updated for list
 
 export default function FinanceManagerPage() {
   const { currentUser } = useAuth();
@@ -91,9 +99,9 @@ export default function FinanceManagerPage() {
 
       const dataPromises: any[] = [getNotesForUserAction(currentUser.id)]; 
       if (currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global') {
-        dataPromises.push(addTransactionAction.getAllTransactions(), getUsers()); // Assuming getAllTransactions is on addTransactionAction or similar
+        dataPromises.push(getAllTransactionsAction(), getUsers()); 
       } else {
-        dataPromises.push(addTransactionAction.getTransactionsForUser(currentUser.id)); // Assuming getTransactionsForUser is on addTransactionAction
+        dataPromises.push(getTransactionsForUserAction(currentUser.id)); 
         if (currentUser.role === 'SYSTEM_ADMIN') { 
             dataPromises.push(getUsers());
         }
@@ -148,7 +156,7 @@ export default function FinanceManagerPage() {
   const confirmDeleteTransaction = async () => {
     if (!transactionToDelete || !currentUser) return;
     setIsDeleting(true);
-    const result = await addTransactionAction.deleteTransaction(transactionToDelete.id, currentUser.id, currentUser.role);
+    const result = await deleteTransactionAction(transactionToDelete.id, currentUser.id, currentUser.role);
     setIsDeleting(false);
     setIsDeleteAlertOpen(false);
     if (result.success) {
@@ -210,7 +218,7 @@ export default function FinanceManagerPage() {
 
   const handleSaveNote = async () => {
     if (!currentUser) return;
-    if (!currentNoteTitle?.trim()) { // Check if currentNoteTitle is not undefined/null before trimming
+    if (!(currentNoteTitle || '').trim()) {
       toast({ title: "Validation Error", description: "Note title is required.", variant: "destructive" });
       return;
     }
@@ -245,7 +253,7 @@ export default function FinanceManagerPage() {
 
   const confirmDeleteNote = async () => {
     if (!noteToDelete || !currentUser) return;
-    setIsSubmittingNote(true); // Reuse for delete loading state
+    setIsSubmittingNote(true); 
     const result = await deleteNoteAction(noteToDelete.id, currentUser.id);
     setIsSubmittingNote(false);
     setIsDeleteNoteAlertOpen(false);
@@ -482,9 +490,7 @@ export default function FinanceManagerPage() {
           </Card>
         </div>
       </div>
-       <Separator className="my-8" />
-       {/* Quick Navigation was removed */}
-
+      
       {isDeleteAlertOpen && transactionToDelete && (
         <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
           <AlertDialogContent>
@@ -527,7 +533,7 @@ export default function FinanceManagerPage() {
             <NoteDialogHeader>
               <NoteDialogTitle>{editingNote ? "Edit Note" : "Add New Note"}</NoteDialogTitle>
               <NoteDialogDescription>
-                {editingNote ? `Update your note titled "${editingNote.title}".` : "Create a new financial note."}
+                {editingNote ? `Update your note titled "${editingNote.title || ''}".` : "Create a new financial note."}
               </NoteDialogDescription>
             </NoteDialogHeader>
             <div className="py-4 space-y-3">
@@ -542,7 +548,7 @@ export default function FinanceManagerPage() {
             </div>
             <NoteDialogFooter>
               <Button variant="outline" onClick={() => setIsNoteDialogOpen(false)} disabled={isSubmittingNote}>Cancel</Button>
-              <Button onClick={handleSaveNote} disabled={isSubmittingNote || !currentNoteTitle?.trim()}>
+              <Button onClick={handleSaveNote} disabled={isSubmittingNote || !(currentNoteTitle || '').trim()}>
                 {isSubmittingNote ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Saving...</> : (editingNote ? "Save Changes" : "Add Note")}
               </Button>
             </NoteDialogFooter>
@@ -572,3 +578,4 @@ export default function FinanceManagerPage() {
   );
 }
 
+    
