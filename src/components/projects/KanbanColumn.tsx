@@ -36,8 +36,8 @@ export function KanbanColumn({
     <div 
       ref={setNodeRef}
       className={cn(
-        "flex-1 min-w-[280px] max-w-[320px] flex flex-col bg-muted/30 rounded-lg shadow-sm overflow-hidden border border-border/30 transition-colors duration-150",
-        isOver ? 'border-primary ring-2 ring-primary shadow-lg' : 'border-border/30'
+        "flex-1 min-w-[280px] max-w-[320px] flex flex-col bg-muted/30 rounded-lg overflow-hidden transition-all duration-200 ease-in-out",
+        isOver ? 'border-primary ring-2 ring-primary shadow-xl scale-[1.01]' : 'border-border/30 shadow-sm' // Added scale and adjusted base shadow
       )}
     >
       <div className={`px-3 py-2.5 flex items-center justify-between ${headerBgClass} ${headerTextClass} rounded-t-lg`}>
@@ -64,3 +64,4 @@ export function KanbanColumn({
     </div>
   );
 }
+

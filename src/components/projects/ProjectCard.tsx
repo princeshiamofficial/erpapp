@@ -18,6 +18,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { parseISO, differenceInSeconds, isAfter, isBefore, addHours, addDays, formatDistanceToNowStrict } from 'date-fns';
 import React, { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
 
 // Inline SVG Stopwatch Icon Component
 const StopwatchIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -166,9 +167,6 @@ const calculateProgressInfo = (
     currentPercentage = 100;
   } else if (
     isBefore(now, effectiveStartDate) && status !== 'CR Cancel' && status !== 'On Hold' 
-    // For 'On Hold', we always calculate progress towards its own 15-day limit from when it was put on hold.
-    // For other SLA stages, if 'now' is before 'effectiveStartDate' (which is the status entry time), it means it hasn't "started" yet.
-    // This condition primarily applies if a project status is set, but its effective start time (the status entry time) is in the future.
   ) {
     const timeUntilStart = formatDistanceToNowStrict(effectiveStartDate, { addSuffix: false });
     currentDisplayText = `Starts in ${timeUntilStart}`;
@@ -228,88 +226,98 @@ export function ProjectCard({ project }: ProjectCardProps) {
     const updateInfo = () => {
         setProgressInfo(calculateProgressInfo(project, new Date()));
     };
-    // Initial calculation
     updateInfo(); 
-
-    // Set up interval to update every second
     const intervalId = setInterval(updateInfo, 1000);
-
-    // Cleanup interval on component unmount or when project data changes
     return () => clearInterval(intervalId); 
-  }, [project]); // Re-run if project data itself changes (e.g., status, updatedAt)
+  }, [project]);
 
 
   return (
-    <Card
+    <motion.div
       ref={setNodeRef}
-      style={style}
+      style={style} // dnd-kit's transform for movement
       {...listeners}
       {...attributes}
       className={cn(
-        "mb-3 bg-card shadow-md hover:shadow-lg transition-shadow relative group",
-        isDragging ? "opacity-50 shadow-2xl ring-2 ring-primary z-50" : "cursor-grab active:cursor-grabbing"
+        "relative group mb-3",
+        isDragging ? "z-50" : ""
       )}
+      animate={{ // framer-motion for visual feedback
+        scale: isDragging ? 1.05 : 1,
+        boxShadow: isDragging
+          ? "0px 10px 25px rgba(0,0,0,0.2), 0px 5px 10px rgba(0,0,0,0.15)"
+          : "0px 1px 3px rgba(0,0,0,0.05), 0px 1px 2px rgba(0,0,0,0.03)", // A softer base shadow
+      }}
+      transition={{ duration: 0.15, ease: "easeInOut" }}
     >
-      <CardContent className="p-3 space-y-2.5">
-        <div
-          className="absolute top-1/2 -translate-y-1/2 left-1.5 opacity-0 group-hover:opacity-80 transition-opacity p-1"
-          title="Drag to move project"
-        >
-          <GripVertical className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
-        </div>
-
-        <div className="flex justify-between items-start ml-6">
-          <span className="text-sm font-semibold text-foreground">{project.projectIdDisplay}</span>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6">
-                <EllipsisVertical className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem disabled>Edit Project (Soon)</DropdownMenuItem>
-              <DropdownMenuItem disabled className="text-destructive focus:text-destructive">Delete Project (Soon)</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-        
-        <p className="text-xs font-medium text-muted-foreground ml-6 truncate" title={project.name}>{project.name}</p>
-
-        <div className="inline-flex items-center rounded-md border border-destructive/30 bg-destructive/20 px-2 py-0.5 text-xs font-semibold text-destructive transition-colors ml-6">
-          <CalendarDays className="mr-1.5 h-3 w-3" />
-          Target: {project.endDate ? parseISO(project.endDate).toLocaleDateString() : 'N/A'}
-        </div>
-
-        <div className="flex items-center space-x-1.5 text-xs text-muted-foreground ml-6">
-          <User className="h-3.5 w-3.5" />
-          <span className="truncate" title={project.assigneeName}>{project.assigneeName}</span>
-        </div>
-
-        <div className="flex items-center space-x-1.5 text-xs text-muted-foreground ml-6">
-          <Folder className="h-3.5 w-3.5" />
-          <span className="truncate" title={project.categoryTag}>{project.categoryTag}</span>
-        </div>
-        
-        {progressInfo.showProgressBar && (
-            <div className="ml-6 pt-1">
-            <div className="flex items-center space-x-2 mb-1">
-                <StopwatchIcon className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-xs font-medium text-muted-foreground truncate" title={progressInfo.displayText}>{progressInfo.displayText}</span>
-            </div>
-            <Progress 
-                value={progressInfo.percentage} 
-                className="h-2.5 rounded-full bg-secondary shadow-inner" 
-                indicatorClassName={progressInfo.progressColorClass}
-            />
-            </div>
+      <Card
+        className={cn(
+          "bg-card hover:shadow-lg transition-shadow",
+          isDragging ? "opacity-80 ring-2 ring-primary cursor-grabbing shadow-xl" : "cursor-grab active:cursor-grabbing shadow-md"
         )}
+      >
+        <CardContent className="p-3 space-y-2.5">
+          <div
+            className="absolute top-1/2 -translate-y-1/2 left-1.5 opacity-0 group-hover:opacity-80 transition-opacity p-1"
+            title="Drag to move project"
+          >
+            <GripVertical className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+          </div>
 
-        <div className="flex items-center justify-start mt-2 ml-6">
-          <Avatar className="h-7 w-7 text-xs border bg-muted">
-            <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(project.assigneeInitials || project.assigneeName)}</AvatarFallback>
-          </Avatar>
-        </div>
-      </CardContent>
-    </Card>
+          <div className="flex justify-between items-start ml-6">
+            <span className="text-sm font-semibold text-foreground">{project.projectIdDisplay}</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6">
+                  <EllipsisVertical className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem disabled>Edit Project (Soon)</DropdownMenuItem>
+                <DropdownMenuItem disabled className="text-destructive focus:text-destructive">Delete Project (Soon)</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          
+          <p className="text-xs font-medium text-muted-foreground ml-6 truncate" title={project.name}>{project.name}</p>
+
+          <div className="inline-flex items-center rounded-md border border-destructive/30 bg-destructive/20 px-2 py-0.5 text-xs font-semibold text-destructive transition-colors ml-6">
+            <CalendarDays className="mr-1.5 h-3 w-3" />
+            Target: {project.endDate ? parseISO(project.endDate).toLocaleDateString() : 'N/A'}
+          </div>
+
+          <div className="flex items-center space-x-1.5 text-xs text-muted-foreground ml-6">
+            <User className="h-3.5 w-3.5" />
+            <span className="truncate" title={project.assigneeName}>{project.assigneeName}</span>
+          </div>
+
+          <div className="flex items-center space-x-1.5 text-xs text-muted-foreground ml-6">
+            <Folder className="h-3.5 w-3.5" />
+            <span className="truncate" title={project.categoryTag}>{project.categoryTag}</span>
+          </div>
+          
+          {progressInfo.showProgressBar && (
+              <div className="ml-6 pt-1">
+              <div className="flex items-center space-x-2 mb-1">
+                  <StopwatchIcon className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-xs font-medium text-muted-foreground truncate" title={progressInfo.displayText}>{progressInfo.displayText}</span>
+              </div>
+              <Progress 
+                  value={progressInfo.percentage} 
+                  className="h-2.5 rounded-full bg-secondary shadow-inner" 
+                  indicatorClassName={progressInfo.progressColorClass}
+              />
+              </div>
+          )}
+
+          <div className="flex items-center justify-start mt-2 ml-6">
+            <Avatar className="h-7 w-7 text-xs border bg-muted">
+              <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(project.assigneeInitials || project.assigneeName)}</AvatarFallback>
+            </Avatar>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
+
