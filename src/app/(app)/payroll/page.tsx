@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, Construction } from 'lucide-react';
+import { Landmark, Construction } from 'lucide-react'; // Changed DollarSign to Landmark
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -13,7 +13,7 @@ export default function PayrollPage() {
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
         <div className="flex items-center gap-3">
-          <DollarSign className="h-8 w-8 text-primary flex-shrink-0" />
+          <Landmark className="h-8 w-8 text-primary flex-shrink-0" /> {/* Replaced DollarSign with Landmark */}
           <div>
             <h1 className="page-title">Payroll Management</h1>
             <p className="page-description">
