@@ -193,22 +193,23 @@ export default function FinanceManagerPage() {
   }, [currentUser, globalAppSettings]);
 
   const summaryCardsToDisplay = useMemo(() => {
-    const allCards = [
-      { title: "Total Income", value: totalIncome, icon: ArrowUpCircle, color: "text-green-600", hint: "green money" },
-      { title: "Total Expenses & Purchases", value: totalExpenses, icon: ArrowDownCircle, color: "text-red-600", hint: "red money" },
-      { title: "Available Balance", value: availableBalance, icon: Wallet, color: availableBalance >= 0 ? "text-blue-600" : "text-orange-600", hint: "wallet coins" },
-    ];
-
-    if (currentUser?.role === 'SYSTEM_ADMIN') {
-      return allCards; // System Admins see all cards
-    }
-
-    if (canUserAddExpense) {
-      return allCards; // Users who can add expenses see all cards
-    }
-    
-    // Users who cannot add expenses only see Total Income
-    return [allCards[0]]; 
+    return [
+      { title: "Total Income", value: totalIncome, icon: ArrowUpCircle, iconColorClass: "text-green-600", circleBgClass: "bg-green-100 dark:bg-green-700/20", hint: "green money" },
+      { title: "Total Expenses & Purchases", value: totalExpenses, icon: ArrowDownCircle, iconColorClass: "text-red-600", circleBgClass: "bg-red-100 dark:bg-red-700/20", hint: "red money" },
+      { 
+        title: "Available Balance", 
+        value: availableBalance, 
+        icon: Wallet, 
+        iconColorClass: availableBalance >= 0 ? "text-blue-600" : "text-orange-600", 
+        circleBgClass: availableBalance >=0 ? "bg-blue-100 dark:bg-blue-700/20" : "bg-orange-100 dark:bg-orange-700/20",
+        hint: "wallet coins" 
+      },
+    ].filter(card => {
+      if (currentUser?.role === 'SYSTEM_ADMIN') return true;
+      if (canUserAddExpense) return true;
+      // Users who cannot add expenses only see Total Income
+      return card.title === "Total Income";
+    });
   }, [totalIncome, totalExpenses, availableBalance, canUserAddExpense, currentUser]);
 
 
@@ -268,21 +269,20 @@ export default function FinanceManagerPage() {
       <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
         {summaryCardsToDisplay.map(card => (
           <Card key={card.title} className="shadow-lg hover:shadow-xl transition-shadow duration-300 ease-in-out border bg-card rounded-xl overflow-hidden transform hover:scale-[1.02]">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 sm:pt-5 px-4 sm:px-5">
-              <CardTitle className="text-md sm:text-lg font-semibold text-card-foreground">{card.title}</CardTitle>
-              <card.icon className={`h-6 w-6 sm:h-7 sm:w-7 ${card.color}`} />
-            </CardHeader>
-            <CardContent className="px-4 sm:px-5 pb-4 sm:pb-5">
-              {isLoading ? (
-                <Skeleton className="h-10 w-3/5" />
-              ) : (
-                <div className="text-3xl sm:text-4xl font-bold text-card-foreground">{formatCurrency(card.value)}</div>
-              )}
-              <p className="text-xs text-muted-foreground mt-1">
-                {card.title === "Available Balance" ? "Your current financial standing" : `Total ${card.title.toLowerCase().replace(' & purchases','')} recorded`}
-                 {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' && card.title === "Available Balance" && " (All Users Combined)"}
-                 {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' && card.title !== "Available Balance" && " (All Users)"}
-              </p>
+            <CardContent className="p-4 sm:p-5 flex items-center space-x-4">
+              <div className={`p-3 rounded-full ${card.circleBgClass}`}>
+                <card.icon className={`h-6 w-6 ${card.iconColorClass}`} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">{card.title}</p>
+                {isLoading ? (
+                  <Skeleton className="h-8 w-32 mt-1" />
+                ) : (
+                  <p className="text-2xl font-bold text-card-foreground font-mono">
+                    {formatCurrency(card.value)}
+                  </p>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}
