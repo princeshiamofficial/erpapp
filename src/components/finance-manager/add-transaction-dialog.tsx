@@ -20,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { TransactionType, User } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addTransactionAction } from '@/app/(app)/finance-manager/actions';
-import { Loader2, CalendarIcon, Users, ChevronsUpDown, Check, UploadCloud, Paperclip, XCircle } from 'lucide-react';
+import { Loader2, CalendarIcon, Users, ChevronsUpDown, Check, UploadCloud, Paperclip, XCircle, ImagePlus } from 'lucide-react';
 import { format } from 'date-fns';
 import { Command, CommandEmpty, CommandInput, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
@@ -49,6 +49,9 @@ export function AddTransactionDialog({
   const [selectedDocumentFile, setSelectedDocumentFile] = useState<File | null>(null);
   const [isUploadingDocument, setIsUploadingDocument] = useState(false);
   const documentFileRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+
 
   const [selectedSentToUserId, setSelectedSentToUserId] = useState<string | undefined>(undefined);
   const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false);
@@ -82,6 +85,7 @@ export function AddTransactionDialog({
     if (documentFileRef.current) documentFileRef.current.value = "";
     setIsUploadingDocument(false);
     setIsSubmitting(false);
+    setIsDraggingOver(false);
   }, [isSendMoneyFlow, currentUser?.role]);
 
   useEffect(() => {
@@ -104,7 +108,6 @@ export function AddTransactionDialog({
         setCategory("Sent Money");
       }
     } else if (isOpen && !isSendMoneyFlow && (type === 'expense' || type === 'purchase')) {
-      // Ensure category is not "Sent Money" if it's a regular expense/purchase
       if (category === "Sent Money") setCategory("");
     }
   }, [isOpen, isSendMoneyFlow, selectedSentToUserId, allUsersForDropdown, type, category]);
@@ -116,21 +119,84 @@ export function AddTransactionDialog({
     }
   }, [availableTransactionTypes, type]);
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const processFile = (file: File | null) => {
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
         toast({ title: "File too large", description: "Please select a file smaller than 5MB.", variant: "destructive" });
-        return;
+        return false;
+      }
+      if (!file.type.match(/image.*|application\/pdf|\.doc|\.docx|\.xls|\.xlsx|\.txt/)) {
+        toast({ title: "Invalid file type", description: "Allowed types: Images, PDF, DOC, XLS, TXT.", variant: "destructive" });
+        return false;
       }
       setSelectedDocumentFile(file);
+      return true;
     }
+    return false;
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    processFile(file || null);
   };
   
   const handleRemoveSelectedFile = () => {
     setSelectedDocumentFile(null);
     if (documentFileRef.current) documentFileRef.current.value = "";
-  }
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(true);
+  };
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+  };
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(true); // Keep it true while dragging over
+  };
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFile(e.dataTransfer.files[0]);
+      e.dataTransfer.clearData();
+    }
+  };
+  
+  useEffect(() => {
+    const handlePaste = (event: ClipboardEvent) => {
+      if (!isOpen || !isDocumentRequired) return; // Only handle paste if dialog is open and doc is needed
+      
+      const items = event.clipboardData?.items;
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type.indexOf("image") !== -1) {
+            const file = items[i].getAsFile();
+            if (file) {
+               const processed = processFile(file);
+               if (processed) {
+                 toast({title: "Image Pasted", description: "Image from clipboard has been attached."});
+               }
+               event.preventDefault(); // Prevent default paste action if we handled it
+               return;
+            }
+          }
+        }
+      }
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => {
+      document.removeEventListener('paste', handlePaste);
+    };
+  }, [isOpen, isDocumentRequired, processFile, toast]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -382,22 +448,34 @@ export function AddTransactionDialog({
             {isDocumentRequired && (
               <div className="space-y-1">
                 <Label htmlFor="transaction-document">Document Attachment *</Label>
-                <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => documentFileRef.current?.click()}
-                      disabled={isUploadingDocument || isSubmitting}
-                      className="flex-1"
-                    >
-                      <UploadCloud className="mr-2 h-4 w-4" />
-                      {selectedDocumentFile ? "Change File" : "Upload File"}
-                    </Button>
-                    {selectedDocumentFile && (
-                        <Button type="button" variant="ghost" size="icon" onClick={handleRemoveSelectedFile} title="Clear selection" className="text-muted-foreground hover:text-destructive h-9 w-9">
+                <div 
+                  ref={dropZoneRef}
+                  className={cn(
+                    "mt-1 flex flex-col items-center justify-center p-4 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors",
+                    isDraggingOver ? "border-primary bg-primary/10" : "border-border bg-background/50",
+                    selectedDocumentFile ? "border-green-500 bg-green-500/5" : ""
+                  )}
+                  onDragEnter={handleDragEnter}
+                  onDragLeave={handleDragLeave}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  onClick={() => documentFileRef.current?.click()}
+                >
+                  <UploadCloud className={cn("h-8 w-8 mb-2", selectedDocumentFile ? "text-green-600" : "text-muted-foreground", isDraggingOver ? "text-primary": "")} />
+                  <p className="text-sm text-muted-foreground">
+                    {isDraggingOver ? "Drop file here" : selectedDocumentFile ? "File selected:" : "Drag & drop or click to upload"}
+                  </p>
+                  {selectedDocumentFile && (
+                     <div className="mt-1 text-xs text-foreground font-medium flex items-center gap-1.5">
+                        <Paperclip className="h-3.5 w-3.5 text-green-600"/>
+                        <span>{selectedDocumentFile.name} ({(selectedDocumentFile.size / 1024).toFixed(1)} KB)</span>
+                        <Button type="button" variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRemoveSelectedFile();}} title="Clear selection" className="text-muted-foreground hover:text-destructive h-6 w-6">
                             <XCircle className="h-4 w-4"/>
                         </Button>
-                    )}
+                    </div>
+                  )}
+                  {!selectedDocumentFile && <p className="text-xs text-muted-foreground mt-0.5">Max 5MB. (Images, PDF, DOC, XLS, TXT)</p>}
+                  {!selectedDocumentFile && <p className="text-xs text-muted-foreground mt-0.5">You can also paste an image from clipboard.</p>}
                 </div>
                 <Input
                   id="transaction-document"
@@ -407,13 +485,6 @@ export function AddTransactionDialog({
                   className="hidden"
                   accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" 
                 />
-                 {selectedDocumentFile && (
-                    <div className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1">
-                        <Paperclip className="h-3 w-3"/>
-                        <span>{selectedDocumentFile.name} ({(selectedDocumentFile.size / 1024).toFixed(1)} KB)</span>
-                    </div>
-                )}
-                <p className="text-xs text-muted-foreground">Max 5MB. (Images, PDF, DOC, XLS, TXT)</p>
               </div>
             )}
 
