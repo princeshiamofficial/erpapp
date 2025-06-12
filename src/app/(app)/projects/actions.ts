@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import type { Project, ProjectStatusType, User, OrderLogEntry } from "@/types"; // Added User, OrderLogEntry
 import { updateProjectStatus as updateProjectStatusInDb } from '@/lib/project-service';
 import { getOrderById, updateOrder } from '@/lib/order-service'; // Added
-import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID } from '@/lib/status-service'; // Added ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID
+import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_STATUS_ID } from '@/lib/status-service'; // Added SHIPPED_STATUS_ID
 import { v4 as uuidv4 } from 'uuid'; // Added
 
 export async function updateProjectStatusAction(
@@ -20,20 +20,37 @@ export async function updateProjectStatusAction(
       return { success: false, error: "Failed to update project status in database." };
     }
 
-    // If project status changed to 'CR Cancel', update the corresponding order
-    if (newStatus === 'CR Cancel') {
-      const order = await getOrderById(project.id); // project.id is the order ID for dynamic projects
-      if (order && order.currentStatus !== CANCELLED_STATUS_ID) {
+    // If project status changed, update the corresponding order
+    const order = await getOrderById(project.id); // project.id is the order ID for dynamic projects
+    if (order) {
+      let targetOrderStatusId: string | null = null;
+      let statusUpdateNote: string | null = null;
+
+      if (newStatus === 'CR Cancel' && order.currentStatus !== CANCELLED_STATUS_ID) {
+        targetOrderStatusId = CANCELLED_STATUS_ID;
+        statusUpdateNote = `Order cancelled from project board by ${actingUser.name}. Project status: CR Cancel.`;
+      } else if (newStatus === 'On Hold' && order.currentStatus !== ON_HOLD_STATUS_ID) {
+        targetOrderStatusId = ON_HOLD_STATUS_ID;
+        statusUpdateNote = `Order put on hold from project board by ${actingUser.name}. Project status: On Hold.`;
+      } else if (newStatus === 'Logistics' && order.currentStatus !== LOGISTICS_STATUS_ID) {
+        targetOrderStatusId = LOGISTICS_STATUS_ID;
+        statusUpdateNote = `Order moved to Logistics via project board by ${actingUser.name}. Project status: Logistics.`;
+      } else if (newStatus === 'Courier' && order.currentStatus !== SHIPPED_STATUS_ID) {
+        targetOrderStatusId = SHIPPED_STATUS_ID;
+        statusUpdateNote = `Order shipped (project in Courier stage) by ${actingUser.name}. Project status: Courier.`;
+      }
+
+      if (targetOrderStatusId && statusUpdateNote) {
         const newLogEntry: OrderLogEntry = {
           id: uuidv4(),
           timestamp: new Date().toISOString(),
-          status: CANCELLED_STATUS_ID,
+          status: targetOrderStatusId,
           changedByUserId: actingUser.id,
           changedByUserName: actingUser.name,
-          notes: `Order cancelled from project board by ${actingUser.name}. Project status: CR Cancel.`,
+          notes: statusUpdateNote,
         };
         const orderUpdateSuccess = await updateOrder(order.id, {
-          currentStatus: CANCELLED_STATUS_ID,
+          currentStatus: targetOrderStatusId,
           statusHistory: [...order.statusHistory, newLogEntry],
           updatedAt: new Date().toISOString(),
           updatedByUserId: actingUser.id,
@@ -41,70 +58,17 @@ export async function updateProjectStatusAction(
         });
 
         if (!orderUpdateSuccess) {
-          console.warn(`Project ${project.id} status updated to CR Cancel, but failed to update corresponding order ${order.id} to Cancelled.`);
+          console.warn(`Project ${project.id} status updated to ${newStatus}, but failed to update corresponding order ${order.id} to target status ${targetOrderStatusId}.`);
         } else {
-          console.log(`Order ${order.id} status updated to Cancelled due to project ${project.id} being CR Cancelled.`);
+          console.log(`Order ${order.id} status updated to ${targetOrderStatusId} due to project ${project.id} being ${newStatus}.`);
           revalidatePath(`/track/${order.id}`);
           revalidatePath("/(app)/orders");
           revalidatePath("/(app)/active-orders");
-        }
-      }
-    } else if (newStatus === 'On Hold') { // If project status changed to 'On Hold'
-      const order = await getOrderById(project.id);
-      if (order && order.currentStatus !== ON_HOLD_STATUS_ID) {
-        const newLogEntry: OrderLogEntry = {
-          id: uuidv4(),
-          timestamp: new Date().toISOString(),
-          status: ON_HOLD_STATUS_ID,
-          changedByUserId: actingUser.id,
-          changedByUserName: actingUser.name,
-          notes: `Order put on hold from project board by ${actingUser.name}. Project status: On Hold.`,
-        };
-        const orderUpdateSuccess = await updateOrder(order.id, {
-          currentStatus: ON_HOLD_STATUS_ID,
-          statusHistory: [...order.statusHistory, newLogEntry],
-          updatedAt: new Date().toISOString(),
-          updatedByUserId: actingUser.id,
-          updatedByUserName: actingUser.name,
-        });
-        if (!orderUpdateSuccess) {
-          console.warn(`Project ${project.id} status updated to On Hold, but failed to update corresponding order ${order.id} to On Hold.`);
-        } else {
-          console.log(`Order ${order.id} status updated to On Hold due to project ${project.id} being On Hold.`);
-          revalidatePath(`/track/${order.id}`);
-          revalidatePath("/(app)/orders");
-          revalidatePath("/(app)/active-orders");
-        }
-      }
-    } else if (newStatus === 'Logistics') { // If project status changed to 'Logistics'
-      const order = await getOrderById(project.id);
-      if (order && order.currentStatus !== LOGISTICS_STATUS_ID) { // Use LOGISTICS_STATUS_ID
-        const newLogEntry: OrderLogEntry = {
-          id: uuidv4(),
-          timestamp: new Date().toISOString(),
-          status: LOGISTICS_STATUS_ID, // Use LOGISTICS_STATUS_ID
-          changedByUserId: actingUser.id,
-          changedByUserName: actingUser.name,
-          notes: `Order moved to Logistics via project board by ${actingUser.name}. Project status: Logistics.`, // Updated note
-        };
-        const orderUpdateSuccess = await updateOrder(order.id, {
-          currentStatus: LOGISTICS_STATUS_ID, // Use LOGISTICS_STATUS_ID
-          statusHistory: [...order.statusHistory, newLogEntry],
-          updatedAt: new Date().toISOString(),
-          updatedByUserId: actingUser.id,
-          updatedByUserName: actingUser.name,
-        });
-        if (!orderUpdateSuccess) {
-          console.warn(`Project ${project.id} status updated to Logistics, but failed to update corresponding order ${order.id} to Logistics.`);
-        } else {
-          console.log(`Order ${order.id} status updated to Logistics due to project ${project.id} being in Logistics.`);
-          revalidatePath(`/track/${order.id}`);
-          revalidatePath("/(app)/orders");
-          revalidatePath("/(app)/active-orders");
+          revalidatePath("/(app)/deliveries/monthly");
+          revalidatePath("/(app)/deliveries/weekly");
         }
       }
     }
-
 
     revalidatePath("/(app)/projects");
     return { success: true };
@@ -113,5 +77,3 @@ export async function updateProjectStatusAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
-
-
