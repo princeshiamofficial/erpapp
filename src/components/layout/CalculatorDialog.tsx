@@ -6,17 +6,45 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { MultiColorCalculatorIcon } from '@/components/icons/MultiColorCalculatorIcon'; // Assuming this exists
+import { MultiColorCalculatorIcon } from '@/components/icons/MultiColorCalculatorIcon';
+import { motion } from 'framer-motion'; // Import framer-motion
+import { cn } from '@/lib/utils';
 
 interface CalculatorDialogProps {
   children: React.ReactNode; // To use as DialogTrigger
 }
+
+interface CalculatorButtonProps {
+  label: string;
+  onClick: () => void;
+  className?: string;
+  ariaLabel?: string;
+}
+
+const CalcButton: React.FC<CalculatorButtonProps> = ({ label, onClick, className, ariaLabel }) => {
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "text-xl font-medium h-14 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-card transition-all duration-150 ease-in-out",
+        "flex items-center justify-center", // Ensure text is centered
+        className
+      )}
+      whileTap={{ scale: 0.95 }}
+      whileHover={{ scale: 1.03, boxShadow: "0px 5px 10px rgba(0,0,0,0.1)" }}
+      aria-label={ariaLabel || label}
+    >
+      {label}
+    </motion.button>
+  );
+};
+
 
 export function CalculatorDialog({ children }: CalculatorDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -67,17 +95,21 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
     if (operator === "+") return prev + current;
     if (operator === "-") return prev - current;
     if (operator === "*") return prev * current;
-    if (operator === "/") return prev / current;
-    return current; // Should not happen
+    if (operator === "/" && current !== 0) return prev / current;
+    if (operator === "/" && current === 0) {
+      alert("Cannot divide by zero"); // Basic error handling
+      return parseFloat(currentValue || "0");
+    }
+    return current;
   };
 
   const handleEqualsClick = () => {
     if (operator && currentValue !== null) {
       const result = performCalculation();
       setDisplayValue(String(result));
-      setCurrentValue(null); // Or String(result) if you want to continue operations
+      setCurrentValue(null); 
       setOperator(null);
-      setWaitingForOperand(true); // Ready for new input
+      setWaitingForOperand(true); 
     }
   };
 
@@ -89,35 +121,50 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
     }
     setWaitingForOperand(false);
   };
+  
+  const handleBackspaceClick = () => {
+    if (waitingForOperand) return; // Don't backspace if waiting for new number after operator
+    if (displayValue.length === 1) {
+      setDisplayValue("0");
+    } else {
+      setDisplayValue(displayValue.slice(0, -1));
+    }
+  };
 
-  const calculatorButtons = [
-    { label: "C", onClick: () => handleClearClick(true), className: "col-span-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground" },
-    { label: "CE", onClick: () => handleClearClick(false), className: "bg-secondary hover:bg-secondary/80" },
-    { label: "/", onClick: () => handleOperatorClick("/"), className: "bg-primary hover:bg-primary/90 text-primary-foreground" },
-    { label: "7", onClick: () => handleNumberClick("7") },
-    { label: "8", onClick: () => handleNumberClick("8") },
-    { label: "9", onClick: () => handleNumberClick("9") },
-    { label: "*", onClick: () => handleOperatorClick("*"), className: "bg-primary hover:bg-primary/90 text-primary-foreground" },
-    { label: "4", onClick: () => handleNumberClick("4") },
-    { label: "5", onClick: () => handleNumberClick("5") },
-    { label: "6", onClick: () => handleNumberClick("6") },
-    { label: "-", onClick: () => handleOperatorClick("-"), className: "bg-primary hover:bg-primary/90 text-primary-foreground" },
-    { label: "1", onClick: () => handleNumberClick("1") },
-    { label: "2", onClick: () => handleNumberClick("2") },
-    { label: "3", onClick: () => handleNumberClick("3") },
-    { label: "+", onClick: () => handleOperatorClick("+"), className: "bg-primary hover:bg-primary/90 text-primary-foreground" },
-    { label: "0", onClick: () => handleNumberClick("0"), className: "col-span-2" },
-    { label: ".", onClick: handleDecimalClick },
-    { label: "=", onClick: handleEqualsClick, className: "bg-green-600 hover:bg-green-700 text-white" },
+
+  const calculatorButtonsConfig = [
+    { label: "C", onClick: () => handleClearClick(true), className: "col-span-1 bg-destructive/80 hover:bg-destructive text-destructive-foreground", ariaLabel: "Clear All" },
+    { label: "CE", onClick: () => handleClearClick(false), className: "bg-secondary hover:bg-secondary/80 text-secondary-foreground", ariaLabel: "Clear Entry" },
+    { label: "⌫", onClick: handleBackspaceClick, className: "bg-secondary hover:bg-secondary/80 text-secondary-foreground", ariaLabel: "Backspace" },
+    { label: "÷", onClick: () => handleOperatorClick("/"), className: "bg-primary/90 hover:bg-primary text-primary-foreground", ariaLabel: "Divide" },
+    
+    { label: "7", onClick: () => handleNumberClick("7"), className: "bg-card hover:bg-muted border border-border" },
+    { label: "8", onClick: () => handleNumberClick("8"), className: "bg-card hover:bg-muted border border-border" },
+    { label: "9", onClick: () => handleNumberClick("9"), className: "bg-card hover:bg-muted border border-border" },
+    { label: "×", onClick: () => handleOperatorClick("*"), className: "bg-primary/90 hover:bg-primary text-primary-foreground", ariaLabel: "Multiply" },
+
+    { label: "4", onClick: () => handleNumberClick("4"), className: "bg-card hover:bg-muted border border-border" },
+    { label: "5", onClick: () => handleNumberClick("5"), className: "bg-card hover:bg-muted border border-border" },
+    { label: "6", onClick: () => handleNumberClick("6"), className: "bg-card hover:bg-muted border border-border" },
+    { label: "-", onClick: () => handleOperatorClick("-"), className: "bg-primary/90 hover:bg-primary text-primary-foreground", ariaLabel: "Subtract" },
+
+    { label: "1", onClick: () => handleNumberClick("1"), className: "bg-card hover:bg-muted border border-border" },
+    { label: "2", onClick: () => handleNumberClick("2"), className: "bg-card hover:bg-muted border border-border" },
+    { label: "3", onClick: () => handleNumberClick("3"), className: "bg-card hover:bg-muted border border-border" },
+    { label: "+", onClick: () => handleOperatorClick("+"), className: "bg-primary/90 hover:bg-primary text-primary-foreground", ariaLabel: "Add" },
+
+    { label: "0", onClick: () => handleNumberClick("0"), className: "col-span-2 bg-card hover:bg-muted border border-border" },
+    { label: ".", onClick: handleDecimalClick, className: "bg-card hover:bg-muted border border-border", ariaLabel: "Decimal" },
+    { label: "=", onClick: handleEqualsClick, className: "bg-green-600 hover:bg-green-700 text-white", ariaLabel: "Equals" },
   ];
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-xs p-0"> {/* Adjusted max-width and removed padding for tighter fit */}
-        <div className="bg-card rounded-lg shadow-xl">
-          <DialogHeader className="p-4 border-b border-border">
-            <DialogTitle className="flex items-center text-lg">
+      <DialogContent className="sm:max-w-xs p-0 border-border/50 shadow-2xl bg-background">
+        <div className="bg-card rounded-lg"> {/* Main calculator body background */}
+          <DialogHeader className="p-4 border-b border-border/30">
+            <DialogTitle className="flex items-center text-lg text-card-foreground">
               <MultiColorCalculatorIcon className="mr-2 h-5 w-5" /> Calculator
             </DialogTitle>
           </DialogHeader>
@@ -126,21 +173,18 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
               type="text"
               value={displayValue}
               readOnly
-              className="h-16 text-3xl text-right font-mono bg-muted border-border/50 rounded-md shadow-inner focus-visible:ring-0 focus-visible:ring-offset-0"
+              className="h-20 text-4xl text-right font-mono bg-muted/70 border-border/50 rounded-md shadow-inner focus-visible:ring-0 focus-visible:ring-offset-0 text-card-foreground placeholder:text-muted-foreground"
               aria-label="Calculator display"
             />
-            <div className="grid grid-cols-4 gap-2">
-              {calculatorButtons.map((btn) => (
-                <Button
+            <div className="grid grid-cols-4 gap-2.5"> {/* Increased gap slightly */}
+              {calculatorButtonsConfig.map((btn) => (
+                <CalcButton
                   key={btn.label}
+                  label={btn.label}
                   onClick={btn.onClick}
-                  variant={btn.className?.includes("bg-primary") || btn.className?.includes("bg-destructive") || btn.className?.includes("bg-green") ? "default" : "outline"}
-                  size="lg"
-                  className={`text-xl font-medium h-14 ${btn.className || ''}`}
-                  aria-label={btn.label === "*" ? "Multiply" : btn.label === "/" ? "Divide" : btn.label}
-                >
-                  {btn.label}
-                </Button>
+                  className={btn.className}
+                  ariaLabel={btn.ariaLabel}
+                />
               ))}
             </div>
           </div>
