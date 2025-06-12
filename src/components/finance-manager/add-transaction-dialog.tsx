@@ -125,11 +125,10 @@ export function AddTransactionDialog({
 
   const processFile = useCallback((file: File | null) => {
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast({ title: "File too large", description: "Please select a file smaller than 5MB.", variant: "destructive" });
+      if (file.size > 50 * 1024 * 1024) { // 50MB limit
+        toast({ title: "File too large", description: "Please select a file smaller than 50MB.", variant: "destructive" });
         return false;
       }
-      // File type validation removed
       setSelectedDocumentFile(file);
       return true;
     }
@@ -178,7 +177,6 @@ export function AddTransactionDialog({
       const items = event.clipboardData?.items;
       if (items) {
         for (let i = 0; i < items.length; i++) {
-          // Allow pasting any file type if browser supports it, though images are most common
           const file = items[i].getAsFile();
           if (file) {
              const processed = processFile(file);
@@ -216,7 +214,7 @@ export function AddTransactionDialog({
     }
 
     let uploadedDocumentUrl: string | null = null;
-    if (isDocumentRequired) { // Use the memoized value here
+    if (isDocumentRequired) { 
       if (!selectedDocumentFile) {
         toast({ title: "Validation Error", description: "A document attachment is required for expenses and purchases.", variant: "destructive" });
         return;
@@ -473,7 +471,7 @@ export function AddTransactionDialog({
                         </Button>
                     </div>
                   )}
-                  {!selectedDocumentFile && <p className="text-xs text-muted-foreground mt-0.5">Max 5MB. (Any file type)</p>}
+                  {!selectedDocumentFile && <p className="text-xs text-muted-foreground mt-0.5">Max 50MB. (Any file type)</p>}
                   {!selectedDocumentFile && <p className="text-xs text-muted-foreground mt-0.5">You can also paste a file from clipboard.</p>}
                 </div>
                 <Input

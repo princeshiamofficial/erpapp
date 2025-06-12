@@ -63,8 +63,8 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast({ title: "File too large", description: "Please select a file smaller than 5MB.", variant: "destructive" });
+      if (file.size > 50 * 1024 * 1024) { // 50MB limit
+        toast({ title: "File too large", description: "Please select a file smaller than 50MB.", variant: "destructive" });
         return;
       }
       setSelectedDocumentFile(file);
@@ -149,7 +149,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
       documentUrl: newUploadedDocumentUrl, // This will be null if removed, or the new URL
     };
 
-    const result = await updateTransactionAction(transaction.id, updates, currentUser.id);
+    const result = await updateTransactionAction(transaction.id, updates, currentUser.id, currentUser.role);
     setIsSubmitting(false);
 
     if (result.success) {
@@ -272,7 +272,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
                    ref={documentFileRef}
                    onChange={handleFileChange}
                    className="hidden"
-                   accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
+                   accept="*/*" 
                  />
                   {selectedDocumentFile && (
                      <div className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1">
@@ -280,7 +280,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
                          <span>{selectedDocumentFile.name} ({(selectedDocumentFile.size / 1024).toFixed(1)} KB)</span>
                      </div>
                  )}
-                  <p className="text-xs text-muted-foreground">Max 5MB. (Images, PDF, DOC, XLS, TXT)</p>
+                  <p className="text-xs text-muted-foreground">Max 50MB. (Any file type)</p>
                   {isDocumentMissingForRequiredType && <p className="text-xs text-destructive">A document is required for this transaction type.</p>}
                </div>
             )}
