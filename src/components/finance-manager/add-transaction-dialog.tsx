@@ -119,16 +119,17 @@ export function AddTransactionDialog({
     }
   }, [availableTransactionTypes, type]);
 
+  const isDocumentRequired = useMemo(() => {
+    return (type === 'expense' || type === 'purchase') && !isSendMoneyFlow;
+  }, [type, isSendMoneyFlow]);
+
   const processFile = useCallback((file: File | null) => {
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
         toast({ title: "File too large", description: "Please select a file smaller than 5MB.", variant: "destructive" });
         return false;
       }
-      if (!file.type.match(/image.*|application\/pdf|\.doc|\.docx|\.xls|\.xlsx|\.txt/)) {
-        toast({ title: "Invalid file type", description: "Allowed types: Images, PDF, DOC, XLS, TXT.", variant: "destructive" });
-        return false;
-      }
+      // File type validation removed
       setSelectedDocumentFile(file);
       return true;
     }
@@ -170,10 +171,6 @@ export function AddTransactionDialog({
     }
   };
   
-  const isDocumentRequired = useMemo(() => {
-    return (type === 'expense' || type === 'purchase') && !isSendMoneyFlow;
-  }, [type, isSendMoneyFlow]);
-
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
       if (!isOpen || !isDocumentRequired) return; 
@@ -181,16 +178,15 @@ export function AddTransactionDialog({
       const items = event.clipboardData?.items;
       if (items) {
         for (let i = 0; i < items.length; i++) {
-          if (items[i].type.indexOf("image") !== -1) {
-            const file = items[i].getAsFile();
-            if (file) {
-               const processed = processFile(file);
-               if (processed) {
-                 toast({title: "Image Pasted", description: "Image from clipboard has been attached."});
-               }
-               event.preventDefault(); 
-               return;
-            }
+          // Allow pasting any file type if browser supports it, though images are most common
+          const file = items[i].getAsFile();
+          if (file) {
+             const processed = processFile(file);
+             if (processed) {
+               toast({title: "File Pasted", description: "File from clipboard has been attached."});
+             }
+             event.preventDefault(); 
+             return;
           }
         }
       }
@@ -477,8 +473,8 @@ export function AddTransactionDialog({
                         </Button>
                     </div>
                   )}
-                  {!selectedDocumentFile && <p className="text-xs text-muted-foreground mt-0.5">Max 5MB. (Images, PDF, DOC, XLS, TXT)</p>}
-                  {!selectedDocumentFile && <p className="text-xs text-muted-foreground mt-0.5">You can also paste an image from clipboard.</p>}
+                  {!selectedDocumentFile && <p className="text-xs text-muted-foreground mt-0.5">Max 5MB. (Any file type)</p>}
+                  {!selectedDocumentFile && <p className="text-xs text-muted-foreground mt-0.5">You can also paste a file from clipboard.</p>}
                 </div>
                 <Input
                   id="transaction-document"
@@ -486,7 +482,7 @@ export function AddTransactionDialog({
                   ref={documentFileRef}
                   onChange={handleFileChange}
                   className="hidden"
-                  accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" 
+                  accept="*/*" 
                 />
               </div>
             )}
