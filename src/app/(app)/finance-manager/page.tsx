@@ -11,7 +11,7 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide } from 'lucide-react'; // Renamed CalendarIcon to avoid conflict
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide } from 'lucide-react'; 
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -34,10 +34,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  addTransactionAction,
   deleteTransactionAction,
   updateTransactionAction,
   getTransactionsForUserAction,
   getAllTransactionsAction,
+  addNoteAction, 
+  deleteNoteAction, 
+  getNotesForUserAction, 
+  updateNoteAction 
 } from './actions';
 import { MultiColorCalculatorIcon } from '@/components/icons/MultiColorCalculatorIcon';
 import { Banknote } from 'lucide-react';
@@ -76,9 +81,7 @@ export default function FinanceManagerPage() {
 
   const defaultDateRange: DateRange = { from: subDays(new Date(), 29), to: new Date() };
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(defaultDateRange);
-  // The displayLabel and predefinedValue are managed by the DateRangePicker component itself,
-  // but we receive them in the callback if needed.
-
+  
   const [isClient, setIsClient] = useState(false);
   useEffect(() => setIsClient(true), []);
 
@@ -148,6 +151,21 @@ export default function FinanceManagerPage() {
     }
   }, [currentUser, viewMode, fetchFinancialData]);
 
+  const displayableTransactionTypeFilters = useMemo(() => {
+    if (currentUser?.role === 'SYSTEM_ADMIN') {
+      return TRANSACTION_TYPES_FOR_FILTER;
+    }
+    return TRANSACTION_TYPES_FOR_FILTER.filter(
+      (type) => type.value !== 'income' && type.value !== 'send_money'
+    );
+  }, [currentUser?.role]);
+
+  useEffect(() => {
+    if (currentUser?.role !== 'SYSTEM_ADMIN' && (transactionTypeFilter === 'income' || transactionTypeFilter === 'send_money')) {
+      setTransactionTypeFilter('all');
+    }
+  }, [currentUser?.role, transactionTypeFilter]);
+
 
   const handleDeleteRequest = (transaction: Transaction) => {
     setTransactionToDelete(transaction);
@@ -185,7 +203,6 @@ export default function FinanceManagerPage() {
   const filteredTransactions = useMemo(() => {
     let results = transactions;
 
-    // Date Range Filter
     if (selectedDateRange?.from && selectedDateRange?.to) {
       const startDate = new Date(selectedDateRange.from);
       startDate.setHours(0, 0, 0, 0);
@@ -204,7 +221,6 @@ export default function FinanceManagerPage() {
       });
     }
 
-    // Transaction Type Filter
     if (transactionTypeFilter !== 'all') {
       results = results.filter(t => {
         if (transactionTypeFilter === 'income') return t.type === 'income';
@@ -215,7 +231,6 @@ export default function FinanceManagerPage() {
       });
     }
   
-    // Search Term Filter
     if (transactionSearchTerm.trim()) {
       const lowerSearchTerm = transactionSearchTerm.toLowerCase();
       results = results.filter(t => {
@@ -236,15 +251,14 @@ export default function FinanceManagerPage() {
   }, [transactions, transactionSearchTerm, viewMode, userMap, transactionTypeFilter, selectedDateRange]);
 
   const { totalIncome, totalExpenses, availableBalance } = useMemo(() => {
-    // Calculations should now use 'filteredTransactions' to reflect date and type filters
     let income = 0;
     let expensesSum = 0;
-    filteredTransactions.forEach(t => { // Use filteredTransactions here
+    filteredTransactions.forEach(t => { 
       if (t.type === 'income') income += t.amount;
       else if (t.type === 'expense' || t.type === 'purchase') expensesSum += t.amount;
     });
     return { totalIncome: income, totalExpenses: expensesSum, availableBalance: income - expensesSum };
-  }, [filteredTransactions]); // Depend on filteredTransactions
+  }, [filteredTransactions]); 
 
   const pageDescription = useMemo(() => {
     if (!currentUser) return "Manage your finances.";
@@ -284,20 +298,21 @@ export default function FinanceManagerPage() {
         hint: "wallet coins"
       },
     ].filter(card => {
-      if (currentUser?.role === 'SYSTEM_ADMIN') return true;
-      if (canUserAddExpense) return true;
-      return card.title === "Total Income";
+      if (currentUser?.role === 'SYSTEM_ADMIN') return true; // Sys admin sees all cards
+      // Non-sys admin sees expenses if they can add them.
+      if (card.title.toLowerCase().includes("expense") && !canUserAddExpense) return false;
+      // Non-sys admin sees income card by default (as they can receive funds)
+      // Balance is always shown.
+      return true;
     });
   }, [totalIncome, totalExpenses, availableBalance, canUserAddExpense, currentUser]);
 
   const handleDateRangeChange = (
     range: DateRange | undefined,
-    label: string, // This label is for display purposes from the picker
+    label: string, 
     predefined: PredefinedRange | "custom" | null
   ) => {
     setSelectedDateRange(range);
-    // setCurrentDateRangeLabel(label); // Optional: if you want to display the label elsewhere
-    // setSelectedPredefinedValue(predefined); // Optional: if you need the predefined value for other logic
   };
 
 
@@ -372,7 +387,7 @@ export default function FinanceManagerPage() {
               </div>
             </SelectTrigger>
             <SelectContent>
-              {TRANSACTION_TYPES_FOR_FILTER.map((filterType) => (
+              {displayableTransactionTypeFilters.map((filterType) => (
                 <SelectItem key={filterType.value} value={filterType.value}>
                   {filterType.label}
                 </SelectItem>
@@ -429,10 +444,9 @@ export default function FinanceManagerPage() {
                   <CardTitle className="text-card-foreground text-xl">Recent Transactions</CardTitle>
                   <CardDescription className="text-muted-foreground text-sm mt-0.5">
                     {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' ? "Latest transactions from all users." : "Your latest income, expense and purchase entries."}
-                    {transactionTypeFilter !== 'all' && ` (Filtered by: ${TRANSACTION_TYPES_FOR_FILTER.find(f=>f.value === transactionTypeFilter)?.label})`}
+                    {transactionTypeFilter !== 'all' && ` (Filtered by: ${displayableTransactionTypeFilters.find(f=>f.value === transactionTypeFilter)?.label})`}
                   </CardDescription>
                 </div>
-                {/* Search Input moved to the filter row */}
             </div>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
@@ -464,7 +478,7 @@ export default function FinanceManagerPage() {
                 <p className="text-sm">
                   {transactionSearchTerm || transactionTypeFilter !== 'all' || (selectedDateRange && (selectedDateRange.from !== defaultDateRange.from || selectedDateRange.to !== defaultDateRange.to))
                     ? "Try adjusting your search or filters."
-                    : (canUserAddExpense ? "Add your first income or expense to get started!" : "Expense logging may be disabled for your role.")
+                    : (canUserAddExpense || currentUser?.role === 'SYSTEM_ADMIN' ? "Add your first transaction to get started!" : "Transaction logging may be restricted for your role.")
                   }
                 </p>
               </div>
@@ -542,5 +556,4 @@ export default function FinanceManagerPage() {
     </div>
   );
 }
-
     
