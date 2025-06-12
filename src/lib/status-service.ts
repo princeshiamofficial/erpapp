@@ -8,6 +8,7 @@ const STATUSES_COLLECTION = 'customOrderStatuses';
 export const READY_FOR_DESIGN_STATUS_ID = 'ready-for-design';
 export const ORDER_SUBMITTED_ID = 'order-submitted'; // Added export
 export const CANCELLED_STATUS_ID = 'cancelled'; // Exported Cancelled Status ID
+export const ON_HOLD_STATUS_ID = 'on-hold'; // Exported On Hold Status ID
 
 // Default statuses with names, colors, and default allowed roles
 const defaultStatusesData: Array<Omit<CustomStatus, 'id' | 'isSystemStatus' | 'isVisible'> & { defaultName: string, defaultAllowedRoles?: UserRole[] }> = [

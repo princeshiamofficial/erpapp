@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { Project, ProjectStatusType, User, OrderLogEntry } from "@/types"; // Added User, OrderLogEntry
 import { updateProjectStatus as updateProjectStatusInDb } from '@/lib/project-service';
 import { getOrderById, updateOrder } from '@/lib/order-service'; // Added
-import { CANCELLED_STATUS_ID } from '@/lib/status-service'; // Added
+import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID } from '@/lib/status-service'; // Added ON_HOLD_STATUS_ID
 import { v4 as uuidv4 } from 'uuid'; // Added
 
 export async function updateProjectStatusAction(
@@ -41,8 +41,6 @@ export async function updateProjectStatusAction(
 
         if (!orderUpdateSuccess) {
           console.warn(`Project ${project.id} status updated to CR Cancel, but failed to update corresponding order ${order.id} to Cancelled.`);
-          // Decide if this should make the whole action fail or just be a warning
-          // For now, we'll consider the project update a success and log a warning for the order.
         } else {
           console.log(`Order ${order.id} status updated to Cancelled due to project ${project.id} being CR Cancelled.`);
           revalidatePath(`/track/${order.id}`);
@@ -50,7 +48,35 @@ export async function updateProjectStatusAction(
           revalidatePath("/(app)/active-orders");
         }
       }
+    } else if (newStatus === 'On Hold') { // If project status changed to 'On Hold'
+      const order = await getOrderById(project.id);
+      if (order && order.currentStatus !== ON_HOLD_STATUS_ID) {
+        const newLogEntry: OrderLogEntry = {
+          id: uuidv4(),
+          timestamp: new Date().toISOString(),
+          status: ON_HOLD_STATUS_ID,
+          changedByUserId: actingUser.id,
+          changedByUserName: actingUser.name,
+          notes: `Order put on hold from project board by ${actingUser.name}. Project status: On Hold.`,
+        };
+        const orderUpdateSuccess = await updateOrder(order.id, {
+          currentStatus: ON_HOLD_STATUS_ID,
+          statusHistory: [...order.statusHistory, newLogEntry],
+          updatedAt: new Date().toISOString(),
+          updatedByUserId: actingUser.id,
+          updatedByUserName: actingUser.name,
+        });
+        if (!orderUpdateSuccess) {
+          console.warn(`Project ${project.id} status updated to On Hold, but failed to update corresponding order ${order.id} to On Hold.`);
+        } else {
+          console.log(`Order ${order.id} status updated to On Hold due to project ${project.id} being On Hold.`);
+          revalidatePath(`/track/${order.id}`);
+          revalidatePath("/(app)/orders");
+          revalidatePath("/(app)/active-orders");
+        }
+      }
     }
+
 
     revalidatePath("/(app)/projects");
     return { success: true };
