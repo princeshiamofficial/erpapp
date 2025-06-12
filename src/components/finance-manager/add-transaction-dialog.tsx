@@ -54,8 +54,20 @@ export function AddTransactionDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
+  const availableTransactionTypes = useMemo(() => {
+    const baseTypes = [
+      { value: 'expense', label: 'Expense' },
+      { value: 'purchase', label: 'Purchase' },
+    ];
+    if (currentUser?.role === 'SYSTEM_ADMIN') {
+      return [{ value: 'income', label: 'Income' }, ...baseTypes];
+    }
+    return baseTypes;
+  }, [currentUser?.role]);
+
   const resetForm = useCallback(() => {
-    setType(isSendMoneyFlow ? 'expense' : 'expense');
+    const defaultType = isSendMoneyFlow ? 'expense' : (currentUser?.role === 'SYSTEM_ADMIN' ? 'income' : 'expense');
+    setType(defaultType);
     setAmount('');
     setDescription('');
     setDate(new Date());
@@ -64,11 +76,12 @@ export function AddTransactionDialog({
     setIsUserPopoverOpen(false);
     setUserSearchQuery("");
     setCategory(isSendMoneyFlow ? "Sent Money" : "");
-  }, [isSendMoneyFlow]);
+  }, [isSendMoneyFlow, currentUser?.role]);
 
   useEffect(() => {
     if (isOpen) {
-      setType(isSendMoneyFlow ? 'expense' : 'expense');
+      const initialType = isSendMoneyFlow ? 'expense' : (currentUser?.role === 'SYSTEM_ADMIN' ? 'income' : 'expense');
+      setType(initialType);
       setAmount('');
       setDescription('');
       setDate(new Date());
@@ -83,7 +96,7 @@ export function AddTransactionDialog({
     } else {
       resetForm(); 
     }
-  }, [isOpen, isSendMoneyFlow, resetForm]);
+  }, [isOpen, isSendMoneyFlow, resetForm, currentUser?.role]);
 
 
   useEffect(() => {
@@ -100,6 +113,13 @@ export function AddTransactionDialog({
       }
     }
   }, [isOpen, isSendMoneyFlow, selectedSentToUserId, allUsersForDropdown]);
+
+  // Ensure the selected type is valid if availableTransactionTypes changes (e.g., role change)
+  useEffect(() => {
+    if (!availableTransactionTypes.some(t => t.value === type)) {
+      setType(availableTransactionTypes[0]?.value || 'expense');
+    }
+  }, [availableTransactionTypes, type]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -203,9 +223,9 @@ export function AddTransactionDialog({
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="income">Income</SelectItem>
-                    <SelectItem value="expense">Expense</SelectItem>
-                    <SelectItem value="purchase">Purchase</SelectItem>
+                    {availableTransactionTypes.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
