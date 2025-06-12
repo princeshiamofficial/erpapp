@@ -169,9 +169,11 @@ export default function DashboardPage() {
     }
     
     return ordersToFilter;
-  }, [allOrders, selectedDateRange, currentUser]); // currentUser dependency ensures re-filter on user change
+  }, [allOrders, selectedDateRange, currentUser]);
 
   useEffect(() => {
+    // This useEffect handles calculations specific to the currently logged-in user,
+    // especially for CRM roles due to the `filteredOrders` dependency which is CRM-aware.
     if (isLoadingData) return;
 
     let currentTotalSales = 0;
@@ -180,8 +182,6 @@ export default function DashboardPage() {
     // Add currentTotalSellReturnValue here if sell returns were tracked on orders
     // let currentTotalSellReturnValue = 0; 
 
-    // Calculations below are based on `filteredOrders`, which is already
-    // CRM-specific if currentUser.role === 'CRM'.
     filteredOrders.forEach(order => {
       if (Array.isArray(order.orderItems)) {
         order.orderItems.forEach((item: OrderItem) => {
@@ -265,7 +265,7 @@ export default function DashboardPage() {
       setSalesChartData([]);
       setChartGranularity('daily');
     }
-  }, [isLoadingData, filteredOrders, selectedDateRange, allModels, selectedPredefinedValue, currentUser]); // Added currentUser for safety, though filteredOrders already depends on it.
+  }, [isLoadingData, filteredOrders, selectedDateRange, allModels, selectedPredefinedValue, currentUser]);
 
 
   const handleDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
@@ -376,7 +376,7 @@ export default function DashboardPage() {
         </Card>
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         {summaryCardData.map((card) => (
           <SummaryCard
             key={card.title}
@@ -475,4 +475,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
