@@ -11,10 +11,11 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search } from 'lucide-react';
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter } from 'lucide-react'; // Added Filter icon
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Kept for Personal/Global view
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,11 +27,19 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"; // Added Select components
+import {
+  // Note-related actions are no longer directly used in UI for "Coming Soon"
+  // addNoteAction, deleteNoteAction, getNotesForUserAction, updateNoteAction,
   deleteTransactionAction,
   updateTransactionAction,
   getTransactionsForUserAction,
   getAllTransactionsAction,
-  // Note actions are removed as per "Notes (Coming Soon)"
 } from './actions';
 import { MultiColorCalculatorIcon } from '@/components/icons/MultiColorCalculatorIcon';
 import { Banknote } from 'lucide-react';
@@ -45,9 +54,9 @@ const formatCurrency = (value: number): string => {
 };
 
 const TRANSACTION_TYPES_FOR_FILTER: Array<{ value: string; label: string }> = [
-  { value: 'all', label: 'All' },
+  { value: 'all', label: 'All Transactions' },
   { value: 'income', label: 'Income' },
-  { value: 'expense_only', label: 'Expenses' },
+  { value: 'expense_only', label: 'Expenses (Direct)' },
   { value: 'purchase', label: 'Purchases' },
   { value: 'send_money', label: 'Sent Money' },
 ];
@@ -168,13 +177,9 @@ export default function FinanceManagerPage() {
 
 
   const { totalIncome, totalExpenses, availableBalance } = useMemo(() => {
-    // This calculation should ideally use the 'transactions' state *before* search/type filtering
-    // to reflect the overall financial picture for the selected viewMode.
-    // If it needs to reflect the filtered list, then 'filteredTransactions' could be used,
-    // but that might be confusing for summary cards.
     let income = 0;
     let expensesSum = 0;
-    transactions.forEach(t => { // Using 'transactions' for overall summary
+    transactions.forEach(t => {
       if (t.type === 'income') income += t.amount;
       else if (t.type === 'expense' || t.type === 'purchase') expensesSum += t.amount;
     });
@@ -195,18 +200,16 @@ export default function FinanceManagerPage() {
   const filteredTransactions = useMemo(() => {
     let results = transactions;
 
-    // Filter by transaction type
     if (transactionTypeFilter !== 'all') {
       results = results.filter(t => {
         if (transactionTypeFilter === 'income') return t.type === 'income';
-        if (transactionTypeFilter === 'expense_only') return t.type === 'expense' && !t.sentToUserId;
+        if (transactionTypeFilter === 'expense_only') return t.type === 'expense' && !t.sentToUserId; // Direct expenses
         if (transactionTypeFilter === 'purchase') return t.type === 'purchase';
-        if (transactionTypeFilter === 'send_money') return t.type === 'expense' && !!t.sentToUserId;
+        if (transactionTypeFilter === 'send_money') return t.type === 'expense' && !!t.sentToUserId; // Sent money (an expense)
         return true; 
       });
     }
   
-    // Filter by search term (applied after type filter)
     if (transactionSearchTerm.trim()) {
       const lowerSearchTerm = transactionSearchTerm.toLowerCase();
       results = results.filter(t => {
@@ -313,24 +316,35 @@ export default function FinanceManagerPage() {
         </div>
       </div>
 
-      {currentUser.role === 'SYSTEM_ADMIN' && (
-        <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'personal' | 'global')} className="mb-6">
-          <TabsList className="grid w-full grid-cols-2 sm:max-w-xs">
-            <TabsTrigger value="personal">Personal View</TabsTrigger>
-            <TabsTrigger value="global">Global View</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      )}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center">
+        {currentUser.role === 'SYSTEM_ADMIN' && (
+          <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'personal' | 'global')} className="w-full sm:w-auto">
+            <TabsList className="grid w-full grid-cols-2 sm:max-w-xs">
+              <TabsTrigger value="personal">Personal View</TabsTrigger>
+              <TabsTrigger value="global">Global View</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
+        <div className="w-full sm:w-auto sm:min-w-[200px] md:min-w-[240px]">
+          <Label htmlFor="transaction-type-filter" className="sr-only">Filter by type</Label>
+          <Select value={transactionTypeFilter} onValueChange={setTransactionTypeFilter}>
+            <SelectTrigger id="transaction-type-filter" className="w-full h-10 bg-card border-border/50">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Filter by type" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {TRANSACTION_TYPES_FOR_FILTER.map((filterType) => (
+                <SelectItem key={filterType.value} value={filterType.value}>
+                  {filterType.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-      <Tabs value={transactionTypeFilter} onValueChange={setTransactionTypeFilter} className="mb-6">
-        <TabsList className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
-          {TRANSACTION_TYPES_FOR_FILTER.map((filterType) => (
-            <TabsTrigger key={filterType.value} value={filterType.value} className="text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2">
-              {filterType.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
 
       <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
         {summaryCardsToDisplay.map(card => (
@@ -483,3 +497,4 @@ export default function FinanceManagerPage() {
 }
 
     
+
