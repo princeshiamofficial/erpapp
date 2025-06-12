@@ -18,10 +18,14 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent, // Added DragStartEvent
+  type DragCancelEvent, // Added DragCancelEvent
   closestCorners,
+  DragOverlay, // Added DragOverlay
 } from '@dnd-kit/core';
 import { updateProjectStatusAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
+import { ProjectCard } from '@/components/projects/ProjectCard'; // For DragOverlay
 
 const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: React.ElementType; headerBgClass: string; headerIconClass?: string; headerTextClass?: string }> = [
   { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, headerBgClass: 'bg-sky-600', headerTextClass: 'text-sky-50' },
@@ -39,6 +43,7 @@ export default function ProjectsPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [endDateFilter, setEndDateFilter] = useState<string>('all');
   const { toast } = useToast();
+  const [activeProject, setActiveProject] = useState<Project | null>(null); // For DragOverlay
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -116,56 +121,55 @@ export default function ProjectsPage() {
     { label: 'This Year', value: 'this_year' },
   ];
 
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-    console.log("DragEnd Event Fired. Active:", active, "Over:", over);
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    if (active.data.current?.project) {
+      setActiveProject(active.data.current.project as Project);
+    }
+  };
 
-    if (!over || !active.data.current?.project) { // Ensure project data is available
-      console.log("Drag ended, but not over a valid droppable target or active item has no project data.");
+  const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveProject(null); // Clear active project for overlay
+    const { active, over } = event;
+
+    if (!over || !active.data.current?.project) {
       return;
     }
 
-    const project = active.data.current.project as Project; // The full project object
-    const projectId = project.id; // ID of the dragged item
-    const newStatus = over.id as ProjectStatusType; // ID of the target column (which is the status string)
+    const project = active.data.current.project as Project;
+    const projectId = project.id;
+    const newStatus = over.id as ProjectStatusType;
     const originalStatus = project.status;
 
-    console.log(`Attempting to move project ID: ${projectId} ('${project.name}') from status '${originalStatus}' to '${newStatus}'`);
-
     if (newStatus === originalStatus) {
-      console.log("Project dropped on the same status column. No action needed.");
       return;
     }
 
-    // Optimistic update
     setProjects(prevProjects => {
-      const updated = prevProjects.map(p =>
+      return prevProjects.map(p =>
         p.id === projectId ? { ...p, status: newStatus } : p
       );
-      console.log("Optimistically updated local projects state.");
-      return updated;
     });
 
-    // Pass the full project object to the action
     const result = await updateProjectStatusAction(project, newStatus);
-    console.log("Server action result for updateProjectStatusAction:", result);
 
     if (result.success) {
       toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
-      // Re-fetch to ensure data consistency after potential creation/update
-      await fetchProjects();
+      await fetchProjects(); // Re-fetch for consistency
     } else {
       toast({ title: "Update Failed", description: result.error || `Could not update status for project '${project.name}'.`, variant: "destructive" });
-      // Revert optimistic update
       setProjects(prevProjects => {
-        const reverted = prevProjects.map(p =>
+        return prevProjects.map(p =>
           p.id === projectId ? { ...p, status: originalStatus } : p
         );
-        console.log("Reverted optimistic update due to server error.");
-        return reverted;
       });
     }
   };
+  
+  const handleDragCancel = () => {
+    setActiveProject(null);
+  };
+
 
   if (isLoading && projects.length === 0) {
     return (
@@ -204,7 +208,13 @@ export default function ProjectsPage() {
   }
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd} collisionDetection={closestCorners}>
+    <DndContext 
+        sensors={sensors} 
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd} 
+        onDragCancel={handleDragCancel}
+        collisionDetection={closestCorners}
+    >
       <div className="flex flex-col h-full p-0 sm:p-6 lg:p-8 space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header pb-2 px-4 sm:px-0">
           <div className="flex items-baseline gap-2">
@@ -271,6 +281,11 @@ export default function ProjectsPage() {
           )}
         </div>
       </div>
+      <DragOverlay dropAnimation={null}>
+        {activeProject ? (
+          <ProjectCard project={activeProject} isOverlay />
+        ) : null}
+      </DragOverlay>
     </DndContext>
   );
 }

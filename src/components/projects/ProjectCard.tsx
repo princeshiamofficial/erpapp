@@ -43,6 +43,7 @@ const StopwatchIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 interface ProjectCardProps {
   project: Project;
+  isOverlay?: boolean; // New prop for drag overlay
 }
 
 function formatDurationPrecise(totalSeconds: number): string {
@@ -97,7 +98,6 @@ const calculateProgressInfo = (
 
   let effectiveStartDateIso: string | undefined;
 
-  // Prioritize status-specific timestamp for the current status
   if (status === 'CR Clearance') effectiveStartDateIso = crClearanceAt;
   else if (status === 'On Design') effectiveStartDateIso = onDesignAt;
   else if (status === 'On Hold') effectiveStartDateIso = onHoldAt;
@@ -105,7 +105,6 @@ const calculateProgressInfo = (
   else if (status === 'Courier') effectiveStartDateIso = courierAt;
   else if (status === 'CR Cancel') effectiveStartDateIso = crCancelAt;
 
-  // Fallback if specific status timestamp isn't set
   if (!effectiveStartDateIso) {
     effectiveStartDateIso = updatedAt || createdAt;
   }
@@ -201,13 +200,14 @@ const calculateProgressInfo = (
 };
 
 
-export function ProjectCard({ project }: ProjectCardProps) {
+export function ProjectCard({ project, isOverlay = false }: ProjectCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: project.id,
     data: { project },
+    disabled: isOverlay, // Disable dragging for the overlay version
   });
 
-  const style = transform ? {
+  const style = !isOverlay && transform ? {
     transform: CSS.Translate.toString(transform),
   } : undefined;
 
@@ -234,70 +234,76 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
   return (
     <motion.div
-      ref={setNodeRef}
-      style={style} // dnd-kit's transform for movement
-      {...listeners}
-      {...attributes}
-      className={cn(
-        "relative group mb-3",
-        isDragging ? "z-50" : ""
-      )}
-      animate={{ // framer-motion for visual feedback
-        scale: isDragging ? 1.05 : 1,
-        boxShadow: isDragging
+      ref={!isOverlay ? setNodeRef : null}
+      style={style}
+      {...(!isOverlay ? listeners : {})}
+      {...(!isOverlay ? attributes : {})}
+      animate={{
+        scale: !isOverlay && isDragging ? 1.05 : (isOverlay ? 0.95 : 1), // Slightly smaller if overlay
+        opacity: !isOverlay && isDragging ? 0.4 : 1,
+        boxShadow: !isOverlay && isDragging
           ? "0px 10px 25px rgba(0,0,0,0.2), 0px 5px 10px rgba(0,0,0,0.15)"
-          : "0px 1px 3px rgba(0,0,0,0.05), 0px 1px 2px rgba(0,0,0,0.03)", // A softer base shadow
+          : (isOverlay ? "0px 8px 20px rgba(0,0,0,0.25)" : "0px 1px 3px rgba(0,0,0,0.05), 0px 1px 2px rgba(0,0,0,0.03)"),
+        rotate: isOverlay ? 2 : 0, // Slight rotation for overlay
       }}
       transition={{ duration: 0.15, ease: "easeInOut" }}
+      className={cn(
+        "relative group mb-3",
+        isOverlay ? "z-50" : (isDragging ? "z-50" : "")
+      )}
     >
       <Card
         className={cn(
-          "bg-card hover:shadow-lg transition-shadow",
-          isDragging ? "opacity-80 ring-2 ring-primary cursor-grabbing shadow-xl" : "cursor-grab active:cursor-grabbing shadow-md"
+          "bg-card hover:shadow-lg transition-shadow w-full", // Ensure card takes full width of motion.div
+           isOverlay ? "cursor-grabbing shadow-xl" : (isDragging ? "ring-2 ring-primary cursor-grabbing shadow-xl" : "cursor-grab active:cursor-grabbing shadow-md")
         )}
       >
         <CardContent className="p-3 space-y-2.5">
-          <div
-            className="absolute top-1/2 -translate-y-1/2 left-1.5 opacity-0 group-hover:opacity-80 transition-opacity p-1"
-            title="Drag to move project"
-          >
-            <GripVertical className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
-          </div>
+          {!isOverlay && !isDragging && (
+            <div
+              className="absolute top-1/2 -translate-y-1/2 left-1.5 opacity-0 group-hover:opacity-80 transition-opacity p-1"
+              title="Drag to move project"
+            >
+              <GripVertical className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
+            </div>
+          )}
 
-          <div className="flex justify-between items-start ml-6">
+          <div className={cn("flex justify-between items-start", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
             <span className="text-sm font-semibold text-foreground">{project.projectIdDisplay}</span>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                  <EllipsisVertical className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem disabled>Edit Project (Soon)</DropdownMenuItem>
-                <DropdownMenuItem disabled className="text-destructive focus:text-destructive">Delete Project (Soon)</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {!isOverlay && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <EllipsisVertical className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem disabled>Edit Project (Soon)</DropdownMenuItem>
+                  <DropdownMenuItem disabled className="text-destructive focus:text-destructive">Delete Project (Soon)</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
           
-          <p className="text-xs font-medium text-muted-foreground ml-6 truncate" title={project.name}>{project.name}</p>
+          <p className={cn("text-xs font-medium text-muted-foreground truncate", !isOverlay && !isDragging ? "ml-6" : "ml-0")} title={project.name}>{project.name}</p>
 
-          <div className="inline-flex items-center rounded-md border border-destructive/30 bg-destructive/20 px-2 py-0.5 text-xs font-semibold text-destructive transition-colors ml-6">
+          <div className={cn("inline-flex items-center rounded-md border border-destructive/30 bg-destructive/20 px-2 py-0.5 text-xs font-semibold text-destructive transition-colors", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
             <CalendarDays className="mr-1.5 h-3 w-3" />
             Target: {project.endDate ? parseISO(project.endDate).toLocaleDateString() : 'N/A'}
           </div>
 
-          <div className="flex items-center space-x-1.5 text-xs text-muted-foreground ml-6">
+          <div className={cn("flex items-center space-x-1.5 text-xs text-muted-foreground", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
             <User className="h-3.5 w-3.5" />
             <span className="truncate" title={project.assigneeName}>{project.assigneeName}</span>
           </div>
 
-          <div className="flex items-center space-x-1.5 text-xs text-muted-foreground ml-6">
+          <div className={cn("flex items-center space-x-1.5 text-xs text-muted-foreground", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
             <Folder className="h-3.5 w-3.5" />
             <span className="truncate" title={project.categoryTag}>{project.categoryTag}</span>
           </div>
           
           {progressInfo.showProgressBar && (
-              <div className="ml-6 pt-1">
+              <div className={cn("pt-1", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
               <div className="flex items-center space-x-2 mb-1">
                   <StopwatchIcon className="h-4 w-4 text-primary shrink-0" />
                   <span className="text-xs font-medium text-muted-foreground truncate" title={progressInfo.displayText}>{progressInfo.displayText}</span>
@@ -310,7 +316,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
               </div>
           )}
 
-          <div className="flex items-center justify-start mt-2 ml-6">
+          <div className={cn("flex items-center justify-start mt-2", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
             <Avatar className="h-7 w-7 text-xs border bg-muted">
               <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(project.assigneeInitials || project.assigneeName)}</AvatarFallback>
             </Avatar>
