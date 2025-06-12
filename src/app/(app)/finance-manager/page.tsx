@@ -11,10 +11,10 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search } from 'lucide-react'; // Added Search
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search } from 'lucide-react';
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input'; // Added Input
+import { Input } from '@/components/ui/input';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +30,7 @@ import {
   updateTransactionAction,
   getTransactionsForUserAction,
   getAllTransactionsAction,
+  // Note actions are removed as per "Notes (Coming Soon)"
 } from './actions';
 import { MultiColorCalculatorIcon } from '@/components/icons/MultiColorCalculatorIcon';
 import { Banknote } from 'lucide-react';
@@ -43,6 +44,14 @@ const formatCurrency = (value: number): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
+const TRANSACTION_TYPES_FOR_FILTER: Array<{ value: string; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'income', label: 'Income' },
+  { value: 'expense_only', label: 'Expenses' },
+  { value: 'purchase', label: 'Purchases' },
+  { value: 'send_money', label: 'Sent Money' },
+];
+
 export default function FinanceManagerPage() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -52,7 +61,8 @@ export default function FinanceManagerPage() {
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
   const [allUsersForDialog, setAllUsersForDialog] = useState<User[]>([]);
   const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null);
-  const [transactionSearchTerm, setTransactionSearchTerm] = useState(''); // State for search
+  const [transactionSearchTerm, setTransactionSearchTerm] = useState('');
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState<string>('all');
 
   const [isClient, setIsClient] = useState(false);
   useEffect(() => setIsClient(true), []);
@@ -158,9 +168,13 @@ export default function FinanceManagerPage() {
 
 
   const { totalIncome, totalExpenses, availableBalance } = useMemo(() => {
+    // This calculation should ideally use the 'transactions' state *before* search/type filtering
+    // to reflect the overall financial picture for the selected viewMode.
+    // If it needs to reflect the filtered list, then 'filteredTransactions' could be used,
+    // but that might be confusing for summary cards.
     let income = 0;
     let expensesSum = 0;
-    transactions.forEach(t => {
+    transactions.forEach(t => { // Using 'transactions' for overall summary
       if (t.type === 'income') income += t.amount;
       else if (t.type === 'expense' || t.type === 'purchase') expensesSum += t.amount;
     });
@@ -179,21 +193,38 @@ export default function FinanceManagerPage() {
   }, [currentUser, viewMode]);
 
   const filteredTransactions = useMemo(() => {
-    if (!transactionSearchTerm.trim()) {
-      return transactions;
+    let results = transactions;
+
+    // Filter by transaction type
+    if (transactionTypeFilter !== 'all') {
+      results = results.filter(t => {
+        if (transactionTypeFilter === 'income') return t.type === 'income';
+        if (transactionTypeFilter === 'expense_only') return t.type === 'expense' && !t.sentToUserId;
+        if (transactionTypeFilter === 'purchase') return t.type === 'purchase';
+        if (transactionTypeFilter === 'send_money') return t.type === 'expense' && !!t.sentToUserId;
+        return true; 
+      });
     }
-    const lowerSearchTerm = transactionSearchTerm.toLowerCase();
-    return transactions.filter(t => {
-      const userName = viewMode === 'global' ? userMap.get(t.userId)?.toLowerCase() : '';
-      return (
-        t.category.toLowerCase().includes(lowerSearchTerm) ||
-        (t.description && t.description.toLowerCase().includes(lowerSearchTerm)) ||
-        t.amount.toString().includes(lowerSearchTerm) ||
-        (userName && userName.includes(lowerSearchTerm)) ||
-        t.type.toLowerCase().includes(lowerSearchTerm)
-      );
-    });
-  }, [transactions, transactionSearchTerm, viewMode, userMap]);
+  
+    // Filter by search term (applied after type filter)
+    if (transactionSearchTerm.trim()) {
+      const lowerSearchTerm = transactionSearchTerm.toLowerCase();
+      results = results.filter(t => {
+        const userName = viewMode === 'global' ? userMap.get(t.userId)?.toLowerCase() : '';
+        const matchesSearch = (
+          t.category.toLowerCase().includes(lowerSearchTerm) ||
+          (t.description && t.description.toLowerCase().includes(lowerSearchTerm)) ||
+          t.amount.toString().includes(lowerSearchTerm) ||
+          (userName && userName.includes(lowerSearchTerm)) ||
+          t.type.toLowerCase().includes(lowerSearchTerm) ||
+          (t.sentToUserName && t.sentToUserName.toLowerCase().includes(lowerSearchTerm)) ||
+          (t.receivedFromUserName && t.receivedFromUserName.toLowerCase().includes(lowerSearchTerm))
+        );
+        return matchesSearch;
+      });
+    }
+    return results; 
+  }, [transactions, transactionSearchTerm, viewMode, userMap, transactionTypeFilter]);
 
 
   if (!currentUser) {
@@ -286,10 +317,20 @@ export default function FinanceManagerPage() {
         <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'personal' | 'global')} className="mb-6">
           <TabsList className="grid w-full grid-cols-2 sm:max-w-xs">
             <TabsTrigger value="personal">Personal View</TabsTrigger>
-            <TabsTrigger value="global">Global View (All Users)</TabsTrigger>
+            <TabsTrigger value="global">Global View</TabsTrigger>
           </TabsList>
         </Tabs>
       )}
+
+      <Tabs value={transactionTypeFilter} onValueChange={setTransactionTypeFilter} className="mb-6">
+        <TabsList className="grid w-full grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
+          {TRANSACTION_TYPES_FOR_FILTER.map((filterType) => (
+            <TabsTrigger key={filterType.value} value={filterType.value} className="text-xs sm:text-sm px-2 py-1.5 sm:px-3 sm:py-2">
+              {filterType.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
       <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
         {summaryCardsToDisplay.map(card => (
@@ -321,6 +362,7 @@ export default function FinanceManagerPage() {
                   <CardTitle className="text-card-foreground text-xl">Recent Transactions</CardTitle>
                   <CardDescription className="text-muted-foreground text-sm mt-0.5">
                     {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' ? "Latest transactions from all users." : "Your latest income, expense and purchase entries."}
+                    {transactionTypeFilter !== 'all' && ` (Filtered by: ${TRANSACTION_TYPES_FOR_FILTER.find(f=>f.value === transactionTypeFilter)?.label})`}
                   </CardDescription>
                 </div>
                 <div className="relative w-full sm:max-w-xs">
@@ -357,10 +399,10 @@ export default function FinanceManagerPage() {
               <div className="text-center py-10 text-muted-foreground">
                 <Banknote className="h-16 w-16 mx-auto opacity-30 mb-3" />
                 <p className="text-lg font-medium">
-                  {transactionSearchTerm ? "No transactions match your search." : "No transactions yet."}
+                  {transactionSearchTerm || transactionTypeFilter !== 'all' ? "No transactions match your filters." : "No transactions yet."}
                 </p>
                 <p className="text-sm">
-                  {transactionSearchTerm ? "Try a different search term." : 
+                  {transactionSearchTerm || transactionTypeFilter !== 'all' ? "Try adjusting your search or filter." : 
                     (canUserAddExpense ? "Add your first income or expense to get started!" : "Expense logging may be disabled for your role.")
                   }
                 </p>
