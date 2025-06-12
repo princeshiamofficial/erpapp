@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -153,20 +154,17 @@ export default function FinanceManagerPage() {
 
   const displayableTransactionTypeFilters = useMemo(() => {
     if (currentUser?.role === 'SYSTEM_ADMIN') {
-      return TRANSACTION_TYPES_FOR_FILTER; // Sys admin sees all
+      return TRANSACTION_TYPES_FOR_FILTER;
     }
-    // Non-SysAdmins: filter out 'send_money' but NOT 'income'
     return TRANSACTION_TYPES_FOR_FILTER.filter(
       (type) => type.value !== 'send_money'
     );
   }, [currentUser?.role]);
 
   useEffect(() => {
-    // If "Sent Money" is selected and user is not System Admin, reset to "All"
     if (currentUser?.role !== 'SYSTEM_ADMIN' && transactionTypeFilter === 'send_money') {
       setTransactionTypeFilter('all');
     }
-    // No need to reset for "income" anymore as it's available to all users
   }, [currentUser?.role, transactionTypeFilter]);
 
 
@@ -301,11 +299,8 @@ export default function FinanceManagerPage() {
         hint: "wallet coins"
       },
     ].filter(card => {
-      if (currentUser?.role === 'SYSTEM_ADMIN') return true; // Sys admin sees all cards
-      // Non-sys admin sees expenses if they can add them.
+      if (currentUser?.role === 'SYSTEM_ADMIN') return true; 
       if (card.title.toLowerCase().includes("expense") && !canUserAddExpense) return false;
-      // Non-sys admin sees income card by default (as they can receive funds)
-      // Balance is always shown.
       return true;
     });
   }, [totalIncome, totalExpenses, availableBalance, canUserAddExpense, currentUser]);
@@ -343,14 +338,14 @@ export default function FinanceManagerPage() {
               <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
           {currentUser.role === 'SYSTEM_ADMIN' && (
-            <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData}>
+            <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addIncome">
               <Button size="default" className="bg-green-600 hover:bg-green-700 text-white h-10">
                 <PlusCircle className="mr-2 h-5 w-5" /> Add Income
               </Button>
             </AddTransactionDialog>
           )}
           {canUserAddExpense && (
-            <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData}>
+            <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addExpenseOrPurchase">
               <Button size="default" className="bg-red-600 hover:bg-red-700 text-white h-10">
                 <Minus className="mr-2 h-5 w-5" /> Add Expense/Purchase
               </Button>
@@ -360,7 +355,7 @@ export default function FinanceManagerPage() {
             <AddTransactionDialog
                 currentUser={currentUser}
                 onTransactionAdded={fetchFinancialData}
-                isSendMoneyFlow={true}
+                dialogMode="sendMoney"
                 allUsersForDropdown={allUsersForDialog}
             >
             <Button size="default" className="bg-blue-600 hover:bg-blue-700 text-white h-10">
