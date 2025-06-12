@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 const STATUSES_COLLECTION = 'customOrderStatuses';
 export const READY_FOR_DESIGN_STATUS_ID = 'ready-for-design';
 export const ORDER_SUBMITTED_ID = 'order-submitted'; // Added export
+export const CANCELLED_STATUS_ID = 'cancelled'; // Exported Cancelled Status ID
 
 // Default statuses with names, colors, and default allowed roles
 const defaultStatusesData: Array<Omit<CustomStatus, 'id' | 'isSystemStatus' | 'isVisible'> & { defaultName: string, defaultAllowedRoles?: UserRole[] }> = [
@@ -301,3 +302,4 @@ export const getContrastTextColor = (hexColor: string): string => {
     return '#000000';
   }
 };
+

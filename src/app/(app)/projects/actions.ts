@@ -2,23 +2,61 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Project, ProjectStatusType } from "@/types"; // Added Project
+import type { Project, ProjectStatusType, User, OrderLogEntry } from "@/types"; // Added User, OrderLogEntry
 import { updateProjectStatus as updateProjectStatusInDb } from '@/lib/project-service';
+import { getOrderById, updateOrder } from '@/lib/order-service'; // Added
+import { CANCELLED_STATUS_ID } from '@/lib/status-service'; // Added
+import { v4 as uuidv4 } from 'uuid'; // Added
 
 export async function updateProjectStatusAction(
-  project: Project, // Changed from projectId: string to the full Project object
-  newStatus: ProjectStatusType
+  project: Project,
+  newStatus: ProjectStatusType,
+  actingUser: User // Added actingUser parameter
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Pass the full project object for potential creation if it doesn't exist
-    const success = await updateProjectStatusInDb(project.id, newStatus, project);
-    if (success) {
-      revalidatePath("/(app)/projects");
-      return { success: true };
+    const projectUpdateSuccess = await updateProjectStatusInDb(project.id, newStatus, project);
+    if (!projectUpdateSuccess) {
+      return { success: false, error: "Failed to update project status in database." };
     }
-    return { success: false, error: "Failed to update project status in database." };
+
+    // If project status changed to 'CR Cancel', update the corresponding order
+    if (newStatus === 'CR Cancel') {
+      const order = await getOrderById(project.id); // project.id is the order ID for dynamic projects
+      if (order && order.currentStatus !== CANCELLED_STATUS_ID) {
+        const newLogEntry: OrderLogEntry = {
+          id: uuidv4(),
+          timestamp: new Date().toISOString(),
+          status: CANCELLED_STATUS_ID,
+          changedByUserId: actingUser.id,
+          changedByUserName: actingUser.name,
+          notes: `Order cancelled from project board by ${actingUser.name}. Project status: CR Cancel.`,
+        };
+        const orderUpdateSuccess = await updateOrder(order.id, {
+          currentStatus: CANCELLED_STATUS_ID,
+          statusHistory: [...order.statusHistory, newLogEntry],
+          updatedAt: new Date().toISOString(),
+          updatedByUserId: actingUser.id,
+          updatedByUserName: actingUser.name,
+        });
+
+        if (!orderUpdateSuccess) {
+          console.warn(`Project ${project.id} status updated to CR Cancel, but failed to update corresponding order ${order.id} to Cancelled.`);
+          // Decide if this should make the whole action fail or just be a warning
+          // For now, we'll consider the project update a success and log a warning for the order.
+        } else {
+          console.log(`Order ${order.id} status updated to Cancelled due to project ${project.id} being CR Cancelled.`);
+          revalidatePath(`/track/${order.id}`);
+          revalidatePath("/(app)/orders");
+          revalidatePath("/(app)/active-orders");
+        }
+      }
+    }
+
+    revalidatePath("/(app)/projects");
+    return { success: true };
   } catch (error) {
     console.error("Error in updateProjectStatusAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+

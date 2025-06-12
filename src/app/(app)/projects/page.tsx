@@ -26,6 +26,7 @@ import {
 import { updateProjectStatusAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectCard } from '@/components/projects/ProjectCard'; 
+import { useAuth } from '@/contexts/auth-context'; // Added useAuth
 
 const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: React.ElementType; headerBgClass: string; headerIconClass?: string; headerTextClass?: string }> = [
   { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, headerBgClass: 'bg-sky-600', headerTextClass: 'text-sky-50' },
@@ -44,6 +45,7 @@ export default function ProjectsPage() {
   const [endDateFilter, setEndDateFilter] = useState<string>('all');
   const { toast } = useToast();
   const [activeProject, setActiveProject] = useState<Project | null>(null); 
+  const { currentUser } = useAuth(); // Get current user
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -132,12 +134,16 @@ export default function ProjectsPage() {
     setActiveProject(null); 
     const { active, over } = event;
 
+    if (!currentUser) {
+      toast({ title: "Authentication Error", description: "Cannot update project, user not authenticated.", variant: "destructive" });
+      return;
+    }
+
     if (!over || !active.data.current?.project) {
       return;
     }
 
     const project = active.data.current.project as Project;
-    // const projectId = project.id; // projectId is now the same as project.id
     const newStatus = over.id as ProjectStatusType;
     const originalStatus = project.status;
 
@@ -145,20 +151,22 @@ export default function ProjectsPage() {
       return;
     }
 
+    // Optimistic update UI
     setProjects(prevProjects => {
       return prevProjects.map(p =>
         p.id === project.id ? { ...p, status: newStatus } : p
       );
     });
 
-    // Pass the full project object to the action
-    const result = await updateProjectStatusAction(project, newStatus);
+    // Pass the full project object and current user to the action
+    const result = await updateProjectStatusAction(project, newStatus, currentUser);
 
     if (result.success) {
       toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
-      await fetchProjects(); 
+      await fetchProjects(); // Re-fetch to ensure consistency
     } else {
       toast({ title: "Update Failed", description: result.error || `Could not update status for project '${project.name}'.`, variant: "destructive" });
+      // Revert optimistic update
       setProjects(prevProjects => {
         return prevProjects.map(p =>
           p.id === project.id ? { ...p, status: originalStatus } : p
