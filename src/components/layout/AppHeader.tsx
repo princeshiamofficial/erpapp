@@ -6,8 +6,9 @@ import { UserNav } from "./UserNav";
 import Link from "next/link";
 import { Logo } from '@/components/layout/Logo';
 import { NotificationBell } from '@/components/layout/NotificationBell';
-import { Button } from "@/components/ui/button"; // Added Button
-import { Calculator } from "lucide-react"; // Added Calculator icon
+import { Button } from "@/components/ui/button";
+import { MultiColorCalculatorIcon } from '@/components/icons/MultiColorCalculatorIcon';
+import { CalculatorDialog } from '@/components/layout/CalculatorDialog'; // Import the dialog
 
 export function AppHeader() {
   return (
@@ -23,12 +24,14 @@ export function AppHeader() {
           </Link>
         </div>
         
-        <div className="flex items-center space-x-1 sm:space-x-2"> {/* Reduced space slightly to accommodate new icon */}
+        <div className="flex items-center space-x-1 sm:space-x-2">
           <NotificationBell />
-          <Button variant="ghost" size="icon" className="text-foreground hover:bg-accent hover:text-accent-foreground h-10 w-10" title="Calculator (Coming Soon)" disabled>
-            <Calculator className="h-5 w-5" />
-            <span className="sr-only">Calculator</span>
-          </Button>
+          <CalculatorDialog>
+            <Button variant="ghost" size="icon" className="text-foreground hover:bg-accent hover:text-accent-foreground h-10 w-10" title="Calculator">
+              <MultiColorCalculatorIcon className="h-5 w-5" />
+              <span className="sr-only">Calculator</span>
+            </Button>
+          </CalculatorDialog>
           <UserNav />
         </div>
       </div>
