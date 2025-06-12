@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import type { Project, ProjectStatusType, User, OrderLogEntry } from "@/types"; // Added User, OrderLogEntry
 import { updateProjectStatus as updateProjectStatusInDb } from '@/lib/project-service';
 import { getOrderById, updateOrder } from '@/lib/order-service'; // Added
-import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID } from '@/lib/status-service'; // Added ON_HOLD_STATUS_ID
+import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID } from '@/lib/status-service'; // Added ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID
 import { v4 as uuidv4 } from 'uuid'; // Added
 
 export async function updateProjectStatusAction(
@@ -70,6 +70,33 @@ export async function updateProjectStatusAction(
           console.warn(`Project ${project.id} status updated to On Hold, but failed to update corresponding order ${order.id} to On Hold.`);
         } else {
           console.log(`Order ${order.id} status updated to On Hold due to project ${project.id} being On Hold.`);
+          revalidatePath(`/track/${order.id}`);
+          revalidatePath("/(app)/orders");
+          revalidatePath("/(app)/active-orders");
+        }
+      }
+    } else if (newStatus === 'Logistics') { // If project status changed to 'Logistics'
+      const order = await getOrderById(project.id);
+      if (order && order.currentStatus !== LOGISTICS_STATUS_ID) {
+        const newLogEntry: OrderLogEntry = {
+          id: uuidv4(),
+          timestamp: new Date().toISOString(),
+          status: LOGISTICS_STATUS_ID,
+          changedByUserId: actingUser.id,
+          changedByUserName: actingUser.name,
+          notes: `Order moved to logistics from project board by ${actingUser.name}. Project status: Logistics.`,
+        };
+        const orderUpdateSuccess = await updateOrder(order.id, {
+          currentStatus: LOGISTICS_STATUS_ID,
+          statusHistory: [...order.statusHistory, newLogEntry],
+          updatedAt: new Date().toISOString(),
+          updatedByUserId: actingUser.id,
+          updatedByUserName: actingUser.name,
+        });
+        if (!orderUpdateSuccess) {
+          console.warn(`Project ${project.id} status updated to Logistics, but failed to update corresponding order ${order.id} to Logistics.`);
+        } else {
+          console.log(`Order ${order.id} status updated to Logistics due to project ${project.id} being in Logistics.`);
           revalidatePath(`/track/${order.id}`);
           revalidatePath("/(app)/orders");
           revalidatePath("/(app)/active-orders");

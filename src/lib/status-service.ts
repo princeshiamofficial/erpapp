@@ -9,6 +9,7 @@ export const READY_FOR_DESIGN_STATUS_ID = 'ready-for-design';
 export const ORDER_SUBMITTED_ID = 'order-submitted'; // Added export
 export const CANCELLED_STATUS_ID = 'cancelled'; // Exported Cancelled Status ID
 export const ON_HOLD_STATUS_ID = 'on-hold'; // Exported On Hold Status ID
+export const LOGISTICS_STATUS_ID = 'logistics'; // Exported Logistics Status ID
 
 // Default statuses with names, colors, and default allowed roles
 const defaultStatusesData: Array<Omit<CustomStatus, 'id' | 'isSystemStatus' | 'isVisible'> & { defaultName: string, defaultAllowedRoles?: UserRole[] }> = [
@@ -20,6 +21,7 @@ const defaultStatusesData: Array<Omit<CustomStatus, 'id' | 'isSystemStatus' | 'i
   { defaultName: 'Approved for Production', color: '#10B981', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
   { defaultName: 'In Production', color: '#0EA5E9', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
   { defaultName: 'Quality Check', color: '#F97316', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
+  { defaultName: 'Logistics', color: '#F97316', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] }, // Added Logistics status (Orange-600)
   { defaultName: 'Shipped', color: '#22C55E', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
   { defaultName: 'Delivered', color: '#65A30D', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
   { defaultName: 'Cancelled', color: '#71717A', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
