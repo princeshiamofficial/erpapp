@@ -53,7 +53,7 @@ export default function ProjectsPage() {
   const [activeProject, setActiveProject] = useState<Project | null>(null); 
   const { currentUser } = useAuth();
 
-  const [selectedOrderForDrAssignment, setSelectedOrderForDrAssignment] = useState<TrackingLink | null>(null); // Changed type
+  const [selectedOrderForDrAssignment, setSelectedOrderForDrAssignment] = useState<TrackingLink | null>(null); 
   const [isAssignDrDialogOpen, setIsAssignDrDialogOpen] = useState(false); 
 
   const sensors = useSensors(
@@ -191,47 +191,57 @@ export default function ProjectsPage() {
   };
 
   const handleOpenAssignDrDialog = useCallback((projectToAssign: Project) => {
+    console.log("ProjectsPage/handleOpenAssignDrDialog: Called for project:", projectToAssign.id, "Current allStatuses count:", allStatuses.length);
+    if (!currentUser) {
+        toast({ title: "Error", description: "User not authenticated. Cannot assign DR.", variant: "destructive" });
+        return;
+    }
+    if (!allStatuses || allStatuses.length === 0) {
+        console.error("ProjectsPage/handleOpenAssignDrDialog: allStatuses is empty or undefined. Cannot open dialog.");
+        toast({
+            title: "Data Error",
+            description: "Status configuration is not loaded. Please try again or refresh.",
+            variant: "destructive"
+        });
+        return;
+    }
+
     const rfdCheck = allStatuses.find(s => s.id === READY_FOR_DESIGN_STATUS_ID);
     if (!rfdCheck) {
         console.error("ProjectsPage/handleOpenAssignDrDialog: CRITICAL - 'ready-for-design' status (ID: 'ready-for-design') NOT FOUND in allStatuses prop.");
         toast({
           title: "Configuration Error",
-          description: "The required system status 'Ready for Design' (ID: ready-for-design) is missing for DR assignment. Please ensure it is configured in Admin > Status Management.",
+          description: `The required system status '${READY_FOR_DESIGN_STATUS_ID}' (typically 'Ready for Design') is missing for DR assignment. Please ensure it is configured in Admin > Status Management.`,
           variant: "destructive",
           duration: 10000,
         });
         return;
     }
 
-    // Create a shim object that resembles TrackingLink for AssignDrDialog
     const orderShim: TrackingLink = {
-      id: projectToAssign.id, // project.id is the orderId for dynamic projects
+      id: projectToAssign.id, 
       companyName: projectToAssign.name,
-      // The dialog uses order.currentStatus for descriptive text.
-      // The actual status logic is on the server action using the real order's status.
-      // Passing project.status here allows the dialog's description to be reasonably accurate.
-      currentStatus: projectToAssign.status as string, // ProjectStatusType is a subset of string
+      currentStatus: projectToAssign.status as string, 
       designerRepresentativeId: projectToAssign.designerRepresentativeId || null,
       designerRepresentativeName: projectToAssign.designerRepresentativeName || null,
-      // Fill other non-critical (for this dialog) TrackingLink fields with defaults
       address: '', 
       phoneNumber: '',
       orderItems: [],
-      crmUserId: projectToAssign.assigneeName, // For dynamic projects, assigneeName is crmUserName
+      crmUserId: projectToAssign.assigneeName, 
       crmUserName: projectToAssign.assigneeName,
       createdAt: projectToAssign.createdAt || new Date().toISOString(),
-      isPublic: false, // Default, not used by dialog for this action
-      statusHistory: [], // Not used by dialog for this action
-      comments: [], // Not used
-      advancePayments: [], // Not used
+      isPublic: false, 
+      statusHistory: [], 
+      comments: [], 
+      advancePayments: [], 
     };
 
     setSelectedOrderForDrAssignment(orderShim);
     setIsAssignDrDialogOpen(true);
-  }, [allStatuses, toast]);
+  }, [allStatuses, toast, currentUser]);
 
   const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromDialog: TrackingLink) => {
-    await fetchData(); // Refresh projects list, as DR assignment might affect project data if it's an "actual" project
+    await fetchData(); 
     toast({ title: "DR Assigned", description: `${updatedOrderFromDialog.designerRepresentativeName} assigned to order ${updatedOrderFromDialog.id}.` });
   }, [fetchData, toast]);
 
@@ -380,3 +390,4 @@ export default function ProjectsPage() {
     
     
     
+
