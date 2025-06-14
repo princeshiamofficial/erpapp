@@ -4,7 +4,7 @@
 import type { Project, CustomStatus, User } from '@/types'; 
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
-import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck } from 'lucide-react';
+import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck } from 'lucide-react'; // Added UserCheck
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useDraggable } from '@dnd-kit/core';
@@ -234,6 +234,8 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
   const crmInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !project.designerRepresentativeName;
   const drInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !!project.designerRepresentativeName;
 
+  const relevantDrStages: ProjectStatusType[] = ['On Design', 'On Hold', 'Logistics', 'Courier'];
+
   return (
     <motion.div
       ref={!isOverlay ? setNodeRef : null}
@@ -264,26 +266,26 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
           <div className={cn("flex justify-between items-start")}>
             <span className="text-sm font-semibold text-foreground">{project.projectIdDisplay}</span>
             {!isOverlay && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  title="View Invoice / Order Details"
-                  onClick={(event) => {
-                    console.log(`[ProjectCard] ReceiptText icon clicked for project ${project.id}.`);
-                    event.stopPropagation();
-                    event.preventDefault(); // Added to be absolutely sure
-                    if (project && project.id) {
-                        const url = `/track/${project.id}`;
-                        console.log(`[ProjectCard] Attempting to open URL: ${url}`);
-                        window.open(url, '_blank', 'noopener,noreferrer');
-                    } else {
-                        console.error('[ProjectCard] project.id is missing. Cannot open link.');
-                    }
-                  }}
-                >
-                  <ReceiptText className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                </Button>
+                 <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    title="View Invoice / Order Details"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      event.preventDefault();
+                      console.log(`[ProjectCard] ReceiptText icon clicked for project ${project.id}.`);
+                      if (project && project.id) {
+                          const url = `/track/${project.id}`;
+                          console.log(`[ProjectCard] Attempting to open URL: ${url}`);
+                          window.open(url, '_blank', 'noopener,noreferrer');
+                      } else {
+                          console.error('[ProjectCard] project.id is missing. Cannot open link.');
+                      }
+                    }}
+                  >
+                    <ReceiptText className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                  </Button>
             )}
           </div>
           
@@ -313,6 +315,28 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
             <UserIconLucide className="h-3.5 w-3.5" />
             <span className="truncate">CRM: {project.assigneeName}</span>
           </div>
+
+          {project.designerRepresentativeName && relevantDrStages.includes(project.status) && (
+            <div 
+              className={cn(
+                "flex items-center space-x-1.5 text-xs text-muted-foreground hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors",
+                drInfoClickable && "cursor-pointer"
+              )}
+              title={drInfoClickable ? `DR: ${project.designerRepresentativeName} (Click to re-assign DR)` : `DR: ${project.designerRepresentativeName}`}
+              onClick={
+                drInfoClickable
+                  ? (e) => { 
+                      e.stopPropagation();
+                      console.log('[ProjectCard] DR Name area clicked. Calling onOpenAssignDrDialog for project:', project.id);
+                      onOpenAssignDrDialog(project);
+                    }
+                  : undefined
+              }
+            >
+              <UserCheck className="h-3.5 w-3.5 text-blue-500" />
+              <span className="truncate text-blue-600 dark:text-blue-400">DR: {project.designerRepresentativeName}</span>
+            </div>
+          )}
           
           <div className={cn("flex items-center space-x-1.5 text-xs text-muted-foreground")}>
             <Folder className="h-3.5 w-3.5" />
@@ -365,7 +389,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
               </Tooltip>
             </TooltipProvider>
 
-            {(project.designerRepresentativeName && (project.status === 'On Design' || project.status === 'On Hold' || project.status === 'Logistics' || project.status === 'Courier')) && (
+            {project.designerRepresentativeName && relevantDrStages.includes(project.status) && (
               <>
                 <div className="w-px h-5 bg-border mx-1.5"></div> 
                 <TooltipProvider>
@@ -410,3 +434,4 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
 }
     
     
+
