@@ -4,7 +4,7 @@
 import type { Project, ProjectStatusType, CustomStatus, User } from '@/types'; 
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
-import { CalendarDays, User as UserIconLucide, Folder, EllipsisVertical, GripVertical, UserPlus, UserCheck } from 'lucide-react'; 
+import { CalendarDays, User as UserIconLucide, Folder, EllipsisVertical, GripVertical, UserCheck } from 'lucide-react'; 
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -282,6 +282,9 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onOpenAssignDrDialog(project)} disabled={project.status !== 'On Design'}>
+                    <UserCheck className="mr-2 h-4 w-4" /> Assign/Re-assign DR
+                  </DropdownMenuItem>
                   <DropdownMenuItem disabled>Edit Project (Soon)</DropdownMenuItem>
                   <DropdownMenuItem disabled className="text-destructive focus:text-destructive">Delete Project (Soon)</DropdownMenuItem>
                 </DropdownMenuContent>
@@ -299,17 +302,6 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
           <div className={cn("flex items-center space-x-1.5 text-xs text-muted-foreground", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
             <UserIconLucide className="h-3.5 w-3.5" />
             <span className="truncate" title={`CRM: ${project.assigneeName}`}>CRM: {project.assigneeName}</span>
-            {project.status === 'On Design' && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-5 w-5 p-0 ml-1 text-purple-500 hover:bg-purple-500/10"
-                onClick={() => onOpenAssignDrDialog(project)}
-                title="Assign/Re-assign Designer"
-              >
-                <UserPlus className="h-3.5 w-3.5" />
-              </Button>
-            )}
           </div>
 
           {showDrInfo && (
