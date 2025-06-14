@@ -4,7 +4,7 @@
 import type { Project, CustomStatus, User } from '@/types'; 
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
-import { CalendarDays, User as UserIconLucide, Folder, Eye, UserCheck } from 'lucide-react'; 
+import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck } from 'lucide-react'; // Changed Eye to ReceiptText
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useDraggable } from '@dnd-kit/core';
@@ -14,8 +14,6 @@ import { parseISO, differenceInSeconds, isAfter, isBefore, addHours, addDays, fo
 import React, { useState, useEffect } from 'react'; 
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-// Link component is no longer directly used for the Eye icon button
-// import Link from 'next/link'; 
 
 // Inline SVG Stopwatch Icon Component
 const StopwatchIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -236,8 +234,8 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
   const crmInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !project.designerRepresentativeName;
   const drInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !!project.designerRepresentativeName;
 
-  const handleOpenLink = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.stopPropagation(); // Prevent drag from starting
+  const handleOpenLink = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation(); // Prevent drag from starting
     window.open(`/track/${project.id}`, '_blank', 'noopener,noreferrer');
   };
 
@@ -275,10 +273,10 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  title="View Tracking Link"
+                  title="View Invoice / Order Details"
                   onClick={handleOpenLink}
                 >
-                  <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                  <ReceiptText className="h-4 w-4 text-muted-foreground hover:text-primary" />
                 </Button>
             )}
           </div>
@@ -406,4 +404,3 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
 }
     
     
-
