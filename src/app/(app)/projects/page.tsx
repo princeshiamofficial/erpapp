@@ -2,11 +2,12 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Project, ProjectStatusType } from '@/types';
+import type { Project, ProjectStatusType, CustomStatus, User } from '@/types'; // Added CustomStatus, User
 import { getProjects } from '@/lib/project-service';
+import { getStatuses } from '@/lib/status-service'; // Added
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Briefcase, ClipboardCheck, ClipboardX, DraftingCompass, PauseCircle, Truck, CheckCircle, RefreshCw } from 'lucide-react'; // Added RefreshCw
+import { Briefcase, ClipboardCheck, ClipboardX, DraftingCompass, PauseCircle, Truck, CheckCircle, RefreshCw } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -27,6 +28,10 @@ import { updateProjectStatusAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectCard } from '@/components/projects/ProjectCard'; 
 import { useAuth } from '@/contexts/auth-context';
+import dynamic from 'next/dynamic'; // Added for dynamic import
+
+const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
+
 
 const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: React.ElementType; headerBgClass: string; headerIconClass?: string; headerTextClass?: string }> = [
   { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, headerBgClass: 'bg-sky-600', headerTextClass: 'text-sky-50' },
@@ -39,6 +44,7 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; i
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]); // Added
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -47,27 +53,35 @@ export default function ProjectsPage() {
   const [activeProject, setActiveProject] = useState<Project | null>(null); 
   const { currentUser } = useAuth();
 
+  const [selectedProjectForDrAssignment, setSelectedProjectForDrAssignment] = useState<Project | null>(null); // Added
+  const [isAssignDrDialogOpen, setIsAssignDrDialogOpen] = useState(false); // Added
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor)
   );
 
-  const fetchProjects = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const fetchedProjects = await getProjects();
+      const [fetchedProjects, fetchedStatuses] = await Promise.all([ // Fetch statuses
+        getProjects(),
+        getStatuses()
+      ]);
       setProjects(fetchedProjects);
+      setAllStatuses(fetchedStatuses); // Set statuses
     } catch (error) {
-      console.error("Failed to fetch projects:", error);
-      toast({ title: "Error", description: "Could not load projects.", variant: "destructive" });
+      console.error("Failed to fetch projects or statuses:", error);
+      toast({ title: "Error", description: "Could not load projects or status configurations.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   }, [toast]);
 
+
   useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+    fetchData();
+  }, [fetchData]);
 
   const filteredProjects = useMemo(() => {
     return projects.filter(project => {
@@ -151,22 +165,19 @@ export default function ProjectsPage() {
       return;
     }
 
-    // Optimistic update UI
     setProjects(prevProjects => {
       return prevProjects.map(p =>
         p.id === project.id ? { ...p, status: newStatus } : p
       );
     });
 
-    // Pass the full project object and current user to the action
     const result = await updateProjectStatusAction(project, newStatus, currentUser);
 
     if (result.success) {
       toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
-      await fetchProjects(); // Re-fetch to ensure consistency
+      await fetchData(); 
     } else {
       toast({ title: "Update Failed", description: result.error || `Could not update status for project '${project.name}'.`, variant: "destructive" });
-      // Revert optimistic update
       setProjects(prevProjects => {
         return prevProjects.map(p =>
           p.id === project.id ? { ...p, status: originalStatus } : p
@@ -179,6 +190,27 @@ export default function ProjectsPage() {
     setActiveProject(null);
   };
 
+  const handleOpenAssignDrDialog = useCallback((projectToAssign: Project) => {
+    const rfdCheck = allStatuses.find(s => s.id === 'ready-for-design');
+    if (!rfdCheck) {
+        console.error("ProjectsPage/handleOpenAssignDrDialog: CRITICAL - 'ready-for-design' status (ID: 'ready-for-design') NOT FOUND in allStatuses prop.");
+        toast({
+          title: "Configuration Error",
+          description: "The required system status 'Ready for Design' (ID: ready-for-design) is missing for DR assignment. Please ensure it is configured in Admin > Status Management.",
+          variant: "destructive",
+          duration: 10000,
+        });
+        return;
+    }
+    setSelectedProjectForDrAssignment(projectToAssign);
+    setIsAssignDrDialogOpen(true);
+  }, [allStatuses, toast]);
+
+  const handleDrAssignmentSuccess = useCallback(async () => {
+    await fetchData(); // Refresh projects list
+    // Toast for successful assignment will be handled by AssignDrDialog's action or its caller
+  }, [fetchData]);
+
 
   if (isLoading && projects.length === 0) {
     return (
@@ -188,7 +220,7 @@ export default function ProjectsPage() {
                 <Briefcase className="h-7 w-7 text-primary"/>
                 <h1 className="page-title text-2xl sm:text-3xl">Projects Kanban</h1>
             </div>
-             <Skeleton className="h-10 w-28 rounded-md" /> {/* Adjusted width for refresh button placeholder */}
+             <Skeleton className="h-10 w-10 rounded-md" /> 
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 sm:px-0">
             <Skeleton className="h-10 w-full rounded-md" />
@@ -230,7 +262,7 @@ export default function ProjectsPage() {
               <Briefcase className="h-7 w-7 text-primary"/>
               <h1 className="page-title text-2xl sm:text-3xl">Projects Kanban</h1>
           </div>
-          <Button variant="outline" size="icon" onClick={fetchProjects} disabled={isLoading} className="h-10 w-10" title="Refresh Projects">
+          <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Projects">
             <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
           </Button>
         </div>
@@ -274,6 +306,9 @@ export default function ProjectsPage() {
                 headerTextClass={col.headerTextClass}
                 headerIconClass={col.headerIconClass}
                 isLoading={isLoading}
+                currentUser={currentUser}
+                allStatuses={allStatuses}
+                onOpenAssignDrDialog={handleOpenAssignDrDialog}
               />
             ))}
           </div>
@@ -295,7 +330,24 @@ export default function ProjectsPage() {
           <ProjectCard project={activeProject} isOverlay />
         ) : null}
       </DragOverlay>
+
+      {selectedProjectForDrAssignment && currentUser && allStatuses.length > 0 && isAssignDrDialogOpen && (
+        <AssignDrDialog
+          isOpen={isAssignDrDialogOpen}
+          onOpenChange={(open) => {
+            setIsAssignDrDialogOpen(open);
+            if (!open) setSelectedProjectForDrAssignment(null);
+          }}
+          // @ts-ignore - Project and TrackingLink share many properties, AssignDrDialog expects TrackingLink but Project is compatible for its needs
+          order={selectedProjectForDrAssignment} 
+          currentUser={currentUser}
+          allStatuses={allStatuses}
+          onDrAssigned={handleDrAssignmentSuccess}
+        />
+      )}
     </DndContext>
   );
 }
-
+    
+    
+    

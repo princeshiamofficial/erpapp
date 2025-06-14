@@ -1,10 +1,10 @@
 
 "use client";
 
-import type { Project, ProjectStatusType } from '@/types';
+import type { Project, ProjectStatusType, CustomStatus, User } from '@/types'; // Added CustomStatus, User
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
-import { CalendarDays, User, Folder, EllipsisVertical, GripVertical, UserPlus } from 'lucide-react'; // Added UserPlus
+import { CalendarDays, User as UserIconLucide, Folder, EllipsisVertical, GripVertical, UserPlus } from 'lucide-react'; 
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +17,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { parseISO, differenceInSeconds, isAfter, isBefore, addHours, addDays, formatDistanceToNowStrict } from 'date-fns';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // Removed unused 'useCallback' if not needed by new changes
 import { motion } from 'framer-motion';
 
 // Inline SVG Stopwatch Icon Component
@@ -44,6 +44,9 @@ const StopwatchIcon = (props: React.SVGProps<SVGSVGElement>) => (
 interface ProjectCardProps {
   project: Project;
   isOverlay?: boolean; 
+  currentUser: User | null; // Added
+  allStatuses: CustomStatus[]; // Added
+  onOpenAssignDrDialog: (project: Project) => void; // Added
 }
 
 function formatDurationPrecise(totalSeconds: number): string {
@@ -200,7 +203,7 @@ const calculateProgressInfo = (
 };
 
 
-export function ProjectCard({ project, isOverlay = false }: ProjectCardProps) {
+export function ProjectCard({ project, isOverlay = false, currentUser, allStatuses, onOpenAssignDrDialog }: ProjectCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: project.id,
     data: { project },
@@ -293,10 +296,18 @@ export function ProjectCard({ project, isOverlay = false }: ProjectCardProps) {
           </div>
 
           <div className={cn("flex items-center space-x-1.5 text-xs text-muted-foreground", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
-            <User className="h-3.5 w-3.5" />
+            <UserIconLucide className="h-3.5 w-3.5" />
             <span className="truncate" title={project.assigneeName}>{project.assigneeName}</span>
             {project.status === 'On Design' && (
-              <UserPlus className="h-3.5 w-3.5 text-purple-500 ml-1" title="Designer Assigned/Working" />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-5 w-5 p-0 ml-1 text-purple-500 hover:bg-purple-500/10"
+                onClick={() => onOpenAssignDrDialog(project)}
+                title="Assign/Re-assign Designer"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+              </Button>
             )}
           </div>
 
@@ -330,4 +341,5 @@ export function ProjectCard({ project, isOverlay = false }: ProjectCardProps) {
     </motion.div>
   );
 }
-
+    
+    
