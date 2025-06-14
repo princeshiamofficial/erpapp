@@ -11,7 +11,7 @@ import { getUsers as getAllUsersService } from './user-service'; // Import user 
 
 const PROJECTS_COLLECTION = 'projects';
 
-const defaultProjectsData: Array<Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'crCancelAt' | 'assigneeAvatarUrl' >> = [
+const defaultProjectsData: Array<Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'crCancelAt' | 'assigneeAvatarUrl' | 'designerRepresentativeId' | 'designerRepresentativeName' | 'designerRepresentativeAvatarUrl' >> = [
   { projectIdDisplay: 'PJ-001', name: 'Alpha Initiative', status: 'CR Clearance', endDate: formatISO(addMonths(new Date(), 2)), assigneeName: 'Austin Azaria', assigneeInitials: 'AU', categoryTag: 'Corporate Client' },
   { projectIdDisplay: 'PJ-002', name: 'Beta Development', status: 'CR Cancel', endDate: formatISO(addMonths(new Date(), 3)), assigneeName: 'Clerk Kent', assigneeInitials: 'CK', categoryTag: 'Walk-In Customer' },
   { projectIdDisplay: 'PJ-003', name: 'Gamma Graphics', status: 'On Design', endDate: formatISO(addMonths(new Date(), 1)), assigneeName: 'Diana Prince', assigneeInitials: 'DP', categoryTag: 'Internal Project' },
@@ -50,7 +50,10 @@ export const seedDefaultProjects = async (): Promise<Project[]> => {
     const newProject: Project = {
       id,
       ...projectData,
-      assigneeAvatarUrl: null, // Default projects have no specific avatar
+      assigneeAvatarUrl: null, 
+      designerRepresentativeId: null,
+      designerRepresentativeName: null,
+      designerRepresentativeAvatarUrl: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -127,6 +130,7 @@ export const getProjects = async (): Promise<Project[]> => {
         const projectCreatedAt = order.createdAt || formatISO(new Date());
         const projectEndDate = formatISO(addDays(new Date(projectCreatedAt), 2)); 
         const crmUser = userMap.get(order.crmUserId);
+        const drUser = order.designerRepresentativeId ? userMap.get(order.designerRepresentativeId) : undefined;
 
         const dynamicProject: Project = {
           id: order.id, 
@@ -135,7 +139,10 @@ export const getProjects = async (): Promise<Project[]> => {
           status: 'CR Clearance',
           assigneeName: order.crmUserName,
           assigneeInitials: getInitialsForName(order.crmUserName),
-          assigneeAvatarUrl: crmUser?.avatarUrl || null, // Get CRM user's avatar
+          assigneeAvatarUrl: crmUser?.avatarUrl || null,
+          designerRepresentativeId: order.designerRepresentativeId || null,
+          designerRepresentativeName: order.designerRepresentativeName || null,
+          designerRepresentativeAvatarUrl: drUser?.avatarUrl || null,
           categoryTag: 'From Order',
           createdAt: projectCreatedAt,
           updatedAt: order.updatedAt || projectCreatedAt,

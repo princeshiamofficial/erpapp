@@ -209,9 +209,9 @@ export interface Project {
   name: string;
   status: ProjectStatusType;
   endDate: string;
-  assigneeName: string;
+  assigneeName: string; // This is the CRM.
   assigneeInitials?: string;
-  assigneeAvatarUrl?: string | null; // Added optional avatar URL
+  assigneeAvatarUrl?: string | null;
   categoryTag: string;
   createdAt?: string;
   updatedAt?: string;
@@ -222,4 +222,9 @@ export interface Project {
   onHoldAt?: string;
   logisticsAt?: string;
   courierAt?: string;
+
+  designerRepresentativeId?: string | null;
+  designerRepresentativeName?: string | null;
+  designerRepresentativeAvatarUrl?: string | null;
 }
+

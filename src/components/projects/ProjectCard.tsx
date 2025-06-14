@@ -1,10 +1,10 @@
 
 "use client";
 
-import type { Project, ProjectStatusType, CustomStatus, User } from '@/types'; // Added CustomStatus, User
+import type { Project, ProjectStatusType, CustomStatus, User } from '@/types'; 
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
-import { CalendarDays, User as UserIconLucide, Folder, EllipsisVertical, GripVertical, UserPlus } from 'lucide-react'; 
+import { CalendarDays, User as UserIconLucide, Folder, EllipsisVertical, GripVertical, UserPlus, UserCheck } from 'lucide-react'; 
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +17,7 @@ import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { parseISO, differenceInSeconds, isAfter, isBefore, addHours, addDays, formatDistanceToNowStrict } from 'date-fns';
-import React, { useState, useEffect, useCallback } from 'react'; // Removed unused 'useCallback' if not needed by new changes
+import React, { useState, useEffect } from 'react'; 
 import { motion } from 'framer-motion';
 
 // Inline SVG Stopwatch Icon Component
@@ -44,9 +44,9 @@ const StopwatchIcon = (props: React.SVGProps<SVGSVGElement>) => (
 interface ProjectCardProps {
   project: Project;
   isOverlay?: boolean; 
-  currentUser: User | null; // Added
-  allStatuses: CustomStatus[]; // Added
-  onOpenAssignDrDialog: (project: Project) => void; // Added
+  currentUser: User | null; 
+  allStatuses: CustomStatus[]; 
+  onOpenAssignDrDialog: (project: Project) => void; 
 }
 
 function formatDurationPrecise(totalSeconds: number): string {
@@ -214,7 +214,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
     transform: CSS.Translate.toString(transform),
   } : undefined;
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string | undefined) => {
     if (!name) return '??';
     const names = name.split(' ');
     if (names.length === 1) return names[0].charAt(0).toUpperCase();
@@ -234,6 +234,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
     return () => clearInterval(intervalId); 
   }, [project]);
 
+  const showDrInfo = ['On Design', 'On Hold', 'Logistics', 'Courier'].includes(project.status) && project.designerRepresentativeName;
 
   return (
     <motion.div
@@ -297,7 +298,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
 
           <div className={cn("flex items-center space-x-1.5 text-xs text-muted-foreground", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
             <UserIconLucide className="h-3.5 w-3.5" />
-            <span className="truncate" title={project.assigneeName}>{project.assigneeName}</span>
+            <span className="truncate" title={`CRM: ${project.assigneeName}`}>CRM: {project.assigneeName}</span>
             {project.status === 'On Design' && (
               <Button 
                 variant="ghost" 
@@ -310,6 +311,23 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
               </Button>
             )}
           </div>
+
+          {showDrInfo && (
+             <div className={cn("flex items-center space-x-1.5 text-xs text-blue-600 dark:text-blue-400 mt-1", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
+              <UserCheck className="h-4 w-4" />
+              <span className="truncate" title={`Designer: ${project.designerRepresentativeName}`}>
+                DR: {project.designerRepresentativeName}
+              </span>
+              {project.designerRepresentativeAvatarUrl && (
+                <Avatar className="h-5 w-5 text-xs border border-blue-300 dark:border-blue-700 bg-muted ml-1">
+                  <AvatarImage src={project.designerRepresentativeAvatarUrl} alt={project.designerRepresentativeName!} data-ai-hint="designer avatar" />
+                  <AvatarFallback className="text-blue-700 dark:text-blue-300 font-semibold">
+                    {getInitials(project.designerRepresentativeName)}
+                  </AvatarFallback>
+                </Avatar>
+              )}
+            </div>
+          )}
 
           <div className={cn("flex items-center space-x-1.5 text-xs text-muted-foreground", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
             <Folder className="h-3.5 w-3.5" />
