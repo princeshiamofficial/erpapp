@@ -91,9 +91,15 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
           <div className="flex items-center text-xs text-muted-foreground mt-0.5 gap-x-2 flex-wrap">
             <span>{format(parseISO(transaction.date), "MMM d, yyyy")}</span>
             {transaction.documentUrl && (
-              <Link href={transaction.documentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-primary hover:underline hover:text-primary/80">
-                <Paperclip className="h-3 w-3 mr-0.5" />
-                View Document
+              <Link
+                href={transaction.documentUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center text-primary hover:underline hover:text-primary/80 min-w-0" // Added min-w-0
+                title={transaction.documentUrl.split('/').pop() || "View Document"}
+              >
+                <Paperclip className="h-3 w-3 mr-0.5 shrink-0" /> {/* Added shrink-0 */}
+                <span className="truncate">View Document</span> {/* Wrapped in span with truncate */}
               </Link>
             )}
           </div>
@@ -132,3 +138,4 @@ export function TransactionListItem({ transaction, currentUser, onDelete, onEdit
     </div>
   );
 }
+
