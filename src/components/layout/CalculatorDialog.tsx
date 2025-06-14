@@ -15,7 +15,7 @@ import { History, Divide, X as MultiplyIcon, Minus, Plus, Percent, Clock, Trash2
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { ScrollArea } from '@/components/ui/scroll-area'; // Added ScrollArea
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface CalculatorDialogProps {
   children: React.ReactNode;
@@ -36,22 +36,22 @@ const CalcButton: React.FC<CalculatorButtonProps> = ({ label, onClick, className
   let variantStyle = "";
   switch (variant) {
     case 'number':
-      variantStyle = "bg-[#5f6368] text-[#e8eaed] hover:bg-[#6b6f73] focus:ring-[#8ab4f8]";
+      variantStyle = "bg-[#5f6368] text-[#e8eaed] hover:bg-[#6b6f73] focus:ring-primary"; // Focus ring to primary
       break;
     case 'operator':
-      variantStyle = "bg-[#202124] text-[#8ab4f8] hover:bg-[#303134] focus:ring-[#5f6368] text-2xl";
+      variantStyle = "bg-[#202124] text-primary hover:bg-[#303134] focus:ring-[#5f6368] text-2xl"; // Text to primary (orange)
       break;
     case 'function':
       variantStyle = "bg-[#303134] text-[#e8eaed] hover:bg-[#3c4043] focus:ring-[#5f6368]";
       break;
     case 'equals':
-      variantStyle = "bg-[#8ab4f8] text-[#202124] hover:bg-[#9ac1f9] focus:ring-[#aad0fa] text-2xl";
+      variantStyle = "bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-orange-400 text-2xl"; // Background to primary (orange)
       break;
     case 'control':
       variantStyle = "bg-[#303134] text-[#e8eaed] hover:bg-[#3c4043] focus:ring-[#5f6368]";
       break;
     case 'control-special':
-       variantStyle = "bg-transparent text-[#8ab4f8] hover:bg-[#303134] text-base w-auto px-2";
+       variantStyle = "bg-transparent text-primary hover:bg-[#303134] text-base w-auto px-2"; // Active text to primary (orange)
       break;
     case 'control-ac':
       variantStyle = "bg-[#303134] text-[#e8eaed] hover:bg-[#3c4043] focus:ring-[#5f6368]";
@@ -103,7 +103,6 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
   }, []);
 
   useEffect(() => {
-    // Save history only if it has items or if there was something previously stored (to clear it)
     if (history.length > 0 || localStorage.getItem(HISTORY_STORAGE_KEY)) {
       localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
     }
@@ -130,7 +129,6 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
       setDisplayValue(currentDisplay);
     }
     
-    // Update expression carefully
     if (expression === "" || /[+\-*/]$/.test(expression.trim()) || waitingForOperand) {
       setExpression(prev => prev + (currentDisplay.startsWith("0.") ? "0." : "."));
     } else if (!expression.endsWith(".")) {
@@ -147,7 +145,7 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
       const result = performCalculation();
       setDisplayValue(String(result));
       setCurrentValue(String(result));
-    } else { // No operator, but currentValue exists (e.g., after an equals)
+    } else { 
        setCurrentValue(String(inputValue));
     }
 
@@ -182,7 +180,7 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
       const historyEntry = `${currentFullExpression} = ${result}`;
       setHistory(prevHistory => [historyEntry, ...prevHistory.slice(0, MAX_HISTORY_ITEMS - 1)]);
 
-      setCurrentValue(String(result)); // Result becomes the new currentValue for chained operations
+      setCurrentValue(String(result)); 
       setOperator(null);
       setWaitingForOperand(true); 
     }
@@ -218,7 +216,7 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
     if (!isNaN(currentNum)) {
       const result = currentNum / 100;
       setDisplayValue(result.toString());
-      setExpression(prev => `(${prev}) / 100`); // More illustrative expression
+      setExpression(prev => `(${prev}) / 100`); 
       setCurrentValue(result.toString());
       setOperator(null);
       setWaitingForOperand(true);
@@ -233,18 +231,18 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
   const handleHistoryItemClick = (entry: string) => {
     const parts = entry.split(" = ");
     if (parts.length === 2) {
-      setExpression(parts[0]); // Set expression
-      setDisplayValue(parts[1]); // Set result to display
-      setCurrentValue(parts[1]); // Set result as current value for next op
+      setExpression(parts[0]); 
+      setDisplayValue(parts[1]); 
+      setCurrentValue(parts[1]); 
       setOperator(null);
       setWaitingForOperand(true);
-      setShowHistoryPanel(false); // Close history panel
+      setShowHistoryPanel(false); 
     }
   };
 
   const calculatorButtonsConfig = [
-    { label: calcMode === 'rad' ? <span className="font-semibold text-[#e8eaed]">Rad</span> : <span className="text-[#8ab4f8]">Rad</span>, onClick: () => setCalcMode('rad'), variant: "control-special", gridSpan: "col-span-1", ariaLabel: "Radians Mode" },
-    { label: calcMode === 'deg' ? <span className="font-semibold text-[#e8eaed]">Deg</span> : <span className="text-[#8ab4f8]">Deg</span>, onClick: () => setCalcMode('deg'), variant: "control-special", gridSpan: "col-span-1", ariaLabel: "Degrees Mode" },
+    { label: calcMode === 'rad' ? <span className="font-semibold text-[#e8eaed]">Rad</span> : <span className="text-primary">Rad</span>, onClick: () => setCalcMode('rad'), variant: "control-special", gridSpan: "col-span-1", ariaLabel: "Radians Mode" },
+    { label: calcMode === 'deg' ? <span className="font-semibold text-[#e8eaed]">Deg</span> : <span className="text-primary">Deg</span>, onClick: () => setCalcMode('deg'), variant: "control-special", gridSpan: "col-span-1", ariaLabel: "Degrees Mode" },
     { label: "x!", onClick: () => handleUnsupported("Factorial"), variant: "control", ariaLabel: "Factorial" },
     { label: "(", onClick: () => handleParenthesis("("), variant: "control", ariaLabel: "Open Parenthesis" },
     { label: ")", onClick: () => handleParenthesis(")"), variant: "control", ariaLabel: "Close Parenthesis" },
@@ -274,7 +272,7 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
     { label: "Ans", onClick: () => handleUnsupported("Answer"), variant: "function", ariaLabel: "Last Answer" },
     { label: "EXP", onClick: () => handleUnsupported("Exponent"), variant: "function", ariaLabel: "Exponent Notation" },
     { label: <div className="flex">x<span className="text-xs align-super">y</span></div>, onClick: () => handleUnsupported("Power"), variant: "function", ariaLabel: "Power x to y" },
-    { label: "0", onClick: () => handleNumberClick("0"), variant: "number" },
+    { label: "0", onClick: () => handleNumberClick("0"), variant: "number", gridSpan:"col-span-2" },
     { label: ".", onClick: handleDecimalClick, variant: "number", ariaLabel: "Decimal Point" },
     { label: "=", onClick: handleEqualsClick, variant: "equals", ariaLabel: "Equals" },
     { label: <Plus className="h-6 w-6"/>, onClick: () => handleOperatorClick("+"), variant: "operator", ariaLabel: "Add" },
@@ -291,19 +289,20 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
   const controlStripButtons = calculatorButtonsConfig.slice(0, 7);
   const mainGridButtonsRows = chunkArray(calculatorButtonsConfig.slice(7), 7);
 
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
       setIsOpen(open);
       if (!open) { 
         handleClearClick(true);
-        setShowHistoryPanel(false); // Close history panel when dialog closes
+        setShowHistoryPanel(false); 
       }
     }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-sm p-0 border-none shadow-2xl bg-[#202124]">
-        <div className="bg-[#202124] rounded-lg relative overflow-hidden"> {/* Added relative and overflow-hidden */}
+        <div className="bg-[#202124] rounded-lg relative overflow-hidden">
           <DialogHeader className="p-4 pt-5">
-            <DialogTitle className="sr-only">Calculator</DialogTitle>
+             <DialogTitle className="sr-only">Calculator</DialogTitle>
             <div className="h-[100px] flex flex-col justify-end items-end px-3 py-2 rounded-md">
               <div className="flex items-center w-full justify-between mb-1">
                 <button 
@@ -370,12 +369,12 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
               >
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-lg font-medium text-[#e8eaed]">History</h3>
-                  <Button variant="ghost" size="sm" onClick={handleClearHistoryClick} className="text-[#8ab4f8] hover:bg-[#303134] text-xs h-8">
+                  <Button variant="ghost" size="sm" onClick={handleClearHistoryClick} className="text-primary hover:bg-[#303134] text-xs h-8"> {/* Clear button text to primary */}
                     <Trash2 className="h-4 w-4 mr-1.5" /> Clear
                   </Button>
                 </div>
                 {history.length === 0 ? (
-                  <div className="text-sm text-center text-[#9aa0a6] flex-1 flex items-center justify-center">
+                  <div className="text-sm text-center text-[#9aa0a6] flex-1 flex flex-col items-center justify-center"> {/* Added flex-col */}
                     <History className="h-12 w-12 text-[#5f6368] mb-3"/>
                     <p>No history yet.</p>
                   </div>
