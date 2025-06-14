@@ -4,13 +4,7 @@
 import type { Project, ProjectStatusType, CustomStatus, User } from '@/types'; 
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
-import { CalendarDays, User as UserIconLucide, Folder, EllipsisVertical, GripVertical, UserCheck } from 'lucide-react'; 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { CalendarDays, User as UserIconLucide, Folder, Eye, GripVertical, UserCheck } from 'lucide-react'; // Replaced EllipsisVertical with Eye
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useDraggable } from '@dnd-kit/core';
@@ -20,7 +14,7 @@ import { parseISO, differenceInSeconds, isAfter, isBefore, addHours, addDays, fo
 import React, { useState, useEffect } from 'react'; 
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
+import Link from 'next/link'; // Added Link import
 
 // Inline SVG Stopwatch Icon Component
 const StopwatchIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -235,7 +229,9 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
     return () => clearInterval(intervalId); 
   }, [project]);
 
-  const showDrInfo = ['On Design', 'On Hold', 'Logistics', 'Courier'].includes(project.status) && project.designerRepresentativeName;
+  const canAssignDr = ['CR Clearance', 'On Design'].includes(project.status) && (currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'CRM');
+  const drInfoClickable = canAssignDr && project.designerRepresentativeName;
+  const crmInfoClickable = canAssignDr && !project.designerRepresentativeName;
 
   return (
     <motion.div
@@ -276,20 +272,11 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
           <div className={cn("flex justify-between items-start", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
             <span className="text-sm font-semibold text-foreground">{project.projectIdDisplay}</span>
             {!isOverlay && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <EllipsisVertical className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onOpenAssignDrDialog(project)} disabled={!['CR Clearance', 'On Design'].includes(project.status)}>
-                    <UserCheck className="mr-2 h-4 w-4" /> Assign/Re-assign DR
-                  </DropdownMenuItem>
-                  <DropdownMenuItem disabled>Edit Project (Soon)</DropdownMenuItem>
-                  <DropdownMenuItem disabled className="text-destructive focus:text-destructive">Delete Project (Soon)</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                <Link href={`/track/${project.id}`} target="_blank" passHref legacyBehavior>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" title="View Tracking Link">
+                        <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                    </Button>
+                </Link>
             )}
           </div>
           
@@ -300,18 +287,31 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
             Target: {project.endDate ? parseISO(project.endDate).toLocaleDateString() : 'N/A'}
           </div>
 
-          <div className={cn("flex items-center space-x-1.5 text-xs text-muted-foreground", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
+          <div 
+            className={cn(
+              "flex items-center space-x-1.5 text-xs text-muted-foreground", 
+              !isOverlay && !isDragging ? "ml-6" : "ml-0",
+              crmInfoClickable && "cursor-pointer hover:text-primary"
+            )}
+            onClick={crmInfoClickable ? () => onOpenAssignDrDialog(project) : undefined}
+            title={crmInfoClickable ? "Assign Designer Representative" : `CRM: ${project.assigneeName}`}
+          >
             <UserIconLucide className="h-3.5 w-3.5" />
-            <span className="truncate" title={`CRM: ${project.assigneeName}`}>CRM: {project.assigneeName}</span>
+            <span className="truncate">CRM: {project.assigneeName}</span>
           </div>
-
-          {showDrInfo && (
-             <div className={cn("flex items-center space-x-1.5 text-xs text-blue-600 dark:text-blue-400 mt-1", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
+          
+          {project.designerRepresentativeName && (
+             <div 
+                className={cn(
+                  "flex items-center space-x-1.5 text-xs text-blue-600 dark:text-blue-400 mt-1", 
+                  !isOverlay && !isDragging ? "ml-6" : "ml-0",
+                  drInfoClickable && "cursor-pointer hover:text-blue-700 dark:hover:text-blue-300"
+                )}
+                onClick={drInfoClickable ? () => onOpenAssignDrDialog(project) : undefined}
+                title={drInfoClickable ? "Re-assign Designer Representative" : `DR: ${project.designerRepresentativeName}`}
+             >
               <UserCheck className="h-4 w-4" />
-              <span className="truncate" title={`Designer: ${project.designerRepresentativeName}`}>
-                DR: {project.designerRepresentativeName}
-              </span>
-              {/* Inline avatar next to DR name is now removed */}
+              <span className="truncate">DR: {project.designerRepresentativeName}</span>
             </div>
           )}
 
@@ -338,32 +338,44 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Avatar className="h-7 w-7 text-xs border bg-muted">
-                    <AvatarImage src={project.assigneeAvatarUrl || undefined} alt={project.assigneeName} data-ai-hint="assignee avatar" />
-                    <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(project.assigneeInitials || project.assigneeName)}</AvatarFallback>
-                  </Avatar>
+                  <div 
+                    className={cn(crmInfoClickable && "cursor-pointer")}
+                    onClick={crmInfoClickable ? () => onOpenAssignDrDialog(project) : undefined}
+                  >
+                    <Avatar className="h-7 w-7 text-xs border bg-muted">
+                      <AvatarImage src={project.assigneeAvatarUrl || undefined} alt={project.assigneeName} data-ai-hint="assignee avatar" />
+                      <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(project.assigneeInitials || project.assigneeName)}</AvatarFallback>
+                    </Avatar>
+                  </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom">
                   <p>CRM: {project.assigneeName}</p>
+                  {crmInfoClickable && <p className="text-xs text-primary">(Click to assign DR)</p>}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
 
-            {showDrInfo && project.designerRepresentativeName && (
+            {project.designerRepresentativeName && (
               <>
                 <div className="w-px h-5 bg-border mx-1.5"></div> 
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                       <Avatar className="h-7 w-7 text-xs border border-blue-400 bg-muted">
-                        <AvatarImage src={project.designerRepresentativeAvatarUrl || undefined} alt={project.designerRepresentativeName} data-ai-hint="designer avatar" />
-                        <AvatarFallback className="text-blue-500 font-semibold">
-                          {getInitials(project.designerRepresentativeName)}
-                        </AvatarFallback>
-                      </Avatar>
+                       <div 
+                          className={cn(drInfoClickable && "cursor-pointer")}
+                          onClick={drInfoClickable ? () => onOpenAssignDrDialog(project) : undefined}
+                       >
+                        <Avatar className="h-7 w-7 text-xs border border-blue-400 bg-muted">
+                          <AvatarImage src={project.designerRepresentativeAvatarUrl || undefined} alt={project.designerRepresentativeName} data-ai-hint="designer avatar" />
+                          <AvatarFallback className="text-blue-500 font-semibold">
+                            {getInitials(project.designerRepresentativeName)}
+                          </AvatarFallback>
+                        </Avatar>
+                       </div>
                     </TooltipTrigger>
                     <TooltipContent side="bottom">
                       <p>DR: {project.designerRepresentativeName}</p>
+                      {drInfoClickable && <p className="text-xs text-primary">(Click to re-assign DR)</p>}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -377,3 +389,4 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
 }
     
     
+
