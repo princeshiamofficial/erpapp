@@ -289,8 +289,8 @@ export default function UsersPage() {
       return targetUser.id !== currentUser.id && targetUser.role !== 'SYSTEM_ADMIN';
     }
     if (currentUser.role === 'ADMIN') {
-      if (targetUser.id === currentUser.id) return true; 
-      return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE';
+      if (targetUser.id === currentUser.id) return true; // Admins can edit their own info
+      return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE' || targetUser.role === 'VENDOR';
     }
     return false; 
   }, [currentUser]);
@@ -300,7 +300,7 @@ export default function UsersPage() {
     if (targetUser.id === currentUser.id) return false; 
     if (currentUser.role === 'SYSTEM_ADMIN') return targetUser.role !== 'SYSTEM_ADMIN'; 
     if (currentUser.role === 'ADMIN') {
-      return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE';
+      return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE' || targetUser.role === 'VENDOR';
     }
     return false;
   }, [currentUser]);
@@ -396,6 +396,7 @@ export default function UsersPage() {
                         user.role === 'ADMIN' ? 'bg-purple-600/20 text-purple-700 dark:text-purple-300 border-purple-600/30 dark:border-purple-500/30' :
                         user.role === 'CRM' ? 'bg-primary/20 text-primary dark:text-orange-300 border-primary/30 dark:border-orange-500/30' :
                         user.role === 'DESIGNER_REPRESENTATIVE' ? 'bg-green-600/20 text-green-700 dark:text-green-300 border-green-600/30 dark:border-green-500/30' : 
+                        user.role === 'VENDOR' ? 'bg-gray-500/20 text-gray-700 dark:text-gray-300 border-gray-500/30' :
                         'bg-gray-500/20 text-gray-700 dark:text-gray-300 border-gray-500/30'
                       }`}>
                         {user.role.replace(/_/g, ' ')}
@@ -658,3 +659,4 @@ export default function UsersPage() {
 }
     
     
+

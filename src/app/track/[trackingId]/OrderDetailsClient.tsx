@@ -76,7 +76,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const [activeMentionStartIndex, setActiveMentionStartIndex] = useState<number | null>(null);
-  const [mentionSuggestions, setMentionSuggestions] = useState<Array<User | { id: string, name: string, role: 'Client' }>>([]);
+  const [mentionSuggestions, setMentionSuggestions] = useState<Array<User | { id: string, name: string, role: 'Client' | UserRole }>>([]);
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
   const invoiceRef = useRef<HTMLDivElement>(null);
   const barcodeRef = useRef<SVGSVGElement>(null);
@@ -246,9 +246,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
         const isAtStartOfWord = lastAtSymbolIndex === 0 || (lastAtSymbolIndex > 0 && /\s/.test(textBeforeCursor[lastAtSymbolIndex - 1]));
         if (isAtStartOfWord && /^[a-zA-Z0-9_]*$/.test(textAfterAt)) {
             setMentionQuery(textAfterAt); setActiveMentionStartIndex(lastAtSymbolIndex);
-            const clientOption = { id: 'client-mention', name: (order.companyName || "Client"), role: 'Client' as 'Client' };
+            const clientOption = { id: 'client-mention', name: (order.companyName || "Client"), role: 'Client' as UserRole | 'Client' };
             const usersToSearchFromProp = Array.isArray(allUsersForMentions) ? allUsersForMentions : [];
-            const usersToSearch = [clientOption, ...usersToSearchFromProp];
+            const usersToSearch = [clientOption, ...usersToSearchFromProp.map(u => ({ ...u, role: u.role as UserRole | 'Client'})) ];
             const filtered = usersToSearch.filter(user => (user.name.toLowerCase().includes(textAfterAt.toLowerCase()) || (user.role && user.role.toLowerCase().replace(/_/g, ' ').includes(textAfterAt.toLowerCase())))).slice(0, 7);
             setMentionSuggestions(filtered); return;
         }
@@ -277,7 +277,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   const renderComment = (comment: Comment, isReply = false, parentCommentId?: string) => {
     if (comment.isInternal && !currentUser) return null;
-    if (comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role)) return null;
+    if (comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR'].includes(currentUser.role)) return null;
     const reactorId = getReactorId();
     const hasLiked = reactorId && comment.likes?.reactedBy.includes(reactorId);
     let avatarSrc: string | undefined = undefined;
@@ -290,7 +290,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
        if (userToDisplay?.avatarUrl) { avatarSrc = userToDisplay.avatarUrl; avatarDataAiHint = "user uploaded avatar"; }
     }
     const avatarFallback = getInitials(comment.userName || "User");
-    const visibleReplies = (comment.replies || []).filter(reply => !(reply.isInternal && !currentUser) && !(reply.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role))).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    const visibleReplies = (comment.replies || []).filter(reply => !(reply.isInternal && !currentUser) && !(reply.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR'].includes(currentUser.role))).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
     const isRepliesExpanded = expandedReplies[comment.id] || false;
     const repliesToRender = isRepliesExpanded || visibleReplies.length <= MAX_INITIAL_REPLIES_TO_SHOW ? visibleReplies : visibleReplies.slice(0, MAX_INITIAL_REPLIES_TO_SHOW);
     return (
@@ -342,7 +342,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 <PopoverContent key={mentionQuery + (activeMentionStartIndex ?? '') + 'popover'} className="w-[250px] p-0" side="top" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
                   <Command><CommandList>{mentionSuggestions.map((user) => (<CommandItem key={user.id + (activeMentionStartIndex ?? '')} value={user.name + user.role} onSelect={() => handleMentionSelect(user.name)} className="cursor-pointer flex items-center gap-2">
                     <Avatar className="h-6 w-6 text-xs"><AvatarImage src={user.role === 'Client' ? CLIENT_AVATAR_URL : (Array.isArray(allUsersForMentions) && (allUsersForMentions.find(u => u.id === user.id) as User)?.avatarUrl) || undefined} /><AvatarFallback className="bg-muted text-xs">{getInitials(user.name)}</AvatarFallback></Avatar>
-                    <span className="text-xs font-medium">{user.name}</span><span className="text-xs text-muted-foreground">({user.role === 'DESIGNER_REPRESENTATIVE' ? 'DR' : user.role.replace(/_/g, ' ')})</span></CommandItem>))}
+                    <span className="text-xs font-medium">{user.name}</span><span className="text-xs text-muted-foreground">({user.role === 'DESIGNER_REPRESENTATIVE' ? 'DR' : (typeof user.role === 'string' ? user.role.replace(/_/g, ' ') : 'Client')})</span></CommandItem>))}
                   </CommandList>{mentionSuggestions.length === 0 && mentionQuery && (<CommandEmpty>No users found matching "@{mentionQuery}"</CommandEmpty>)}</Command>
                 </PopoverContent>
               )}
@@ -357,8 +357,8 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   };
 
   const publicCommentsAndRepliesCount = order.comments.reduce((acc, comment) => {
-    if (!(comment.isInternal && !currentUser) && !(comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role))) {
-      acc++; const visibleReplies = (comment.replies || []).filter(reply => !(reply.isInternal && !currentUser) && !(reply.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role))); acc += visibleReplies.length;
+    if (!(comment.isInternal && !currentUser) && !(comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR'].includes(currentUser.role))) {
+      acc++; const visibleReplies = (comment.replies || []).filter(reply => !(reply.isInternal && !currentUser) && !(reply.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR'].includes(currentUser.role))); acc += visibleReplies.length;
     } return acc;
   }, 0);
 
@@ -515,7 +515,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
           <CardDescription className="text-muted-foreground mt-1 ml-[44px] sm:ml-[56px]">Share updates or ask questions about this order.</CardDescription>
         </CardHeader>
         <CardContent className="p-6 sm:p-8 space-y-5">
-          <div className="space-y-4 sm:space-y-5 max-h-[600px] overflow-y-auto pr-2 sm:pr-3 custom-scrollbar">{order.comments.filter(comment => !(comment.isInternal && !currentUser) && !(comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'].includes(currentUser.role))).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map((comment) => renderComment(comment))}
+          <div className="space-y-4 sm:space-y-5 max-h-[600px] overflow-y-auto pr-2 sm:pr-3 custom-scrollbar">{order.comments.filter(comment => !(comment.isInternal && !currentUser) && !(comment.isInternal && currentUser && !['ADMIN', 'SYSTEM_ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR'].includes(currentUser.role))).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()).map((comment) => renderComment(comment))}
             {publicCommentsAndRepliesCount === 0 && (<div className="text-center py-8 sm:py-10"><div className="mx-auto h-28 w-36 rounded-lg opacity-50 shadow-sm" data-ai-hint="empty message"><svg viewBox="0 0 150 112" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 0C8.95431 0 0 8.95431 0 20V72C0 83.0457 8.95431 92 20 92H40L48.8889 107.5C49.4817 108.921 51.5183 108.921 52.1111 107.5L61 92H130C141.046 92 150 83.0457 150 72V20C150 8.95431 141.046 0 130 0H20Z" fill="hsl(var(--muted))"/><rect x="20" y="25" width="110" height="8" rx="4" fill="hsl(var(--muted-foreground))" fillOpacity="0.3"/><rect x="20" y="45" width="80" height="8" rx="4" fill="hsl(var(--muted-foreground))" fillOpacity="0.3"/></svg></div>
             <p className="mt-4 sm:mt-5 text-muted-foreground text-md sm:text-lg">No public comments yet.</p><p className="text-xs sm:text-sm text-muted-foreground">Be the first to add one using the form below!</p></div>)}
           </div>

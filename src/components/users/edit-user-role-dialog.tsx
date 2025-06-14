@@ -16,7 +16,7 @@ interface EditUserRoleDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"];
+const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR"];
 
 export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, isOpen, onOpenChange }: EditUserRoleDialogProps) {
   const [selectedRole, setSelectedRole] = useState<UserRole>(user.role);
@@ -43,12 +43,18 @@ export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, isOpe
   const getAvailableRolesForSelection = (): UserRole[] => {
     if (currentUser.role === 'SYSTEM_ADMIN') return ALL_USER_ROLES; 
     if (currentUser.role === 'ADMIN') {
-      if (user.role === 'ADMIN' || user.role === 'SYSTEM_ADMIN' || user.id === currentUser.id) {
-        return [user.role];
+      // Admin can assign/edit to ADMIN, CRM, DR, VENDOR, but not SYSTEM_ADMIN.
+      // If editing another ADMIN or SYSTEM_ADMIN, or themselves, they are restricted.
+      if (user.id === currentUser.id || user.role === 'SYSTEM_ADMIN') {
+        return [user.role]; // Can only select the current role (effectively no change allowed)
       }
-      return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
+      if (user.role === 'ADMIN') { // If target is admin, current admin can't change their role
+          return [user.role];
+      }
+      // Can assign these roles to non-admin/non-system-admin users
+      return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR'];
     }
-    return [user.role]; 
+    return [user.role]; // Default: can only select current role (no change)
   };
   const availableRoles = getAvailableRolesForSelection();
 
@@ -124,3 +130,4 @@ export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, isOpe
     </Dialog>
   );
 }
+
