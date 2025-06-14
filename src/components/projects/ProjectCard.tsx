@@ -1,7 +1,7 @@
 
 "use client";
 
-import type { Project, ProjectStatusType, CustomStatus, User } from '@/types'; 
+import type { Project, CustomStatus, User } from '@/types'; 
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
 import { CalendarDays, User as UserIconLucide, Folder, Eye, GripVertical, UserCheck } from 'lucide-react'; 
@@ -275,11 +275,22 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
           <div className={cn("flex justify-between items-start", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
             <span className="text-sm font-semibold text-foreground">{project.projectIdDisplay}</span>
             {!isOverlay && (
-                <Link href={`/track/${project.id}`} target="_blank" passHref legacyBehavior>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" title="View Tracking Link">
-                        <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                    </Button>
-                </Link>
+               <Button
+                  asChild
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  title="View Tracking Link"
+                  onClick={(e) => {
+                    // Prevent the click from propagating to the draggable card handlers
+                    // which might interfere with the link's default action.
+                    e.stopPropagation();
+                  }}
+                >
+                  <Link href={`/track/${project.id}`} target="_blank" rel="noopener noreferrer">
+                    <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                  </Link>
+                </Button>
             )}
           </div>
           
@@ -295,19 +306,19 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
               "flex items-center space-x-1.5 text-xs text-muted-foreground", 
               !isOverlay && !isDragging ? "ml-6" : "ml-0"
             )}
-            title={`CRM: ${project.assigneeName}${crmInfoClickable ? ' (Click to assign DR)' : ''}`}
+            title={`CRM: ${project.assigneeName}`}
           >
             <UserIconLucide className="h-3.5 w-3.5" />
             <span className="truncate">CRM: {project.assigneeName}</span>
           </div>
           
-          {project.designerRepresentativeName && (
+          {project.designerRepresentativeName && (project.status === 'On Design' || project.status === 'On Hold' || project.status === 'Logistics' || project.status === 'Courier') && (
              <div 
                 className={cn(
                   "flex items-center space-x-1.5 text-xs text-blue-600 dark:text-blue-400 mt-1", 
                   !isOverlay && !isDragging ? "ml-6" : "ml-0"
                 )}
-                title={`DR: ${project.designerRepresentativeName}${drInfoClickable ? ' (Click to re-assign DR)' : ''}`}
+                title={`DR: ${project.designerRepresentativeName}`}
              >
               <UserCheck className="h-4 w-4" />
               <span className="truncate">DR: {project.designerRepresentativeName}</span>
@@ -338,7 +349,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
-                    className={cn(crmInfoClickable && "cursor-pointer hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors")}
+                    className={cn("hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors", crmInfoClickable && "cursor-pointer")}
                     onClick={
                       crmInfoClickable
                         ? (e) => { 
@@ -369,7 +380,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
                   <Tooltip>
                     <TooltipTrigger asChild>
                        <div
-                          className={cn(drInfoClickable && "cursor-pointer hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors")}
+                          className={cn("hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors", drInfoClickable && "cursor-pointer")}
                           onClick={
                             drInfoClickable
                               ? (e) => {
@@ -404,5 +415,3 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
 }
     
     
-
-
