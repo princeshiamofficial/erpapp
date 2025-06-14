@@ -6,7 +6,7 @@ import type { Project, ProjectStatusType } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { formatISO, addMonths, addDays } from 'date-fns';
 import { getOrders } from './order-service'; 
-import { ORDER_SUBMITTED_ID } from './status-service'; 
+import { ORDER_SUBMITTED_ID, READY_FOR_DESIGN_STATUS_ID } from './status-service'; 
 import { getUsers as getAllUsersService } from './user-service'; // Import user service to fetch avatars
 
 const PROJECTS_COLLECTION = 'projects';
@@ -103,22 +103,18 @@ export const getProjects = async (): Promise<Project[]> => {
   try {
     const [allOrders, allUsers] = await Promise.all([
       getOrders(),
-      getAllUsersService() // Fetch all users to get avatar URLs
+      getAllUsersService() 
     ]);
     const userMap = new Map(allUsers.map(user => [user.id, user]));
 
     console.log(`[getProjects] Fetched ${allOrders.length} total orders.`);
     
-    const orderSubmittedOrders = allOrders.filter(
-      (order) => order.currentStatus === ORDER_SUBMITTED_ID
+    const relevantOrdersForKanban = allOrders.filter(
+      (order) => order.currentStatus === ORDER_SUBMITTED_ID || order.currentStatus === READY_FOR_DESIGN_STATUS_ID
     );
-    console.log(`[getProjects] Found ${orderSubmittedOrders.length} orders with status '${ORDER_SUBMITTED_ID}'.`);
+    console.log(`[getProjects] Found ${relevantOrdersForKanban.length} orders with status '${ORDER_SUBMITTED_ID}' or '${READY_FOR_DESIGN_STATUS_ID}'.`);
     
-    if (orderSubmittedOrders.length > 0) {
-        console.log('[getProjects] Details of "order-submitted" orders:', orderSubmittedOrders.map(o => ({id: o.id, companyName: o.companyName, currentStatus: o.currentStatus, createdAt: o.createdAt })));
-    }
-
-    const dynamicProjectsFromOrders = orderSubmittedOrders
+    const dynamicProjectsFromOrders = relevantOrdersForKanban
       .filter(order => {
         const alreadyExistsAsProject = existingProjectIds.has(order.id);
         if (alreadyExistsAsProject) {
@@ -132,11 +128,27 @@ export const getProjects = async (): Promise<Project[]> => {
         const crmUser = userMap.get(order.crmUserId);
         const drUser = order.designerRepresentativeId ? userMap.get(order.designerRepresentativeId) : undefined;
 
+        let projectStatus: ProjectStatusType;
+        let crClearanceTimestamp: string | undefined = undefined;
+        let onDesignTimestamp: string | undefined = undefined;
+
+        if (order.currentStatus === ORDER_SUBMITTED_ID) {
+          projectStatus = 'CR Clearance';
+          crClearanceTimestamp = order.createdAt || projectCreatedAt;
+        } else if (order.currentStatus === READY_FOR_DESIGN_STATUS_ID) {
+          projectStatus = 'On Design';
+          onDesignTimestamp = order.updatedAt || projectCreatedAt; // Assuming updatedAt reflects when it became ready for design
+        } else {
+          // Fallback, though filter should prevent this
+          projectStatus = 'CR Clearance'; 
+          crClearanceTimestamp = order.createdAt || projectCreatedAt;
+        }
+
         const dynamicProject: Project = {
           id: order.id, 
           projectIdDisplay: order.id,
           name: order.companyName,
-          status: 'CR Clearance',
+          status: projectStatus,
           assigneeName: order.crmUserName,
           assigneeInitials: getInitialsForName(order.crmUserName),
           assigneeAvatarUrl: crmUser?.avatarUrl || null,
@@ -146,10 +158,11 @@ export const getProjects = async (): Promise<Project[]> => {
           categoryTag: 'From Order',
           createdAt: projectCreatedAt,
           updatedAt: order.updatedAt || projectCreatedAt,
-          crClearanceAt: projectCreatedAt, 
           endDate: projectEndDate,
+          crClearanceAt: crClearanceTimestamp,
+          onDesignAt: onDesignTimestamp,
         };
-        console.log(`[getProjects] Dynamically creating project for order ${order.id}:`, dynamicProject);
+        console.log(`[getProjects] Dynamically creating project for order ${order.id} with status ${projectStatus}:`, dynamicProject);
         return dynamicProject;
       });
 
@@ -269,4 +282,5 @@ export const updateProjectStatus = async (
   }
 };
     
+
 
