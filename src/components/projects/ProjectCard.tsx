@@ -19,6 +19,8 @@ import { cn } from '@/lib/utils';
 import { parseISO, differenceInSeconds, isAfter, isBefore, addHours, addDays, formatDistanceToNowStrict } from 'date-fns';
 import React, { useState, useEffect } from 'react'; 
 import { motion } from 'framer-motion';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 // Inline SVG Stopwatch Icon Component
 const StopwatchIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -202,7 +204,6 @@ const calculateProgressInfo = (
   };
 };
 
-
 export function ProjectCard({ project, isOverlay = false, currentUser, allStatuses, onOpenAssignDrDialog }: ProjectCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: project.id,
@@ -218,7 +219,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
     if (!name) return '??';
     const names = name.split(' ');
     if (names.length === 1) return names[0].charAt(0).toUpperCase();
-    return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
+    return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
   };
   
   const [progressInfo, setProgressInfo] = useState<ProgressInfo>(() => 
@@ -282,7 +283,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onOpenAssignDrDialog(project)} disabled={project.status !== 'On Design'}>
+                  <DropdownMenuItem onClick={() => onOpenAssignDrDialog(project)} disabled={!['CR Clearance', 'On Design'].includes(project.status)}>
                     <UserCheck className="mr-2 h-4 w-4" /> Assign/Re-assign DR
                   </DropdownMenuItem>
                   <DropdownMenuItem disabled>Edit Project (Soon)</DropdownMenuItem>
@@ -310,14 +311,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
               <span className="truncate" title={`Designer: ${project.designerRepresentativeName}`}>
                 DR: {project.designerRepresentativeName}
               </span>
-              {project.designerRepresentativeAvatarUrl && (
-                <Avatar className="h-5 w-5 text-xs border border-blue-300 dark:border-blue-700 bg-muted ml-1">
-                  <AvatarImage src={project.designerRepresentativeAvatarUrl} alt={project.designerRepresentativeName!} data-ai-hint="designer avatar" />
-                  <AvatarFallback className="text-blue-700 dark:text-blue-300 font-semibold">
-                    {getInitials(project.designerRepresentativeName)}
-                  </AvatarFallback>
-                </Avatar>
-              )}
+              {/* Inline avatar next to DR name is now removed */}
             </div>
           )}
 
@@ -341,10 +335,40 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
           )}
 
           <div className={cn("flex items-center justify-start mt-2", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
-            <Avatar className="h-7 w-7 text-xs border bg-muted">
-              <AvatarImage src={project.assigneeAvatarUrl || undefined} alt={project.assigneeName} data-ai-hint="assignee avatar" />
-              <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(project.assigneeInitials || project.assigneeName)}</AvatarFallback>
-            </Avatar>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Avatar className="h-7 w-7 text-xs border bg-muted">
+                    <AvatarImage src={project.assigneeAvatarUrl || undefined} alt={project.assigneeName} data-ai-hint="assignee avatar" />
+                    <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(project.assigneeInitials || project.assigneeName)}</AvatarFallback>
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent side="bottom">
+                  <p>CRM: {project.assigneeName}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+
+            {showDrInfo && project.designerRepresentativeName && (
+              <>
+                <div className="w-px h-5 bg-border mx-1.5"></div> 
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                       <Avatar className="h-7 w-7 text-xs border border-blue-400 bg-muted">
+                        <AvatarImage src={project.designerRepresentativeAvatarUrl || undefined} alt={project.designerRepresentativeName} data-ai-hint="designer avatar" />
+                        <AvatarFallback className="text-blue-500 font-semibold">
+                          {getInitials(project.designerRepresentativeName)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>DR: {project.designerRepresentativeName}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
