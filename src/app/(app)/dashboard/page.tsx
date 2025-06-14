@@ -206,6 +206,7 @@ export default function DashboardPage() {
     setTotalSales(formatCurrency(currentTotalSales));
     setInvoiceDue(formatCurrency(currentTotalSales - currentTotalAdvance));
     setTotalPurchase(formatCurrency(currentTotalPurchaseValue));
+    setNetValue(formatCurrency(currentTotalSales - currentTotalPurchaseValue));
     // setTotalSellReturn(formatCurrency(currentTotalSellReturnValue)); // This would update the sell return card
 
     if (selectedPredefinedValue === 'today' || selectedPredefinedValue === 'yesterday') {
@@ -288,7 +289,7 @@ export default function DashboardPage() {
   const summaryCardData = useMemo(() => {
     if (currentUser?.role === 'VENDOR') {
       return summaryCardDefinitions.filter(card => 
-        card.title === "Total Sales" || card.title === "Invoice due"
+        card.title === "Total Sales" || card.title === "Invoice due" || card.title === "Net"
       );
     }
     return summaryCardDefinitions;
