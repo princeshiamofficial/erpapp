@@ -230,9 +230,7 @@ export default function ProjectsPage() {
               <Briefcase className="h-7 w-7 text-primary"/>
               <h1 className="page-title text-2xl sm:text-3xl">Projects Kanban</h1>
           </div>
-          <Button variant="default" size="lg" className="w-full sm:w-auto h-10" disabled>
-            New Project (Soon)
-          </Button>
+          {/* New Project (Soon) button removed */}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 sm:px-0">
