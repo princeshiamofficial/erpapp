@@ -3,8 +3,8 @@
 
 import type { Project, ProjectStatusType } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Added AvatarImage
-import { CalendarDays, User, Folder, EllipsisVertical, GripVertical } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
+import { CalendarDays, User, Folder, EllipsisVertical, GripVertical, UserPlus } from 'lucide-react'; // Added UserPlus
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -295,6 +295,9 @@ export function ProjectCard({ project, isOverlay = false }: ProjectCardProps) {
           <div className={cn("flex items-center space-x-1.5 text-xs text-muted-foreground", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
             <User className="h-3.5 w-3.5" />
             <span className="truncate" title={project.assigneeName}>{project.assigneeName}</span>
+            {project.status === 'On Design' && (
+              <UserPlus className="h-3.5 w-3.5 text-purple-500 ml-1" title="Designer Assigned/Working" />
+            )}
           </div>
 
           <div className={cn("flex items-center space-x-1.5 text-xs text-muted-foreground", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
