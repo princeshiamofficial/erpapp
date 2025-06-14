@@ -274,7 +274,7 @@ export default function DashboardPage() {
     setSelectedPredefinedValue(predefined);
   };
 
- const summaryCardData = useMemo(() => [
+ const summaryCardDefinitions = [
     { title: "Total Sales", value: totalSales, icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
     { title: "Net", value: netValue, icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData },
     { title: "Invoice due", value: invoiceDue, icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
@@ -283,7 +283,16 @@ export default function DashboardPage() {
     { title: "Purchase due", value: purchaseDue, icon: AlertTriangle, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
     { title: "Total Purchase Return", value: totalPurchaseReturn, icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
     { title: "Expense", value: expense, icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
-  ], [isLoadingData, totalSales, netValue, invoiceDue, totalSellReturn, totalPurchase, purchaseDue, totalPurchaseReturn, expense]);
+  ];
+
+  const summaryCardData = useMemo(() => {
+    if (currentUser?.role === 'VENDOR') {
+      return summaryCardDefinitions.filter(card => 
+        card.title === "Total Sales" || card.title === "Invoice due"
+      );
+    }
+    return summaryCardDefinitions;
+  }, [isLoadingData, totalSales, netValue, invoiceDue, totalSellReturn, totalPurchase, purchaseDue, totalPurchaseReturn, expense, currentUser, summaryCardDefinitions]);
 
 
   if (!currentUser && !isLoadingData) {
@@ -475,3 +484,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+
