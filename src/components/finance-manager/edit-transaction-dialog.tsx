@@ -236,20 +236,15 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
                  <div className="space-y-1">
                  <Label htmlFor="edit-transaction-document">Document Attachment {isDocumentNowRequired ? "*" : "(Optional)"}</Label>
                  {currentDocumentUrl && !selectedDocumentFile && (
-                   <div className="flex items-center justify-between p-2 border rounded-md bg-secondary/30 min-w-0">
+                   <div className="flex items-center justify-between p-2 border rounded-md bg-secondary/30 min-w-0 gap-2">
                      <NextLink
                        href={currentDocumentUrl}
                        target="_blank"
                        rel="noopener noreferrer"
                        className="text-sm text-primary hover:underline flex-1 min-w-0"
-                       title={currentDocumentUrl}
+                       title={currentDocumentUrl.split('/').pop() || "View Current Document"}
                      >
-                       <div className="flex items-center min-w-0"> {/* Inner flex container */}
-                         <LinkIcon className="h-4 w-4 mr-1.5 shrink-0" />
-                         <span className="truncate"> {/* This span will truncate */}
-                           {currentDocumentUrl.split('/').pop() || "View Current Document"}
-                         </span>
-                       </div>
+                       <LinkIcon className="h-5 w-5" /> {/* Icon only */}
                      </NextLink>
                      <Button
                         type="button"
@@ -257,7 +252,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
                         size="sm"
                         onClick={handleRemoveExistingDocument}
                         title="Remove existing document"
-                        className="text-xs text-destructive hover:text-destructive/80 h-7 px-1.5 shrink-0 ml-2"
+                        className="text-xs text-destructive hover:text-destructive/80 h-7 px-1.5 shrink-0"
                         disabled={isSubmitting || isUploadingDocument}
                       >
                         <XCircle className="h-3.5 w-3.5 mr-1"/>Remove
