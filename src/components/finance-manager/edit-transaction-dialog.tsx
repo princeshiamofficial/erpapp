@@ -237,14 +237,14 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
                  <div className="space-y-1">
                  <Label htmlFor="edit-transaction-document">Document Attachment {isDocumentNowRequired ? "*" : "(Optional)"}</Label>
                  {currentDocumentUrl && !selectedDocumentFile && (
-                   <div className="flex items-center justify-between p-2 border rounded-md bg-secondary/30">
-                     <Link href={currentDocumentUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate flex items-center">
+                   <div className="flex items-center justify-between p-2 border rounded-md bg-secondary/30 min-w-0">
+                     <Link href={currentDocumentUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center min-w-0" title={currentDocumentUrl}>
                        <LinkIcon className="h-4 w-4 mr-1.5 shrink-0" />
-                       <span className="truncate" title={currentDocumentUrl.split('/').pop() || "View Current Document"}>
+                       <span className="truncate">
                          {currentDocumentUrl.split('/').pop() || "View Current Document"}
                        </span>
                      </Link>
-                     <Button type="button" variant="ghost" size="sm" onClick={handleRemoveExistingDocument} title="Remove existing document" className="text-xs text-destructive hover:text-destructive/80 h-7 px-1.5" disabled={isSubmitting || isUploadingDocument}>
+                     <Button type="button" variant="ghost" size="sm" onClick={handleRemoveExistingDocument} title="Remove existing document" className="text-xs text-destructive hover:text-destructive/80 h-7 px-1.5 shrink-0" disabled={isSubmitting || isUploadingDocument}>
                         <XCircle className="h-3.5 w-3.5 mr-1"/>Remove
                      </Button>
                    </div>
@@ -277,7 +277,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
                   {selectedDocumentFile && (
                      <div className="text-xs text-muted-foreground flex items-center gap-1.5 pt-1">
                          <Paperclip className="h-3 w-3"/>
-                         <span>{selectedDocumentFile.name} ({(selectedDocumentFile.size / 1024).toFixed(1)} KB)</span>
+                         <span className="truncate">{selectedDocumentFile.name} ({(selectedDocumentFile.size / (1024 * 1024)).toFixed(2)} MB)</span>
                      </div>
                  )}
                   <p className="text-xs text-muted-foreground">Max 50MB. (Any file type)</p>
@@ -299,3 +299,4 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
     </Dialog>
   );
 }
+
