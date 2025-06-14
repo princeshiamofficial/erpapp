@@ -4,7 +4,7 @@
 import type { Project, CustomStatus, User } from '@/types'; 
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
-import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck } from 'lucide-react'; // Changed Eye to ReceiptText
+import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useDraggable } from '@dnd-kit/core';
@@ -234,11 +234,6 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
   const crmInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !project.designerRepresentativeName;
   const drInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !!project.designerRepresentativeName;
 
-  const handleOpenLink = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.stopPropagation(); // Prevent drag from starting
-    window.open(`/track/${project.id}`, '_blank', 'noopener,noreferrer');
-  };
-
   return (
     <motion.div
       ref={!isOverlay ? setNodeRef : null}
@@ -274,7 +269,18 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
                   size="icon"
                   className="h-6 w-6"
                   title="View Invoice / Order Details"
-                  onClick={handleOpenLink}
+                  onClick={(event) => {
+                    console.log(`[ProjectCard] ReceiptText icon clicked for project ${project.id}.`);
+                    event.stopPropagation();
+                    event.preventDefault(); // Added to be absolutely sure
+                    if (project && project.id) {
+                        const url = `/track/${project.id}`;
+                        console.log(`[ProjectCard] Attempting to open URL: ${url}`);
+                        window.open(url, '_blank', 'noopener,noreferrer');
+                    } else {
+                        console.error('[ProjectCard] project.id is missing. Cannot open link.');
+                    }
+                  }}
                 >
                   <ReceiptText className="h-4 w-4 text-muted-foreground hover:text-primary" />
                 </Button>
