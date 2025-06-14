@@ -7,7 +7,7 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogTitle,
+  DialogTitle, // Imported DialogTitle
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
 interface CalculatorDialogProps {
-  children: React.ReactNode; 
+  children: React.ReactNode;
 }
 
 interface CalculatorButtonProps {
@@ -26,13 +26,13 @@ interface CalculatorButtonProps {
   onClick: () => void;
   className?: string;
   variant?: 'number' | 'operator' | 'function' | 'equals' | 'control' | 'control-special' | 'control-ac';
-  gridSpan?: string; 
+  gridSpan?: string;
   ariaLabel?: string;
 }
 
 const CalcButton: React.FC<CalculatorButtonProps> = ({ label, onClick, className, variant = 'number', gridSpan, ariaLabel }) => {
   const baseStyle = "text-xl h-14 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#202124] transition-colors duration-150 ease-in-out flex items-center justify-center";
-  
+
   let variantStyle = "";
   switch (variant) {
     case 'number': // Numbers (0-9, .)
@@ -119,7 +119,7 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
       setDisplayValue(String(result));
       setCurrentValue(String(result));
     }
-    
+
     setWaitingForOperand(true);
     setOperator(nextOperator);
     setExpression(prev => prev + ` ${nextOperator} `);
@@ -160,7 +160,7 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
     }
     setWaitingForOperand(false);
   };
-  
+
   const handleUnsupported = (featureName: string) => {
     toast({
       title: "Feature Not Implemented",
@@ -214,7 +214,7 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
     { label: "8", onClick: () => handleNumberClick("8"), variant: "number" },
     { label: "9", onClick: () => handleNumberClick("9"), variant: "number" },
     { label: <Divide className="h-6 w-6"/>, onClick: () => handleOperatorClick("/"), variant: "operator", ariaLabel: "Divide" },
-    
+
     { label: "π", onClick: () => handleUnsupported("Pi"), variant: "function", ariaLabel: "Pi" },
     { label: "cos", onClick: () => handleUnsupported("Cosine"), variant: "function", ariaLabel: "Cosine" },
     { label: "log", onClick: () => handleUnsupported("Logarithm"), variant: "function", ariaLabel: "Logarithm base 10" },
@@ -239,7 +239,7 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
     { label: "=", onClick: handleEqualsClick, variant: "equals", ariaLabel: "Equals" },
     { label: <Plus className="h-6 w-6"/>, onClick: () => handleOperatorClick("+"), variant: "operator", ariaLabel: "Add" },
   ];
-  
+
   // Function to manually chunk buttons for rows
   const chunkArray = (arr: any[], size: number) => {
     const result = [];
@@ -263,7 +263,8 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-sm p-0 border-none shadow-2xl bg-[#202124]">
         <div className="bg-[#202124] rounded-lg">
-          <DialogHeader className="p-4 pt-5"> {/* Removed border-b */}
+          <DialogHeader className="p-4 pt-5">
+            <DialogTitle className="sr-only">Calculator</DialogTitle> {/* Added for accessibility */}
             {/* Display Area */}
             <div className="h-[100px] flex flex-col justify-end items-end px-3 py-2 rounded-md">
               <div className="flex items-center w-full justify-between mb-1">
@@ -302,7 +303,7 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
                 />
               ))}
             </div>
-            
+
             {/* Main Button Grid */}
             {mainGridButtonsRows.map((row, rowIndex) => (
               <div key={`row-${rowIndex}`} className="grid grid-cols-7 gap-1.5">
