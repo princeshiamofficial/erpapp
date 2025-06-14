@@ -4,7 +4,7 @@
 import type { Project, CustomStatus, User } from '@/types'; 
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
-import { CalendarDays, User as UserIconLucide, Folder, Eye, GripVertical, UserCheck } from 'lucide-react'; 
+import { CalendarDays, User as UserIconLucide, Folder, Eye, UserCheck } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useDraggable } from '@dnd-kit/core';
@@ -263,27 +263,16 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
         )}
       >
         <CardContent className="p-3 space-y-2.5">
-          {!isOverlay && !isDragging && (
-            <div
-              className="absolute top-1/2 -translate-y-1/2 left-1.5 opacity-0 group-hover:opacity-80 transition-opacity p-1"
-              title="Drag to move project"
-            >
-              <GripVertical className="h-5 w-5 text-muted-foreground group-hover:text-primary" />
-            </div>
-          )}
-
-          <div className={cn("flex justify-between items-start", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
+          <div className={cn("flex justify-between items-start")}>
             <span className="text-sm font-semibold text-foreground">{project.projectIdDisplay}</span>
             {!isOverlay && (
-               <Button
-                  asChild
+                <Button
+                  asChild // Use asChild to make the Link the actual interactive element
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
                   title="View Tracking Link"
                   onClick={(e) => {
-                    // Prevent the click from propagating to the draggable card handlers
-                    // which might interfere with the link's default action.
                     e.stopPropagation();
                   }}
                 >
@@ -294,44 +283,28 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
             )}
           </div>
           
-          <p className={cn("text-xs font-medium text-muted-foreground truncate", !isOverlay && !isDragging ? "ml-6" : "ml-0")} title={project.name}>{project.name}</p>
+          <p className={cn("text-xs font-medium text-muted-foreground truncate")} title={project.name}>{project.name}</p>
 
-          <div className={cn("inline-flex items-center rounded-md border border-destructive/30 bg-destructive/20 px-2 py-0.5 text-xs font-semibold text-destructive transition-colors", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
+          <div className={cn("inline-flex items-center rounded-md border border-destructive/30 bg-destructive/20 px-2 py-0.5 text-xs font-semibold text-destructive transition-colors")}>
             <CalendarDays className="mr-1.5 h-3 w-3" />
             Target: {project.endDate ? parseISO(project.endDate).toLocaleDateString() : 'N/A'}
           </div>
 
           <div 
-            className={cn(
-              "flex items-center space-x-1.5 text-xs text-muted-foreground", 
-              !isOverlay && !isDragging ? "ml-6" : "ml-0"
-            )}
+            className={cn("flex items-center space-x-1.5 text-xs text-muted-foreground")}
             title={`CRM: ${project.assigneeName}`}
           >
             <UserIconLucide className="h-3.5 w-3.5" />
             <span className="truncate">CRM: {project.assigneeName}</span>
           </div>
           
-          {project.designerRepresentativeName && (project.status === 'On Design' || project.status === 'On Hold' || project.status === 'Logistics' || project.status === 'Courier') && (
-             <div 
-                className={cn(
-                  "flex items-center space-x-1.5 text-xs text-blue-600 dark:text-blue-400 mt-1", 
-                  !isOverlay && !isDragging ? "ml-6" : "ml-0"
-                )}
-                title={`DR: ${project.designerRepresentativeName}`}
-             >
-              <UserCheck className="h-4 w-4" />
-              <span className="truncate">DR: {project.designerRepresentativeName}</span>
-            </div>
-          )}
-
-          <div className={cn("flex items-center space-x-1.5 text-xs text-muted-foreground", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
+          <div className={cn("flex items-center space-x-1.5 text-xs text-muted-foreground")}>
             <Folder className="h-3.5 w-3.5" />
             <span className="truncate" title={project.categoryTag}>{project.categoryTag}</span>
           </div>
           
           {progressInfo.showProgressBar && (
-              <div className={cn("pt-1", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
+              <div className={cn("pt-1")}>
               <div className="flex items-center space-x-2 mb-1">
                   <StopwatchIcon className="h-4 w-4 text-primary shrink-0" />
                   <span className="text-xs font-medium text-muted-foreground truncate" title={progressInfo.displayText}>{progressInfo.displayText}</span>
@@ -344,7 +317,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
               </div>
           )}
 
-          <div className={cn("flex items-center justify-start mt-2", !isOverlay && !isDragging ? "ml-6" : "ml-0")}>
+          <div className={cn("flex items-center justify-start mt-2")}>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
