@@ -14,7 +14,8 @@ import { parseISO, differenceInSeconds, isAfter, isBefore, addHours, addDays, fo
 import React, { useState, useEffect } from 'react'; 
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import Link from 'next/link';
+// Link component is no longer directly used for the Eye icon button
+// import Link from 'next/link'; 
 
 // Inline SVG Stopwatch Icon Component
 const StopwatchIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -235,6 +236,10 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
   const crmInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !project.designerRepresentativeName;
   const drInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !!project.designerRepresentativeName;
 
+  const handleOpenLink = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation(); // Prevent drag from starting
+    window.open(`/track/${project.id}`, '_blank', 'noopener,noreferrer');
+  };
 
   return (
     <motion.div
@@ -267,18 +272,13 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
             <span className="text-sm font-semibold text-foreground">{project.projectIdDisplay}</span>
             {!isOverlay && (
                 <Button
-                  asChild // Use asChild to make the Link the actual interactive element
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
                   title="View Tracking Link"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
+                  onClick={handleOpenLink}
                 >
-                  <Link href={`/track/${project.id}`} target="_blank" rel="noopener noreferrer">
-                    <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                  </Link>
+                  <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
                 </Button>
             )}
           </div>
@@ -291,8 +291,20 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
           </div>
 
           <div 
-            className={cn("flex items-center space-x-1.5 text-xs text-muted-foreground")}
-            title={`CRM: ${project.assigneeName}`}
+            className={cn(
+              "flex items-center space-x-1.5 text-xs text-muted-foreground hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors",
+              crmInfoClickable && "cursor-pointer"
+            )}
+            title={crmInfoClickable ? `CRM: ${project.assigneeName} (Click to assign DR)` : `CRM: ${project.assigneeName}`}
+            onClick={
+              crmInfoClickable
+                ? (e) => { 
+                    e.stopPropagation();
+                    console.log('[ProjectCard] CRM area clicked. Calling onOpenAssignDrDialog for project:', project.id);
+                    onOpenAssignDrDialog(project);
+                  }
+                : undefined
+            }
           >
             <UserIconLucide className="h-3.5 w-3.5" />
             <span className="truncate">CRM: {project.assigneeName}</span>
@@ -322,12 +334,15 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div
-                    className={cn("hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors", crmInfoClickable && "cursor-pointer")}
+                    className={cn(
+                      "hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors",
+                      crmInfoClickable && "cursor-pointer"
+                    )}
                     onClick={
                       crmInfoClickable
                         ? (e) => { 
                             e.stopPropagation();
-                            console.log('[ProjectCard] CRM area clicked. Calling onOpenAssignDrDialog for project:', project.id);
+                            console.log('[ProjectCard] CRM AVATAR clicked. Calling onOpenAssignDrDialog for project:', project.id);
                             onOpenAssignDrDialog(project);
                           }
                         : undefined
@@ -346,19 +361,22 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
               </Tooltip>
             </TooltipProvider>
 
-            {project.designerRepresentativeName && (project.status === 'On Design' || project.status === 'On Hold' || project.status === 'Logistics' || project.status === 'Courier') && (
+            {(project.designerRepresentativeName && (project.status === 'On Design' || project.status === 'On Hold' || project.status === 'Logistics' || project.status === 'Courier')) && (
               <>
                 <div className="w-px h-5 bg-border mx-1.5"></div> 
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                        <div
-                          className={cn("hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors", drInfoClickable && "cursor-pointer")}
+                          className={cn(
+                            "hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors",
+                            drInfoClickable && "cursor-pointer"
+                          )}
                           onClick={
                             drInfoClickable
                               ? (e) => {
                                   e.stopPropagation();
-                                  console.log('[ProjectCard] DR area clicked. Calling onOpenAssignDrDialog for project:', project.id);
+                                  console.log('[ProjectCard] DR AVATAR area clicked. Calling onOpenAssignDrDialog for project:', project.id);
                                   onOpenAssignDrDialog(project);
                                 }
                               : undefined
@@ -388,3 +406,4 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
 }
     
     
+
