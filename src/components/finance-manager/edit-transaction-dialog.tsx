@@ -131,7 +131,6 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
       }
     }
     
-    // If it's an expense/purchase and no document is present (neither old nor new), and it's not a 'sent money' type expense
     const isSendMoneyTypeExpense = type === 'expense' && !!transaction.sentToUserId;
     if ((type === 'expense' || type === 'purchase') && !newUploadedDocumentUrl && !isSendMoneyTypeExpense) {
       toast({ title: "Validation Error", description: "Document is required for expenses and purchases.", variant: "destructive" });
@@ -146,14 +145,14 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
       category: category.trim(),
       description: description.trim() || null,
       date: date.toISOString(),
-      documentUrl: newUploadedDocumentUrl, // This will be null if removed, or the new URL
+      documentUrl: newUploadedDocumentUrl,
     };
 
     const result = await updateTransactionAction(transaction.id, updates, currentUser.id, currentUser.role);
     setIsSubmitting(false);
 
     if (result.success) {
-      onTransactionUpdated(); // Parent handles main success toast and closes dialog
+      onTransactionUpdated(); 
     } else {
       toast({ title: "Error", description: result.error || "Could not update transaction.", variant: "destructive" });
     }
@@ -238,13 +237,27 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
                  <Label htmlFor="edit-transaction-document">Document Attachment {isDocumentNowRequired ? "*" : "(Optional)"}</Label>
                  {currentDocumentUrl && !selectedDocumentFile && (
                    <div className="flex items-center justify-between p-2 border rounded-md bg-secondary/30 min-w-0">
-                     <Link href={currentDocumentUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline flex items-center min-w-0" title={currentDocumentUrl}>
+                     <Link
+                       href={currentDocumentUrl}
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       className="text-sm text-primary hover:underline flex flex-1 items-center min-w-0" 
+                       title={currentDocumentUrl}
+                     >
                        <LinkIcon className="h-4 w-4 mr-1.5 shrink-0" />
                        <span className="truncate">
                          {currentDocumentUrl.split('/').pop() || "View Current Document"}
                        </span>
                      </Link>
-                     <Button type="button" variant="ghost" size="sm" onClick={handleRemoveExistingDocument} title="Remove existing document" className="text-xs text-destructive hover:text-destructive/80 h-7 px-1.5 shrink-0" disabled={isSubmitting || isUploadingDocument}>
+                     <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRemoveExistingDocument}
+                        title="Remove existing document"
+                        className="text-xs text-destructive hover:text-destructive/80 h-7 px-1.5 shrink-0"
+                        disabled={isSubmitting || isUploadingDocument}
+                      >
                         <XCircle className="h-3.5 w-3.5 mr-1"/>Remove
                      </Button>
                    </div>
@@ -261,7 +274,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
                        {selectedDocumentFile ? "Change File" : (currentDocumentUrl ? "Replace File" : "Upload File")}
                      </Button>
                      {selectedDocumentFile && (
-                         <Button type="button" variant="ghost" size="icon" onClick={handleRemoveSelectedFile} title="Clear selection" className="text-muted-foreground hover:text-destructive h-9 w-9" disabled={isSubmitting || isUploadingDocument}>
+                         <Button type="button" variant="ghost" size="icon" onClick={handleRemoveSelectedFile} title="Clear selection" className="text-muted-foreground hover:text-destructive h-9 w-9 shrink-0" disabled={isSubmitting || isUploadingDocument}>
                              <XCircle className="h-4 w-4"/>
                          </Button>
                      )}
