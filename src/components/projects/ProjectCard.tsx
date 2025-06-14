@@ -4,7 +4,7 @@
 import type { Project, ProjectStatusType, CustomStatus, User } from '@/types'; 
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
-import { CalendarDays, User as UserIconLucide, Folder, Eye, GripVertical, UserCheck } from 'lucide-react'; // Replaced EllipsisVertical with Eye
+import { CalendarDays, User as UserIconLucide, Folder, Eye, GripVertical, UserCheck } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { useDraggable } from '@dnd-kit/core';
@@ -14,7 +14,7 @@ import { parseISO, differenceInSeconds, isAfter, isBefore, addHours, addDays, fo
 import React, { useState, useEffect } from 'react'; 
 import { motion } from 'framer-motion';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import Link from 'next/link'; // Added Link import
+import Link from 'next/link';
 
 // Inline SVG Stopwatch Icon Component
 const StopwatchIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -229,9 +229,12 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
     return () => clearInterval(intervalId); 
   }, [project]);
 
-  const canAssignDr = ['CR Clearance', 'On Design'].includes(project.status) && (currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'CRM');
-  const drInfoClickable = canAssignDr && project.designerRepresentativeName;
-  const crmInfoClickable = canAssignDr && !project.designerRepresentativeName;
+  const canAssignDrPermission = (currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'CRM');
+  const canOpenDialogFromProjectCard = (project.status === 'CR Clearance' || project.status === 'On Design');
+
+  const crmInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !project.designerRepresentativeName;
+  const drInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !!project.designerRepresentativeName;
+
 
   return (
     <motion.div
@@ -290,11 +293,9 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
           <div 
             className={cn(
               "flex items-center space-x-1.5 text-xs text-muted-foreground", 
-              !isOverlay && !isDragging ? "ml-6" : "ml-0",
-              crmInfoClickable && "cursor-pointer hover:text-primary"
+              !isOverlay && !isDragging ? "ml-6" : "ml-0"
             )}
-            onClick={crmInfoClickable ? () => onOpenAssignDrDialog(project) : undefined}
-            title={crmInfoClickable ? "Assign Designer Representative" : `CRM: ${project.assigneeName}`}
+            title={`CRM: ${project.assigneeName}${crmInfoClickable ? ' (Click to assign DR)' : ''}`}
           >
             <UserIconLucide className="h-3.5 w-3.5" />
             <span className="truncate">CRM: {project.assigneeName}</span>
@@ -304,11 +305,9 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
              <div 
                 className={cn(
                   "flex items-center space-x-1.5 text-xs text-blue-600 dark:text-blue-400 mt-1", 
-                  !isOverlay && !isDragging ? "ml-6" : "ml-0",
-                  drInfoClickable && "cursor-pointer hover:text-blue-700 dark:hover:text-blue-300"
+                  !isOverlay && !isDragging ? "ml-6" : "ml-0"
                 )}
-                onClick={drInfoClickable ? () => onOpenAssignDrDialog(project) : undefined}
-                title={drInfoClickable ? "Re-assign Designer Representative" : `DR: ${project.designerRepresentativeName}`}
+                title={`DR: ${project.designerRepresentativeName}${drInfoClickable ? ' (Click to re-assign DR)' : ''}`}
              >
               <UserCheck className="h-4 w-4" />
               <span className="truncate">DR: {project.designerRepresentativeName}</span>
@@ -338,9 +337,17 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div 
-                    className={cn(crmInfoClickable && "cursor-pointer")}
-                    onClick={crmInfoClickable ? () => onOpenAssignDrDialog(project) : undefined}
+                  <div
+                    className={cn(crmInfoClickable && "cursor-pointer hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors")}
+                    onClick={
+                      crmInfoClickable
+                        ? (e) => { 
+                            e.stopPropagation();
+                            console.log('[ProjectCard] CRM area clicked. Calling onOpenAssignDrDialog for project:', project.id);
+                            onOpenAssignDrDialog(project);
+                          }
+                        : undefined
+                    }
                   >
                     <Avatar className="h-7 w-7 text-xs border bg-muted">
                       <AvatarImage src={project.assigneeAvatarUrl || undefined} alt={project.assigneeName} data-ai-hint="assignee avatar" />
@@ -355,15 +362,23 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
               </Tooltip>
             </TooltipProvider>
 
-            {project.designerRepresentativeName && (
+            {project.designerRepresentativeName && (project.status === 'On Design' || project.status === 'On Hold' || project.status === 'Logistics' || project.status === 'Courier') && (
               <>
                 <div className="w-px h-5 bg-border mx-1.5"></div> 
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                       <div 
-                          className={cn(drInfoClickable && "cursor-pointer")}
-                          onClick={drInfoClickable ? () => onOpenAssignDrDialog(project) : undefined}
+                       <div
+                          className={cn(drInfoClickable && "cursor-pointer hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors")}
+                          onClick={
+                            drInfoClickable
+                              ? (e) => {
+                                  e.stopPropagation();
+                                  console.log('[ProjectCard] DR area clicked. Calling onOpenAssignDrDialog for project:', project.id);
+                                  onOpenAssignDrDialog(project);
+                                }
+                              : undefined
+                          }
                        >
                         <Avatar className="h-7 w-7 text-xs border border-blue-400 bg-muted">
                           <AvatarImage src={project.designerRepresentativeAvatarUrl || undefined} alt={project.designerRepresentativeName} data-ai-hint="designer avatar" />
@@ -389,4 +404,5 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
 }
     
     
+
 

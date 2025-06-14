@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Project, ProjectStatusType, CustomStatus, User, TrackingLink } from '@/types'; // Added TrackingLink
+import type { Project, ProjectStatusType, CustomStatus, User, TrackingLink } from '@/types'; 
 import { getProjects } from '@/lib/project-service';
 import { getStatuses, ORDER_SUBMITTED_ID, READY_FOR_DESIGN_STATUS_ID } from '@/lib/status-service'; 
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
@@ -190,55 +190,75 @@ export default function ProjectsPage() {
     setActiveProject(null);
   };
 
-  const handleOpenAssignDrDialog = useCallback((projectToAssign: Project) => {
-    console.log("ProjectsPage/handleOpenAssignDrDialog: Called for project:", projectToAssign.id, "Current allStatuses count:", allStatuses.length);
+  const handleOpenAssignDrDialog = useCallback(async (projectToAssign: Project) => {
+    console.log("[ProjectsPage] handleOpenAssignDrDialog called for project:", projectToAssign.id);
     if (!currentUser) {
         toast({ title: "Error", description: "User not authenticated. Cannot assign DR.", variant: "destructive" });
-        return;
-    }
-    if (!allStatuses || allStatuses.length === 0) {
-        console.error("ProjectsPage/handleOpenAssignDrDialog: allStatuses is empty or undefined. Cannot open dialog.");
-        toast({
-            title: "Data Error",
-            description: "Status configuration is not loaded. Please try again or refresh.",
-            variant: "destructive"
-        });
+        console.error("[ProjectsPage] currentUser is null in handleOpenAssignDrDialog");
         return;
     }
 
-    const rfdCheck = allStatuses.find(s => s.id === READY_FOR_DESIGN_STATUS_ID);
-    if (!rfdCheck) {
-        console.error("ProjectsPage/handleOpenAssignDrDialog: CRITICAL - 'ready-for-design' status (ID: 'ready-for-design') NOT FOUND in allStatuses prop.");
-        toast({
-          title: "Configuration Error",
-          description: `The required system status '${READY_FOR_DESIGN_STATUS_ID}' (typically 'Ready for Design') is missing for DR assignment. Please ensure it is configured in Admin > Status Management.`,
-          variant: "destructive",
-          duration: 10000,
-        });
-        return;
-    }
-
-    const orderShim: TrackingLink = {
-      id: projectToAssign.id, 
-      companyName: projectToAssign.name,
-      currentStatus: projectToAssign.status as string, 
-      designerRepresentativeId: projectToAssign.designerRepresentativeId || null,
-      designerRepresentativeName: projectToAssign.designerRepresentativeName || null,
-      address: '', 
-      phoneNumber: '',
-      orderItems: [],
-      crmUserId: projectToAssign.assigneeName, 
-      crmUserName: projectToAssign.assigneeName,
-      createdAt: projectToAssign.createdAt || new Date().toISOString(),
-      isPublic: false, 
-      statusHistory: [], 
-      comments: [], 
-      advancePayments: [], 
+    const projectShim: TrackingLink = {
+        id: projectToAssign.id,
+        companyName: projectToAssign.name,
+        currentStatus: projectToAssign.status as string,
+        designerRepresentativeId: projectToAssign.designerRepresentativeId || null,
+        designerRepresentativeName: projectToAssign.designerRepresentativeName || null,
+        address: '',
+        phoneNumber: '',
+        orderItems: [],
+        crmUserId: projectToAssign.assigneeName,
+        crmUserName: projectToAssign.assigneeName,
+        createdAt: projectToAssign.createdAt || new Date().toISOString(),
+        isPublic: false,
+        statusHistory: [],
+        comments: [],
+        advancePayments: [],
     };
+    setSelectedOrderForDrAssignment(projectShim);
 
-    setSelectedOrderForDrAssignment(orderShim);
+    let effectiveStatuses = allStatuses;
+    if (!effectiveStatuses || effectiveStatuses.length === 0) {
+        console.warn("[ProjectsPage] allStatuses is empty in handleOpenAssignDrDialog. Attempting to fetch fresh statuses...");
+        try {
+            effectiveStatuses = await getStatuses();
+            if (!effectiveStatuses || effectiveStatuses.length === 0) {
+                console.error("[ProjectsPage] Freshly fetched allStatuses is still empty. Aborting DR assignment.");
+                toast({ title: "Data Error", description: "Status configuration is not loaded. Please refresh the page or try again.", variant: "destructive" });
+                setSelectedOrderForDrAssignment(null); // Clear selection if data fails
+                return;
+            }
+            setAllStatuses(effectiveStatuses); // Update state, will trigger re-render
+            console.log("[ProjectsPage] Successfully fetched fresh statuses. Count:", effectiveStatuses.length);
+        } catch (fetchErr) {
+            console.error("[ProjectsPage] Error fetching fresh statuses:", fetchErr);
+            toast({ title: "Data Error", description: "Failed to load status configuration. Please refresh or try again.", variant: "destructive" });
+            setSelectedOrderForDrAssignment(null); // Clear selection
+            return;
+        }
+    }
+    
+    console.log("[ProjectsPage] Using allStatuses (count):", effectiveStatuses.length, "IDs:", effectiveStatuses.map(s => s.id).join(', '));
+
+    const rfdCheck = effectiveStatuses.find(s => s.id === READY_FOR_DESIGN_STATUS_ID);
+    if (!rfdCheck) {
+        console.error("[ProjectsPage] CRITICAL - 'ready-for-design' status (ID: 'ready-for-design') NOT FOUND in effectiveStatuses.");
+        toast({
+            title: "Configuration Error",
+            description: `The required system status '${READY_FOR_DESIGN_STATUS_ID}' (typically 'Ready for Design') is missing. Please ensure it's configured. Assignment not possible.`,
+            variant: "destructive",
+            duration: 10000,
+        });
+        setSelectedOrderForDrAssignment(null); // Clear selection
+        return;
+    }
+    console.log("[ProjectsPage] 'ready-for-design' status check PASSED.");
+    
     setIsAssignDrDialogOpen(true);
-  }, [allStatuses, toast, currentUser]);
+    console.log("[ProjectsPage] Dialog state set to open for order/project:", projectShim.id);
+
+  }, [toast, allStatuses, currentUser, setAllStatuses]);
+
 
   const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromDialog: TrackingLink) => {
     await fetchData(); 
@@ -380,7 +400,7 @@ export default function ProjectsPage() {
           }}
           order={selectedOrderForDrAssignment} 
           currentUser={currentUser}
-          allStatuses={allStatuses}
+          allStatuses={allStatuses} // Pass the state variable `allStatuses`
           onDrAssigned={handleDrAssignmentSuccess}
         />
       )}
@@ -390,4 +410,5 @@ export default function ProjectsPage() {
     
     
     
+
 
