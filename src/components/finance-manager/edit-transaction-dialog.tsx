@@ -21,7 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { updateTransactionAction } from '@/app/(app)/finance-manager/actions';
 import { Loader2, CalendarIcon, Paperclip, UploadCloud, XCircle, Link as LinkIcon } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import Link from 'next/link';
+import NextLink from 'next/link'; // Renamed to avoid conflict with internal Link var
 
 
 interface EditTransactionDialogProps {
@@ -237,25 +237,27 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
                  <Label htmlFor="edit-transaction-document">Document Attachment {isDocumentNowRequired ? "*" : "(Optional)"}</Label>
                  {currentDocumentUrl && !selectedDocumentFile && (
                    <div className="flex items-center justify-between p-2 border rounded-md bg-secondary/30 min-w-0">
-                     <Link
+                     <NextLink
                        href={currentDocumentUrl}
                        target="_blank"
                        rel="noopener noreferrer"
-                       className="text-sm text-primary hover:underline flex flex-1 items-center min-w-0" 
+                       className="text-sm text-primary hover:underline flex-1 min-w-0"
                        title={currentDocumentUrl}
                      >
-                       <LinkIcon className="h-4 w-4 mr-1.5 shrink-0" />
-                       <span className="truncate">
-                         {currentDocumentUrl.split('/').pop() || "View Current Document"}
-                       </span>
-                     </Link>
+                       <div className="flex items-center min-w-0"> {/* Inner flex container */}
+                         <LinkIcon className="h-4 w-4 mr-1.5 shrink-0" />
+                         <span className="truncate"> {/* This span will truncate */}
+                           {currentDocumentUrl.split('/').pop() || "View Current Document"}
+                         </span>
+                       </div>
+                     </NextLink>
                      <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={handleRemoveExistingDocument}
                         title="Remove existing document"
-                        className="text-xs text-destructive hover:text-destructive/80 h-7 px-1.5 shrink-0"
+                        className="text-xs text-destructive hover:text-destructive/80 h-7 px-1.5 shrink-0 ml-2"
                         disabled={isSubmitting || isUploadingDocument}
                       >
                         <XCircle className="h-3.5 w-3.5 mr-1"/>Remove
