@@ -34,26 +34,27 @@ const CalcButton: React.FC<CalculatorButtonProps> = ({ label, onClick, className
   const baseStyle = "text-xl h-14 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#202124] transition-colors duration-150 ease-in-out flex items-center justify-center";
 
   let variantStyle = "";
+  // Google Calculator style colors
   switch (variant) {
-    case 'number':
-      variantStyle = "bg-[#5f6368] text-[#e8eaed] hover:bg-[#6b6f73] focus:ring-primary"; // Focus ring to primary
+    case 'number': // Numbers and decimal
+      variantStyle = "bg-[#5f6368] text-[#e8eaed] hover:bg-[#6b6f73] focus:ring-primary";
       break;
-    case 'operator':
-      variantStyle = "bg-[#202124] text-primary hover:bg-[#303134] focus:ring-[#5f6368] text-2xl"; // Text to primary (orange)
+    case 'operator': // +, -, ×, ÷
+      variantStyle = "bg-[#202124] text-primary hover:bg-[#303134] focus:ring-[#5f6368] text-2xl";
       break;
-    case 'function':
+    case 'function': // sin, cos, log, etc. (NOT AC or Rad/Deg specific controls)
       variantStyle = "bg-[#303134] text-[#e8eaed] hover:bg-[#3c4043] focus:ring-[#5f6368]";
       break;
-    case 'equals':
-      variantStyle = "bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-orange-400 text-2xl"; // Background to primary (orange)
+    case 'equals': // =
+      variantStyle = "bg-primary text-primary-foreground hover:bg-primary/90 focus:ring-orange-400 text-2xl";
       break;
-    case 'control':
+    case 'control': // Top row: x!, (, ), % (AC is separate)
       variantStyle = "bg-[#303134] text-[#e8eaed] hover:bg-[#3c4043] focus:ring-[#5f6368]";
       break;
-    case 'control-special':
-       variantStyle = "bg-transparent text-primary hover:bg-[#303134] text-base w-auto px-2"; // Active text to primary (orange)
+    case 'control-special': // Rad/Deg
+      variantStyle = "bg-transparent text-primary hover:bg-[#303134] text-base w-auto px-2";
       break;
-    case 'control-ac':
+    case 'control-ac': // AC button
       variantStyle = "bg-[#303134] text-[#e8eaed] hover:bg-[#3c4043] focus:ring-[#5f6368]";
       break;
     default:
@@ -241,13 +242,16 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
   };
 
   const calculatorButtonsConfig = [
-    { label: calcMode === 'rad' ? <span className="font-semibold text-[#e8eaed]">Rad</span> : <span className="text-primary">Rad</span>, onClick: () => setCalcMode('rad'), variant: "control-special", gridSpan: "col-span-1", ariaLabel: "Radians Mode" },
-    { label: calcMode === 'deg' ? <span className="font-semibold text-[#e8eaed]">Deg</span> : <span className="text-primary">Deg</span>, onClick: () => setCalcMode('deg'), variant: "control-special", gridSpan: "col-span-1", ariaLabel: "Degrees Mode" },
-    { label: "x!", onClick: () => handleUnsupported("Factorial"), variant: "control", ariaLabel: "Factorial" },
-    { label: "(", onClick: () => handleParenthesis("("), variant: "control", ariaLabel: "Open Parenthesis" },
-    { label: ")", onClick: () => handleParenthesis(")"), variant: "control", ariaLabel: "Close Parenthesis" },
-    { label: <Percent className="h-5 w-5" />, onClick: handlePercentage, variant: "control", ariaLabel: "Percentage" },
-    { label: "AC", onClick: () => handleClearClick(true), variant: "control-ac", ariaLabel: "All Clear" },
+    // Top Control Row
+    { label: calcMode === 'rad' ? <span className="font-semibold text-primary">Rad</span> : <span className="text-[#9aa0a6]">Rad</span>, onClick: () => setCalcMode('rad'), variant: "control-special", ariaLabel: "Radians Mode", className:"h-10 text-sm" },
+    { label: calcMode === 'deg' ? <span className="font-semibold text-primary">Deg</span> : <span className="text-[#9aa0a6]">Deg</span>, onClick: () => setCalcMode('deg'), variant: "control-special", ariaLabel: "Degrees Mode", className:"h-10 text-sm" },
+    { label: "x!", onClick: () => handleUnsupported("Factorial"), variant: "control", ariaLabel: "Factorial", className:"h-10 text-lg" },
+    { label: "(", onClick: () => handleParenthesis("("), variant: "control", ariaLabel: "Open Parenthesis", className:"h-10 text-lg" },
+    { label: ")", onClick: () => handleParenthesis(")"), variant: "control", ariaLabel: "Close Parenthesis", className:"h-10 text-lg" },
+    { label: <Percent className="h-5 w-5" />, onClick: handlePercentage, variant: "control", ariaLabel: "Percentage", className:"h-10" },
+    { label: "AC", onClick: () => handleClearClick(true), variant: "control-ac", ariaLabel: "All Clear", className:"h-10 text-lg" },
+
+    // Main Grid - Row 2
     { label: "Inv", onClick: () => handleUnsupported("Inverse"), variant: "function", ariaLabel: "Inverse" },
     { label: "sin", onClick: () => handleUnsupported("Sine"), variant: "function", ariaLabel: "Sine" },
     { label: "ln", onClick: () => handleUnsupported("Natural Logarithm"), variant: "function", ariaLabel: "Natural Logarithm" },
@@ -255,6 +259,8 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
     { label: "8", onClick: () => handleNumberClick("8"), variant: "number" },
     { label: "9", onClick: () => handleNumberClick("9"), variant: "number" },
     { label: <Divide className="h-6 w-6"/>, onClick: () => handleOperatorClick("/"), variant: "operator", ariaLabel: "Divide" },
+    
+    // Main Grid - Row 3
     { label: "π", onClick: () => handleUnsupported("Pi"), variant: "function", ariaLabel: "Pi" },
     { label: "cos", onClick: () => handleUnsupported("Cosine"), variant: "function", ariaLabel: "Cosine" },
     { label: "log", onClick: () => handleUnsupported("Logarithm"), variant: "function", ariaLabel: "Logarithm base 10" },
@@ -262,6 +268,8 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
     { label: "5", onClick: () => handleNumberClick("5"), variant: "number" },
     { label: "6", onClick: () => handleNumberClick("6"), variant: "number" },
     { label: <MultiplyIcon className="h-6 w-6"/>, onClick: () => handleOperatorClick("*"), variant: "operator", ariaLabel: "Multiply" },
+    
+    // Main Grid - Row 4
     { label: "e", onClick: () => handleUnsupported("Euler's Number"), variant: "function", ariaLabel: "Euler's Number e" },
     { label: "tan", onClick: () => handleUnsupported("Tangent"), variant: "function", ariaLabel: "Tangent" },
     { label: "√", onClick: () => handleUnsupported("Square Root"), variant: "function", ariaLabel: "Square Root" },
@@ -269,26 +277,30 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
     { label: "2", onClick: () => handleNumberClick("2"), variant: "number" },
     { label: "3", onClick: () => handleNumberClick("3"), variant: "number" },
     { label: <Minus className="h-6 w-6"/>, onClick: () => handleOperatorClick("-"), variant: "operator", ariaLabel: "Subtract" },
+
+    // Main Grid - Row 5
     { label: "Ans", onClick: () => handleUnsupported("Answer"), variant: "function", ariaLabel: "Last Answer" },
     { label: "EXP", onClick: () => handleUnsupported("Exponent"), variant: "function", ariaLabel: "Exponent Notation" },
-    { label: <div className="flex">x<span className="text-xs align-super">y</span></div>, onClick: () => handleUnsupported("Power"), variant: "function", ariaLabel: "Power x to y" },
+    { label: <div className="flex items-center justify-center">x<span className="text-xs align-baseline relative -top-1.5 left-0.5">y</span></div>, onClick: () => handleUnsupported("Power"), variant: "function", ariaLabel: "Power x to y" },
     { label: "0", onClick: () => handleNumberClick("0"), variant: "number", gridSpan:"col-span-2" },
     { label: ".", onClick: handleDecimalClick, variant: "number", ariaLabel: "Decimal Point" },
-    { label: "=", onClick: handleEqualsClick, variant: "equals", ariaLabel: "Equals" },
     { label: <Plus className="h-6 w-6"/>, onClick: () => handleOperatorClick("+"), variant: "operator", ariaLabel: "Add" },
+    { label: "=", onClick: handleEqualsClick, variant: "equals", ariaLabel: "Equals", className:"row-start-5 col-start-7" }, // Explicitly place equals
   ];
-
-  const chunkArray = (arr: any[], size: number) => {
-    const result = [];
-    for (let i = 0; i < arr.length; i += size) {
-      result.push(arr.slice(i, i + size));
-    }
-    return result;
-  };
-
+  
+  // Split the config for rendering
   const controlStripButtons = calculatorButtonsConfig.slice(0, 7);
-  const mainGridButtonsRows = chunkArray(calculatorButtonsConfig.slice(7), 7);
-
+  // The main grid buttons, now correctly handling the equals button that should be at the end of the last row
+  const mainGridButtonsList = calculatorButtonsConfig.slice(7);
+  // Remove equals from main grid for row-by-row layout, then append it separately or handle its position in the last row
+  const equalsButtonConfig = mainGridButtonsList.pop(); // Temporarily remove equals
+  
+  const mainGridRows = [];
+  for (let i = 0; i < mainGridButtonsList.length; i += 7) {
+    mainGridRows.push(mainGridButtonsList.slice(i, i + 7));
+  }
+  // Add equals button to the last slot of the last row if it's not full, or handle its specific position
+  // For now, the config places it at row-start-5 col-start-7, which will be rendered at the end.
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => {
@@ -330,6 +342,7 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
             </div>
           </DialogHeader>
           <div className="p-3 pt-2 space-y-1.5">
+            {/* Control Strip */}
             <div className="grid grid-cols-7 gap-1.5">
               {controlStripButtons.map((btn, index) => (
                 <CalcButton
@@ -337,26 +350,26 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
                   label={btn.label}
                   onClick={btn.onClick}
                   variant={btn.variant as any}
-                  className={cn("text-sm", btn.className)}
+                  className={cn("!h-10 text-sm", btn.className)} // Ensure smaller height for control strip
                   gridSpan={btn.gridSpan}
                   ariaLabel={btn.ariaLabel}
                 />
               ))}
             </div>
-            {mainGridButtonsRows.map((row, rowIndex) => (
-              <div key={`row-${rowIndex}`} className="grid grid-cols-7 gap-1.5">
-                {row.map((btn, btnIndex) => (
-                   <CalcButton
-                    key={`btn-${rowIndex}-${btnIndex}-${btn.label}`}
-                    label={btn.label}
-                    onClick={btn.onClick}
-                    variant={btn.variant as any}
-                    gridSpan={btn.gridSpan}
-                    ariaLabel={btn.ariaLabel}
-                  />
-                ))}
-              </div>
-            ))}
+            {/* Main Grid */}
+            <div className="grid grid-cols-7 gap-1.5">
+              {calculatorButtonsConfig.slice(7).map((btn, index) => (
+                 <CalcButton
+                  key={`btn-main-${index}-${btn.label}`}
+                  label={btn.label}
+                  onClick={btn.onClick}
+                  variant={btn.variant as any}
+                  gridSpan={btn.gridSpan}
+                  className={cn(btn.className)} 
+                  ariaLabel={btn.ariaLabel}
+                />
+              ))}
+            </div>
           </div>
           <AnimatePresence>
             {showHistoryPanel && (
@@ -369,12 +382,12 @@ export function CalculatorDialog({ children }: CalculatorDialogProps) {
               >
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-lg font-medium text-[#e8eaed]">History</h3>
-                  <Button variant="ghost" size="sm" onClick={handleClearHistoryClick} className="text-primary hover:bg-[#303134] text-xs h-8"> {/* Clear button text to primary */}
+                  <Button variant="ghost" size="sm" onClick={handleClearHistoryClick} className="text-primary hover:bg-[#303134] text-xs h-8">
                     <Trash2 className="h-4 w-4 mr-1.5" /> Clear
                   </Button>
                 </div>
                 {history.length === 0 ? (
-                  <div className="text-sm text-center text-[#9aa0a6] flex-1 flex flex-col items-center justify-center"> {/* Added flex-col */}
+                  <div className="text-sm text-center text-[#9aa0a6] flex-1 flex flex-col items-center justify-center">
                     <History className="h-12 w-12 text-[#5f6368] mb-3"/>
                     <p>No history yet.</p>
                   </div>
