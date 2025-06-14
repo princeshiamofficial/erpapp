@@ -6,7 +6,7 @@ import type { Project, ProjectStatusType } from '@/types';
 import { getProjects } from '@/lib/project-service';
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Briefcase, ClipboardCheck, ClipboardX, DraftingCompass, PauseCircle, Truck, CheckCircle } from 'lucide-react';
+import { Briefcase, ClipboardCheck, ClipboardX, DraftingCompass, PauseCircle, Truck, CheckCircle, RefreshCw } from 'lucide-react'; // Added RefreshCw
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -26,7 +26,7 @@ import {
 import { updateProjectStatusAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectCard } from '@/components/projects/ProjectCard'; 
-import { useAuth } from '@/contexts/auth-context'; // Added useAuth
+import { useAuth } from '@/contexts/auth-context';
 
 const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: React.ElementType; headerBgClass: string; headerIconClass?: string; headerTextClass?: string }> = [
   { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, headerBgClass: 'bg-sky-600', headerTextClass: 'text-sky-50' },
@@ -45,7 +45,7 @@ export default function ProjectsPage() {
   const [endDateFilter, setEndDateFilter] = useState<string>('all');
   const { toast } = useToast();
   const [activeProject, setActiveProject] = useState<Project | null>(null); 
-  const { currentUser } = useAuth(); // Get current user
+  const { currentUser } = useAuth();
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -188,7 +188,7 @@ export default function ProjectsPage() {
                 <Briefcase className="h-7 w-7 text-primary"/>
                 <h1 className="page-title text-2xl sm:text-3xl">Projects Kanban</h1>
             </div>
-             <Skeleton className="h-10 w-full sm:w-48 rounded-md" />
+             <Skeleton className="h-10 w-28 rounded-md" /> {/* Adjusted width for refresh button placeholder */}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 sm:px-0">
             <Skeleton className="h-10 w-full rounded-md" />
@@ -230,7 +230,9 @@ export default function ProjectsPage() {
               <Briefcase className="h-7 w-7 text-primary"/>
               <h1 className="page-title text-2xl sm:text-3xl">Projects Kanban</h1>
           </div>
-          {/* New Project (Soon) button removed */}
+          <Button variant="outline" size="icon" onClick={fetchProjects} disabled={isLoading} className="h-10 w-10" title="Refresh Projects">
+            <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 sm:px-0">
