@@ -2,9 +2,9 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Project, ProjectStatusType, CustomStatus, User } from '@/types'; // Added CustomStatus, User
+import type { Project, ProjectStatusType, CustomStatus, User, TrackingLink } from '@/types'; // Added TrackingLink
 import { getProjects } from '@/lib/project-service';
-import { getStatuses } from '@/lib/status-service'; // Added
+import { getStatuses, ORDER_SUBMITTED_ID, READY_FOR_DESIGN_STATUS_ID } from '@/lib/status-service'; 
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Briefcase, ClipboardCheck, ClipboardX, DraftingCompass, PauseCircle, Truck, CheckCircle, RefreshCw } from 'lucide-react'; 
@@ -28,7 +28,7 @@ import { updateProjectStatusAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectCard } from '@/components/projects/ProjectCard'; 
 import { useAuth } from '@/contexts/auth-context';
-import dynamic from 'next/dynamic'; // Added for dynamic import
+import dynamic from 'next/dynamic'; 
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
 
@@ -44,7 +44,7 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; i
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]); // Added
+  const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -53,8 +53,8 @@ export default function ProjectsPage() {
   const [activeProject, setActiveProject] = useState<Project | null>(null); 
   const { currentUser } = useAuth();
 
-  const [selectedProjectForDrAssignment, setSelectedProjectForDrAssignment] = useState<Project | null>(null); // Added
-  const [isAssignDrDialogOpen, setIsAssignDrDialogOpen] = useState(false); // Added
+  const [selectedOrderForDrAssignment, setSelectedOrderForDrAssignment] = useState<TrackingLink | null>(null); // Changed type
+  const [isAssignDrDialogOpen, setIsAssignDrDialogOpen] = useState(false); 
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -64,12 +64,12 @@ export default function ProjectsPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedProjects, fetchedStatuses] = await Promise.all([ // Fetch statuses
+      const [fetchedProjects, fetchedStatuses] = await Promise.all([ 
         getProjects(),
         getStatuses()
       ]);
       setProjects(fetchedProjects);
-      setAllStatuses(fetchedStatuses); // Set statuses
+      setAllStatuses(fetchedStatuses); 
     } catch (error) {
       console.error("Failed to fetch projects or statuses:", error);
       toast({ title: "Error", description: "Could not load projects or status configurations.", variant: "destructive" });
@@ -191,7 +191,7 @@ export default function ProjectsPage() {
   };
 
   const handleOpenAssignDrDialog = useCallback((projectToAssign: Project) => {
-    const rfdCheck = allStatuses.find(s => s.id === 'ready-for-design');
+    const rfdCheck = allStatuses.find(s => s.id === READY_FOR_DESIGN_STATUS_ID);
     if (!rfdCheck) {
         console.error("ProjectsPage/handleOpenAssignDrDialog: CRITICAL - 'ready-for-design' status (ID: 'ready-for-design') NOT FOUND in allStatuses prop.");
         toast({
@@ -202,14 +202,38 @@ export default function ProjectsPage() {
         });
         return;
     }
-    setSelectedProjectForDrAssignment(projectToAssign);
+
+    // Create a shim object that resembles TrackingLink for AssignDrDialog
+    const orderShim: TrackingLink = {
+      id: projectToAssign.id, // project.id is the orderId for dynamic projects
+      companyName: projectToAssign.name,
+      // The dialog uses order.currentStatus for descriptive text.
+      // The actual status logic is on the server action using the real order's status.
+      // Passing project.status here allows the dialog's description to be reasonably accurate.
+      currentStatus: projectToAssign.status as string, // ProjectStatusType is a subset of string
+      designerRepresentativeId: projectToAssign.designerRepresentativeId || null,
+      designerRepresentativeName: projectToAssign.designerRepresentativeName || null,
+      // Fill other non-critical (for this dialog) TrackingLink fields with defaults
+      address: '', 
+      phoneNumber: '',
+      orderItems: [],
+      crmUserId: projectToAssign.assigneeName, // For dynamic projects, assigneeName is crmUserName
+      crmUserName: projectToAssign.assigneeName,
+      createdAt: projectToAssign.createdAt || new Date().toISOString(),
+      isPublic: false, // Default, not used by dialog for this action
+      statusHistory: [], // Not used by dialog for this action
+      comments: [], // Not used
+      advancePayments: [], // Not used
+    };
+
+    setSelectedOrderForDrAssignment(orderShim);
     setIsAssignDrDialogOpen(true);
   }, [allStatuses, toast]);
 
-  const handleDrAssignmentSuccess = useCallback(async () => {
-    await fetchData(); // Refresh projects list
-    // Toast for successful assignment will be handled by AssignDrDialog's action or its caller
-  }, [fetchData]);
+  const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromDialog: TrackingLink) => {
+    await fetchData(); // Refresh projects list, as DR assignment might affect project data if it's an "actual" project
+    toast({ title: "DR Assigned", description: `${updatedOrderFromDialog.designerRepresentativeName} assigned to order ${updatedOrderFromDialog.id}.` });
+  }, [fetchData, toast]);
 
 
   if (isLoading && projects.length === 0) {
@@ -327,19 +351,24 @@ export default function ProjectsPage() {
       </div>
       <DragOverlay dropAnimation={null}>
         {activeProject ? (
-          <ProjectCard project={activeProject} isOverlay />
+          <ProjectCard 
+            project={activeProject} 
+            isOverlay 
+            currentUser={currentUser}
+            allStatuses={allStatuses}
+            onOpenAssignDrDialog={handleOpenAssignDrDialog} 
+          />
         ) : null}
       </DragOverlay>
 
-      {selectedProjectForDrAssignment && currentUser && allStatuses.length > 0 && isAssignDrDialogOpen && (
+      {selectedOrderForDrAssignment && currentUser && allStatuses.length > 0 && isAssignDrDialogOpen && (
         <AssignDrDialog
           isOpen={isAssignDrDialogOpen}
           onOpenChange={(open) => {
             setIsAssignDrDialogOpen(open);
-            if (!open) setSelectedProjectForDrAssignment(null);
+            if (!open) setSelectedOrderForDrAssignment(null);
           }}
-          // @ts-ignore - Project and TrackingLink share many properties, AssignDrDialog expects TrackingLink but Project is compatible for its needs
-          order={selectedProjectForDrAssignment} 
+          order={selectedOrderForDrAssignment} 
           currentUser={currentUser}
           allStatuses={allStatuses}
           onDrAssigned={handleDrAssignmentSuccess}
