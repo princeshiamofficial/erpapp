@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -146,7 +147,6 @@ export default function InvoiceListPage() {
                   <TableHead>Paid</TableHead>
                   <TableHead>Due</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="pr-6 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -159,7 +159,6 @@ export default function InvoiceListPage() {
                       <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
-                      <TableCell className="pr-6 text-right"><Skeleton className="h-9 w-24 inline-block rounded-md" /></TableCell>
                     </TableRow>
                   ))
                 ) : filteredOrders.length > 0 ? (
@@ -182,17 +181,12 @@ export default function InvoiceListPage() {
                             {statusInfo.name}
                           </Badge>
                         </TableCell>
-                        <TableCell className="pr-6 text-right">
-                          <Button onClick={() => handlePrintInvoice(order.id)} variant="outline" size="sm" className="h-9 px-3">
-                            <Printer className="mr-1.5 h-4 w-4" /> Print Invoice
-                          </Button>
-                        </TableCell>
                       </TableRow>
                     );
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 h-[300px]">
+                    <TableCell colSpan={6} className="text-center py-12 h-[300px]">
                        <Package className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
                        <p className="text-lg text-muted-foreground font-medium">No orders found.</p>
                        <p className="text-sm text-muted-foreground">
@@ -209,3 +203,4 @@ export default function InvoiceListPage() {
     </div>
   );
 }
+
