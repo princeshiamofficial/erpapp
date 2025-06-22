@@ -87,13 +87,23 @@ export default function InvoiceListPage() {
 
   useEffect(() => {
     if (ordersToPrint) {
-      const timer = setTimeout(() => {
-        window.print();
+      const handleAfterPrint = () => {
         setOrdersToPrint(null);
         setIsPreparingPrint(false);
         setSelectedRowIds(new Set());
+        window.removeEventListener('afterprint', handleAfterPrint);
+      };
+      
+      window.addEventListener('afterprint', handleAfterPrint);
+
+      const timer = setTimeout(() => {
+        window.print();
       }, 100);
-      return () => clearTimeout(timer);
+
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener('afterprint', handleAfterPrint);
+      };
     }
   }, [ordersToPrint]);
   
@@ -169,147 +179,151 @@ export default function InvoiceListPage() {
   const numSelected = selectedRowIds.size;
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 print:hidden">
-      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden print:hidden">
-        <CardHeader className="border-b p-5">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex-grow">
-              <CardTitle className="text-card-foreground text-xl">All Order Invoices</CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                A list of all generated orders and their financial status.
-              </CardDescription>
+    <>
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8 print:hidden">
+        <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+          <CardHeader className="border-b p-5">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex-grow">
+                <CardTitle className="text-card-foreground text-xl">All Order Invoices</CardTitle>
+                <CardDescription className="text-muted-foreground text-sm mt-0.5">
+                  A list of all generated orders and their financial status.
+                </CardDescription>
+              </div>
+              <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search orders..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-background h-10 rounded-md w-full"
+                />
+              </div>
             </div>
-            <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search orders..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-background h-10 rounded-md w-full"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {numSelected > 0 && (
-            <div className="flex items-center gap-4 px-5 py-3 bg-secondary/50 border-b">
-                <div className="text-sm font-semibold text-foreground flex-1">
-                    {numSelected} row{numSelected > 1 ? 's' : ''} selected.
-                </div>
-                 <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handlePrintInvoices(Array.from(selectedRowIds))}
-                    disabled={isPreparingPrint}
-                 >
-                    {isPreparingPrint ? (
-                        <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Preparing...</>
-                    ) : (
-                        <><Printer className="mr-2 h-4 w-4"/> Print Selected</>
-                    )}
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => setSelectedRowIds(new Set())}>
-                    <X className="h-4 w-4"/>
-                    <span className="sr-only">Clear selection</span>
-                </Button>
-            </div>
-          )}
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12 text-center pl-4">
-                    <Checkbox
-                      checked={
-                        (numSelected > 0 && numSelected < filteredOrders.length)
-                          ? 'indeterminate'
-                          : (numSelected === filteredOrders.length && filteredOrders.length > 0)
-                      }
-                      onCheckedChange={handleSelectAll}
-                      aria-label="Select all rows"
-                    />
-                  </TableHead>
-                  <TableHead>Order ID</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Paid</TableHead>
-                  <TableHead>Due</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  [...Array(8)].map((_, i) => (
-                    <TableRow key={`skel-invoice-${i}`}>
-                      <TableCell className="text-center pl-4"><Skeleton className="h-5 w-5"/></TableCell>
-                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
-                    </TableRow>
-                  ))
-                ) : filteredOrders.length > 0 ? (
-                  filteredOrders.map((order) => {
-                    const financials = getOrderFinancials(order);
-                    const statusInfo = getStatusDisplayInfo(order.currentStatus);
-                    const isSelected = selectedRowIds.has(order.id);
-                    return (
-                      <TableRow key={order.id} className="hover:bg-muted/50 transition-colors" data-state={isSelected ? "selected" : ""}>
-                        <TableCell className="text-center pl-4">
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={(checked) => handleSelectRow(order.id, !!checked)}
-                              aria-label={`Select row for order ${order.id}`}
-                            />
-                        </TableCell>
-                        <TableCell className="font-medium text-primary">
-                          <Link href={`/invoice/${order.id}`} className="hover:underline" target="_blank" rel="noopener noreferrer">
-                            {order.id}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="text-card-foreground">{order.companyName}</TableCell>
-                        <TableCell className="text-card-foreground font-mono">{formatCurrency(financials.totalAmount)}</TableCell>
-                        <TableCell className="text-green-600 font-mono">{formatCurrency(financials.paidAmount)}</TableCell>
-                        <TableCell className="text-red-600 font-mono">{formatCurrency(financials.dueAmount)}</TableCell>
-                        <TableCell>
-                          <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
-                            {statusInfo.name}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                ) : (
+          </CardHeader>
+          <CardContent className="p-0">
+            {numSelected > 0 && (
+              <div className="flex items-center gap-4 px-5 py-3 bg-secondary/50 border-b">
+                  <div className="text-sm font-semibold text-foreground flex-1">
+                      {numSelected} row{numSelected > 1 ? 's' : ''} selected.
+                  </div>
+                   <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePrintInvoices(Array.from(selectedRowIds))}
+                      disabled={isPreparingPrint}
+                   >
+                      {isPreparingPrint ? (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Preparing...</>
+                      ) : (
+                          <><Printer className="mr-2 h-4 w-4"/> Print Selected</>
+                      )}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => setSelectedRowIds(new Set())}>
+                      <X className="h-4 w-4"/>
+                      <span className="sr-only">Clear selection</span>
+                  </Button>
+              </div>
+            )}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 h-[300px]">
-                       <Package className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
-                       <p className="text-lg text-muted-foreground font-medium">No orders found.</p>
-                       <p className="text-sm text-muted-foreground">
-                         {searchTerm ? "Try adjusting your search term." : "Create a new order to see it here."}
-                       </p>
-                    </TableCell>
+                    <TableHead className="w-12 text-center pl-4">
+                      <Checkbox
+                        checked={
+                          (numSelected > 0 && numSelected < filteredOrders.length)
+                            ? 'indeterminate'
+                            : (numSelected === filteredOrders.length && filteredOrders.length > 0)
+                        }
+                        onCheckedChange={handleSelectAll}
+                        aria-label="Select all rows"
+                      />
+                    </TableHead>
+                    <TableHead>Order ID</TableHead>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Total</TableHead>
+                    <TableHead>Paid</TableHead>
+                    <TableHead>Due</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    [...Array(8)].map((_, i) => (
+                      <TableRow key={`skel-invoice-${i}`}>
+                        <TableCell className="text-center pl-4"><Skeleton className="h-5 w-5"/></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
+                      </TableRow>
+                    ))
+                  ) : filteredOrders.length > 0 ? (
+                    filteredOrders.map((order) => {
+                      const financials = getOrderFinancials(order);
+                      const statusInfo = getStatusDisplayInfo(order.currentStatus);
+                      const isSelected = selectedRowIds.has(order.id);
+                      return (
+                        <TableRow key={order.id} className="hover:bg-muted/50 transition-colors" data-state={isSelected ? "selected" : ""}>
+                          <TableCell className="text-center pl-4">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={(checked) => handleSelectRow(order.id, !!checked)}
+                                aria-label={`Select row for order ${order.id}`}
+                              />
+                          </TableCell>
+                          <TableCell className="font-medium text-primary">
+                            <Link href={`/invoice/${order.id}`} className="hover:underline" target="_blank" rel="noopener noreferrer">
+                              {order.id}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-card-foreground">{order.companyName}</TableCell>
+                          <TableCell className="text-card-foreground font-mono">{formatCurrency(financials.totalAmount)}</TableCell>
+                          <TableCell className="text-green-600 font-mono">{formatCurrency(financials.paidAmount)}</TableCell>
+                          <TableCell className="text-red-600 font-mono">{formatCurrency(financials.dueAmount)}</TableCell>
+                          <TableCell>
+                            <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
+                              {statusInfo.name}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center py-12 h-[300px]">
+                         <Package className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
+                         <p className="text-lg text-muted-foreground font-medium">No orders found.</p>
+                         <p className="text-sm text-muted-foreground">
+                           {searchTerm ? "Try adjusting your search term." : "Create a new order to see it here."}
+                         </p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
       
       {/* Hidden container for printing */}
-      <div className={cn("hidden print-container", !ordersToPrint && "hidden")}>
-        {ordersToPrint?.map(order => (
-          <div key={`print-${order.id}`} className="invoice-page">
-            <InvoiceDetailsClient 
-              order={order} 
-              allStatuses={allStatuses} 
-              allUsers={allUsers}
-            />
-          </div>
-        ))}
-      </div>
-    </div>
+      {ordersToPrint && (
+        <div className="hidden print:block">
+          {ordersToPrint.map(order => (
+            <div key={`print-${order.id}`} className="invoice-page">
+              <InvoiceDetailsClient 
+                order={order} 
+                allStatuses={allStatuses} 
+                allUsers={allUsers}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
