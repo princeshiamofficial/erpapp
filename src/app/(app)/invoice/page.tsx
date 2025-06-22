@@ -1,21 +1,25 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { Printer, Search, Package, X } from 'lucide-react';
+import { Printer, Search, Package, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import type { TrackingLink, CustomStatus, AdvancePaymentRecord } from '@/types';
+import type { TrackingLink, CustomStatus, AdvancePaymentRecord, User } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { getStatuses, getContrastTextColor } from '@/lib/status-service';
+import { getUsers } from '@/lib/user-service';
+import { getFullOrdersByIds } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { Checkbox } from "@/components/ui/checkbox";
+import { InvoiceDetailsClient } from '../invoice/[orderId]/InvoiceDetailsClient';
+import { cn } from '@/lib/utils';
 
 const formatCurrency = (value: number | null | undefined): string => {
   if (value === null || value === undefined) return 'N/A';
@@ -27,9 +31,12 @@ export default function InvoiceListPage() {
   const { currentUser } = useAuth();
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
+  const [ordersToPrint, setOrdersToPrint] = useState<TrackingLink[] | null>(null);
+  const [isPreparingPrint, setIsPreparingPrint] = useState(false);
 
   const fetchInvoiceData = useCallback(async () => {
     if (!currentUser) {
@@ -38,12 +45,14 @@ export default function InvoiceListPage() {
     }
     setIsLoading(true);
     try {
-      const [fetchedOrders, fetchedStatuses] = await Promise.all([
+      const [fetchedOrders, fetchedStatuses, fetchedUsers] = await Promise.all([
         getOrders(),
         getStatuses(),
+        getUsers(),
       ]);
       setAllOrders(fetchedOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
       setAllStatuses(fetchedStatuses);
+      setAllUsers(fetchedUsers);
     } catch (error) {
       console.error("Failed to fetch orders or statuses:", error);
       toast({ title: "Error", description: "Could not load invoice data.", variant: "destructive" });
@@ -55,28 +64,39 @@ export default function InvoiceListPage() {
   useEffect(() => {
     fetchInvoiceData();
   }, [fetchInvoiceData]);
-  
-  const handlePrintInvoices = (orderIds: string[]) => {
-    orderIds.forEach((orderId, index) => {
-      const printUrl = `/invoice/${orderId}`;
-      setTimeout(() => {
-        const printWindow = window.open(printUrl, '_blank', 'noopener,noreferrer');
-        if (printWindow) {
-            printWindow.onload = () => {
-                printWindow.focus();
-                printWindow.print();
-            };
-        } else {
-            toast({
-                title: "Print Blocked",
-                description: `Could not open print window for order ${orderId}. Please check your browser's pop-up blocker settings.`,
-                variant: "destructive"
-            });
+
+  const handlePrintInvoices = async (orderIds: string[]) => {
+    if (orderIds.length === 0) return;
+    setIsPreparingPrint(true);
+    try {
+        const fullOrders = await getFullOrdersByIds(orderIds);
+        if (fullOrders.length !== orderIds.length) {
+          toast({ title: "Print Warning", description: "Some selected invoices could not be found.", variant: "destructive" });
         }
-      }, index * 250); // Stagger opening windows slightly
-    });
+        if (fullOrders.length > 0) {
+          setOrdersToPrint(fullOrders);
+        } else {
+          setIsPreparingPrint(false);
+        }
+    } catch (error) {
+        console.error("Failed to fetch full orders for printing:", error);
+        toast({ title: "Print Error", description: "Could not prepare invoices for printing.", variant: "destructive" });
+        setIsPreparingPrint(false);
+    }
   };
 
+  useEffect(() => {
+    if (ordersToPrint) {
+      const timer = setTimeout(() => {
+        window.print();
+        setOrdersToPrint(null);
+        setIsPreparingPrint(false);
+        setSelectedRowIds(new Set());
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [ordersToPrint]);
+  
   const filteredOrders = useMemo(() => {
     if (!searchTerm) return allOrders;
     const lowerSearchTerm = searchTerm.toLowerCase();
@@ -150,7 +170,7 @@ export default function InvoiceListPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden print:hidden">
         <CardHeader className="border-b p-5">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex-grow">
@@ -180,9 +200,13 @@ export default function InvoiceListPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => handlePrintInvoices(Array.from(selectedRowIds))}
+                    disabled={isPreparingPrint}
                  >
-                    <Printer className="mr-2 h-4 w-4"/>
-                    Print Selected
+                    {isPreparingPrint ? (
+                        <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Preparing...</>
+                    ) : (
+                        <><Printer className="mr-2 h-4 w-4"/> Print Selected</>
+                    )}
                 </Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => setSelectedRowIds(new Set())}>
                     <X className="h-4 w-4"/>
@@ -273,6 +297,19 @@ export default function InvoiceListPage() {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Hidden container for printing */}
+      <div className={cn("hidden print:block", !ordersToPrint && "hidden")}>
+        {ordersToPrint?.map(order => (
+          <div key={`print-${order.id}`} className="invoice-page">
+            <InvoiceDetailsClient 
+              order={order} 
+              allStatuses={allStatuses} 
+              allUsers={allUsers}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

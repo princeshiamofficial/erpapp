@@ -191,5 +191,13 @@
   .progress-indicator-gradient {
     background-image: linear-gradient(to right, hsl(var(--destructive)), hsl(39 100% 50%), hsl(60 100% 50%), hsl(90 76% 50%), hsl(var(--chart-2)));
   }
-}
 
+  @media print {
+    .invoice-page {
+      page-break-after: always;
+    }
+    .invoice-page:last-child {
+      page-break-after: avoid;
+    }
+  }
+}
