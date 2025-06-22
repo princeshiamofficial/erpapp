@@ -193,6 +193,10 @@
   }
 
   @media print {
+    @page {
+      size: auto;
+      margin: 0mm;
+    }
     .invoice-page {
       page-break-after: always;
     }
