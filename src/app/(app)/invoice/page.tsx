@@ -196,8 +196,11 @@ export default function InvoiceListPage() {
                 <TableRow>
                   <TableHead className="w-12 text-center pl-4">
                     <Checkbox
-                      checked={numSelected === filteredOrders.length && filteredOrders.length > 0}
-                      indeterminate={numSelected > 0 && numSelected < filteredOrders.length}
+                      checked={
+                        (numSelected > 0 && numSelected < filteredOrders.length)
+                          ? 'indeterminate'
+                          : (numSelected === filteredOrders.length && filteredOrders.length > 0)
+                      }
                       onCheckedChange={handleSelectAll}
                       aria-label="Select all rows"
                     />
