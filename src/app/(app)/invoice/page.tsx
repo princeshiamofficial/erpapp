@@ -169,7 +169,7 @@ export default function InvoiceListPage() {
   const numSelected = selectedRowIds.size;
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 print:hidden">
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden print:hidden">
         <CardHeader className="border-b p-5">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -299,7 +299,7 @@ export default function InvoiceListPage() {
       </Card>
       
       {/* Hidden container for printing */}
-      <div className={cn("hidden print:block", !ordersToPrint && "hidden")}>
+      <div className={cn("hidden print-container", !ordersToPrint && "hidden")}>
         {ordersToPrint?.map(order => (
           <div key={`print-${order.id}`} className="invoice-page">
             <InvoiceDetailsClient 

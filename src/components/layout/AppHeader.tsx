@@ -12,7 +12,7 @@ import { CalculatorDialog } from '@/components/layout/CalculatorDialog';
 
 export function AppHeader() {
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/90 backdrop-blur-lg supports-[backdrop-filter]:bg-background/75 shadow-sm">
+    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/90 backdrop-blur-lg supports-[backdrop-filter]:bg-background/75 shadow-sm print:hidden">
       <div className="container flex h-[4.5rem] items-center justify-between max-w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center">
           <div className="md:hidden"> {/* SidebarTrigger only on mobile */}
@@ -38,4 +38,3 @@ export function AppHeader() {
     </header>
   );
 }
-
