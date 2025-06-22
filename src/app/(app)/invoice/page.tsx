@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { Eye, Search, Package } from 'lucide-react';
+import { Printer, Search, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { TrackingLink, CustomStatus, AdvancePaymentRecord } from '@/types';
@@ -20,13 +20,14 @@ const formatCurrency = (value: number | null | undefined): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
-export default function InvoicePage() {
+export default function InvoiceListPage() {
   const { toast } = useToast();
   const { currentUser } = useAuth();
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const printWindowRef = useRef<Window | null>(null);
 
   const fetchInvoiceData = useCallback(async () => {
     if (!currentUser) {
@@ -52,6 +53,20 @@ export default function InvoicePage() {
   useEffect(() => {
     fetchInvoiceData();
   }, [fetchInvoiceData]);
+  
+  const handlePrintInvoice = (orderId: string) => {
+    const printUrl = `/invoice/${orderId}`;
+    printWindowRef.current = window.open(printUrl, '_blank', 'noopener,noreferrer');
+    if (printWindowRef.current) {
+        printWindowRef.current.onload = () => {
+            if (printWindowRef.current) {
+                printWindowRef.current.focus();
+                printWindowRef.current.print();
+            }
+        };
+    }
+  };
+
 
   const filteredOrders = useMemo(() => {
     if (!searchTerm) return allOrders;
@@ -154,7 +169,7 @@ export default function InvoicePage() {
                     return (
                       <TableRow key={order.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="pl-6 font-medium text-primary">
-                          <Link href={`/track/${order.id}`} className="hover:underline">
+                          <Link href={`/invoice/${order.id}`} className="hover:underline" target="_blank" rel="noopener noreferrer">
                             {order.id}
                           </Link>
                         </TableCell>
@@ -168,10 +183,8 @@ export default function InvoicePage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="pr-6 text-right">
-                          <Button asChild variant="outline" size="sm" className="h-9 px-3">
-                            <Link href={`/track/${order.id}`} target="_blank" rel="noopener noreferrer">
-                              <Eye className="mr-1.5 h-4 w-4" /> View Invoice
-                            </Link>
+                          <Button onClick={() => handlePrintInvoice(order.id)} variant="outline" size="sm" className="h-9 px-3">
+                            <Printer className="mr-1.5 h-4 w-4" /> Print Invoice
                           </Button>
                         </TableCell>
                       </TableRow>
