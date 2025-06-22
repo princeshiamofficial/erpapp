@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { Printer, Search, Package } from 'lucide-react';
+import { Printer, Search, Package, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { TrackingLink, CustomStatus, AdvancePaymentRecord } from '@/types';
@@ -15,6 +15,7 @@ import { getOrders } from '@/lib/order-service';
 import { getStatuses, getContrastTextColor } from '@/lib/status-service';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
+import { Checkbox } from "@/components/ui/checkbox";
 
 const formatCurrency = (value: number | null | undefined): string => {
   if (value === null || value === undefined) return 'N/A';
@@ -28,7 +29,7 @@ export default function InvoiceListPage() {
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const printWindowRef = useRef<Window | null>(null);
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
 
   const fetchInvoiceData = useCallback(async () => {
     if (!currentUser) {
@@ -55,19 +56,26 @@ export default function InvoiceListPage() {
     fetchInvoiceData();
   }, [fetchInvoiceData]);
   
-  const handlePrintInvoice = (orderId: string) => {
-    const printUrl = `/invoice/${orderId}`;
-    printWindowRef.current = window.open(printUrl, '_blank', 'noopener,noreferrer');
-    if (printWindowRef.current) {
-        printWindowRef.current.onload = () => {
-            if (printWindowRef.current) {
-                printWindowRef.current.focus();
-                printWindowRef.current.print();
-            }
-        };
-    }
+  const handlePrintInvoices = (orderIds: string[]) => {
+    orderIds.forEach((orderId, index) => {
+      const printUrl = `/invoice/${orderId}`;
+      setTimeout(() => {
+        const printWindow = window.open(printUrl, '_blank', 'noopener,noreferrer');
+        if (printWindow) {
+            printWindow.onload = () => {
+                printWindow.focus();
+                printWindow.print();
+            };
+        } else {
+            toast({
+                title: "Print Blocked",
+                description: `Could not open print window for order ${orderId}. Please check your browser's pop-up blocker settings.`,
+                variant: "destructive"
+            });
+        }
+      }, index * 250); // Stagger opening windows slightly
+    });
   };
-
 
   const filteredOrders = useMemo(() => {
     if (!searchTerm) return allOrders;
@@ -79,6 +87,10 @@ export default function InvoiceListPage() {
       order.crmUserName.toLowerCase().includes(lowerSearchTerm)
     );
   }, [allOrders, searchTerm]);
+  
+  useEffect(() => {
+    setSelectedRowIds(new Set());
+  }, [searchTerm]);
 
   const getOrderFinancials = useCallback((order: TrackingLink) => {
     const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
@@ -113,6 +125,28 @@ export default function InvoiceListPage() {
     }
     return { name: 'N/A', color: '#A1A1AA', textColor: '#FFFFFF' };
   }, [allStatuses]);
+  
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+      setSelectedRowIds(new Set(filteredOrders.map(o => o.id)));
+    } else {
+      setSelectedRowIds(new Set());
+    }
+  };
+
+  const handleSelectRow = (orderId: string, checked: boolean) => {
+    setSelectedRowIds(prev => {
+      const newSelection = new Set(prev);
+      if (checked) {
+        newSelection.add(orderId);
+      } else {
+        newSelection.delete(orderId);
+      }
+      return newSelection;
+    });
+  };
+
+  const numSelected = selectedRowIds.size;
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -137,11 +171,38 @@ export default function InvoiceListPage() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
+          {numSelected > 0 && (
+            <div className="flex items-center gap-4 px-5 py-3 bg-secondary/50 border-b">
+                <div className="text-sm font-semibold text-foreground flex-1">
+                    {numSelected} row{numSelected > 1 ? 's' : ''} selected.
+                </div>
+                 <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePrintInvoices(Array.from(selectedRowIds))}
+                 >
+                    <Printer className="mr-2 h-4 w-4"/>
+                    Print Selected
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" onClick={() => setSelectedRowIds(new Set())}>
+                    <X className="h-4 w-4"/>
+                    <span className="sr-only">Clear selection</span>
+                </Button>
+            </div>
+          )}
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="pl-6">Order ID</TableHead>
+                  <TableHead className="w-12 text-center pl-4">
+                    <Checkbox
+                      checked={numSelected === filteredOrders.length && filteredOrders.length > 0}
+                      indeterminate={numSelected > 0 && numSelected < filteredOrders.length}
+                      onCheckedChange={handleSelectAll}
+                      aria-label="Select all rows"
+                    />
+                  </TableHead>
+                  <TableHead>Order ID</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Paid</TableHead>
@@ -153,7 +214,8 @@ export default function InvoiceListPage() {
                 {isLoading ? (
                   [...Array(8)].map((_, i) => (
                     <TableRow key={`skel-invoice-${i}`}>
-                      <TableCell className="pl-6"><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell className="text-center pl-4"><Skeleton className="h-5 w-5"/></TableCell>
+                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-20" /></TableCell>
@@ -165,9 +227,17 @@ export default function InvoiceListPage() {
                   filteredOrders.map((order) => {
                     const financials = getOrderFinancials(order);
                     const statusInfo = getStatusDisplayInfo(order.currentStatus);
+                    const isSelected = selectedRowIds.has(order.id);
                     return (
-                      <TableRow key={order.id} className="hover:bg-muted/50 transition-colors">
-                        <TableCell className="pl-6 font-medium text-primary">
+                      <TableRow key={order.id} className="hover:bg-muted/50 transition-colors" data-state={isSelected ? "selected" : ""}>
+                        <TableCell className="text-center pl-4">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(checked) => handleSelectRow(order.id, !!checked)}
+                              aria-label={`Select row for order ${order.id}`}
+                            />
+                        </TableCell>
+                        <TableCell className="font-medium text-primary">
                           <Link href={`/invoice/${order.id}`} className="hover:underline" target="_blank" rel="noopener noreferrer">
                             {order.id}
                           </Link>
@@ -186,7 +256,7 @@ export default function InvoiceListPage() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12 h-[300px]">
+                    <TableCell colSpan={7} className="text-center py-12 h-[300px]">
                        <Package className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
                        <p className="text-lg text-muted-foreground font-medium">No orders found.</p>
                        <p className="text-sm text-muted-foreground">
@@ -203,4 +273,3 @@ export default function InvoiceListPage() {
     </div>
   );
 }
-
