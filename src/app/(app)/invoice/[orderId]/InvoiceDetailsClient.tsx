@@ -86,8 +86,8 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
   const amountDue = netPayable - totalAdvancePaid;
 
   return (
-    <div ref={invoiceRef} className="max-w-4xl mx-auto p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl">
-      <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30">
+    <div ref={invoiceRef} className="max-w-4xl mx-auto p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl print:shadow-none print:border-none print:p-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30 print:mb-4 print:pb-4">
         <div>
           <h2 className="text-3xl font-bold text-primary mb-2 flex items-center"><FileText className="h-8 w-8 mr-3" /> INVOICE</h2>
           <p className="font-bold text-foreground">Color Hut</p>
@@ -102,7 +102,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 print:mb-4">
         <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
           <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4"/>Bill To:</h4>
           <p className="text-lg font-semibold text-foreground">{order.companyName}</p>
@@ -117,7 +117,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
       </div>
 
       {Array.isArray(order.orderItems) && order.orderItems.length > 0 && (
-          <div className="mb-6">
+          <div className="mb-6 print:mb-4">
             <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">Order Items</h3>
             <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
               <Table><TableHeader><TableRow><TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Model</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-center">Quantity</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Lamination</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Unit Price</TableHead><TableHead className="text-xs uppercase tracking-wider text-muted-foreground text-right">Total Price</TableHead></TableRow></TableHeader>
@@ -128,13 +128,13 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
           </div>
       )}
       
-      {order.orderNotes && (<div className="mb-8">
+      {order.orderNotes && (<div className="mb-8 print:mb-4">
         <h3 className="text-lg font-semibold text-foreground mb-2 flex items-center"><StickyNote className="mr-2 h-5 w-5 text-primary/80"/>Order Notes:</h3>
         <Card className="bg-amber-50 border border-amber-200 dark:bg-amber-900/20 dark:border-amber-700/40 shadow-sm"><CardContent className="p-4 text-sm text-amber-800 dark:text-amber-200 whitespace-pre-wrap">{order.orderNotes}</CardContent></Card>
       </div>)}
 
       {allAdvancePaymentRecords.length > 0 && (
-        <div className="mb-8">
+        <div className="mb-8 print:mb-4">
           <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80"/>Advance Payments History</h3>
           <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
             <Table>
@@ -155,7 +155,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
         </div>
       )}
 
-      <div className="flex justify-end mt-8 pt-6 border-t border-border/30">
+      <div className="flex justify-end mt-8 pt-6 border-t border-border/30 print:mt-4 print:pt-4">
         <div className="w-full max-w-xs sm:max-w-sm relative">
           <div className="flex justify-between mb-1"><span className="text-md text-muted-foreground">Order Items Total:</span><span className="text-md font-medium text-foreground">{formatCurrency(orderSubtotal)}</span></div>
           {effectiveDiscount > 0 && (<div className="flex justify-between mb-1"><span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500"/>Special Client Discount:</span><span className="text-md font-medium text-red-500">- {formatCurrency(effectiveDiscount)}</span></div>)}
@@ -169,4 +169,3 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
   );
 }
 
-    
