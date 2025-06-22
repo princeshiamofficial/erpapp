@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { FileText, Eye, Search, Package } from 'lucide-react';
+import { Eye, Search, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { TrackingLink, CustomStatus, AdvancePaymentRecord } from '@/types';
@@ -100,18 +100,6 @@ export default function InvoicePage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
-        <div className="flex items-center gap-3">
-          <FileText className="h-8 w-8 text-primary flex-shrink-0" />
-          <div>
-            <h1 className="page-title">Invoices</h1>
-            <p className="page-description">
-              View and manage all order invoices.
-            </p>
-          </div>
-        </div>
-      </div>
-
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
