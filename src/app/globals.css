@@ -203,15 +203,5 @@
     .invoice-page:last-child {
       page-break-after: avoid;
     }
-    .print-container {
-        display: block !important;
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: auto;
-        padding: 0;
-        margin: 0;
-    }
   }
 }
