@@ -11,9 +11,9 @@ import { getUsers as getAllUsersService } from './user-service'; // Import user 
 
 const PROJECTS_COLLECTION = 'projects';
 
-const defaultProjectsData: Array<Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'crCancelAt' | 'deliveredAt' | 'assigneeAvatarUrl' | 'designerRepresentativeId' | 'designerRepresentativeName' | 'designerRepresentativeAvatarUrl' >> = [
+const defaultProjectsData: Array<Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'cancelAt' | 'deliveredAt' | 'assigneeAvatarUrl' | 'designerRepresentativeId' | 'designerRepresentativeName' | 'designerRepresentativeAvatarUrl' >> = [
   { projectIdDisplay: 'PJ-001', name: 'Alpha Initiative', status: 'CR Clearance', endDate: formatISO(addMonths(new Date(), 2)), assigneeName: 'Austin Azaria', assigneeInitials: 'AU', categoryTag: 'Corporate Client' },
-  { projectIdDisplay: 'PJ-002', name: 'Beta Development', status: 'CR Cancel', endDate: formatISO(addMonths(new Date(), 3)), assigneeName: 'Clerk Kent', assigneeInitials: 'CK', categoryTag: 'Walk-In Customer' },
+  { projectIdDisplay: 'PJ-002', name: 'Beta Development', status: 'Cancel', endDate: formatISO(addMonths(new Date(), 3)), assigneeName: 'Clerk Kent', assigneeInitials: 'CK', categoryTag: 'Walk-In Customer' },
   { projectIdDisplay: 'PJ-003', name: 'Gamma Graphics', status: 'On Design', endDate: formatISO(addMonths(new Date(), 1)), assigneeName: 'Diana Prince', assigneeInitials: 'DP', categoryTag: 'Internal Project' },
   { projectIdDisplay: 'PJ-004', name: 'Delta Distribution', status: 'Logistics', endDate: formatISO(addMonths(new Date(), 5)), assigneeName: 'Barry Allen', assigneeInitials: 'BA', categoryTag: 'Partner Integration' },
   { projectIdDisplay: 'PJ-005', name: 'Epsilon Exploration', status: 'Courier', endDate: formatISO(addMonths(new Date(), 4)), assigneeName: 'Hal Jordan', assigneeInitials: 'HJ', categoryTag: 'R&D' },
@@ -23,7 +23,7 @@ const defaultProjectsData: Array<Omit<Project, 'id' | 'createdAt' | 'updatedAt' 
 const getInitialStatusTimestampField = (status: ProjectStatusType): keyof Project | undefined => {
   switch (status) {
     case 'CR Clearance': return 'crClearanceAt';
-    case 'CR Cancel': return 'crCancelAt';
+    case 'Cancel': return 'cancelAt';
     case 'On Design': return 'onDesignAt';
     case 'On Hold': return 'onHoldAt';
     case 'Logistics': return 'logisticsAt';
@@ -191,7 +191,7 @@ export const getProjects = async (): Promise<Project[]> => {
   });
 };
 
-export const addProject = async (projectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'crCancelAt' | 'deliveredAt'>): Promise<Project | null> => {
+export const addProject = async (projectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'cancelAt' | 'deliveredAt'>): Promise<Project | null> => {
   try {
     const id = uuidv4(); 
     const now = formatISO(new Date());
@@ -251,7 +251,7 @@ export const updateProjectStatus = async (
         status: _oldStatus, 
         updatedAt: _oldUpdatedAt, 
         createdAt: _oldCreatedAt,
-        crClearanceAt, crCancelAt, onDesignAt, onHoldAt, logisticsAt, courierAt, deliveredAt,
+        crClearanceAt, cancelAt, onDesignAt, onHoldAt, logisticsAt, courierAt, deliveredAt,
         ...restOfProjectData 
       } = projectDataIfCreating;
 

@@ -35,7 +35,7 @@ const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialo
 
 const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: React.ElementType; headerBgClass: string; headerIconClass?: string; headerTextClass?: string }> = [
   { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, headerBgClass: 'bg-sky-600', headerTextClass: 'text-sky-50' },
-  { title: 'CR Cancel', status: 'CR Cancel', icon: ClipboardX, headerBgClass: 'bg-red-600', headerTextClass: 'text-red-50' },
+  { title: 'Cancel', status: 'Cancel', icon: ClipboardX, headerBgClass: 'bg-red-600', headerTextClass: 'text-red-50' },
   { title: 'On Design', status: 'On Design', icon: DraftingCompass, headerBgClass: 'bg-purple-600', headerTextClass: 'text-purple-50' },
   { title: 'On Hold', status: 'On Hold', icon: PauseCircle, headerBgClass: 'bg-yellow-500', headerTextClass: 'text-yellow-950' },
   { title: 'Logistics', status: 'Logistics', icon: Truck, headerBgClass: 'bg-orange-600', headerTextClass: 'text-orange-50' },
@@ -115,7 +115,7 @@ export default function ProjectsPage() {
 
   const projectsByStatus = useMemo(() => {
     const grouped: Record<ProjectStatusType, Project[]> = {
-      'CR Clearance': [], 'CR Cancel': [], 'On Design': [],
+      'CR Clearance': [], 'Cancel': [], 'On Design': [],
       'On Hold': [], 'Logistics': [], 'Courier': [], 'Delivered': [],
     };
     filteredProjects.forEach(project => {

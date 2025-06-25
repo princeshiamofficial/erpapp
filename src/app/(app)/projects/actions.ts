@@ -26,9 +26,9 @@ export async function updateProjectStatusAction(
       let targetOrderStatusId: string | null = null;
       let statusUpdateNote: string | null = null;
 
-      if (newStatus === 'CR Cancel' && order.currentStatus !== CANCELLED_STATUS_ID) {
+      if (newStatus === 'Cancel' && order.currentStatus !== CANCELLED_STATUS_ID) {
         targetOrderStatusId = CANCELLED_STATUS_ID;
-        statusUpdateNote = `Order cancelled from project board by ${actingUser.name}. Project status: CR Cancel.`;
+        statusUpdateNote = `Order cancelled from project board by ${actingUser.name}. Project status: Cancelled.`;
       } else if (newStatus === 'On Hold' && order.currentStatus !== ON_HOLD_STATUS_ID) {
         targetOrderStatusId = ON_HOLD_STATUS_ID;
         statusUpdateNote = `Order put on hold from project board by ${actingUser.name}. Project status: On Hold.`;
