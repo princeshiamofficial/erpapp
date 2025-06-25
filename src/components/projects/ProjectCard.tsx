@@ -91,7 +91,7 @@ const calculateProgressInfo = (
 ): ProgressInfo => {
   
   const { status, createdAt, updatedAt, endDate, 
-          crClearanceAt, onDesignAt, onHoldAt, logisticsAt, courierAt, crCancelAt, deliveredAt
+          crClearanceAt, onDesignAt, onHoldAt, logisticsAt, courierAt, cancelAt, deliveredAt
         } = project;
 
   let effectiveStartDateIso: string | undefined;
@@ -101,7 +101,7 @@ const calculateProgressInfo = (
   else if (status === 'On Hold') effectiveStartDateIso = onHoldAt;
   else if (status === 'Logistics') effectiveStartDateIso = logisticsAt;
   else if (status === 'Courier') effectiveStartDateIso = courierAt;
-  else if (status === 'CR Cancel') effectiveStartDateIso = crCancelAt;
+  else if (status === 'Cancel') effectiveStartDateIso = cancelAt;
   else if (status === 'Delivered') effectiveStartDateIso = deliveredAt;
 
   if (!effectiveStartDateIso) {
@@ -118,7 +118,7 @@ const calculateProgressInfo = (
   let showProgressBar = true;
   let progressColorClass = 'progress-indicator-gradient'; 
 
-  if (status === 'CR Cancel' || status === 'Delivered') {
+  if (status === 'Cancel' || status === 'Delivered') {
     showProgressBar = false;
     return { showProgressBar, percentage: 0, displayText: "", isOverdue: false, progressColorClass: "" };
   }
@@ -164,7 +164,7 @@ const calculateProgressInfo = (
     progressColorClass = 'bg-destructive';
     currentPercentage = 100;
   } else if (
-    isBefore(now, effectiveStartDate) && status !== 'CR Cancel' && status !== 'On Hold' 
+    isBefore(now, effectiveStartDate) && status !== 'Cancel' && status !== 'On Hold' 
   ) {
     const timeUntilStart = formatDistanceToNowStrict(effectiveStartDate, { addSuffix: false });
     currentDisplayText = `Starts in ${timeUntilStart}`;
