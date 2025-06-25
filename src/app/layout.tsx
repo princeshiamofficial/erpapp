@@ -1,5 +1,5 @@
 
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import './globals.css';
 import { AuthProvider } from '@/contexts/auth-context';
@@ -11,6 +11,9 @@ export const metadata: Metadata = {
   title: 'Color Hut',
   description: 'Seamless Order Tracking and Management',
   manifest: '/manifest.json',
+};
+
+export const viewport: Viewport = {
   themeColor: '#EF6C00',
 };
 
