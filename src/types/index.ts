@@ -201,7 +201,7 @@ export interface PersonalNote {
   updatedAt: string; // ISO string
 }
 
-export type ProjectStatusType = 'CR Clearance' | 'CR Cancel' | 'On Design' | 'On Hold' | 'Logistics' | 'Courier';
+export type ProjectStatusType = 'CR Clearance' | 'CR Cancel' | 'On Design' | 'On Hold' | 'Logistics' | 'Courier' | 'Delivered';
 
 export interface Project {
   id: string;
@@ -222,9 +222,9 @@ export interface Project {
   onHoldAt?: string;
   logisticsAt?: string;
   courierAt?: string;
+  deliveredAt?: string;
 
   designerRepresentativeId?: string | null;
   designerRepresentativeName?: string | null;
   designerRepresentativeAvatarUrl?: string | null;
 }
-

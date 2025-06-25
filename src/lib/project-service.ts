@@ -11,7 +11,7 @@ import { getUsers as getAllUsersService } from './user-service'; // Import user 
 
 const PROJECTS_COLLECTION = 'projects';
 
-const defaultProjectsData: Array<Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'crCancelAt' | 'assigneeAvatarUrl' | 'designerRepresentativeId' | 'designerRepresentativeName' | 'designerRepresentativeAvatarUrl' >> = [
+const defaultProjectsData: Array<Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'crCancelAt' | 'deliveredAt' | 'assigneeAvatarUrl' | 'designerRepresentativeId' | 'designerRepresentativeName' | 'designerRepresentativeAvatarUrl' >> = [
   { projectIdDisplay: 'PJ-001', name: 'Alpha Initiative', status: 'CR Clearance', endDate: formatISO(addMonths(new Date(), 2)), assigneeName: 'Austin Azaria', assigneeInitials: 'AU', categoryTag: 'Corporate Client' },
   { projectIdDisplay: 'PJ-002', name: 'Beta Development', status: 'CR Cancel', endDate: formatISO(addMonths(new Date(), 3)), assigneeName: 'Clerk Kent', assigneeInitials: 'CK', categoryTag: 'Walk-In Customer' },
   { projectIdDisplay: 'PJ-003', name: 'Gamma Graphics', status: 'On Design', endDate: formatISO(addMonths(new Date(), 1)), assigneeName: 'Diana Prince', assigneeInitials: 'DP', categoryTag: 'Internal Project' },
@@ -28,6 +28,7 @@ const getInitialStatusTimestampField = (status: ProjectStatusType): keyof Projec
     case 'On Hold': return 'onHoldAt';
     case 'Logistics': return 'logisticsAt';
     case 'Courier': return 'courierAt';
+    case 'Delivered': return 'deliveredAt';
     default: return undefined;
   }
 };
@@ -190,7 +191,7 @@ export const getProjects = async (): Promise<Project[]> => {
   });
 };
 
-export const addProject = async (projectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'crCancelAt'>): Promise<Project | null> => {
+export const addProject = async (projectData: Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'crCancelAt' | 'deliveredAt'>): Promise<Project | null> => {
   try {
     const id = uuidv4(); 
     const now = formatISO(new Date());
@@ -250,7 +251,7 @@ export const updateProjectStatus = async (
         status: _oldStatus, 
         updatedAt: _oldUpdatedAt, 
         createdAt: _oldCreatedAt,
-        crClearanceAt, crCancelAt, onDesignAt, onHoldAt, logisticsAt, courierAt, 
+        crClearanceAt, crCancelAt, onDesignAt, onHoldAt, logisticsAt, courierAt, deliveredAt,
         ...restOfProjectData 
       } = projectDataIfCreating;
 
@@ -282,5 +283,3 @@ export const updateProjectStatus = async (
   }
 };
     
-
-

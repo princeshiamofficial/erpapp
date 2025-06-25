@@ -91,7 +91,7 @@ const calculateProgressInfo = (
 ): ProgressInfo => {
   
   const { status, createdAt, updatedAt, endDate, 
-          crClearanceAt, onDesignAt, onHoldAt, logisticsAt, courierAt, crCancelAt 
+          crClearanceAt, onDesignAt, onHoldAt, logisticsAt, courierAt, crCancelAt, deliveredAt
         } = project;
 
   let effectiveStartDateIso: string | undefined;
@@ -102,6 +102,7 @@ const calculateProgressInfo = (
   else if (status === 'Logistics') effectiveStartDateIso = logisticsAt;
   else if (status === 'Courier') effectiveStartDateIso = courierAt;
   else if (status === 'CR Cancel') effectiveStartDateIso = crCancelAt;
+  else if (status === 'Delivered') effectiveStartDateIso = deliveredAt;
 
   if (!effectiveStartDateIso) {
     effectiveStartDateIso = updatedAt || createdAt;
@@ -117,7 +118,7 @@ const calculateProgressInfo = (
   let showProgressBar = true;
   let progressColorClass = 'progress-indicator-gradient'; 
 
-  if (status === 'CR Cancel') {
+  if (status === 'CR Cancel' || status === 'Delivered') {
     showProgressBar = false;
     return { showProgressBar, percentage: 0, displayText: "", isOverdue: false, progressColorClass: "" };
   }
@@ -432,6 +433,3 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
     </motion.div>
   );
 }
-    
-    
-

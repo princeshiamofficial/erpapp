@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import type { Project, ProjectStatusType, User, OrderLogEntry } from "@/types"; // Added User, OrderLogEntry
 import { updateProjectStatus as updateProjectStatusInDb } from '@/lib/project-service';
 import { getOrderById, updateOrder } from '@/lib/order-service'; // Added
-import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_STATUS_ID } from '@/lib/status-service'; // Added SHIPPED_STATUS_ID
+import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_STATUS_ID, DELIVERED_STATUS_ID } from '@/lib/status-service'; // Added SHIPPED_STATUS_ID
 import { v4 as uuidv4 } from 'uuid'; // Added
 
 export async function updateProjectStatusAction(
@@ -38,6 +38,9 @@ export async function updateProjectStatusAction(
       } else if (newStatus === 'Courier' && order.currentStatus !== SHIPPED_STATUS_ID) {
         targetOrderStatusId = SHIPPED_STATUS_ID;
         statusUpdateNote = `Order shipped (project in Courier stage) by ${actingUser.name}. Project status: Courier.`;
+      } else if (newStatus === 'Delivered' && order.currentStatus !== DELIVERED_STATUS_ID) {
+        targetOrderStatusId = DELIVERED_STATUS_ID;
+        statusUpdateNote = `Order delivered via project board by ${actingUser.name}. Project status: Delivered.`;
       }
 
       if (targetOrderStatusId && statusUpdateNote) {

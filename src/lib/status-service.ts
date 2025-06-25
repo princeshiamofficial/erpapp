@@ -13,6 +13,7 @@ export const ON_HOLD_STATUS_ID = 'on-hold';
 export const LOGISTICS_STATUS_ID = 'logistics'; 
 export const QUALITY_CHECK_STATUS_ID = 'quality-check';
 export const SHIPPED_STATUS_ID = 'shipped'; // Added SHIPPED_STATUS_ID
+export const DELIVERED_STATUS_ID = 'delivered';
 
 // Default statuses with names, colors, and default allowed roles
 const defaultStatusesData: Array<Omit<CustomStatus, 'id' | 'isSystemStatus' | 'isVisible'> & { defaultName: string, defaultAllowedRoles?: UserRole[] }> = [
@@ -308,5 +309,3 @@ export const getContrastTextColor = (hexColor: string): string => {
     return '#000000';
   }
 };
-
-

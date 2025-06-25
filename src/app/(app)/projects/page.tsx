@@ -7,7 +7,7 @@ import { getProjects } from '@/lib/project-service';
 import { getStatuses, ORDER_SUBMITTED_ID, READY_FOR_DESIGN_STATUS_ID } from '@/lib/status-service'; 
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Briefcase, ClipboardCheck, ClipboardX, DraftingCompass, PauseCircle, Truck, CheckCircle, RefreshCw } from 'lucide-react'; 
+import { Briefcase, ClipboardCheck, ClipboardX, DraftingCompass, PauseCircle, Truck, CheckCircle, RefreshCw, PackageCheck } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,6 +40,7 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; i
   { title: 'On Hold', status: 'On Hold', icon: PauseCircle, headerBgClass: 'bg-yellow-500', headerTextClass: 'text-yellow-950' },
   { title: 'Logistics', status: 'Logistics', icon: Truck, headerBgClass: 'bg-orange-600', headerTextClass: 'text-orange-50' },
   { title: 'Courier', status: 'Courier', icon: CheckCircle, headerBgClass: 'bg-green-600', headerTextClass: 'text-green-50' },
+  { title: 'Delivered', status: 'Delivered', icon: PackageCheck, headerBgClass: 'bg-emerald-600', headerTextClass: 'text-emerald-50' },
 ];
 
 export default function ProjectsPage() {
@@ -115,7 +116,7 @@ export default function ProjectsPage() {
   const projectsByStatus = useMemo(() => {
     const grouped: Record<ProjectStatusType, Project[]> = {
       'CR Clearance': [], 'CR Cancel': [], 'On Design': [],
-      'On Hold': [], 'Logistics': [], 'Courier': [],
+      'On Hold': [], 'Logistics': [], 'Courier': [], 'Delivered': [],
     };
     filteredProjects.forEach(project => {
       if (grouped[project.status]) {
@@ -407,8 +408,3 @@ export default function ProjectsPage() {
     </DndContext>
   );
 }
-    
-    
-    
-
-
