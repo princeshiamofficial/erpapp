@@ -226,6 +226,31 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     if (value.toLowerCase() !== 'other') setNewCustomPaymentMethodText('');
   };
   
+  const handleDiscountChangeEdit = (value: string) => {
+    setSpecialClientDiscount(value);
+    let discountVal = 0;
+    const discountStr = value.trim();
+    if (discountStr.endsWith('%')) {
+        const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
+        if (!isNaN(percentage) && percentage >= 0) {
+            discountVal = (percentage / 100) * orderItemsTotal;
+        }
+    } else {
+        const fixedAmount = parseFloat(discountStr);
+        if (!isNaN(fixedAmount) && fixedAmount >= 0) {
+            discountVal = fixedAmount;
+        }
+    }
+
+    if (discountVal > orderItemsTotal && orderItemsTotal > 0) {
+        toast({
+            title: "Validation Warning",
+            description: `Special Client Discount cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`,
+            variant: "destructive"
+        });
+    }
+  };
+  
   const isNewAdvanceEntered = (parseFloat(newAdvanceAmount) || 0) > 0;
 
   useEffect(() => {
@@ -328,7 +353,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                 <div className="space-y-1"><Label htmlFor="edit-phoneNumber">Phone Number *</Label><Input id="edit-phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required disabled={isSubmitting} /></div>
                 <div className="space-y-1"><Label htmlFor="edit-orderDate">Date Created *</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal",!createdAt && "text-muted-foreground")} disabled={isSubmitting}><CalendarDays className="mr-2 h-4 w-4" />{createdAt ? formatDateForDialogInput(createdAt) : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={createdAt} onSelect={setCreatedAt} initialFocus disabled={isSubmitting} /></PopoverContent></Popover></div>
               </div>
-              <div className="space-y-1"><Label htmlFor="edit-orderNotes">Order Notes (Optional)</Label><Textarea id="edit-orderNotes" value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} rows={3} disabled={isSubmitting}/></div>
+              <div className="space-y-1"><Label htmlFor="edit-orderNotes">Order Notes (Optional)</Label><Textarea id="edit-orderNotes" value={orderNotes} onChange={e => setOrderNotes(e.target.value)} rows={3} disabled={isSubmitting}/></div>
               <div className="space-y-3 mt-4 border-t border-border pt-4"><Label className="text-lg font-semibold">Order Items *</Label>
                 {orderItems.map((item) => (<div key={item.id} className="p-3 border rounded-md bg-secondary/30 space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr_1fr_auto] gap-x-3 gap-y-2 items-end">
