@@ -457,7 +457,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
         {allAdvancePaymentRecords.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80"/>Advance Payments History</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80"/>Payments History</h3>
             <div className="overflow-x-auto rounded-lg border border-border/30 bg-background shadow-sm">
               <Table>
                 <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Amount</TableHead><TableHead>Method</TableHead><TableHead>Notes</TableHead><TableHead>Recorded By</TableHead></TableRow></TableHeader>
@@ -535,5 +535,3 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
-
-    
