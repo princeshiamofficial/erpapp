@@ -290,7 +290,9 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
             )}
           </div>
           
-          <p className={cn("text-xs font-medium text-muted-foreground truncate")} title={project.name}>{project.name}</p>
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-muted-foreground truncate" title={project.name}>{project.name}</p>
+          </div>
 
           <div className={cn("inline-flex items-center rounded-md border border-destructive/30 bg-destructive/20 px-2 py-0.5 text-xs font-semibold text-destructive transition-colors")}>
             <CalendarDays className="mr-1.5 h-3 w-3" />
