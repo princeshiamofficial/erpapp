@@ -1,4 +1,5 @@
 
+
 import { db } from './firebase';
 import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, orderBy, writeBatch, limit, where, deleteDoc as deleteFirestoreDoc, runTransaction } from 'firebase/firestore';
 import type { TrackingLink, Comment, OrderLogEntry, CustomStatus, UserRole, OrderItem, AdvancePaymentRecord } from '@/types';
@@ -85,6 +86,8 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       advancePayments: firstOrderAdvancePayments, // Use new structure
       advancePayment: null, // Legacy field, set to null
       paymentMethod: null,  // Legacy field, set to null
+      packzyConsignmentId: null,
+      packzyTrackingCode: null,
     };
     const firstDocRef = doc(ordersRef, firstOrderId);
     batch.set(firstDocRef, firstOrder);
@@ -138,6 +141,8 @@ export const seedInitialOrders = async (): Promise<TrackingLink[]> => {
       advancePayments: secondOrderAdvancePayments,
       advancePayment: null,
       paymentMethod: null,
+      packzyConsignmentId: null,
+      packzyTrackingCode: null,
     };
     const secondDocRef = doc(ordersRef, secondOrderId);
     batch.set(secondDocRef, secondOrder);
@@ -284,6 +289,8 @@ export const addOrder = async (orderData: {
       advancePayments: initialAdvancePayments,
       advancePayment: null, // Legacy field
       paymentMethod: null, // Legacy field
+      packzyConsignmentId: null,
+      packzyTrackingCode: null,
     };
 
     const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);

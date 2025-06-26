@@ -80,3 +80,98 @@ export async function updateProjectStatusAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
+
+export async function transferToCourierAction(
+  project: Project,
+  actingUser: User
+): Promise<{ success: boolean; error?: string; consignment?: any }> {
+  if (!project || !project.id) {
+    return { success: false, error: 'Invalid project data provided.' };
+  }
+  
+  try {
+    const order = await getOrderById(project.id);
+    if (!order) {
+      return { success: false, error: `Order with ID ${project.id} not found.` };
+    }
+
+    // Calculate Due Amount
+    const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+    const effectiveDiscount = order.specialClientDiscount || 0;
+    const netPayable = orderSubtotal - effectiveDiscount;
+    const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
+    const dueAmount = Math.max(0, netPayable - totalAdvancePaid);
+
+    // Prepare Packzy API request
+    const packzyPayload = {
+      invoice: order.id,
+      recipient_name: order.companyName.split('•').pop()?.trim() || order.companyName, // Get name part
+      recipient_phone: order.phoneNumber,
+      recipient_address: order.address,
+      cod_amount: dueAmount,
+    };
+
+    const response = await fetch("https://portal.packzy.com/api/v1/create_order", {
+      method: 'POST',
+      headers: {
+        'Api-Key': 'vfei2q49dhy1rxqxjs6xntkkvc2odeax',
+        'Secret-Key': 'n4wr4fhdohq0x3gmm8xg3pp1',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(packzyPayload),
+    });
+
+    const responseData = await response.json();
+
+    if (response.status !== 200 || responseData.status !== 200) {
+      console.error('Packzy API Error:', responseData);
+      return { success: false, error: `Packzy API Error: ${responseData.message || 'Failed to create consignment.'}` };
+    }
+
+    const { consignment } = responseData;
+    
+    // Update Project Status
+    const projectUpdateSuccess = await updateProjectStatusInDb(project.id, 'Courier');
+    if (!projectUpdateSuccess) {
+      console.error(`CRITICAL: Project ${project.id} consignment created in Packzy (ID: ${consignment.consignment_id}) but failed to update project status to 'Courier'.`);
+      return { success: false, error: "Consignment created, but failed to update project status. Please check manually." };
+    }
+    
+    // Update Order Status and add Packzy info
+    const logEntry: OrderLogEntry = {
+      id: uuidv4(),
+      timestamp: new Date().toISOString(),
+      status: SHIPPED_STATUS_ID,
+      changedByUserId: actingUser.id,
+      changedByUserName: actingUser.name,
+      notes: `Order transferred to Packzy Courier. Tracking: ${consignment.tracking_code}, Consignment ID: ${consignment.consignment_id}.`,
+    };
+
+    const orderUpdateSuccess = await updateOrder(order.id, {
+      currentStatus: SHIPPED_STATUS_ID,
+      statusHistory: [...order.statusHistory, logEntry],
+      packzyConsignmentId: consignment.consignment_id.toString(),
+      packzyTrackingCode: consignment.tracking_code,
+      updatedAt: new Date().toISOString(),
+      updatedByUserId: actingUser.id,
+      updatedByUserName: actingUser.name,
+    });
+    
+    if (!orderUpdateSuccess) {
+       console.error(`CRITICAL: Project ${project.id} status updated, but failed to update corresponding order ${order.id} with Packzy details.`);
+       return { success: false, error: "Project status updated, but failed to update order details. Please check manually." };
+    }
+
+    revalidatePath("/(app)/projects");
+    revalidatePath(`/track/${order.id}`);
+    revalidatePath("/(app)/orders");
+    revalidatePath("/(app)/active-orders");
+    
+    return { success: true, consignment };
+
+  } catch (error) {
+    console.error("Error in transferToCourierAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}

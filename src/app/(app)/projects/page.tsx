@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -29,6 +30,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ProjectCard } from '@/components/projects/ProjectCard'; 
 import { useAuth } from '@/contexts/auth-context';
 import dynamic from 'next/dynamic'; 
+import { CourierConfirmationDialog } from '@/components/projects/CourierConfirmationDialog';
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
 
@@ -56,6 +58,7 @@ export default function ProjectsPage() {
 
   const [selectedOrderForDrAssignment, setSelectedOrderForDrAssignment] = useState<TrackingLink | null>(null); 
   const [isAssignDrDialogOpen, setIsAssignDrDialogOpen] = useState(false); 
+  const [projectToCourier, setProjectToCourier] = useState<Project | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -163,6 +166,11 @@ export default function ProjectsPage() {
     const originalStatus = project.status;
 
     if (newStatus === originalStatus) {
+      return;
+    }
+    
+    if (newStatus === 'Courier') {
+      setProjectToCourier(project);
       return;
     }
 
@@ -403,6 +411,18 @@ export default function ProjectsPage() {
           currentUser={currentUser}
           allStatuses={allStatuses} // Pass the state variable `allStatuses`
           onDrAssigned={handleDrAssignmentSuccess}
+        />
+      )}
+      
+      {projectToCourier && currentUser && (
+        <CourierConfirmationDialog
+          isOpen={!!projectToCourier}
+          onOpenChange={(open) => {
+            if (!open) setProjectToCourier(null);
+          }}
+          project={projectToCourier}
+          currentUser={currentUser}
+          onSuccess={fetchData}
         />
       )}
     </DndContext>

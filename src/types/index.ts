@@ -78,6 +78,8 @@ export interface TrackingLink {
   comments: Comment[];
   viewCount?: number;
   advancePayments?: AdvancePaymentRecord[]; // New field for payment history
+  packzyConsignmentId?: string | null;
+  packzyTrackingCode?: string | null;
 }
 
 export interface Comment {
