@@ -5,7 +5,8 @@ import type { Project, CustomStatus, User } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
 import { CalendarDays, User as UserIconLucide, Folder, ReceiptText, UserCheck } from 'lucide-react'; // Added UserCheck
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import Link from 'next/link';
 import { Progress } from '@/components/ui/progress';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
@@ -267,26 +268,16 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
           <div className={cn("flex justify-between items-start")}>
             <span className="text-sm font-semibold text-foreground">{project.projectIdDisplay}</span>
             {!isOverlay && (
-                 <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
+                 <Link
+                    href={`/track/${project.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), "h-6 w-6")}
+                    onClick={(e) => e.stopPropagation()}
                     title="View Invoice / Order Details"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      event.preventDefault();
-                      console.log(`[ProjectCard] ReceiptText icon clicked for project ${project.id}.`);
-                      if (project && project.id) {
-                          const url = `/track/${project.id}`;
-                          console.log(`[ProjectCard] Attempting to open URL: ${url}`);
-                          window.open(url, '_blank', 'noopener,noreferrer');
-                      } else {
-                          console.error('[ProjectCard] project.id is missing. Cannot open link.');
-                      }
-                    }}
                   >
                     <ReceiptText className="h-4 w-4 text-muted-foreground hover:text-primary" />
-                  </Button>
+                  </Link>
             )}
           </div>
           
@@ -435,3 +426,5 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
     </motion.div>
   );
 }
+
+    
