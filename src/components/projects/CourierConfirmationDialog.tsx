@@ -105,11 +105,6 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
            ) : orderDetails ? (
             <AlertDialogDescription>
                 This will create a consignment in <span className="font-semibold text-foreground">Packzy</span> for order <span className="font-mono bg-muted px-1.5 py-0.5 rounded">{project?.projectIdDisplay}</span> with the following details. This action cannot be undone.
-                <div className="mt-3 text-sm text-foreground bg-secondary/50 p-3 rounded-md border border-border/50 space-y-1">
-                    <div><strong className="w-24 inline-block">Recipient:</strong> {orderDetails.recipient}</div>
-                    <div><strong className="w-24 inline-block">Phone:</strong> {orderDetails.phone}</div>
-                    <div><strong className="w-24 inline-block">COD Amount:</strong> <span className="font-bold">{formatCurrency(orderDetails.dueAmount)}</span></div>
-                </div>
             </AlertDialogDescription>
            ) : (
                 <AlertDialogDescription className="text-destructive">
@@ -117,6 +112,15 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
                 </AlertDialogDescription>
            )}
         </AlertDialogHeader>
+
+        {orderDetails && !isLoadingDetails && (
+            <div className="text-sm text-foreground bg-secondary/50 p-3 rounded-md border border-border/50 space-y-1">
+                <div><strong className="w-24 inline-block">Recipient:</strong> {orderDetails.recipient}</div>
+                <div><strong className="w-24 inline-block">Phone:</strong> {orderDetails.phone}</div>
+                <div><strong className="w-24 inline-block">COD Amount:</strong> <span className="font-bold">{formatCurrency(orderDetails.dueAmount)}</span></div>
+            </div>
+        )}
+        
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</AlertDialogCancel>
           <AlertDialogAction 
