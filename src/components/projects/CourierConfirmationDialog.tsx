@@ -76,7 +76,7 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
     if (result.success) {
       toast({
         title: "Transfer Successful",
-        description: `Order ${project.projectIdDisplay} sent to Packzy. Tracking: ${result.consignment.tracking_code}`,
+        description: `Order ${project.projectIdDisplay} sent to Steadfast. Tracking: ${result.consignment.tracking_code}`,
       });
       onSuccess(); // This will trigger a re-fetch in the parent
       onOpenChange(false);
@@ -104,7 +104,7 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
               </div>
            ) : orderDetails ? (
             <AlertDialogDescription>
-                This will create a consignment in <span className="font-semibold text-foreground">Packzy</span> for order <span className="font-mono bg-muted px-1.5 py-0.5 rounded">{project?.projectIdDisplay}</span> with the following details. This action cannot be undone.
+                This will create a consignment in <span className="font-semibold text-foreground">Steadfast</span> for order <span className="font-mono bg-muted px-1.5 py-0.5 rounded">{project?.projectIdDisplay}</span> with the following details. This action cannot be undone.
             </AlertDialogDescription>
            ) : (
                 <AlertDialogDescription className="text-destructive">
