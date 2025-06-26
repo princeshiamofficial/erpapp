@@ -305,6 +305,7 @@ export default function OrdersPage() {
               onOrderCreated={async () => {
                 await fetchOrderData();
               }}
+              allOrders={orders}
             >
               <Button
                 size="lg"
@@ -470,6 +471,7 @@ export default function OrdersPage() {
                           onOrderCreated={async () => {
                             await fetchOrderData();
                           }}
+                          allOrders={orders}
                         >
                           <Button size="sm" className="mt-4" disabled={isLoading || (allStatuses.length === 0)}>
                             {(isLoading && allStatuses.length === 0) ? (

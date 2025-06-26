@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { User, CustomStatus, ServiceModelItem, ServiceLaminationItem, OrderItem, ServicePaymentMethodItem, AdvancePaymentRecord } from "@/types";
+import type { User, CustomStatus, ServiceModelItem, ServiceLaminationItem, OrderItem, ServicePaymentMethodItem, AdvancePaymentRecord, TrackingLink } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { createOrderAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,6 +26,7 @@ interface CreateOrderDialogProps {
   availableStatuses: CustomStatus[];
   onOrderCreated: () => void;
   children: React.ReactNode;
+  allOrders: TrackingLink[];
 }
 
 interface DialogOrderItem {
@@ -51,7 +52,7 @@ const initialOrderItemState: DialogOrderItem = {
   lineItemTotalPrice: null,
 };
 
-export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children }: CreateOrderDialogProps) {
+export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children, allOrders }: CreateOrderDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [jobId, setJobId] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -216,6 +217,40 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       })
     );
   };
+  
+  useEffect(() => {
+    if (!jobId || !allOrders.length) {
+      return;
+    }
+
+    const handler = setTimeout(() => {
+      const trimmedJobId = jobId.trim();
+      if (!trimmedJobId) return;
+
+      const existingOrder = allOrders.find(order => {
+        const orderJobId = (order.companyName || '').split(' • ')[0].trim();
+        return orderJobId.toLowerCase() === trimmedJobId.toLowerCase();
+      });
+
+      if (existingOrder) {
+        const nameParts = (existingOrder.companyName || '').split(' • ');
+        const actualCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : '';
+
+        setCompanyName(actualCompanyName);
+        setAddress(existingOrder.address);
+        setPhoneNumber(existingOrder.phoneNumber);
+
+        toast({
+          title: "Existing Job ID Found",
+          description: `Details for "${trimmedJobId}" have been auto-filled.`,
+        });
+      }
+    }, 500); // 500ms debounce
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [jobId, allOrders, toast]);
 
   const handleAddItem = () => {
     setOrderItems([...orderItems, { ...initialOrderItemState, id: uuidv4() }]);
