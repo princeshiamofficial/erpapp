@@ -149,7 +149,7 @@ export default function ProjectsPage() {
   };
 
   const handleDragEnd = async (event: DragEndEvent) => {
-    setActiveProject(null); 
+    setActiveProject(null);
     const { active, over } = event;
 
     if (!currentUser) {
@@ -168,25 +168,33 @@ export default function ProjectsPage() {
     if (newStatus === originalStatus) {
       return;
     }
+
+    if (newStatus === 'On Design' && !project.designerRepresentativeId) {
+      handleOpenAssignDrDialog(project);
+      return;
+    }
     
     if (newStatus === 'Courier') {
       setProjectToCourier(project);
       return;
     }
 
+    // Optimistically update the UI
     setProjects(prevProjects => {
       return prevProjects.map(p =>
         p.id === project.id ? { ...p, status: newStatus } : p
       );
     });
 
+    // Call the server action
     const result = await updateProjectStatusAction(project, newStatus, currentUser);
 
     if (result.success) {
       toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
-      await fetchData(); 
+      await fetchData(); // Re-fetch to confirm state
     } else {
       toast({ title: "Update Failed", description: result.error || `Could not update status for project '${project.name}'.`, variant: "destructive" });
+      // Revert optimistic update on failure
       setProjects(prevProjects => {
         return prevProjects.map(p =>
           p.id === project.id ? { ...p, status: originalStatus } : p
