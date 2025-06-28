@@ -133,7 +133,7 @@ export default function PayrollPage() {
     return pageNumbers.map((page, index) => (
         <PaginationItem key={index}>
         {page === '...' ? <PaginationEllipsis />
-        : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number);}} className={cn(currentPage === page && 'bg-green-500 text-white hover:bg-green-600 hover:text-white')}>
+        : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number);}} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
             {page}
           </PaginationLink>
         }
@@ -153,7 +153,7 @@ export default function PayrollPage() {
             </div>
             <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
             <AddEmployeeDialog onEmployeeAdded={fetchEmployeesData}>
-              <Button className="h-10 rounded-full bg-green-500 hover:bg-green-600 text-white"><Plus className="mr-2 h-4 w-4" /> Add Employee</Button>
+              <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"><Plus className="mr-2 h-4 w-4" /> Add Employee</Button>
             </AddEmployeeDialog>
           </div>
         </div>
@@ -188,10 +188,10 @@ export default function PayrollPage() {
                 <span className="truncate">{employee.email}</span><span>{employee.mobileNo}</span>
                 <span>{format(new Date(employee.dob), 'yyyy-MM-dd')}</span><span>{employee.designation}</span>
                 <span>{format(new Date(employee.joiningDate), 'yyyy-MM-dd')}</span>
-                <span><Badge className={cn(employee.status === 'Active' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{employee.status}</Badge></span>
+                <span><Badge className={cn(employee.status === 'Active' ? 'bg-primary/20 text-primary border-primary/30' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{employee.status}</Badge></span>
                 <span className="flex justify-center items-center gap-1">
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-500 hover:bg-blue-100"><Eye className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-green-500 hover:bg-green-100" onClick={() => setEmployeeToEdit(employee)}><Pencil className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:bg-primary/10" onClick={() => setEmployeeToEdit(employee)}><Pencil className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:bg-red-100" onClick={() => setEmployeeToDelete(employee)}><Trash2 className="h-4 w-4" /></Button>
                 </span>
               </div>
