@@ -21,6 +21,7 @@ import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2 } from 'lucide-r
 import type { User } from '@/types';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 const ITEMS_PER_PAGE = 8;
 
@@ -114,7 +115,21 @@ export default function PayrollPage() {
         pageNumbers.push(totalPages);
       }
     }
-    return pageNumbers;
+    return pageNumbers.map((page, index) => (
+        <PaginationItem key={index}>
+        {page === '...' ? (
+            <PaginationEllipsis />
+        ) : (
+            <PaginationLink
+              href="#"
+              onClick={(e) => { e.preventDefault(); setCurrentPage(page as number);}}
+              className={cn(currentPage === page && 'bg-green-500 text-white hover:bg-green-600 hover:text-white')}
+            >
+            {page}
+            </PaginationLink>
+        )}
+        </PaginationItem>
+    ));
   };
 
   const employeeListContent = (
@@ -209,17 +224,7 @@ export default function PayrollPage() {
                         <PaginationItem>
                             <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/>
                         </PaginationItem>
-                        {renderPagination().map((page, index) => (
-                            <PaginationItem key={index}>
-                            {page === '...' ? (
-                                <PaginationEllipsis />
-                            ) : (
-                                <PaginationLink href="#" isActive={currentPage === page} onClick={(e) => { e.preventDefault(); setCurrentPage(page as number);}}>
-                                {page}
-                                </PaginationLink>
-                            )}
-                            </PaginationItem>
-                        ))}
+                        {renderPagination()}
                         <PaginationItem>
                             <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/>
                         </PaginationItem>
@@ -257,15 +262,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
-// Override PaginationLink style to match image
-const originalPaginationLink = PaginationLink;
-// @ts-ignore
-PaginationLink = React.forwardRef<HTMLAnchorElement, React.ComponentProps<typeof originalPaginationLink>>(({ isActive, className, ...props }, ref) => (
-  <originalPaginationLink
-    ref={ref}
-    className={isActive ? 'bg-green-500 text-white hover:bg-green-600 hover:text-white' : className}
-    {...props}
-  />
-));
-
