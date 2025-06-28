@@ -33,6 +33,7 @@ export function EditEmployeeDialog({ employee, onEmployeeUpdated, isOpen, onOpen
     const [mobileNo, setMobileNo] = useState('');
     const [dob, setDob] = useState('');
     const [designation, setDesignation] = useState('');
+    const [salary, setSalary] = useState('');
     const [joiningDate, setJoiningDate] = useState('');
     const [status, setStatus] = useState<'Active' | 'Inactive'>('Active');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,6 +46,7 @@ export function EditEmployeeDialog({ employee, onEmployeeUpdated, isOpen, onOpen
             setMobileNo(employee.mobileNo);
             setDesignation(employee.designation);
             setStatus(employee.status);
+            setSalary((employee.salary || '').toString());
             try {
               setDob(format(new Date(employee.dob), 'yyyy-MM-dd'));
               setJoiningDate(format(new Date(employee.joiningDate), 'yyyy-MM-dd'));
@@ -57,11 +59,18 @@ export function EditEmployeeDialog({ employee, onEmployeeUpdated, isOpen, onOpen
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const numericSalary = parseFloat(salary);
+        if (isNaN(numericSalary) || numericSalary < 0) {
+            toast({ title: "Validation Error", description: "Please enter a valid positive salary.", variant: "destructive" });
+            return;
+        }
+
         setIsSubmitting(true);
         const updates: Partial<Omit<Employee, 'id' | 'employeeId'>> = {
             name, email, mobileNo, designation, status,
             dob: new Date(dob).toISOString(),
             joiningDate: new Date(joiningDate).toISOString(),
+            salary: numericSalary,
         };
 
         const result = await updateEmployeeAction(employee.id, updates);
@@ -83,7 +92,7 @@ export function EditEmployeeDialog({ employee, onEmployeeUpdated, isOpen, onOpen
                     <DialogTitle>Edit Employee: {employee.name}</DialogTitle>
                     <DialogDescription>Update the details for this employee.</DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+                <form onSubmit={handleSubmit} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
                     <div className="space-y-1">
                         <Label htmlFor="edit-name">Name</Label>
                         <Input id="edit-name" value={name} onChange={e => setName(e.target.value)} required />
@@ -99,6 +108,10 @@ export function EditEmployeeDialog({ employee, onEmployeeUpdated, isOpen, onOpen
                     <div className="space-y-1">
                         <Label htmlFor="edit-designation">Designation</Label>
                         <Input id="edit-designation" value={designation} onChange={e => setDesignation(e.target.value)} required />
+                    </div>
+                     <div className="space-y-1">
+                        <Label htmlFor="edit-salary">Salary (BDT)</Label>
+                        <Input id="edit-salary" type="number" value={salary} onChange={e => setSalary(e.target.value)} required placeholder="e.g., 50000" min="0" />
                     </div>
                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">

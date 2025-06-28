@@ -31,14 +31,20 @@ export function AddEmployeeDialog({ onEmployeeAdded, children }: AddEmployeeDial
   const [mobileNo, setMobileNo] = useState('');
   const [dob, setDob] = useState('');
   const [designation, setDesignation] = useState('');
+  const [salary, setSalary] = useState('');
   const [joiningDate, setJoiningDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email || !mobileNo || !dob || !designation || !joiningDate) {
+    if (!name || !email || !mobileNo || !dob || !designation || !joiningDate || !salary) {
       toast({ title: "Validation Error", description: "All fields are required.", variant: "destructive" });
+      return;
+    }
+     const numericSalary = parseFloat(salary);
+    if (isNaN(numericSalary) || numericSalary < 0) {
+      toast({ title: "Validation Error", description: "Please enter a valid salary.", variant: "destructive" });
       return;
     }
 
@@ -47,6 +53,7 @@ export function AddEmployeeDialog({ onEmployeeAdded, children }: AddEmployeeDial
       name, email, mobileNo,
       dob: new Date(dob).toISOString(),
       designation,
+      salary: numericSalary,
       joiningDate: new Date(joiningDate).toISOString(),
       status: 'Active'
     };
@@ -71,7 +78,7 @@ export function AddEmployeeDialog({ onEmployeeAdded, children }: AddEmployeeDial
           <DialogTitle>Add New Employee</DialogTitle>
           <DialogDescription>Enter the details for the new employee.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+        <form onSubmit={handleSubmit} className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
           <div className="space-y-1">
             <Label htmlFor="name">Name</Label>
             <Input id="name" value={name} onChange={e => setName(e.target.value)} required />
@@ -87,6 +94,10 @@ export function AddEmployeeDialog({ onEmployeeAdded, children }: AddEmployeeDial
           <div className="space-y-1">
             <Label htmlFor="designation">Designation</Label>
             <Input id="designation" value={designation} onChange={e => setDesignation(e.target.value)} required />
+          </div>
+           <div className="space-y-1">
+            <Label htmlFor="salary">Salary (BDT)</Label>
+            <Input id="salary" type="number" value={salary} onChange={e => setSalary(e.target.value)} required placeholder="e.g., 50000" min="0" />
           </div>
           <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">

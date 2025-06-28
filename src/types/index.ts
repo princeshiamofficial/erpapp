@@ -26,6 +26,7 @@ export interface Employee {
   joiningDate: string; // ISO string date
   status: 'Active' | 'Inactive';
   avatarUrl?: string | null;
+  salary?: number | null;
 }
 
 export interface CustomStatus {
