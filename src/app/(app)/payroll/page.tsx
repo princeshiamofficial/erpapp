@@ -194,7 +194,7 @@ export default function PayrollPage() {
             ))
           ) : paginatedUsers.length > 0 ? (
             paginatedUsers.map((user, index) => {
-              const extraData = mockData[user.email] || { dob: 'N/A', designation: 'N/A', joiningDate: user.createdAt };
+              const extraData = mockData[user.email] || { dob: 'N/A', designation: 'N/A', joiningDate: null };
               return (
               <div key={user.id} className="grid grid-cols-[30px_80px_1.5fr_1.5fr_1fr_1fr_1fr_1fr_80px_80px] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
                 <span className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</span>
@@ -204,7 +204,7 @@ export default function PayrollPage() {
                 <span>{extraData.dob === 'N/A' ? '098-8765-9876' : '198-8765-9876'}</span>
                 <span>{extraData.dob}</span>
                 <span>{extraData.designation}</span>
-                <span>{new Date(extraData.joiningDate).toISOString().split('T')[0]}</span>
+                <span>{extraData.joiningDate ? new Date(extraData.joiningDate).toISOString().split('T')[0] : 'N/A'}</span>
                 <td><Badge className="bg-green-100 text-green-700 hover:bg-green-200 border border-green-200">Active</Badge></td>
                 <td className="flex justify-center items-center gap-1">
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-500 hover:bg-blue-100"><Eye className="h-4 w-4" /></Button>
