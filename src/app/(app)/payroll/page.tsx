@@ -205,12 +205,12 @@ export default function PayrollPage() {
                 <span>{extraData.dob}</span>
                 <span>{extraData.designation}</span>
                 <span>{extraData.joiningDate ? new Date(extraData.joiningDate).toISOString().split('T')[0] : 'N/A'}</span>
-                <td><Badge className="bg-green-100 text-green-700 hover:bg-green-200 border border-green-200">Active</Badge></td>
-                <td className="flex justify-center items-center gap-1">
+                <span><Badge className="bg-green-100 text-green-700 hover:bg-green-200 border border-green-200">Active</Badge></span>
+                <span className="flex justify-center items-center gap-1">
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-500 hover:bg-blue-100"><Eye className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-green-500 hover:bg-green-100"><Pencil className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:bg-red-100"><Trash2 className="h-4 w-4" /></Button>
-                </td>
+                </span>
               </div>
             )})
           ) : (
