@@ -15,6 +15,19 @@ export interface User {
   fcmToken?: string | null;
 }
 
+export interface Employee {
+  id: string; // Firestore document ID
+  employeeId: string; // e.g., EMP-001
+  name: string;
+  email: string;
+  mobileNo: string;
+  dob: string; // ISO string date
+  designation: string;
+  joiningDate: string; // ISO string date
+  status: 'Active' | 'Inactive';
+  avatarUrl?: string | null;
+}
+
 export interface CustomStatus {
   id: string;
   name: string;
