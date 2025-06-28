@@ -188,7 +188,7 @@ export default function PayrollPage() {
                 <span className="truncate">{employee.email}</span><span>{employee.mobileNo}</span>
                 <span>{format(new Date(employee.dob), 'yyyy-MM-dd')}</span><span>{employee.designation}</span>
                 <span>{format(new Date(employee.joiningDate), 'yyyy-MM-dd')}</span>
-                <span><Badge className={cn(employee.status === 'Active' ? 'bg-primary/20 text-primary border-primary/30' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{employee.status}</Badge></span>
+                <span><Badge className={cn(employee.status === 'Active' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{employee.status}</Badge></span>
                 <span className="flex justify-center items-center gap-1">
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-blue-500 hover:bg-blue-100"><Eye className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:bg-primary/10" onClick={() => setEmployeeToEdit(employee)}><Pencil className="h-4 w-4" /></Button>
