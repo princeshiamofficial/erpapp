@@ -7,6 +7,9 @@ import { addOrder as addOrderService, getOrderById, deleteOrder as deleteOrderFr
 import { getGlobalSettings } from "@/lib/settings-service";
 import { v4 as uuidv4 } from 'uuid';
 import { parseISO } from 'date-fns';
+import { getUserById as getUserFromDb } from "@/lib/user-service";
+import { db } from '@/lib/firebase';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 interface CreateOrderDialogFormData {
   jobId: string;
@@ -279,7 +282,7 @@ export async function updateOrderAction(
 export async function assignDrToOrderAction(
   orderId: string,
   designerRepresentativeId: string,
-  designerRepresentativeName: string,
+  designerRepresentativeName: string, // Keep for log message consistency, but will use fresh data
   actingUser: User,
   readyForDesignStatusId: string
 ): Promise<TrackingLink | { error: string }> {
@@ -295,6 +298,14 @@ export async function assignDrToOrderAction(
     if (!currentOrder) {
       return { error: `Order ${orderId} not found.` };
     }
+    
+    // Fetch full DR user data to get avatar and ensure name is fresh
+    const designerRepUser = await getUserFromDb(designerRepresentativeId);
+    if (!designerRepUser) {
+        return { error: `Designer Representative with ID ${designerRepresentativeId} not found.` };
+    }
+    const freshDrName = designerRepUser.name;
+    const freshDrAvatarUrl = designerRepUser.avatarUrl || null;
 
     const logEntry: OrderLogEntry = {
       id: uuidv4(),
@@ -302,12 +313,13 @@ export async function assignDrToOrderAction(
       status: readyForDesignStatusId,
       changedByUserId: actingUser.id,
       changedByUserName: actingUser.name,
-      notes: `Assigned to Designer: ${designerRepresentativeName} by ${actingUser.name}.`,
+      notes: `Assigned to Designer: ${freshDrName} by ${actingUser.name}.`,
     };
 
     const updatedOrderData: Partial<TrackingLink> = {
       designerRepresentativeId,
-      designerRepresentativeName,
+      designerRepresentativeName: freshDrName,
+      designerRepresentativeAvatarUrl: freshDrAvatarUrl, // Add avatar url
       currentStatus: readyForDesignStatusId,
       statusHistory: Array.isArray(currentOrder.statusHistory)
         ? [...currentOrder.statusHistory, logEntry]
@@ -322,6 +334,27 @@ export async function assignDrToOrderAction(
       return { error: "Failed to update order with DR assignment." };
     }
 
+    // --- New Project Sync Logic ---
+    const projectDocRef = doc(db, 'projects', orderId);
+    try {
+        const projectDocSnap = await getDoc(projectDocRef);
+        if (projectDocSnap.exists()) {
+            console.log(`[assignDrToOrderAction] Found persistent project for order ${orderId}. Syncing DR assignment.`);
+            const projectUpdates = {
+                designerRepresentativeId: designerRepresentativeId,
+                designerRepresentativeName: freshDrName,
+                designerRepresentativeAvatarUrl: freshDrAvatarUrl,
+                status: 'On Design', // Move to 'On Design' stage
+                onDesignAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+            };
+            await updateDoc(projectDocRef, projectUpdates);
+        }
+    } catch (projectError) {
+        console.warn(`[assignDrToOrderAction] Failed to sync DR assignment to project board for order ${orderId}. This is not a critical error if project was not yet persistent. Error:`, projectError);
+    }
+    // --- End Project Sync Logic ---
+
     revalidatePath("/(app)/orders");
     revalidatePath("/(app)/dashboard");
     revalidatePath("/(app)/active-orders");
@@ -329,6 +362,7 @@ export async function assignDrToOrderAction(
     revalidatePath("/(app)/deliveries/monthly");
     revalidatePath("/(app)/deliveries/weekly");
     revalidatePath("/(app)/orders/monthly");
+    revalidatePath("/(app)/projects"); // Revalidate projects page
 
     const updatedOrder = await getOrderById(orderId);
     if (!updatedOrder) {
@@ -365,4 +399,5 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
     return { success: false, error: errorMessage };
   }
 }
+
 
