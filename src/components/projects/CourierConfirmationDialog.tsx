@@ -13,11 +13,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { Project, TrackingLink, User } from "@/types";
+import type { Project, User } from "@/types";
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, AlertTriangle, Truck } from 'lucide-react';
+import { Loader2, Truck } from 'lucide-react';
 import { getOrderById } from '@/lib/order-service';
 import { transferToCourierAction } from '@/app/(app)/projects/actions';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface CourierConfirmationDialogProps {
   isOpen: boolean;
@@ -36,11 +39,15 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingDetails, setIsLoadingDetails] = useState(true);
   const [orderDetails, setOrderDetails] = useState<{ dueAmount: number, recipient: string, phone: string, address: string } | null>(null);
+  const [shippingArea, setShippingArea] = useState<string>('');
+  const [shippingCharge, setShippingCharge] = useState<string>('0');
   const { toast } = useToast();
   
   useEffect(() => {
     if (isOpen && project) {
       setIsLoadingDetails(true);
+      setShippingArea('');
+      setShippingCharge('0');
       const fetchOrderDetails = async () => {
         const order = await getOrderById(project.id);
         if (order) {
@@ -69,8 +76,18 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
   const handleConfirm = async () => {
     if (!project || !currentUser) return;
     
+    if (!shippingArea) {
+      toast({ title: "Validation Error", description: "Please select a shipping area.", variant: "destructive" });
+      return;
+    }
+    const charge = parseFloat(shippingCharge);
+    if (isNaN(charge) || charge < 0) {
+        toast({ title: "Validation Error", description: "Please enter a valid, non-negative shipping charge.", variant: "destructive" });
+        return;
+    }
+
     setIsSubmitting(true);
-    const result = await transferToCourierAction(project, currentUser);
+    const result = await transferToCourierAction(project, currentUser, shippingArea, charge);
     setIsSubmitting(false);
 
     if (result.success) {
@@ -95,7 +112,7 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2">
-            <Truck className="h-6 w-6 text-primary" /> Transfer to Courier?
+            <Truck className="h-6 w-6 text-primary" /> Transfer to Courier
           </AlertDialogTitle>
            {isLoadingDetails ? (
               <div className="space-y-2 py-2">
@@ -104,7 +121,7 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
               </div>
            ) : orderDetails ? (
             <AlertDialogDescription>
-                This will create a consignment in <span className="font-semibold text-foreground">Steadfast</span> for order <span className="font-mono bg-muted px-1.5 py-0.5 rounded">{project?.projectIdDisplay}</span> with the following details. This action cannot be undone.
+                This will create a consignment in <span className="font-semibold text-foreground">Steadfast</span> for order <span className="font-mono bg-muted px-1.5 py-0.5 rounded">{project?.projectIdDisplay}</span>. Please confirm the details below.
             </AlertDialogDescription>
            ) : (
                 <AlertDialogDescription className="text-destructive">
@@ -114,10 +131,50 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
         </AlertDialogHeader>
 
         {orderDetails && !isLoadingDetails && (
-            <div className="text-sm text-foreground bg-secondary/50 p-3 rounded-md border border-border/50 space-y-1">
-                <div><strong className="w-24 inline-block">Recipient:</strong> {orderDetails.recipient}</div>
-                <div><strong className="w-24 inline-block">Phone:</strong> {orderDetails.phone}</div>
-                <div><strong className="w-24 inline-block">COD Amount:</strong> <span className="font-bold">{formatCurrency(orderDetails.dueAmount)}</span></div>
+            <div className="text-sm text-foreground bg-secondary/50 p-4 rounded-md border border-border/50 space-y-3">
+                 <div className="grid grid-cols-3 items-center gap-4">
+                  <Label htmlFor="recipient" className="text-right">Recipient</Label>
+                  <Input id="recipient" value={orderDetails.recipient} readOnly className="col-span-2 h-8 bg-muted/50" />
+                </div>
+                <div className="grid grid-cols-3 items-center gap-4">
+                  <Label htmlFor="phone" className="text-right">Phone</Label>
+                  <Input id="phone" value={orderDetails.phone} readOnly className="col-span-2 h-8 bg-muted/50" />
+                </div>
+                <div className="grid grid-cols-3 items-center gap-4">
+                  <Label htmlFor="cod" className="text-right">Product Due</Label>
+                  <Input id="cod" value={formatCurrency(orderDetails.dueAmount)} readOnly className="col-span-2 h-8 bg-muted/50" />
+                </div>
+                <div className="grid grid-cols-3 items-center gap-4">
+                  <Label htmlFor="shipping-area" className="text-right">Shipping Area</Label>
+                  <Select value={shippingArea} onValueChange={setShippingArea} required>
+                    <SelectTrigger id="shipping-area" className="col-span-2 h-8">
+                      <SelectValue placeholder="Select Area..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Inside Dhaka">Inside Dhaka</SelectItem>
+                      <SelectItem value="Dhaka Suburbs">Dhaka Suburbs</SelectItem>
+                      <SelectItem value="Outside Dhaka">Outside Dhaka</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-3 items-center gap-4">
+                  <Label htmlFor="shipping-charge" className="text-right">Shipping Charge</Label>
+                  <Input
+                    id="shipping-charge"
+                    type="number"
+                    value={shippingCharge}
+                    onChange={(e) => setShippingCharge(e.target.value)}
+                    className="col-span-2 h-8"
+                    placeholder="e.g., 60"
+                    min="0"
+                  />
+                </div>
+                <div className="grid grid-cols-3 items-center gap-4 mt-2 pt-2 border-t border-dashed">
+                  <Label className="text-right font-bold">Total COD</Label>
+                  <div className="col-span-2 font-bold text-base">
+                    {formatCurrency(orderDetails.dueAmount + (parseFloat(shippingCharge) || 0))}
+                  </div>
+                </div>
             </div>
         )}
         
@@ -125,7 +182,7 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
           <AlertDialogCancel onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</AlertDialogCancel>
           <AlertDialogAction 
             onClick={handleConfirm} 
-            disabled={isSubmitting || isLoadingDetails || !orderDetails}
+            disabled={isSubmitting || isLoadingDetails || !orderDetails || !shippingArea}
           >
             {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Transferring...</> : "Confirm Transfer"}
           </AlertDialogAction>

@@ -94,6 +94,8 @@ export interface TrackingLink {
   advancePayments?: AdvancePaymentRecord[]; // New field for payment history
   packzyConsignmentId?: string | null;
   packzyTrackingCode?: string | null;
+  shippingArea?: string | null;
+  shippingCharge?: number | null;
 }
 
 export interface Comment {

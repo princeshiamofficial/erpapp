@@ -84,7 +84,9 @@ export async function updateProjectStatusAction(
 
 export async function transferToCourierAction(
   project: Project,
-  actingUser: User
+  actingUser: User,
+  shippingArea: string,
+  shippingCharge: number
 ): Promise<{ success: boolean; error?: string; consignment?: any }> {
   if (!project || !project.id) {
     return { success: false, error: 'Invalid project data provided.' };
@@ -103,13 +105,16 @@ export async function transferToCourierAction(
     const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
     const dueAmount = Math.max(0, netPayable - totalAdvancePaid);
 
+    const totalCodAmount = dueAmount + shippingCharge;
+
     // Prepare Steadfast API request
     const steadfastPayload = {
       invoice: order.id,
       recipient_name: order.companyName.split('•').pop()?.trim() || order.companyName, // Get name part
       recipient_phone: order.phoneNumber,
       recipient_address: order.address,
-      cod_amount: dueAmount,
+      cod_amount: totalCodAmount, // COD amount includes shipping charge
+      note: `Area: ${shippingArea}. Shipping: ${shippingCharge}.`, // Adding info to note
     };
 
     const response = await fetch("https://portal.packzy.com/api/v1/create_order", {
@@ -145,7 +150,7 @@ export async function transferToCourierAction(
       status: SHIPPED_STATUS_ID,
       changedByUserId: actingUser.id,
       changedByUserName: actingUser.name,
-      notes: `Order transferred to Steadfast Courier. Tracking: ${consignment.tracking_code}, Consignment ID: ${consignment.consignment_id}.`,
+      notes: `Order transferred to Steadfast Courier. Tracking: ${consignment.tracking_code}, Consignment ID: ${consignment.consignment_id}. COD: ${totalCodAmount}, Shipping: ${shippingCharge}. Area: ${shippingArea}.`,
     };
 
     const orderUpdateSuccess = await updateOrder(order.id, {
@@ -153,6 +158,8 @@ export async function transferToCourierAction(
       statusHistory: [...order.statusHistory, logEntry],
       packzyConsignmentId: consignment.consignment_id.toString(),
       packzyTrackingCode: consignment.tracking_code,
+      shippingArea: shippingArea,
+      shippingCharge: shippingCharge,
       updatedAt: new Date().toISOString(),
       updatedByUserId: actingUser.id,
       updatedByUserName: actingUser.name,
