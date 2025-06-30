@@ -21,6 +21,7 @@ import { transferToCourierAction } from '@/app/(app)/projects/actions';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 interface CourierConfirmationDialogProps {
   isOpen: boolean;
@@ -139,6 +140,10 @@ export function CourierConfirmationDialog({ isOpen, onOpenChange, project, curre
                 <div className="grid grid-cols-3 items-center gap-4">
                   <Label htmlFor="phone" className="text-right">Phone</Label>
                   <Input id="phone" value={orderDetails.phone} readOnly className="col-span-2 h-8 bg-muted/50" />
+                </div>
+                <div className="grid grid-cols-3 items-start gap-4">
+                  <Label htmlFor="address" className="text-right pt-2">Address</Label>
+                  <Textarea id="address" value={orderDetails.address} readOnly className="col-span-2 bg-muted/50 text-xs" rows={2} />
                 </div>
                 <div className="grid grid-cols-3 items-center gap-4">
                   <Label htmlFor="cod" className="text-right">Product Due</Label>
