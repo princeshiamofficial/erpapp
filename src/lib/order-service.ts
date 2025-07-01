@@ -8,6 +8,7 @@ import { getStatuses, READY_FOR_DESIGN_STATUS_ID } from './status-service';
 import { format, parseISO } from 'date-fns';
 
 const ORDERS_COLLECTION = 'orders';
+const PROJECTS_COLLECTION = 'projects';
 
 // Constants for system status IDs, used for seeding
 const ORDER_SUBMITTED_ID = 'order-submitted';
@@ -349,10 +350,17 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
 export const deleteOrder = async (orderId: string): Promise<boolean> => {
   try {
     const orderDocRef = doc(db, ORDERS_COLLECTION, orderId);
-    await deleteFirestoreDoc(orderDocRef);
+    const projectDocRef = doc(db, PROJECTS_COLLECTION, orderId);
+
+    const batch = writeBatch(db);
+
+    batch.delete(orderDocRef);
+    batch.delete(projectDocRef);
+
+    await batch.commit();
     return true;
   } catch (error) {
-    console.error(`Error deleting order ${orderId} from Firestore:`, error);
+    console.error(`Error deleting order and corresponding project for ID ${orderId} from Firestore:`, error);
     return false;
   }
 };

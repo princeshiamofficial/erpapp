@@ -390,6 +390,7 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
       revalidatePath("/(app)/orders/monthly");
       revalidatePath("/(app)/deliveries/monthly");
       revalidatePath("/(app)/deliveries/weekly");
+      revalidatePath("/(app)/projects");
       return { success: true };
     }
     return { success: false, error: "Failed to delete order from database. Service returned failure." };
@@ -399,5 +400,6 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
     return { success: false, error: errorMessage };
   }
 }
+
 
 
