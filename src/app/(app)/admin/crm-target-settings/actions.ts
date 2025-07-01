@@ -6,12 +6,13 @@ import {
   setCrmCompletionStatusIds,
   setCommentsVisibility,
   setRolesAllowedToEditOrders,
+  setRolesAllowedToDeleteOrders, // New
   setToastSoundUrl,
   setLeaderboardBackgroundImageUrl,
-  setExpenseLoggingPermissions, // Changed from setCanUsersAddExpenses
-  setProjectStageAccess, // NEW
+  setExpenseLoggingPermissions, 
+  setProjectStageAccess, 
 } from "@/lib/settings-service";
-import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType } from "@/types"; // Added ExpenseLoggingPermissions
+import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType } from "@/types"; 
 import { adminApp } from '@/lib/firebase-admin';
 import { getUsers as getAllUsersFromDb, getUserById } from '@/lib/user-service';
 import type { FirebaseError } from 'firebase-admin';
@@ -63,6 +64,22 @@ export async function updateRolesAllowedToEditOrdersAction(roles: UserRole[]): P
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
+export async function updateRolesAllowedToDeleteOrdersAction(roles: UserRole[]): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setRolesAllowedToDeleteOrders(roles);
+    if (success) {
+      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/orders"); // Revalidate orders page as permissions changed
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update order deletion permissions in database." };
+  } catch (error) {
+    console.error("Error in updateRolesAllowedToDeleteOrdersAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
 
 export async function updateToastSoundUrlAction(soundUrl: string | null): Promise<{ success: boolean; error?: string }> {
   try {
@@ -294,5 +311,3 @@ export async function sendPushNotificationAction(
     };
   }
 }
-
-    

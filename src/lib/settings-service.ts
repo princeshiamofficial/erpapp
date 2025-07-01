@@ -32,7 +32,8 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   globalWeeklyOrderTarget: 0,
   crmCompletionStatusIds: [],
   areCommentsVisibleOnPublicPage: true,
-  rolesAllowedToEditOrders: ['SYSTEM_ADMIN', 'ADMIN'], 
+  rolesAllowedToEditOrders: ['SYSTEM_ADMIN', 'ADMIN'],
+  rolesAllowedToDeleteOrders: ['SYSTEM_ADMIN'],
   toastSoundUrl: DEFAULT_TOAST_SOUND_URL,
   leaderboardBackgroundImageUrl: DEFAULT_LEADERBOARD_BACKGROUND_URL,
   expenseLoggingPermissions: DEFAULT_EXPENSE_LOGGING_PERMISSIONS,
@@ -64,6 +65,7 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         crmCompletionStatusIds: data.crmCompletionStatusIds ?? DEFAULT_GLOBAL_SETTINGS.crmCompletionStatusIds,
         areCommentsVisibleOnPublicPage: data.areCommentsVisibleOnPublicPage ?? DEFAULT_GLOBAL_SETTINGS.areCommentsVisibleOnPublicPage,
         rolesAllowedToEditOrders: data.rolesAllowedToEditOrders ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToEditOrders,
+        rolesAllowedToDeleteOrders: data.rolesAllowedToDeleteOrders ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToDeleteOrders,
         toastSoundUrl: data.toastSoundUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.toastSoundUrl : data.toastSoundUrl,
         leaderboardBackgroundImageUrl: data.leaderboardBackgroundImageUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.leaderboardBackgroundImageUrl : data.leaderboardBackgroundImageUrl,
         expenseLoggingPermissions: fullExpensePerms,
@@ -177,6 +179,27 @@ export async function setRolesAllowedToEditOrders(roles: UserRole[]): Promise<bo
   }
 }
 
+// Sets the roles allowed to delete orders
+export async function setRolesAllowedToDeleteOrders(roles: UserRole[]): Promise<boolean> {
+  try {
+    const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+    const docSnap = await getDoc(settingsDocRef);
+    if (docSnap.exists()) {
+      await updateDoc(settingsDocRef, { rolesAllowedToDeleteOrders: roles });
+    } else {
+      const initialData: GlobalSettings = {
+        ...DEFAULT_GLOBAL_SETTINGS,
+        rolesAllowedToDeleteOrders: roles
+      };
+      await setDoc(settingsDocRef, initialData);
+    }
+    return true;
+  } catch (error) {
+    console.error("Error setting roles allowed to delete orders:", error);
+    return false;
+  }
+}
+
 // Sets the toast sound URL
 export async function setToastSoundUrl(soundUrl: string | null): Promise<boolean> {
   try {
@@ -265,5 +288,3 @@ export async function setProjectStageAccess(permissions: Record<ProjectStatusTyp
     return false;
   }
 }
-
-    

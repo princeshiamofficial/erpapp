@@ -144,6 +144,7 @@ export interface GlobalSettings {
   crmCompletionStatusIds?: string[];
   areCommentsVisibleOnPublicPage?: boolean;
   rolesAllowedToEditOrders?: UserRole[];
+  rolesAllowedToDeleteOrders?: UserRole[];
   toastSoundUrl?: string | null;
   leaderboardBackgroundImageUrl?: string | null;
   leaderboardThemeSettings?: LeaderboardThemeSettings | null;
@@ -247,5 +248,3 @@ export interface Project {
   designerRepresentativeName?: string | null;
   designerRepresentativeAvatarUrl?: string | null;
 }
-
-    

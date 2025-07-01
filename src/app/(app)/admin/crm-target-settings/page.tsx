@@ -21,6 +21,7 @@ import {
   updateCompletionStatusIdsAction,
   updateCommentsVisibilityAction,
   updateRolesAllowedToEditOrdersAction,
+  updateRolesAllowedToDeleteOrdersAction,
   updateToastSoundUrlAction,
   updateLeaderboardBackgroundImageUrlAction,
   updateExpenseLoggingPermissionsAction, 
@@ -29,7 +30,7 @@ import {
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon, Settings2, Briefcase } from 'lucide-react';
+import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon, Settings2, Briefcase, Trash2 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
@@ -39,6 +40,7 @@ import NextImage from 'next/image';
 
 
 const EDITABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
+const DELETABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'LR'];
 const EXPENSE_LOGGING_TARGET_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR']; // Roles that can be targeted for expense logging
 const NOTIFICATION_TARGET_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR'];
 const TOAST_SOUND_STORAGE_KEY = 'colorHutToastSoundUrl';
@@ -58,6 +60,7 @@ export default function CrmTargetSettingsPage() {
   const [selectedStatusIds, setSelectedStatusIds] = useState<Set<string>>(new Set());
   const [areCommentsVisible, setAreCommentsVisible] = useState(true);
   const [rolesAllowedToEdit, setRolesAllowedToEdit] = useState<Set<UserRole>>(new Set(['ADMIN', 'SYSTEM_ADMIN']));
+  const [rolesAllowedToDelete, setRolesAllowedToDelete] = useState<Set<UserRole>>(new Set(['SYSTEM_ADMIN']));
   const [toastSoundUrl, setToastSoundUrl] = useState<string>('');
   const [leaderboardBgUrl, setLeaderboardBgUrl] = useState<string>('');
   const [expenseLoggingPerms, setExpenseLoggingPerms] = useState<ExpenseLoggingPermissions>({
@@ -84,6 +87,7 @@ export default function CrmTargetSettingsPage() {
   const [isSubmittingCrmTargets, setIsSubmittingCrmTargets] = useState(false);
   const [isSubmittingCommentsVisibility, setIsSubmittingCommentsVisibility] = useState(false);
   const [isSubmittingOrderEditingPermissions, setIsSubmittingOrderEditingPermissions] = useState(false);
+  const [isSubmittingOrderDeletionPermissions, setIsSubmittingOrderDeletionPermissions] = useState(false);
   const [isSubmittingToastSound, setIsSubmittingToastSound] = useState(false);
   const [isSubmittingLeaderboardBg, setIsSubmittingLeaderboardBg] = useState(false);
   const [isSubmittingExpensePerms, setIsSubmittingExpensePerms] = useState(false);
@@ -109,6 +113,7 @@ export default function CrmTargetSettingsPage() {
       setSelectedStatusIds(new Set(globalSettings.crmCompletionStatusIds ?? []));
       setAreCommentsVisible(globalSettings.areCommentsVisibleOnPublicPage ?? true);
       setRolesAllowedToEdit(new Set(globalSettings.rolesAllowedToEditOrders ?? ['ADMIN', 'SYSTEM_ADMIN']));
+      setRolesAllowedToDelete(new Set(globalSettings.rolesAllowedToDeleteOrders ?? ['SYSTEM_ADMIN']));
       setToastSoundUrl(globalSettings.toastSoundUrl ?? '');
       setLeaderboardBgUrl(globalSettings.leaderboardBackgroundImageUrl ?? '');
       setExpenseLoggingPerms(globalSettings.expenseLoggingPermissions ?? { mode: 'all', allowedRoles: [], allowedUserIds: []});
@@ -178,6 +183,24 @@ export default function CrmTargetSettingsPage() {
     if (result.success) toast({ title: "Settings Updated", description: "Order editing permissions have been saved." });
     else toast({ title: "Update Failed", description: result.error || "Could not save order editing permissions.", variant: "destructive" });
     setIsSubmittingOrderEditingPermissions(false);
+  };
+  
+  const handleRoleDeletionPermissionChange = (role: UserRole, checked: boolean | "indeterminate") => {
+    setRolesAllowedToDelete(prev => {
+      const newSet = new Set(prev);
+      if (checked === true) newSet.add(role);
+      else newSet.delete(role);
+      return newSet;
+    });
+  };
+
+  const handleSaveOrderDeletionPermissions = async () => {
+    setIsSubmittingOrderDeletionPermissions(true);
+    const rolesToSave = Array.from(rolesAllowedToDelete).filter(role => role !== 'SYSTEM_ADMIN');
+    const result = await updateRolesAllowedToDeleteOrdersAction(rolesToSave);
+    if (result.success) toast({ title: "Settings Updated", description: "Order deletion permissions have been saved." });
+    else toast({ title: "Update Failed", description: result.error || "Could not save order deletion permissions.", variant: "destructive" });
+    setIsSubmittingOrderDeletionPermissions(false);
   };
 
   const handleSaveToastSoundUrl = async () => {
@@ -534,24 +557,46 @@ export default function CrmTargetSettingsPage() {
 
 
       <Separator className="my-8" />
-
-      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5">
-          <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><UserCheck className="h-6 w-6 text-primary" /> Order Management Permissions</CardTitle>
-          <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which user roles are permitted to edit order details. System Admins always have permission.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-6">
-          {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
-            : <ScrollArea className="h-auto pr-3"><div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                {EDITABLE_ROLES_FOR_ORDERS.map((role) => (<div key={role} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                    <Checkbox id={`role-edit-perm-${role}`} checked={rolesAllowedToEdit.has(role)} onCheckedChange={(checked) => handleRoleEditingPermissionChange(role, checked)} disabled={isSubmittingOrderEditingPermissions}/>
-                    <Label htmlFor={`role-edit-perm-${role}`} className="text-sm font-medium leading-none cursor-pointer">{role.replace(/_/g, ' ')}</Label></div>))}
-              </div></ScrollArea>}
-        </CardContent>
-         <CardFooter className="border-t p-5 flex justify-end">
-          <Button onClick={handleSaveOrderEditingPermissions} disabled={isLoading || isSubmittingOrderEditingPermissions}>{isSubmittingOrderEditingPermissions ? "Saving..." : "Save Editing Permissions"}</Button>
-        </CardFooter>
-      </Card>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+          <CardHeader className="border-b p-5">
+            <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><UserCheck className="h-6 w-6 text-primary" /> Order Editing Permissions</CardTitle>
+            <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which user roles can edit order details. System Admins always have permission.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-6">
+            {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
+              : <ScrollArea className="h-auto pr-3"><div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                  {EDITABLE_ROLES_FOR_ORDERS.map((role) => (<div key={role} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                      <Checkbox id={`role-edit-perm-${role}`} checked={rolesAllowedToEdit.has(role)} onCheckedChange={(checked) => handleRoleEditingPermissionChange(role, checked)} disabled={isSubmittingOrderEditingPermissions}/>
+                      <Label htmlFor={`role-edit-perm-${role}`} className="text-sm font-medium leading-none cursor-pointer">{role.replace(/_/g, ' ')}</Label></div>))}
+                </div></ScrollArea>}
+          </CardContent>
+           <CardFooter className="border-t p-5 flex justify-end">
+            <Button onClick={handleSaveOrderEditingPermissions} disabled={isLoading || isSubmittingOrderEditingPermissions}>{isSubmittingOrderEditingPermissions ? "Saving..." : "Save Editing Permissions"}</Button>
+          </CardFooter>
+        </Card>
+        
+        <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+          <CardHeader className="border-b p-5">
+            <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Trash2 className="h-6 w-6 text-destructive" /> Order Deletion Permissions</CardTitle>
+            <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which user roles can delete orders. This is a destructive action. System Admins always have permission.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-6">
+            {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
+              : <ScrollArea className="h-auto pr-3"><div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                  {DELETABLE_ROLES_FOR_ORDERS.map((role) => (<div key={`role-delete-perm-${role}`} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                      <Checkbox id={`role-delete-perm-${role}`} checked={rolesAllowedToDelete.has(role)} onCheckedChange={(checked) => handleRoleDeletionPermissionChange(role, checked)} disabled={isSubmittingOrderDeletionPermissions}/>
+                      <Label htmlFor={`role-delete-perm-${role}`} className="text-sm font-medium leading-none cursor-pointer">{role.replace(/_/g, ' ')}</Label></div>))}
+                </div></ScrollArea>}
+          </CardContent>
+           <CardFooter className="border-t p-5 flex justify-end">
+            <Button onClick={handleSaveOrderDeletionPermissions} disabled={isLoading || isSubmittingOrderDeletionPermissions} variant="destructive">
+              {isSubmittingOrderDeletionPermissions ? "Saving..." : "Save Deletion Permissions"}
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
 
       <Separator className="my-8" />
 
@@ -811,5 +856,3 @@ export default function CrmTargetSettingsPage() {
     </div>
   );
 }
-
-    

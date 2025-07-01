@@ -377,11 +377,22 @@ export async function assignDrToOrderAction(
   }
 }
 
-export async function deleteOrderAction(orderId: string): Promise<{ success: boolean; error?: string }> {
+export async function deleteOrderAction(
+  orderId: string, 
+  currentUser: User
+): Promise<{ success: boolean; error?: string }> {
   try {
     if (!orderId) {
         return { success: false, error: "Order ID is required for deletion." };
     }
+    
+    const settings = await getGlobalSettings();
+    const canDelete = currentUser.role === 'SYSTEM_ADMIN' || (settings.rolesAllowedToDeleteOrders?.includes(currentUser.role) ?? false);
+
+    if (!canDelete) {
+      return { success: false, error: "You do not have permission to delete this order." };
+    }
+
     const success = await deleteOrderFromDb(orderId);
     if (success) {
       revalidatePath("/(app)/orders");
@@ -400,6 +411,3 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
     return { success: false, error: errorMessage };
   }
 }
-
-
-

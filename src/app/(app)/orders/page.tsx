@@ -174,7 +174,12 @@ export default function OrdersPage() {
     return (globalAppSettings.rolesAllowedToEditOrders?.includes(currentUser.role) ?? false);
   }, [currentUser, globalAppSettings]);
 
-  const canDeleteOrder = currentUser?.role === 'SYSTEM_ADMIN';
+  const canDeleteOrder = useMemo(() => {
+    if (!currentUser || !globalAppSettings) return false;
+    if (currentUser.role === 'SYSTEM_ADMIN') return true;
+    return (globalAppSettings.rolesAllowedToDeleteOrders?.includes(currentUser.role) ?? false);
+  }, [currentUser, globalAppSettings]);
+
 
   const handleOpenAssignDrDialog = useCallback(async (orderToAssign: TrackingLink) => {
     setIsLoading(true); // Consider a more specific loading state
@@ -224,9 +229,9 @@ export default function OrdersPage() {
   }, [toast]);
 
   const handleDeleteOrder = async () => {
-    if (!orderToDelete || !canDeleteOrder) return;
+    if (!orderToDelete || !canDeleteOrder || !currentUser) return;
     setIsDeletingOrder(true);
-    const result = await deleteOrderAction(orderToDelete.id);
+    const result = await deleteOrderAction(orderToDelete.id, currentUser);
     if (result.success) {
       toast({ title: "Order Deleted", description: `Order ${orderToDelete.id} has been deleted successfully.` });
       await fetchOrderData();
@@ -550,4 +555,3 @@ export default function OrdersPage() {
     </div>
   );
 }
-
