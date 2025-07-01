@@ -12,12 +12,12 @@ import { getUsers as getAllUsersService } from './user-service'; // Import user 
 const PROJECTS_COLLECTION = 'projects';
 
 const defaultProjectsData: Array<Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'cancelAt' | 'deliveredAt' | 'assigneeAvatarUrl' | 'designerRepresentativeId' | 'designerRepresentativeName' | 'designerRepresentativeAvatarUrl' >> = [
-  { projectIdDisplay: 'PJ-001', name: 'Alpha Initiative', status: 'CR Clearance', endDate: formatISO(addMonths(new Date(), 2)), assigneeName: 'Austin Azaria', assigneeInitials: 'AU', categoryTag: 'Corporate Client' },
-  { projectIdDisplay: 'PJ-002', name: 'Beta Development', status: 'Cancel', endDate: formatISO(addMonths(new Date(), 3)), assigneeName: 'Clerk Kent', assigneeInitials: 'CK', categoryTag: 'Walk-In Customer' },
-  { projectIdDisplay: 'PJ-003', name: 'Gamma Graphics', status: 'On Design', endDate: formatISO(addMonths(new Date(), 1)), assigneeName: 'Diana Prince', assigneeInitials: 'DP', categoryTag: 'Internal Project' },
-  { projectIdDisplay: 'PJ-004', name: 'Delta Distribution', status: 'Logistics', endDate: formatISO(addMonths(new Date(), 5)), assigneeName: 'Barry Allen', assigneeInitials: 'BA', categoryTag: 'Partner Integration' },
-  { projectIdDisplay: 'PJ-005', name: 'Epsilon Exploration', status: 'Courier', endDate: formatISO(addMonths(new Date(), 4)), assigneeName: 'Hal Jordan', assigneeInitials: 'HJ', categoryTag: 'R&D' },
-  { projectIdDisplay: 'PJ-006', name: 'Zeta Zero-Day', status: 'On Hold', endDate: formatISO(addMonths(new Date(), 6)), assigneeName: 'Arthur Curry', assigneeInitials: 'AC', categoryTag: 'Security Audit' },
+  { projectIdDisplay: 'PJ-001', name: 'Alpha Initiative', status: 'CR Clearance', endDate: formatISO(addMonths(new Date(), 2)), assigneeId: 'CRM-001', assigneeName: 'Austin Azaria', assigneeInitials: 'AU', categoryTag: 'Corporate Client' },
+  { projectIdDisplay: 'PJ-002', name: 'Beta Development', status: 'Cancel', endDate: formatISO(addMonths(new Date(), 3)), assigneeId: 'CRM-002', assigneeName: 'Clerk Kent', assigneeInitials: 'CK', categoryTag: 'Walk-In Customer' },
+  { projectIdDisplay: 'PJ-003', name: 'Gamma Graphics', status: 'On Design', endDate: formatISO(addMonths(new Date(), 1)), assigneeId: 'CRM-003', assigneeName: 'Diana Prince', assigneeInitials: 'DP', categoryTag: 'Internal Project' },
+  { projectIdDisplay: 'PJ-004', name: 'Delta Distribution', status: 'Logistics', endDate: formatISO(addMonths(new Date(), 5)), assigneeId: 'CRM-001', assigneeName: 'Barry Allen', assigneeInitials: 'BA', categoryTag: 'Partner Integration' },
+  { projectIdDisplay: 'PJ-005', name: 'Epsilon Exploration', status: 'Courier', endDate: formatISO(addMonths(new Date(), 4)), assigneeId: 'CRM-002', assigneeName: 'Hal Jordan', assigneeInitials: 'HJ', categoryTag: 'R&D' },
+  { projectIdDisplay: 'PJ-006', name: 'Zeta Zero-Day', status: 'On Hold', endDate: formatISO(addMonths(new Date(), 6)), assigneeId: 'CRM-003', assigneeName: 'Arthur Curry', assigneeInitials: 'AC', categoryTag: 'Security Audit' },
 ];
 
 const getInitialStatusTimestampField = (status: ProjectStatusType): keyof Project | undefined => {
@@ -150,6 +150,7 @@ export const getProjects = async (): Promise<Project[]> => {
           projectIdDisplay: order.id,
           name: order.companyName,
           status: projectStatus,
+          assigneeId: order.crmUserId,
           assigneeName: order.crmUserName,
           assigneeInitials: getInitialsForName(order.crmUserName),
           assigneeAvatarUrl: crmUser?.avatarUrl || null,

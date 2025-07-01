@@ -229,6 +229,7 @@ export interface Project {
   name: string;
   status: ProjectStatusType;
   endDate: string;
+  assigneeId: string;
   assigneeName: string; // This is the CRM.
   assigneeInitials?: string;
   assigneeAvatarUrl?: string | null;

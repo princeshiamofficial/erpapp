@@ -92,7 +92,17 @@ export default function ProjectsPage() {
   }, [fetchData]);
 
   const filteredProjects = useMemo(() => {
-    return projects.filter(project => {
+    let roleFilteredProjects = projects;
+    
+    // Apply role-based filtering first
+    if (currentUser?.role === 'CRM') {
+      roleFilteredProjects = projects.filter(project => project.assigneeId === currentUser.id);
+    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
+      roleFilteredProjects = projects.filter(project => project.designerRepresentativeId === currentUser.id);
+    }
+    // Admins and System Admins see all projects, so no extra filtering for them.
+    
+    return roleFilteredProjects.filter(project => {
       const matchesSearchTerm = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         project.projectIdDisplay.toLowerCase().includes(searchTerm.toLowerCase()) ||
         project.assigneeName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -118,7 +128,7 @@ export default function ProjectsPage() {
       }
       return matchesSearchTerm && matchesCategory && matchesEndDate;
     });
-  }, [projects, searchTerm, categoryFilter, endDateFilter]);
+  }, [projects, searchTerm, categoryFilter, endDateFilter, currentUser]);
 
   const projectsByStatus = useMemo(() => {
     const grouped: Record<ProjectStatusType, Project[]> = {
@@ -241,7 +251,7 @@ export default function ProjectsPage() {
         address: '',
         phoneNumber: '',
         orderItems: [],
-        crmUserId: projectToAssign.assigneeName,
+        crmUserId: projectToAssign.assigneeId,
         crmUserName: projectToAssign.assigneeName,
         createdAt: projectToAssign.createdAt || new Date().toISOString(),
         isPublic: false,
