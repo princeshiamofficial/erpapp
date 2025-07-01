@@ -22,8 +22,10 @@ import {
   MessageCircle,
   Landmark // Changed from WalletCards
 } from "lucide-react";
-import type { UserRole } from "@/types";
+import type { UserRole, GlobalSettings } from "@/types";
 import { cn } from "@/lib/utils";
+import React, { useState, useEffect, useMemo } from 'react';
+import { getGlobalSettings } from '@/lib/settings-service';
 
 interface NavItem {
   href: string;
@@ -53,6 +55,32 @@ const navItems: NavItem[] = [
 export function SidebarNavigation() {
   const pathname = usePathname();
   const { currentUser } = useAuth();
+  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
+
+  useEffect(() => {
+    async function fetchSettings() {
+      if (currentUser) {
+        const settings = await getGlobalSettings();
+        setGlobalSettings(settings);
+      }
+    }
+    fetchSettings();
+  }, [currentUser]);
+
+  const canUserLogExpense = useMemo(() => {
+    if (!currentUser || !globalSettings?.expenseLoggingPermissions) return false;
+    if (currentUser.role === 'SYSTEM_ADMIN') return true;
+
+    const perms = globalSettings.expenseLoggingPermissions;
+    switch (perms.mode) {
+      case 'all': return true;
+      case 'none': return false;
+      case 'specificRoles': return perms.allowedRoles.includes(currentUser.role);
+      case 'specificUsers': return perms.allowedUserIds.includes(currentUser.id);
+      default: return false;
+    }
+  }, [currentUser, globalSettings]);
+
 
   if (!currentUser) return null;
 
@@ -60,8 +88,15 @@ export function SidebarNavigation() {
 
   return (
     <>
-      {navItems.map((item) =>
-        item.roles.includes(userRole) ? (
+      {navItems.map((item) => {
+        
+        let shouldShowItem = item.roles.includes(userRole);
+
+        if (item.href === "/finance-manager" && !canUserLogExpense) {
+          shouldShowItem = false;
+        }
+
+        return shouldShowItem ? (
           <SidebarMenuItem key={item.href}>
             <Link href={item.href} passHref legacyBehavior>
               <SidebarMenuButton
@@ -94,7 +129,7 @@ export function SidebarNavigation() {
             </Link>
           </SidebarMenuItem>
         ) : null
-      )}
+      })}
     </>
   );
 }
