@@ -19,6 +19,8 @@ const getRolePrefix = (role: UserRole): string => {
       return 'SysAdmin-';
     case 'VENDOR':
       return 'Vendor-';
+    case 'LR':
+      return 'LR-';
     default:
       return 'User-'; // Fallback, though all roles should be covered
   }

@@ -16,7 +16,7 @@ interface EditUserRoleDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR"];
+const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR"];
 
 export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, isOpen, onOpenChange }: EditUserRoleDialogProps) {
   const [selectedRole, setSelectedRole] = useState<UserRole>(user.role);
@@ -52,7 +52,7 @@ export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, isOpe
           return [user.role];
       }
       // Can assign these roles to non-admin/non-system-admin users
-      return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR'];
+      return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR'];
     }
     return [user.role]; // Default: can only select current role (no change)
   };
@@ -130,4 +130,3 @@ export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, isOpe
     </Dialog>
   );
 }
-

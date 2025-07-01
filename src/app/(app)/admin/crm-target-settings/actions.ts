@@ -104,7 +104,7 @@ export async function updateExpenseLoggingPermissionsAction(permissions: Expense
     if (!permissions || !permissions.mode) {
         return { success: false, error: "Invalid permission structure provided." };
     }
-    if (permissions.mode === 'specificRoles' && (!Array.isArray(permissions.allowedRoles) || permissions.allowedRoles.some(r => !['ADMIN','CRM','DESIGNER_REPRESENTATIVE'].includes(r)))) {
+    if (permissions.mode === 'specificRoles' && (!Array.isArray(permissions.allowedRoles) || permissions.allowedRoles.some(r => !['ADMIN','CRM','DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR'].includes(r)))) {
         return { success: false, error: "Invalid roles specified for expense logging." };
     }
     if (permissions.mode === 'specificUsers' && !Array.isArray(permissions.allowedUserIds)) {

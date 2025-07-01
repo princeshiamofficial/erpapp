@@ -20,7 +20,7 @@ interface AddUserDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR"];
+const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR"];
 
 export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange }: AddUserDialogProps) {
   const [name, setName] = useState('');
@@ -76,8 +76,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange }
       return ALL_USER_ROLES;
     }
     if (currentUser.role === 'ADMIN') {
-      // Regular Admin can assign ADMIN, CRM, DESIGNER_REPRESENTATIVE, VENDOR.
-      return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR']; 
+      return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR']; 
     }
     return []; 
   };
@@ -304,4 +303,3 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange }
     </Dialog>
   );
 }
-

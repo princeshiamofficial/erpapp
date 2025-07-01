@@ -27,7 +27,7 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox'; // For selecting roles
 import { Separator } from '@/components/ui/separator';
 
-const AVAILABLE_ROLES_FOR_STATUS_ASSIGNMENT: UserRole[] = ['CRM', 'DESIGNER_REPRESENTATIVE', 'ADMIN', 'VENDOR'];
+const AVAILABLE_ROLES_FOR_STATUS_ASSIGNMENT: UserRole[] = ['CRM', 'DESIGNER_REPRESENTATIVE', 'ADMIN', 'VENDOR', 'LR'];
 
 export default function AdminStatusesPage() {
   const { currentUser } = useAuth();
@@ -398,4 +398,3 @@ export default function AdminStatusesPage() {
     </div>
   );
 }
-

@@ -25,9 +25,9 @@ const defaultStatusesData: Array<Omit<CustomStatus, 'id' | 'isSystemStatus' | 'i
   { defaultName: 'Approved for Production', color: '#10B981', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
   { defaultName: 'In Production', color: '#0EA5E9', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
   { defaultName: 'Quality Check', color: '#F97316', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] }, // ID: quality-check
-  { defaultName: 'Logistics', color: '#F97316', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] }, // ID: logistics
-  { defaultName: 'Shipped', color: '#22C55E', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] }, // ID: shipped
-  { defaultName: 'Delivered', color: '#65A30D', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
+  { defaultName: 'Logistics', color: '#F97316', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN', 'LR'] }, // ID: logistics
+  { defaultName: 'Shipped', color: '#22C55E', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN', 'LR'] }, // ID: shipped
+  { defaultName: 'Delivered', color: '#65A30D', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN', 'LR'] },
   { defaultName: 'Cancelled', color: '#71717A', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
   { defaultName: 'On Hold', color: '#A1A1AA', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
 ];
