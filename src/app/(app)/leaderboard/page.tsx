@@ -7,20 +7,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getUsers } from '@/lib/user-service';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronLeft, Crown } from 'lucide-react';
 import Link from 'next/link';
 import { LeaderboardDisplay } from '@/components/leaderboard/LeaderboardDisplay';
 import type { User, TrackingLink, GlobalSettings, UserRole } from '@/types';
 import {
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
   isWithinInterval,
   parseISO,
+  subDays,
+  differenceInDays,
 } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
+import { type DateRange } from "react-day-picker";
 
 // CrmPerformanceData type might be better defined within LeaderboardDisplay or a shared types file if complex
 export interface CrmPerformanceData {
@@ -39,37 +38,44 @@ export interface CrmPerformanceData {
 export default function LeaderboardPage() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
   const { toast } = useToast();
-  const [crmMonthlyPerformance, setCrmMonthlyPerformance] = React.useState<CrmPerformanceData[]>([]);
-  const [crmWeeklyPerformance, setCrmWeeklyPerformance] = React.useState<CrmPerformanceData[]>([]);
-  const [isLoadingData, setIsLoadingData] = React.useState(true);
-  const [fetchError, setFetchError] = React.useState<string | null>(null);
-  const [selectedPeriod, setSelectedPeriod] = useState<'monthly' | 'weekly'>('monthly');
+  const [performanceData, setPerformanceData] = useState<CrmPerformanceData[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
+      from: subDays(new Date(), 29),
+      to: new Date(),
+  });
+  const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Last 30 Days");
+
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
+  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
+
   const [currentLeaderboardBackground, setCurrentLeaderboardBackground] = useState<string | null | undefined>(undefined);
 
-  const calculatePerformance = useCallback(async (
+  const calculatePerformance = useCallback((
     crmUsers: User[],
     allOrders: TrackingLink[],
     globalSettings: GlobalSettings,
-    period: 'monthly' | 'weekly'
-  ): Promise<CrmPerformanceData[]> => {
-    const now = new Date();
-    let periodStart: Date;
-    let periodEnd: Date;
-
-    if (period === 'monthly') {
-      periodStart = startOfMonth(now);
-      periodEnd = endOfMonth(now);
-    } else { // weekly
-      periodStart = startOfWeek(now, { weekStartsOn: 1 });
-      periodEnd = endOfWeek(now, { weekStartsOn: 1 });
+    dateRange: DateRange | undefined
+  ): CrmPerformanceData[] => {
+    if (!dateRange?.from || !dateRange?.to) {
+        return [];
     }
+    const periodStart = new Date(dateRange.from);
+    const periodEnd = new Date(dateRange.to);
+    periodStart.setHours(0,0,0,0);
+    periodEnd.setHours(23,59,59,999);
 
     const completionStatusIds = globalSettings.crmCompletionStatusIds || [];
     if (completionStatusIds.length === 0) {
         console.warn(`Leaderboard: No CRM completion status IDs configured. Performance will be 0.`);
     }
 
-    const performanceData = crmUsers.map(crmUser => {
+    const numDaysInRange = differenceInDays(periodEnd, periodStart) + 1;
+
+    const performanceDataList = crmUsers.map(crmUser => {
       let ordersCompletedInPeriod = 0;
       const userOrders = allOrders.filter(order => order.crmUserId === crmUser.id);
 
@@ -90,11 +96,10 @@ export default function LeaderboardPage() {
           ordersCompletedInPeriod++;
         }
       });
-
-      const target = period === 'monthly'
-        ? (crmUser.monthlyOrderTarget ?? globalSettings.globalMonthlyOrderTarget ?? 0)
-        : (crmUser.weeklyOrderTarget ?? globalSettings.globalWeeklyOrderTarget ?? 0);
-
+      
+      const monthlyTarget = (crmUser.monthlyOrderTarget ?? globalSettings.globalMonthlyOrderTarget ?? 0);
+      const dailyTarget = monthlyTarget / 30; // Assume 30 days in a month for simplicity
+      const target = Math.round(dailyTarget * numDaysInRange);
 
       const pointChange = Math.floor(Math.random() * 5) - 2;
       const trend = pointChange > 0 ? 'up' : pointChange < 0 ? 'down' : 'same';
@@ -111,12 +116,12 @@ export default function LeaderboardPage() {
       };
     });
 
-    performanceData.sort((a, b) => b.ordersCompleted - a.ordersCompleted || a.userName.localeCompare(b.userName));
-    performanceData.forEach((user, index) => {
+    performanceDataList.sort((a, b) => b.ordersCompleted - a.ordersCompleted || a.userName.localeCompare(b.userName));
+    performanceDataList.forEach((user, index) => {
       user.rank = index + 1;
     });
 
-    return performanceData;
+    return performanceDataList;
   }, []);
 
 
@@ -128,41 +133,24 @@ export default function LeaderboardPage() {
     setIsLoadingData(true);
     setFetchError(null);
     try {
-      const [allUsers, allOrders, globalSettings] = await Promise.all([
+      const [fetchedUsers, fetchedOrders, fetchedSettings] = await Promise.all([
         getUsers(),
         getOrders(),
         getGlobalSettings(),
       ]);
 
-      setCurrentLeaderboardBackground(globalSettings.leaderboardBackgroundImageUrl);
-
-      const crmUsers = allUsers.filter(user => user.role === 'CRM');
-
-      let displayUsers = [...crmUsers];
-
-      const mapDataForCurrentUser = (data: CrmPerformanceData[]): CrmPerformanceData[] => {
-        return data.map(d =>
-          currentUser && d.userId === currentUser.id
-            ? { ...d, userName: "You", role: currentUser.role as UserRole, userAvatar: currentUser.avatarUrl || d.userAvatar }
-            : d
-        );
-      };
-
-      const monthlyData = await calculatePerformance(displayUsers, allOrders, globalSettings, 'monthly');
-      const weeklyData = await calculatePerformance(displayUsers, allOrders, globalSettings, 'weekly');
-
-      setCrmMonthlyPerformance(mapDataForCurrentUser(monthlyData));
-      setCrmWeeklyPerformance(mapDataForCurrentUser(weeklyData));
+      setAllUsers(fetchedUsers);
+      setAllOrders(fetchedOrders);
+      setGlobalSettings(fetchedSettings);
+      setCurrentLeaderboardBackground(fetchedSettings.leaderboardBackgroundImageUrl);
 
     } catch (error) {
       console.error("Failed to fetch leaderboard data:", error);
       setFetchError("Could not load leaderboard data. Please try again later.");
-      setCrmMonthlyPerformance([]);
-      setCrmWeeklyPerformance([]);
     } finally {
       setIsLoadingData(false);
     }
-  }, [currentUser, calculatePerformance, toast]);
+  }, [currentUser, toast]);
 
   useEffect(() => {
     if (!isAuthLoading) {
@@ -170,8 +158,30 @@ export default function LeaderboardPage() {
     }
   }, [isAuthLoading, fetchData]);
 
+  useEffect(() => {
+    if (isLoadingData || !allUsers.length || !globalSettings) return;
 
-  if (isAuthLoading || isLoadingData) {
+    const crmUsers = allUsers.filter(user => user.role === 'CRM');
+
+    const mapDataForCurrentUser = (data: CrmPerformanceData[]): CrmPerformanceData[] => {
+      return data.map(d =>
+        currentUser && d.userId === currentUser.id
+          ? { ...d, userName: "You", role: currentUser.role as UserRole, userAvatar: currentUser.avatarUrl || d.userAvatar }
+          : d
+      );
+    };
+
+    const newPerformanceData = calculatePerformance(crmUsers, allOrders, globalSettings, selectedDateRange);
+    setPerformanceData(mapDataForCurrentUser(newPerformanceData));
+
+  }, [isLoadingData, allUsers, allOrders, globalSettings, selectedDateRange, currentUser, calculatePerformance]);
+
+  const handleDateRangeChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
+    setSelectedDateRange(range);
+    setCurrentDateRangeLabel(displayLabel);
+  };
+
+  if (isAuthLoading || (isLoadingData && !performanceData.length)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--leaderboard-bg-main-start))] to-[hsl(var(--leaderboard-bg-main-end))] text-[hsl(var(--leaderboard-text-light))] p-4 relative overflow-hidden">
 
@@ -185,7 +195,7 @@ export default function LeaderboardPage() {
                 <ChevronLeft className="h-6 w-6" />
             </Link>
             <h1 className="text-xl font-semibold tracking-wider">LEADERBOARD</h1>
-            <Skeleton className="h-9 w-28 rounded-md bg-white/10" />
+            <Skeleton className="h-9 w-36 rounded-md bg-white/10" />
         </header>
         <div className="relative z-10 text-center mb-8">
           <Crown className="h-10 w-10 text-[hsl(var(--leaderboard-gold))] mx-auto mb-2 opacity-50" />
@@ -229,23 +239,17 @@ export default function LeaderboardPage() {
           <ChevronLeft className="h-6 w-6" />
         </Link>
         <h1 className="text-lg sm:text-xl font-semibold tracking-wider text-[hsl(var(--leaderboard-text-light))]">LEADERBOARD</h1>
-        <Select value={selectedPeriod} onValueChange={(value) => setSelectedPeriod(value as 'monthly' | 'weekly')}>
-          <SelectTrigger className="w-[120px] sm:w-[140px] bg-black/20 border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))] focus:ring-[hsl(var(--leaderboard-gold))] h-9 text-xs sm:text-sm">
-            <SelectValue placeholder="Select period" />
-          </SelectTrigger>
-          <SelectContent className="bg-[hsl(var(--leaderboard-podium-bg))] border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))]">
-            <SelectItem value="monthly" className="focus:bg-white/20">Monthly</SelectItem>
-            <SelectItem value="weekly" className="focus:bg-white/20">Weekly</SelectItem>
-          </SelectContent>
-        </Select>
+        <DateRangePicker 
+          initialRange={selectedDateRange} 
+          onDateRangeChange={handleDateRangeChange}
+        />
       </header>
 
       <LeaderboardDisplay
-        performanceData={selectedPeriod === 'monthly' ? crmMonthlyPerformance : crmWeeklyPerformance}
+        performanceData={performanceData}
         currentUser={currentUser}
-        timePeriodLabel={selectedPeriod === 'monthly' ? 'This Month' : 'This Week'}
+        timePeriodLabel={currentDateRangeLabel}
       />
     </div>
   );
 }
-
