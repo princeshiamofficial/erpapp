@@ -67,35 +67,19 @@ export default function LeaderboardPage() {
     const periodEnd = new Date(dateRange.to);
     periodStart.setHours(0,0,0,0);
     periodEnd.setHours(23,59,59,999);
-
-    const completionStatusIds = globalSettings.crmCompletionStatusIds || [];
-    if (completionStatusIds.length === 0) {
-        console.warn(`Leaderboard: No CRM completion status IDs configured. Performance will be 0.`);
-    }
+    
+    // The metric is now the number of orders created in the date range.
+    // The crmCompletionStatusIds are no longer needed for this calculation.
 
     const numDaysInRange = differenceInDays(periodEnd, periodStart) + 1;
 
     const performanceDataList = crmUsers.map(crmUser => {
-      let ordersCompletedInPeriod = 0;
-      const userOrders = allOrders.filter(order => order.crmUserId === crmUser.id);
-
-      userOrders.forEach(order => {
-        const completionLog = order.statusHistory.find(log => {
-          if (completionStatusIds.includes(log.status)) {
-            try {
-              const logTimestamp = parseISO(log.timestamp);
-              return isWithinInterval(logTimestamp, { start: periodStart, end: periodEnd });
-            } catch (e) {
-              console.error(`Error parsing timestamp ${log.timestamp} for order ${order.id}`, e);
-              return false;
-            }
-          }
-          return false;
-        });
-        if (completionLog) {
-          ordersCompletedInPeriod++;
-        }
-      });
+      // Filter orders created by this CRM within the date range
+      const ordersCreatedInPeriod = allOrders.filter(order => 
+        order.crmUserId === crmUser.id &&
+        order.createdAt && 
+        isWithinInterval(parseISO(order.createdAt), { start: periodStart, end: periodEnd })
+      ).length;
       
       const monthlyTarget = (crmUser.monthlyOrderTarget ?? globalSettings.globalMonthlyOrderTarget ?? 0);
       const dailyTarget = monthlyTarget / 30; // Assume 30 days in a month for simplicity
@@ -108,7 +92,7 @@ export default function LeaderboardPage() {
         userId: crmUser.id,
         userName: crmUser.name,
         userAvatar: crmUser.avatarUrl || undefined,
-        ordersCompleted: ordersCompletedInPeriod,
+        ordersCompleted: ordersCreatedInPeriod, // This now represents orders CREATED
         target: target,
         role: crmUser.role,
         trend,
