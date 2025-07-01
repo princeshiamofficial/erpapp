@@ -43,10 +43,10 @@ export default function LeaderboardPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
-      from: subDays(new Date(), 29),
+      from: new Date(),
       to: new Date(),
   });
-  const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Last 30 Days");
+  const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Today");
 
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
