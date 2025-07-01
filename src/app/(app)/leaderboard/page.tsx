@@ -242,6 +242,7 @@ export default function LeaderboardPage() {
         <DateRangePicker 
           initialRange={selectedDateRange} 
           onDateRangeChange={handleDateRangeChange}
+          className="w-auto bg-black/40 border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))] hover:bg-black/60 focus:ring-[hsl(var(--leaderboard-gold))] h-9 text-xs sm:text-sm"
         />
       </header>
 

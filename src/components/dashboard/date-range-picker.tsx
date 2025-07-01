@@ -32,6 +32,7 @@ import {
   isSameDay,
 } from "date-fns";
 import type { DateRange } from "react-day-picker";
+import { cn } from "@/lib/utils";
 
 export type PredefinedRange =
   | "today"
@@ -47,6 +48,7 @@ interface DateRangePickerProps {
   initialRange?: DateRange;
   onDateRangeChange: (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => void;
   align?: "start" | "center" | "end";
+  className?: string;
 }
 
 const PREDEFINED_RANGES_CONFIG: { label: string; value: PredefinedRange }[] = [
@@ -85,6 +87,7 @@ export function DateRangePicker({
   initialRange,
   onDateRangeChange,
   align = "end",
+  className,
 }: DateRangePickerProps) {
   const defaultInitialRange: DateRange = {
     from: subDays(new Date(), 29),
@@ -183,9 +186,9 @@ export function DateRangePicker({
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className="w-full justify-start text-left font-normal sm:w-auto h-9 sm:h-10"
+          className={cn("w-full justify-start text-left font-normal sm:w-auto h-9 sm:h-10", className)}
         >
-          <CalendarDays className="mr-2 h-4 w-4 text-primary/80" />
+          <CalendarDays className="mr-2 h-4 w-4" />
           <span className="truncate">{triggerButtonDisplayLabel}</span>
           <ChevronDown className="ml-auto h-4 w-4 opacity-70" />
         </Button>
