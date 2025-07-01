@@ -3,9 +3,10 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import type { Project, ProjectStatusType, CustomStatus, User, TrackingLink } from '@/types'; 
+import type { Project, ProjectStatusType, CustomStatus, User, TrackingLink, GlobalSettings } from '@/types'; 
 import { getProjects } from '@/lib/project-service';
 import { getStatuses, ORDER_SUBMITTED_ID, READY_FOR_DESIGN_STATUS_ID } from '@/lib/status-service'; 
+import { getGlobalSettings } from '@/lib/settings-service';
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Briefcase, ClipboardCheck, ClipboardX, DraftingCompass, PauseCircle, Truck, CheckCircle, RefreshCw, PackageCheck } from 'lucide-react'; 
@@ -48,6 +49,7 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; i
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]); 
+  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -68,12 +70,14 @@ export default function ProjectsPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedProjects, fetchedStatuses] = await Promise.all([ 
+      const [fetchedProjects, fetchedStatuses, fetchedSettings] = await Promise.all([ 
         getProjects(),
-        getStatuses()
+        getStatuses(),
+        getGlobalSettings()
       ]);
       setProjects(fetchedProjects);
       setAllStatuses(fetchedStatuses); 
+      setGlobalSettings(fetchedSettings);
     } catch (error) {
       console.error("Failed to fetch projects or statuses:", error);
       toast({ title: "Error", description: "Could not load projects or status configurations.", variant: "destructive" });
@@ -140,6 +144,19 @@ export default function ProjectsPage() {
     { label: 'This Month', value: 'this_month' },
     { label: 'This Year', value: 'this_year' },
   ];
+  
+  const visibleKanbanColumns = useMemo(() => {
+    if (!currentUser || !globalSettings?.projectStageAccess) {
+      return [];
+    }
+    if (currentUser.role === 'SYSTEM_ADMIN') {
+      return KANBAN_COLUMNS_CONFIG;
+    }
+    const userPermissions = globalSettings.projectStageAccess;
+    return KANBAN_COLUMNS_CONFIG.filter(column => 
+      userPermissions[column.status]?.includes(currentUser.role)
+    );
+  }, [currentUser, globalSettings]);
 
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -366,7 +383,7 @@ export default function ProjectsPage() {
 
         <div className="flex-1 overflow-x-auto pb-4">
           <div className="flex space-x-4 min-w-max px-4 sm:px-0">
-            {KANBAN_COLUMNS_CONFIG.map((col) => (
+            {visibleKanbanColumns.map((col) => (
               <KanbanColumn
                 key={col.status}
                 id={col.status} 
@@ -436,3 +453,5 @@ export default function ProjectsPage() {
     </DndContext>
   );
 }
+
+    

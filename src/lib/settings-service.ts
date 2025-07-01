@@ -3,7 +3,7 @@
 
 import { db } from './firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import type { GlobalSettings, UserRole, ExpenseLoggingPermissions } from '@/types';
+import type { GlobalSettings, UserRole, ExpenseLoggingPermissions, ProjectStatusType } from '@/types';
 
 const GLOBAL_SETTINGS_COLLECTION = 'globalSettings';
 const MAIN_SETTINGS_DOC_ID = 'main';
@@ -17,6 +17,16 @@ const DEFAULT_EXPENSE_LOGGING_PERMISSIONS: ExpenseLoggingPermissions = {
   allowedUserIds: []
 };
 
+const DEFAULT_PROJECT_STAGE_ACCESS: Record<ProjectStatusType, UserRole[]> = {
+  'CR Clearance': ['SYSTEM_ADMIN', 'ADMIN', 'CRM'],
+  'Cancel': ['SYSTEM_ADMIN', 'ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'],
+  'On Design': ['SYSTEM_ADMIN', 'ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'],
+  'On Hold': ['SYSTEM_ADMIN', 'ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'],
+  'Logistics': ['SYSTEM_ADMIN', 'ADMIN', 'DESIGNER_REPRESENTATIVE', 'LR'],
+  'Courier': ['SYSTEM_ADMIN', 'ADMIN', 'LR'],
+  'Delivered': ['SYSTEM_ADMIN', 'ADMIN', 'LR'],
+};
+
 const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   globalMonthlyOrderTarget: 0,
   globalWeeklyOrderTarget: 0,
@@ -26,6 +36,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   toastSoundUrl: DEFAULT_TOAST_SOUND_URL,
   leaderboardBackgroundImageUrl: DEFAULT_LEADERBOARD_BACKGROUND_URL,
   expenseLoggingPermissions: DEFAULT_EXPENSE_LOGGING_PERMISSIONS,
+  projectStageAccess: DEFAULT_PROJECT_STAGE_ACCESS,
 };
 
 // Gets global settings from Firestore
@@ -44,6 +55,9 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         allowedUserIds: expensePerms.allowedUserIds ?? DEFAULT_EXPENSE_LOGGING_PERMISSIONS.allowedUserIds,
       };
 
+      const projectStageAccess = data.projectStageAccess || {};
+
+
       return {
         globalMonthlyOrderTarget: data.globalMonthlyOrderTarget ?? DEFAULT_GLOBAL_SETTINGS.globalMonthlyOrderTarget,
         globalWeeklyOrderTarget: data.globalWeeklyOrderTarget ?? DEFAULT_GLOBAL_SETTINGS.globalWeeklyOrderTarget,
@@ -53,6 +67,7 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         toastSoundUrl: data.toastSoundUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.toastSoundUrl : data.toastSoundUrl,
         leaderboardBackgroundImageUrl: data.leaderboardBackgroundImageUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.leaderboardBackgroundImageUrl : data.leaderboardBackgroundImageUrl,
         expenseLoggingPermissions: fullExpensePerms,
+        projectStageAccess: { ...DEFAULT_PROJECT_STAGE_ACCESS, ...projectStageAccess },
       };
     } else {
       console.log("Global settings document not found, returning defaults. Creating document with defaults.");
@@ -230,3 +245,25 @@ export async function setExpenseLoggingPermissions(permissions: ExpenseLoggingPe
     return false;
   }
 }
+
+export async function setProjectStageAccess(permissions: Record<ProjectStatusType, UserRole[]>): Promise<boolean> {
+  try {
+    const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+    const docSnap = await getDoc(settingsDocRef);
+    if (docSnap.exists()) {
+      await updateDoc(settingsDocRef, { projectStageAccess: permissions });
+    } else {
+      const initialData: GlobalSettings = {
+        ...DEFAULT_GLOBAL_SETTINGS,
+        projectStageAccess: permissions,
+      };
+      await setDoc(settingsDocRef, initialData);
+    }
+    return true;
+  } catch (error) {
+    console.error("Error setting project stage access permissions:", error);
+    return false;
+  }
+}
+
+    

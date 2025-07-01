@@ -8,6 +8,7 @@ import { updateProjectStatus as updateProjectStatusInDb } from '@/lib/project-se
 import { getOrderById, updateOrder } from '@/lib/order-service'; // Added
 import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_STATUS_ID, DELIVERED_STATUS_ID } from '@/lib/status-service'; // Added SHIPPED_STATUS_ID
 import { v4 as uuidv4 } from 'uuid'; // Added
+import { getGlobalSettings } from '@/lib/settings-service';
 
 export async function updateProjectStatusAction(
   project: Project,
@@ -15,6 +16,14 @@ export async function updateProjectStatusAction(
   actingUser: User // Added actingUser parameter
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const settings = await getGlobalSettings();
+    if (actingUser.role !== 'SYSTEM_ADMIN') {
+      const permissions = settings.projectStageAccess;
+      if (permissions && permissions[newStatus] && !permissions[newStatus].includes(actingUser.role)) {
+        return { success: false, error: `You do not have permission to move projects to the '${newStatus}' stage.` };
+      }
+    }
+    
     const projectUpdateSuccess = await updateProjectStatusInDb(project.id, newStatus, project);
     if (!projectUpdateSuccess) {
       return { success: false, error: "Failed to update project status in database." };
@@ -182,3 +191,5 @@ export async function transferToCourierAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
+    

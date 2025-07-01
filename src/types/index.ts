@@ -148,6 +148,7 @@ export interface GlobalSettings {
   leaderboardBackgroundImageUrl?: string | null;
   leaderboardThemeSettings?: LeaderboardThemeSettings | null;
   expenseLoggingPermissions?: ExpenseLoggingPermissions;
+  projectStageAccess?: Record<ProjectStatusType, UserRole[]>;
 }
 
 export interface LeaderboardThemeSettings {
@@ -246,3 +247,5 @@ export interface Project {
   designerRepresentativeName?: string | null;
   designerRepresentativeAvatarUrl?: string | null;
 }
+
+    

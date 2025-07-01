@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { CustomStatus, UserRole, User, GlobalSettings, ExpenseLoggingPermissions, ExpenseLoggingMode } from "@/types";
+import type { CustomStatus, UserRole, User, GlobalSettings, ExpenseLoggingPermissions, ExpenseLoggingMode, ProjectStatusType } from "@/types";
 import { getStatuses } from '@/lib/status-service';
 import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings as fetchGlobalSettings } from '@/lib/settings-service';
@@ -24,11 +24,12 @@ import {
   updateToastSoundUrlAction,
   updateLeaderboardBackgroundImageUrlAction,
   updateExpenseLoggingPermissionsAction, 
-  sendPushNotificationAction
+  sendPushNotificationAction,
+  updateProjectStageAccessAction
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon, Settings2 } from 'lucide-react';
+import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon, Settings2, Briefcase } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
@@ -42,6 +43,9 @@ const EXPENSE_LOGGING_TARGET_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPR
 const NOTIFICATION_TARGET_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR'];
 const TOAST_SOUND_STORAGE_KEY = 'colorHutToastSoundUrl';
 const DEFAULT_LEADERBOARD_BACKGROUND_PLACEHOLDER = 'https://i.ibb.co/PGBMbxBc/360-F-338486227-q-Qit-Uvh3n-ILq-Yiu-QOUGxdfindo-NMbtp-H.jpg';
+
+const PROJECT_STAGE_ACCESS_ROLES: UserRole[] = ['SYSTEM_ADMIN', 'ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'LR'];
+const PROJECT_STAGES: ProjectStatusType[] = ['CR Clearance', 'Cancel', 'On Design', 'On Hold', 'Logistics', 'Courier', 'Delivered'];
 
 
 export default function CrmTargetSettingsPage() {
@@ -59,6 +63,7 @@ export default function CrmTargetSettingsPage() {
   const [expenseLoggingPerms, setExpenseLoggingPerms] = useState<ExpenseLoggingPermissions>({
     mode: 'all', allowedRoles: [], allowedUserIds: []
   });
+  const [projectStageAccess, setProjectStageAccess] = useState<Record<ProjectStatusType, UserRole[]>>({} as Record<ProjectStatusType, UserRole[]>);
 
   // Notification states
   const [allUsers, setAllUsers] = useState<User[]>([]); // Users excluding System_Admin for targeting
@@ -82,6 +87,7 @@ export default function CrmTargetSettingsPage() {
   const [isSubmittingToastSound, setIsSubmittingToastSound] = useState(false);
   const [isSubmittingLeaderboardBg, setIsSubmittingLeaderboardBg] = useState(false);
   const [isSubmittingExpensePerms, setIsSubmittingExpensePerms] = useState(false);
+  const [isSubmittingProjectStageAccess, setIsSubmittingProjectStageAccess] = useState(false);
   const [isSendingNotification, setIsSendingNotification] = useState(false);
   const [isLoadingUsersForNotifAndTokens, setIsLoadingUsersForNotifAndTokens] = useState(false);
 
@@ -106,6 +112,7 @@ export default function CrmTargetSettingsPage() {
       setToastSoundUrl(globalSettings.toastSoundUrl ?? '');
       setLeaderboardBgUrl(globalSettings.leaderboardBackgroundImageUrl ?? '');
       setExpenseLoggingPerms(globalSettings.expenseLoggingPermissions ?? { mode: 'all', allowedRoles: [], allowedUserIds: []});
+      setProjectStageAccess(globalSettings.projectStageAccess || ({} as Record<ProjectStatusType, UserRole[]>));
 
       setAllUsers(fetchedUsersDb.filter(u => u.role !== 'SYSTEM_ADMIN')); // For notification targeting and FCM token list
       setAllTargetableUsersForExpensePerms(fetchedUsersDb.filter(u => u.role !== 'SYSTEM_ADMIN')); // For expense perm specific user picker
@@ -231,6 +238,30 @@ export default function CrmTargetSettingsPage() {
     setIsSubmittingExpensePerms(false);
   };
 
+  const handleProjectStageAccessChange = (stage: ProjectStatusType, role: UserRole, checked: boolean | "indeterminate") => {
+    setProjectStageAccess(prev => {
+      const newPermissions = { ...prev };
+      const currentRolesForStage = new Set(newPermissions[stage] || []);
+      if (checked) {
+        currentRolesForStage.add(role);
+      } else {
+        currentRolesForStage.delete(role);
+      }
+      newPermissions[stage] = Array.from(currentRolesForStage);
+      return newPermissions;
+    });
+  };
+
+  const handleSaveProjectStageAccess = async () => {
+    setIsSubmittingProjectStageAccess(true);
+    const result = await updateProjectStageAccessAction(projectStageAccess);
+    if (result.success) {
+      toast({ title: "Settings Updated", description: "Project stage access permissions saved successfully." });
+    } else {
+      toast({ title: "Update Failed", description: result.error || "Could not save project stage access permissions.", variant: "destructive" });
+    }
+    setIsSubmittingProjectStageAccess(false);
+  };
 
   const handleNotificationRoleCheckboxChange = (role: UserRole, checked: boolean | "indeterminate") => {
     setSelectedNotificationRoles(prev => {
@@ -325,7 +356,7 @@ export default function CrmTargetSettingsPage() {
         <div>
           <h1 className="page-title">Application Settings</h1>
           <p className="page-description">
-            Configure CRM targets, public page features, order editing, notifications, and view FCM tokens.
+            Configure global settings for CRM, permissions, projects, notifications, and more.
           </p>
         </div>
         <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
@@ -356,6 +387,64 @@ export default function CrmTargetSettingsPage() {
       </Card>
 
       <Separator className="my-8" />
+      
+      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+        <CardHeader className="border-b p-5">
+          <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Briefcase className="h-6 w-6 text-primary" />Project Stage Access</CardTitle>
+          <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which user roles can view and move projects to each Kanban stage.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="pl-6 font-semibold">Stage</TableHead>
+                  {PROJECT_STAGE_ACCESS_ROLES.map(role => (
+                    <TableHead key={role} className="text-center">{role.replace(/_/g, ' ')}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  PROJECT_STAGES.map(stage => (
+                    <TableRow key={`skel-stage-${stage}`}>
+                      <TableCell className="pl-6"><Skeleton className="h-5 w-32" /></TableCell>
+                      {PROJECT_STAGE_ACCESS_ROLES.map(role => (
+                        <TableCell key={`skel-cell-${stage}-${role}`} className="text-center"><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  PROJECT_STAGES.map(stage => (
+                    <TableRow key={stage} className="hover:bg-muted/30">
+                      <TableCell className="pl-6 font-medium">{stage}</TableCell>
+                      {PROJECT_STAGE_ACCESS_ROLES.map(role => (
+                        <TableCell key={`${stage}-${role}`} className="text-center">
+                          <Checkbox
+                            id={`perm-${stage}-${role}`}
+                            checked={projectStageAccess[stage]?.includes(role) || false}
+                            onCheckedChange={(checked) => handleProjectStageAccessChange(stage, role, checked)}
+                            disabled={isSubmittingProjectStageAccess}
+                            aria-label={`Allow ${role} for ${stage} stage`}
+                          />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+        <CardFooter className="border-t p-5 flex justify-end">
+          <Button onClick={handleSaveProjectStageAccess} disabled={isLoading || isSubmittingProjectStageAccess}>
+            {isSubmittingProjectStageAccess ? "Saving Permissions..." : "Save Stage Permissions"}
+          </Button>
+        </CardFooter>
+      </Card>
+
+      <Separator className="my-8" />
+
 
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
@@ -722,3 +811,5 @@ export default function CrmTargetSettingsPage() {
     </div>
   );
 }
+
+    

@@ -8,9 +8,10 @@ import {
   setRolesAllowedToEditOrders,
   setToastSoundUrl,
   setLeaderboardBackgroundImageUrl,
-  setExpenseLoggingPermissions // Changed from setCanUsersAddExpenses
+  setExpenseLoggingPermissions, // Changed from setCanUsersAddExpenses
+  setProjectStageAccess, // NEW
 } from "@/lib/settings-service";
-import type { UserRole, User, ExpenseLoggingPermissions } from "@/types"; // Added ExpenseLoggingPermissions
+import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType } from "@/types"; // Added ExpenseLoggingPermissions
 import { adminApp } from '@/lib/firebase-admin';
 import { getUsers as getAllUsersFromDb, getUserById } from '@/lib/user-service';
 import type { FirebaseError } from 'firebase-admin';
@@ -120,6 +121,23 @@ export async function updateExpenseLoggingPermissionsAction(permissions: Expense
     return { success: false, error: "Failed to update expense logging permissions in database." };
   } catch (error) {
     console.error("Error in updateExpenseLoggingPermissionsAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updateProjectStageAccessAction(
+  permissions: Record<ProjectStatusType, UserRole[]>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setProjectStageAccess(permissions);
+    if (success) {
+      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/projects");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update project stage access permissions in database." };
+  } catch (error) {
+    console.error("Error in updateProjectStageAccessAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
@@ -276,3 +294,5 @@ export async function sendPushNotificationAction(
     };
   }
 }
+
+    
