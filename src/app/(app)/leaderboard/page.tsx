@@ -42,10 +42,7 @@ export default function LeaderboardPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   
-  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
-      from: new Date(),
-      to: new Date(),
-  });
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
   const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Today");
 
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -53,6 +50,13 @@ export default function LeaderboardPage() {
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
 
   const [currentLeaderboardBackground, setCurrentLeaderboardBackground] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => {
+    setSelectedDateRange({
+        from: new Date(),
+        to: new Date(),
+    });
+  }, []);
 
   const calculatePerformance = useCallback((
     crmUsers: User[],
@@ -143,7 +147,7 @@ export default function LeaderboardPage() {
   }, [isAuthLoading, fetchData]);
 
   useEffect(() => {
-    if (isLoadingData || !allUsers.length || !globalSettings) return;
+    if (isLoadingData || !allUsers.length || !globalSettings || !selectedDateRange) return;
 
     const crmUsers = allUsers.filter(user => user.role === 'CRM');
 
@@ -165,7 +169,9 @@ export default function LeaderboardPage() {
     setCurrentDateRangeLabel(displayLabel);
   };
 
-  if (isAuthLoading || (isLoadingData && !performanceData.length)) {
+  const isLoadingContent = isAuthLoading || isLoadingData || !selectedDateRange;
+
+  if (isLoadingContent) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--leaderboard-bg-main-start))] to-[hsl(var(--leaderboard-bg-main-end))] text-[hsl(var(--leaderboard-text-light))] p-4 relative overflow-hidden">
 
@@ -223,11 +229,13 @@ export default function LeaderboardPage() {
           <ChevronLeft className="h-6 w-6" />
         </Link>
         <h1 className="text-lg sm:text-xl font-semibold tracking-wider text-[hsl(var(--leaderboard-text-light))]">LEADERBOARD</h1>
-        <DateRangePicker 
-          initialRange={selectedDateRange} 
-          onDateRangeChange={handleDateRangeChange}
-          className="w-auto bg-black/40 border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))] hover:bg-black/60 focus:ring-[hsl(var(--leaderboard-gold))] h-9 text-xs sm:text-sm"
-        />
+        {selectedDateRange && (
+          <DateRangePicker 
+            initialRange={selectedDateRange} 
+            onDateRangeChange={handleDateRangeChange}
+            className="w-auto bg-black/40 border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))] hover:bg-black/60 focus:ring-[hsl(var(--leaderboard-gold))] h-9 text-xs sm:text-sm"
+          />
+        )}
       </header>
 
       <LeaderboardDisplay

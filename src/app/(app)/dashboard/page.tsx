@@ -100,11 +100,7 @@ export default function DashboardPage() {
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
   const [allModels, setAllModels] = useState<ServiceModelItem[]>([]); 
   
-  const defaultDateRange: DateRange = {
-    from: subDays(new Date(), 29), 
-    to: new Date(),
-  };
-  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(defaultDateRange);
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
   const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Last 30 Days");
   const [selectedPredefinedValue, setSelectedPredefinedValue] = useState<PredefinedRange | "custom" | null>("last30Days");
   const [chartGranularity, setChartGranularity] = useState<'daily' | 'hourly'>('daily');
@@ -115,10 +111,17 @@ export default function DashboardPage() {
   const [totalPurchase, setTotalPurchase] = useState(formatCurrency(0)); 
 
   const [netValue, setNetValue] = useState(formatCurrency(0));
-  const [totalSellReturn, setTotalSellReturn] = useState(formatCurrency(0)); // Stays 0 as it's not calculated from data yet
+  const [totalSellReturn, setTotalSellReturn] = useState(formatCurrency(0));
   const [purchaseDue, setPurchaseDue] = useState(formatCurrency(0));
   const [totalPurchaseReturn, setTotalPurchaseReturn] = useState(formatCurrency(0));
   const [expense, setExpense] = useState(formatCurrency(0));
+
+  useEffect(() => {
+    setSelectedDateRange({
+      from: subDays(new Date(), 29), 
+      to: new Date(),
+    });
+  }, []);
 
   const fetchDashboardData = useCallback(async () => {
     if (!currentUser) {
@@ -163,7 +166,6 @@ export default function DashboardPage() {
       })
     );
 
-    // CRM-specific data filtering:
     if (currentUser?.role === 'CRM') {
       ordersToFilter = ordersToFilter.filter(order => order.crmUserId === currentUser.id);
     }
@@ -172,15 +174,11 @@ export default function DashboardPage() {
   }, [allOrders, selectedDateRange, currentUser]);
 
   useEffect(() => {
-    // This useEffect handles calculations specific to the currently logged-in user,
-    // especially for CRM roles due to the `filteredOrders` dependency which is CRM-aware.
-    if (isLoadingData) return;
+    if (isLoadingData || !selectedDateRange) return;
 
     let currentTotalSales = 0;
     let currentTotalAdvance = 0;
     let currentTotalPurchaseValue = 0;
-    // Add currentTotalSellReturnValue here if sell returns were tracked on orders
-    // let currentTotalSellReturnValue = 0; 
 
     filteredOrders.forEach(order => {
       if (Array.isArray(order.orderItems)) {
@@ -190,8 +188,6 @@ export default function DashboardPage() {
           if (modelDetails && typeof modelDetails.buyingPrice === 'number' && typeof item.quantity === 'number' && item.quantity > 0) {
             currentTotalPurchaseValue += (modelDetails.buyingPrice * item.quantity);
           }
-          // If sell returns were tracked, e.g., on item:
-          // currentTotalSellReturnValue += (item.returnedAmount || 0);
         });
       }
       if (Array.isArray(order.advancePayments) && order.advancePayments.length > 0) {
@@ -199,15 +195,12 @@ export default function DashboardPage() {
       } else if (order.advancePayment) { 
         currentTotalAdvance += order.advancePayment;
       }
-      // Or if sell return was on order level:
-      // currentTotalSellReturnValue += (order.totalReturnAmount || 0);
     });
     
     setTotalSales(formatCurrency(currentTotalSales));
     setInvoiceDue(formatCurrency(currentTotalSales - currentTotalAdvance));
     setTotalPurchase(formatCurrency(currentTotalPurchaseValue));
     setNetValue(formatCurrency(currentTotalSales - currentTotalPurchaseValue));
-    // setTotalSellReturn(formatCurrency(currentTotalSellReturnValue)); // This would update the sell return card
 
     if (selectedPredefinedValue === 'today' || selectedPredefinedValue === 'yesterday') {
       setChartGranularity('hourly');
@@ -351,6 +344,8 @@ export default function DashboardPage() {
     return null;
   };
 
+  const isLoadingContent = isLoadingData || !selectedDateRange;
+
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--primary))] text-primary-foreground p-6 sm:p-8 rounded-xl shadow-xl">
@@ -381,7 +376,11 @@ export default function DashboardPage() {
               <CalendarDays className="h-5 w-5 mr-2 text-primary/80" />
               <span>Filter by Date</span>
             </div>
-            <DateRangePicker initialRange={defaultDateRange} onDateRangeChange={handleDateRangeChange} />
+            {selectedDateRange ? (
+              <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={handleDateRangeChange} />
+            ) : (
+              <Skeleton className="h-10 w-full sm:w-[260px]"/>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -395,7 +394,7 @@ export default function DashboardPage() {
             icon={card.icon}
             iconColorClass={card.iconColorClass}
             circleBgClass={card.circleBgClass}
-            isLoading={card.isLoading}
+            isLoading={isLoadingContent}
           />
         ))}
       </div>
@@ -409,7 +408,7 @@ export default function DashboardPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">
-          {isLoadingData && salesChartData.length === 0 ? ( 
+          {isLoadingContent ? ( 
             <div className="flex items-center justify-center h-full">
               <Skeleton className="h-full w-full" />
             </div>
@@ -485,4 +484,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-

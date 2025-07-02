@@ -80,9 +80,12 @@ export default function FinanceManagerPage() {
   const [transactionSearchTerm, setTransactionSearchTerm] = useState('');
   const [transactionTypeFilter, setTransactionTypeFilter] = useState<string>('all');
 
-  const defaultDateRange: DateRange = { from: subDays(new Date(), 29), to: new Date() };
-  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(defaultDateRange);
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
   
+  useEffect(() => {
+    setSelectedDateRange({ from: subDays(new Date(), 29), to: new Date() });
+  }, []);
+
   const [isClient, setIsClient] = useState(false);
   useEffect(() => setIsClient(true), []);
 
@@ -322,6 +325,8 @@ export default function FinanceManagerPage() {
     );
   }
 
+  const isLoadingContent = isLoading || !selectedDateRange;
+
   return (
     <div className="space-y-6 p-1 sm:p-0">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
@@ -394,10 +399,14 @@ export default function FinanceManagerPage() {
           </Select>
         </div>
          <div className="w-full sm:w-auto grow sm:grow-0 order-3 sm:order-none">
-            <DateRangePicker 
-                initialRange={defaultDateRange} 
-                onDateRangeChange={handleDateRangeChange} 
-            />
+            {selectedDateRange ? (
+              <DateRangePicker 
+                  initialRange={selectedDateRange} 
+                  onDateRangeChange={handleDateRangeChange} 
+              />
+            ) : (
+              <Skeleton className="h-10 w-full sm:w-[260px]"/>
+            )}
         </div>
         <div className="relative w-full sm:w-auto grow sm:flex-1 order-4 sm:order-none sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -421,7 +430,7 @@ export default function FinanceManagerPage() {
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">{card.title}</p>
-                {isLoading ? (
+                {isLoadingContent ? (
                   <Skeleton className="h-8 w-32 mt-1" />
                 ) : (
                   <p className="text-2xl font-bold text-card-foreground font-mono">
@@ -448,7 +457,7 @@ export default function FinanceManagerPage() {
             </div>
           </CardHeader>
           <CardContent className="p-4 sm:p-6">
-            {isLoading ? (
+            {isLoadingContent ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}
               </div>
@@ -469,12 +478,12 @@ export default function FinanceManagerPage() {
               <div className="text-center py-10 text-muted-foreground">
                 <Banknote className="h-16 w-16 mx-auto opacity-30 mb-3" />
                 <p className="text-lg font-medium">
-                  {transactionSearchTerm || transactionTypeFilter !== 'all' || (selectedDateRange && (selectedDateRange.from !== defaultDateRange.from || selectedDateRange.to !== defaultDateRange.to))
+                  {transactionSearchTerm || transactionTypeFilter !== 'all' || (selectedDateRange)
                     ? "No transactions match your filters."
                     : "No transactions yet."}
                 </p>
                 <p className="text-sm">
-                  {transactionSearchTerm || transactionTypeFilter !== 'all' || (selectedDateRange && (selectedDateRange.from !== defaultDateRange.from || selectedDateRange.to !== defaultDateRange.to))
+                  {transactionSearchTerm || transactionTypeFilter !== 'all' || (selectedDateRange)
                     ? "Try adjusting your search or filters."
                     : (canUserAddExpense || currentUser?.role === 'SYSTEM_ADMIN' ? "Add your first transaction to get started!" : "Transaction logging may be restricted for your role.")
                   }
