@@ -55,27 +55,16 @@ export function EditTrackingLinkDialog({
   const displayableStatuses = useMemo(() => {
     if (!availableStatuses) return [];
     
-    const filtered = availableStatuses.filter(status => {
-      const isCurrentlySelected = status.id === trackingLink.currentStatus;
-      if (isCurrentlySelected) return true; 
-
-      if (status.isVisible === false) return false; 
-
-      if (currentUser.role === 'SYSTEM_ADMIN') return true; 
-
-      const hasNoRoleRestrictions = !status.allowedRoles || status.allowedRoles.length === 0;
-      const isRoleAllowed = status.allowedRoles && status.allowedRoles.includes(currentUser.role);
-      
-      return hasNoRoleRestrictions || isRoleAllowed;
-    });
-
-    if (!filtered.find(s => s.id === trackingLink.currentStatus)) {
-        const currentStatusObject = availableStatuses.find(s => s.id === trackingLink.currentStatus);
-        if (currentStatusObject) {
-            return [currentStatusObject, ...filtered].sort((a,b) => a.name.localeCompare(b.name));
-        }
+    // System Admin can see all visible statuses, plus the current one if it's hidden.
+    if (currentUser.role === 'SYSTEM_ADMIN') {
+        return availableStatuses
+          .filter(status => status.isVisible !== false || status.id === trackingLink.currentStatus)
+          .sort((a,b) => a.name.localeCompare(b.name));
     }
-    return filtered.sort((a,b) => a.name.localeCompare(b.name));
+    
+    // For other roles, this is not strictly needed as they won't see the dropdown,
+    // but it's good practice to keep it correct.
+    return availableStatuses;
 
   }, [availableStatuses, trackingLink.currentStatus, currentUser.role]);
 
@@ -97,7 +86,7 @@ export function EditTrackingLinkDialog({
     if (isPublic !== trackingLink.isPublic) {
       updates.isPublic = isPublic;
     }
-    if (currentStatusId !== trackingLink.currentStatus) {
+    if (currentStatusId !== trackingLink.currentStatus && currentUser.role === 'SYSTEM_ADMIN') {
       updates.currentStatus = currentStatusId;
       statusChanged = true;
     }
@@ -130,11 +119,6 @@ export function EditTrackingLinkDialog({
     (currentUser.role === 'CRM' && !isCrmEditingOthersOrder) ||
     (currentUser.role === 'DESIGNER_REPRESENTATIVE' && !isDrEditingUnassignedOrder);
 
-
-  const canEditStatus = 
-    (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') ||
-    (currentUser.role === 'CRM' && !isCrmEditingOthersOrder) ||
-    (currentUser.role === 'DESIGNER_REPRESENTATIVE' && !isDrEditingUnassignedOrder);
 
   const canEditVisibility = 
     (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') ||
@@ -186,44 +170,43 @@ export function EditTrackingLinkDialog({
               />
             </div>
 
-            <div className="space-y-3 p-3 bg-secondary/30 rounded-md border border-border/20">
-              <div>
-                <Label htmlFor="currentStatus">Order Status</Label>
-                 <Select 
-                  value={currentStatusId} 
-                  onValueChange={(value) => setCurrentStatusId(value)}
-                  disabled={!canEditStatus || isSubmitting || displayableStatuses.length === 0 || isCrmEditingOthersOrder || isDrEditingUnassignedOrder}
-                >
-                  <SelectTrigger id="currentStatus" className="mt-1">
-                    <SelectValue placeholder="Select order status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {displayableStatuses.map(status => (
-                      <SelectItem key={status.id} value={status.id}>{status.name}</SelectItem>
-                    ))}
-                    {displayableStatuses.length === 0 && availableStatuses.length > 0 && (
-                       <div className="p-2 text-sm text-muted-foreground text-center">No statuses available for you to assign.</div>
-                    )}
-                    {availableStatuses.length === 0 && (
-                       <div className="p-2 text-sm text-muted-foreground text-center">Loading statuses...</div>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-              {currentStatusId !== trackingLink.currentStatus && ( 
+            {currentUser.role === 'SYSTEM_ADMIN' && (
+              <div className="space-y-3 p-3 bg-secondary/30 rounded-md border border-border/20">
                 <div>
-                  <Label htmlFor="statusNotes">Status Update Notes (Optional)</Label>
-                  <Textarea
-                    id="statusNotes"
-                    placeholder="Add any relevant notes for this status change..."
-                    value={statusNotes}
-                    onChange={(e) => setStatusNotes(e.target.value)}
-                    className="mt-1 min-h-[80px]"
-                    disabled={!canEditStatus || isSubmitting || isCrmEditingOthersOrder || isDrEditingUnassignedOrder}
-                  />
+                  <Label htmlFor="currentStatus">Order Status</Label>
+                   <Select 
+                    value={currentStatusId} 
+                    onValueChange={(value) => setCurrentStatusId(value)}
+                    disabled={isSubmitting || displayableStatuses.length === 0}
+                  >
+                    <SelectTrigger id="currentStatus" className="mt-1">
+                      <SelectValue placeholder="Select order status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {displayableStatuses.map(status => (
+                        <SelectItem key={status.id} value={status.id}>{status.name}</SelectItem>
+                      ))}
+                      {availableStatuses.length === 0 && (
+                         <div className="p-2 text-sm text-muted-foreground text-center">Loading statuses...</div>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
-            </div>
+                {currentStatusId !== trackingLink.currentStatus && ( 
+                  <div>
+                    <Label htmlFor="statusNotes">Status Update Notes (Optional)</Label>
+                    <Textarea
+                      id="statusNotes"
+                      placeholder="Add any relevant notes for this status change..."
+                      value={statusNotes}
+                      onChange={(e) => setStatusNotes(e.target.value)}
+                      className="mt-1 min-h-[80px]"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter className="pt-4 border-t mt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
