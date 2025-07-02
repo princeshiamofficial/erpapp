@@ -6,14 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem, AdvancePaymentRecord } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Label } from '@/components/ui/label';
 import { getStatusById, getContrastTextColor } from '@/lib/status-service';
-import { submitCommentAction, submitClientReplyAction, toggleOrderCommentReactionAction, submitReplyAction } from './actions';
+import { submitCommentAction, submitClientReplyAction, toggleOrderCommentReactionAction, submitReplyAction, getPackzyDeliveryStatusAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/auth-context';
@@ -81,6 +81,9 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const invoiceRef = useRef<HTMLDivElement>(null);
   const barcodeRef = useRef<SVGSVGElement>(null);
 
+  const [packzyStatus, setPackzyStatus] = useState<string | null>(null);
+  const [isLoadingPackzyStatus, setIsLoadingPackzyStatus] = useState(false);
+
   useEffect(() => {
     if (barcodeRef.current && order.id) {
       try {
@@ -106,6 +109,22 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
       localStorage.setItem('CLIENT_REACTOR_ID_KEY', storedReactorId);
     }
     setClientReactorId(storedReactorId);
+
+    const fetchPackzyStatus = async () => {
+      if (initialOrder.packzyTrackingCode) {
+        setIsLoadingPackzyStatus(true);
+        const result = await getPackzyDeliveryStatusAction(initialOrder.packzyTrackingCode);
+        if ('delivery_status' in result) {
+          setPackzyStatus(result.delivery_status);
+        } else {
+          console.warn("Could not fetch Packzy status:", result.error);
+          setPackzyStatus('unavailable'); // To prevent re-fetching on error
+        }
+        setIsLoadingPackzyStatus(false);
+      }
+    };
+    fetchPackzyStatus();
+
   }, [initialOrder]);
 
   const getReactorId = useCallback(() => {
@@ -405,6 +424,24 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <h3 className="text-lg font-semibold mb-1 text-foreground flex items-center">{getStatusIcon(order.currentStatus, "h-7 w-7")}Current Status: <span className="ml-2 text-2xl font-bold" style={{ color: currentStatusInfo.color }}>{currentStatusInfo.name}</span></h3>
             <div className="text-xs text-muted-foreground mt-1.5 ml-[40px] sm:ml-[44px]">{isClient ? (lastStatusUpdateEntry ? `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp, true)} by ${lastStatusUpdateEntry.changedByUserName}` : "Status pending.") : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}</div>
           </div>
+          {order.packzyTrackingCode && (
+            <div className="mt-4 pt-4 border-t border-border/30">
+              <h3 className="text-lg font-semibold mb-1 text-foreground flex items-center">
+                <Truck className="h-7 w-7 mr-2 text-primary/80"/>
+                Courier Status (Packzy)
+              </h3>
+              <div className="ml-[40px] sm:ml-[44px]">
+              {isLoadingPackzyStatus ? (
+                <Skeleton className="h-7 w-32" />
+              ) : packzyStatus && packzyStatus !== 'unavailable' ? (
+                <p className="text-2xl font-bold text-green-600 capitalize">{packzyStatus}</p>
+              ) : (
+                <p className="text-muted-foreground">Could not retrieve courier status.</p>
+              )}
+              <p className="text-xs text-muted-foreground mt-0.5">Tracking Code: {order.packzyTrackingCode}</p>
+              </div>
+            </div>
+          )}
         </CardHeader>
       </div>
 

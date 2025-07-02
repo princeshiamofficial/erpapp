@@ -9,6 +9,7 @@ import JsBarcode from 'jsbarcode';
 import type { CustomStatus, TrackingLink, User, AdvancePaymentRecord } from "@/types";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from '@/components/ui/skeleton';
+import { getPackzyDeliveryStatusAction } from '../actions';
 
 const formatCurrency = (value: number | null | undefined): string => {
   if (value === null || value === undefined) return 'N/A';
@@ -37,6 +38,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
   const [isClient, setIsClient] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
   const barcodeRef = useRef<SVGSVGElement>(null);
+  const [packzyDeliveryStatus, setPackzyDeliveryStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (barcodeRef.current && order.id) {
@@ -57,6 +59,19 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
   useEffect(() => {
     setIsClient(true);
     setOrder(initialOrder);
+
+    const fetchPackzyStatus = async () => {
+      if (initialOrder.packzyTrackingCode) {
+        const result = await getPackzyDeliveryStatusAction(initialOrder.packzyTrackingCode);
+        if ('delivery_status' in result) {
+          setPackzyDeliveryStatus(result.delivery_status);
+        } else {
+          console.warn("Could not fetch Packzy status for invoice:", result.error);
+        }
+      }
+    };
+    fetchPackzyStatus();
+
   }, [initialOrder]);
   
   const lastEditedByEntry = order.updatedAt && order.updatedByUserName ? { timestamp: order.updatedAt, changedByUserName: order.updatedByUserName } : null;
@@ -83,7 +98,10 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
   }, [order]);
 
   const totalAdvancePaid = allAdvancePaymentRecords.reduce((sum, record) => sum + record.amount, 0);
-  const amountDue = netPayable - totalAdvancePaid;
+
+  const isDeliveredByPackzy = packzyDeliveryStatus === 'delivered';
+  const amountDue = isDeliveredByPackzy ? 0 : (netPayable - totalAdvancePaid);
+  const showPaidBadge = (orderSubtotal > 0 && amountDue <= 0.01) || isDeliveredByPackzy;
 
   return (
     <div ref={invoiceRef} className="max-w-4xl mx-auto p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl print:shadow-none print:border-none print:p-4">
@@ -160,8 +178,8 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
           <div className="flex justify-between mb-1"><span className="text-md text-muted-foreground">Order Items Total:</span><span className="text-md font-medium text-foreground">{formatCurrency(orderSubtotal)}</span></div>
           {effectiveDiscount > 0 && (<div className="flex justify-between mb-1"><span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500"/>Special Client Discount:</span><span className="text-md font-medium text-red-500">- {formatCurrency(effectiveDiscount)}</span></div>)}
           <div className="flex justify-between mb-2 pt-1 border-t border-dashed border-border/40"><span className="text-md font-semibold text-foreground">Net Payable:</span><span className="text-md font-bold text-foreground">{formatCurrency(netPayable)}</span></div>
-          {totalAdvancePaid > 0 && (<div className="flex justify-between mb-2"><span className="text-md text-muted-foreground">Total Advance Paid:</span><span className="text-md text-foreground">{formatCurrency(totalAdvancePaid)}</span></div>)}
-          {orderSubtotal > 0 && amountDue <= 0.01 ? (<div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end"><div className="absolute -left-8 -top-4 sm:-left-12 sm:-top-6 transform -rotate-[15deg] border-4 border-green-500 text-green-500 font-bold uppercase text-3xl sm:text-4xl px-3 py-1 rounded-md shadow-lg bg-background/80 dark:bg-card/80 backdrop-blur-sm flex items-center gap-2"><CheckCircle className="h-8 w-8"/>PAID</div></div>)
+          {totalAdvancePaid > 0 && !isDeliveredByPackzy && (<div className="flex justify-between mb-2"><span className="text-md text-muted-foreground">Total Advance Paid:</span><span className="text-md text-foreground">{formatCurrency(totalAdvancePaid)}</span></div>)}
+          {showPaidBadge ? (<div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end"><div className="absolute -left-8 -top-4 sm:-left-12 sm:-top-6 transform -rotate-[15deg] border-4 border-green-500 text-green-500 font-bold uppercase text-3xl sm:text-4xl px-3 py-1 rounded-md shadow-lg bg-background/80 dark:bg-card/80 backdrop-blur-sm flex items-center gap-2"><CheckCircle className="h-8 w-8"/>PAID</div></div>)
           : (orderSubtotal > 0 && amountDue > 0.01) && (<><Separator className="my-2 bg-border/50" /><div className="flex justify-between"><span className="text-lg font-bold text-primary">Amount Due:</span><span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span></div></>)}
         </div>
       </div>
