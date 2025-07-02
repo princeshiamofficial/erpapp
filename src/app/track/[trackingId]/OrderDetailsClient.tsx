@@ -420,10 +420,14 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               </div>
             </div>
           </div>
-           <div className="mt-4 pt-4 border-t border-border/30">
-            <h3 className="text-lg font-semibold mb-1 text-foreground flex items-center">{getStatusIcon(order.currentStatus, "h-7 w-7")}Current Status: <span className="ml-2 text-2xl font-bold" style={{ color: currentStatusInfo.color }}>{currentStatusInfo.name}</span></h3>
-            <div className="text-xs text-muted-foreground mt-1.5 ml-[40px] sm:ml-[44px]">{isClient ? (lastStatusUpdateEntry ? `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp, true)} by ${lastStatusUpdateEntry.changedByUserName}` : "Status pending.") : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}</div>
-          </div>
+           
+           {(!packzyStatus || packzyStatus === 'unavailable') && (
+            <div className="mt-4 pt-4 border-t border-border/30">
+              <h3 className="text-lg font-semibold mb-1 text-foreground flex items-center">{getStatusIcon(order.currentStatus, "h-7 w-7")}Current Status: <span className="ml-2 text-2xl font-bold" style={{ color: currentStatusInfo.color }}>{currentStatusInfo.name}</span></h3>
+              <div className="text-xs text-muted-foreground mt-1.5 ml-[40px] sm:ml-[44px]">{isClient ? (lastStatusUpdateEntry ? `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp, true)} by ${lastStatusUpdateEntry.changedByUserName}` : "Status pending.") : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}</div>
+            </div>
+           )}
+
           {order.packzyTrackingCode && (
             <div className="mt-4 pt-4 border-t border-border/30">
               <h3 className="text-lg font-semibold mb-1 text-foreground flex items-center">
