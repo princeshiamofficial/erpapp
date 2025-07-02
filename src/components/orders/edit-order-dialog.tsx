@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -20,11 +21,11 @@ import { useToast } from '@/hooks/use-toast';
 import { updateOrderAction } from '@/app/(app)/orders/actions';
 import { getPaymentMethods, getModels, getLaminations } from '@/lib/service-options-service';
 import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from '@/lib/utils';
-import { v4 as uuidv4 } from 'uuid';
 import { Separator } from '@/components/ui/separator';
 import { format, parseISO } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -350,7 +351,26 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
               </div>
               <div className="space-y-1"><Label htmlFor="edit-address">Address *</Label><Textarea id="edit-address" value={address} onChange={(e) => setAddress(e.target.value)} required disabled={isSubmitting} /></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1"><Label htmlFor="edit-phoneNumber">Phone Number *</Label><Input id="edit-phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required disabled={isSubmitting} /></div>
+                <div className="space-y-1">
+                  <Label htmlFor="edit-phoneNumber">Phone Number *</Label>
+                  <Input
+                    id="edit-phoneNumber"
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => {
+                      const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                      if (numericValue.length <= 11) {
+                        setPhoneNumber(numericValue);
+                      }
+                    }}
+                    required
+                    disabled={isSubmitting}
+                    pattern="0\d{10}"
+                    maxLength={11}
+                    title="Phone number must be an 11-digit number starting with 0."
+                    placeholder="01xxxxxxxxx"
+                  />
+                </div>
                 <div className="space-y-1"><Label htmlFor="edit-orderDate">Date Created *</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal",!createdAt && "text-muted-foreground")} disabled={isSubmitting}><CalendarDays className="mr-2 h-4 w-4" />{createdAt ? formatDateForDialogInput(createdAt) : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={createdAt} onSelect={setCreatedAt} initialFocus disabled={isSubmitting} /></PopoverContent></Popover></div>
               </div>
               <div className="space-y-1"><Label htmlFor="edit-orderNotes">Order Notes (Optional)</Label><Textarea id="edit-orderNotes" value={orderNotes} onChange={e => setOrderNotes(e.target.value)} rows={3} disabled={isSubmitting}/></div>

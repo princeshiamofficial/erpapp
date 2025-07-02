@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -89,7 +90,22 @@ export function AddEmployeeDialog({ onEmployeeAdded, children }: AddEmployeeDial
           </div>
           <div className="space-y-1">
             <Label htmlFor="mobileNo">Mobile No</Label>
-            <Input id="mobileNo" value={mobileNo} onChange={e => setMobileNo(e.target.value)} required />
+            <Input
+              id="mobileNo"
+              type="tel"
+              value={mobileNo}
+              onChange={(e) => {
+                const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                if (numericValue.length <= 11) {
+                  setMobileNo(numericValue);
+                }
+              }}
+              required
+              pattern="0\d{10}"
+              maxLength={11}
+              title="Phone number must be an 11-digit number starting with 0."
+              placeholder="01xxxxxxxxx"
+            />
           </div>
           <div className="space-y-1">
             <Label htmlFor="designation">Designation</Label>

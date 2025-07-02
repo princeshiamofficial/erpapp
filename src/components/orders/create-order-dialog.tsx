@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -448,7 +449,22 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="phoneNumber">Phone Number *</Label>
-                <Input id="phoneNumber" type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} required />
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => {
+                    const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                    if (numericValue.length <= 11) {
+                      setPhoneNumber(numericValue);
+                    }
+                  }}
+                  required
+                  pattern="0\d{10}"
+                  maxLength={11}
+                  title="Phone number must be an 11-digit number starting with 0."
+                  placeholder="01xxxxxxxxx"
+                />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="orderDate">Order Date *</Label>

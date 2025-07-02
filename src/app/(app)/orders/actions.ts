@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -45,7 +46,14 @@ export async function createOrderAction(
     if (!data.jobId?.trim()) return { error: "Job ID is required." };
     if (!data.companyName?.trim()) return { error: "Company Name is required." };
     if (!data.address?.trim()) return { error: "Address is required." };
-    if (!data.phoneNumber?.trim()) return { error: "Phone Number is required." };
+    
+    const phoneNumber = data.phoneNumber?.trim();
+    if (!phoneNumber) return { error: "Phone Number is required." };
+    const phoneRegex = /^0\d{10}$/;
+    if (!phoneRegex.test(phoneNumber)) {
+      return { error: "Invalid phone number. It must be an 11-digit number starting with 0." };
+    }
+
     if (!data.initialStatusId) return { error: "Initial status ID is required." };
     if (!data.createdAt) return { error: "Order creation date is required." };
     try {
@@ -119,7 +127,7 @@ export async function createOrderAction(
     const newOrderDataForService = {
       companyName: finalCombinedCompanyName,
       address: data.address.trim(),
-      phoneNumber: data.phoneNumber.trim(),
+      phoneNumber: phoneNumber,
       createdAt: data.createdAt,
       orderItems: processedOrderItems,
       advancePaymentAmount: parsedAdvancePaymentAmount, 
@@ -206,7 +214,17 @@ export async function updateOrderAction(
 
     if (updates.companyName !== undefined && !updates.companyName.trim()) return { success: false, error: "Company Name (Job ID • Name) cannot be empty."};
     if (updates.address !== undefined && !updates.address.trim()) return { success: false, error: "Address cannot be empty."};
-    if (updates.phoneNumber !== undefined && !updates.phoneNumber.trim()) return { success: false, error: "Phone Number cannot be empty."};
+    
+    if (updates.phoneNumber !== undefined) {
+      const phoneNumber = updates.phoneNumber.trim();
+      if (!phoneNumber) return { success: false, error: "Phone Number cannot be empty." };
+      const phoneRegex = /^0\d{10}$/;
+      if (!phoneRegex.test(phoneNumber)) {
+        return { success: false, error: "Invalid phone number. It must be an 11-digit number starting with 0." };
+      }
+      finalUpdates.phoneNumber = phoneNumber;
+    }
+    
     if (updates.orderNotes !== undefined) finalUpdates.orderNotes = updates.orderNotes?.trim() || null;
 
     if (updates.orderItems) {
