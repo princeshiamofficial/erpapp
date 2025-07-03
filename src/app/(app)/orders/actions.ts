@@ -28,9 +28,9 @@ interface CreateOrderDialogFormData {
   }>;
   advancePaymentAmount?: string | null;
   advancePaymentMethod?: string | null;
-  specialClientDiscount?: number | null; // Changed from string | null
-  // paymentMethod field on root is now advancePaymentMethod
-  customPaymentMethodText?: string; // For 'Other' advance payment method
+  specialClientDiscount?: number | null;
+  shippingCharge?: string | null; // Added
+  customPaymentMethodText?: string; 
   orderNotes?: string | null;
   initialStatusId: string;
 }
@@ -86,8 +86,6 @@ export async function createOrderAction(
       orderItemsTotal += Number(item.lineItemTotalPrice);
     }
 
-    // data.specialClientDiscount is now number | null, directly use it.
-    // Removed the block that parsed data.specialClientDiscount as a string.
     if (data.specialClientDiscount !== null && data.specialClientDiscount < 0) {
       return { error: "Special Client Discount must be a non-negative number." };
     }
@@ -102,10 +100,16 @@ export async function createOrderAction(
       if (isNaN(numAdvancePayment) || numAdvancePayment < 0) return { error: "Advance Payment Amount must be a non-negative number." };
       parsedAdvancePaymentAmount = numAdvancePayment;
     }
+    
+    const parsedShippingCharge = parseFloat(data.shippingCharge || '0');
+    if (isNaN(parsedShippingCharge) || parsedShippingCharge < 0) {
+      return { error: "Shipping Charge must be a non-negative number." };
+    }
 
     const netPayable = orderItemsTotal - (data.specialClientDiscount || 0);
-    if (parsedAdvancePaymentAmount !== null && parsedAdvancePaymentAmount > netPayable && netPayable > 0) {
-        return { error: `Advance payment (${parsedAdvancePaymentAmount}) cannot exceed net payable amount (${netPayable}).` };
+    const grandTotal = netPayable + parsedShippingCharge;
+    if (parsedAdvancePaymentAmount !== null && parsedAdvancePaymentAmount > grandTotal && grandTotal > 0) {
+        return { error: `Advance payment (${parsedAdvancePaymentAmount}) cannot exceed grand total amount (${grandTotal}).` };
     }
 
     let finalAdvancePaymentMethod: string | null = null;
@@ -132,7 +136,8 @@ export async function createOrderAction(
       orderItems: processedOrderItems,
       advancePaymentAmount: parsedAdvancePaymentAmount, 
       advancePaymentMethod: finalAdvancePaymentMethod,
-      specialClientDiscount: data.specialClientDiscount, // data.specialClientDiscount is already number | null
+      specialClientDiscount: data.specialClientDiscount,
+      shippingCharge: parsedShippingCharge > 0 ? parsedShippingCharge : null,
       orderNotes: data.orderNotes?.trim() || null,
       crmUserId: currentUser.id,
       crmUserName: currentUser.name,
@@ -176,7 +181,6 @@ export async function updateOrderAction(
     if (!existingOrder) return { success: false, error: `Order with ID ${orderId} not found.` };
 
     const finalUpdates: Partial<TrackingLink> = { ...updates };
-    // Remove fields specific to adding a new advance payment from the main updates object
     delete finalUpdates.newAdvancePaymentAmount;
     delete finalUpdates.newAdvancePaymentMethod;
     delete finalUpdates.newAdvancePaymentNotes;
@@ -191,6 +195,15 @@ export async function updateOrderAction(
         return { success: false, error: "Invalid Date Created format." };
       }
     }
+    
+    if (updates.shippingCharge !== undefined) {
+      const charge = Number(updates.shippingCharge);
+      if (isNaN(charge) || charge < 0) {
+        return { success: false, error: "Shipping charge must be a non-negative number." };
+      }
+      finalUpdates.shippingCharge = charge > 0 ? charge : null;
+    }
+
 
     if (updates.specialClientDiscountString !== undefined) {
         if (updates.specialClientDiscountString && updates.specialClientDiscountString.trim() !== '') {
@@ -256,13 +269,15 @@ export async function updateOrderAction(
         };
         finalUpdates.advancePayments = [...(existingOrder.advancePayments || []), newAdvanceRecord];
 
-        // Ensure advance payment does not exceed net payable after this new payment
         const totalAdvanceAfterNew = (finalUpdates.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
         const currentNetPayable = currentOrderItemsTotal - (finalUpdates.specialClientDiscount ?? existingOrder.specialClientDiscount ?? 0);
-        if (totalAdvanceAfterNew > currentNetPayable && currentNetPayable > 0) {
-           return { success: false, error: `Total advance payments (${totalAdvanceAfterNew}) cannot exceed net payable amount (${currentNetPayable}).` };
+        const currentShippingCharge = finalUpdates.shippingCharge ?? existingOrder.shippingCharge ?? 0;
+        const currentGrandTotal = currentNetPayable + currentShippingCharge;
+
+        if (totalAdvanceAfterNew > currentGrandTotal && currentGrandTotal > 0) {
+           return { success: false, error: `Total advance payments (${totalAdvanceAfterNew}) cannot exceed grand total amount (${currentGrandTotal}).` };
         }
-    } else if (updates.advancePayments) { // If the whole array is being passed (e.g. initial conversion)
+    } else if (updates.advancePayments) {
         finalUpdates.advancePayments = updates.advancePayments;
     }
 
@@ -300,7 +315,7 @@ export async function updateOrderAction(
 export async function assignDrToOrderAction(
   orderId: string,
   designerRepresentativeId: string,
-  designerRepresentativeName: string, // Keep for log message consistency, but will use fresh data
+  designerRepresentativeName: string,
   actingUser: User,
   readyForDesignStatusId: string
 ): Promise<TrackingLink | { error: string }> {
@@ -317,7 +332,6 @@ export async function assignDrToOrderAction(
       return { error: `Order ${orderId} not found.` };
     }
     
-    // Fetch full DR user data to get avatar and ensure name is fresh
     const designerRepUser = await getUserFromDb(designerRepresentativeId);
     if (!designerRepUser) {
         return { error: `Designer Representative with ID ${designerRepresentativeId} not found.` };
@@ -337,7 +351,7 @@ export async function assignDrToOrderAction(
     const updatedOrderData: Partial<TrackingLink> = {
       designerRepresentativeId,
       designerRepresentativeName: freshDrName,
-      designerRepresentativeAvatarUrl: freshDrAvatarUrl, // Add avatar url
+      designerRepresentativeAvatarUrl: freshDrAvatarUrl,
       currentStatus: readyForDesignStatusId,
       statusHistory: Array.isArray(currentOrder.statusHistory)
         ? [...currentOrder.statusHistory, logEntry]
@@ -352,7 +366,6 @@ export async function assignDrToOrderAction(
       return { error: "Failed to update order with DR assignment." };
     }
 
-    // --- New Project Sync Logic ---
     const projectDocRef = doc(db, 'projects', orderId);
     try {
         const projectDocSnap = await getDoc(projectDocRef);
@@ -362,7 +375,7 @@ export async function assignDrToOrderAction(
                 designerRepresentativeId: designerRepresentativeId,
                 designerRepresentativeName: freshDrName,
                 designerRepresentativeAvatarUrl: freshDrAvatarUrl,
-                status: 'On Design', // Move to 'On Design' stage
+                status: 'On Design',
                 onDesignAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
             };
@@ -371,7 +384,6 @@ export async function assignDrToOrderAction(
     } catch (projectError) {
         console.warn(`[assignDrToOrderAction] Failed to sync DR assignment to project board for order ${orderId}. This is not a critical error if project was not yet persistent. Error:`, projectError);
     }
-    // --- End Project Sync Logic ---
 
     revalidatePath("/(app)/orders");
     revalidatePath("/(app)/dashboard");
@@ -380,7 +392,7 @@ export async function assignDrToOrderAction(
     revalidatePath("/(app)/deliveries/monthly");
     revalidatePath("/(app)/deliveries/weekly");
     revalidatePath("/(app)/orders/monthly");
-    revalidatePath("/(app)/projects"); // Revalidate projects page
+    revalidatePath("/(app)/projects");
 
     const updatedOrder = await getOrderById(orderId);
     if (!updatedOrder) {

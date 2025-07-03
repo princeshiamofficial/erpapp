@@ -263,9 +263,10 @@ export const addOrder = async (orderData: {
   address: string;
   phoneNumber: string;
   orderItems: OrderItem[];
-  advancePaymentAmount?: number | null; // Changed from advancePayment
+  advancePaymentAmount?: number | null;
   specialClientDiscount?: number | null;
-  advancePaymentMethod?: string | null; // New: specific for the initial advance
+  shippingCharge?: number | null; // Added
+  advancePaymentMethod?: string | null;
   orderNotes?: string | null;
   initialStatusId: string;
   crmUserId: string;
@@ -339,6 +340,7 @@ export const addOrder = async (orderData: {
       phoneNumber: orderData.phoneNumber,
       orderItems: orderData.orderItems,
       specialClientDiscount: orderData.specialClientDiscount === undefined ? null : orderData.specialClientDiscount,
+      shippingCharge: orderData.shippingCharge === undefined ? null : orderData.shippingCharge,
       orderNotes: orderData.orderNotes || null,
       crmUserId: orderData.crmUserId,
       crmUserName: orderData.crmUserName,
@@ -354,8 +356,8 @@ export const addOrder = async (orderData: {
       comments: [],
       viewCount: 0,
       advancePayments: initialAdvancePayments,
-      advancePayment: null, // Legacy field
-      paymentMethod: null, // Legacy field
+      advancePayment: null, 
+      paymentMethod: null, 
       packzyConsignmentId: null,
       packzyTrackingCode: null,
     };
@@ -378,7 +380,7 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     for (const key in updates) {
       if (Object.prototype.hasOwnProperty.call(updates, key)) {
         const value = updates[key as keyof TrackingLink];
-        if (key === 'specialClientDiscount') {
+        if (key === 'specialClientDiscount' || key === 'shippingCharge') {
           sanitizedUpdates[key] = (value === undefined || value === '' || isNaN(Number(value))) ? null : Number(value);
         } else if (key === 'createdAt' && typeof value === 'string') {
           try {
@@ -390,8 +392,6 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
         } else if (key === 'advancePayments' && Array.isArray(value)) {
             sanitizedUpdates[key] = value; // Store the whole array
         } else if (key === 'advancePayment' || key === 'paymentMethod') {
-            // Explicitly ignore updates to old advancePayment/paymentMethod fields
-            // New advances are handled via advancePayments array
             continue;
         }
         else {
