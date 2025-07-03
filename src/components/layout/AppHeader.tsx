@@ -1,6 +1,7 @@
 
 "use client";
 
+import React, { useState } from 'react';
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { UserNav } from "./UserNav";
 import Link from "next/link";
@@ -8,8 +9,49 @@ import { Logo } from '@/components/layout/Logo';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { settleAllDeliveredOrdersAction } from '@/app/(app)/dashboard/actions';
+import { cn } from '@/lib/utils';
+
 
 export function AppHeader() {
+  const [isSyncing, setIsSyncing] = useState(false);
+  const { toast } = useToast();
+
+  const handleSyncClick = async () => {
+    setIsSyncing(true);
+    toast({
+      title: "Syncing Data...",
+      description: "Checking for delivered orders with due balances to settle.",
+    });
+
+    const result = await settleAllDeliveredOrdersAction();
+
+    if (result.success) {
+      if (result.settledCount > 0) {
+        toast({
+          title: "Sync Complete",
+          description: `Successfully settled ${result.settledCount} delivered order(s). Reloading data.`,
+        });
+        // Short delay to allow toast to be seen before reload
+        setTimeout(() => window.location.reload(), 1500);
+      } else {
+        toast({
+          title: "Sync Complete",
+          description: "No delivered orders with due balances found.",
+        });
+        setIsSyncing(false);
+      }
+    } else {
+      toast({
+        title: "Sync Failed",
+        description: result.error || "An unexpected error occurred.",
+        variant: "destructive",
+      });
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/90 backdrop-blur-lg supports-[backdrop-filter]:bg-background/75 shadow-sm print:hidden">
       <div className="container flex h-[4.5rem] items-center justify-between max-w-full px-4 sm:px-6 lg:px-8">
@@ -30,9 +72,10 @@ export function AppHeader() {
             size="icon"
             className="text-foreground hover:bg-accent hover:text-accent-foreground h-10 w-10"
             title="Sync Data"
-            onClick={() => window.location.reload()}
+            onClick={handleSyncClick}
+            disabled={isSyncing}
           >
-            <RefreshCw className="h-5 w-5" />
+            <RefreshCw className={cn("h-5 w-5", isSyncing && "animate-spin")} />
             <span className="sr-only">Sync Data</span>
           </Button>
           <UserNav />
