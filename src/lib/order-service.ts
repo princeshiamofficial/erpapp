@@ -2,9 +2,9 @@
 
 import { db } from './firebase';
 import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, orderBy, writeBatch, limit, where, deleteDoc as deleteFirestoreDoc, runTransaction } from 'firebase/firestore';
-import type { TrackingLink, Comment, OrderLogEntry, CustomStatus, UserRole, OrderItem, AdvancePaymentRecord } from '@/types';
+import type { TrackingLink, Comment, OrderLogEntry, CustomStatus, UserRole, OrderItem, AdvancePaymentRecord, User } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { getStatuses, READY_FOR_DESIGN_STATUS_ID } from './status-service';
+import { getStatuses, READY_FOR_DESIGN_STATUS_ID, DELIVERED_STATUS_ID } from './status-service';
 import { format, parseISO } from 'date-fns';
 
 const ORDERS_COLLECTION = 'orders';
@@ -192,6 +192,23 @@ export const getOrderById = async (id: string): Promise<TrackingLink | undefined
   }
 };
 
+export const getOrderByTrackingCode = async (trackingCode: string): Promise<TrackingLink | null> => {
+  if (!trackingCode) return null;
+  const ordersRef = collection(db, ORDERS_COLLECTION);
+  const q = query(ordersRef, where("packzyTrackingCode", "==", trackingCode), limit(1));
+  try {
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const orderDoc = querySnapshot.docs[0];
+      return { ...orderDoc.data(), id: orderDoc.id } as TrackingLink;
+    }
+    return null;
+  } catch (error) {
+    console.error(`Error fetching order by tracking code "${trackingCode}":`, error);
+    return null;
+  }
+};
+
 export const addOrder = async (orderData: {
   companyName: string;
   address: string;
@@ -364,6 +381,79 @@ export const deleteOrder = async (orderId: string): Promise<boolean> => {
     return false;
   }
 };
+
+export const autoSettleOrderIfDelivered = async (
+  orderId: string,
+  settlementReason: string,
+  actingUser: { id: string; name: string }
+): Promise<boolean> => {
+  try {
+    const order = await getOrderById(orderId);
+    if (!order) {
+      console.warn(`[autoSettleOrderIfDelivered] Order ${orderId} not found. Cannot settle.`);
+      return false;
+    }
+
+    const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+    const effectiveDiscount = order.specialClientDiscount || 0;
+    const netPayable = orderSubtotal - effectiveDiscount;
+    const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
+    const dueAmount = netPayable - totalAdvancePaid;
+
+    const updates: Partial<TrackingLink> = {};
+    const logEntriesToAdd: OrderLogEntry[] = [];
+    let needsUpdate = false;
+
+    // Settle due amount if necessary
+    if (dueAmount > 0.01) { // Use a small epsilon for floating point issues
+      console.log(`[autoSettleOrderIfDelivered] Order ${orderId} has a due amount of ${dueAmount}. Auto-settling.`);
+      const settlementRecord: AdvancePaymentRecord = {
+        id: uuidv4(),
+        amount: dueAmount,
+        date: new Date().toISOString(),
+        paymentMethod: "System Auto-Settled",
+        notes: settlementReason,
+        recordedByUserId: actingUser.id,
+        recordedByUserName: actingUser.name,
+      };
+      updates.advancePayments = [...(order.advancePayments || []), settlementRecord];
+      needsUpdate = true;
+    }
+
+    // Ensure status is 'Delivered'
+    if (order.currentStatus !== DELIVERED_STATUS_ID) {
+      console.log(`[autoSettleOrderIfDelivered] Order ${orderId} status is not 'Delivered'. Updating status.`);
+      updates.currentStatus = DELIVERED_STATUS_ID;
+      const newStatusLogEntry: OrderLogEntry = {
+        id: uuidv4(),
+        timestamp: new Date().toISOString(),
+        status: DELIVERED_STATUS_ID,
+        changedByUserId: actingUser.id,
+        changedByUserName: actingUser.name,
+        notes: settlementReason,
+      };
+      logEntriesToAdd.push(newStatusLogEntry);
+      needsUpdate = true;
+    }
+    
+    if (needsUpdate) {
+      updates.statusHistory = [...order.statusHistory, ...logEntriesToAdd];
+      updates.updatedAt = new Date().toISOString();
+      updates.updatedByUserId = actingUser.id;
+      updates.updatedByUserName = actingUser.name;
+      await updateOrder(orderId, updates);
+      console.log(`[autoSettleOrderIfDelivered] Order ${orderId} successfully processed.`);
+    } else {
+      console.log(`[autoSettleOrderIfDelivered] Order ${orderId} already settled and in 'Delivered' state. No action taken.`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error(`[autoSettleOrderIfDelivered] Error settling order ${orderId}:`, error);
+    return false;
+  }
+};
+
 
 export const addCommentToOrder = async (orderId: string, commentData: Omit<Comment, 'id' | 'timestamp' | 'replies' | 'likes'>): Promise<TrackingLink | undefined> => {
   try {

@@ -3,8 +3,8 @@
 
 import { revalidatePath } from "next/cache";
 import type { TrackingLink, User, OrderLogEntry, CustomStatus, UserRole } from "@/types";
-import { updateOrder, getOrderById } from "@/lib/order-service"; 
-import { getStatusById } from "@/lib/status-service"; 
+import { updateOrder, getOrderById, autoSettleOrderIfDelivered } from "@/lib/order-service"; 
+import { getStatusById, DELIVERED_STATUS_ID } from "@/lib/status-service"; 
 import { v4 as uuidv4 } from 'uuid';
 
 export async function updateTrackingLinkAction(
@@ -37,6 +37,7 @@ export async function updateTrackingLinkAction(
 
     const dataToUpdate: Partial<TrackingLink> = {};
     let newLogEntries: OrderLogEntry[] = [];
+    let statusChangedToDelivered = false;
 
     if (updates.isPublic !== undefined && updates.isPublic !== currentOrder.isPublic) {
       dataToUpdate.isPublic = updates.isPublic;
@@ -55,6 +56,9 @@ export async function updateTrackingLinkAction(
       }
 
       dataToUpdate.currentStatus = updates.currentStatus;
+      if (updates.currentStatus === DELIVERED_STATUS_ID) {
+        statusChangedToDelivered = true;
+      }
       
       const newStatusObject = await getStatusById(updates.currentStatus);
       const newStatusName = newStatusObject ? newStatusObject.name : updates.currentStatus; 
@@ -85,6 +89,10 @@ export async function updateTrackingLinkAction(
     const success = await updateOrder(orderId, dataToUpdate);
     if (!success) {
       return { error: "Failed to update tracking link in the database." };
+    }
+
+    if (statusChangedToDelivered) {
+      await autoSettleOrderIfDelivered(orderId, `System auto-settled: Status changed to '${DELIVERED_STATUS_ID}'.`, currentUser);
     }
 
     revalidatePath("/(app)/tracking-links");

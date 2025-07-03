@@ -3,7 +3,8 @@
 
 import { revalidatePath } from "next/cache";
 import type { Comment, TrackingLink, User, UserRole } from "@/types";
-import { addCommentToOrder, addReplyToComment, toggleReaction } from "@/lib/order-service"; 
+import { addCommentToOrder, addReplyToComment, toggleReaction, getOrderByTrackingCode, autoSettleOrderIfDelivered } from "@/lib/order-service"; 
+import { DELIVERED_STATUS_ID } from '@/lib/status-service';
 
 // For top-level comments from the main form (typically by client or general update)
 export async function submitCommentAction(
@@ -175,14 +176,31 @@ export async function getPackzyDeliveryStatusAction(trackingCode: string): Promi
       cache: 'no-store', // Ensure we always get the latest status
     });
 
-    const data = await response.json();
+    const responseData = await response.json();
 
-    if (data.status !== 200) {
-      console.error('Packzy API Error:', data);
-      return { error: data.message || 'Failed to fetch delivery status from Packzy.' };
+    if (responseData.status !== 200) {
+      console.error('Packzy API Error:', responseData);
+      return { error: responseData.message || 'Failed to fetch delivery status from Packzy.' };
     }
 
-    return { delivery_status: data.delivery_status };
+    if (responseData.status === 200 && responseData.delivery_status === 'delivered') {
+      try {
+        const order = await getOrderByTrackingCode(trackingCode);
+        if (order) {
+          // Trigger settlement if the conditions are met (due amount > 0 or status not yet Delivered)
+          await autoSettleOrderIfDelivered(
+            order.id,
+            "System auto-settled: Courier confirmed delivery.",
+            { id: order.crmUserId, name: order.crmUserName }
+          );
+        }
+      } catch (settleError) {
+        console.error(`[getPackzyDeliveryStatusAction] Failed to auto-settle order for tracking code ${trackingCode}:`, settleError);
+        // Don't block the return of the status, just log the error.
+      }
+    }
+    
+    return { delivery_status: responseData.delivery_status };
   } catch (error) {
     console.error('Error calling Packzy API:', error);
     return { error: 'An unexpected error occurred while fetching delivery status.' };
