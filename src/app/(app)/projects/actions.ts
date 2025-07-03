@@ -148,7 +148,7 @@ export async function transferToCourierAction(
     const { consignment } = responseData;
     
     // Update Project Status
-    const projectUpdateSuccess = await updateProjectStatusInDb(project.id, 'Courier');
+    const projectUpdateSuccess = await updateProjectStatusInDb(project.id, 'Courier', project);
     if (!projectUpdateSuccess) {
       console.error(`CRITICAL: Project ${project.id} consignment created in Packzy (ID: ${consignment.consignment_id}) but failed to update project status to 'Courier'.`);
       return { success: false, error: "Consignment created, but failed to update project status. Please check manually." };
@@ -193,3 +193,4 @@ export async function transferToCourierAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
