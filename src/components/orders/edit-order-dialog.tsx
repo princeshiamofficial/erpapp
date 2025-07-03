@@ -20,7 +20,7 @@ import type { TrackingLink, User, ServicePaymentMethodItem, OrderItem, ServiceMo
 import { useToast } from '@/hooks/use-toast';
 import { updateOrderAction } from '@/app/(app)/orders/actions';
 import { getPaymentMethods, getModels, getLaminations } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, Truck } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -71,7 +71,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const [phoneNumber, setPhoneNumber] = useState('');
   const [createdAt, setCreatedAt] = useState<Date | undefined>(undefined);
   const [specialClientDiscount, setSpecialClientDiscount] = useState<string>('');
-  const [shippingCharge, setShippingCharge] = useState<string>(''); // Added
   const [orderNotes, setOrderNotes] = useState('');
 
   const [orderItems, setOrderItems] = useState<DialogOrderItem[]>([]);
@@ -131,7 +130,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       setPhoneNumber(order.phoneNumber);
       setCreatedAt(order.createdAt ? parseISO(order.createdAt) : undefined);
       setSpecialClientDiscount(order.specialClientDiscount?.toString() || '');
-      setShippingCharge(order.shippingCharge?.toString() || '');
       setOrderNotes(order.orderNotes || '');
       setOrderItems(order.orderItems.map(item => ({ ...item, quantity: item.quantity.toString() })));
 
@@ -188,11 +186,10 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setTotalExistingAdvancePaid(currentTotalExistingAdvance);
 
     const newAdvanceNum = parseFloat(newAdvanceAmount) || 0;
-    const chargeNum = parseFloat(shippingCharge) || 0;
-    const grandTotal = currentNetPayable + chargeNum;
+    const grandTotal = currentNetPayable; // No shipping charge
 
     setAmountDue(Math.max(0, grandTotal - currentTotalExistingAdvance - newAdvanceNum));
-  }, [orderItems, specialClientDiscount, newAdvanceAmount, existingAdvancePayments, shippingCharge]);
+  }, [orderItems, specialClientDiscount, newAdvanceAmount, existingAdvancePayments]);
 
   const calculateLineItemTotal = (unitPrice: number | null, quantityStr: string): number | null => {
     if (unitPrice === null) return null;
@@ -270,7 +267,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const canSubmit = useMemo(() => {
     if (!currentUser || !currentUser.role) return false;
     const totalAdvanceAfterNew = totalExistingAdvancePaid + (parseFloat(newAdvanceAmount) || 0);
-    const grandTotal = netPayable + (parseFloat(shippingCharge) || 0);
+    const grandTotal = netPayable;
     const isAdvPaymentValid = totalAdvanceAfterNew <= grandTotal || grandTotal === 0;
     const isDiscountValid = calculatedDiscountAmount <= orderItemsTotal || orderItemsTotal === 0;
 
@@ -279,7 +276,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       !(isNewAdvanceEntered && !newAdvancePaymentMethod.trim()) &&
       !(isNewAdvanceEntered && newAdvancePaymentMethod.toLowerCase() === 'other' && !newCustomPaymentMethodText.trim()) &&
       isAdvPaymentValid && isDiscountValid;
-  }, [isSubmitting, jobIdInput, companyNameInput, address, phoneNumber, createdAt, isLoadingOptions, orderItems, isNewAdvanceEntered, newAdvancePaymentMethod, newCustomPaymentMethodText, currentUser, totalExistingAdvancePaid, newAdvanceAmount, netPayable, shippingCharge, orderItemsTotal, calculatedDiscountAmount]);
+  }, [isSubmitting, jobIdInput, companyNameInput, address, phoneNumber, createdAt, isLoadingOptions, orderItems, isNewAdvanceEntered, newAdvancePaymentMethod, newCustomPaymentMethodText, currentUser, totalExistingAdvancePaid, newAdvanceAmount, netPayable, orderItemsTotal, calculatedDiscountAmount]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,9 +297,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
         toast({ title: "Validation Error", description: "Specify 'Other' payment method.", variant: "destructive" }); return;
     }
     
-    const parsedShippingCharge = parseFloat(shippingCharge) || 0;
     const totalAdvanceAfterNew = totalExistingAdvancePaid + parsedNewAdvAmount;
-    const grandTotal = netPayable + parsedShippingCharge;
+    const grandTotal = netPayable;
     if (totalAdvanceAfterNew > grandTotal && grandTotal > 0) {
         toast({ title: "Validation Error", description: `Total advance payment cannot exceed grand total.`, variant: "destructive"}); return;
     }
@@ -317,7 +313,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       phoneNumber: phoneNumber.trim(),
       createdAt: createdAt.toISOString(),
       specialClientDiscountString: specialClientDiscount.trim() || null,
-      shippingCharge: parsedShippingCharge > 0 ? parsedShippingCharge : null,
       orderNotes: orderNotes.trim() || null,
       orderItems: orderItems.map(item => ({ ...item, quantity: parseInt(item.quantity, 10), unitPrice: item.unitPrice!, lineItemTotalPrice: item.lineItemTotalPrice! })),
       advancePayments: [...existingAdvancePayments],
@@ -408,7 +403,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
               <Separator className="my-4" />
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                   <div className="space-y-1"><Label htmlFor="edit-specialClientDiscount">Special Client Discount</Label><div className="relative"><Input id="edit-specialClientDiscount" type="text" value={specialClientDiscount} onChange={(e) => handleDiscountChangeEdit(e.target.value)} placeholder="e.g., 100 or 10%" disabled={isSubmitting} className="pl-7"/><Percent className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /></div></div>
-                  <div className="space-y-1"><Label htmlFor="edit-shippingCharge">Shipping Charge</Label><div className="relative"><Input id="edit-shippingCharge" type="number" value={shippingCharge} onChange={(e) => setShippingCharge(e.target.value)} placeholder="e.g., 120" min="0" step="0.01" disabled={isSubmitting} className="pl-7"/><Truck className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" /></div></div>
               </div>
               
               {existingAdvancePayments.length > 0 && (
@@ -443,7 +437,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Order Items Total:</span><span className="font-medium text-foreground">{formatCurrencyBdt(orderItemsTotal)}</span></div>
                 {(calculatedDiscountAmount || 0) > 0 && (<div className="flex justify-between text-sm"><span className="text-muted-foreground">Discount:</span><span className="font-medium text-red-600">- {formatCurrencyBdt(calculatedDiscountAmount)}</span></div>)}
                 <div className="flex justify-between text-sm font-semibold"><span className="text-foreground">Net Payable:</span><span className="text-foreground">{formatCurrencyBdt(netPayable)}</span></div>
-                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Shipping Charge:</span><span className="font-medium text-foreground">+ {formatCurrencyBdt(parseFloat(shippingCharge) || 0)}</span></div>
                 {(totalExistingAdvancePaid + (parseFloat(newAdvanceAmount)||0)) > 0 && (<div className="flex justify-between text-sm mt-1 pt-1 border-t border-dashed border-border"><span className="text-muted-foreground">Total Advance Paid:</span><span className="font-medium text-green-600">- {formatCurrencyBdt(totalExistingAdvancePaid + (parseFloat(newAdvanceAmount)||0))}</span></div>)}
                 <div className="flex justify-between text-lg font-bold mt-1 pt-1 border-t border-border"><span className="text-primary">Amount Due:</span><span className="text-primary">{formatCurrencyBdt(amountDue)}</span></div>
               </div>

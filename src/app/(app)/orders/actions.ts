@@ -29,7 +29,7 @@ interface CreateOrderDialogFormData {
   advancePaymentAmount?: string | null;
   advancePaymentMethod?: string | null;
   specialClientDiscount?: number | null;
-  shippingCharge?: string | null; // Added
+  // shippingCharge removed from here
   customPaymentMethodText?: string; 
   orderNotes?: string | null;
   initialStatusId: string;
@@ -101,13 +101,9 @@ export async function createOrderAction(
       parsedAdvancePaymentAmount = numAdvancePayment;
     }
     
-    const parsedShippingCharge = parseFloat(data.shippingCharge || '0');
-    if (isNaN(parsedShippingCharge) || parsedShippingCharge < 0) {
-      return { error: "Shipping Charge must be a non-negative number." };
-    }
-
+    // shipping charge parsing removed
     const netPayable = orderItemsTotal - (data.specialClientDiscount || 0);
-    const grandTotal = netPayable + parsedShippingCharge;
+    const grandTotal = netPayable; // No shipping charge here
     if (parsedAdvancePaymentAmount !== null && parsedAdvancePaymentAmount > grandTotal && grandTotal > 0) {
         return { error: `Advance payment (${parsedAdvancePaymentAmount}) cannot exceed grand total amount (${grandTotal}).` };
     }
@@ -137,7 +133,7 @@ export async function createOrderAction(
       advancePaymentAmount: parsedAdvancePaymentAmount, 
       advancePaymentMethod: finalAdvancePaymentMethod,
       specialClientDiscount: data.specialClientDiscount,
-      shippingCharge: parsedShippingCharge > 0 ? parsedShippingCharge : null,
+      shippingCharge: null, // Default to null
       orderNotes: data.orderNotes?.trim() || null,
       crmUserId: currentUser.id,
       crmUserName: currentUser.name,
@@ -196,6 +192,7 @@ export async function updateOrderAction(
       }
     }
     
+    // Keep shipping charge handling here for the courier dialog to use
     if (updates.shippingCharge !== undefined) {
       const charge = Number(updates.shippingCharge);
       if (isNaN(charge) || charge < 0) {
@@ -203,7 +200,6 @@ export async function updateOrderAction(
       }
       finalUpdates.shippingCharge = charge > 0 ? charge : null;
     }
-
 
     if (updates.specialClientDiscountString !== undefined) {
         if (updates.specialClientDiscountString && updates.specialClientDiscountString.trim() !== '') {
@@ -280,7 +276,6 @@ export async function updateOrderAction(
     } else if (updates.advancePayments) {
         finalUpdates.advancePayments = updates.advancePayments;
     }
-
 
     if (Object.keys(finalUpdates).length === 0 && updates.specialClientDiscountString === undefined) {
         return { success: true, order: existingOrder, error: "No changes detected to save." };
