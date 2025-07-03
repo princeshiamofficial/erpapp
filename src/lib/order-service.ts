@@ -169,6 +169,55 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
     } else {
       orders = snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as TrackingLink));
     }
+
+    // --- BEGIN BACKGROUND SETTLEMENT ---
+    // This task runs in the background and does not block the return of the orders list.
+    const backgroundSettle = async () => {
+        try {
+            const deliveredStatusId = DELIVERED_STATUS_ID;
+            
+            const ordersToCheck = orders.filter(o => o.currentStatus === deliveredStatusId);
+            if (ordersToCheck.length === 0) return; // No delivered orders to check.
+
+            const allUsers = await import('@/lib/user-service').then(m => m.getUsers());
+            const systemAdmin = allUsers.find(u => u.role === 'SYSTEM_ADMIN');
+            if (!systemAdmin) {
+                console.warn('[backgroundSettle] No System Admin user found to perform background settlement.');
+                return;
+            }
+            const actingUser = { id: systemAdmin.id, name: systemAdmin.name };
+            let settledCount = 0;
+
+            for (const order of ordersToCheck) {
+                const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+                const effectiveDiscount = order.specialClientDiscount || 0;
+                const netPayable = orderSubtotal - effectiveDiscount;
+                const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
+                const dueAmount = netPayable - totalAdvancePaid;
+
+                if (dueAmount > 0.01) {
+                    console.log(`[backgroundSettle] Found delivered order ${order.id} with due amount ${dueAmount}. Settling...`);
+                    // Call autoSettle which is defined in this same file.
+                    await autoSettleOrderIfDelivered(order.id, "System background check for delivered orders with due balance.", actingUser);
+                    settledCount++;
+                }
+            }
+            if (settledCount > 0) {
+                console.log(`[backgroundSettle] Successfully auto-settled ${settledCount} previously delivered orders.`);
+                // No revalidatePath needed here; the next getOrders call will reflect the changes.
+            }
+        } catch (error) {
+            console.error('[backgroundSettle] Error during background order settlement:', error);
+        }
+    };
+
+    // Fire and forget the background task
+    if (process.env.NODE_ENV !== 'test') { // Avoid running this during tests
+      backgroundSettle();
+    }
+    // --- END BACKGROUND SETTLEMENT ---
+
+
   } catch (error) {
     console.error("Error fetching orders from Firestore:", error);
     return [];
@@ -382,11 +431,11 @@ export const deleteOrder = async (orderId: string): Promise<boolean> => {
   }
 };
 
-export const autoSettleOrderIfDelivered = async (
+export async function autoSettleOrderIfDelivered(
   orderId: string,
   settlementReason: string,
   actingUser: { id: string; name: string }
-): Promise<boolean> => {
+): Promise<boolean> {
   try {
     const order = await getOrderById(orderId);
     if (!order) {
