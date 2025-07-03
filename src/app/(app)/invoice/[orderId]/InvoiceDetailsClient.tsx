@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Building, MapPin, Phone, UserCheck, FileText, StickyNote, Percent, ReceiptText, CheckCircle } from "lucide-react";
+import { Building, MapPin, Phone, UserCheck, FileText, StickyNote, Percent, ReceiptText, CheckCircle, Truck } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { CustomStatus, TrackingLink, User, AdvancePaymentRecord } from "@/types";
 import { Separator } from "@/components/ui/separator";
@@ -98,10 +98,12 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
   }, [order]);
 
   const totalAdvancePaid = allAdvancePaymentRecords.reduce((sum, record) => sum + record.amount, 0);
+  const shippingCharge = order.shippingCharge || 0;
+  const grandTotal = netPayable + shippingCharge;
 
   const isDeliveredByPackzy = packzyDeliveryStatus === 'delivered';
-  const amountDue = isDeliveredByPackzy ? 0 : (netPayable - totalAdvancePaid);
-  const showPaidBadge = (orderSubtotal > 0 && amountDue <= 0.01) || isDeliveredByPackzy;
+  const amountDue = isDeliveredByPackzy ? 0 : (grandTotal - totalAdvancePaid);
+  const showPaidBadge = (grandTotal > 0 && amountDue <= 0.01) || isDeliveredByPackzy;
 
   return (
     <div ref={invoiceRef} className="max-w-4xl mx-auto p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl print:shadow-none print:border-none print:p-4">
@@ -178,9 +180,23 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
           <div className="flex justify-between mb-1"><span className="text-md text-muted-foreground">Order Items Total:</span><span className="text-md font-medium text-foreground">{formatCurrency(orderSubtotal)}</span></div>
           {effectiveDiscount > 0 && (<div className="flex justify-between mb-1"><span className="text-md text-muted-foreground flex items-center"><Percent className="h-4 w-4 mr-1 text-red-500"/>Special Client Discount:</span><span className="text-md font-medium text-red-500">- {formatCurrency(effectiveDiscount)}</span></div>)}
           <div className="flex justify-between mb-2 pt-1 border-t border-dashed border-border/40"><span className="text-md font-semibold text-foreground">Net Payable:</span><span className="text-md font-bold text-foreground">{formatCurrency(netPayable)}</span></div>
-          {totalAdvancePaid > 0 && !isDeliveredByPackzy && (<div className="flex justify-between mb-2"><span className="text-md text-muted-foreground">Total Advance Paid:</span><span className="text-md text-foreground">{formatCurrency(totalAdvancePaid)}</span></div>)}
+          
+          {shippingCharge > 0 && (
+            <div className="flex justify-between mb-2">
+              <span className="text-md text-muted-foreground flex items-center"><Truck className="h-4 w-4 mr-1"/>Shipping Charge:</span>
+              <span className="text-md font-medium text-foreground">+ {formatCurrency(shippingCharge)}</span>
+            </div>
+          )}
+
+          {totalAdvancePaid > 0 && (
+            <div className="flex justify-between mb-2">
+              <span className="text-md text-muted-foreground">Total Advance Paid:</span>
+              <span className="text-md font-medium text-green-600">- {formatCurrency(totalAdvancePaid)}</span>
+            </div>
+          )}
+
           {showPaidBadge ? (<div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end"><div className="absolute -left-8 -top-4 sm:-left-12 sm:-top-6 transform -rotate-[15deg] border-4 border-green-500 text-green-500 font-bold uppercase text-3xl sm:text-4xl px-3 py-1 rounded-md shadow-lg bg-background/80 dark:bg-card/80 backdrop-blur-sm flex items-center gap-2"><CheckCircle className="h-8 w-8"/>PAID</div></div>)
-          : (orderSubtotal > 0 && amountDue > 0.01) && (<><Separator className="my-2 bg-border/50" /><div className="flex justify-between"><span className="text-lg font-bold text-primary">Amount Due:</span><span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span></div></>)}
+          : (grandTotal > 0 && amountDue > 0.01) && (<><Separator className="my-2 bg-border/50" /><div className="flex justify-between"><span className="text-lg font-bold text-primary">Amount Due:</span><span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span></div></>)}
         </div>
       </div>
     </div>
