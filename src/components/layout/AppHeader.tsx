@@ -7,8 +7,7 @@ import Link from "next/link";
 import { Logo } from '@/components/layout/Logo';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { Button } from "@/components/ui/button";
-import { Calculator } from 'lucide-react'; 
-import { CalculatorDialog } from '@/components/layout/CalculatorDialog';
+import { RefreshCw } from 'lucide-react';
 
 export function AppHeader() {
   return (
@@ -26,12 +25,16 @@ export function AppHeader() {
         
         <div className="flex items-center space-x-1 sm:space-x-2">
           <NotificationBell />
-          <CalculatorDialog>
-            <Button variant="ghost" size="icon" className="text-foreground hover:bg-accent hover:text-accent-foreground h-10 w-10" title="Calculator">
-              <Calculator className="h-5 w-5" /> {/* Removed text-primary */}
-              <span className="sr-only">Calculator</span>
-            </Button>
-          </CalculatorDialog>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-foreground hover:bg-accent hover:text-accent-foreground h-10 w-10"
+            title="Sync Data"
+            onClick={() => window.location.reload()}
+          >
+            <RefreshCw className="h-5 w-5" />
+            <span className="sr-only">Sync Data</span>
+          </Button>
           <UserNav />
         </div>
       </div>
