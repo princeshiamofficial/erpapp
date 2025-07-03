@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, FormEvent, useRef, useMemo } from 'react';
@@ -19,7 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/auth-context';
 import { v4 as uuidv4 } from 'uuid';
 import { motion } from 'framer-motion';
-import { formatDistanceToNowStrict } from 'date-fns';
+import { formatDistanceToNowStrict, parseISO, format as formatDateFns } from 'date-fns';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
@@ -44,7 +43,8 @@ const formatDate = (dateString: string | undefined, relative: boolean = false) =
     if (relative) {
       return formatDistanceToNowStrict(date, { addSuffix: true });
     }
-    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+    // Using a consistent format string avoids locale-based hydration mismatches
+    return formatDateFns(parseISO(dateString), "d MMM yyyy, h:mm a");
   } catch (e) {
     return "Invalid Date";
   }
@@ -117,7 +117,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
         if ('delivery_status' in result) {
           setPackzyStatus(result.delivery_status);
         } else {
-          console.warn("Could not fetch Packzy status:", result.error);
+          console.warn("Could not fetch Steadfast status:", result.error);
           setPackzyStatus('unavailable'); // To prevent re-fetching on error
         }
         setIsLoadingPackzyStatus(false);
@@ -433,7 +433,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <div className="mt-4 pt-4 border-t border-border/30">
               <h3 className="text-lg font-semibold mb-1 text-foreground flex items-center">
                 <Truck className="h-7 w-7 mr-2 text-primary/80"/>
-                Courier Status (Packzy)
+                Courier Status (Steadfast)
               </h3>
               <div className="ml-[40px] sm:ml-[44px]">
               {isLoadingPackzyStatus ? (
@@ -583,3 +583,5 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
+
+    

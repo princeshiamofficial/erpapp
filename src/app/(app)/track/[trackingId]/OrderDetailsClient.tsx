@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, FormEvent, useRef, useMemo } from 'react';
@@ -19,7 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/auth-context';
 import { v4 as uuidv4 } from 'uuid';
 import { motion } from 'framer-motion';
-import { formatDistanceToNowStrict } from 'date-fns';
+import { formatDistanceToNowStrict, parseISO, format as formatDateFns } from 'date-fns';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 
@@ -44,7 +43,8 @@ const formatDate = (dateString: string | undefined, relative: boolean = false) =
     if (relative) {
       return formatDistanceToNowStrict(date, { addSuffix: true });
     }
-    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+    // Using a consistent format string avoids locale-based hydration mismatches
+    return formatDateFns(parseISO(dateString), "d MMM yyyy, h:mm a");
   } catch (e) {
     return "Invalid Date";
   }
@@ -583,3 +583,5 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
+
+    
