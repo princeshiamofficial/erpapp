@@ -18,8 +18,9 @@ import { startOfMonth, endOfMonth, isWithinInterval, parseISO, format as formatD
 const formatDateForDisplay = (dateString: string | undefined) => {
   if (!dateString) return "N/A";
   try {
-    return new Date(dateString).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    return formatDateFns(parseISO(dateString), 'd MMM yyyy');
   } catch (e) {
+    console.error("Invalid date string for formatting:", dateString, e);
     return "Invalid Date";
   }
 };
@@ -189,5 +190,3 @@ export default function MonthlyDeliveriesPage() {
     </div>
   );
 }
-
-    

@@ -36,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { format, parseISO } from 'date-fns';
 
 const CreateOrderDialog = dynamic(() => import('@/components/orders/create-order-dialog').then(mod => mod.CreateOrderDialog));
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
@@ -45,8 +46,9 @@ const EditOrderDialog = dynamic(() => import('@/components/orders/edit-order-dia
 const formatDate = (dateString: string | undefined) => {
   if (!dateString) return "N/A";
   try {
-    return new Date(dateString).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    return format(parseISO(dateString), 'd MMM yyyy');
   } catch (e) {
+    console.error("Invalid date string for formatting:", dateString, e);
     return "Invalid Date";
   }
 };

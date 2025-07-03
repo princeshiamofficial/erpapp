@@ -14,12 +14,15 @@ import { getOrders } from '@/lib/order-service';
 import { getStatuses, getContrastTextColor } from '@/lib/status-service';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context'; // Added useAuth
+import { format as formatDateFns, parseISO } from 'date-fns';
 
 const formatDateForDisplay = (dateString: string | undefined) => {
   if (!dateString) return "N/A";
   try {
-    return new Date(dateString).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    // Using a consistent format string avoids locale-based hydration mismatches
+    return formatDateFns(parseISO(dateString), 'd MMM yyyy');
   } catch (e) {
+    console.error("Invalid date string for formatting:", dateString, e);
     return "Invalid Date";
   }
 };
