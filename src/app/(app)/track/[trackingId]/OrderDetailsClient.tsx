@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, FormEvent, useRef, useMemo } from 'react';
@@ -39,12 +40,11 @@ const formatCurrency = (value: number | null | undefined): string => {
 const formatDate = (dateString: string | undefined, relative: boolean = false) => {
   if (!dateString) return "Loading date...";
   try {
-    const date = new Date(dateString);
+    const date = parseISO(dateString);
     if (relative) {
       return formatDistanceToNowStrict(date, { addSuffix: true });
     }
-    // Using a consistent format string avoids locale-based hydration mismatches
-    return formatDateFns(parseISO(dateString), "d MMM yyyy, h:mm a");
+    return formatDateFns(date, "d MMM yyyy, h:mm a");
   } catch (e) {
     return "Invalid Date";
   }
@@ -337,7 +337,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <span className="text-muted-foreground">&middot;</span>
             <button onClick={() => { const isOpeningNewReplyForm = !replyingTo || replyingTo.formUnderId !== comment.id; const targetNameForMention = comment.userName || "User"; const parentIdForReply = isReply ? parentCommentId! : comment.id; setReplyingTo(isOpeningNewReplyForm ? { parentId: parentIdForReply, targetName: targetNameForMention, formUnderId: comment.id } : null); if (isOpeningNewReplyForm) { setCurrentReplyText(`@${targetNameForMention.replace(/\s+/g, '')} `); setTimeout(() => replyTextareaRef.current?.focus(), 0); } else { setCurrentReplyText(''); } }} className="font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 px-1.5 py-0.5 rounded-sm transition-colors">Reply</button>
             <span className="text-muted-foreground">&middot;</span>
-            <span className="text-muted-foreground" title={isClient ? formatDate(comment.timestamp) : 'Loading date...'}>{isClient ? formatDistanceToNowStrict(new Date(comment.timestamp), { addSuffix: true }) : <Skeleton className="h-3 w-10 inline-block" />}</span>
+            <span className="text-muted-foreground" title={isClient ? formatDate(comment.timestamp) : 'Loading date...'}>{isClient ? formatDate(comment.timestamp, true) : <Skeleton className="h-3 w-10 inline-block" />}</span>
           </div>
           {replyingTo?.formUnderId === comment.id && (
              <Popover open={mentionQuery !== null && mentionSuggestions.length > 0} onOpenChange={(open) => { if (!open) { setMentionQuery(null); setActiveMentionStartIndex(null); setMentionSuggestions([]); } }}>
@@ -583,5 +583,3 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
-
-    
