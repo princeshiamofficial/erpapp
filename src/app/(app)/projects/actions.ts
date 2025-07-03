@@ -141,8 +141,8 @@ export async function transferToCourierAction(
     const responseData = await response.json();
 
     if (response.status !== 200 || responseData.status !== 200) {
-      console.error('Packzy API Error:', responseData);
-      return { success: false, error: `Packzy API Error: ${responseData.message || 'Failed to create consignment.'}` };
+      console.error('Steadfast API Error:', responseData);
+      return { success: false, error: `Steadfast API Error: ${responseData.message || 'Failed to create consignment.'}` };
     }
 
     const { consignment } = responseData;
@@ -150,7 +150,7 @@ export async function transferToCourierAction(
     // Update Project Status
     const projectUpdateSuccess = await updateProjectStatusInDb(project.id, 'Courier', project);
     if (!projectUpdateSuccess) {
-      console.error(`CRITICAL: Project ${project.id} consignment created in Packzy (ID: ${consignment.consignment_id}) but failed to update project status to 'Courier'.`);
+      console.error(`CRITICAL: Project ${project.id} consignment created in Steadfast (ID: ${consignment.consignment_id}) but failed to update project status to 'Courier'.`);
       return { success: false, error: "Consignment created, but failed to update project status. Please check manually." };
     }
     
@@ -161,7 +161,7 @@ export async function transferToCourierAction(
       status: SHIPPED_STATUS_ID,
       changedByUserId: actingUser.id,
       changedByUserName: actingUser.name,
-      notes: `Order transferred to Packzy Courier. Tracking: ${consignment.tracking_code}, Consignment ID: ${consignment.consignment_id}. COD: ${totalCodAmount}, Shipping: ${shippingCharge}. Area: ${shippingArea}.`,
+      notes: `Order transferred to Steadfast Courier. Tracking: ${consignment.tracking_code}, Consignment ID: ${consignment.consignment_id}. COD: ${totalCodAmount}, Shipping: ${shippingCharge}. Area: ${shippingArea}.`,
     };
 
     const orderUpdateSuccess = await updateOrder(order.id, {
@@ -177,7 +177,7 @@ export async function transferToCourierAction(
     });
     
     if (!orderUpdateSuccess) {
-       console.error(`CRITICAL: Project ${project.id} status updated, but failed to update corresponding order ${order.id} with Packzy details.`);
+       console.error(`CRITICAL: Project ${project.id} status updated, but failed to update corresponding order ${order.id} with Steadfast details.`);
        return { success: false, error: "Project status updated, but failed to update order details. Please check manually." };
     }
 
@@ -193,4 +193,3 @@ export async function transferToCourierAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
-

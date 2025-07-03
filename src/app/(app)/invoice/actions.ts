@@ -43,13 +43,13 @@ export async function getPackzyDeliveryStatusAction(trackingCode: string): Promi
     const data = await response.json();
 
     if (data.status !== 200) {
-      console.error('Packzy API Error:', data);
-      return { error: data.message || 'Failed to fetch delivery status from Packzy.' };
+      console.error('Steadfast API Error:', data);
+      return { error: data.message || 'Failed to fetch delivery status from Steadfast.' };
     }
 
     return { delivery_status: data.delivery_status };
   } catch (error) {
-    console.error('Error calling Packzy API:', error);
+    console.error('Error calling Steadfast API:', error);
     return { error: 'An unexpected error occurred while fetching delivery status.' };
   }
 }
