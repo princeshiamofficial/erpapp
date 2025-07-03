@@ -26,18 +26,61 @@ export async function setGlobalTargetAction(targetType: 'monthly' | 'weekly', ne
   }
 }
 
-export async function settleAllDeliveredOrdersAction(): Promise<{ success: boolean; settledCount: number; error?: string }> {
+export async function settleAllDeliveredOrdersAction(): Promise<{ success: boolean; settledCount: number; statusUpdateCount: number; error?: string }> {
   try {
-    const allOrders = await getOrders();
+    let allOrders = await getOrders();
     const allUsers = await getUsers();
     
     const systemAdmin = allUsers.find(u => u.role === 'SYSTEM_ADMIN');
     if (!systemAdmin) {
-      return { success: false, settledCount: 0, error: "System Admin user not found to perform settlement." };
+      return { success: false, settledCount: 0, statusUpdateCount: 0, error: "System Admin user not found to perform settlement." };
     }
     const actingUser = { id: systemAdmin.id, name: systemAdmin.name };
     
-    const deliveredOrdersWithDue = allOrders.filter(order => {
+    let settledCount = 0;
+    let statusUpdateCount = 0;
+
+    // Part 1: Proactively check courier statuses for non-delivered orders
+    const ordersToCheckCourier = allOrders.filter(order => 
+        order.currentStatus !== DELIVERED_STATUS_ID && order.packzyTrackingCode
+    );
+
+    if (ordersToCheckCourier.length > 0) {
+        console.log(`[SettleAction] Checking courier status for ${ordersToCheckCourier.length} non-delivered orders with tracking codes.`);
+        const apiKey = 'vfei2q49dhy1rxqxjs6xntkkvc2odeax';
+        const secretKey = 'n4wr4fhdohq0x3gmm8xg3pp1';
+
+        for (const order of ordersToCheckCourier) {
+            try {
+                const response = await fetch(`https://portal.packzy.com/api/v1/status_by_trackingcode/${order.packzyTrackingCode}`, {
+                    method: 'GET',
+                    headers: { 'Api-Key': apiKey, 'Secret-Key': secretKey, 'Content-Type': 'application/json' },
+                    cache: 'no-store',
+                });
+                const data = await response.json();
+
+                if (data.status === 200 && data.delivery_status === 'delivered') {
+                    console.log(`[SettleAction] Courier confirmed delivery for order ${order.id}. Auto-settling...`);
+                    const result = await autoSettleOrderIfDelivered(
+                        order.id, 
+                        "Manual sync: Courier confirmed delivery.", 
+                        actingUser
+                    );
+                    if (result) {
+                        statusUpdateCount++;
+                    }
+                }
+            } catch (courierError) {
+                console.error(`[SettleAction] Error fetching courier status for order ${order.id}:`, courierError);
+                // Continue to next order
+            }
+        }
+    }
+
+    // Part 2: Retroactively fix due amounts on already-delivered orders
+    // Re-fetch orders to get the updated list after Part 1's potential updates
+    const updatedAllOrders = await getOrders();
+    const deliveredOrdersWithDue = updatedAllOrders.filter(order => {
       if (order.currentStatus !== DELIVERED_STATUS_ID) {
         return false;
       }
@@ -49,29 +92,27 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
       return dueAmount > 0.01;
     });
 
-    if (deliveredOrdersWithDue.length === 0) {
-      return { success: true, settledCount: 0 };
-    }
-
-    let settledCount = 0;
-    for (const order of deliveredOrdersWithDue) {
-      const result = await autoSettleOrderIfDelivered(
-        order.id, 
-        "Manual sync: System auto-settled delivered order with due balance.", 
-        actingUser
-      );
-      if (result) {
-        settledCount++;
-      }
+    if (deliveredOrdersWithDue.length > 0) {
+        console.log(`[SettleAction] Found ${deliveredOrdersWithDue.length} internally delivered orders with a due balance. Settling...`);
+        for (const order of deliveredOrdersWithDue) {
+          const result = await autoSettleOrderIfDelivered(
+            order.id, 
+            "Manual sync: System auto-settled delivered order with due balance.", 
+            actingUser
+          );
+          if (result) {
+            settledCount++;
+          }
+        }
     }
     
     revalidatePath("/(app)/dashboard", "layout");
     revalidatePath("/(app)/orders", "layout");
     revalidatePath("/(app)/invoice", "layout");
     
-    return { success: true, settledCount };
+    return { success: true, settledCount, statusUpdateCount };
   } catch (error) {
     console.error("Error in settleAllDeliveredOrdersAction:", error);
-    return { success: false, settledCount: 0, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+    return { success: false, settledCount: 0, statusUpdateCount: 0, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

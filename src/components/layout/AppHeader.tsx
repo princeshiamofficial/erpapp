@@ -28,18 +28,26 @@ export function AppHeader() {
     const result = await settleAllDeliveredOrdersAction();
 
     if (result.success) {
-      if (result.settledCount > 0) {
-        toast({
-          title: "Sync Complete",
-          description: `Successfully settled ${result.settledCount} delivered order(s). Reloading data.`,
-        });
+      const { settledCount, statusUpdateCount } = result;
+      let description = "No updates were necessary.";
+
+      if (statusUpdateCount > 0 && settledCount > 0) {
+        description = `Updated ${statusUpdateCount} order status(es) and settled ${settledCount} due balance(s).`;
+      } else if (statusUpdateCount > 0) {
+        description = `Updated ${statusUpdateCount} order status(es) to 'Delivered' based on courier confirmation.`;
+      } else if (settledCount > 0) {
+        description = `Successfully settled ${settledCount} delivered order(s) with a due balance.`;
+      }
+      
+      toast({
+        title: "Sync Complete",
+        description,
+      });
+
+      if (statusUpdateCount > 0 || settledCount > 0) {
         // Short delay to allow toast to be seen before reload
         setTimeout(() => window.location.reload(), 1500);
       } else {
-        toast({
-          title: "Sync Complete",
-          description: "No delivered orders with due balances found.",
-        });
         setIsSyncing(false);
       }
     } else {
