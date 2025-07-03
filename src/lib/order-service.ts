@@ -496,6 +496,23 @@ export async function autoSettleOrderIfDelivered(
       console.log(`[autoSettleOrderIfDelivered] Order ${orderId} already settled and in 'Delivered' state. No action taken.`);
     }
 
+    // --- Sync Project Status to Delivered ---
+    const projectDocRef = doc(db, PROJECTS_COLLECTION, orderId); // Assuming project ID is same as order ID
+    try {
+        const projectDocSnap = await getDoc(projectDocRef);
+        if (projectDocSnap.exists() && projectDocSnap.data().status !== 'Delivered') {
+            console.log(`[autoSettleOrderIfDelivered] Syncing project ${orderId} to 'Delivered' status.`);
+            await updateDoc(projectDocRef, {
+                status: 'Delivered',
+                deliveredAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            });
+        }
+    } catch(projectError) {
+        console.warn(`[autoSettleOrderIfDelivered] Could not sync project status for ${orderId}. This is non-critical if the project was not persistent. Error:`, projectError);
+    }
+    // --- End Sync ---
+
     return true;
   } catch (error) {
     console.error(`[autoSettleOrderIfDelivered] Error settling order ${orderId}:`, error);
