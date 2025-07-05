@@ -126,6 +126,7 @@ export default function InvoiceListPage() {
     const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
     const effectiveDiscount = order.specialClientDiscount || 0;
     const netPayable = orderSubtotal - effectiveDiscount;
+    const shippingCharge = order.shippingCharge || 0;
 
     const allAdvancePaymentRecords: AdvancePaymentRecord[] = [];
     if (order.advancePayments && order.advancePayments.length > 0) {
@@ -143,9 +144,10 @@ export default function InvoiceListPage() {
     }
 
     const totalAdvancePaid = allAdvancePaymentRecords.reduce((sum, record) => sum + record.amount, 0);
-    const amountDue = netPayable - totalAdvancePaid;
+    const grandTotal = netPayable + shippingCharge;
+    const amountDue = grandTotal - totalAdvancePaid;
 
-    return { totalAmount: netPayable, paidAmount: totalAdvancePaid, dueAmount: amountDue };
+    return { totalAmount: grandTotal, paidAmount: totalAdvancePaid, dueAmount: amountDue };
   }, []);
 
   const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
