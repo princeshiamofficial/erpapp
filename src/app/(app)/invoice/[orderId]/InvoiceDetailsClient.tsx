@@ -66,7 +66,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
         if ('delivery_status' in result) {
           setPackzyDeliveryStatus(result.delivery_status);
         } else {
-          console.warn("Could not fetch Packzy status for invoice:", result.error);
+          console.warn("Could not fetch Steadfast status for invoice:", result.error);
         }
       }
     };
@@ -101,9 +101,13 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
   const shippingCharge = order.shippingCharge || 0;
   const grandTotal = netPayable + shippingCharge;
 
-  const isDeliveredByPackzy = packzyDeliveryStatus === 'delivered';
-  const amountDue = isDeliveredByPackzy ? 0 : (grandTotal - totalAdvancePaid);
-  const showPaidBadge = (grandTotal > 0 && amountDue <= 0.01) || isDeliveredByPackzy;
+  const isDeliveredByCourier = packzyDeliveryStatus === 'delivered';
+  const isDeliveredInternally = order.currentStatus === 'delivered';
+  const isConsideredDelivered = isDeliveredByCourier || isDeliveredInternally;
+
+  const amountDue = isConsideredDelivered ? 0 : (grandTotal - totalAdvancePaid);
+  const showPaidBadge = (grandTotal > 0 && amountDue <= 0.01) || isConsideredDelivered;
+
 
   return (
     <div ref={invoiceRef} className="max-w-4xl mx-auto p-6 sm:p-8 bg-card border border-border/40 rounded-xl shadow-2xl print:shadow-none print:border-none print:p-4">

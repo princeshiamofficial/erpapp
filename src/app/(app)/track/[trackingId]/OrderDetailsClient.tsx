@@ -44,6 +44,7 @@ const formatDate = (dateString: string | undefined, relative: boolean = false) =
     if (relative) {
       return formatDistanceToNowStrict(date, { addSuffix: true });
     }
+    // Using a consistent format string avoids locale-based hydration mismatches
     return formatDateFns(date, "d MMM yyyy, h:mm a");
   } catch (e) {
     return "Invalid Date";
@@ -406,7 +407,13 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const totalAdvancePaid = allAdvancePaymentRecords.reduce((sum, record) => sum + record.amount, 0);
   const shippingCharge = order.shippingCharge || 0;
   const grandTotal = netPayable + shippingCharge;
-  const amountDue = grandTotal - totalAdvancePaid;
+  
+  const isDeliveredByCourier = packzyStatus === 'delivered';
+  const isDeliveredInternally = order.currentStatus === 'delivered';
+  const isConsideredDelivered = isDeliveredByCourier || isDeliveredInternally;
+  
+  const amountDue = isConsideredDelivered ? 0 : (grandTotal - totalAdvancePaid);
+
 
   return (
     <main className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
@@ -531,7 +538,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               </div>
             )}
             {totalAdvancePaid > 0 && (<div className="flex justify-between mb-2"><span className="text-md text-muted-foreground">Total Advance Paid:</span><span className="text-md font-medium text-green-600">- {formatCurrency(totalAdvancePaid)}</span></div>)}
-            {orderSubtotal > 0 && amountDue <= 0.01 ? (<div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end"><div className="absolute -left-8 -top-4 sm:-left-12 sm:-top-6 transform -rotate-[15deg] border-4 border-green-500 text-green-500 font-bold uppercase text-3xl sm:text-4xl px-3 py-1 rounded-md shadow-lg bg-background/80 dark:bg-card/80 backdrop-blur-sm">PAID</div></div>)
+            {isConsideredDelivered || (orderSubtotal > 0 && amountDue <= 0.01) ? (<div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end"><div className="absolute -left-8 -top-4 sm:-left-12 sm:-top-6 transform -rotate-[15deg] border-4 border-green-500 text-green-500 font-bold uppercase text-3xl sm:text-4xl px-3 py-1 rounded-md shadow-lg bg-background/80 dark:bg-card/80 backdrop-blur-sm">PAID</div></div>)
             : (orderSubtotal > 0 && amountDue > 0.01) && (<><Separator className="my-2 bg-border/50" /><div className="flex justify-between"><span className="text-lg font-bold text-primary">Amount Due:</span><span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span></div></>)}
           </div>
         </div>
