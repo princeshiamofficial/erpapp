@@ -193,7 +193,8 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
                 const effectiveDiscount = order.specialClientDiscount || 0;
                 const netPayable = orderSubtotal - effectiveDiscount;
                 const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
-                const dueAmount = netPayable - totalAdvancePaid;
+                const shippingCharge = order.shippingCharge || 0;
+                const dueAmount = netPayable + shippingCharge - totalAdvancePaid;
 
                 if (dueAmount > 0.01) {
                     console.log(`[backgroundSettle] Found delivered order ${order.id} with due amount ${dueAmount}. Settling...`);
@@ -447,7 +448,8 @@ export async function autoSettleOrderIfDelivered(
     const effectiveDiscount = order.specialClientDiscount || 0;
     const netPayable = orderSubtotal - effectiveDiscount;
     const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
-    const dueAmount = netPayable - totalAdvancePaid;
+    const shippingCharge = order.shippingCharge || 0;
+    const dueAmount = netPayable + shippingCharge - totalAdvancePaid;
 
     const updates: Partial<TrackingLink> = {};
     const logEntriesToAdd: OrderLogEntry[] = [];
