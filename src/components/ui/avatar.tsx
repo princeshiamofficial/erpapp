@@ -9,20 +9,15 @@ import { cn } from "@/lib/utils"
 const Avatar = React.forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root>
->(({ className, children, ...props }, ref) => (
+>(({ className, ...props }, ref) => (
   <AvatarPrimitive.Root
     ref={ref}
     className={cn(
-      "relative flex h-10 w-10 shrink-0 rounded-full", // Base styles, overflow-hidden might be added via className prop
+      "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
       className
     )}
     {...props}
-  >
-    {/* Inner div for clipping content, ensuring it's also round and clips */}
-    <div className="h-full w-full rounded-full overflow-hidden">
-      {children}
-    </div>
-  </AvatarPrimitive.Root>
+  />
 ))
 Avatar.displayName = AvatarPrimitive.Root.displayName
 
@@ -32,7 +27,7 @@ const AvatarImage = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AvatarPrimitive.Image
     ref={ref}
-    className={cn("h-full w-full object-cover rounded-full", className)} // Added rounded-full
+    className={cn("aspect-square h-full w-full", className)}
     {...props}
   />
 ))
@@ -45,7 +40,7 @@ const AvatarFallback = React.forwardRef<
   <AvatarPrimitive.Fallback
     ref={ref}
     className={cn(
-      "flex h-full w-full items-center justify-center rounded-full bg-muted", // Fallback is already round
+      "flex h-full w-full items-center justify-center rounded-full bg-muted",
       className
     )}
     {...props}

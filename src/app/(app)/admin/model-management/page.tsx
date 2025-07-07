@@ -1,12 +1,12 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import NextImage from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle, Search } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle, Search, UploadCloud, ImageIcon } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { ServiceModelItem } from "@/types";
@@ -49,9 +49,12 @@ export default function ModelManagementPage() {
   const [itemName, setItemName] = useState('');
   const [itemBuyingPrice, setItemBuyingPrice] = useState('');
   const [itemSellingPrice, setItemSellingPrice] = useState('');
-  const [itemImageUrl, setItemImageUrl] = useState('');
   const [editingItem, setEditingItem] = useState<ItemToEdit | null>(null);
   const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
+
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -86,7 +89,8 @@ export default function ModelManagementPage() {
     setItemName('');
     setItemBuyingPrice('0');
     setItemSellingPrice('0');
-    setItemImageUrl('');
+    setSelectedImageFile(null);
+    setImagePreviewUrl(null);
     setIsAddEditDialogOpen(true);
   };
 
@@ -101,7 +105,8 @@ export default function ModelManagementPage() {
     setItemName(item.name);
     setItemBuyingPrice((item.buyingPrice ?? 0).toString());
     setItemSellingPrice((item.sellingPrice ?? 0).toString());
-    setItemImageUrl(item.imageUrl || '');
+    setSelectedImageFile(null);
+    setImagePreviewUrl(item.imageUrl || null);
     setIsAddEditDialogOpen(true);
   };
   
@@ -109,6 +114,29 @@ export default function ModelManagementPage() {
     setItemToDelete({ id: item.id, name: item.name });
     setIsDeleteDialogOpen(true);
   };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast({ title: "File too large", description: "Please select an image smaller than 2MB.", variant: "destructive" });
+        return;
+      }
+      if (!['image/jpeg', 'image/png', 'image/gif'].includes(file.type)) {
+        toast({ title: "Invalid file type", description: "Please select a JPG, PNG, or GIF image.", variant: "destructive" });
+        return;
+      }
+      setSelectedImageFile(file);
+      setImagePreviewUrl(URL.createObjectURL(file));
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImageFile(null);
+    setImagePreviewUrl(null);
+    if(fileInputRef.current) fileInputRef.current.value = "";
+  };
+
 
   const handleAddEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,7 +146,6 @@ export default function ModelManagementPage() {
     }
     const buyingPriceValue = parseFloat(itemBuyingPrice);
     const sellingPriceValue = parseFloat(itemSellingPrice);
-    const imageUrlToSave = itemImageUrl.trim() === '' ? null : itemImageUrl.trim();
 
     if (isNaN(buyingPriceValue) || buyingPriceValue < 0) {
       toast({ title: "Validation Error", description: "Buying Price must be a non-negative number.", variant: "destructive" });
@@ -130,15 +157,53 @@ export default function ModelManagementPage() {
     }
 
     setIsSubmitting(true);
-    let result;
+    let finalImageUrl: string | null = editingItem?.imageUrl || null;
 
+    if (selectedImageFile) {
+        // Upload new image
+        const formData = new FormData();
+        formData.append('file', selectedImageFile);
+
+        try {
+            const response = await fetch('https://colorhutbd.xyz/model-image/index.php', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`Upload failed with status: ${response.status}. Response: ${errorText}`);
+            }
+
+            const result = await response.json();
+
+            if (result.success && result.file_url) {
+                finalImageUrl = result.file_url;
+            } else {
+                toast({ title: "Image Upload Failed", description: result.message || "Could not save the image.", variant: "destructive" });
+                setIsSubmitting(false);
+                return;
+            }
+        } catch (uploadError) {
+            console.error("Image upload error:", uploadError);
+            toast({ title: "Upload Error", description: uploadError instanceof Error ? uploadError.message : "An error occurred while uploading the image.", variant: "destructive" });
+            setIsSubmitting(false);
+            return;
+        }
+    } else if (imagePreviewUrl === null && editingItem?.imageUrl) {
+      // Image was removed
+      finalImageUrl = null;
+    }
+
+
+    let result;
     if (editingItem) { 
-      result = await updateModelAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue, imageUrlToSave);
+      result = await updateModelAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl);
       if (result.success) {
         toast({ title: "Success", description: `Model "${itemName.trim()}" updated.` });
       }
     } else { 
-      result = await addModelAction(itemName.trim(), buyingPriceValue, sellingPriceValue, imageUrlToSave);
+      result = await addModelAction(itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl);
       if (result.success) {
         toast({ title: "Success", description: `Model "${itemName.trim()}" added.` });
       }
@@ -149,7 +214,9 @@ export default function ModelManagementPage() {
       setItemName('');
       setItemBuyingPrice('');
       setItemSellingPrice('');
-      setItemImageUrl('');
+      setSelectedImageFile(null);
+      setImagePreviewUrl(null);
+      if(fileInputRef.current) fileInputRef.current.value = "";
       setEditingItem(null);
       await fetchData();
     } else if (result) {
@@ -231,7 +298,7 @@ export default function ModelManagementPage() {
                       height={48}
                       className="rounded-md object-cover bg-muted"
                       data-ai-hint="product photo"
-                      unoptimized={item.imageUrl?.startsWith('/')}
+                      unoptimized={!item.imageUrl?.startsWith('https://colorhutbd.xyz')}
                   />
                   <div className="flex-1 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-x-2 sm:gap-x-4 items-center">
                     <span className="font-medium text-foreground whitespace-nowrap overflow-hidden" title={item.name}>
@@ -333,34 +400,47 @@ export default function ModelManagementPage() {
               </div>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="itemImageUrl">Image URL (Optional)</Label>
-              <Input 
-                  id="itemImageUrl" 
-                  value={itemImageUrl} 
-                  onChange={(e) => setItemImageUrl(e.target.value)} 
-                  disabled={isSubmitting}
-                  placeholder="e.g., https://example.com/image.png"
+              <Label htmlFor="modelImageFile">Model Image (Optional)</Label>
+              <div className="flex items-center gap-4 mt-1">
+                {imagePreviewUrl ? (
+                  <NextImage
+                    src={imagePreviewUrl}
+                    alt="Model preview"
+                    width={80}
+                    height={80}
+                    className="rounded-md object-cover border bg-muted"
+                    unoptimized={!imagePreviewUrl.startsWith('https://colorhutbd.xyz')}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = `https://placehold.co/80x80.png`;
+                      (e.target as HTMLImageElement).alt = 'Error loading image';
+                    }}
+                  />
+                ) : (
+                  <div className="h-20 w-20 rounded-md bg-muted flex items-center justify-center border border-dashed">
+                    <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex flex-col gap-2">
+                  <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isSubmitting}>
+                    <UploadCloud className="mr-2 h-4 w-4" /> {selectedImageFile ? "Change Image" : "Upload Image"}
+                  </Button>
+                  {(imagePreviewUrl) && (
+                    <Button type="button" variant="ghost" size="sm" className="text-xs text-destructive hover:bg-destructive/10" onClick={handleRemoveImage} disabled={isSubmitting}>
+                      <Trash2 className="mr-1 h-3 w-3" /> Remove Image
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <Input
+                id="modelImageFile"
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                className="hidden"
+                accept="image/jpeg,image/png,image/gif"
               />
             </div>
-            {itemImageUrl && (
-                <div className="mt-2">
-                    <Label className="text-xs text-muted-foreground">Preview</Label>
-                    <div className="mt-1 p-2 border rounded-md inline-block bg-muted">
-                        <NextImage
-                            src={itemImageUrl}
-                            alt="Model preview"
-                            width={80}
-                            height={80}
-                            className="rounded-md object-cover"
-                            unoptimized={itemImageUrl.startsWith('/')}
-                            onError={(e) => {
-                                (e.target as HTMLImageElement).src = `https://placehold.co/80x80.png`;
-                                (e.target as HTMLImageElement).alt = 'Error loading image';
-                            }}
-                        />
-                    </div>
-                </div>
-            )}
+
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => setIsAddEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : (editingItem ? "Save Changes" : "Add Model")}</Button>
