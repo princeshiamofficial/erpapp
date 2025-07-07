@@ -21,6 +21,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { format, parseISO } from 'date-fns';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface CreateOrderDialogProps {
   currentUser: User;
@@ -527,10 +528,18 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                             className="w-full justify-between bg-background"
                             disabled={isLoadingOptions || modelOptions.length === 0}
                           >
-                            <span className="flex-1 text-left whitespace-nowrap">
-                            {item.model
-                              ? modelOptions.find((option) => option.name === item.model)?.name
-                              : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
+                            <span className="flex items-center gap-2 flex-1 text-left whitespace-nowrap overflow-hidden">
+                              {item.model && modelOptions.find((option) => option.name === item.model)?.imageUrl ? (
+                                  <Avatar className="h-5 w-5 rounded-sm">
+                                      <AvatarImage src={modelOptions.find((option) => option.name === item.model)?.imageUrl || undefined} alt={item.model} />
+                                      <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
+                                  </Avatar>
+                              ) : null}
+                              <span className="truncate">
+                              {item.model
+                                ? modelOptions.find((option) => option.name === item.model)?.name
+                                : (isLoadingOptions ? "Loading..." : (modelOptions.length === 0 ? "No models" : "Select model..."))}
+                              </span>
                             </span>
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
@@ -549,15 +558,19 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                                       handleItemChange(item.id, 'modelName', currentValue === item.model ? '' : currentValue);
                                       togglePopover(item.id, false);
                                     }}
-                                    className="whitespace-nowrap"
+                                    className="flex items-center gap-2"
                                   >
                                     <Check
                                       className={cn(
-                                        "mr-2 h-4 w-4",
+                                        "h-4 w-4 shrink-0",
                                         item.model === option.name ? "opacity-100" : "opacity-0"
                                       )}
                                     />
-                                    {option.name}
+                                    <Avatar className="h-8 w-8 rounded-sm shrink-0">
+                                      <AvatarImage src={option.imageUrl || undefined} alt={option.name} data-ai-hint="product photo" />
+                                      <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
+                                    </Avatar>
+                                    <span className="flex-1 truncate">{option.name}</span>
                                     {option.sellingPrice !== undefined && <span className="ml-auto text-xs text-muted-foreground">({formatCurrencyBdt(option.sellingPrice)})</span>}
                                   </CommandItem>
                                 ))}
