@@ -10,10 +10,10 @@ const PAYMENT_METHODS_COLLECTION = 'servicePaymentMethods';
 
 // Default options with prices for models
 const defaultModelsData: Array<Omit<ServiceModelItem, 'id'>> = [
-  { name: "Standard Gloss", buyingPrice: 5.00, sellingPrice: 10.00 },
-  { name: "Premium Matte", buyingPrice: 8.00, sellingPrice: 15.00 },
-  { name: "Eco-Friendly Recycled", buyingPrice: 7.00, sellingPrice: 12.50 },
-  { name: "Luxury Silk", buyingPrice: 10.00, sellingPrice: 18.75 }
+  { name: "Standard Gloss", buyingPrice: 5.00, sellingPrice: 10.00, imageUrl: 'https://placehold.co/100x100.png' },
+  { name: "Premium Matte", buyingPrice: 8.00, sellingPrice: 15.00, imageUrl: 'https://placehold.co/100x100.png' },
+  { name: "Eco-Friendly Recycled", buyingPrice: 7.00, sellingPrice: 12.50, imageUrl: 'https://placehold.co/100x100.png' },
+  { name: "Luxury Silk", buyingPrice: 10.00, sellingPrice: 18.75, imageUrl: 'https://placehold.co/100x100.png' }
 ];
 const defaultLaminationsData: string[] = ["None", "Glossy", "Matte", "Soft Touch", "Anti-Scuff Matte"];
 const defaultPaymentMethodsData: string[] = ["Cash", "Card", "Bank Transfer", "Mobile Banking", "Cheque", "Other"];
@@ -31,7 +31,8 @@ const seedDefaultModels = async (): Promise<ServiceModelItem[]> => {
       id, 
       name: modelData.name, 
       buyingPrice: modelData.buyingPrice ?? 0,
-      sellingPrice: modelData.sellingPrice ?? 0
+      sellingPrice: modelData.sellingPrice ?? 0,
+      imageUrl: modelData.imageUrl ?? null
     };
     const docRef = doc(modelsRef, id);
     batch.set(docRef, newModel);
@@ -63,7 +64,8 @@ export const getModels = async (): Promise<ServiceModelItem[]> => {
         id: docSnap.id, 
         name: data.name,
         buyingPrice: data.buyingPrice === undefined ? 0 : data.buyingPrice,
-        sellingPrice: data.sellingPrice === undefined ? 0 : data.sellingPrice 
+        sellingPrice: data.sellingPrice === undefined ? 0 : data.sellingPrice,
+        imageUrl: data.imageUrl || null
       } as ServiceModelItem;
     });
   } catch (error) {
@@ -72,7 +74,7 @@ export const getModels = async (): Promise<ServiceModelItem[]> => {
   }
 };
 
-export const addModel = async (name: string, buyingPrice?: number, sellingPrice?: number): Promise<ServiceModelItem | null> => {
+export const addModel = async (name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null): Promise<ServiceModelItem | null> => {
   if (!name.trim()) {
     throw new Error("Model name cannot be empty.");
   }
@@ -88,7 +90,7 @@ export const addModel = async (name: string, buyingPrice?: number, sellingPrice?
     }
 
     const id = uuidv4();
-    const newModel: ServiceModelItem = { id, name: name.trim(), buyingPrice: numBuyingPrice, sellingPrice: numSellingPrice };
+    const newModel: ServiceModelItem = { id, name: name.trim(), buyingPrice: numBuyingPrice, sellingPrice: numSellingPrice, imageUrl: imageUrl || null };
     await setDoc(doc(modelsCol, id), newModel);
     return newModel;
   } catch (error) {
@@ -98,7 +100,7 @@ export const addModel = async (name: string, buyingPrice?: number, sellingPrice?
   }
 };
 
-export const updateModel = async (id: string, name: string, buyingPrice?: number, sellingPrice?: number): Promise<boolean> => {
+export const updateModel = async (id: string, name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null): Promise<boolean> => {
   if (!name.trim()) {
     throw new Error("Model name cannot be empty.");
   }
@@ -114,7 +116,7 @@ export const updateModel = async (id: string, name: string, buyingPrice?: number
     }
 
     const modelDoc = doc(db, MODELS_COLLECTION, id);
-    await updateDoc(modelDoc, { name: name.trim(), buyingPrice: numBuyingPrice, sellingPrice: numSellingPrice });
+    await updateDoc(modelDoc, { name: name.trim(), buyingPrice: numBuyingPrice, sellingPrice: numSellingPrice, imageUrl: imageUrl || null });
     return true;
   } catch (error) {
     console.error("Error updating service model:", error);

@@ -118,6 +118,7 @@ export interface ServiceModelItem {
   name: string;
   buyingPrice?: number;
   sellingPrice?: number;
+  imageUrl?: string | null;
 }
 
 export interface ServiceLaminationItem {

@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import NextImage from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
@@ -24,7 +25,8 @@ interface ItemToEdit {
   id: string;
   name: string;
   buyingPrice: string;
-  sellingPrice: string; 
+  sellingPrice: string;
+  imageUrl?: string | null; 
 }
 interface ItemToDelete {
   id: string;
@@ -47,6 +49,7 @@ export default function ModelManagementPage() {
   const [itemName, setItemName] = useState('');
   const [itemBuyingPrice, setItemBuyingPrice] = useState('');
   const [itemSellingPrice, setItemSellingPrice] = useState('');
+  const [itemImageUrl, setItemImageUrl] = useState('');
   const [editingItem, setEditingItem] = useState<ItemToEdit | null>(null);
   const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
 
@@ -83,6 +86,7 @@ export default function ModelManagementPage() {
     setItemName('');
     setItemBuyingPrice('0');
     setItemSellingPrice('0');
+    setItemImageUrl('');
     setIsAddEditDialogOpen(true);
   };
 
@@ -91,11 +95,13 @@ export default function ModelManagementPage() {
       id: item.id, 
       name: item.name, 
       buyingPrice: (item.buyingPrice ?? 0).toString(),
-      sellingPrice: (item.sellingPrice ?? 0).toString()
+      sellingPrice: (item.sellingPrice ?? 0).toString(),
+      imageUrl: item.imageUrl
     });
     setItemName(item.name);
     setItemBuyingPrice((item.buyingPrice ?? 0).toString());
     setItemSellingPrice((item.sellingPrice ?? 0).toString());
+    setItemImageUrl(item.imageUrl || '');
     setIsAddEditDialogOpen(true);
   };
   
@@ -112,6 +118,7 @@ export default function ModelManagementPage() {
     }
     const buyingPriceValue = parseFloat(itemBuyingPrice);
     const sellingPriceValue = parseFloat(itemSellingPrice);
+    const imageUrlToSave = itemImageUrl.trim() === '' ? null : itemImageUrl.trim();
 
     if (isNaN(buyingPriceValue) || buyingPriceValue < 0) {
       toast({ title: "Validation Error", description: "Buying Price must be a non-negative number.", variant: "destructive" });
@@ -126,12 +133,12 @@ export default function ModelManagementPage() {
     let result;
 
     if (editingItem) { 
-      result = await updateModelAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue);
+      result = await updateModelAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue, imageUrlToSave);
       if (result.success) {
         toast({ title: "Success", description: `Model "${itemName.trim()}" updated.` });
       }
     } else { 
-      result = await addModelAction(itemName.trim(), buyingPriceValue, sellingPriceValue);
+      result = await addModelAction(itemName.trim(), buyingPriceValue, sellingPriceValue, imageUrlToSave);
       if (result.success) {
         toast({ title: "Success", description: `Model "${itemName.trim()}" added.` });
       }
@@ -142,6 +149,7 @@ export default function ModelManagementPage() {
       setItemName('');
       setItemBuyingPrice('');
       setItemSellingPrice('');
+      setItemImageUrl('');
       setEditingItem(null);
       await fetchData();
     } else if (result) {
@@ -204,7 +212,7 @@ export default function ModelManagementPage() {
       <CardContent className="p-0 max-h-[calc(100vh-350px)] overflow-y-auto">
         {isLoading ? (
           <div className="p-4 space-y-3">
-            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 w-full rounded-md" />)}
+            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-md" />)}
           </div>
         ) : items.length === 0 ? (
           <div className="p-6 text-center text-muted-foreground">
@@ -215,24 +223,33 @@ export default function ModelManagementPage() {
           <ul className="divide-y divide-border/50">
             {items.map((item) => (
               <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
-                <div className="flex-1 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-x-2 sm:gap-x-4 items-center">
-                  <span className="font-medium text-foreground whitespace-nowrap overflow-hidden" title={item.name}>
-                    {item.name}
-                  </span>
-                  <span className="font-bold text-[hsl(var(--chart-1))] flex items-center justify-between min-w-[7rem] md:min-w-[7.5rem] py-1">
-                    <span className="flex items-center">
-                      
-                      <span className="text-muted-foreground/90 text-[0.75rem] sm:text-xs w-9 text-right mr-1.5 flex-shrink-0">Buy:</span>
+                <div className="flex items-center gap-4 flex-1">
+                   <NextImage
+                      src={item.imageUrl || `https://placehold.co/64x64.png`}
+                      alt={item.name}
+                      width={48}
+                      height={48}
+                      className="rounded-md object-cover bg-muted"
+                      data-ai-hint="product photo"
+                      unoptimized={item.imageUrl?.startsWith('/')}
+                  />
+                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-x-2 sm:gap-x-4 items-center">
+                    <span className="font-medium text-foreground whitespace-nowrap overflow-hidden" title={item.name}>
+                      {item.name}
                     </span>
-                    <span className="font-mono text-sm sm:text-base">{formatCurrency(item.buyingPrice)}</span>
-                  </span>
-                  <span className="font-bold text-[hsl(var(--chart-2))] flex items-center justify-between min-w-[7rem] md:min-w-[7.5rem] py-1">
-                     <span className="flex items-center">
-                      
-                      <span className="text-muted-foreground/90 text-[0.75rem] sm:text-xs w-9 text-right mr-1.5 flex-shrink-0">Sell:</span>
+                    <span className="font-bold text-[hsl(var(--chart-1))] flex items-center justify-between min-w-[7rem] md:min-w-[7.5rem] py-1">
+                      <span className="flex items-center">
+                        <span className="text-muted-foreground/90 text-[0.75rem] sm:text-xs w-9 text-right mr-1.5 flex-shrink-0">Buy:</span>
+                      </span>
+                      <span className="font-mono text-sm sm:text-base">{formatCurrency(item.buyingPrice)}</span>
                     </span>
-                    <span className="font-mono text-sm sm:text-base">{formatCurrency(item.sellingPrice)}</span>
-                  </span>
+                    <span className="font-bold text-[hsl(var(--chart-2))] flex items-center justify-between min-w-[7rem] md:min-w-[7.5rem] py-1">
+                      <span className="flex items-center">
+                        <span className="text-muted-foreground/90 text-[0.75rem] sm:text-xs w-9 text-right mr-1.5 flex-shrink-0">Sell:</span>
+                      </span>
+                      <span className="font-mono text-sm sm:text-base">{formatCurrency(item.sellingPrice)}</span>
+                    </span>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 ml-4">
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(item)} title={`Edit model`} className="h-8 w-8">
@@ -277,15 +294,15 @@ export default function ModelManagementPage() {
           <DialogHeader>
             <DialogTitle>{editingItem ? 'Edit' : 'Add New'} Model</DialogTitle>
             <DialogDescription>
-              {editingItem ? 'Update the name and prices of this model.' : 'Enter the name and prices for the new model.'}
+              {editingItem ? 'Update the name, prices, and image of this model.' : 'Enter the name, prices, and image for the new model.'}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="itemName">Name</Label>
-                <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
-              </div>
+            <div className="space-y-1">
+              <Label htmlFor="itemName">Name</Label>
+              <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="itemBuyingPrice">Buying Price (BDT)</Label>
                 <Input 
@@ -315,6 +332,35 @@ export default function ModelManagementPage() {
                 />
               </div>
             </div>
+            <div className="space-y-1">
+              <Label htmlFor="itemImageUrl">Image URL (Optional)</Label>
+              <Input 
+                  id="itemImageUrl" 
+                  value={itemImageUrl} 
+                  onChange={(e) => setItemImageUrl(e.target.value)} 
+                  disabled={isSubmitting}
+                  placeholder="e.g., https://example.com/image.png"
+              />
+            </div>
+            {itemImageUrl && (
+                <div className="mt-2">
+                    <Label className="text-xs text-muted-foreground">Preview</Label>
+                    <div className="mt-1 p-2 border rounded-md inline-block bg-muted">
+                        <NextImage
+                            src={itemImageUrl}
+                            alt="Model preview"
+                            width={80}
+                            height={80}
+                            className="rounded-md object-cover"
+                            unoptimized={itemImageUrl.startsWith('/')}
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).src = `https://placehold.co/80x80.png`;
+                                (e.target as HTMLImageElement).alt = 'Error loading image';
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => setIsAddEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : (editingItem ? "Save Changes" : "Add Model")}</Button>
@@ -347,10 +393,3 @@ export default function ModelManagementPage() {
     </div>
   );
 }
-    
-    
-    
-
-    
-
-    
