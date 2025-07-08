@@ -16,6 +16,7 @@ import {
   SidebarTrigger
 } from '@/components/ui/sidebar';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { UserNav } from '@/components/layout/UserNav';
 import { SidebarNavigation } from '@/components/layout/SidebarNavigation';
 import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
@@ -139,6 +140,37 @@ export default function AuthenticatedLayout({
     return null; 
   }
 
+  // Special layout for LR role without sidebar
+  if (currentUser?.role === 'LR') {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/90 backdrop-blur-lg supports-[backdrop-filter]:bg-background/75 shadow-sm print:hidden">
+            <div className="container flex h-[4.5rem] items-center justify-between max-w-full px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center">
+                    <Link href="/projects" className="flex items-center space-x-2 text-primary hover:text-primary/80 transition-colors">
+                        <Logo className="h-7 w-7" />
+                        <span className="font-extrabold text-xl tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400">Color Hut</span>
+                    </Link>
+                </div>
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                    <UserNav />
+                </div>
+            </div>
+        </header>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-background min-h-[calc(100vh-4.5rem)] selection:bg-primary/20 selection:text-primary">
+          {children}
+        </main>
+         {isSuspendedDialogOpen && (
+          <AccountSuspendedDialog
+            isOpen={isSuspendedDialogOpen}
+            onConfirmLogout={logout}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Default layout for all other roles
   return (
     <SidebarProvider defaultOpen={true}>
       <Sidebar
