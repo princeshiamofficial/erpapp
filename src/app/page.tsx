@@ -13,7 +13,11 @@ export default function HomePage() {
   useEffect(() => {
     if (!isLoading) {
       if (currentUser) {
-        router.replace('/dashboard');
+        if (currentUser.role === 'LR') {
+          router.replace('/projects');
+        } else {
+          router.replace('/dashboard');
+        }
       } else {
         router.replace('/login');
       }

@@ -152,7 +152,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setCurrentUser(userToStore as User);
             localStorage.setItem('colorhut-user', JSON.stringify(userToStore));
             setIsLoading(false);
-            router.push('/dashboard'); 
+            if (userToStore.role === 'LR') {
+              router.push('/projects');
+            } else {
+              router.push('/dashboard'); 
+            }
             return true; 
           }
         } else {

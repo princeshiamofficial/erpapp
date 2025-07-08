@@ -90,10 +90,15 @@ export function SidebarNavigation() {
     <>
       {navItems.map((item) => {
         
-        let shouldShowItem = item.roles.includes(userRole);
+        let shouldShowItem;
 
-        if (item.href === "/finance-manager" && !canUserLogExpense) {
-          shouldShowItem = false;
+        if (userRole === 'LR') {
+          shouldShowItem = item.href === '/projects';
+        } else {
+          shouldShowItem = item.roles.includes(userRole);
+          if (item.href === "/finance-manager" && !canUserLogExpense) {
+            shouldShowItem = false;
+          }
         }
 
         return shouldShowItem ? (
