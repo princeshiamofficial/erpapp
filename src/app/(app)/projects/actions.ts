@@ -125,7 +125,6 @@ export async function transferToCourierAction(
       recipient_phone: order.phoneNumber,
       recipient_address: order.address,
       cod_amount: totalCodAmount, // COD amount includes shipping charge
-      note: `Area: ${shippingArea}. Shipping: ${shippingCharge}.`, // Adding info to note
     };
 
     const response = await fetch("https://portal.packzy.com/api/v1/create_order", {
@@ -193,3 +192,4 @@ export async function transferToCourierAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
