@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -22,7 +23,8 @@ import {
   BarChartBig,
   MapPin,
   CalendarDays, 
-  ChevronDown
+  ChevronDown,
+  Loader2
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -94,7 +96,8 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
 };
 
 export default function DashboardPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, isLoading: isAuthLoading } = useAuth();
+  const router = useRouter();
   const { toast } = useToast();
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
@@ -117,6 +120,12 @@ export default function DashboardPage() {
   const [expense, setExpense] = useState(formatCurrency(0));
 
   useEffect(() => {
+    if (currentUser?.role === 'LR') {
+      router.replace('/projects');
+    }
+  }, [currentUser, router]);
+
+  useEffect(() => {
     setSelectedDateRange({
       from: subDays(new Date(), 29), 
       to: new Date(),
@@ -124,7 +133,7 @@ export default function DashboardPage() {
   }, []);
 
   const fetchDashboardData = useCallback(async () => {
-    if (!currentUser) {
+    if (!currentUser || currentUser.role === 'LR') {
       setIsLoadingData(false);
       return;
     }
@@ -147,8 +156,10 @@ export default function DashboardPage() {
   }, [currentUser, toast]);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    if (currentUser && currentUser.role !== 'LR') {
+      fetchDashboardData();
+    }
+  }, [fetchDashboardData, currentUser]);
 
   const filteredOrders = useMemo(() => {
     if (!selectedDateRange?.from || !selectedDateRange?.to) return [];
@@ -289,7 +300,15 @@ export default function DashboardPage() {
   }, [isLoadingData, totalSales, netValue, invoiceDue, totalSellReturn, totalPurchase, purchaseDue, totalPurchaseReturn, expense, currentUser, summaryCardDefinitions]);
 
 
-  if (!currentUser && !isLoadingData) {
+  if (isAuthLoading || currentUser?.role === 'LR') {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  if (!currentUser && !isAuthLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <p>Redirecting to login...</p>
