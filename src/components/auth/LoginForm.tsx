@@ -33,8 +33,10 @@ export function LoginForm() {
     const success = await login(email, password);
     if (!success) {
       // Toast is already handled by login function for specific errors
+      setIsLoading(false);
     }
-    setIsLoading(false);
+    // If login is successful, navigation will unmount this component,
+    // so we don't need to set isLoading back to false.
   };
 
   return (
