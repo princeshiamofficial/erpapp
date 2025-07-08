@@ -16,7 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format, parseISO, isSameWeek, isSameMonth, isSameYear } from 'date-fns';
 import {
   DndContext,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
@@ -63,7 +64,19 @@ export default function ProjectsPage() {
   const [projectToCourier, setProjectToCourier] = useState<Project | null>(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(MouseSensor, {
+      // Require the mouse to move by 10 pixels before activating
+      activationConstraint: {
+        distance: 10,
+      },
+    }),
+    useSensor(TouchSensor, {
+      // Press delay of 250ms, with a tolerance of 5px of movement
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    }),
     useSensor(KeyboardSensor)
   );
 
@@ -463,5 +476,3 @@ export default function ProjectsPage() {
     </DndContext>
   );
 }
-
-    
