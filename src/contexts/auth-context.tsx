@@ -155,9 +155,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (userToStore.role === 'LR') {
               router.push('/projects');
             } else {
-              router.push('/dashboard'); 
+              router.push('/dashboard');
             }
-            return true; 
+            return true;
           }
         } else {
           console.log("AuthContext: Password does NOT match for user:", email);
