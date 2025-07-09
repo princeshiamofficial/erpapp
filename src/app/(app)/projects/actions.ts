@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import type { Project, ProjectStatusType, User, OrderLogEntry } from "@/types"; // Added User, OrderLogEntry
 import { updateProjectStatus as updateProjectStatusInDb } from '@/lib/project-service';
 import { getOrderById, updateOrder, autoSettleOrderIfDelivered } from "@/lib/order-service"; // Added autoSettleOrderIfDelivered
-import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_STATUS_ID, DELIVERED_STATUS_ID } from '@/lib/status-service'; // Added SHIPPED_STATUS_ID
+import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_STATUS_ID, DELIVERED_STATUS_ID, ORDER_SUBMITTED_ID } from '@/lib/status-service'; // Added SHIPPED_STATUS_ID
 import { v4 as uuidv4 } from 'uuid'; // Added
 import { getGlobalSettings } from '@/lib/settings-service';
 
@@ -51,7 +51,11 @@ export async function updateProjectStatusAction(
         } else if (newStatus === 'Courier' && order.currentStatus !== SHIPPED_STATUS_ID) {
           targetOrderStatusId = SHIPPED_STATUS_ID;
           statusUpdateNote = `Order shipped (project in Courier stage) by ${actingUser.name}. Project status: Courier.`;
+        } else if (newStatus === 'CR Clearance' && order.currentStatus !== ORDER_SUBMITTED_ID) {
+          targetOrderStatusId = ORDER_SUBMITTED_ID;
+          statusUpdateNote = `Order moved back to CR Clearance from project board by ${actingUser.name}.`;
         }
+
 
         if (targetOrderStatusId && statusUpdateNote) {
           const newLogEntry: OrderLogEntry = {
@@ -192,4 +196,3 @@ export async function transferToCourierAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
-
