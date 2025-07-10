@@ -271,7 +271,7 @@ export async function updateOrderAction(
         const currentGrandTotal = currentNetPayable + currentShippingCharge;
 
         if (totalAdvanceAfterNew > currentGrandTotal && currentGrandTotal > 0) {
-           return { success: false, error: `Total advance payments (${totalAdvanceAfterNew}) cannot exceed grand total amount (${currentGrandTotal}).` };
+           return { success: false, error: `Total advance payment (${totalAdvanceAfterNew}) cannot exceed grand total amount (${currentGrandTotal}).` };
         }
     } else if (updates.advancePayments) {
         finalUpdates.advancePayments = updates.advancePayments;
@@ -291,6 +291,35 @@ export async function updateOrderAction(
     const updatedOrder = await getOrderById(orderId);
     if (!updatedOrder) return { success: false, error: "Failed to retrieve updated order after update." };
 
+    // --- Sync with Project ---
+    const projectDocRef = doc(db, 'projects', orderId);
+    try {
+        const projectDocSnap = await getDoc(projectDocRef);
+        if (projectDocSnap.exists()) {
+            console.log(`[updateOrderAction] Found persistent project for order ${orderId}. Syncing info.`);
+            const projectUpdates: { [key: string]: any } = {};
+            if (finalUpdates.companyName) {
+                projectUpdates.name = finalUpdates.companyName;
+            }
+            if (finalUpdates.crmUserName) {
+                projectUpdates.assigneeName = finalUpdates.crmUserName;
+            }
+             if (finalUpdates.designerRepresentativeName !== undefined) { // Check for undefined to handle removal
+                projectUpdates.designerRepresentativeName = finalUpdates.designerRepresentativeName;
+            }
+            projectUpdates.updatedAt = new Date().toISOString();
+            
+            if(Object.keys(projectUpdates).length > 1) { // Check if more than just updatedAt changed
+                 await updateDoc(projectDocRef, projectUpdates);
+                 console.log(`[updateOrderAction] Synced project ${orderId} with updates:`, projectUpdates);
+            }
+        }
+    } catch (projectError) {
+        console.warn(`[updateOrderAction] Failed to sync order update to project board for order ${orderId}. This is not a critical error. Error:`, projectError);
+    }
+    // --- End Sync with Project ---
+
+
     revalidatePath("/(app)/orders");
     revalidatePath(`/track/${orderId}`);
     revalidatePath("/(app)/dashboard");
@@ -298,6 +327,7 @@ export async function updateOrderAction(
     revalidatePath("/(app)/orders/monthly");
     revalidatePath("/(app)/deliveries/monthly");
     revalidatePath("/(app)/deliveries/weekly");
+    revalidatePath("/(app)/projects"); // Added revalidation for projects page
 
     return { success: true, order: updatedOrder };
   } catch (error: any) {
