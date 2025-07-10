@@ -10,6 +10,11 @@ import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_ST
 import { v4 as uuidv4 } from 'uuid'; // Added
 import { getGlobalSettings } from '@/lib/settings-service';
 
+const sanitizeInput = (str: string): string => {
+  // Removes HTML tags and trims whitespace
+  return str.replace(/<[^>]*>/g, '').trim();
+};
+
 export async function updateProjectStatusAction(
   project: Project,
   newStatus: ProjectStatusType,
@@ -122,12 +127,15 @@ export async function transferToCourierAction(
 
     const totalCodAmount = dueAmount + shippingCharge;
 
-    // Prepare Packzy API request
+    const recipientNameRaw = order.companyName.split('•').pop()?.trim() || order.companyName;
+    const recipientAddressRaw = order.address;
+
+    // Prepare Packzy API request with sanitized data
     const packzyPayload = {
       invoice: order.id,
-      recipient_name: order.companyName.split('•').pop()?.trim() || order.companyName, // Get name part
+      recipient_name: sanitizeInput(recipientNameRaw),
       recipient_phone: order.phoneNumber,
-      recipient_address: order.address,
+      recipient_address: sanitizeInput(recipientAddressRaw),
       cod_amount: totalCodAmount, // COD amount includes shipping charge
     };
 
@@ -141,11 +149,19 @@ export async function transferToCourierAction(
       body: JSON.stringify(packzyPayload),
     });
 
-    const responseData = await response.json();
+    const responseText = await response.text();
+    let responseData;
+    try {
+        responseData = JSON.parse(responseText);
+    } catch (e) {
+        console.error('Packzy API Error: Response is not valid JSON.', responseText);
+        return { success: false, error: `Packzy API returned an unexpected response that is not valid JSON. Please check their server status. Raw response: ${responseText.substring(0, 100)}...` };
+    }
+
 
     if (response.status !== 200 || responseData.status !== 200) {
-      console.error('Steadfast API Error:', responseData);
-      return { success: false, error: `Steadfast API Error: ${responseData.message || 'Failed to create consignment.'}` };
+      console.error('Packzy API Error:', responseData);
+      return { success: false, error: `Packzy API Error: ${responseData.message || 'Failed to create consignment.'}` };
     }
 
     const { consignment } = responseData;
@@ -153,7 +169,7 @@ export async function transferToCourierAction(
     // Update Project Status
     const projectUpdateSuccess = await updateProjectStatusInDb(project.id, 'Courier', project);
     if (!projectUpdateSuccess) {
-      console.error(`CRITICAL: Project ${project.id} consignment created in Steadfast (ID: ${consignment.consignment_id}) but failed to update project status to 'Courier'.`);
+      console.error(`CRITICAL: Project ${project.id} consignment created in Packzy (ID: ${consignment.consignment_id}) but failed to update project status to 'Courier'.`);
       return { success: false, error: "Consignment created, but failed to update project status. Please check manually." };
     }
     
@@ -164,7 +180,7 @@ export async function transferToCourierAction(
       status: SHIPPED_STATUS_ID,
       changedByUserId: actingUser.id,
       changedByUserName: actingUser.name,
-      notes: `Order transferred to Steadfast Courier. Tracking: ${consignment.tracking_code}, Consignment ID: ${consignment.consignment_id}. COD: ${totalCodAmount}, Shipping: ${shippingCharge}. Area: ${shippingArea}.`,
+      notes: `Order transferred to Packzy Courier. Tracking: ${consignment.tracking_code}, Consignment ID: ${consignment.consignment_id}. COD: ${totalCodAmount}, Shipping: ${shippingCharge}. Area: ${shippingArea}.`,
     };
 
     const orderUpdateSuccess = await updateOrder(order.id, {
@@ -180,7 +196,7 @@ export async function transferToCourierAction(
     });
     
     if (!orderUpdateSuccess) {
-       console.error(`CRITICAL: Project ${project.id} status updated, but failed to update corresponding order ${order.id} with Steadfast details.`);
+       console.error(`CRITICAL: Project ${project.id} status updated, but failed to update corresponding order ${order.id} with Packzy details.`);
        return { success: false, error: "Project status updated, but failed to update order details. Please check manually." };
     }
 
@@ -196,3 +212,4 @@ export async function transferToCourierAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
