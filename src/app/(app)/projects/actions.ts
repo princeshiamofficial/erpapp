@@ -12,9 +12,17 @@ import { getGlobalSettings } from '@/lib/settings-service';
 
 const sanitizeInput = (str: string): string => {
   if (!str) return "";
-  // Removes HTML tags, multiple whitespace/newlines, and trims.
-  return str.replace(/<[^>]*>/g, '').replace(/\s\s+/g, ' ').trim();
+  // More aggressive sanitization: removes HTML tags, multiple whitespace/newlines,
+  // and characters that might break JSON or cause API issues.
+  // Allows letters, numbers, spaces, and basic punctuation (- , . # /).
+  return str
+    .replace(/<[^>]*>/g, '')      // Remove HTML tags
+    .replace(/[\r\n\t]+/g, ' ')   // Replace newlines, tabs with a space
+    .replace(/[^\p{L}\p{N}\s\-.,#/\\]/gu, '') // Keep letters, numbers, space, and specific punctuation
+    .replace(/\s\s+/g, ' ')       // Collapse multiple spaces
+    .trim();
 };
+
 
 export async function updateProjectStatusAction(
   project: Project,
@@ -119,7 +127,6 @@ export async function transferToCourierAction(
       return { success: false, error: `Order with ID ${project.id} not found.` };
     }
 
-    // Calculate Due Amount
     const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
     const effectiveDiscount = order.specialClientDiscount || 0;
     const netPayable = orderSubtotal - effectiveDiscount;
@@ -132,11 +139,10 @@ export async function transferToCourierAction(
     const recipientNameRaw = order.companyName.split('•').pop()?.trim() || order.companyName;
     const recipientAddressRaw = order.address;
 
-    // Prepare Packzy API request with sanitized data
     const packzyPayload = {
-      invoice: order.id,
+      invoice: sanitizeInput(order.id),
       recipient_name: sanitizeInput(recipientNameRaw),
-      recipient_phone: order.phoneNumber,
+      recipient_phone: sanitizeInput(order.phoneNumber),
       recipient_address: sanitizeInput(recipientAddressRaw),
       cod_amount: totalCodAmount,
     };
@@ -146,7 +152,7 @@ export async function transferToCourierAction(
       headers: {
         'Api-Key': 'vfei2q49dhy1rxqxjs6xntkkvc2odeax',
         'Secret-Key': 'n4wr4fhdohq0x3gmm8xg3pp1',
-        'Content-Type': 'application/json; charset=utf-8', // Ensure UTF-8
+        'Content-Type': 'application/json; charset=utf-8',
       },
       body: JSON.stringify(packzyPayload),
     });
@@ -155,9 +161,7 @@ export async function transferToCourierAction(
     let responseData;
     
     if (!response.ok) {
-        // If the server responded with an error status (4xx or 5xx)
         console.error(`Packzy API Error: Status ${response.status}`, responseText);
-        // Try to parse error, but fallback to raw text
         try {
             responseData = JSON.parse(responseText);
             return { success: false, error: `Packzy API Error: ${responseData.message || 'Failed to create consignment.'}` };
@@ -180,14 +184,12 @@ export async function transferToCourierAction(
 
     const { consignment } = responseData;
     
-    // Update Project Status
     const projectUpdateSuccess = await updateProjectStatusInDb(project.id, 'Courier', project);
     if (!projectUpdateSuccess) {
       console.error(`CRITICAL: Project ${project.id} consignment created in Packzy (ID: ${consignment.consignment_id}) but failed to update project status to 'Courier'.`);
       return { success: false, error: "Consignment created, but failed to update project status. Please check manually." };
     }
     
-    // Update Order Status and add Packzy info
     const logEntry: OrderLogEntry = {
       id: uuidv4(),
       timestamp: new Date().toISOString(),
