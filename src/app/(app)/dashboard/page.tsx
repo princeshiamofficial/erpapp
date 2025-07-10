@@ -380,6 +380,8 @@ export default function DashboardPage() {
 
   const isLoadingContent = isLoadingData || !selectedDateRange;
 
+  const canSelectCR = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
+
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--primary))] text-primary-foreground p-6 sm:p-8 rounded-xl shadow-xl">
@@ -399,7 +401,7 @@ export default function DashboardPage() {
               <Users className="h-5 w-5 mr-2 text-primary/80" />
               <span>Select CR</span>
             </div>
-            {currentUser?.role !== 'CRM' ? (
+            {canSelectCR ? (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="text-xs h-9 sm:h-10 truncate">
