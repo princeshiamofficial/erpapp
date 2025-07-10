@@ -10,14 +10,20 @@ import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_ST
 import { v4 as uuidv4 } from 'uuid'; // Added
 import { getGlobalSettings } from '@/lib/settings-service';
 
-const sanitizeInput = (str: string | null | undefined): string => {
-  if (!str) return "";
-  return str
-    .replace(/<[^>]*>/g, '')          // Remove HTML tags
-    .replace(/[\r\n\t]+/g, ' ')       // Replace line breaks/tabs with space
-    .replace(/[^\p{L}\p{M}\p{N}\s\-.,#/\\]/gu, '')  // Keep allowed chars
-    .replace(/\s+/g, ' ')             // Collapse multiple spaces
-    .trim();                          // Trim leading/trailing space
+/**
+ * Sanitizes a string for Packzy courier API compatibility.
+ * This version is specifically designed to preserve Unicode characters including
+ * letters, combining marks (like Bangla matras), and numbers, while stripping
+ * out other symbols that might cause issues.
+ * @param input The raw input string.
+ * @returns A cleaned, trimmed string.
+ */
+const sanitizeForPackzy = (input: string | null | undefined): string => {
+  if (!input) return '';
+  return input
+    .replace(/[^\p{L}\p{M}\p{N}.,\s-]/gu, '') // Keep letters, marks, numbers, ., ,, -, space
+    .replace(/\s+/g, ' ') // Collapse multiple spaces into one
+    .trim();
 };
 
 
@@ -137,10 +143,10 @@ export async function transferToCourierAction(
     const recipientAddressRaw = order.address;
 
     const packzyPayload = {
-      invoice: sanitizeInput(order.id),
-      recipient_name: sanitizeInput(recipientNameRaw),
-      recipient_phone: sanitizeInput(order.phoneNumber),
-      recipient_address: sanitizeInput(recipientAddressRaw),
+      invoice: sanitizeForPackzy(order.id),
+      recipient_name: sanitizeForPackzy(recipientNameRaw),
+      recipient_phone: sanitizeForPackzy(order.phoneNumber),
+      recipient_address: sanitizeForPackzy(recipientAddressRaw),
       cod_amount: totalCodAmount,
     };
 
@@ -225,5 +231,6 @@ export async function transferToCourierAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
 
 
