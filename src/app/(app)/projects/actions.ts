@@ -10,17 +10,14 @@ import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_ST
 import { v4 as uuidv4 } from 'uuid'; // Added
 import { getGlobalSettings } from '@/lib/settings-service';
 
-const sanitizeInput = (str: string): string => {
+const sanitizeInput = (str: string | null | undefined): string => {
   if (!str) return "";
-  // More aggressive sanitization: removes HTML tags, multiple whitespace/newlines,
-  // and characters that might break JSON or cause API issues.
-  // Allows letters, numbers, spaces, and basic punctuation (- , . # /).
   return str
-    .replace(/<[^>]*>/g, '')      // Remove HTML tags
-    .replace(/[\r\n\t]+/g, ' ')   // Replace newlines, tabs with a space
-    .replace(/[^\p{L}\p{N}\s\-.,#/\\]/gu, '') // Keep letters, numbers, space, and specific punctuation
-    .replace(/\s\s+/g, ' ')       // Collapse multiple spaces
-    .trim();
+    .replace(/<[^>]*>/g, '')          // Remove HTML tags
+    .replace(/[\r\n\t]+/g, ' ')       // Replace line breaks/tabs with space
+    .replace(/[^\p{L}\p{M}\p{N}\s\-.,#/\\]/gu, '')  // Keep allowed chars
+    .replace(/\s+/g, ' ')             // Collapse multiple spaces
+    .trim();                          // Trim leading/trailing space
 };
 
 
@@ -228,4 +225,5 @@ export async function transferToCourierAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
 
