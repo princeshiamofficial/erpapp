@@ -149,15 +149,19 @@ export async function transferToCourierAction(
       recipient_address: sanitizeForPackzy(recipientAddressRaw),
       cod_amount: totalCodAmount,
     };
+    
+    const urlEncodedBody = Object.entries(packzyPayload)
+      .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+      .join('&');
 
     const response = await fetch("https://portal.packzy.com/api/v1/create_order", {
       method: 'POST',
       headers: {
         'Api-Key': 'vfei2q49dhy1rxqxjs6xntkkvc2odeax',
         'Secret-Key': 'n4wr4fhdohq0x3gmm8xg3pp1',
-        'Content-Type': 'application/json; charset=utf-8',
+        'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: JSON.stringify(packzyPayload),
+      body: urlEncodedBody,
     });
 
     const responseText = await response.text();
@@ -231,6 +235,3 @@ export async function transferToCourierAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
-
-
-
