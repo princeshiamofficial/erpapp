@@ -21,7 +21,7 @@ import {
   Redo2, 
   Receipt, 
   BarChartBig,
-  MapPin,
+  Users,
   CalendarDays, 
   ChevronDown,
   Loader2
@@ -37,10 +37,12 @@ import {
   Legend,
 } from 'recharts';
 import { ChartContainer } from '@/components/ui/chart';
-import type { TrackingLink, OrderItem, ServiceModelItem } from '@/types'; 
+import type { TrackingLink, OrderItem, ServiceModelItem, User } from '@/types'; 
 import { getOrders } from '@/lib/order-service';
 import { getModels } from '@/lib/service-options-service'; 
 import { useToast } from '@/hooks/use-toast';
+import { getUsers } from '@/lib/user-service';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const chartConfig = {
   sales: {
@@ -102,11 +104,14 @@ export default function DashboardPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
   const [allModels, setAllModels] = useState<ServiceModelItem[]>([]); 
+  const [allCrmUsers, setAllCrmUsers] = useState<User[]>([]);
   
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
   const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Last 30 Days");
   const [selectedPredefinedValue, setSelectedPredefinedValue] = useState<PredefinedRange | "custom" | null>("last30Days");
   const [chartGranularity, setChartGranularity] = useState<'daily' | 'hourly'>('daily');
+  const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
+
 
   const [totalSales, setTotalSales] = useState(formatCurrency(0));
   const [invoiceDue, setInvoiceDue] = useState(formatCurrency(0));
@@ -139,17 +144,20 @@ export default function DashboardPage() {
     }
     setIsLoadingData(true);
     try {
-      const [fetchedOrders, fetchedModels] = await Promise.all([ 
+      const [fetchedOrders, fetchedModels, fetchedUsers] = await Promise.all([ 
         getOrders(),
         getModels(),
+        getUsers(),
       ]);
       setAllOrders(fetchedOrders);
       setAllModels(fetchedModels); 
+      setAllCrmUsers(fetchedUsers.filter(u => u.role === 'CRM'));
     } catch (error) {
       console.error("Failed to fetch orders or models for dashboard:", error);
-      toast({ title: "Error", description: "Could not load order or model data.", variant: "destructive" });
+      toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive" });
       setAllOrders([]);
       setAllModels([]);
+      setAllCrmUsers([]);
     } finally {
       setIsLoadingData(false);
     }
@@ -176,13 +184,15 @@ export default function DashboardPage() {
         end: endDate
       })
     );
-
+    
     if (currentUser?.role === 'CRM') {
       ordersToFilter = ordersToFilter.filter(order => order.crmUserId === currentUser.id);
+    } else if (selectedCrmId !== 'all') {
+      ordersToFilter = ordersToFilter.filter(order => order.crmUserId === selectedCrmId);
     }
     
     return ordersToFilter;
-  }, [allOrders, selectedDateRange, currentUser]);
+  }, [allOrders, selectedDateRange, currentUser, selectedCrmId]);
 
   useEffect(() => {
     if (isLoadingData || !selectedDateRange) return;
@@ -276,7 +286,7 @@ export default function DashboardPage() {
   const handleDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
     setCurrentDateRangeLabel(label);
-    setSelectedPredefinedValue(predefined);
+    setSelectedPredefined(predefined);
   };
 
  const summaryCardDefinitions = [
@@ -298,6 +308,11 @@ export default function DashboardPage() {
     }
     return summaryCardDefinitions;
   }, [isLoadingData, totalSales, netValue, invoiceDue, totalSellReturn, totalPurchase, purchaseDue, totalPurchaseReturn, expense, currentUser, summaryCardDefinitions]);
+
+  const selectedCrmName = useMemo(() => {
+    if (selectedCrmId === 'all') return "All CRs";
+    return allCrmUsers.find(u => u.id === selectedCrmId)?.name || "Select CR";
+  }, [selectedCrmId, allCrmUsers]);
 
 
   if (isAuthLoading || currentUser?.role === 'LR') {
@@ -381,12 +396,32 @@ export default function DashboardPage() {
         <Card className="shadow-sm bg-card">
           <CardContent className="p-3 sm:p-4 flex items-center justify-between">
             <div className="flex items-center text-sm text-muted-foreground">
-              <MapPin className="h-5 w-5 mr-2 text-primary/80" />
-              <span>Select Location</span>
+              <Users className="h-5 w-5 mr-2 text-primary/80" />
+              <span>Select CR</span>
             </div>
-            <Button variant="outline" size="sm" className="text-xs h-9 sm:h-10" disabled>
-              All Locations <ChevronDown className="ml-1.5 h-3.5 w-3.5 opacity-70" />
-            </Button>
+            {currentUser?.role !== 'CRM' ? (
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="text-xs h-9 sm:h-10 truncate">
+                      {selectedCrmName} <ChevronDown className="ml-1.5 h-3.5 w-3.5 opacity-70" />
+                    </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                    <DropdownMenuLabel>Filter by CRM</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => setSelectedCrmId('all')}>All CRs</DropdownMenuItem>
+                    {allCrmUsers.map(crm => (
+                        <DropdownMenuItem key={crm.id} onSelect={() => setSelectedCrmId(crm.id)}>
+                        {crm.name}
+                        </DropdownMenuItem>
+                    ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            ) : (
+                <Button variant="outline" size="sm" className="text-xs h-9 sm:h-10" disabled>
+                    Your Data
+                </Button>
+            )}
           </CardContent>
         </Card>
         <Card className="shadow-sm bg-card">
