@@ -11,8 +11,9 @@ import { v4 as uuidv4 } from 'uuid'; // Added
 import { getGlobalSettings } from '@/lib/settings-service';
 
 const sanitizeInput = (str: string): string => {
-  // Removes HTML tags and trims whitespace
-  return str.replace(/<[^>]*>/g, '').trim();
+  if (!str) return "";
+  // Removes HTML tags, multiple whitespace/newlines, and trims.
+  return str.replace(/<[^>]*>/g, '').replace(/\s\s+/g, ' ').trim();
 };
 
 export async function updateProjectStatusAction(
@@ -125,7 +126,8 @@ export async function transferToCourierAction(
     const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
     const dueAmount = Math.max(0, netPayable - totalAdvancePaid);
 
-    const totalCodAmount = dueAmount + shippingCharge;
+    const numericShippingCharge = Number(shippingCharge) || 0;
+    const totalCodAmount = dueAmount + numericShippingCharge;
 
     const recipientNameRaw = order.companyName.split('•').pop()?.trim() || order.companyName;
     const recipientAddressRaw = order.address;
@@ -136,7 +138,7 @@ export async function transferToCourierAction(
       recipient_name: sanitizeInput(recipientNameRaw),
       recipient_phone: order.phoneNumber,
       recipient_address: sanitizeInput(recipientAddressRaw),
-      cod_amount: totalCodAmount, // COD amount includes shipping charge
+      cod_amount: totalCodAmount,
     };
 
     const response = await fetch("https://portal.packzy.com/api/v1/create_order", {
@@ -144,23 +146,35 @@ export async function transferToCourierAction(
       headers: {
         'Api-Key': 'vfei2q49dhy1rxqxjs6xntkkvc2odeax',
         'Secret-Key': 'n4wr4fhdohq0x3gmm8xg3pp1',
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json; charset=utf-8', // Ensure UTF-8
       },
       body: JSON.stringify(packzyPayload),
     });
 
     const responseText = await response.text();
     let responseData;
+    
+    if (!response.ok) {
+        // If the server responded with an error status (4xx or 5xx)
+        console.error(`Packzy API Error: Status ${response.status}`, responseText);
+        // Try to parse error, but fallback to raw text
+        try {
+            responseData = JSON.parse(responseText);
+            return { success: false, error: `Packzy API Error: ${responseData.message || 'Failed to create consignment.'}` };
+        } catch (e) {
+             return { success: false, error: `Packzy API returned an error page. Please check the recipient details for invalid characters. Status: ${response.status}.` };
+        }
+    }
+
     try {
         responseData = JSON.parse(responseText);
     } catch (e) {
         console.error('Packzy API Error: Response is not valid JSON.', responseText);
-        return { success: false, error: `Packzy API returned an unexpected response that is not valid JSON. Please check their server status. Raw response: ${responseText.substring(0, 100)}...` };
+        return { success: false, error: `Packzy API returned an unexpected response that is not valid JSON. Please check their server status. Raw response: ${responseText.substring(0, 150)}...` };
     }
 
-
-    if (response.status !== 200 || responseData.status !== 200) {
-      console.error('Packzy API Error:', responseData);
+    if (responseData.status !== 200) {
+      console.error('Packzy API Error (Status in JSON is not 200):', responseData);
       return { success: false, error: `Packzy API Error: ${responseData.message || 'Failed to create consignment.'}` };
     }
 
@@ -212,4 +226,3 @@ export async function transferToCourierAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
-
