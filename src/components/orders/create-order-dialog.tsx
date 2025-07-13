@@ -472,7 +472,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             </div>
             <div className="space-y-1">
               <Label htmlFor="address">Address *</Label>
-              <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required />
+              <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required readOnly={isAutoFilled} className={isAutoFilled ? "bg-muted/50" : ""} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
@@ -805,3 +805,4 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
+
