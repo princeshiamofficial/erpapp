@@ -134,8 +134,26 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     if (isOpen) {
       fetchOptions();
       setCurrentOrderDate(new Date());
+
+      // Suggest next available Job ID
+      if (allOrders && allOrders.length > 0) {
+        let maxJobId = 0;
+        allOrders.forEach(order => {
+          const orderJobIdStr = (order.companyName || '').split(' • ')[0].trim();
+          const orderJobIdNum = parseInt(orderJobIdStr, 10);
+          if (!isNaN(orderJobIdNum) && orderJobIdNum > maxJobId) {
+            maxJobId = orderJobIdNum;
+          }
+        });
+        const newSuggestedId = (maxJobId + 1).toString();
+        setJobId(newSuggestedId);
+      } else {
+        setJobId('1'); // Start with 1 if no orders exist
+      }
+    } else {
+        resetForm();
     }
-  }, [isOpen, fetchOptions]);
+  }, [isOpen, fetchOptions, allOrders, resetForm]);
 
   useEffect(() => {
     if (isOpen && availableStatuses.length > 0) {
@@ -467,12 +485,12 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               </div>
               <div className="space-y-1">
                 <Label htmlFor="companyName">Company Name *</Label>
-                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="e.g., Acme Corp" readOnly={isAutoFilled} className={isAutoFilled ? "bg-muted/50" : ""} />
+                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="e.g., Acme Corp" readOnly={isAutoFilled} className={cn(isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
               </div>
             </div>
             <div className="space-y-1">
               <Label htmlFor="address">Address *</Label>
-              <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required readOnly={isAutoFilled} className={isAutoFilled ? "bg-muted/50" : ""} />
+              <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required readOnly={isAutoFilled} className={cn(isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
@@ -493,7 +511,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   title="Phone number must be an 11-digit number starting with 0."
                   placeholder="01xxxxxxxxx"
                   readOnly={isAutoFilled}
-                  className={isAutoFilled ? "bg-muted/50" : ""}
+                  className={cn(isAutoFilled && "bg-muted/50 cursor-not-allowed")}
                 />
               </div>
               <div className="space-y-1">
