@@ -68,6 +68,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [customPaymentMethodText, setCustomPaymentMethodText] = useState('');
   const [orderNotes, setOrderNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAutoFilled, setIsAutoFilled] = useState(false);
 
   const [orderItems, setOrderItems] = useState<DialogOrderItem[]>([{ ...initialOrderItemState, id: uuidv4() }]);
   const [orderItemsTotal, setOrderItemsTotal] = useState<number>(0);
@@ -107,6 +108,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setAmountDue(0);
     setIsSubmitting(false);
     setCurrentOrderDate(new Date());
+    setIsAutoFilled(false);
   }, []);
 
   const fetchOptions = useCallback(async () => {
@@ -221,14 +223,27 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     );
   };
   
-  useEffect(() => {
-    if (!jobId || !allOrders.length) {
-      return;
+  const handleJobIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newJobId = e.target.value;
+    setJobId(newJobId);
+    if (isAutoFilled && newJobId.trim() === '') {
+      setIsAutoFilled(false);
     }
+  };
 
+  useEffect(() => {
     const handler = setTimeout(() => {
       const trimmedJobId = jobId.trim();
-      if (!trimmedJobId) return;
+      if (!trimmedJobId || !allOrders.length) {
+        if(isAutoFilled) {
+          // Clear fields if Job ID is cleared
+          setCompanyName('');
+          setAddress('');
+          setPhoneNumber('');
+          setIsAutoFilled(false);
+        }
+        return;
+      }
 
       const existingOrder = allOrders.find(order => {
         const orderJobId = (order.companyName || '').split(' • ')[0].trim();
@@ -236,24 +251,31 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       });
 
       if (existingOrder) {
-        const nameParts = (existingOrder.companyName || '').split(' • ');
-        const actualCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : '';
+        if (!isAutoFilled) {
+            const nameParts = (existingOrder.companyName || '').split(' • ');
+            const actualCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : '';
 
-        setCompanyName(actualCompanyName);
-        setAddress(existingOrder.address);
-        setPhoneNumber(existingOrder.phoneNumber);
+            setCompanyName(actualCompanyName);
+            setAddress(existingOrder.address);
+            setPhoneNumber(existingOrder.phoneNumber);
+            setIsAutoFilled(true);
 
-        toast({
-          title: "Existing Job ID Found",
-          description: `Details for "${trimmedJobId}" have been auto-filled.`,
-        });
+            toast({
+              title: "Existing Job ID Found",
+              description: `Details for "${trimmedJobId}" have been auto-filled.`,
+            });
+        }
+      } else if (isAutoFilled) {
+        // Job ID changed to something that doesn't exist, clear fields
+        setCompanyName('');
+        setAddress('');
+        setPhoneNumber('');
+        setIsAutoFilled(false);
       }
     }, 500);
 
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [jobId, allOrders, toast]);
+    return () => clearTimeout(handler);
+  }, [jobId, allOrders, toast, isAutoFilled]);
 
   const handleAddItem = () => {
     setOrderItems([...orderItems, { ...initialOrderItemState, id: uuidv4() }]);
@@ -441,11 +463,11 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="jobId">Job ID *</Label>
-                <Input id="jobId" value={jobId} onChange={(e) => setJobId(e.target.value)} required placeholder="e.g., CUST101, J123" />
+                <Input id="jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., CUST101, J123" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="companyName">Company Name *</Label>
-                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="e.g., Acme Corp" />
+                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="e.g., Acme Corp" readOnly={isAutoFilled} className={isAutoFilled ? "bg-muted/50" : ""} />
               </div>
             </div>
             <div className="space-y-1">
@@ -470,6 +492,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   maxLength={11}
                   title="Phone number must be an 11-digit number starting with 0."
                   placeholder="01xxxxxxxxx"
+                  readOnly={isAutoFilled}
+                  className={isAutoFilled ? "bg-muted/50" : ""}
                 />
               </div>
               <div className="space-y-1">
