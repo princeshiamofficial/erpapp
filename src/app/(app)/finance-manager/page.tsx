@@ -12,7 +12,7 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide } from 'lucide-react'; 
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown } from 'lucide-react'; 
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -35,6 +35,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   addTransactionAction,
   deleteTransactionAction,
   updateTransactionAction,
@@ -50,6 +56,9 @@ import { Banknote } from 'lucide-react';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO, subDays } from "date-fns";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from '@/lib/utils';
+import { Check } from 'lucide-react';
 
 const AddTransactionDialog = dynamic(() => import('@/components/finance-manager/add-transaction-dialog').then(mod => mod.AddTransactionDialog));
 const EditTransactionDialog = dynamic(() => import('@/components/finance-manager/edit-transaction-dialog').then(mod => mod.EditTransactionDialog));
@@ -76,6 +85,10 @@ export default function FinanceManagerPage() {
   const [viewMode, setViewMode] = useState<'personal' | 'global'>('personal');
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
   const [allUsersForDialog, setAllUsersForDialog] = useState<User[]>([]);
+  const [allUsersForFilter, setAllUsersForFilter] = useState<User[]>([]); // New state for filter dropdown
+  const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all'); // New state for selected user
+  const [isUserFilterPopoverOpen, setIsUserFilterPopoverOpen] = useState(false);
+
   const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null);
   const [transactionSearchTerm, setTransactionSearchTerm] = useState('');
   const [transactionTypeFilter, setTransactionTypeFilter] = useState<string>('all');
@@ -102,58 +115,57 @@ export default function FinanceManagerPage() {
     setIsLoading(true);
     try {
       let fetchedTransactions: Transaction[];
-      let fetchedUsersForMap: User[] = [];
-      let fetchedUsersForDialogLocal: User[] = [];
+      let fetchedUsers: User[] = [];
 
       const settings = await getGlobalSettings();
       setGlobalAppSettings(settings);
 
       const dataPromises: any[] = [];
-      if (currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global') {
+      if (currentUser.role === 'SYSTEM_ADMIN') {
         dataPromises.push(getAllTransactionsAction(), getUsers());
       } else {
         dataPromises.push(getTransactionsForUserAction(currentUser.id));
-        if (currentUser.role === 'SYSTEM_ADMIN') {
-            dataPromises.push(getUsers());
-        }
       }
 
       const results = await Promise.all(dataPromises);
       fetchedTransactions = results[0] as Transaction[];
-
-      if (currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global') {
-        fetchedUsersForMap = results[1] as User[];
-        fetchedUsersForDialogLocal = fetchedUsersForMap.filter(u => u.id !== currentUser.id && u.role !== 'SYSTEM_ADMIN');
-        const newUserMap = new Map(fetchedUsersForMap.map(user => [user.id, user.name]));
+      
+      if (currentUser.role === 'SYSTEM_ADMIN') {
+        fetchedUsers = results[1] as User[];
+        const newUserMap = new Map(fetchedUsers.map(user => [user.id, user.name]));
         setUserMap(newUserMap);
-      } else if (currentUser.role === 'SYSTEM_ADMIN') {
-        fetchedUsersForMap = results[1] as User[];
-        fetchedUsersForDialogLocal = fetchedUsersForMap.filter(u => u.id !== currentUser.id && u.role !== 'SYSTEM_ADMIN');
-        setUserMap(new Map());
+        setAllUsersForFilter(fetchedUsers);
+        setAllUsersForDialog(fetchedUsers.filter(u => u.id !== currentUser.id && u.role !== 'SYSTEM_ADMIN'));
       } else {
         setUserMap(new Map());
-        fetchedUsersForDialogLocal = [];
+        setAllUsersForFilter([]);
+        setAllUsersForDialog([]);
       }
-
-      setAllUsersForDialog(fetchedUsersForDialogLocal);
+      
       setTransactions(fetchedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch (error) {
       console.error("Failed to fetch financial data, users, or settings:", error);
       toast({ title: "Error", description: "Could not load page data. Please try again.", variant: "destructive" });
       setTransactions([]);
       setUserMap(new Map());
+      setAllUsersForFilter([]);
       setAllUsersForDialog([]);
       setGlobalAppSettings(null);
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser, viewMode, toast]);
+  }, [currentUser, toast]);
 
   useEffect(() => {
     if (currentUser) {
       fetchFinancialData();
     }
-  }, [currentUser, viewMode, fetchFinancialData]);
+  }, [currentUser, fetchFinancialData]);
+
+  // When viewMode changes, reset the user filter
+  useEffect(() => {
+    setSelectedUserIdFilter('all');
+  }, [viewMode]);
 
   const displayableTransactionTypeFilters = useMemo(() => {
     if (currentUser?.role === 'SYSTEM_ADMIN') {
@@ -206,6 +218,11 @@ export default function FinanceManagerPage() {
 
   const filteredTransactions = useMemo(() => {
     let results = transactions;
+    
+    // Filter by selected user first if in global view and a specific user is chosen
+    if (viewMode === 'global' && selectedUserIdFilter !== 'all') {
+      results = results.filter(t => t.userId === selectedUserIdFilter);
+    }
 
     if (selectedDateRange?.from && selectedDateRange?.to) {
       const startDate = new Date(selectedDateRange.from);
@@ -252,7 +269,7 @@ export default function FinanceManagerPage() {
       });
     }
     return results;
-  }, [transactions, transactionSearchTerm, viewMode, userMap, transactionTypeFilter, selectedDateRange]);
+  }, [transactions, transactionSearchTerm, viewMode, userMap, transactionTypeFilter, selectedDateRange, selectedUserIdFilter]);
 
   const { totalIncome, totalExpenses, availableBalance } = useMemo(() => {
     let income = 0;
@@ -267,12 +284,16 @@ export default function FinanceManagerPage() {
   const pageDescription = useMemo(() => {
     if (!currentUser) return "Manage your finances.";
     if (currentUser.role === 'SYSTEM_ADMIN') {
-      return viewMode === 'global'
-        ? "View and manage all user financial transactions."
-        : "Track your personal income, expenses, and send money to staff.";
+        const selectedUserName = allUsersForFilter.find(u => u.id === selectedUserIdFilter)?.name;
+        if (viewMode === 'global' && selectedUserIdFilter !== 'all' && selectedUserName) {
+            return `Viewing transactions for ${selectedUserName}.`;
+        }
+        return viewMode === 'global'
+            ? "View and manage all user financial transactions."
+            : "Track your personal income, expenses, and send money to staff.";
     }
     return `Track your personal income, expenses, and purchases.`;
-  }, [currentUser, viewMode]);
+  }, [currentUser, viewMode, selectedUserIdFilter, allUsersForFilter]);
 
 
   const canUserAddExpense = useMemo(() => {
@@ -327,6 +348,11 @@ export default function FinanceManagerPage() {
 
   const isLoadingContent = isLoading || !selectedDateRange;
 
+  const selectedUserNameForFilter = useMemo(() => {
+    if (selectedUserIdFilter === 'all') return 'All Users';
+    return allUsersForFilter.find(u => u.id === selectedUserIdFilter)?.name || 'Select User';
+  }, [selectedUserIdFilter, allUsersForFilter]);
+
   return (
     <div className="space-y-6 p-1 sm:p-0">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
@@ -334,8 +360,6 @@ export default function FinanceManagerPage() {
           <h1 className="page-title">Finance Manager</h1>
           <p className="page-description">
             {pageDescription}
-            {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'personal' && ` (Viewing: Personal Data)`}
-            {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' && ` (Viewing: Global Data)`}
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
@@ -380,7 +404,38 @@ export default function FinanceManagerPage() {
             </TabsList>
           </Tabs>
         )}
-        <div className="w-full sm:w-auto grow sm:grow-0 order-2 sm:order-none sm:min-w-[200px] md:min-w-[240px]">
+        {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' && (
+           <DropdownMenu open={isUserFilterPopoverOpen} onOpenChange={setIsUserFilterPopoverOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full sm:w-auto order-2 sm:order-none flex-shrink-0 h-10">
+                  <UserIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                  <span className="truncate">{selectedUserNameForFilter}</span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-[--radix-dropdown-menu-trigger-width] max-h-80 overflow-y-auto">
+                 <Command>
+                    <CommandInput placeholder="Search user..." />
+                    <CommandList>
+                      <CommandEmpty>No user found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem onSelect={() => setSelectedUserIdFilter('all')}>
+                          <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === 'all' ? "opacity-100" : "opacity-0")}/>
+                          All Users
+                        </CommandItem>
+                        {allUsersForFilter.map((user) => (
+                           <CommandItem key={user.id} onSelect={() => setSelectedUserIdFilter(user.id)}>
+                             <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === user.id ? "opacity-100" : "opacity-0")}/>
+                             {user.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+              </DropdownMenuContent>
+            </DropdownMenu>
+        )}
+        <div className="w-full sm:w-auto grow sm:grow-0 order-3 sm:order-none sm:min-w-[200px] md:min-w-[240px]">
           <Label htmlFor="transaction-type-filter" className="sr-only">Filter by type</Label>
           <Select value={transactionTypeFilter} onValueChange={setTransactionTypeFilter}>
             <SelectTrigger id="transaction-type-filter" className="w-full h-10 bg-card border-border/50">
@@ -398,7 +453,7 @@ export default function FinanceManagerPage() {
             </SelectContent>
           </Select>
         </div>
-         <div className="w-full sm:w-auto grow sm:grow-0 order-3 sm:order-none">
+         <div className="w-full sm:w-auto grow sm:grow-0 order-4 sm:order-none">
             {selectedDateRange ? (
               <DateRangePicker 
                   initialRange={selectedDateRange} 
@@ -408,7 +463,7 @@ export default function FinanceManagerPage() {
               <Skeleton className="h-10 w-full sm:w-[260px]"/>
             )}
         </div>
-        <div className="relative w-full sm:w-auto grow sm:flex-1 order-4 sm:order-none sm:max-w-xs">
+        <div className="relative w-full sm:w-auto grow sm:flex-1 order-5 sm:order-none sm:max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
             type="search"
@@ -450,7 +505,9 @@ export default function FinanceManagerPage() {
                 <div>
                   <CardTitle className="text-card-foreground text-xl">Recent Transactions</CardTitle>
                   <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                    {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' ? "Latest transactions from all users." : "Your latest income, expense and purchase entries."}
+                    {currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' && selectedUserIdFilter === 'all' ? "Latest transactions from all users." : 
+                     currentUser.role === 'SYSTEM_ADMIN' && viewMode === 'global' && selectedUserIdFilter !== 'all' ? `Latest transactions for selected user.` : 
+                     "Your latest income, expense and purchase entries."}
                     {transactionTypeFilter !== 'all' && ` (Filtered by: ${displayableTransactionTypeFilters.find(f=>f.value === transactionTypeFilter)?.label})`}
                   </CardDescription>
                 </div>
@@ -478,12 +535,12 @@ export default function FinanceManagerPage() {
               <div className="text-center py-10 text-muted-foreground">
                 <Banknote className="h-16 w-16 mx-auto opacity-30 mb-3" />
                 <p className="text-lg font-medium">
-                  {transactionSearchTerm || transactionTypeFilter !== 'all' || (selectedDateRange)
+                  {transactionSearchTerm || transactionTypeFilter !== 'all' || selectedUserIdFilter !== 'all' || (selectedDateRange)
                     ? "No transactions match your filters."
                     : "No transactions yet."}
                 </p>
                 <p className="text-sm">
-                  {transactionSearchTerm || transactionTypeFilter !== 'all' || (selectedDateRange)
+                  {transactionSearchTerm || transactionTypeFilter !== 'all' || selectedUserIdFilter !== 'all' || (selectedDateRange)
                     ? "Try adjusting your search or filters."
                     : (canUserAddExpense || currentUser?.role === 'SYSTEM_ADMIN' ? "Add your first transaction to get started!" : "Transaction logging may be restricted for your role.")
                   }
