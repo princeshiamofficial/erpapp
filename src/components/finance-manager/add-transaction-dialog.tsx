@@ -316,7 +316,10 @@ export function AddTransactionDialog({
   }, [dialogMode]);
 
   const availableUsers = useMemo(() => {
-    return allUsersForDropdown.filter(u => u.id && u.id !== currentUser.id);
+    return allUsersForDropdown.filter(u => {
+        if (u.id === currentUser.id) return false; // Can't send to self
+        return true; // The parent component now handles all filtering logic
+    });
   }, [allUsersForDropdown, currentUser.id]);
 
   const filteredUsersForDropdown = useMemo(() => {
@@ -436,7 +439,7 @@ export function AddTransactionDialog({
                                   selectedSentToUserId === user.id ? "opacity-100" : "opacity-0"
                                 )}
                               />
-                              {user.name} ({user.role.replace(/_/g, ' ')})
+                              {user.name}
                             </CommandItem>
                           ))}
                         </CommandGroup>
