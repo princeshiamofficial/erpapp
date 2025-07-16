@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -77,8 +76,6 @@ const TRANSACTION_TYPES_FOR_FILTER: Array<{ value: string; label: string }> = [
   { value: 'send_money', label: 'Sent Money' },
 ];
 
-const PERMITTED_ROLES_FOR_PAYMENT: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR'];
-
 export default function FinanceManagerPage() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -137,10 +134,22 @@ export default function FinanceManagerPage() {
         const newUserMap = new Map(fetchedUsers.map(user => [user.id, user.name]));
         setUserMap(newUserMap);
         setAllUsersForFilter(fetchedUsers);
-        // Filter users for the "Send Money" dialog to only include permitted roles
-        setAllUsersForDialog(fetchedUsers.filter(u => 
-            u.id !== currentUser.id && PERMITTED_ROLES_FOR_PAYMENT.includes(u.role)
-        ));
+        
+        // Filter users for the "Send Money" dialog based on expense logging permissions
+        const perms = settings.expenseLoggingPermissions || { mode: 'none' };
+        const permittedUsersForDialog = fetchedUsers.filter(u => {
+            if (u.id === currentUser.id) return false; // Can't send to self
+            if (u.role === 'SYSTEM_ADMIN') return false; // Don't allow sending to other sys admins
+            switch (perms.mode) {
+                case 'all': return true;
+                case 'specificRoles': return perms.allowedRoles?.includes(u.role);
+                case 'specificUsers': return perms.allowedUserIds?.includes(u.id);
+                case 'none': return false;
+                default: return false;
+            }
+        });
+        setAllUsersForDialog(permittedUsersForDialog);
+
       } else {
         setUserMap(new Map());
         setAllUsersForFilter([]);
