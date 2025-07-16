@@ -2,23 +2,15 @@
 
 import { db } from './firebase';
 import { collection, getDocs, doc, setDoc, updateDoc, query, orderBy, writeBatch, getDoc as getFirestoreDoc, deleteField } from 'firebase/firestore';
-import type { Project, ProjectStatusType } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
-import { formatISO, addMonths, addDays } from 'date-fns';
+import type { Project, ProjectStatusType, User, OrderLogEntry } from '@/types'; // Added User, OrderLogEntry
+import { v4 as uuidv4 } from 'uuid'; // Added
+import { formatISO, addDays } from 'date-fns';
 import { getOrders } from './order-service'; 
 import { ORDER_SUBMITTED_ID, READY_FOR_DESIGN_STATUS_ID } from './status-service'; 
 import { getUsers as getAllUsersService } from './user-service'; // Import user service to fetch avatars
 
 const PROJECTS_COLLECTION = 'projects';
 
-const defaultProjectsData: Array<Omit<Project, 'id' | 'createdAt' | 'updatedAt' | 'crClearanceAt' | 'onDesignAt' | 'onHoldAt' | 'logisticsAt' | 'courierAt' | 'cancelAt' | 'deliveredAt' | 'assigneeAvatarUrl' | 'designerRepresentativeId' | 'designerRepresentativeName' | 'designerRepresentativeAvatarUrl' >> = [
-  { projectIdDisplay: 'PJ-001', name: 'Alpha Initiative', status: 'CR Clearance', endDate: formatISO(addMonths(new Date(), 2)), assigneeId: 'CRM-001', assigneeName: 'Austin Azaria', assigneeInitials: 'AU', categoryTag: 'Corporate Client' },
-  { projectIdDisplay: 'PJ-002', name: 'Beta Development', status: 'Cancel', endDate: formatISO(addMonths(new Date(), 3)), assigneeId: 'CRM-002', assigneeName: 'Clerk Kent', assigneeInitials: 'CK', categoryTag: 'Walk-In Customer' },
-  { projectIdDisplay: 'PJ-003', name: 'Gamma Graphics', status: 'On Design', endDate: formatISO(addMonths(new Date(), 1)), assigneeId: 'CRM-003', assigneeName: 'Diana Prince', assigneeInitials: 'DP', categoryTag: 'Internal Project' },
-  { projectIdDisplay: 'PJ-004', name: 'Delta Distribution', status: 'Logistics', endDate: formatISO(addMonths(new Date(), 5)), assigneeId: 'CRM-001', assigneeName: 'Barry Allen', assigneeInitials: 'BA', categoryTag: 'Partner Integration' },
-  { projectIdDisplay: 'PJ-005', name: 'Epsilon Exploration', status: 'Courier', endDate: formatISO(addMonths(new Date(), 4)), assigneeId: 'CRM-002', assigneeName: 'Hal Jordan', assigneeInitials: 'HJ', categoryTag: 'R&D' },
-  { projectIdDisplay: 'PJ-006', name: 'Zeta Zero-Day', status: 'On Hold', endDate: formatISO(addMonths(new Date(), 6)), assigneeId: 'CRM-003', assigneeName: 'Arthur Curry', assigneeInitials: 'AC', categoryTag: 'Security Audit' },
-];
 
 const getInitialStatusTimestampField = (status: ProjectStatusType): keyof Project | undefined => {
   switch (status) {
@@ -40,43 +32,6 @@ const getInitialsForName = (name: string | undefined): string => {
   return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
 };
 
-export const seedDefaultProjects = async (): Promise<Project[]> => {
-  const projectsRef = collection(db, PROJECTS_COLLECTION);
-  const batch = writeBatch(db);
-  const createdProjects: Project[] = [];
-  const now = formatISO(new Date());
-
-  defaultProjectsData.forEach(projectData => {
-    const id = uuidv4();
-    const newProject: Project = {
-      id,
-      ...projectData,
-      assigneeAvatarUrl: null, 
-      designerRepresentativeId: null,
-      designerRepresentativeName: null,
-      designerRepresentativeAvatarUrl: null,
-      createdAt: now,
-      updatedAt: now,
-    };
-    const initialStatusField = getInitialStatusTimestampField(projectData.status);
-    if (initialStatusField) {
-      (newProject as any)[initialStatusField] = now;
-    }
-
-    const docRef = doc(projectsRef, id);
-    batch.set(docRef, newProject);
-    createdProjects.push(newProject);
-  });
-
-  try {
-    await batch.commit();
-    console.log('Default projects seeded in Firestore with status-specific timestamps.');
-    return createdProjects;
-  } catch (error) {
-    console.error("Error seeding default projects:", error);
-    return [];
-  }
-};
 
 export const getProjects = async (): Promise<Project[]> => {
   console.log('[getProjects] Function called.');
@@ -87,8 +42,8 @@ export const getProjects = async (): Promise<Project[]> => {
   try {
     const projectSnapshot = await getDocs(qActualProjects);
     if (projectSnapshot.empty) {
-      console.log("[getProjects] No actual projects found in Firestore, attempting to seed defaults.");
-      actualProjects = await seedDefaultProjects();
+      console.log("[getProjects] No actual projects found in Firestore.");
+      actualProjects = [];
     } else {
       actualProjects = projectSnapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as Project));
       console.log(`[getProjects] Fetched ${actualProjects.length} actual projects from Firestore.`);
