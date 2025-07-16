@@ -139,7 +139,7 @@ export default function FinanceManagerPage() {
         const perms = settings.expenseLoggingPermissions || { mode: 'none' };
         const permittedUsersForDialog = fetchedUsers.filter(u => {
             if (u.id === currentUser.id) return false; // Can't send to self
-            if (u.role === 'SYSTEM_ADMIN') return false; // Don't allow sending to other sys admins
+            if (u.role === 'SYSTEM_ADMIN') return true; // Always allow sending to other System Admins
             switch (perms.mode) {
                 case 'all': return true;
                 case 'specificRoles': return perms.allowedRoles?.includes(u.role);
