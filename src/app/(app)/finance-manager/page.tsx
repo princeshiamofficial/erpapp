@@ -83,9 +83,9 @@ export default function FinanceManagerPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'personal' | 'global'>('personal');
   const [userMap, setUserMap] = useState<Map<string, string>>(new Map());
-  const [allUsersForDialog, setAllUsersForDialog] = useState<User[]>([]);
-  const [allUsersForFilter, setAllUsersForFilter] = useState<User[]>([]); // New state for filter dropdown
-  const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all'); // New state for selected user
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allUsersForFilter, setAllUsersForFilter] = useState<User[]>([]); 
+  const [selectedUserIdFilter, setSelectedUserIdFilter] = useState<string>('all'); 
   const [isUserFilterPopoverOpen, setIsUserFilterPopoverOpen] = useState(false);
 
   const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null);
@@ -133,12 +133,11 @@ export default function FinanceManagerPage() {
         fetchedUsers = results[1] as User[];
         const newUserMap = new Map(fetchedUsers.map(user => [user.id, user.name]));
         setUserMap(newUserMap);
-        setAllUsersForFilter(fetchedUsers);
         
-        // Filter users for the "Send Money" dialog based on expense logging permissions
+        // Filter users based on expense logging permissions
         const perms = settings.expenseLoggingPermissions || { mode: 'none' };
-        const permittedUsersForDialog = fetchedUsers.filter(u => {
-            if (u.id === currentUser.id) return false; // Can't send to self
+        const permittedUsers = fetchedUsers.filter(u => {
+            if (u.id === currentUser.id) return true; // Always include self
             if (u.role === 'SYSTEM_ADMIN') return true; // Always allow sending to other System Admins
             switch (perms.mode) {
                 case 'all': return true;
@@ -148,12 +147,12 @@ export default function FinanceManagerPage() {
                 default: return false;
             }
         });
-        setAllUsersForDialog(permittedUsersForDialog);
-
+        setAllUsersForFilter(permittedUsers);
+        setAllUsers(fetchedUsers); // Keep all users for other dialogs if needed
       } else {
         setUserMap(new Map());
         setAllUsersForFilter([]);
-        setAllUsersForDialog([]);
+        setAllUsers([]);
       }
       
       setTransactions(fetchedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime() || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
@@ -163,7 +162,7 @@ export default function FinanceManagerPage() {
       setTransactions([]);
       setUserMap(new Map());
       setAllUsersForFilter([]);
-      setAllUsersForDialog([]);
+      setAllUsers([]);
       setGlobalAppSettings(null);
     } finally {
       setIsLoading(false);
@@ -399,7 +398,7 @@ export default function FinanceManagerPage() {
                 currentUser={currentUser}
                 onTransactionAdded={fetchFinancialData}
                 dialogMode="sendMoney"
-                allUsersForDropdown={allUsersForDialog}
+                allUsersForDropdown={allUsers}
             >
             <Button size="default" className="bg-blue-600 hover:bg-blue-700 text-white h-10">
               <Send className="mr-2 h-5 w-5" /> Send Money
@@ -433,12 +432,12 @@ export default function FinanceManagerPage() {
                     <CommandList>
                       <CommandEmpty>No user found.</CommandEmpty>
                       <CommandGroup>
-                        <CommandItem onSelect={() => setSelectedUserIdFilter('all')}>
+                        <CommandItem onSelect={() => {setSelectedUserIdFilter('all'); setIsUserFilterPopoverOpen(false);}}>
                           <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === 'all' ? "opacity-100" : "opacity-0")}/>
                           All Users
                         </CommandItem>
                         {allUsersForFilter.map((user) => (
-                           <CommandItem key={user.id} onSelect={() => setSelectedUserIdFilter(user.id)}>
+                           <CommandItem key={user.id} onSelect={() => {setSelectedUserIdFilter(user.id); setIsUserFilterPopoverOpen(false);}}>
                              <Check className={cn("mr-2 h-4 w-4", selectedUserIdFilter === user.id ? "opacity-100" : "opacity-0")}/>
                              {user.name}
                           </CommandItem>
