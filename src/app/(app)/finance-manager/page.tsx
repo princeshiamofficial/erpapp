@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/contexts/auth-context";
-import type { Transaction, User, TransactionType, GlobalSettings, PersonalNote } from "@/types";
+import type { Transaction, User, TransactionType, GlobalSettings, PersonalNote, UserRole } from "@/types";
 import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
@@ -77,6 +77,8 @@ const TRANSACTION_TYPES_FOR_FILTER: Array<{ value: string; label: string }> = [
   { value: 'send_money', label: 'Sent Money' },
 ];
 
+const PERMITTED_ROLES_FOR_PAYMENT: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR'];
+
 export default function FinanceManagerPage() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -135,7 +137,10 @@ export default function FinanceManagerPage() {
         const newUserMap = new Map(fetchedUsers.map(user => [user.id, user.name]));
         setUserMap(newUserMap);
         setAllUsersForFilter(fetchedUsers);
-        setAllUsersForDialog(fetchedUsers.filter(u => u.id !== currentUser.id && u.role !== 'SYSTEM_ADMIN'));
+        // Filter users for the "Send Money" dialog to only include permitted roles
+        setAllUsersForDialog(fetchedUsers.filter(u => 
+            u.id !== currentUser.id && PERMITTED_ROLES_FOR_PAYMENT.includes(u.role)
+        ));
       } else {
         setUserMap(new Map());
         setAllUsersForFilter([]);
