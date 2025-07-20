@@ -137,7 +137,7 @@ export function SidebarNavigation() {
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={() => toggleMenu(item.label)}
-                isActive={isMenuOpen}
+                isActive={false} // Set to false to prevent highlighting
                 className={cn(
                   "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-medium py-2.5 px-3 h-auto rounded-lg transition-all duration-200 ease-in-out transform hover:translate-x-1"
                 )}
