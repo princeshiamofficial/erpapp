@@ -11,8 +11,7 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart, Landmark, Wifi, Signal } from 'lucide-react'; 
-import { ChipIcon } from '@/components/icons/ChipIcon';
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart, Landmark } from 'lucide-react'; 
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from "@/components/ui/input";
@@ -545,9 +544,9 @@ export default function FinanceManagerPage() {
                 {isLoadingContent ? (
                   <Skeleton className="h-8 w-32 mt-1" />
                 ) : (
-                  <p className="text-2xl font-bold text-card-foreground font-mono">
+                  <div className="text-2xl font-bold text-card-foreground font-mono">
                     {formatCurrency(card.value)}
-                  </p>
+                  </div>
                 )}
               </div>
             </CardContent>
@@ -608,34 +607,6 @@ export default function FinanceManagerPage() {
         </Card>
 
         <div className="space-y-6">
-            <Card className="shadow-xl border-none rounded-2xl bg-gradient-to-br from-gray-900 to-black text-white p-6 flex flex-col justify-between h-[240px] relative overflow-hidden" data-ai-hint="credit card mastercard">
-                <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre-v2.png')] opacity-5 mix-blend-overlay"></div>
-                
-                <div className="flex justify-between items-start z-10">
-                    <div/>
-                    <div className="flex items-center gap-1.5">
-                        <Wifi className="h-5 w-5 opacity-80"/>
-                        <Signal className="h-5 w-5 opacity-80"/>
-                    </div>
-                </div>
-
-                <div className="z-10">
-                    <ChipIcon className="w-12 h-9 text-yellow-400 opacity-80" />
-                    <p className="font-mono text-xl tracking-widest mt-2">**** **** **** 1234</p>
-                </div>
-                
-                <div className="flex justify-between items-end z-10">
-                    <div>
-                        <p className="text-xs opacity-70">Card Holder</p>
-                        <p className="font-semibold tracking-wider">{currentUser.name}</p>
-                    </div>
-                    <div className="flex items-center space-x-[-12px]">
-                        <div className="h-8 w-8 rounded-full bg-red-500 opacity-80 ring-2 ring-black"></div>
-                        <div className="h-8 w-8 rounded-full bg-yellow-500 opacity-80 ring-2 ring-black"></div>
-                    </div>
-                </div>
-            </Card>
-
             <Card className="shadow-xl border bg-card rounded-lg">
                 <CardHeader>
                 <CardTitle className="text-card-foreground text-xl flex items-center">
