@@ -112,7 +112,7 @@ export default function AuthenticatedLayout({
   const inMaintenanceMode = useMemo(() => {
     if (isLoading || isLoadingSettings) return false;
     if (!globalSettings?.maintenanceMode) return false;
-    if (currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') return false;
+    if (currentUser?.role === 'SYSTEM_ADMIN') return false;
     return true;
   }, [isLoading, isLoadingSettings, globalSettings, currentUser]);
 
