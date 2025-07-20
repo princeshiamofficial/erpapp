@@ -141,8 +141,7 @@ export function SidebarNavigation() {
                 onClick={() => toggleMenu(item.label)}
                 isActive={isMenuButtonActive}
                 className={cn(
-                  "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-medium py-2.5 px-3 h-auto rounded-lg transition-all duration-200 ease-in-out transform hover:translate-x-1",
-                   isMenuButtonActive && "bg-gradient-to-r from-primary to-orange-500 text-primary-foreground font-semibold shadow-md hover:shadow-lg"
+                  "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-medium py-2.5 px-3 h-auto rounded-lg transition-all duration-200 ease-in-out transform hover:translate-x-1"
                 )}
               >
                 <item.icon className="mr-3 h-5 w-5 shrink-0" />
