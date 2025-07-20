@@ -8,8 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PlusCircle, Search, Edit, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
-// Mock data for the pipeline table
+type Category = 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
+
+// Mock data for the pipeline table with new categories
 const mockPipelineData = [
   {
     id: 'pipe_1',
@@ -17,7 +20,7 @@ const mockPipelineData = [
     phone: '01712345678',
     source: 'Referral',
     address: '123 Tech Street, Dhaka',
-    category: 'SaaS',
+    category: 'POP' as Category,
     notes: 'Interested in enterprise package. Follow up next week.',
   },
   {
@@ -26,7 +29,7 @@ const mockPipelineData = [
     phone: '01987654321',
     source: 'Website',
     address: '456 Art Avenue, Chittagong',
-    category: 'Design Agency',
+    category: 'POG' as Category,
     notes: 'Needs a quote for 5000 units.',
   },
   {
@@ -35,10 +38,36 @@ const mockPipelineData = [
     phone: '01611223344',
     source: 'Cold Call',
     address: '789 Trade Tower, Gulshan',
-    category: 'Manufacturing',
+    category: 'B2B' as Category,
     notes: '',
   },
+  {
+    id: 'pipe_4',
+    businessName: 'Digital Solutions',
+    phone: '01555667788',
+    source: 'Facebook',
+    address: 'Suite 202, ABC Plaza, Banani',
+    category: 'OC' as Category,
+    notes: 'Scheduled a demo for next Tuesday.',
+  },
+  {
+    id: 'pipe_5',
+    businessName: 'Artisan Crafts',
+    phone: '01333445566',
+    source: 'Referral',
+    address: 'Dhanmondi 27, Dhaka',
+    category: 'OD' as Category,
+    notes: 'Follow up on the sample design.',
+  },
 ];
+
+const categoryColors: Record<Category, string> = {
+  POP: 'bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-200 dark:border-blue-700',
+  POG: 'bg-green-100 text-green-800 border-green-200 hover:bg-green-200 dark:bg-green-900/50 dark:text-green-200 dark:border-green-700',
+  OC: 'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200 dark:bg-orange-900/50 dark:text-orange-200 dark:border-orange-700',
+  OD: 'bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200 dark:bg-purple-900/50 dark:text-purple-200 dark:border-purple-700',
+  B2B: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-200 dark:border-red-700',
+};
 
 export default function PipeLinePage() {
   // In a real application, you would use useState and useEffect to fetch data.
@@ -108,7 +137,9 @@ export default function PipeLinePage() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{lead.address}</TableCell>
                       <TableCell>
-                         <Badge variant="outline">{lead.category}</Badge>
+                         <Badge className={cn(categoryColors[lead.category] || 'bg-gray-100 text-gray-800')}>
+                          {lead.category}
+                         </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-xs truncate max-w-xs" title={lead.notes}>
                         {lead.notes || 'N/A'}
