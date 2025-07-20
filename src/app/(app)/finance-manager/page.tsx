@@ -11,7 +11,7 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart } from 'lucide-react'; 
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart, Landmark, Wifi, Signal } from 'lucide-react'; 
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from "@/components/ui/input";
@@ -66,6 +66,7 @@ import {
   Pie,
   PieChart as RechartsPieChart,
   Cell,
+  Label as RechartsLabel,
 } from "recharts"
 
 const AddTransactionDialog = dynamic(() => import('@/components/finance-manager/add-transaction-dialog').then(mod => mod.AddTransactionDialog));
@@ -606,107 +607,110 @@ export default function FinanceManagerPage() {
         </Card>
 
         <div className="space-y-6">
-           <Card className="shadow-xl border bg-card rounded-lg">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-card-foreground text-xl flex items-center"><MultiColorCalculatorIcon className="mr-2 h-5 w-5"/>Calculator</CardTitle>
-                <CardDescription className="text-muted-foreground text-sm mt-0.5">Quick calculations.</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-                <CalculatorDialog>
-                  <Button variant="outline" className="w-full">
-                    <Calculator className="mr-2 h-4 w-4"/> Open Calculator
-                  </Button>
-                </CalculatorDialog>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-xl border bg-card rounded-lg">
-            <CardHeader>
-              <CardTitle className="text-card-foreground text-xl flex items-center">
-                <PieChart className="mr-2 h-5 w-5 text-primary"/>
-                Expense Breakdown
-              </CardTitle>
-              <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                Spending by category for the selected period.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center min-h-60">
-              {isLoadingContent ? (
-                 <Skeleton className="h-48 w-48 rounded-full" />
-              ) : expenseChartData.length > 0 ? (
-                <ChartContainer config={expenseChartConfig} className="mx-auto aspect-square w-full max-w-[250px]">
-                   <RechartsPieChart>
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent hideLabel />}
-                    />
-                    <Pie
-                      data={expenseChartData}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={60}
-                      strokeWidth={5}
-                      label={({
-                          payload,
-                          cx,
-                          cy,
-                          ...props
-                      }) => {
-                          const totalValue = expenseChartData.reduce((acc, curr) => acc + curr.value, 0);
-                          const percent = totalValue > 0 ? (payload.value / totalValue) * 100 : 0;
-                          return (
-                              <text
-                                  x={cx}
-                                  y={cy}
-                                  textAnchor="middle"
-                                  dominantBaseline="central"
-                                  className="fill-foreground text-center"
-                              >
-                                  <tspan
-                                      x={cx}
-                                      y={cy - 12}
-                                      className="text-2xl font-bold"
-                                  >
-                                      {formatCurrency(totalExpenses).replace('BDT', '৳')}
-                                  </tspan>
-                                  <tspan
-                                      x={cx}
-                                      y={cy + 12}
-                                      className="text-xs text-muted-foreground"
-                                  >
-                                      Total Expenses
-                                  </tspan>
-                              </text>
-                          )
-                      }}
-                    >
-                      {expenseChartData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={expenseChartConfig[entry.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()]?.color}
-                          className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                        />
-                      ))}
-                    </Pie>
-                  </RechartsPieChart>
-                  {expenseChartData.length > 0 && (
-                    <div className="text-xs border-t pt-4 mt-4 w-full">
-                      <ChartLegend
-                        content={<ChartLegendContent nameKey="name" />}
-                        className="flex-wrap"
-                      />
+            <Card className="shadow-xl border-none rounded-2xl bg-gradient-to-br from-gray-900 to-black text-white p-6 flex flex-col justify-between h-56 relative overflow-hidden" data-ai-hint="credit card mastercard">
+                <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre-v2.png')] opacity-5 mix-blend-overlay"></div>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <p className="text-xs opacity-70">Available Balance</p>
+                        <p className="text-2xl font-bold tracking-wider">{isLoadingContent ? <Skeleton className="h-8 w-36 bg-white/20 mt-1" /> : formatCurrency(availableBalance)}</p>
                     </div>
-                  )}
-                </ChartContainer>
-              ) : (
-                <div className="text-center text-muted-foreground">
-                  <p>No expense data to display.</p>
+                    <div className="flex items-center gap-1.5">
+                        <Wifi className="h-5 w-5 opacity-80"/>
+                        <Signal className="h-5 w-5 opacity-80"/>
+                    </div>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <div className="flex justify-between items-end">
+                    <div>
+                        <p className="text-xs opacity-70">Card Holder</p>
+                        <p className="font-semibold tracking-wider">{currentUser.name}</p>
+                    </div>
+                    <div className="flex items-center space-x-[-12px]">
+                        <div className="h-8 w-8 rounded-full bg-red-500 opacity-80 ring-2 ring-black"></div>
+                        <div className="h-8 w-8 rounded-full bg-yellow-500 opacity-80 ring-2 ring-black"></div>
+                    </div>
+                </div>
+            </Card>
+
+            <Card className="shadow-xl border bg-card rounded-lg">
+                <CardHeader>
+                <CardTitle className="text-card-foreground text-xl flex items-center">
+                    <PieChart className="mr-2 h-5 w-5 text-primary"/>
+                    Expense Breakdown
+                </CardTitle>
+                <CardDescription className="text-muted-foreground text-sm mt-0.5">
+                    Spending by category for the selected period.
+                </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col items-center justify-center min-h-60">
+                {isLoadingContent ? (
+                    <Skeleton className="h-48 w-48 rounded-full" />
+                ) : expenseChartData.length > 0 ? (
+                    <ChartContainer config={expenseChartConfig} className="mx-auto aspect-square w-full max-w-[250px]">
+                    <RechartsPieChart>
+                        <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                        />
+                        <Pie
+                            data={expenseChartData}
+                            dataKey="value"
+                            nameKey="name"
+                            innerRadius={60}
+                            strokeWidth={5}
+                            label={({
+                                cx,
+                                cy,
+                                ...props
+                            }) => {
+                                const {payload} = props;
+                                const totalValue = expenseChartData.reduce((acc, curr) => acc + curr.value, 0);
+                                return (
+                                    <text
+                                        x={cx}
+                                        y={cy}
+                                        textAnchor="middle"
+                                        dominantBaseline="central"
+                                        className="fill-foreground text-center"
+                                    >
+                                        <tspan
+                                            x={cx}
+                                            y={cy - 12}
+                                            className="text-2xl font-bold"
+                                        >
+                                            {formatCurrency(totalExpenses).replace('BDT', '৳')}
+                                        </tspan>
+                                        <tspan
+                                            x={cx}
+                                            y={cy + 12}
+                                            className="text-xs text-muted-foreground"
+                                        >
+                                            Total Expenses
+                                        </tspan>
+                                    </text>
+                                )
+                            }}
+                        >
+                        {expenseChartData.map((entry, index) => (
+                            <Cell
+                            key={`cell-${index}`}
+                            fill={expenseChartConfig[entry.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()]?.color}
+                            className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                            />
+                        ))}
+                        </Pie>
+                    </RechartsPieChart>
+                    <ChartLegend
+                        content={<ChartLegendContent nameKey="name" />}
+                        className="-mt-4 flex-wrap gap-2 [&>*]:basis-1/2 [&>*]:justify-center"
+                    />
+                    </ChartContainer>
+                ) : (
+                    <div className="text-center text-muted-foreground">
+                    <p>No expense data to display.</p>
+                    </div>
+                )}
+                </CardContent>
+            </Card>
         </div>
       </div>
 
