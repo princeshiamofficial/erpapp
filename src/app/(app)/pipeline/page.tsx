@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet, Loader2, UploadCloud } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet, Loader2, UploadCloud, User as UserIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Lead } from '@/types';
 import { getLeads, deleteLeadAction } from './actions';
 import { AddEditLeadDialog } from '@/components/pipeline/AddEditLeadDialog';
-import { ImportLeadsDialog } from '@/components/pipeline/ImportLeadsDialog'; // Import the new component
+import { ImportLeadsDialog } from '@/components/pipeline/ImportLeadsDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,6 +27,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
+import { useAuth } from '@/contexts/auth-context';
 
 
 type Category = 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
@@ -52,11 +53,12 @@ export default function PipeLinePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  const { currentUser } = useAuth();
 
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
-  const [isImportOpen, setIsImportOpen] = useState(false); // State for import dialog
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -78,16 +80,23 @@ export default function PipeLinePage() {
   }, [fetchLeads]);
 
   const filteredLeads = useMemo(() => {
-    if (!searchTerm) return leads;
+    let roleFilteredLeads = leads;
+    if (currentUser?.role === 'CRM') {
+      roleFilteredLeads = leads.filter(lead => lead.crmId === currentUser.id);
+    }
+    
+    if (!searchTerm) return roleFilteredLeads;
+
     const lowercasedFilter = searchTerm.toLowerCase();
-    return leads.filter(lead =>
+    return roleFilteredLeads.filter(lead =>
       lead.contactName.toLowerCase().includes(lowercasedFilter) ||
       lead.businessName.toLowerCase().includes(lowercasedFilter) ||
       lead.phone.toLowerCase().includes(lowercasedFilter) ||
       lead.source.toLowerCase().includes(lowercasedFilter) ||
-      lead.category.toLowerCase().includes(lowercasedFilter)
+      lead.category.toLowerCase().includes(lowercasedFilter) ||
+      (lead.crmName && lead.crmName.toLowerCase().includes(lowercasedFilter))
     );
-  }, [leads, searchTerm]);
+  }, [leads, searchTerm, currentUser]);
 
   const handleOpenAddDialog = () => {
     setEditingLead(null);
@@ -95,6 +104,10 @@ export default function PipeLinePage() {
   };
 
   const handleOpenEditDialog = (lead: Lead) => {
+    if (currentUser?.role !== 'SYSTEM_ADMIN' && currentUser?.role !== 'ADMIN' && currentUser?.id !== lead.crmId) {
+        toast({ title: "Permission Denied", description: "You can only edit your own leads.", variant: "destructive" });
+        return;
+    }
     setEditingLead(lead);
     setIsAddEditOpen(true);
   };
@@ -111,6 +124,10 @@ export default function PipeLinePage() {
   };
 
   const handleDeleteRequest = (lead: Lead) => {
+     if (currentUser?.role !== 'SYSTEM_ADMIN' && currentUser?.role !== 'ADMIN' && currentUser?.id !== lead.crmId) {
+        toast({ title: "Permission Denied", description: "You can only delete your own leads.", variant: "destructive" });
+        return;
+    }
     setLeadToDelete(lead);
   };
 
@@ -129,14 +146,14 @@ export default function PipeLinePage() {
   };
 
   const handleExport = () => {
-    if (leads.length === 0) {
-      toast({ title: "No Data", description: "There is no pipeline data to export." });
+    if (filteredLeads.length === 0) {
+      toast({ title: "No Data", description: "There is no data matching your filters to export." });
       return;
     }
-    const headers = ["date", "contactName", "businessName", "phone", "source", "address", "category", "notes", "schedule"];
+    const headers = ["date", "contactName", "businessName", "phone", "source", "address", "category", "notes", "schedule", "crmName"];
     const csvContent = [
       headers.join(','),
-      ...leads.map(lead => [
+      ...filteredLeads.map(lead => [
         `"${format(new Date(lead.date), 'yyyy-MM-dd')}"`,
         `"${lead.contactName.replace(/"/g, '""')}"`,
         `"${lead.businessName.replace(/"/g, '""')}"`,
@@ -145,7 +162,8 @@ export default function PipeLinePage() {
         `"${lead.address.replace(/"/g, '""')}"`,
         `"${lead.category}"`,
         `"${(lead.notes || '').replace(/"/g, '""')}"`,
-        `"${lead.schedule ? format(new Date(lead.schedule), 'yyyy-MM-dd') : ''}"`
+        `"${lead.schedule ? format(new Date(lead.schedule), 'yyyy-MM-dd') : ''}"`,
+        `"${lead.crmName || ''}"`
       ].join(','))
     ].join('\n');
 
@@ -162,6 +180,14 @@ export default function PipeLinePage() {
       toast({ title: "Export Successful", description: "Your leads have been downloaded as a CSV file." });
     }
   };
+
+  if (!currentUser) {
+      return (
+          <div className="flex h-screen w-full items-center justify-center">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          </div>
+      )
+  }
 
   return (
     <>
@@ -188,7 +214,7 @@ export default function PipeLinePage() {
               variant="outline"
               onClick={handleExport}
               className="w-full sm:w-auto h-10"
-              disabled={leads.length === 0}
+              disabled={filteredLeads.length === 0}
             >
               <FileSpreadsheet className="mr-2 h-4 w-4" />
               Export to Sheet
@@ -210,7 +236,7 @@ export default function PipeLinePage() {
               <div className="flex-grow">
                 <CardTitle className="text-card-foreground text-xl">Pipeline Leads</CardTitle>
                 <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                  All potential leads are listed here.
+                  {currentUser.role === 'CRM' ? "Displaying your assigned leads." : "All potential leads are listed here."}
                 </CardDescription>
               </div>
               <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
@@ -232,6 +258,7 @@ export default function PipeLinePage() {
                     <TableHead className="pl-6 w-[120px]">Date</TableHead>
                     <TableHead className="min-w-[200px]">Name</TableHead>
                     <TableHead>Business Name</TableHead>
+                    {currentUser.role !== 'CRM' && <TableHead>Assigned To</TableHead>}
                     <TableHead>Phone</TableHead>
                     <TableHead>Source</TableHead>
                     <TableHead>Address</TableHead>
@@ -245,7 +272,7 @@ export default function PipeLinePage() {
                   {isLoading ? (
                     [...Array(5)].map((_, i) => (
                       <TableRow key={`skel-${i}`}>
-                        <TableCell colSpan={10} className="p-0"><Skeleton className="h-16 w-full"/></TableCell>
+                        <TableCell colSpan={currentUser.role !== 'CRM' ? 11 : 10} className="p-0"><Skeleton className="h-16 w-full"/></TableCell>
                       </TableRow>
                     ))
                   ) : filteredLeads.length > 0 ? (
@@ -261,6 +288,14 @@ export default function PipeLinePage() {
                             </div>
                         </TableCell>
                         <TableCell className="font-medium text-foreground">{lead.businessName}</TableCell>
+                        {currentUser.role !== 'CRM' && (
+                            <TableCell className="text-xs text-muted-foreground">
+                                <div className="flex items-center gap-1.5" title={lead.crmName}>
+                                    <UserIcon className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="truncate">{lead.crmName}</span>
+                                </div>
+                            </TableCell>
+                        )}
                         <TableCell className="text-muted-foreground">{lead.phone}</TableCell>
                         <TableCell>
                           <Badge variant="secondary">{lead.source}</Badge>
@@ -289,7 +324,7 @@ export default function PipeLinePage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={10} className="text-center py-12 h-[300px]">
+                      <TableCell colSpan={currentUser.role !== 'CRM' ? 11 : 10} className="text-center py-12 h-[300px]">
                         <p className="text-lg text-muted-foreground font-medium">No leads in the pipeline.</p>
                         <p className="text-sm text-muted-foreground">Click "Add New Lead" to get started.</p>
                       </TableCell>
@@ -307,12 +342,14 @@ export default function PipeLinePage() {
         onOpenChange={setIsAddEditOpen}
         onLeadSaved={handleLeadSaved}
         lead={editingLead}
+        currentUser={currentUser}
       />
       
       <ImportLeadsDialog
         isOpen={isImportOpen}
         onOpenChange={setIsImportOpen}
         onLeadsImported={handleLeadsImported}
+        currentUser={currentUser}
       />
 
       {leadToDelete && (

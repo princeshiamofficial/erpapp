@@ -96,7 +96,7 @@ export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> 
 };
 
 // Update a lead
-export const updateLead = async (leadId: string, updates: Partial<Omit<Lead, 'id'>>): Promise<boolean> => {
+export const updateLead = async (leadId: string, updates: Partial<Omit<Lead, 'id' | 'crmId' | 'crmName'>>): Promise<boolean> => {
   try {
     await ensureCollectionExists(); // Ensure collection exists before updating
     const payload = {

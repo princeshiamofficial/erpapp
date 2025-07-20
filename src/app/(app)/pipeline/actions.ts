@@ -2,7 +2,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Lead } from '@/types';
+import type { Lead, User } from '@/types';
 import {
   getLeads as getLeadsFromDb,
   addLead,
@@ -21,10 +21,16 @@ export async function getLeads(): Promise<Lead[]> {
 }
 
 export async function addLeadAction(
-  leadData: Omit<Lead, 'id'>
+  leadData: Omit<Lead, 'id' | 'crmId' | 'crmName'>,
+  currentUser: User
 ): Promise<{ success: boolean; lead?: Lead; error?: string }> {
   try {
-    const newLead = await addLead(leadData);
+    const leadDataWithUser = {
+      ...leadData,
+      crmId: currentUser.id,
+      crmName: currentUser.name,
+    };
+    const newLead = await addLead(leadDataWithUser);
     if (newLead) {
       revalidatePath("/(app)/pipeline");
       return { success: true, lead: newLead };
@@ -37,25 +43,31 @@ export async function addLeadAction(
 }
 
 export async function addLeadsBatchAction(
-  leadsData: Omit<Lead, 'id'>[]
+  leadsData: Omit<Lead, 'id' | 'crmId' | 'crmName'>[],
+  currentUser: User
 ): Promise<{ success: boolean; createdCount: number; errorCount: number; errors: string[] }> {
     let createdCount = 0;
     let errorCount = 0;
     const errors: string[] = [];
 
-    for (const leadData of leadsData) {
+    for (const lead of leadsData) {
         try {
-            const newLead = await addLead(leadData);
+            const leadDataWithUser = {
+              ...lead,
+              crmId: currentUser.id,
+              crmName: currentUser.name,
+            };
+            const newLead = await addLead(leadDataWithUser);
             if (newLead) {
                 createdCount++;
             } else {
                 errorCount++;
-                errors.push(`Failed to add lead for contact: ${leadData.contactName || 'Unknown'}`);
+                errors.push(`Failed to add lead for contact: ${lead.contactName || 'Unknown'}`);
             }
         } catch (error) {
             errorCount++;
             const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
-            errors.push(`Error for ${leadData.contactName || 'Unknown'}: ${errorMessage}`);
+            errors.push(`Error for ${lead.contactName || 'Unknown'}: ${errorMessage}`);
         }
     }
 
@@ -74,7 +86,7 @@ export async function addLeadsBatchAction(
 
 export async function updateLeadAction(
   leadId: string,
-  updates: Partial<Omit<Lead, 'id'>>
+  updates: Partial<Omit<Lead, 'id' | 'crmId' | 'crmName'>> // crmId/Name can't be updated this way
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const success = await updateLead(leadId, updates);

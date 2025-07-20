@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { addLeadsBatchAction } from '@/app/(app)/pipeline/actions';
 import { Loader2, UploadCloud, FileCheck2, AlertTriangle, TableIcon } from 'lucide-react';
-import type { Lead } from '@/types';
+import type { Lead, User } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -25,13 +25,14 @@ interface ImportLeadsDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onLeadsImported: () => void;
+  currentUser: User;
 }
 
 const REQUIRED_HEADERS = ["date", "contactName", "businessName", "phone", "source", "address", "category"];
 
-export function ImportLeadsDialog({ isOpen, onOpenChange, onLeadsImported }: ImportLeadsDialogProps) {
+export function ImportLeadsDialog({ isOpen, onOpenChange, onLeadsImported, currentUser }: ImportLeadsDialogProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [parsedData, setParsedData] = useState<Omit<Lead, 'id'>[]>([]);
+  const [parsedData, setParsedData] = useState<Omit<Lead, 'id' | 'crmId' | 'crmName'>[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isParsing, setIsParsing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -79,7 +80,7 @@ export function ImportLeadsDialog({ isOpen, onOpenChange, onLeadsImported }: Imp
           return;
         }
 
-        const validLeads: Omit<Lead, 'id'>[] = [];
+        const validLeads: Omit<Lead, 'id' | 'crmId' | 'crmName'>[] = [];
         const validationErrors: string[] = [];
 
         results.data.forEach((row, index) => {
@@ -129,7 +130,7 @@ export function ImportLeadsDialog({ isOpen, onOpenChange, onLeadsImported }: Imp
       return;
     }
     setIsSubmitting(true);
-    const result = await addLeadsBatchAction(parsedData);
+    const result = await addLeadsBatchAction(parsedData, currentUser);
     setIsSubmitting(false);
 
     if (result.success) {

@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { Lead } from "@/types";
+import type { Lead, User } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addLeadAction, updateLeadAction } from '@/app/(app)/pipeline/actions';
 import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
@@ -28,11 +28,12 @@ interface AddEditLeadDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   onLeadSaved: () => void;
   lead?: Lead | null;
+  currentUser: User;
 }
 
 const CATEGORIES: Array<Lead['category']> = ['POP', 'POG', 'OC', 'OD', 'B2B'];
 
-export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead }: AddEditLeadDialogProps) {
+export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, currentUser }: AddEditLeadDialogProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [schedule, setSchedule] = useState<Date | undefined>();
   const [contactName, setContactName] = useState('');
@@ -83,7 +84,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead }: A
 
     setIsSubmitting(true);
 
-    const leadData: Omit<Lead, 'id'> = {
+    const leadData = {
       date: date.toISOString(),
       schedule: schedule ? schedule.toISOString() : null,
       contactName, businessName, phone, source, address, category,
@@ -94,7 +95,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead }: A
     if (isEditMode) {
       result = await updateLeadAction(lead.id, leadData);
     } else {
-      result = await addLeadAction(leadData);
+      result = await addLeadAction(leadData, currentUser);
     }
     
     setIsSubmitting(false);
