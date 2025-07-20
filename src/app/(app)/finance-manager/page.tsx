@@ -11,7 +11,7 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart, Landmark, Wifi, Signal } from 'lucide-react'; 
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart, Landmark, Wifi, Signal, Chip } from 'lucide-react'; 
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from "@/components/ui/input";
@@ -607,9 +607,10 @@ export default function FinanceManagerPage() {
         </Card>
 
         <div className="space-y-6">
-            <Card className="shadow-xl border-none rounded-2xl bg-gradient-to-br from-gray-900 to-black text-white p-6 flex flex-col justify-between h-56 relative overflow-hidden" data-ai-hint="credit card mastercard">
+            <Card className="shadow-xl border-none rounded-2xl bg-gradient-to-br from-gray-900 to-black text-white p-6 flex flex-col justify-between h-[240px] relative overflow-hidden" data-ai-hint="credit card mastercard">
                 <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre-v2.png')] opacity-5 mix-blend-overlay"></div>
-                <div className="flex justify-between items-start">
+                
+                <div className="flex justify-between items-start z-10">
                     <div>
                         <p className="text-xs opacity-70">Available Balance</p>
                         <div className="text-2xl font-bold tracking-wider">{isLoadingContent ? <Skeleton className="h-8 w-36 bg-white/20 mt-1" /> : formatCurrency(availableBalance)}</div>
@@ -619,7 +620,13 @@ export default function FinanceManagerPage() {
                         <Signal className="h-5 w-5 opacity-80"/>
                     </div>
                 </div>
-                <div className="flex justify-between items-end">
+
+                <div className="z-10">
+                    <Chip className="w-12 h-9 text-yellow-400 opacity-80" />
+                    <p className="font-mono text-xl tracking-widest mt-2">**** **** **** 1234</p>
+                </div>
+                
+                <div className="flex justify-between items-end z-10">
                     <div>
                         <p className="text-xs opacity-70">Card Holder</p>
                         <p className="font-semibold tracking-wider">{currentUser.name}</p>
