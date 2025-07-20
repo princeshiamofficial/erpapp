@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 type Category = 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
 
-// Mock data for the pipeline table with new categories
+// Mock data for the pipeline table
 const mockPipelineData = [
   {
     id: 'pipe_1',
@@ -25,7 +25,6 @@ const mockPipelineData = [
     source: 'Referral',
     address: '123 Tech Street, Dhaka',
     category: 'POP' as Category,
-    schedule: '2024-08-15',
     notes: 'Interested in enterprise package. Follow up next week.',
   },
   {
@@ -37,7 +36,6 @@ const mockPipelineData = [
     source: 'Website',
     address: '456 Art Avenue, Chittagong',
     category: 'POG' as Category,
-    schedule: '2024-08-18',
     notes: 'Needs a quote for 5000 units.',
   },
   {
@@ -49,7 +47,6 @@ const mockPipelineData = [
     source: 'Cold Call',
     address: '789 Trade Tower, Gulshan',
     category: 'B2B' as Category,
-    schedule: '2024-09-01',
     notes: '',
   },
   {
@@ -61,7 +58,6 @@ const mockPipelineData = [
     source: 'Facebook',
     address: 'Suite 202, ABC Plaza, Banani',
     category: 'OC' as Category,
-    schedule: '2024-08-22',
     notes: 'Scheduled a demo for next Tuesday.',
   },
   {
@@ -73,7 +69,6 @@ const mockPipelineData = [
     source: 'Referral',
     address: 'Dhanmondi 27, Dhaka',
     category: 'OD' as Category,
-    schedule: '2024-08-25',
     notes: 'Follow up on the sample design.',
   },
 ];
@@ -149,7 +144,6 @@ export default function PipeLinePage() {
                   <TableHead>Source</TableHead>
                   <TableHead>Address</TableHead>
                   <TableHead>Category</TableHead>
-                  <TableHead>Schedule</TableHead>
                   <TableHead>Notes</TableHead>
                   <TableHead className="pr-6 text-right">Action</TableHead>
                 </TableRow>
@@ -178,7 +172,6 @@ export default function PipeLinePage() {
                           {lead.category}
                          </Badge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{lead.schedule}</TableCell>
                       <TableCell className="text-muted-foreground text-xs truncate max-w-xs" title={lead.notes}>
                         {lead.notes || 'N/A'}
                       </TableCell>
