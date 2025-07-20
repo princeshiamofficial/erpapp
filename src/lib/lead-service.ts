@@ -28,13 +28,38 @@ async function fetchFromApi(endpoint: string, options: RequestInit = {}) {
     return response.json();
 }
 
+// New function to ensure the collection exists
+const ensureCollectionExists = async () => {
+    try {
+        // First, try to get info about the collection. This is a lightweight check.
+        await fetchFromApi(`collections/${COLLECTION_NAME}`);
+    } catch (error) {
+        // If the error indicates "not found", we create it.
+        if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
+            console.log(`Collection '${COLLECTION_NAME}' not found. Attempting to create it...`);
+            try {
+                await fetchFromApi('collections', {
+                    method: 'POST',
+                    body: JSON.stringify({ name: COLLECTION_NAME }),
+                });
+                console.log(`Collection '${COLLECTION_NAME}' created successfully.`);
+            } catch (creationError) {
+                console.error(`Failed to create collection '${COLLECTION_NAME}':`, creationError);
+                throw new Error(`Could not create required collection '${COLLECTION_NAME}'.`);
+            }
+        } else {
+            // Re-throw other errors (e.g., auth errors, server down)
+            throw error;
+        }
+    }
+};
+
 // Get all leads
 export const getLeads = async (): Promise<Lead[]> => {
   try {
+    await ensureCollectionExists(); // Ensure collection exists before fetching
     const response = await fetchFromApi(`collections/${COLLECTION_NAME}/documents?limit=200`);
     if (response && Array.isArray(response.documents)) {
-        // The API returns documents as { id: '...', data: { ... } }
-        // We need to transform it into our Lead type { id: '...', ...data }
         return response.documents.map((doc: { id: string, data: any }) => ({
             id: doc.id,
             ...doc.data
@@ -50,8 +75,7 @@ export const getLeads = async (): Promise<Lead[]> => {
 // Add a new lead
 export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> => {
   try {
-    // The API expects the lead data to be nested under a "data" key.
-    // The API will auto-generate an ID if we don't provide one.
+    await ensureCollectionExists(); // Ensure collection exists before adding
     const payload = {
         data: leadData
     };
@@ -60,14 +84,13 @@ export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> 
         body: JSON.stringify(payload),
     });
 
-    // The API returns the created document, so we transform it to our Lead type
     return {
         id: newDoc.id,
         ...newDoc.data
     } as Lead;
   } catch (error) {
     console.error("Error adding lead via API:", error);
-    if (error instanceof Error) throw error; // Re-throw the error to be caught by the server action
+    if (error instanceof Error) throw error; 
     return null;
   }
 };
@@ -75,7 +98,7 @@ export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> 
 // Update a lead
 export const updateLead = async (leadId: string, updates: Partial<Omit<Lead, 'id'>>): Promise<boolean> => {
   try {
-    // The API expects the updated data to be nested under a "data" key.
+    await ensureCollectionExists(); // Ensure collection exists before updating
     const payload = {
         data: updates
     };
@@ -93,6 +116,7 @@ export const updateLead = async (leadId: string, updates: Partial<Omit<Lead, 'id
 // Delete a lead
 export const deleteLead = async (leadId: string): Promise<boolean> => {
   try {
+    await ensureCollectionExists(); // Ensure collection exists before deleting
     await fetchFromApi(`collections/${COLLECTION_NAME}/documents/${leadId}`, {
         method: 'DELETE'
     });
