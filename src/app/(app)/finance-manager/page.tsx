@@ -648,32 +648,32 @@ export default function FinanceManagerPage() {
                       nameKey="name"
                       innerRadius={60}
                       strokeWidth={5}
-                      labelLine={false}
                       label={({
                           payload,
+                          cx,
+                          cy,
                           ...props
                       }) => {
                           const totalValue = expenseChartData.reduce((acc, curr) => acc + curr.value, 0);
                           const percent = totalValue > 0 ? (payload.value / totalValue) * 100 : 0;
                           return (
                               <text
-                                  {...props}
-                                  x={props.cx}
-                                  y={props.cy}
+                                  x={cx}
+                                  y={cy}
                                   textAnchor="middle"
                                   dominantBaseline="central"
                                   className="fill-foreground text-center"
                               >
                                   <tspan
-                                      x={props.cx}
-                                      y={props.cy - 12}
+                                      x={cx}
+                                      y={cy - 12}
                                       className="text-2xl font-bold"
                                   >
                                       {formatCurrency(totalExpenses).replace('BDT', '৳')}
                                   </tspan>
                                   <tspan
-                                      x={props.cx}
-                                      y={props.cy + 12}
+                                      x={cx}
+                                      y={cy + 12}
                                       className="text-xs text-muted-foreground"
                                   >
                                       Total Expenses
@@ -682,9 +682,9 @@ export default function FinanceManagerPage() {
                           )
                       }}
                     >
-                      {expenseChartData.map((entry) => (
+                      {expenseChartData.map((entry, index) => (
                         <Cell
-                          key={entry.name}
+                          key={`cell-${index}`}
                           fill={expenseChartConfig[entry.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()]?.color}
                           className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                         />
