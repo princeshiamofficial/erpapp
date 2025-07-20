@@ -11,7 +11,8 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart, Landmark, Wifi, Signal, Chip } from 'lucide-react'; 
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart, Landmark, Wifi, Signal } from 'lucide-react'; 
+import { ChipIcon } from '@/components/icons/ChipIcon';
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from "@/components/ui/input";
@@ -622,7 +623,7 @@ export default function FinanceManagerPage() {
                 </div>
 
                 <div className="z-10">
-                    <Chip className="w-12 h-9 text-yellow-400 opacity-80" />
+                    <ChipIcon className="w-12 h-9 text-yellow-400 opacity-80" />
                     <p className="font-mono text-xl tracking-widest mt-2">**** **** **** 1234</p>
                 </div>
                 
