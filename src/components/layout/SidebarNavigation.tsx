@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
-import { SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem, useSidebar } from "@/components/ui/sidebar";
+import { SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem, useSidebar } from "@/components/ui/sidebar";
 import { 
   LayoutDashboard, 
   Package, 
@@ -21,7 +21,7 @@ import {
   Briefcase,
   MessageCircle,
   Landmark,
-  Shield, // Using Shield for CRM for now
+  Shield, 
   ChevronDown
 } from "lucide-react";
 import type { UserRole, GlobalSettings } from "@/types";
@@ -50,7 +50,7 @@ const navItems: NavItem[] = [
     roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"], 
     href: "",
     subItems: [
-      { href: "/projects", label: "Pipe Line", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
+      { href: "/pipeline", label: "Pipe Line", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
     ]
   },
   { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
@@ -86,7 +86,6 @@ export function SidebarNavigation() {
   }, [currentUser]);
 
   useEffect(() => {
-    // Automatically open the CRM menu if the current path is one of its sub-items
     const crmMenu = navItems.find(item => item.label === 'CRM');
     if (crmMenu?.subItems?.some(sub => sub.href && pathname.startsWith(sub.href))) {
       setOpenMenus(prev => ({ ...prev, CRM: true }));
@@ -138,7 +137,7 @@ export function SidebarNavigation() {
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={() => toggleMenu(item.label)}
-                isActive={false} // Ensure header is never highlighted
+                isActive={false}
                 className={cn(
                   "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-medium py-2.5 px-3 h-auto rounded-lg transition-all duration-200 ease-in-out transform hover:translate-x-1"
                 )}
@@ -194,7 +193,6 @@ export function SidebarNavigation() {
         );
       }
 
-      // Regular nav item
       const isActive = item.href && (pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href)));
       
       return (
