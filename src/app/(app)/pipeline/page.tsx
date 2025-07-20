@@ -90,9 +90,9 @@ const getInitials = (name: string) => {
 
 
 export default function PipeLinePage() {
-  // In a real application, you would use useState and useEffect to fetch data.
-  // For this example, we'll use the mock data directly.
-  const pipelineData = mockPipelineData;
+  const pipelineData = React.useMemo(() => {
+    return [...mockPipelineData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, []);
 
   return (
     <div className="space-y-6 p-1 sm:p-0">
@@ -138,7 +138,7 @@ export default function PipeLinePage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-6">Business Name</TableHead>
-                  <TableHead>Contact Person</TableHead>
+                  <TableHead>Name</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Source</TableHead>
