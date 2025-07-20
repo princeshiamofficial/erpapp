@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -94,6 +94,35 @@ export default function PipeLinePage() {
     return [...mockPipelineData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, []);
 
+  const handleExport = () => {
+    const headers = ["Date", "Name", "Business Name", "Phone", "Source", "Address", "Category", "Notes"];
+    const csvContent = [
+      headers.join(','),
+      ...pipelineData.map(lead => [
+        `"${lead.date}"`,
+        `"${lead.contactName}"`,
+        `"${lead.businessName.replace(/"/g, '""')}"`,
+        `"${lead.phone}"`,
+        `"${lead.source}"`,
+        `"${lead.address.replace(/"/g, '""')}"`,
+        `"${lead.category}"`,
+        `"${(lead.notes || '').replace(/"/g, '""')}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", "pipeline_export.csv");
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   return (
     <div className="space-y-6 p-1 sm:p-0">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
@@ -104,6 +133,15 @@ export default function PipeLinePage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={handleExport}
+            className="w-full sm:w-auto h-10"
+          >
+            <FileSpreadsheet className="mr-2 h-4 w-4" />
+            Export to Sheet
+          </Button>
           <Button
             size="lg"
             className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground rounded-md shadow-md hover:shadow-lg transition-shadow font-semibold h-10"
