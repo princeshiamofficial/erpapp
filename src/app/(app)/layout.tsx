@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
@@ -19,7 +19,7 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { UserNav } from '@/components/layout/UserNav';
 import { SidebarNavigation } from '@/components/layout/SidebarNavigation';
 import { Button } from '@/components/ui/button';
-import { LogOut, PowerOff } from 'lucide-react';
+import { LogOut, PowerOff, Construction, Target } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,25 +27,86 @@ import { Logo } from '@/components/layout/Logo';
 import { Progress } from '@/components/ui/progress';
 import { getGlobalSettings } from '@/lib/settings-service';
 import type { GlobalSettings } from '@/types';
+import { cn } from '@/lib/utils';
+
 
 const AccountSuspendedDialog = dynamic(() => import('@/components/auth/AccountSuspendedDialog').then(mod => mod.AccountSuspendedDialog));
 
-const MaintenancePage: React.FC<{ message: string | null }> = ({ message }) => (
-  <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-foreground p-6 text-center">
-    <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1, rotate: [0, -5, 5, -5, 0] }}
-      transition={{ duration: 0.7, ease: "easeOut", type: "spring", stiffness: 100 }}
-      className="mb-8"
-    >
-      <PowerOff className="h-24 w-24 text-primary" />
-    </motion.div>
-    <h1 className="text-4xl font-bold mb-4">Under Maintenance</h1>
-    <p className="text-lg text-muted-foreground max-w-lg">
-      {message || "We are currently performing scheduled maintenance. We should be back online shortly. Thank you for your patience."}
-    </p>
-  </div>
-);
+const MaintenancePage: React.FC<{ message: string | null }> = ({ message }) => {
+  const [score, setScore] = useState(0);
+  const [highScore, setHighScore] = useState(0);
+
+  const handleDotClick = () => {
+    const newScore = score + 1;
+    setScore(newScore);
+    if (newScore > highScore) {
+      setHighScore(newScore);
+    }
+  };
+
+  const resetGame = () => {
+    setScore(0);
+  };
+
+  return (
+    <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-foreground p-6 text-center overflow-hidden">
+      <div className="absolute inset-0 -z-10 h-full w-full bg-background">
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,theme(colors.border/0.1)_1px,transparent_1px),linear-gradient(to_bottom,theme(colors.border/0.1)_1px,transparent_1px)] bg-[size:30px_30px] opacity-50 dark:opacity-20"></div>
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,theme(colors.background)_80%)]"></div>
+      </div>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8, rotate: -15 }}
+        animate={{ opacity: 1, scale: 1, rotate: 0 }}
+        transition={{ duration: 0.7, ease: "easeOut", type: "spring", stiffness: 100 }}
+        className="mb-8"
+      >
+        <Construction className="h-24 w-24 text-primary drop-shadow-[0_5px_15px_rgba(var(--primary-hsl),0.3)]" />
+      </motion.div>
+      <motion.h1 
+        className="text-4xl font-bold mb-4"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+      >
+        Under Maintenance
+      </motion.h1>
+      <motion.p 
+        className="text-lg text-muted-foreground max-w-lg mb-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.3 }}
+      >
+        {message || "We are currently performing scheduled maintenance. We should be back online shortly. Thank you for your patience."}
+      </motion.p>
+      
+      <motion.div 
+        className="w-full max-w-sm p-4 bg-card/50 backdrop-blur-sm border rounded-lg shadow-lg"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5, delay: 0.5 }}
+      >
+        <h3 className="text-sm font-semibold text-muted-foreground mb-2">A quick game while you wait?</h3>
+        <div className="flex justify-between items-center mb-4">
+            <p className="text-lg font-mono">Score: <span className="font-bold text-primary">{score}</span></p>
+            <p className="text-xs font-mono text-muted-foreground">High Score: {highScore}</p>
+            <Button variant="ghost" size="sm" onClick={resetGame} className="text-xs h-7">Reset</Button>
+        </div>
+        <AnimatePresence mode="wait">
+            <motion.button
+                key={score}
+                onClick={handleDotClick}
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1, x: Math.random() * 200 - 100, y: Math.random() * 40 - 20 }}
+                exit={{ scale: 0, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+                className="w-10 h-10 rounded-full bg-primary shadow-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card"
+                aria-label="Click to score"
+            />
+        </AnimatePresence>
+      </motion.div>
+    </div>
+  );
+};
 
 export default function AuthenticatedLayout({
   children,
@@ -112,6 +173,7 @@ export default function AuthenticatedLayout({
   const inMaintenanceMode = useMemo(() => {
     if (isLoading || isLoadingSettings) return false;
     if (!globalSettings?.maintenanceMode) return false;
+    // Only SYSTEM_ADMIN can bypass maintenance mode
     if (currentUser?.role === 'SYSTEM_ADMIN') return false;
     return true;
   }, [isLoading, isLoadingSettings, globalSettings, currentUser]);
