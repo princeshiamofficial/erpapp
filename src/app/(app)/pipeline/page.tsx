@@ -137,9 +137,9 @@ export default function PipeLinePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="pl-6">Business Name</TableHead>
+                  <TableHead className="pl-6">Date</TableHead>
                   <TableHead>Name</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead>Business Name</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Address</TableHead>
@@ -152,7 +152,7 @@ export default function PipeLinePage() {
                 {pipelineData.length > 0 ? (
                   pipelineData.map((lead) => (
                     <TableRow key={lead.id} className="hover:bg-muted/50 transition-colors">
-                      <TableCell className="pl-6 font-medium text-foreground">{lead.businessName}</TableCell>
+                      <TableCell className="pl-6 text-muted-foreground">{lead.date}</TableCell>
                       <TableCell>
                           <div className="flex items-center gap-2">
                               <Avatar className="h-8 w-8 text-xs border bg-muted">
@@ -161,7 +161,7 @@ export default function PipeLinePage() {
                               <span className="text-muted-foreground font-medium">{lead.contactName}</span>
                           </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{lead.date}</TableCell>
+                      <TableCell className="font-medium text-foreground">{lead.businessName}</TableCell>
                       <TableCell className="text-muted-foreground">{lead.phone}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{lead.source}</Badge>
