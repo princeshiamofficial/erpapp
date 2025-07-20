@@ -67,6 +67,7 @@ export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> 
     } as Lead;
   } catch (error) {
     console.error("Error adding lead via API:", error);
+    if (error instanceof Error) throw error; // Re-throw the error to be caught by the server action
     return null;
   }
 };
