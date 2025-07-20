@@ -125,18 +125,19 @@ export default function PipeLinePage() {
       toast({ title: "No Data", description: "There is no pipeline data to export." });
       return;
     }
-    const headers = ["Date", "Name", "Business Name", "Phone", "Source", "Address", "Category", "Notes"];
+    const headers = ["Date", "Name", "Business Name", "Phone", "Source", "Address", "Category", "Notes", "Schedule"];
     const csvContent = [
       headers.join(','),
       ...leads.map(lead => [
-        `"${lead.date}"`,
-        `"${lead.contactName}"`,
+        `"${format(new Date(lead.date), 'yyyy-MM-dd')}"`,
+        `"${lead.contactName.replace(/"/g, '""')}"`,
         `"${lead.businessName.replace(/"/g, '""')}"`,
         `"${lead.phone}"`,
-        `"${lead.source}"`,
+        `"${lead.source.replace(/"/g, '""')}"`,
         `"${lead.address.replace(/"/g, '""')}"`,
         `"${lead.category}"`,
-        `"${(lead.notes || '').replace(/"/g, '""')}"`
+        `"${(lead.notes || '').replace(/"/g, '""')}"`,
+        `"${lead.schedule ? format(new Date(lead.schedule), 'yyyy-MM-dd') : ''}"`
       ].join(','))
     ].join('\n');
 
@@ -145,11 +146,12 @@ export default function PipeLinePage() {
     if (link.download !== undefined) {
       const url = URL.createObjectURL(blob);
       link.setAttribute("href", url);
-      link.setAttribute("download", "pipeline_export.csv");
+      link.setAttribute("download", `pipeline_export_${new Date().toISOString().split('T')[0]}.csv`);
       link.style.visibility = 'hidden';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      toast({ title: "Export Successful", description: "Your leads have been downloaded as a CSV file." });
     }
   };
 
@@ -217,6 +219,7 @@ export default function PipeLinePage() {
                     <TableHead>Source</TableHead>
                     <TableHead>Address</TableHead>
                     <TableHead>Category</TableHead>
+                    <TableHead>Schedule</TableHead>
                     <TableHead className="max-w-[250px]">Notes</TableHead>
                     <TableHead className="pr-6 text-right">Action</TableHead>
                   </TableRow>
@@ -225,7 +228,7 @@ export default function PipeLinePage() {
                   {isLoading ? (
                     [...Array(5)].map((_, i) => (
                       <TableRow key={`skel-${i}`}>
-                        <TableCell colSpan={9} className="p-0"><Skeleton className="h-16 w-full"/></TableCell>
+                        <TableCell colSpan={10} className="p-0"><Skeleton className="h-16 w-full"/></TableCell>
                       </TableRow>
                     ))
                   ) : filteredLeads.length > 0 ? (
@@ -251,6 +254,9 @@ export default function PipeLinePage() {
                             {lead.category}
                            </Badge>
                         </TableCell>
+                        <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                            {lead.schedule ? format(new Date(lead.schedule), 'd MMM yyyy') : 'N/A'}
+                        </TableCell>
                         <TableCell className="text-muted-foreground text-xs truncate max-w-xs" title={lead.notes}>
                           {lead.notes || 'N/A'}
                         </TableCell>
@@ -266,7 +272,7 @@ export default function PipeLinePage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-12 h-[300px]">
+                      <TableCell colSpan={10} className="text-center py-12 h-[300px]">
                         <p className="text-lg text-muted-foreground font-medium">No leads in the pipeline.</p>
                         <p className="text-sm text-muted-foreground">Click "Add New Lead" to get started.</p>
                       </TableCell>
