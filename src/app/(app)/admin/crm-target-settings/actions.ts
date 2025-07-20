@@ -11,6 +11,7 @@ import {
   setLeaderboardBackgroundImageUrl,
   setExpenseLoggingPermissions, 
   setProjectStageAccess, 
+  setMaintenanceMode,
 } from "@/lib/settings-service";
 import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType } from "@/types"; 
 import { adminApp } from '@/lib/firebase-admin';
@@ -155,6 +156,24 @@ export async function updateProjectStageAccessAction(
     return { success: false, error: "Failed to update project stage access permissions in database." };
   } catch (error) {
     console.error("Error in updateProjectStageAccessAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updateMaintenanceModeAction(
+  enabled: boolean,
+  message: string | null
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setMaintenanceMode(enabled, message);
+    if (success) {
+      // Revalidate all app pages to reflect maintenance mode change immediately
+      revalidatePath('/(app)', 'layout');
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update maintenance mode settings in database." };
+  } catch (error) {
+    console.error("Error in updateMaintenanceModeAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

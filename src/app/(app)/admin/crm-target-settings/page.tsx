@@ -26,11 +26,12 @@ import {
   updateLeaderboardBackgroundImageUrlAction,
   updateExpenseLoggingPermissionsAction, 
   sendPushNotificationAction,
-  updateProjectStageAccessAction
+  updateProjectStageAccessAction,
+  updateMaintenanceModeAction,
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon, Settings2, Briefcase, Trash2 } from 'lucide-react';
+import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon, Settings2, Briefcase, Trash2, PowerOff } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
@@ -67,6 +68,8 @@ export default function CrmTargetSettingsPage() {
     mode: 'all', allowedRoles: [], allowedUserIds: []
   });
   const [projectStageAccess, setProjectStageAccess] = useState<Record<ProjectStatusType, UserRole[]>>({} as Record<ProjectStatusType, UserRole[]>);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('');
 
   // Notification states
   const [allUsers, setAllUsers] = useState<User[]>([]); // Users excluding System_Admin for targeting
@@ -93,6 +96,7 @@ export default function CrmTargetSettingsPage() {
   const [isSubmittingExpensePerms, setIsSubmittingExpensePerms] = useState(false);
   const [isSubmittingProjectStageAccess, setIsSubmittingProjectStageAccess] = useState(false);
   const [isSendingNotification, setIsSendingNotification] = useState(false);
+  const [isSubmittingMaintenanceMode, setIsSubmittingMaintenanceMode] = useState(false);
   const [isLoadingUsersForNotifAndTokens, setIsLoadingUsersForNotifAndTokens] = useState(false);
 
   // FCM Token Display State
@@ -118,6 +122,8 @@ export default function CrmTargetSettingsPage() {
       setLeaderboardBgUrl(globalSettings.leaderboardBackgroundImageUrl ?? '');
       setExpenseLoggingPerms(globalSettings.expenseLoggingPermissions ?? { mode: 'all', allowedRoles: [], allowedUserIds: []});
       setProjectStageAccess(globalSettings.projectStageAccess || ({} as Record<ProjectStatusType, UserRole[]>));
+      setMaintenanceMode(globalSettings.maintenanceMode ?? false);
+      setMaintenanceMessage(globalSettings.maintenanceMessage ?? '');
 
       setAllUsers(fetchedUsersDb.filter(u => u.role !== 'SYSTEM_ADMIN')); // For notification targeting and FCM token list
       setAllTargetableUsersForExpensePerms(fetchedUsersDb.filter(u => u.role !== 'SYSTEM_ADMIN')); // For expense perm specific user picker
@@ -284,6 +290,17 @@ export default function CrmTargetSettingsPage() {
       toast({ title: "Update Failed", description: result.error || "Could not save project stage access permissions.", variant: "destructive" });
     }
     setIsSubmittingProjectStageAccess(false);
+  };
+
+  const handleSaveMaintenanceMode = async () => {
+    setIsSubmittingMaintenanceMode(true);
+    const result = await updateMaintenanceModeAction(maintenanceMode, maintenanceMessage.trim());
+    if (result.success) {
+      toast({ title: "Settings Updated", description: `Maintenance mode has been ${maintenanceMode ? 'enabled' : 'disabled'}.` });
+    } else {
+      toast({ title: "Update Failed", description: result.error || "Could not update maintenance mode.", variant: "destructive" });
+    }
+    setIsSubmittingMaintenanceMode(false);
   };
 
   const handleNotificationRoleCheckboxChange = (role: UserRole, checked: boolean | "indeterminate") => {
@@ -597,6 +614,54 @@ export default function CrmTargetSettingsPage() {
           </CardFooter>
         </Card>
       </div>
+
+      <Separator className="my-8" />
+      
+      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+        <CardHeader className="border-b p-5">
+          <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
+            <PowerOff className="h-6 w-6 text-primary" /> Maintenance Mode
+          </CardTitle>
+          <CardDescription className="text-muted-foreground text-sm mt-0.5">
+            Temporarily restrict access for non-admin users and display a maintenance message.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+            <Label htmlFor="maintenanceModeSwitch" className="flex flex-col space-y-1 cursor-pointer">
+              <span>Enable Maintenance Mode</span>
+              <span className="font-normal leading-snug text-muted-foreground text-xs">
+                When enabled, only SYSTEM_ADMIN and ADMIN users can log in. Others will see the maintenance page.
+              </span>
+            </Label>
+            <Switch
+              id="maintenanceModeSwitch"
+              checked={maintenanceMode}
+              onCheckedChange={setMaintenanceMode}
+              disabled={isSubmittingMaintenanceMode || isLoading}
+              aria-label="Toggle maintenance mode"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="maintenanceMessage">Maintenance Message</Label>
+            <Textarea
+              id="maintenanceMessage"
+              value={maintenanceMessage}
+              onChange={(e) => setMaintenanceMessage(e.target.value)}
+              placeholder="e.g., The application is currently down for maintenance. We'll be back shortly!"
+              disabled={isSubmittingMaintenanceMode || isLoading}
+              rows={3}
+            />
+            <p className="text-xs text-muted-foreground">This message will be shown to users when maintenance mode is active.</p>
+          </div>
+        </CardContent>
+        <CardFooter className="border-t p-5 flex justify-end">
+          <Button onClick={handleSaveMaintenanceMode} disabled={isSubmittingMaintenanceMode || isLoading}>
+            {isSubmittingMaintenanceMode ? "Saving..." : "Save Maintenance Settings"}
+          </Button>
+        </CardFooter>
+      </Card>
+
 
       <Separator className="my-8" />
 

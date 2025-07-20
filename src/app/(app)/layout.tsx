@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
@@ -19,14 +19,33 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { UserNav } from '@/components/layout/UserNav';
 import { SidebarNavigation } from '@/components/layout/SidebarNavigation';
 import { Button } from '@/components/ui/button';
-import { LogOut } from 'lucide-react';
+import { LogOut, PowerOff } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Logo } from '@/components/layout/Logo';
 import { Progress } from '@/components/ui/progress';
+import { getGlobalSettings } from '@/lib/settings-service';
+import type { GlobalSettings } from '@/types';
 
 const AccountSuspendedDialog = dynamic(() => import('@/components/auth/AccountSuspendedDialog').then(mod => mod.AccountSuspendedDialog));
+
+const MaintenancePage: React.FC<{ message: string | null }> = ({ message }) => (
+  <div className="flex h-screen w-full flex-col items-center justify-center bg-background text-foreground p-6 text-center">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1, rotate: [0, -5, 5, -5, 0] }}
+      transition={{ duration: 0.7, ease: "easeOut", type: "spring", stiffness: 100 }}
+      className="mb-8"
+    >
+      <PowerOff className="h-24 w-24 text-primary" />
+    </motion.div>
+    <h1 className="text-4xl font-bold mb-4">Under Maintenance</h1>
+    <p className="text-lg text-muted-foreground max-w-lg">
+      {message || "We are currently performing scheduled maintenance. We should be back online shortly. Thank you for your patience."}
+    </p>
+  </div>
+);
 
 export default function AuthenticatedLayout({
   children,
@@ -37,6 +56,22 @@ export default function AuthenticatedLayout({
   const router = useRouter();
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [showLoadingScreen, setShowLoadingScreen] = useState(true);
+  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
+  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+
+  useEffect(() => {
+    async function fetchSettings() {
+      if (currentUser) {
+        setIsLoadingSettings(true);
+        const settings = await getGlobalSettings();
+        setGlobalSettings(settings);
+        setIsLoadingSettings(false);
+      } else {
+        setIsLoadingSettings(false);
+      }
+    }
+    fetchSettings();
+  }, [currentUser]);
 
   useEffect(() => {
     let progressInterval: NodeJS.Timeout | undefined;
@@ -45,7 +80,7 @@ export default function AuthenticatedLayout({
       setLoadingProgress(0); 
       let currentProgress = 0;
       progressInterval = setInterval(() => {
-        currentProgress += Math.random() * 15 + 5; // Simulate variable loading chunks
+        currentProgress += Math.random() * 15 + 5;
         if (currentProgress >= 90) {
           currentProgress = 90; 
           clearInterval(progressInterval);
@@ -73,6 +108,14 @@ export default function AuthenticatedLayout({
       router.replace('/login');
     }
   }, [currentUser, isLoading, router, isSuspendedDialogOpen]);
+
+  const inMaintenanceMode = useMemo(() => {
+    if (isLoading || isLoadingSettings) return false;
+    if (!globalSettings?.maintenanceMode) return false;
+    if (currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') return false;
+    return true;
+  }, [isLoading, isLoadingSettings, globalSettings, currentUser]);
+
 
   if ((isLoading || (!currentUser && !isSuspendedDialogOpen)) && showLoadingScreen) {
     return (
@@ -138,6 +181,10 @@ export default function AuthenticatedLayout({
 
   if (!currentUser && !isSuspendedDialogOpen && !isLoading) {
     return null; 
+  }
+
+  if (inMaintenanceMode) {
+    return <MaintenancePage message={globalSettings?.maintenanceMessage ?? null} />;
   }
 
   // Special layout for LR role without sidebar

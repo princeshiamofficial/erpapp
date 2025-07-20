@@ -96,6 +96,7 @@ export interface TrackingLink {
   packzyTrackingCode?: string | null;
   shippingArea?: string | null;
   shippingCharge?: number | null;
+  designerRepresentativeAvatarUrl?: string | null; // Added field
 }
 
 export interface Comment {
@@ -139,6 +140,8 @@ export interface ExpenseLoggingPermissions {
   allowedUserIds: string[];
 }
 
+export type ProjectStatusType = 'CR Clearance' | 'Cancel' | 'On Design' | 'On Hold' | 'Logistics' | 'Courier' | 'Delivered';
+
 export interface GlobalSettings {
   globalMonthlyOrderTarget: number;
   globalWeeklyOrderTarget: number;
@@ -151,6 +154,8 @@ export interface GlobalSettings {
   leaderboardThemeSettings?: LeaderboardThemeSettings | null;
   expenseLoggingPermissions?: ExpenseLoggingPermissions;
   projectStageAccess?: Record<ProjectStatusType, UserRole[]>;
+  maintenanceMode?: boolean;
+  maintenanceMessage?: string | null;
 }
 
 export interface LeaderboardThemeSettings {
@@ -222,7 +227,6 @@ export interface PersonalNote {
   updatedAt: string; // ISO string
 }
 
-export type ProjectStatusType = 'CR Clearance' | 'Cancel' | 'On Design' | 'On Hold' | 'Logistics' | 'Courier' | 'Delivered';
 
 export interface Project {
   id: string;

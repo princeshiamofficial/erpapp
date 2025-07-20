@@ -38,6 +38,8 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   leaderboardBackgroundImageUrl: DEFAULT_LEADERBOARD_BACKGROUND_URL,
   expenseLoggingPermissions: DEFAULT_EXPENSE_LOGGING_PERMISSIONS,
   projectStageAccess: DEFAULT_PROJECT_STAGE_ACCESS,
+  maintenanceMode: false,
+  maintenanceMessage: "The application is currently down for maintenance. We'll be back shortly!",
 };
 
 // Gets global settings from Firestore
@@ -70,6 +72,8 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         leaderboardBackgroundImageUrl: data.leaderboardBackgroundImageUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.leaderboardBackgroundImageUrl : data.leaderboardBackgroundImageUrl,
         expenseLoggingPermissions: fullExpensePerms,
         projectStageAccess: { ...DEFAULT_PROJECT_STAGE_ACCESS, ...projectStageAccess },
+        maintenanceMode: data.maintenanceMode ?? DEFAULT_GLOBAL_SETTINGS.maintenanceMode,
+        maintenanceMessage: data.maintenanceMessage ?? DEFAULT_GLOBAL_SETTINGS.maintenanceMessage,
       };
     } else {
       console.log("Global settings document not found, returning defaults. Creating document with defaults.");
@@ -285,6 +289,31 @@ export async function setProjectStageAccess(permissions: Record<ProjectStatusTyp
     return true;
   } catch (error) {
     console.error("Error setting project stage access permissions:", error);
+    return false;
+  }
+}
+
+
+export async function setMaintenanceMode(
+  enabled: boolean,
+  message: string | null
+): Promise<boolean> {
+  try {
+    const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+    const docSnap = await getDoc(settingsDocRef);
+    const updates = {
+      maintenanceMode: enabled,
+      maintenanceMessage: message ?? DEFAULT_GLOBAL_SETTINGS.maintenanceMessage,
+    };
+
+    if (docSnap.exists()) {
+      await updateDoc(settingsDocRef, updates);
+    } else {
+      await setDoc(settingsDocRef, { ...DEFAULT_GLOBAL_SETTINGS, ...updates });
+    }
+    return true;
+  } catch (error) {
+    console.error("Error setting maintenance mode:", error);
     return false;
   }
 }
