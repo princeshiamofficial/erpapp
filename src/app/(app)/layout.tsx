@@ -36,11 +36,20 @@ const MaintenancePage: React.FC<{ message: string | null }> = ({ message }) => {
   const [score, setScore] = useState(0);
   const [highScore, setHighScore] = useState(0);
 
+  useEffect(() => {
+    // Load high score from local storage on component mount
+    const savedHighScore = localStorage.getItem('maintenanceGameHighScore');
+    if (savedHighScore) {
+      setHighScore(parseInt(savedHighScore, 10));
+    }
+  }, []);
+
   const handleDotClick = () => {
     const newScore = score + 1;
     setScore(newScore);
     if (newScore > highScore) {
       setHighScore(newScore);
+      localStorage.setItem('maintenanceGameHighScore', newScore.toString());
     }
   };
 
