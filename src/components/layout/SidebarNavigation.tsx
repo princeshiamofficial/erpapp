@@ -38,8 +38,8 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR"] },
-  { href: "/orders", label: "CRM", icon: Shield, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
-  { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "DESIGNER_REPRESENTATIVE"] }, // Removed CRM
+  { href: "", label: "CRM", icon: Shield, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] }, // Removed href
+  { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] }, // Added CRM back to see orders
   { href: "/tracking-links", label: "Tracking Links", icon: Link2, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
   { href: "/finance-manager", label: "Finance Manager", icon: DollarSign, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
   { href: "/invoice", label: "Invoice", icon: FileText, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
@@ -103,37 +103,62 @@ export function SidebarNavigation() {
           }
         }
 
+        const isLink = item.href !== "";
+        const isActive = isLink && (pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href) && item.label !== "CRM" && item.label !== "Orders") || (pathname.startsWith("/orders") && (item.label === "CRM" || item.label === "Orders")));
+
+        const menuButtonContent = (
+          <>
+            <item.icon className="mr-3 h-5 w-5 shrink-0" />
+            <span className="truncate group-data-[collapsible=icon]:hidden text-sm">
+              {item.label}
+            </span>
+          </>
+        );
+
         return shouldShowItem ? (
           <SidebarMenuItem key={`${item.href}-${item.label}`}>
-            <Link href={item.href} passHref legacyBehavior>
+            {isLink ? (
+              <Link href={item.href} passHref legacyBehavior>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive}
+                  tooltip={{ 
+                      children: item.label, 
+                      side: 'right', 
+                      align: 'center', 
+                      className: "bg-primary text-primary-foreground shadow-lg border-none text-xs px-2.5 py-1.5 rounded-md" 
+                  }}
+                  disabled={item.disabled}
+                  aria-disabled={item.disabled}
+                  className={
+                    cn(
+                      "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-medium py-2.5 px-3 h-auto rounded-lg transition-all duration-200 ease-in-out transform hover:translate-x-1",
+                      isActive && "bg-gradient-to-r from-primary to-orange-500 text-primary-foreground font-semibold shadow-md hover:shadow-lg",
+                      item.disabled && "cursor-not-allowed opacity-50 hover:bg-transparent hover:text-sidebar-foreground/80 hover:translate-x-0"
+                    )
+                  }
+                >
+                  <a className="flex items-center w-full">
+                    {menuButtonContent}
+                  </a>
+                </SidebarMenuButton>
+              </Link>
+            ) : (
               <SidebarMenuButton
-                asChild
-                isActive={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href) && item.label !== "CRM" && item.label !== "Orders") || (pathname.startsWith("/orders") && (item.label === "CRM" || item.label === "Orders"))}
+                isActive={isActive}
                 tooltip={{ 
                     children: item.label, 
                     side: 'right', 
                     align: 'center', 
                     className: "bg-primary text-primary-foreground shadow-lg border-none text-xs px-2.5 py-1.5 rounded-md" 
                 }}
-                disabled={item.disabled}
-                aria-disabled={item.disabled}
-                className={
-                  cn(
-                    "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-medium py-2.5 px-3 h-auto rounded-lg transition-all duration-200 ease-in-out transform hover:translate-x-1",
-                    ((pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href) && item.label !== "CRM" && item.label !== "Orders")) || (pathname.startsWith("/orders") && (item.label === "CRM" || item.label === "Orders"))) && 
-                    "bg-gradient-to-r from-primary to-orange-500 text-primary-foreground font-semibold shadow-md hover:shadow-lg",
-                    item.disabled && "cursor-not-allowed opacity-50 hover:bg-transparent hover:text-sidebar-foreground/80 hover:translate-x-0"
-                  )
-                }
+                disabled
+                aria-disabled
+                className="cursor-default text-sidebar-foreground/80 font-medium py-2.5 px-3 h-auto rounded-lg"
               >
-                <a className="flex items-center w-full">
-                  <item.icon className="mr-3 h-5 w-5 shrink-0" />
-                  <span className="truncate group-data-[collapsible=icon]:hidden text-sm">
-                    {item.label}
-                  </span>
-                </a>
+                {menuButtonContent}
               </SidebarMenuButton>
-            </Link>
+            )}
           </SidebarMenuItem>
         ) : null
       })}
