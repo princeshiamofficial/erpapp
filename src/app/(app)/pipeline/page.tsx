@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { PlusCircle, Search, Edit, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 
 type Category = 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
 
@@ -17,6 +19,8 @@ const mockPipelineData = [
   {
     id: 'pipe_1',
     businessName: 'Innovate Corp',
+    contactName: 'Mr. Rahim',
+    date: '2024-08-10',
     phone: '01712345678',
     source: 'Referral',
     address: '123 Tech Street, Dhaka',
@@ -27,6 +31,8 @@ const mockPipelineData = [
   {
     id: 'pipe_2',
     businessName: 'Creative Minds',
+    contactName: 'Ms. Anika',
+    date: '2024-08-11',
     phone: '01987654321',
     source: 'Website',
     address: '456 Art Avenue, Chittagong',
@@ -37,6 +43,8 @@ const mockPipelineData = [
   {
     id: 'pipe_3',
     businessName: 'Global Exports',
+    contactName: 'Mr. Khan',
+    date: '2024-08-12',
     phone: '01611223344',
     source: 'Cold Call',
     address: '789 Trade Tower, Gulshan',
@@ -47,6 +55,8 @@ const mockPipelineData = [
   {
     id: 'pipe_4',
     businessName: 'Digital Solutions',
+    contactName: 'Mr. Fahim',
+    date: '2024-08-12',
     phone: '01555667788',
     source: 'Facebook',
     address: 'Suite 202, ABC Plaza, Banani',
@@ -57,6 +67,8 @@ const mockPipelineData = [
   {
     id: 'pipe_5',
     businessName: 'Artisan Crafts',
+    contactName: 'Ms. Tania',
+    date: '2024-08-13',
     phone: '01333445566',
     source: 'Referral',
     address: 'Dhanmondi 27, Dhaka',
@@ -73,6 +85,14 @@ const categoryColors: Record<Category, string> = {
   OD: 'bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200 dark:bg-purple-900/50 dark:text-purple-200 dark:border-purple-700',
   B2B: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-200 dark:border-red-700',
 };
+
+const getInitials = (name: string) => {
+    if (!name) return '??';
+    const names = name.split(' ');
+    if (names.length === 1) return names[0].charAt(0).toUpperCase();
+    return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+};
+
 
 export default function PipeLinePage() {
   // In a real application, you would use useState and useEffect to fetch data.
@@ -123,6 +143,8 @@ export default function PipeLinePage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-6">Business Name</TableHead>
+                  <TableHead>Contact Person</TableHead>
+                  <TableHead>Date</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Source</TableHead>
                   <TableHead>Address</TableHead>
@@ -137,6 +159,15 @@ export default function PipeLinePage() {
                   pipelineData.map((lead) => (
                     <TableRow key={lead.id} className="hover:bg-muted/50 transition-colors">
                       <TableCell className="pl-6 font-medium text-foreground">{lead.businessName}</TableCell>
+                      <TableCell>
+                          <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8 text-xs border bg-muted">
+                                  <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(lead.contactName)}</AvatarFallback>
+                              </Avatar>
+                              <span className="text-muted-foreground font-medium">{lead.contactName}</span>
+                          </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{lead.date}</TableCell>
                       <TableCell className="text-muted-foreground">{lead.phone}</TableCell>
                       <TableCell>
                         <Badge variant="secondary">{lead.source}</Badge>
