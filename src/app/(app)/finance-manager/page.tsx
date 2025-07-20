@@ -444,7 +444,7 @@ export default function FinanceManagerPage() {
                 dialogMode="sendMoney"
                 allUsersForDropdown={allUsers}
             >
-            <Button size="default" className="bg-blue-600 hover:bg-blue-700 text-white h-10">
+            <Button size="default" className="bg-blue-600 hover:bg-blue-600 text-white h-10">
               <Send className="mr-2 h-5 w-5" /> Send Money
             </Button>
           </AddTransactionDialog>
@@ -612,10 +612,7 @@ export default function FinanceManagerPage() {
                 <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre-v2.png')] opacity-5 mix-blend-overlay"></div>
                 
                 <div className="flex justify-between items-start z-10">
-                    <div>
-                        <p className="text-xs opacity-70">Available Balance</p>
-                        <div className="text-2xl font-bold tracking-wider">{isLoadingContent ? <Skeleton className="h-8 w-36 bg-white/20 mt-1" /> : formatCurrency(availableBalance)}</div>
-                    </div>
+                    <div/>
                     <div className="flex items-center gap-1.5">
                         <Wifi className="h-5 w-5 opacity-80"/>
                         <Signal className="h-5 w-5 opacity-80"/>
