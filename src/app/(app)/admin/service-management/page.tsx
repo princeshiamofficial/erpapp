@@ -5,13 +5,12 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Layers, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, Search } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ShieldHalf, RefreshCw, AlertTriangle, CreditCard } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem } from "@/types"; 
-import { getModels, getLaminations, getPaymentMethods } from '@/lib/service-options-service'; 
+import type { ServiceLaminationItem, ServicePaymentMethodItem } from "@/types"; 
+import { getLaminations, getPaymentMethods } from '@/lib/service-options-service'; 
 import {
-  addModelAction, updateModelAction, deleteModelAction,
   addLaminationAction, updateLaminationAction, deleteLaminationAction,
   addPaymentMethodAction, updatePaymentMethodAction, deletePaymentMethodAction 
 } from './actions';
@@ -22,12 +21,10 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
-type ItemType = 'model' | 'lamination' | 'paymentMethod'; 
+type ItemType = 'lamination' | 'paymentMethod'; 
 interface ItemToEdit {
   id: string;
   name: string;
-  buyingPrice?: string; 
-  sellingPrice?: string;
   type: ItemType;
 }
 interface ItemToDelete {
@@ -41,19 +38,15 @@ export default function ServiceManagementPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const [models, setModels] = useState<ServiceModelItem[]>([]);
   const [laminations, setLaminations] = useState<ServiceLaminationItem[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<ServicePaymentMethodItem[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [modelSearchTerm, setModelSearchTerm] = useState('');
 
   const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const [itemName, setItemName] = useState('');
-  const [itemBuyingPrice, setItemBuyingPrice] = useState('');
-  const [itemSellingPrice, setItemSellingPrice] = useState('');
   const [editingItem, setEditingItem] = useState<ItemToEdit | null>(null);
   const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
   const [itemTypeToAdd, setItemTypeToAdd] = useState<ItemType | null>(null);
@@ -62,12 +55,10 @@ export default function ServiceManagementPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedModels, fetchedLaminations, fetchedPaymentMethods] = await Promise.all([ 
-        getModels(),
+      const [fetchedLaminations, fetchedPaymentMethods] = await Promise.all([ 
         getLaminations(),
         getPaymentMethods(),
       ]);
-      setModels(fetchedModels);
       setLaminations(fetchedLaminations);
       setPaymentMethods(fetchedPaymentMethods); 
     } catch (error) {
@@ -86,48 +77,25 @@ export default function ServiceManagementPage() {
     }
   }, [currentUser, router, fetchData]);
 
-  const filteredModels = useMemo(() => {
-    if (!modelSearchTerm) return models;
-    return models.filter(model =>
-      model.name.toLowerCase().includes(modelSearchTerm.toLowerCase())
-    );
-  }, [models, modelSearchTerm]);
-
   const openAddDialog = (type: ItemType) => {
     setEditingItem(null);
     setItemTypeToAdd(type);
     setItemName('');
-    if (type === 'model') {
-      setItemBuyingPrice('0');
-      setItemSellingPrice('0');
-    } else {
-      setItemBuyingPrice('');
-      setItemSellingPrice('');
-    }
     setIsAddEditDialogOpen(true);
   };
 
-  const openEditDialog = (item: ServiceModelItem | ServiceLaminationItem | ServicePaymentMethodItem, type: ItemType) => {
+  const openEditDialog = (item: ServiceLaminationItem | ServicePaymentMethodItem, type: ItemType) => {
     setEditingItem({ 
       id: item.id, 
       name: item.name, 
-      buyingPrice: type === 'model' ? ((item as ServiceModelItem).buyingPrice ?? 0).toString() : undefined,
-      sellingPrice: type === 'model' ? ((item as ServiceModelItem).sellingPrice ?? 0).toString() : undefined,
       type 
     });
     setItemTypeToAdd(null);
     setItemName(item.name);
-    if (type === 'model') {
-      setItemBuyingPrice(((item as ServiceModelItem).buyingPrice ?? 0).toString());
-      setItemSellingPrice(((item as ServiceModelItem).sellingPrice ?? 0).toString());
-    } else {
-      setItemBuyingPrice('');
-      setItemSellingPrice('');
-    }
     setIsAddEditDialogOpen(true);
   };
   
-  const openDeleteDialog = (item: ServiceModelItem | ServiceLaminationItem | ServicePaymentMethodItem, type: ItemType) => {
+  const openDeleteDialog = (item: ServiceLaminationItem | ServicePaymentMethodItem, type: ItemType) => {
     setItemToDelete({ id: item.id, name: item.name, type });
     setIsDeleteDialogOpen(true);
   };
@@ -141,53 +109,30 @@ export default function ServiceManagementPage() {
     setIsSubmitting(true);
     let result;
     const currentType = editingItem?.type || itemTypeToAdd;
-    let buyingPriceValue: number | undefined = undefined;
-    let sellingPriceValue: number | undefined = undefined;
-
-    if (currentType === 'model') {
-      buyingPriceValue = parseFloat(itemBuyingPrice);
-      sellingPriceValue = parseFloat(itemSellingPrice);
-      if (isNaN(buyingPriceValue) || buyingPriceValue < 0) {
-        toast({ title: "Validation Error", description: "Buying Price for model must be a non-negative number.", variant: "destructive" });
-        setIsSubmitting(false);
-        return;
-      }
-      if (isNaN(sellingPriceValue) || sellingPriceValue < 0) {
-        toast({ title: "Validation Error", description: "Selling Price for model must be a non-negative number.", variant: "destructive" });
-        setIsSubmitting(false);
-        return;
-      }
-    }
 
     if (editingItem) { 
-      if (currentType === 'model') {
-        result = await updateModelAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue);
-      } else if (currentType === 'lamination') {
+      if (currentType === 'lamination') {
         result = await updateLaminationAction(editingItem.id, itemName.trim());
       } else if (currentType === 'paymentMethod') {
         result = await updatePaymentMethodAction(editingItem.id, itemName.trim());
       }
       if (result?.success) {
-        toast({ title: "Success", description: `${currentType === 'model' ? 'Model' : currentType === 'lamination' ? 'Lamination' : 'Payment Method'} "${itemName.trim()}" updated.` });
+        toast({ title: "Success", description: `${currentType === 'lamination' ? 'Lamination' : 'Payment Method'} "${itemName.trim()}" updated.` });
       }
     } else if (itemTypeToAdd) { 
-       if (currentType === 'model') {
-        result = await addModelAction(itemName.trim(), buyingPriceValue, sellingPriceValue);
-      } else if (currentType === 'lamination') {
+       if (currentType === 'lamination') {
         result = await addLaminationAction(itemName.trim());
       } else if (currentType === 'paymentMethod') {
         result = await addPaymentMethodAction(itemName.trim());
       }
       if (result?.success) {
-        toast({ title: "Success", description: `${currentType === 'model' ? 'Model' : currentType === 'lamination' ? 'Lamination' : 'Payment Method'} "${itemName.trim()}" added.` });
+        toast({ title: "Success", description: `${currentType === 'lamination' ? 'Lamination' : 'Payment Method'} "${itemName.trim()}" added.` });
       }
     }
 
     if (result && result.success) {
       setIsAddEditDialogOpen(false);
       setItemName('');
-      setItemBuyingPrice('');
-      setItemSellingPrice('');
       setEditingItem(null);
       setItemTypeToAdd(null);
       await fetchData();
@@ -201,16 +146,14 @@ export default function ServiceManagementPage() {
     if (!itemToDelete) return;
     setIsSubmitting(true);
     let result;
-    if (itemToDelete.type === 'model') {
-      result = await deleteModelAction(itemToDelete.id);
-    } else if (itemToDelete.type === 'lamination') {
+    if (itemToDelete.type === 'lamination') {
       result = await deleteLaminationAction(itemToDelete.id);
     } else if (itemToDelete.type === 'paymentMethod') {
       result = await deletePaymentMethodAction(itemToDelete.id);
     }
 
     if (result?.success) {
-      toast({ title: "Success", description: `${itemToDelete.type === 'model' ? 'Model' : itemToDelete.type === 'lamination' ? 'Lamination' : 'Payment Method'} "${itemToDelete.name}" deleted.` });
+      toast({ title: "Success", description: `${itemToDelete.type === 'lamination' ? 'Lamination' : 'Payment Method'} "${itemToDelete.name}" deleted.` });
       setIsDeleteDialogOpen(false);
       setItemToDelete(null);
       await fetchData();
@@ -219,12 +162,6 @@ export default function ServiceManagementPage() {
     }
     setIsSubmitting(false);
   };
-  
-  const formatCurrency = (value?: number) => {
-    if (value === undefined || value === null) return 'N/A';
-    return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
-  };
-
 
   if (!currentUser || currentUser.role !== 'SYSTEM_ADMIN') {
     return (
@@ -234,7 +171,7 @@ export default function ServiceManagementPage() {
     );
   }
   
-  const renderItemList = (items: (ServiceModelItem | ServiceLaminationItem | ServicePaymentMethodItem)[], type: ItemType, title: string, Icon: React.ElementType) => (
+  const renderItemList = (items: (ServiceLaminationItem | ServicePaymentMethodItem)[], type: ItemType, title: string, Icon: React.ElementType) => (
     <Card className="shadow-xl border bg-card rounded-lg overflow-hidden w-full">
       <CardHeader className="border-b p-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
@@ -246,17 +183,6 @@ export default function ServiceManagementPage() {
               <PlusCircle className="mr-2 h-4 w-4" /> Add New
           </Button>
         </div>
-        {type === 'model' && (
-          <div className="relative mt-4">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={`Search ${title}...`}
-              value={modelSearchTerm}
-              onChange={(e) => setModelSearchTerm(e.target.value)}
-              className="pl-9 bg-background/50"
-            />
-          </div>
-        )}
       </CardHeader>
       <CardContent className="p-0 max-h-[400px] overflow-y-auto">
         {isLoading ? (
@@ -266,35 +192,13 @@ export default function ServiceManagementPage() {
         ) : items.length === 0 ? (
           <div className="p-6 text-center text-muted-foreground">
             <Icon className="mx-auto h-10 w-10 opacity-50 mb-2" />
-            No {modelSearchTerm && type === 'model' ? `${title.toLowerCase()} found for "${modelSearchTerm}"` : `${title.toLowerCase()} found.`}
+            No {title.toLowerCase()} found.
           </div>
         ) : (
           <ul className="divide-y divide-border/50">
             {items.map((item) => (
               <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
-                {type === 'model' ? (
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-x-2 sm:gap-x-4 items-center">
-                      <span className="font-medium text-foreground whitespace-nowrap overflow-hidden" title={item.name}>
-                        {item.name}
-                      </span>
-                      <span className="font-bold text-[hsl(var(--chart-1))] flex items-center justify-between min-w-[7rem] md:min-w-[7.5rem] py-1">
-                        <span className="flex items-center">
-                          
-                          <span className="text-muted-foreground/90 text-[0.75rem] sm:text-xs w-9 text-right mr-1.5 flex-shrink-0">Buy:</span>
-                        </span>
-                        <span className="font-mono text-sm sm:text-base">{formatCurrency((item as ServiceModelItem).buyingPrice)}</span>
-                      </span>
-                      <span className="font-bold text-[hsl(var(--chart-2))] flex items-center justify-between min-w-[7rem] md:min-w-[7.5rem] py-1">
-                        <span className="flex items-center">
-                          
-                          <span className="text-muted-foreground/90 text-[0.75rem] sm:text-xs w-9 text-right mr-1.5 flex-shrink-0">Sell:</span>
-                        </span>
-                        <span className="font-mono text-sm sm:text-base">{formatCurrency((item as ServiceModelItem).sellingPrice)}</span>
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="font-medium text-foreground flex-1 whitespace-nowrap" title={item.name}>{item.name}</span>
-                  )}
+                <span className="font-medium text-foreground flex-1 whitespace-nowrap" title={item.name}>{item.name}</span>
                 <div className="flex items-center gap-2 ml-4">
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(item, type)} title={`Edit ${type}`} className="h-8 w-8">
                     <Edit className="h-4 w-4" />
@@ -322,7 +226,7 @@ export default function ServiceManagementPage() {
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 page-header">
         <div>
           <h1 className="page-title">Service Options Management</h1>
-          <p className="page-description">Configure Model, Lamination, and Payment Method options available for orders.</p>
+          <p className="page-description">Configure Lamination and Payment Method options available for orders.</p>
         </div>
         <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
           <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
@@ -330,62 +234,24 @@ export default function ServiceManagementPage() {
       </div>
 
       <div className="flex flex-col space-y-6">
-        {renderItemList(filteredModels, 'model', 'Models', Layers)}
         {renderItemList(laminations, 'lamination', 'Laminations', ShieldHalf)}
         {renderItemList(paymentMethods, 'paymentMethod', 'Payment Methods', CreditCard)} 
       </div>
 
       {/* Add/Edit Dialog */}
       <Dialog open={isAddEditDialogOpen} onOpenChange={setIsAddEditDialogOpen}>
-        <DialogContent className={cn("sm:max-w-md", (editingItem?.type || itemTypeToAdd) === 'model' && "sm:max-w-2xl")}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingItem ? 'Edit' : 'Add New'} {(editingItem?.type || itemTypeToAdd) === 'model' ? 'Model' : (editingItem?.type || itemTypeToAdd) === 'lamination' ? 'Lamination' : 'Payment Method'}</DialogTitle>
+            <DialogTitle>{editingItem ? 'Edit' : 'Add New'} {(editingItem?.type || itemTypeToAdd) === 'lamination' ? 'Lamination' : 'Payment Method'}</DialogTitle>
             <DialogDescription>
-              {editingItem ? 'Update the details of this option.' : 'Enter the details for the new option.'}
+              {editingItem ? 'Update the name of this option.' : 'Enter the name for the new option.'}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleAddEditSubmit} className="space-y-4 py-2">
-            {(editingItem?.type || itemTypeToAdd) === 'model' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="itemName">Name</Label>
-                  <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="itemBuyingPrice">Buying Price (BDT)</Label>
-                  <Input 
-                      id="itemBuyingPrice" 
-                      type="number"
-                      value={itemBuyingPrice} 
-                      onChange={(e) => setItemBuyingPrice(e.target.value)} 
-                      required 
-                      disabled={isSubmitting}
-                      placeholder="e.g., 1000.00"
-                      min="0"
-                      step="0.01"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor="itemSellingPrice">Selling Price (BDT)</Label>
-                  <Input 
-                      id="itemSellingPrice" 
-                      type="number"
-                      value={itemSellingPrice} 
-                      onChange={(e) => setItemSellingPrice(e.target.value)} 
-                      required 
-                      disabled={isSubmitting}
-                      placeholder="e.g., 1500.00"
-                      min="0"
-                      step="0.01"
-                  />
-                </div>
-              </div>
-            ) : (
-              <div>
-                <Label htmlFor="itemName">Name</Label>
-                <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
-              </div>
-            )}
+            <div>
+              <Label htmlFor="itemName">Name</Label>
+              <Input id="itemName" value={itemName} onChange={(e) => setItemName(e.target.value)} required disabled={isSubmitting} />
+            </div>
             <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => setIsAddEditDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving..." : (editingItem ? "Save Changes" : "Add Option")}</Button>
@@ -419,10 +285,3 @@ export default function ServiceManagementPage() {
     </div>
   );
 }
-    
-    
-    
-
-    
-
-    

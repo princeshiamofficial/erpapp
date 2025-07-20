@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getUsers } from '@/lib/user-service';
 import { getOrders } from '@/lib/order-service';
+<<<<<<< HEAD
 import { getGlobalSettings } from '@/lib/settings-service';
 import { ChevronLeft, Crown } from 'lucide-react';
 import Link from 'next/link';
@@ -23,6 +24,21 @@ import { type DateRange } from "react-day-picker";
 
 // CrmPerformanceData type might be better defined within LeaderboardDisplay or a shared types file if complex
 export interface CrmPerformanceData {
+=======
+import type { User, TrackingLink, GlobalSettings } from '@/types'; // Changed GlobalSalesTargets to GlobalSettings
+import { getGlobalSettings } from '@/lib/settings-service';
+import { LeaderboardClientTabs } from '@/components/leaderboard/LeaderboardClientTabs';
+
+const DEFAULT_GLOBAL_SETTINGS_STATE: GlobalSettings = { // Changed type and variable name
+  globalMonthlyOrderTarget: 0,
+  globalWeeklyOrderTarget: 0,
+  crmCompletionStatusIds: [],
+  areCommentsVisibleOnPublicPage: true, // Added missing default fields
+  rolesAllowedToEditOrders: ['SYSTEM_ADMIN', 'ADMIN'], // Added missing default fields
+};
+
+interface CrmPerformanceData {
+>>>>>>> 9dc7f0e0 (fix this error)
   userId: string;
   userName: string;
   userAvatar?: string;
@@ -34,6 +50,7 @@ export interface CrmPerformanceData {
   pointChange?: number;
 }
 
+<<<<<<< HEAD
 
 export default function LeaderboardPage() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
@@ -91,6 +108,32 @@ export default function LeaderboardPage() {
 
       const pointChange = Math.floor(Math.random() * 5) - 2;
       const trend = pointChange > 0 ? 'up' : pointChange < 0 ? 'down' : 'same';
+=======
+interface CalculatePerformanceOptions {
+  targetField: 'monthlyOrderTarget' | 'weeklyOrderTarget';
+  crmCompletionStatusIds: string[];
+}
+
+const calculatePerformanceData = (
+  crmUsers: User[],
+  allOrders: TrackingLink[],
+  globalTargetValue: number,
+  options: CalculatePerformanceOptions
+): CrmPerformanceData[] => {
+  const { targetField, crmCompletionStatusIds } = options;
+
+  return crmUsers
+    .map(user => {
+      const userOrders = allOrders.filter(order => order.crmUserId === user.id);
+      
+      // Calculate completed orders based on crmCompletionStatusIds
+      const completedUserOrders = userOrders.filter(order => 
+        crmCompletionStatusIds.includes(order.currentStatus)
+      );
+      const ordersCompleted = completedUserOrders.length;
+      
+      const specificTarget = user[targetField];
+>>>>>>> 9dc7f0e0 (fix this error)
 
       return {
         userId: crmUser.id,
@@ -104,6 +147,7 @@ export default function LeaderboardPage() {
       };
     });
 
+<<<<<<< HEAD
     performanceDataList.sort((a, b) => b.ordersCompleted - a.ordersCompleted || a.userName.localeCompare(b.userName));
     performanceDataList.forEach((user, index) => {
       user.rank = index + 1;
@@ -202,6 +246,51 @@ export default function LeaderboardPage() {
         </div>
       </div>
     );
+=======
+export default async function LeaderboardPage() {
+  let crmMonthlyPerformance: CrmPerformanceData[] = [];
+  let crmWeeklyPerformance: CrmPerformanceData[] = [];
+  let fetchError: string | null = null;
+  let fetchedGlobalSettings: GlobalSettings = DEFAULT_GLOBAL_SETTINGS_STATE; // Use GlobalSettings
+
+
+  try {
+    const [globalSettingsData, allUsers, allOrders] = await Promise.all([
+      getGlobalSettings(),
+      getUsers(),
+      getOrders(),
+    ]);
+
+    fetchedGlobalSettings = globalSettingsData;
+
+    const crmUsers = allUsers.filter(user => user.role === 'CRM' && !user.isBanned);
+    const completionStatusIds = fetchedGlobalSettings.crmCompletionStatusIds ?? [];
+
+    crmMonthlyPerformance = calculatePerformanceData(
+      crmUsers,
+      allOrders,
+      fetchedGlobalSettings.globalMonthlyOrderTarget,
+      {
+        targetField: 'monthlyOrderTarget',
+        crmCompletionStatusIds: completionStatusIds
+      }
+    );
+    crmWeeklyPerformance = calculatePerformanceData(
+      crmUsers,
+      allOrders,
+      fetchedGlobalSettings.globalWeeklyOrderTarget,
+      {
+        targetField: 'weeklyOrderTarget',
+        crmCompletionStatusIds: completionStatusIds
+      }
+    );
+
+  } catch (error) {
+    console.error("Failed to fetch leaderboard data:", error);
+    fetchError = "Could not load leaderboard data. Please try again later.";
+    crmMonthlyPerformance = [];
+    crmWeeklyPerformance = [];
+>>>>>>> 9dc7f0e0 (fix this error)
   }
 
   if (fetchError) {
@@ -218,6 +307,7 @@ export default function LeaderboardPage() {
     : { backgroundImage: "url('https://i.ibb.co/PGBMbxBc/360-F-338486227-q-Qit-Uvh3n-ILq-Yiu-QOUGxdfindo-NMbtp-H.jpg')" };
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--leaderboard-bg-main-start))] to-[hsl(var(--leaderboard-bg-main-end))] text-[hsl(var(--leaderboard-text-light))] p-0 sm:p-0 md:p-0 lg:p-0 relative overflow-x-hidden">
       <div
         className="absolute inset-0 bg-cover bg-center"
@@ -237,6 +327,15 @@ export default function LeaderboardPage() {
           />
         )}
       </header>
+=======
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="page-header">
+        <h1 className="page-title">CRM Sales Leaderboard</h1>
+        <p className="page-description">
+          Ranking of CRM performance based on orders completed according to defined target statuses. Targets are specific to each CRM or fall back to global defaults.
+        </p>
+      </div>
+>>>>>>> 9dc7f0e0 (fix this error)
 
       <LeaderboardDisplay
         performanceData={performanceData}
