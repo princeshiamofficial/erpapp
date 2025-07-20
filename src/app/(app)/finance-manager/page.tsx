@@ -675,18 +675,16 @@ export default function FinanceManagerPage() {
                         ))}
                         </Pie>
                     </RechartsPieChart>
+                     <ChartLegend
+                        content={<ChartLegendContent nameKey="name" />}
+                        className="flex-wrap gap-2 [&>*]:basis-1/2 [&>*]:justify-center"
+                    />
                     </ChartContainer>
                 ) : (
                     <div className="text-center text-muted-foreground">
                     <p>No expense data to display.</p>
                     </div>
                 )}
-                </CardContent>
-                <CardContent className="flex flex-col gap-2 text-sm pt-0">
-                    <ChartLegend
-                        content={<ChartLegendContent nameKey="name" />}
-                        className="flex-wrap gap-2 [&>*]:basis-1/2 [&>*]:justify-center"
-                    />
                 </CardContent>
             </Card>
         </div>
@@ -734,3 +732,6 @@ export default function FinanceManagerPage() {
 
     
 
+
+
+    
