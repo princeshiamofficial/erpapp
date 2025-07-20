@@ -373,8 +373,8 @@ export default function FinanceManagerPage() {
         title: "Available Balance",
         value: availableBalance,
         icon: Wallet,
-        iconColorClass: availableBalance >= 0 ? "text-blue-600" : "text-orange-600",
-        circleBgClass: availableBalance >=0 ? "bg-blue-100 dark:bg-blue-700/20" : "bg-orange-100 dark:bg-orange-700/20",
+        iconColorClass: availableBalance >= 0 ? "text-blue-600" : "text-red-600",
+        circleBgClass: availableBalance >= 0 ? "bg-blue-100 dark:bg-blue-700/20" : "bg-red-100 dark:bg-red-700/20",
         hint: "wallet coins"
       },
     ].filter(card => {
@@ -430,7 +430,7 @@ export default function FinanceManagerPage() {
           )}
           {canUserAddExpense && (
             <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addExpenseOrPurchase">
-              <Button size="default" className="bg-red-600 hover:bg-red-700 text-white h-10">
+              <Button size="default" className="bg-red-600 hover:bg-red-600 text-white h-10">
                 <Minus className="mr-2 h-5 w-5" /> Add Expense/Purchase
               </Button>
             </AddTransactionDialog>
@@ -543,8 +543,11 @@ export default function FinanceManagerPage() {
                 {isLoadingContent ? (
                   <Skeleton className="h-8 w-32 mt-1" />
                 ) : (
-                  <div className="text-2xl font-bold text-card-foreground font-mono">
-                    {formatCurrency(card.value)}
+                  <div className={cn(
+                    "text-2xl font-bold font-mono",
+                    card.title === 'Available Balance' && availableBalance < 0 ? 'text-red-600' : 'text-card-foreground'
+                  )}>
+                    {formatCurrency(card.value as number)}
                   </div>
                 )}
               </div>
@@ -621,64 +624,60 @@ export default function FinanceManagerPage() {
                     <Skeleton className="h-48 w-48 rounded-full" />
                 ) : expenseChartData.length > 0 ? (
                     <ChartContainer config={expenseChartConfig} className="mx-auto aspect-square w-full max-w-[250px]">
-                    <RechartsPieChart>
-                        <ChartTooltip
-                        cursor={false}
-                        content={<ChartTooltipContent hideLabel />}
-                        />
-                        <Pie
-                            data={expenseChartData}
-                            dataKey="value"
-                            nameKey="name"
-                            innerRadius={60}
-                            strokeWidth={5}
-                            label={({
-                                cx,
-                                cy,
-                                ...props
-                            }) => {
-                                if (isNaN(cx) || isNaN(cy)) {
-                                    return null;
-                                }
-                                return (
-                                    <text
-                                        x={cx}
-                                        y={cy}
-                                        textAnchor="middle"
-                                        dominantBaseline="central"
-                                        className="fill-foreground text-center"
-                                    >
-                                        <tspan
-                                            x={cx}
-                                            y={cy - 12}
-                                            className="text-2xl font-bold"
-                                        >
-                                            {formatCurrency(totalExpenses).replace('BDT', '৳')}
-                                        </tspan>
-                                        <tspan
-                                            x={cx}
-                                            y={cy + 12}
-                                            className="text-xs text-muted-foreground"
-                                        >
-                                            Total Expenses
-                                        </tspan>
-                                    </text>
-                                )
-                            }}
-                        >
-                        {expenseChartData.map((entry, index) => (
-                            <Cell
-                            key={`cell-${index}`}
-                            fill={expenseChartConfig[entry.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()]?.color}
-                            className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                            />
-                        ))}
-                        </Pie>
-                    </RechartsPieChart>
-                     <ChartLegend
-                        content={<ChartLegendContent nameKey="name" />}
-                        className="flex-wrap gap-2 [&>*]:basis-1/2 [&>*]:justify-center"
-                    />
+                      <RechartsPieChart>
+                          <ChartTooltip
+                          cursor={false}
+                          content={<ChartTooltipContent hideLabel />}
+                          />
+                          <Pie
+                              data={expenseChartData}
+                              dataKey="value"
+                              nameKey="name"
+                              innerRadius={60}
+                              strokeWidth={5}
+                              label={({ cx, cy, ...props }) => {
+                                  if (isNaN(cx) || isNaN(cy)) {
+                                      return null;
+                                  }
+                                  return (
+                                      <text
+                                          x={cx}
+                                          y={cy}
+                                          textAnchor="middle"
+                                          dominantBaseline="central"
+                                          className="fill-foreground text-center"
+                                      >
+                                          <tspan
+                                              x={cx}
+                                              y={cy - 12}
+                                              className="text-2xl font-bold"
+                                          >
+                                              {formatCurrency(totalExpenses).replace('BDT', '৳')}
+                                          </tspan>
+                                          <tspan
+                                              x={cx}
+                                              y={cy + 12}
+                                              className="text-xs text-muted-foreground"
+                                          >
+                                              Total Expenses
+                                          </tspan>
+                                      </text>
+                                  )
+                              }}
+                          >
+                          {expenseChartData.map((entry, index) => (
+                              <Cell
+                              key={`cell-${index}`}
+                              fill={expenseChartConfig[entry.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()]?.color}
+                              className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                              />
+                          ))}
+                          </Pie>
+                      </RechartsPieChart>
+                       <ChartLegend
+                          content={<ChartLegendContent nameKey="name" />}
+                          className="flex-wrap gap-2 [&>*]:basis-1/2 [&>*]:justify-center"
+                      />
                     </ChartContainer>
                 ) : (
                     <div className="text-center text-muted-foreground">
