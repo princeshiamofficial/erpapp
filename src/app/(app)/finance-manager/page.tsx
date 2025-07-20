@@ -66,7 +66,6 @@ import {
   Pie,
   PieChart as RechartsPieChart,
   Cell,
-  Label as RechartsLabel,
 } from "recharts"
 
 const AddTransactionDialog = dynamic(() => import('@/components/finance-manager/add-transaction-dialog').then(mod => mod.AddTransactionDialog));
@@ -638,26 +637,27 @@ export default function FinanceManagerPage() {
                                 cy,
                                 ...props
                             }) => {
-                                const {payload} = props;
-                                const totalValue = expenseChartData.reduce((acc, curr) => acc + curr.value, 0);
+                                if (isNaN(cx) || isNaN(cy)) {
+                                    return null;
+                                }
                                 return (
                                     <text
-                                        x={props.cx}
-                                        y={props.cy}
+                                        x={cx}
+                                        y={cy}
                                         textAnchor="middle"
                                         dominantBaseline="central"
                                         className="fill-foreground text-center"
                                     >
                                         <tspan
-                                            x={props.cx}
-                                            y={props.cy - 12}
+                                            x={cx}
+                                            y={cy - 12}
                                             className="text-2xl font-bold"
                                         >
                                             {formatCurrency(totalExpenses).replace('BDT', '৳')}
                                         </tspan>
                                         <tspan
-                                            x={props.cx}
-                                            y={props.cy + 12}
+                                            x={cx}
+                                            y={cy + 12}
                                             className="text-xs text-muted-foreground"
                                         >
                                             Total Expenses
@@ -675,16 +675,18 @@ export default function FinanceManagerPage() {
                         ))}
                         </Pie>
                     </RechartsPieChart>
-                    <ChartLegend
-                        content={<ChartLegendContent nameKey="name" />}
-                        className="-mt-4 flex-wrap gap-2 [&>*]:basis-1/2 [&>*]:justify-center"
-                    />
                     </ChartContainer>
                 ) : (
                     <div className="text-center text-muted-foreground">
                     <p>No expense data to display.</p>
                     </div>
                 )}
+                </CardContent>
+                <CardContent className="flex flex-col gap-2 text-sm pt-0">
+                    <ChartLegend
+                        content={<ChartLegendContent nameKey="name" />}
+                        className="flex-wrap gap-2 [&>*]:basis-1/2 [&>*]:justify-center"
+                    />
                 </CardContent>
             </Card>
         </div>
@@ -731,3 +733,4 @@ export default function FinanceManagerPage() {
     
 
     
+
