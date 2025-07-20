@@ -11,7 +11,7 @@ import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown } from 'lucide-react'; 
+import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart } from 'lucide-react'; 
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -45,10 +45,6 @@ import {
   updateTransactionAction,
   getTransactionsForUserAction,
   getAllTransactionsAction,
-  // addNoteAction, // Notes feature coming soon
-  // deleteNoteAction, 
-  // getNotesForUserAction, 
-  // updateNoteAction 
 } from './actions';
 import { MultiColorCalculatorIcon } from '@/components/icons/MultiColorCalculatorIcon';
 import { Banknote } from 'lucide-react';
@@ -58,6 +54,17 @@ import { isWithinInterval, parseISO, subDays } from "date-fns";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from '@/lib/utils';
 import { Check } from 'lucide-react';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartConfig,
+} from "@/components/ui/chart"
+import {
+  Pie,
+  PieChart as RechartsPieChart,
+  Cell,
+} from "recharts"
 
 const AddTransactionDialog = dynamic(() => import('@/components/finance-manager/add-transaction-dialog').then(mod => mod.AddTransactionDialog));
 const EditTransactionDialog = dynamic(() => import('@/components/finance-manager/edit-transaction-dialog').then(mod => mod.EditTransactionDialog));
@@ -75,6 +82,9 @@ const TRANSACTION_TYPES_FOR_FILTER: Array<{ value: string; label: string }> = [
   { value: 'purchase', label: 'Purchases' },
   { value: 'send_money', label: 'Sent Money' },
 ];
+
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF", "#FF4560", "#775DD0"];
+
 
 export default function FinanceManagerPage() {
   const { currentUser } = useAuth();
@@ -134,11 +144,10 @@ export default function FinanceManagerPage() {
         const newUserMap = new Map(fetchedUsers.map(user => [user.id, user.name]));
         setUserMap(newUserMap);
         
-        // Filter users based on expense logging permissions
         const perms = settings.expenseLoggingPermissions || { mode: 'none' };
         const permittedUsers = fetchedUsers.filter(u => {
-            if (u.id === currentUser.id) return true; // Always include self
-            if (u.role === 'SYSTEM_ADMIN') return true; // Always allow sending to other System Admins
+            if (u.id === currentUser.id) return true; 
+            if (u.role === 'SYSTEM_ADMIN') return true; 
             switch (perms.mode) {
                 case 'all': return true;
                 case 'specificRoles': return perms.allowedRoles?.includes(u.role);
@@ -148,7 +157,7 @@ export default function FinanceManagerPage() {
             }
         });
         setAllUsersForFilter(permittedUsers);
-        setAllUsers(fetchedUsers); // Keep all users for other dialogs if needed
+        setAllUsers(fetchedUsers);
       } else {
         setUserMap(new Map());
         setAllUsersForFilter([]);
@@ -175,7 +184,6 @@ export default function FinanceManagerPage() {
     }
   }, [currentUser, fetchFinancialData]);
 
-  // When viewMode changes, reset the user filter
   useEffect(() => {
     setSelectedUserIdFilter('all');
   }, [viewMode]);
@@ -232,7 +240,6 @@ export default function FinanceManagerPage() {
   const filteredTransactions = useMemo(() => {
     let results = transactions;
     
-    // Filter by selected user first if in global view and a specific user is chosen
     if (viewMode === 'global' && selectedUserIdFilter !== 'all') {
       results = results.filter(t => t.userId === selectedUserIdFilter);
     }
@@ -284,15 +291,43 @@ export default function FinanceManagerPage() {
     return results;
   }, [transactions, transactionSearchTerm, viewMode, userMap, transactionTypeFilter, selectedDateRange, selectedUserIdFilter]);
 
-  const { totalIncome, totalExpenses, availableBalance } = useMemo(() => {
+  const { totalIncome, totalExpenses, availableBalance, expenseChartData } = useMemo(() => {
     let income = 0;
     let expensesSum = 0;
+    const categoryTotals: Record<string, number> = {};
+
     filteredTransactions.forEach(t => { 
-      if (t.type === 'income') income += t.amount;
-      else if (t.type === 'expense' || t.type === 'purchase') expensesSum += t.amount;
+      if (t.type === 'income') {
+        income += t.amount;
+      } else if (t.type === 'expense' || t.type === 'purchase') {
+        expensesSum += t.amount;
+        const categoryKey = t.category || "Uncategorized";
+        categoryTotals[categoryKey] = (categoryTotals[categoryKey] || 0) + t.amount;
+      }
     });
-    return { totalIncome: income, totalExpenses: expensesSum, availableBalance: income - expensesSum };
+
+    const chartData = Object.entries(categoryTotals)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+
+    return { 
+      totalIncome: income, 
+      totalExpenses: expensesSum, 
+      availableBalance: income - expensesSum,
+      expenseChartData: chartData,
+    };
   }, [filteredTransactions]); 
+
+  const expenseChartConfig = useMemo(() => {
+    const config: ChartConfig = {};
+    expenseChartData.forEach((item, index) => {
+      config[item.name] = {
+        label: item.name,
+        color: COLORS[index % COLORS.length],
+      };
+    });
+    return config;
+  }, [expenseChartData]);
 
   const pageDescription = useMemo(() => {
     if (!currentUser) return "Manage your finances.";
@@ -580,18 +615,51 @@ export default function FinanceManagerPage() {
             </CardContent>
           </Card>
 
-           <Card className="shadow-xl border bg-card rounded-lg">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle className="text-card-foreground text-xl flex items-center"><NotebookPen className="mr-2 h-5 w-5 text-primary"/>Notes (Coming Soon)</CardTitle>
-                <CardDescription className="text-muted-foreground text-sm mt-0.5">Jot down financial reminders.</CardDescription>
-              </div>
+          <Card className="shadow-xl border bg-card rounded-lg">
+            <CardHeader>
+              <CardTitle className="text-card-foreground text-xl flex items-center">
+                <PieChart className="mr-2 h-5 w-5 text-primary"/>
+                Expense Breakdown
+              </CardTitle>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">
+                Spending by category for the selected period.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="text-center py-6 text-muted-foreground">
-                <Construction className="h-10 w-10 mx-auto opacity-50 mb-2"/>
-                <p className="text-sm">This feature will be available soon!</p>
+            <CardContent className="flex items-center justify-center h-60">
+              {isLoadingContent ? (
+                 <Skeleton className="h-48 w-48 rounded-full" />
+              ) : expenseChartData.length > 0 ? (
+                <ChartContainer config={expenseChartConfig} className="w-full h-full">
+                  <RechartsPieChart>
+                    <ChartTooltip
+                      cursor={false}
+                      content={<ChartTooltipContent hideLabel />}
+                    />
+                    <Pie
+                      data={expenseChartData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={60}
+                      strokeWidth={5}
+                    >
+                      {expenseChartData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                          className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        />
+                      ))}
+                    </Pie>
+                  </RechartsPieChart>
+                </ChartContainer>
+              ) : (
+                <div className="text-center text-muted-foreground">
+                  <p>No expense data to display.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
+
         </div>
       </div>
 
