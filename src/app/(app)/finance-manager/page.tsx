@@ -612,7 +612,7 @@ export default function FinanceManagerPage() {
                 <div className="flex justify-between items-start">
                     <div>
                         <p className="text-xs opacity-70">Available Balance</p>
-                        <p className="text-2xl font-bold tracking-wider">{isLoadingContent ? <Skeleton className="h-8 w-36 bg-white/20 mt-1" /> : formatCurrency(availableBalance)}</p>
+                        <div className="text-2xl font-bold tracking-wider">{isLoadingContent ? <Skeleton className="h-8 w-36 bg-white/20 mt-1" /> : formatCurrency(availableBalance)}</div>
                     </div>
                     <div className="flex items-center gap-1.5">
                         <Wifi className="h-5 w-5 opacity-80"/>
@@ -666,22 +666,22 @@ export default function FinanceManagerPage() {
                                 const totalValue = expenseChartData.reduce((acc, curr) => acc + curr.value, 0);
                                 return (
                                     <text
-                                        x={cx}
-                                        y={cy}
+                                        x={props.cx}
+                                        y={props.cy}
                                         textAnchor="middle"
                                         dominantBaseline="central"
                                         className="fill-foreground text-center"
                                     >
                                         <tspan
-                                            x={cx}
-                                            y={cy - 12}
+                                            x={props.cx}
+                                            y={props.cy - 12}
                                             className="text-2xl font-bold"
                                         >
                                             {formatCurrency(totalExpenses).replace('BDT', '৳')}
                                         </tspan>
                                         <tspan
-                                            x={cx}
-                                            y={cy + 12}
+                                            x={props.cx}
+                                            y={props.cy + 12}
                                             className="text-xs text-muted-foreground"
                                         >
                                             Total Expenses
@@ -752,4 +752,6 @@ export default function FinanceManagerPage() {
     </div>
   );
 }
+    
+
     
