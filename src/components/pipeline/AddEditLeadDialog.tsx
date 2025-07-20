@@ -34,6 +34,7 @@ const CATEGORIES: Array<Lead['category']> = ['POP', 'POG', 'OC', 'OD', 'B2B'];
 
 export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead }: AddEditLeadDialogProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [schedule, setSchedule] = useState<Date | undefined>();
   const [contactName, setContactName] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [phone, setPhone] = useState('');
@@ -50,6 +51,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead }: A
     if (isOpen) {
       if (isEditMode && lead) {
         setDate(parseISO(lead.date));
+        setSchedule(lead.schedule ? parseISO(lead.schedule) : undefined);
         setContactName(lead.contactName);
         setBusinessName(lead.businessName);
         setPhone(lead.phone);
@@ -60,6 +62,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead }: A
       } else {
         // Reset for add mode
         setDate(new Date());
+        setSchedule(undefined);
         setContactName('');
         setBusinessName('');
         setPhone('');
@@ -82,6 +85,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead }: A
 
     const leadData: Omit<Lead, 'id'> = {
       date: date.toISOString(),
+      schedule: schedule ? schedule.toISOString() : null,
       contactName, businessName, phone, source, address, category,
       notes: notes || null,
     };
@@ -128,10 +132,22 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead }: A
                 </Popover>
               </div>
               <div className="space-y-1">
+                <Label htmlFor="schedule">Schedule (Optional)</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {schedule ? format(schedule, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={schedule} onSelect={setSchedule} initialFocus /></PopoverContent>
+                </Popover>
+              </div>
+            </div>
+            <div className="space-y-1">
                 <Label htmlFor="contactName">Contact Name *</Label>
                 <Input id="contactName" value={contactName} onChange={(e) => setContactName(e.target.value)} required />
               </div>
-            </div>
             <div className="space-y-1">
               <Label htmlFor="businessName">Business Name *</Label>
               <Input id="businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />

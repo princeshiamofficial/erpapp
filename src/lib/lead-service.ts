@@ -37,6 +37,7 @@ export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> 
     const newLead: Lead = {
       ...leadData,
       id: newDocRef.id,
+      schedule: leadData.schedule || null,
     };
     await setDoc(newDocRef, newLead);
     return newLead;
@@ -50,7 +51,7 @@ export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> 
 export const updateLead = async (leadId: string, updates: Partial<Omit<Lead, 'id'>>): Promise<boolean> => {
   try {
     const leadDocRef = doc(db, LEADS_COLLECTION, leadId);
-    await updateDoc(leadDocRef, updates);
+    await updateDoc(leadDocRef, { ...updates, schedule: updates.schedule || null });
     return true;
   } catch (error) {
     console.error(`Error updating lead ${leadId}:`, error);
