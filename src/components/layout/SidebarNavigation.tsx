@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
-import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
+import { SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, useSidebar } from "@/components/ui/sidebar";
 import { 
   LayoutDashboard, 
   Package, 
@@ -21,12 +21,15 @@ import {
   Briefcase,
   MessageCircle,
   Landmark,
-  Shield // Using Shield for CRM for now
+  Shield, // Using Shield for CRM for now
+  ChevronDown
 } from "lucide-react";
 import type { UserRole, GlobalSettings } from "@/types";
 import { cn } from "@/lib/utils";
 import React, { useState, useEffect, useMemo } from 'react';
 import { getGlobalSettings } from '@/lib/settings-service';
+import { AnimatePresence, motion } from "framer-motion";
+
 
 interface NavItem {
   href: string;
@@ -34,14 +37,25 @@ interface NavItem {
   icon: React.ElementType;
   roles: UserRole[];
   disabled?: boolean;
+  isHeader?: boolean;
+  subItems?: NavItem[];
 }
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR"] },
-  { href: "", label: "CRM", icon: Shield, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] }, // Removed href
-  { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] }, // Added CRM back to see orders
-  { href: "/tracking-links", label: "Tracking Links", icon: Link2, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
-  { href: "/finance-manager", label: "Finance Manager", icon: DollarSign, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
+  { 
+    isHeader: true,
+    label: "CRM", 
+    icon: Shield, 
+    roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"], 
+    href: "",
+    subItems: [
+      { href: "/projects", label: "Pipe Line", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
+      { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
+      { href: "/tracking-links", label: "Tracking Links", icon: Link2, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
+      { href: "/finance-manager", label: "Finance Manager", icon: DollarSign, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
+    ]
+  },
   { href: "/invoice", label: "Invoice", icon: FileText, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
   { href: "/payroll", label: "Payroll", icon: Landmark, roles: ["SYSTEM_ADMIN", "ADMIN"] }, 
   { href: "/leaderboard", label: "Leaderboard", icon: Award, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
@@ -58,6 +72,8 @@ export function SidebarNavigation() {
   const pathname = usePathname();
   const { currentUser } = useAuth();
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
+  const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
+  const { state: sidebarState } = useSidebar();
 
   useEffect(() => {
     async function fetchSettings() {
@@ -68,6 +84,18 @@ export function SidebarNavigation() {
     }
     fetchSettings();
   }, [currentUser]);
+
+  useEffect(() => {
+    // Automatically open the CRM menu if the current path is one of its sub-items
+    const crmMenu = navItems.find(item => item.label === 'CRM');
+    if (crmMenu?.subItems?.some(sub => sub.href && pathname.startsWith(sub.href))) {
+      setOpenMenus(prev => ({ ...prev, CRM: true }));
+    }
+  }, [pathname]);
+
+  const toggleMenu = (label: string) => {
+    setOpenMenus(prev => ({ ...prev, [label]: !prev[label] }));
+  };
 
   const canUserLogExpense = useMemo(() => {
     if (!currentUser || !globalSettings?.expenseLoggingPermissions) return false;
@@ -83,85 +111,128 @@ export function SidebarNavigation() {
     }
   }, [currentUser, globalSettings]);
 
-
   if (!currentUser) return null;
 
   const userRole = currentUser.role;
 
-  return (
-    <>
-      {navItems.map((item) => {
-        
-        let shouldShowItem;
-
-        if (userRole === 'LR') {
-          shouldShowItem = item.href === '/projects';
-        } else {
-          shouldShowItem = item.roles.includes(userRole);
-          if (item.href === "/finance-manager" && !canUserLogExpense) {
-            shouldShowItem = false;
-          }
+  const renderNavItems = (items: NavItem[]) => {
+    return items.map((item) => {
+      
+      let shouldShowItem;
+      if (userRole === 'LR') {
+        shouldShowItem = item.href === '/projects';
+      } else {
+        shouldShowItem = item.roles.includes(userRole);
+        if (item.href === "/finance-manager" && !canUserLogExpense) {
+          shouldShowItem = false;
         }
+      }
 
-        const isLink = item.href !== "";
-        const isActive = isLink && (pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href) && item.label !== "CRM" && item.label !== "Orders") || (pathname.startsWith("/orders") && (item.label === "CRM" || item.label === "Orders")));
+      if (!shouldShowItem) return null;
 
-        const menuButtonContent = (
-          <>
-            <item.icon className="mr-3 h-5 w-5 shrink-0" />
-            <span className="truncate group-data-[collapsible=icon]:hidden text-sm">
-              {item.label}
-            </span>
-          </>
-        );
+      if (item.subItems && item.subItems.length > 0) {
+        const isMenuOpen = openMenus[item.label] || false;
+        const isMenuButtonActive = isMenuOpen || item.subItems.some(sub => sub.href && pathname.startsWith(sub.href));
 
-        return shouldShowItem ? (
-          <SidebarMenuItem key={`${item.href}-${item.label}`}>
-            {isLink ? (
-              <Link href={item.href} passHref legacyBehavior>
-                <SidebarMenuButton
-                  asChild
-                  isActive={isActive}
-                  tooltip={{ 
-                      children: item.label, 
-                      side: 'right', 
-                      align: 'center', 
-                      className: "bg-primary text-primary-foreground shadow-lg border-none text-xs px-2.5 py-1.5 rounded-md" 
-                  }}
-                  disabled={item.disabled}
-                  aria-disabled={item.disabled}
-                  className={
-                    cn(
-                      "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-medium py-2.5 px-3 h-auto rounded-lg transition-all duration-200 ease-in-out transform hover:translate-x-1",
-                      isActive && "bg-gradient-to-r from-primary to-orange-500 text-primary-foreground font-semibold shadow-md hover:shadow-lg",
-                      item.disabled && "cursor-not-allowed opacity-50 hover:bg-transparent hover:text-sidebar-foreground/80 hover:translate-x-0"
-                    )
-                  }
-                >
-                  <a className="flex items-center w-full">
-                    {menuButtonContent}
-                  </a>
-                </SidebarMenuButton>
-              </Link>
-            ) : (
+        return (
+          <React.Fragment key={item.label}>
+            <SidebarMenuItem>
               <SidebarMenuButton
-                isActive={isActive}
-                tooltip={{ 
-                    children: item.label, 
-                    side: 'right', 
-                    align: 'center', 
-                    className: "bg-primary text-primary-foreground shadow-lg border-none text-xs px-2.5 py-1.5 rounded-md" 
-                }}
-                disabled
-                aria-disabled
-                className="cursor-default text-sidebar-foreground/80 font-medium py-2.5 px-3 h-auto rounded-lg"
+                onClick={() => toggleMenu(item.label)}
+                isActive={isMenuButtonActive}
+                className={cn(
+                  "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-medium py-2.5 px-3 h-auto rounded-lg transition-all duration-200 ease-in-out transform hover:translate-x-1",
+                   isMenuButtonActive && "bg-gradient-to-r from-primary to-orange-500 text-primary-foreground font-semibold shadow-md hover:shadow-lg"
+                )}
               >
-                {menuButtonContent}
+                <item.icon className="mr-3 h-5 w-5 shrink-0" />
+                <span className="truncate group-data-[collapsible=icon]:hidden text-sm flex-1 text-left">
+                  {item.label}
+                </span>
+                <ChevronDown
+                  className={cn(
+                    "h-4 w-4 transition-transform duration-200 group-data-[collapsible=icon]:hidden",
+                    isMenuOpen && "rotate-180"
+                  )}
+                />
               </SidebarMenuButton>
-            )}
-          </SidebarMenuItem>
-        ) : null
-      })}
-    </>
-  );
+            </SidebarMenuItem>
+            <AnimatePresence>
+              {isMenuOpen && sidebarState === 'expanded' && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="overflow-hidden"
+                >
+                  <SidebarMenuSub>
+                    {item.subItems.map(subItem => {
+                      if (!subItem.roles.includes(userRole) || (subItem.href === "/finance-manager" && !canUserLogExpense)) {
+                        return null;
+                      }
+                      return (
+                        <SidebarMenuSubItem key={subItem.href}>
+                           <Link href={subItem.href} passHref legacyBehavior>
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={pathname.startsWith(subItem.href)}
+                              disabled={subItem.disabled}
+                            >
+                                <a className="flex items-center w-full">
+                                  <subItem.icon className="mr-3 h-4 w-4 shrink-0" />
+                                  <span className="truncate text-sm">{subItem.label}</span>
+                                </a>
+                            </SidebarMenuSubButton>
+                           </Link>
+                        </SidebarMenuSubItem>
+                      );
+                    })}
+                  </SidebarMenuSub>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </React.Fragment>
+        );
+      }
+
+      // Regular nav item
+      const isActive = item.href && (pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href)));
+      
+      return (
+        <SidebarMenuItem key={`${item.href}-${item.label}`}>
+          <Link href={item.href} passHref legacyBehavior>
+            <SidebarMenuButton
+              asChild
+              isActive={isActive}
+              tooltip={{ 
+                  children: item.label, 
+                  side: 'right', 
+                  align: 'center', 
+                  className: "bg-primary text-primary-foreground shadow-lg border-none text-xs px-2.5 py-1.5 rounded-md" 
+              }}
+              disabled={item.disabled}
+              aria-disabled={item.disabled}
+              className={
+                cn(
+                  "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-medium py-2.5 px-3 h-auto rounded-lg transition-all duration-200 ease-in-out transform hover:translate-x-1",
+                  isActive && "bg-gradient-to-r from-primary to-orange-500 text-primary-foreground font-semibold shadow-md hover:shadow-lg",
+                  item.disabled && "cursor-not-allowed opacity-50 hover:bg-transparent hover:text-sidebar-foreground/80 hover:translate-x-0"
+                )
+              }
+            >
+              <a className="flex items-center w-full">
+                <item.icon className="mr-3 h-5 w-5 shrink-0" />
+                <span className="truncate group-data-[collapsible=icon]:hidden text-sm">
+                  {item.label}
+                </span>
+              </a>
+            </SidebarMenuButton>
+          </Link>
+        </SidebarMenuItem>
+      );
+    });
+  };
+
+  return <>{renderNavItems(navItems)}</>;
 }
