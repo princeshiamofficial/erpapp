@@ -132,14 +132,13 @@ export function SidebarNavigation() {
 
       if (item.subItems && item.subItems.length > 0) {
         const isMenuOpen = openMenus[item.label] || false;
-        const isMenuButtonActive = isMenuOpen || item.subItems.some(sub => sub.href && pathname.startsWith(sub.href));
-
+        
         return (
           <React.Fragment key={item.label}>
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={() => toggleMenu(item.label)}
-                isActive={isMenuButtonActive}
+                isActive={false} // Ensure header is never highlighted
                 className={cn(
                   "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-medium py-2.5 px-3 h-auto rounded-lg transition-all duration-200 ease-in-out transform hover:translate-x-1"
                 )}
