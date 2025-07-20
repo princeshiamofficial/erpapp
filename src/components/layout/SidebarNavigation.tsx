@@ -21,7 +21,7 @@ import {
   Briefcase,
   MessageCircle,
   Landmark,
-  ListOrdered // Added for Active Orders
+  Shield // Using Shield for CRM for now
 } from "lucide-react";
 import type { UserRole, GlobalSettings } from "@/types";
 import { cn } from "@/lib/utils";
@@ -38,18 +38,19 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR"] },
-  { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
+  { href: "/orders", label: "CRM", icon: Shield, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
+  { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "DESIGNER_REPRESENTATIVE"] }, // Removed CRM
   { href: "/tracking-links", label: "Tracking Links", icon: Link2, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
   { href: "/finance-manager", label: "Finance Manager", icon: DollarSign, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
   { href: "/invoice", label: "Invoice", icon: FileText, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
-  { href: "/payroll", label: "Payroll", icon: Landmark, roles: ["SYSTEM_ADMIN", "ADMIN"] }, // Changed icon here
+  { href: "/payroll", label: "Payroll", icon: Landmark, roles: ["SYSTEM_ADMIN", "ADMIN"] }, 
   { href: "/leaderboard", label: "Leaderboard", icon: Award, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
   { href: "/projects", label: "Projects", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "LR"] }, 
   { href: "/users", label: "User Management", icon: Users, roles: ["SYSTEM_ADMIN", "ADMIN"] },
   { href: "/admin/model-management", label: "Model Management", icon: Layers, roles: ["SYSTEM_ADMIN", "ADMIN"] },
   { href: "/admin/statuses", label: "Status Management", icon: ListChecks, roles: ["SYSTEM_ADMIN"] },
   { href: "/admin/service-management", label: "Service Options", icon: Settings2, roles: ["SYSTEM_ADMIN"] },
-  { href: "/admin/crm-target-settings", label: "App Settings", icon: Target, roles: ["SYSTEM_ADMIN"] }, // Renamed for broader scope
+  { href: "/admin/crm-target-settings", label: "App Settings", icon: Target, roles: ["SYSTEM_ADMIN"] }, 
   { href: "/reports", label: "Reports", icon: BarChart3, roles: ["SYSTEM_ADMIN", "ADMIN"], disabled: true },
 ];
 
@@ -103,11 +104,11 @@ export function SidebarNavigation() {
         }
 
         return shouldShowItem ? (
-          <SidebarMenuItem key={item.href}>
+          <SidebarMenuItem key={`${item.href}-${item.label}`}>
             <Link href={item.href} passHref legacyBehavior>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))}
+                isActive={pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href) && item.label !== "CRM" && item.label !== "Orders") || (pathname.startsWith("/orders") && (item.label === "CRM" || item.label === "Orders"))}
                 tooltip={{ 
                     children: item.label, 
                     side: 'right', 
@@ -119,7 +120,7 @@ export function SidebarNavigation() {
                 className={
                   cn(
                     "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-medium py-2.5 px-3 h-auto rounded-lg transition-all duration-200 ease-in-out transform hover:translate-x-1",
-                    (pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href))) && 
+                    ((pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href) && item.label !== "CRM" && item.label !== "Orders")) || (pathname.startsWith("/orders") && (item.label === "CRM" || item.label === "Orders"))) && 
                     "bg-gradient-to-r from-primary to-orange-500 text-primary-foreground font-semibold shadow-md hover:shadow-lg",
                     item.disabled && "cursor-not-allowed opacity-50 hover:bg-transparent hover:text-sidebar-foreground/80 hover:translate-x-0"
                   )
