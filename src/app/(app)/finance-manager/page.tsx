@@ -58,7 +58,9 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartConfig,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
 } from "@/components/ui/chart"
 import {
   Pie,
@@ -83,7 +85,7 @@ const TRANSACTION_TYPES_FOR_FILTER: Array<{ value: string; label: string }> = [
   { value: 'send_money', label: 'Sent Money' },
 ];
 
-const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF", "#FF4560", "#775DD0"];
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF", "#FF4560", "#775DD0", "#82ca9d", "#ffc658", "#d0ed57", "#a4de6c", "#8884d8" ];
 
 
 export default function FinanceManagerPage() {
@@ -307,7 +309,7 @@ export default function FinanceManagerPage() {
     });
 
     const chartData = Object.entries(categoryTotals)
-      .map(([name, value]) => ({ name, value }))
+      .map(([name, value]) => ({ name, value, fill: 'var(--color-expenses)' })) // All expenses are one color initially
       .sort((a, b) => b.value - a.value);
 
     return { 
@@ -321,11 +323,16 @@ export default function FinanceManagerPage() {
   const expenseChartConfig = useMemo(() => {
     const config: ChartConfig = {};
     expenseChartData.forEach((item, index) => {
-      config[item.name] = {
+      const uniqueKey = item.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase();
+      config[uniqueKey] = {
         label: item.name,
         color: COLORS[index % COLORS.length],
       };
     });
+    // Add a total entry for the center label
+    config.total = {
+      label: "Total Expenses",
+    };
     return config;
   }, [expenseChartData]);
 
@@ -625,12 +632,12 @@ export default function FinanceManagerPage() {
                 Spending by category for the selected period.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex items-center justify-center h-60">
+            <CardContent className="flex items-center justify-center min-h-60">
               {isLoadingContent ? (
                  <Skeleton className="h-48 w-48 rounded-full" />
               ) : expenseChartData.length > 0 ? (
-                <ChartContainer config={expenseChartConfig} className="w-full h-full">
-                  <RechartsPieChart>
+                <ChartContainer config={expenseChartConfig} className="mx-auto aspect-square w-full max-w-[250px]">
+                   <RechartsPieChart>
                     <ChartTooltip
                       cursor={false}
                       content={<ChartTooltipContent hideLabel />}
@@ -641,11 +648,44 @@ export default function FinanceManagerPage() {
                       nameKey="name"
                       innerRadius={60}
                       strokeWidth={5}
+                      labelLine={false}
+                      label={({
+                          payload,
+                          ...props
+                      }) => {
+                          const totalValue = expenseChartData.reduce((acc, curr) => acc + curr.value, 0);
+                          const percent = totalValue > 0 ? (payload.value / totalValue) * 100 : 0;
+                          return (
+                              <text
+                                  {...props}
+                                  x={props.cx}
+                                  y={props.cy}
+                                  textAnchor="middle"
+                                  dominantBaseline="central"
+                                  className="fill-foreground text-center"
+                              >
+                                  <tspan
+                                      x={props.cx}
+                                      y={props.cy - 12}
+                                      className="text-2xl font-bold"
+                                  >
+                                      {formatCurrency(totalExpenses).replace('BDT', '৳')}
+                                  </tspan>
+                                  <tspan
+                                      x={props.cx}
+                                      y={props.cy + 12}
+                                      className="text-xs text-muted-foreground"
+                                  >
+                                      Total Expenses
+                                  </tspan>
+                              </text>
+                          )
+                      }}
                     >
-                      {expenseChartData.map((entry, index) => (
+                      {expenseChartData.map((entry) => (
                         <Cell
-                          key={`cell-${index}`}
-                          fill={COLORS[index % COLORS.length]}
+                          key={entry.name}
+                          fill={expenseChartConfig[entry.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()]?.color}
                           className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                         />
                       ))}
@@ -658,6 +698,14 @@ export default function FinanceManagerPage() {
                 </div>
               )}
             </CardContent>
+             {expenseChartData.length > 0 && (
+                <CardContent className="text-xs border-t pt-4">
+                  <ChartLegend
+                    content={<ChartLegendContent nameKey="name" />}
+                    className="flex-wrap"
+                  />
+                </CardContent>
+            )}
           </Card>
 
         </div>
