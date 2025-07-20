@@ -14,8 +14,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PlusCircle, ArrowDownCircle, ArrowUpCircle, Wallet, AlertTriangle, Calculator, NotebookPen, RefreshCw, Loader2, Minus, Send, Edit2, Trash2, X, Construction, Search, Filter, CalendarDays as CalendarIconLucide, User as UserIcon, ChevronsUpDown, PieChart } from 'lucide-react'; 
 import { TransactionListItem } from '@/components/finance-manager/transaction-list-item';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -632,7 +632,7 @@ export default function FinanceManagerPage() {
                 Spending by category for the selected period.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex items-center justify-center min-h-60">
+            <CardContent className="flex flex-col items-center justify-center min-h-60">
               {isLoadingContent ? (
                  <Skeleton className="h-48 w-48 rounded-full" />
               ) : expenseChartData.length > 0 ? (
@@ -691,6 +691,14 @@ export default function FinanceManagerPage() {
                       ))}
                     </Pie>
                   </RechartsPieChart>
+                  {expenseChartData.length > 0 && (
+                    <div className="text-xs border-t pt-4 mt-4 w-full">
+                      <ChartLegend
+                        content={<ChartLegendContent nameKey="name" />}
+                        className="flex-wrap"
+                      />
+                    </div>
+                  )}
                 </ChartContainer>
               ) : (
                 <div className="text-center text-muted-foreground">
@@ -698,16 +706,7 @@ export default function FinanceManagerPage() {
                 </div>
               )}
             </CardContent>
-             {expenseChartData.length > 0 && (
-                <CardContent className="text-xs border-t pt-4">
-                  <ChartLegend
-                    content={<ChartLegendContent nameKey="name" />}
-                    className="flex-wrap"
-                  />
-                </CardContent>
-            )}
           </Card>
-
         </div>
       </div>
 
