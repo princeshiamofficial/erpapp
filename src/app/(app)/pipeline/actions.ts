@@ -36,6 +36,42 @@ export async function addLeadAction(
   }
 }
 
+export async function addLeadsBatchAction(
+  leadsData: Omit<Lead, 'id'>[]
+): Promise<{ success: boolean; createdCount: number; errorCount: number; errors: string[] }> {
+    let createdCount = 0;
+    let errorCount = 0;
+    const errors: string[] = [];
+
+    for (const leadData of leadsData) {
+        try {
+            const newLead = await addLead(leadData);
+            if (newLead) {
+                createdCount++;
+            } else {
+                errorCount++;
+                errors.push(`Failed to add lead for contact: ${leadData.contactName || 'Unknown'}`);
+            }
+        } catch (error) {
+            errorCount++;
+            const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
+            errors.push(`Error for ${leadData.contactName || 'Unknown'}: ${errorMessage}`);
+        }
+    }
+
+    if (createdCount > 0) {
+        revalidatePath("/(app)/pipeline");
+    }
+
+    return {
+        success: errorCount === 0,
+        createdCount,
+        errorCount,
+        errors,
+    };
+}
+
+
 export async function updateLeadAction(
   leadId: string,
   updates: Partial<Omit<Lead, 'id'>>

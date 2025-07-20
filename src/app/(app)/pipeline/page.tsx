@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet, Loader2, UploadCloud } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Lead } from '@/types';
 import { getLeads, deleteLeadAction } from './actions';
 import { AddEditLeadDialog } from '@/components/pipeline/AddEditLeadDialog';
+import { ImportLeadsDialog } from '@/components/pipeline/ImportLeadsDialog'; // Import the new component
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,6 +55,8 @@ export default function PipeLinePage() {
 
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
+
+  const [isImportOpen, setIsImportOpen] = useState(false); // State for import dialog
 
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -101,6 +104,11 @@ export default function PipeLinePage() {
     setEditingLead(null);
     fetchLeads();
   };
+  
+  const handleLeadsImported = () => {
+    setIsImportOpen(false);
+    fetchLeads();
+  };
 
   const handleDeleteRequest = (lead: Lead) => {
     setLeadToDelete(lead);
@@ -125,7 +133,7 @@ export default function PipeLinePage() {
       toast({ title: "No Data", description: "There is no pipeline data to export." });
       return;
     }
-    const headers = ["Date", "Name", "Business Name", "Phone", "Source", "Address", "Category", "Notes", "Schedule"];
+    const headers = ["date", "contactName", "businessName", "phone", "source", "address", "category", "notes", "schedule"];
     const csvContent = [
       headers.join(','),
       ...leads.map(lead => [
@@ -166,6 +174,15 @@ export default function PipeLinePage() {
             </p>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={() => setIsImportOpen(true)}
+              className="w-full sm:w-auto h-10"
+            >
+              <UploadCloud className="mr-2 h-4 w-4" />
+              Import from Sheet
+            </Button>
             <Button
               size="lg"
               variant="outline"
@@ -292,6 +309,12 @@ export default function PipeLinePage() {
         lead={editingLead}
       />
       
+      <ImportLeadsDialog
+        isOpen={isImportOpen}
+        onOpenChange={setIsImportOpen}
+        onLeadsImported={handleLeadsImported}
+      />
+
       {leadToDelete && (
         <AlertDialog open={!!leadToDelete} onOpenChange={(open) => !open && setLeadToDelete(null)}>
           <AlertDialogContent>

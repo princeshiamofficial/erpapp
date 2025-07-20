@@ -266,5 +266,5 @@ export interface Lead {
   address: string;
   category: 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
   notes?: string | null;
-  schedule?: string | null;
+  schedule?: string | null; // ISO string or null
 }
