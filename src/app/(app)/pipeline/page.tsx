@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { format } from 'date-fns';
 
 
 type Category = 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
@@ -209,14 +210,14 @@ export default function PipeLinePage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="pl-6">Date</TableHead>
-                    <TableHead>Name</TableHead>
+                    <TableHead className="pl-6 w-[120px]">Date</TableHead>
+                    <TableHead className="min-w-[200px]">Name</TableHead>
                     <TableHead>Business Name</TableHead>
                     <TableHead>Phone</TableHead>
                     <TableHead>Source</TableHead>
                     <TableHead>Address</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead>Notes</TableHead>
+                    <TableHead className="max-w-[250px]">Notes</TableHead>
                     <TableHead className="pr-6 text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -230,13 +231,13 @@ export default function PipeLinePage() {
                   ) : filteredLeads.length > 0 ? (
                     filteredLeads.map((lead) => (
                       <TableRow key={lead.id} className="hover:bg-muted/50 transition-colors">
-                        <TableCell className="pl-6 text-muted-foreground text-xs">{new Date(lead.date).toLocaleDateString()}</TableCell>
+                        <TableCell className="pl-6 text-muted-foreground text-xs whitespace-nowrap">{format(new Date(lead.date), 'd MMM yyyy')}</TableCell>
                         <TableCell>
-                            <div className="flex items-center gap-2">
-                                <Avatar className="h-8 w-8 text-xs border bg-muted">
+                            <div className="flex items-center gap-3">
+                                <Avatar className="h-9 w-9 text-sm border bg-muted shrink-0">
                                     <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(lead.contactName)}</AvatarFallback>
                                 </Avatar>
-                                <span className="text-muted-foreground font-medium">{lead.contactName}</span>
+                                <span className="text-foreground font-medium">{lead.contactName}</span>
                             </div>
                         </TableCell>
                         <TableCell className="font-medium text-foreground">{lead.businessName}</TableCell>
