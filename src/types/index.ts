@@ -1,4 +1,5 @@
 
+
 export type UserRole = "ADMIN" | "CRM" | "DESIGNER_REPRESENTATIVE" | "SYSTEM_ADMIN" | "VENDOR" | "LR";
 
 export interface User {
@@ -253,4 +254,16 @@ export interface Project {
   designerRepresentativeId?: string | null;
   designerRepresentativeName?: string | null;
   designerRepresentativeAvatarUrl?: string | null;
+}
+
+export interface Lead {
+  id: string;
+  date: string; // ISO string
+  contactName: string;
+  businessName: string;
+  phone: string;
+  source: string;
+  address: string;
+  category: 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
+  notes?: string | null;
 }
