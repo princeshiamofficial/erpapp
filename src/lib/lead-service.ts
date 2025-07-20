@@ -1,14 +1,14 @@
 
 import type { Lead } from '@/types';
 
-// These would be set in your environment variables (e.g., .env.local)
-const API_URL = process.env.NEXT_PUBLIC_LEADS_API_URL;
-const API_KEY = process.env.NEXT_PUBLIC_LEADS_API_KEY;
+// These values are now hardcoded as per your request.
+const API_URL = "https://colorhutbd.xyz/firestore/api/index.php";
+const API_KEY = "44dc62ef42385a594d319d2c4261914655453b46640d23d9f13ac9a21f7357de";
 const COLLECTION_NAME = 'leads'; // The collection to store leads in
 
 async function fetchFromApi(endpoint: string, options: RequestInit = {}) {
     if (!API_URL || !API_KEY) {
-        throw new Error("API URL or API Key is not configured in environment variables.");
+        throw new Error("API URL or API Key is not configured.");
     }
 
     const headers = {
@@ -101,4 +101,3 @@ export const deleteLead = async (leadId: string): Promise<boolean> => {
     return false;
   }
 };
-
