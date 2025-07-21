@@ -267,7 +267,6 @@ export default function PipeLinePage() {
                     <TableHead>Source</TableHead>
                     <TableHead>Address</TableHead>
                     <TableHead>Category</TableHead>
-                    <TableHead>Schedule</TableHead>
                     <TableHead className="max-w-[250px]">Notes</TableHead>
                     <TableHead className="pr-6 text-right">Action</TableHead>
                   </TableRow>
@@ -276,7 +275,7 @@ export default function PipeLinePage() {
                   {isLoading ? (
                     [...Array(5)].map((_, i) => (
                       <TableRow key={`skel-${i}`}>
-                        <TableCell colSpan={currentUser.role !== 'CRM' ? 11 : 10} className="p-0"><Skeleton className="h-16 w-full"/></TableCell>
+                        <TableCell colSpan={currentUser.role !== 'CRM' ? 10 : 9} className="p-0"><Skeleton className="h-16 w-full"/></TableCell>
                       </TableRow>
                     ))
                   ) : filteredLeads.length > 0 ? (
@@ -310,9 +309,6 @@ export default function PipeLinePage() {
                             {lead.category}
                            </Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                            {lead.schedule ? format(new Date(lead.schedule), 'd MMM yyyy') : 'N/A'}
-                        </TableCell>
                         <TableCell className="text-muted-foreground text-xs truncate max-w-xs" title={lead.notes}>
                           {lead.notes || 'N/A'}
                         </TableCell>
@@ -328,7 +324,7 @@ export default function PipeLinePage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={currentUser.role !== 'CRM' ? 11 : 10} className="text-center py-12 h-[300px]">
+                      <TableCell colSpan={currentUser.role !== 'CRM' ? 10 : 9} className="text-center py-12 h-[300px]">
                         <p className="text-lg text-muted-foreground font-medium">No leads in the pipeline.</p>
                         <p className="text-sm text-muted-foreground">Click "Add New Lead" to get started.</p>
                       </TableCell>
