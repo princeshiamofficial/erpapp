@@ -10,125 +10,143 @@ export type Division = {
   districts: District[];
 };
 
-// Data based on the provided JSON structure for divisions and districts of Bangladesh.
-const divisionData = [
-  {
-    "name": "Dhaka",
-    "districts": [
-      { "name": "Dhaka" },
-      { "name": "Faridpur" },
-      { "name": "Gazipur", "aliases": ["গাজীপুর"] },
-      { "name": "Gopalganj" },
-      { "name": "Kishoreganj" },
-      { "name": "Madaripur" },
-      { "name": "Manikganj" },
-      { "name": "Munshiganj" },
-      { "name": "Narayanganj" },
-      { "name": "Narsingdi" },
-      { "name": "Rajbari" },
-      { "name": "Shariatpur" },
-      { "name": "Tangail" }
-    ]
-  },
-  {
-    "name": "Chattogram",
-    "districts": [
-      { "name": "Chattogram" },
-      { "name": "Cox’s Bazar", "aliases": ["Cox's Bazar", "Coxs Bazar", "Cox Bazar"] },
-      { "name": "Cumilla" },
-      { "name": "Brahmanbaria" },
-      { "name": "Chandpur" },
-      { "name": "Feni" },
-      { "name": "Lakshmipur" },
-      { "name": "Noakhali" },
-      { "name": "Khagrachari" },
-      { "name": "Bandarban" },
-      { "name": "Rangamati" }
-    ]
-  },
-  {
-    "name": "Khulna",
-    "districts": [
-      { "name": "Khulna" },
-      { "name": "Bagerhat" },
-      { "name": "Satkhira" },
-      { "name": "Jessore" },
-      { "name": "Jhenaidah" },
-      { "name": "Magura" },
-      { "name": "Narail" },
-      { "name": "Chuadanga" },
-      { "name": "Meherpur" },
-      { "name": "Kushtia" }
-    ]
-  },
-  {
-    "name": "Rajshahi",
-    "districts": [
-      { "name": "Rajshahi" },
-      { "name": "Bogura" },
-      { "name": "Chapainawabganj" },
-      { "name": "Joypurhat" },
-      { "name": "Naogaon" },
-      { "name": "Natore" },
-      { "name": "Pabna" },
-      { "name": "Sirajganj" }
-    ]
-  },
-  {
-    "name": "Barishal",
-    "districts": [
-      { "name": "Barishal" },
-      { "name": "Barguna" },
-      { "name": "Bhola" },
-      { "name": "Jhalokathi" },
-      { "name": "Patuakhali" },
-      { "name": "Pirojpur" }
-    ]
-  },
-  {
-    "name": "Sylhet",
-    "districts": [
-      { "name": "Sylhet" },
-      { "name": "Habiganj" },
-      { "name": "Moulvibazar" },
-      { "name": "Sunamganj" }
-    ]
-  },
-  {
-    "name": "Rangpur",
-    "districts": [
-      { "name": "Rangpur" },
-      { "name": "Dinajpur" },
-      { "name": "Kurigram" },
-      { "name": "Gaibandha" },
-      { "name": "Lalmonirhat" },
-      { "name": "Nilphamari" },
-      { "name": "Panchagarh" },
-      { "name": "Thakurgaon" }
-    ]
-  },
-  {
-    "name": "Mymensingh",
-    "districts": [
-      { "name": "Mymensingh" },
-      { "name": "Jamalpur" },
-      { "name": "Netrokona" },
-      { "name": "Sherpur" }
-    ]
-  }
-];
-
-// Transform the raw data to match the expected 'Division' type structure.
-export const divisions: Division[] = divisionData.map(division => ({
-  division: division.name,
-  districts: division.districts.map(district => {
-    if (typeof district === 'string') {
-      return { name: district, thanas: [], aliases: [] };
+const rawData = {
+  "divisions": [
+    {
+      "name": "Dhaka (ঢাকা)",
+      "districts": [
+        "Dhaka (ঢাকা)",
+        "Faridpur (ফরিদপুর)",
+        "Gazipur (গাজীপুর)",
+        "Gopalganj (গোপালগঞ্জ)",
+        "Kishoreganj (কিশোরগঞ্জ)",
+        "Madaripur (মাদারীপুর)",
+        "Manikganj (মানিকগঞ্জ)",
+        "Munshiganj (মুন্সীগঞ্জ)",
+        "Narayanganj (নারায়ণগঞ্জ)",
+        "Narsingdi (নরসিংদী)",
+        "Rajbari (রাজবাড়ী)",
+        "Shariatpur (শরীয়তপুর)",
+        "Tangail (টাঙ্গাইল)"
+      ]
+    },
+    {
+      "name": "Chattogram (চট্টগ্রাম)",
+      "districts": [
+        "Chattogram (চট্টগ্রাম)",
+        "Cox’s Bazar (কক্সবাজার)",
+        "Cumilla (কুমিল্লা)",
+        "Brahmanbaria (ব্রাহ্মণবাড়িয়া)",
+        "Chandpur (চাঁদপুর)",
+        "Feni (ফেনী)",
+        "Lakshmipur (লক্ষ্মীপুর)",
+        "Noakhali (নোয়াখালী)",
+        "Khagrachari (খাগড়াছড়ি)",
+        "Bandarban (বান্দরবান)",
+        "Rangamati (রাঙামাটি)"
+      ]
+    },
+    {
+      "name": "Khulna (খুলনা)",
+      "districts": [
+        "Khulna (খুলনা)",
+        "Bagerhat (বাগেরহাট)",
+        "Satkhira (সাতক্ষীরা)",
+        "Jessore (যশোর)",
+        "Jhenaidah (ঝিনাইদহ)",
+        "Magura (মাগুরা)",
+        "Narail (নড়াইল)",
+        "Chuadanga (চুয়াডাঙ্গা)",
+        "Meherpur (মেহেরপুর)",
+        "Kushtia (কুষ্টিয়া)"
+      ]
+    },
+    {
+      "name": "Rajshahi (রাজশাহী)",
+      "districts": [
+        "Rajshahi (রাজশাহী)",
+        "Bogura (বগুড়া)",
+        "Chapainawabganj (চাঁপাইনবাবগঞ্জ)",
+        "Joypurhat (জয়পুরহাট)",
+        "Naogaon (নওগাঁ)",
+        "Natore (নাটোর)",
+        "Pabna (পাবনা)",
+        "Sirajganj (সিরাজগঞ্জ)"
+      ]
+    },
+    {
+      "name": "Barishal (বরিশাল)",
+      "districts": [
+        "Barishal (বরিশাল)",
+        "Barguna (বরগুনা)",
+        "Bhola (ভোলা)",
+        "Jhalokathi (ঝালকাঠি)",
+        "Patuakhali (পটুয়াখালী)",
+        "Pirojpur (পিরোজপুর)"
+      ]
+    },
+    {
+      "name": "Sylhet (সিলেট)",
+      "districts": [
+        "Sylhet (সিলেট)",
+        "Habiganj (হবিগঞ্জ)",
+        "Moulvibazar (মৌলভীবাজার)",
+        "Sunamganj (সুনামগঞ্জ)"
+      ]
+    },
+    {
+      "name": "Rangpur (রংপুর)",
+      "districts": [
+        "Rangpur (রংপুর)",
+        "Dinajpur (দিনাজপুর)",
+        "Kurigram (কুড়িগ্রাম)",
+        "Gaibandha (গাইবান্ধা)",
+        "Lalmonirhat (লালমনিরহাট)",
+        "Nilphamari (নীলফামারী)",
+        "Panchagarh (পঞ্চগড়)",
+        "Thakurgaon (ঠাকুরগাঁও)"
+      ]
+    },
+    {
+      "name": "Mymensingh (ময়মনসিংহ)",
+      "districts": [
+        "Mymensingh (ময়মনসিংহ)",
+        "Jamalpur (জামালপুর)",
+        "Netrokona (নেত্রকোনা)",
+        "Sherpur (শেরপুর)"
+      ]
     }
+  ]
+};
+
+const parseName = (nameString: string): { name: string; aliases: string[] } => {
+  const match = nameString.match(/^(.*?)\s*\((.*?)\)$/);
+  if (match) {
+    const englishName = match[1].trim();
+    const bengaliName = match[2].trim();
+    const aliases = [bengaliName];
+
+    // Special handling for Cox's Bazar
+    if (englishName.toLowerCase().includes("cox")) {
+      aliases.push("coxs bazar", "coxsbazar", "cox bazar", "coxbazar");
+    }
+
+    return { name: englishName, aliases };
+  }
+  return { name: nameString.trim(), aliases: [] };
+};
+
+export const divisions: Division[] = rawData.divisions.map(division => {
+    const parsedDivision = parseName(division.name);
     return {
-      name: district.name,
-      aliases: district.aliases || [],
-      thanas: [], // Thanas are not used for now
+        division: parsedDivision.name,
+        districts: division.districts.map(districtString => {
+            const parsedDistrict = parseName(districtString);
+            return {
+                name: parsedDistrict.name,
+                aliases: parsedDistrict.aliases,
+                thanas: []
+            };
+        })
     };
-  })
-}));
+});
