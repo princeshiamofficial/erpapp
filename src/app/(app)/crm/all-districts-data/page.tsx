@@ -13,24 +13,32 @@ import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, DistrictDataEntry, DivisionData } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { divisions } from '@/lib/district-data';
-
-const AddEditDistrictDataDialog = dynamic(() => import('@/components/crm/AddEditDistrictDataDialog').then(mod => mod.AddEditDistrictDataDialog));
+import { AddEditDistrictDataDialog } from '@/components/crm/AddEditDistrictDataDialog';
 
 
 const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
     const divisionMap: Record<string, Record<string, DistrictDataEntry[]>> = {};
 
     orders.forEach(order => {
-        const addressParts = order.address.split(',').map(part => part.trim());
-        const districtName = addressParts.length > 1 ? addressParts[addressParts.length - 1] : "Unknown";
+        let foundDistrict: { name: string; division: string; } | null = null;
+        
+        // Split the address by commas and spaces to check each part
+        const addressParts = order.address.toLowerCase().split(/[\s,]+/).map(p => p.trim());
 
-        let divisionName = "Unknown";
+        // Iterate through all divisions and districts to find a match
         for (const div of divisions) {
-            if (div.districts.some(dist => dist.name === districtName)) {
-                divisionName = div.division;
-                break;
+            for (const dist of div.districts) {
+                // Check if any part of the address matches a district name
+                if (addressParts.includes(dist.name.toLowerCase())) {
+                    foundDistrict = { name: dist.name, division: div.division };
+                    break;
+                }
             }
+            if (foundDistrict) break;
         }
+
+        const districtName = foundDistrict ? foundDistrict.name : "Unknown";
+        const divisionName = foundDistrict ? foundDistrict.division : "Unknown";
 
         if (!divisionMap[divisionName]) {
             divisionMap[divisionName] = {};
@@ -101,9 +109,7 @@ export default function AllDistrictsDataPage() {
     setIsAddEditDialogOpen(false);
     setEditingEntry(null);
     toast({ title: "Success", description: "District data has been saved." });
-    // In a real scenario, you'd re-fetch data here.
-    // For now, we just close the dialog.
-    // fetchData(); 
+    fetchData();
   };
 
 
