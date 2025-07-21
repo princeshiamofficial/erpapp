@@ -174,13 +174,13 @@ export default function AllDistrictsDataPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[200px] text-base pl-6">Division</TableHead>
-                    <TableHead className="w-[180px] text-base">District</TableHead>
-                    <TableHead>Job ID</TableHead>
-                    <TableHead>Business Name</TableHead>
-                    <TableHead>Address</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead className="pr-6 text-right">Actions</TableHead>
+                    <TableHead className="w-[200px] text-xs pl-6 py-2">Division</TableHead>
+                    <TableHead className="w-[180px] text-xs py-2">District</TableHead>
+                    <TableHead className="text-xs py-2">Job ID</TableHead>
+                    <TableHead className="text-xs py-2">Business Name</TableHead>
+                    <TableHead className="text-xs py-2">Address</TableHead>
+                    <TableHead className="text-xs py-2">Phone</TableHead>
+                    <TableHead className="pr-6 text-right text-xs py-2">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -198,14 +198,14 @@ export default function AllDistrictsDataPage() {
 
                       return districtData.entries.map((entry, entryIndex) => {
                         const divisionCell = isFirstDivisionRow ? (
-                          <TableCell rowSpan={divisionData.districts.reduce((sum, d) => sum + d.entries.length, 0)} className="align-top font-semibold text-card-foreground border-r bg-muted/30 py-0 px-4 text-base pl-6">
+                          <TableCell rowSpan={divisionData.districts.reduce((sum, d) => sum + d.entries.length, 0)} className="align-top font-semibold text-card-foreground border-r bg-muted/30 py-0 px-4 text-xs pl-6">
                             {divisionData.division}
                           </TableCell>
                         ) : null;
                         isFirstDivisionRow = false;
 
                         const districtCell = isFirstDistrictRow ? (
-                          <TableCell rowSpan={districtData.entries.length} className="align-top text-muted-foreground border-r py-0 px-4 font-medium">
+                          <TableCell rowSpan={districtData.entries.length} className="align-top text-muted-foreground border-r py-0 px-4 text-xs">
                             {districtData.name}
                           </TableCell>
                         ) : null;
@@ -220,11 +220,11 @@ export default function AllDistrictsDataPage() {
                             <TableCell className="py-0 px-4">{entry.address}</TableCell>
                             <TableCell className="py-0 px-4">{entry.phone}</TableCell>
                             <TableCell className="py-0 px-4 pr-6 text-right">
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => handleOpenEditDialog(entry)}>
-                                  <Edit className="h-4 w-4" />
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => handleOpenEditDialog(entry)}>
+                                  <Edit className="h-3 w-3" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                                  <Trash2 className="h-4 w-4" />
+                              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive">
+                                  <Trash2 className="h-3 w-3" />
                               </Button>
                             </TableCell>
                           </TableRow>
