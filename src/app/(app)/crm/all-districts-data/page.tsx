@@ -7,46 +7,75 @@ import { Input } from '@/components/ui/input';
 
 const districtsData = [
   {
-    division: 'Division 1',
+    division: 'Dhaka Division',
     districts: [
       {
-        name: 'District 1',
+        name: 'Dhaka',
         entries: [
-          { jobId: 'J001', businessName: 'Alice\'s Wonderland', address: '123 Main St', phone: '555-0101' },
-          { jobId: 'J002', businessName: 'Bob\'s Burgers', address: '456 Oak Ave', phone: '555-0102' },
-          { jobId: 'J003', businessName: 'Charlie\'s Chocolate', address: '789 Pine Ln', phone: '555-0103' },
+          { jobId: 'DHK001', businessName: 'Star Kabab & Restaurant', address: 'Banani, Dhaka', phone: '01712-345678' },
+          { jobId: 'DHK002', businessName: 'Aarong', address: 'Gulshan, Dhaka', phone: '01823-456789' },
+          { jobId: 'DHK003', businessName: 'Bata Shoe Company', address: 'New Market, Dhaka', phone: '01934-567890' },
         ],
       },
       {
-        name: 'District 2',
+        name: 'Gazipur',
         entries: [
-          { jobId: 'J004', businessName: 'Diana\'s Diner', address: '101 Maple Dr', phone: '555-0104' },
-          { jobId: 'J005', businessName: 'Eve\'s Eatery', address: '212 Birch Rd', phone: '555-0105' },
+          { jobId: 'GAZ001', businessName: 'Bhawal Resort & Spa', address: 'Sreepur, Gazipur', phone: '01645-678901' },
+          { jobId: 'GAZ002', businessName: 'National Park', address: 'Gazipur Sadar', phone: '01556-789012' },
+        ],
+      },
+      {
+        name: 'Narayanganj',
+        entries: [
+            { jobId: 'NJN001', businessName: 'Rupayan Town', address: 'Fatullah, Narayanganj', phone: '01367-890123' },
+        ],
+      }
+    ],
+  },
+  {
+    division: 'Chattogram Division',
+    districts: [
+      {
+        name: 'Chattogram',
+        entries: [
+          { jobId: 'CTG001', businessName: 'Well Food', address: 'GEC Circle, Chattogram', phone: '01778-901234' },
+          { jobId: 'CTG002', businessName: 'Radisson Blu', address: 'Chattogram Bay View', phone: '01889-012345' },
+        ],
+      },
+      {
+        name: "Cox's Bazar",
+        entries: [
+          { jobId: 'CXB001', businessName: 'Mermaid Beach Resort', address: 'Kolatoli, Cox\'s Bazar', phone: '01990-123456' },
+          { jobId: 'CXB002', businessName: 'Sea Gull Hotel', address: 'Hotel Motel Zone, Cox\'s Bazar', phone: '01501-234567' },
+          { jobId: 'CXB003', businessName: 'Poushee Restaurant', address: 'Main Road, Cox\'s Bazar', phone: '01612-345678' },
+        ],
+      },
+       {
+        name: 'Comilla',
+        entries: [
+          { jobId: 'COM001', businessName: 'Matri Bhandar', address: 'Manoharpur, Comilla', phone: '01723-456789' },
         ],
       },
     ],
   },
   {
-    division: 'Division 2',
+    division: 'Sylhet Division',
     districts: [
-      {
-        name: 'District 3',
-        entries: [
-          { jobId: 'J006', businessName: 'Frank\'s Fish', address: '321 Elm Ct', phone: '555-0106' },
-          { jobId: 'J007', businessName: 'Grace\'s Grill', address: '654 Spruce Blvd', phone: '555-0107' },
-        ],
-      },
-      {
-        name: 'District 4',
-        entries: [
-          { jobId: 'J008', businessName: 'Heidi\'s Hangar', address: '987 Cedar Way', phone: '555-0108' },
-          { jobId: 'J009', businessName: 'Ivan\'s Ice Cream', address: '111 Redwood St', phone: '555-0109' },
-          { jobId: 'J010', businessName: 'Judy\'s Juices', address: '222 Aspen Ave', phone: '555-0110' },
-          { jobId: 'J011', businessName: 'Mallory\'s Market', address: '333 Willow Ln', phone: '555-0111' },
-        ],
-      },
-    ],
-  },
+        {
+            name: 'Sylhet',
+            entries: [
+                { jobId: 'SYL001', businessName: 'Panshi Restaurant', address: 'Zindabazar, Sylhet', phone: '01734-567890' },
+                { jobId: 'SYL002', businessName: 'Rose View Hotel', address: 'Shahjalal Uposhohor, Sylhet', phone: '01945-678901' },
+            ],
+        },
+        {
+            name: 'Habiganj',
+            entries: [
+                { jobId: 'HBG001', businessName: 'The Palace Luxury Resort', address: 'Bahubal, Habiganj', phone: '01856-789012' },
+            ],
+        },
+    ]
+  }
 ];
 
 export default function AllDistrictsDataPage() {
@@ -124,3 +153,4 @@ export default function AllDistrictsDataPage() {
     </div>
   );
 }
+
