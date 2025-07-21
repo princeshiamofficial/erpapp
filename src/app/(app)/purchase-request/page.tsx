@@ -50,21 +50,27 @@ export default function PurchaseRequestPage() {
   }, [toast]);
 
   useEffect(() => {
-    if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) {
+    if (currentUser) {
       fetchRequests();
-    } else if (currentUser) {
-      router.replace('/dashboard');
     }
-  }, [currentUser, router, fetchRequests]);
+  }, [currentUser, fetchRequests]);
 
   const filteredRequests = useMemo(() => {
-    if (!searchTerm) return requests;
-    return requests.filter(req =>
+    let userFilteredRequests = requests;
+
+    if (currentUser && currentUser.role !== 'SYSTEM_ADMIN' && currentUser.role !== 'ADMIN') {
+      userFilteredRequests = requests.filter(req => req.requestedByUserId === currentUser.id);
+    }
+
+    if (!searchTerm) return userFilteredRequests;
+    
+    return userFilteredRequests.filter(req =>
       req.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
       req.requestedByUserName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.id.toLowerCase().includes(searchTerm.toLowerCase())
+      (req.id && req.id.toLowerCase().includes(searchTerm.toLowerCase()))
     );
-  }, [requests, searchTerm]);
+  }, [requests, searchTerm, currentUser]);
+
 
   const getStatusBadgeClass = (status: PurchaseRequestStatus) => {
     switch (status) {
@@ -108,12 +114,18 @@ export default function PurchaseRequestPage() {
   };
 
 
-  if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
+  if (!currentUser) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
+  }
+
+  const canModify = (req: PurchaseRequest) => {
+      if (!currentUser) return false;
+      if (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') return true;
+      return currentUser.id === req.requestedByUserId;
   }
 
   return (
@@ -184,9 +196,9 @@ export default function PurchaseRequestPage() {
                       </TableRow>
                     ))
                   ) : filteredRequests.length > 0 ? (
-                    filteredRequests.map((req) => (
-                      <TableRow key={req.id} className="hover:bg-muted/50 transition-colors">
-                        <TableCell className="pl-6 font-mono text-xs text-primary">{req.id.substring(0,8)}...</TableCell>
+                    filteredRequests.map((req, index) => (
+                      <TableRow key={req.id || index} className="hover:bg-muted/50 transition-colors">
+                        <TableCell className="pl-6 font-mono text-xs text-primary">{req.id?.substring(0,8)}...</TableCell>
                         <TableCell className="text-card-foreground font-medium">{req.item}</TableCell>
                         <TableCell className="text-card-foreground">{req.quantity}</TableCell>
                         <TableCell className="text-muted-foreground">{req.requestedByUserName}</TableCell>
@@ -195,21 +207,23 @@ export default function PurchaseRequestPage() {
                           <Badge className={getStatusBadgeClass(req.status)}>{req.status}</Badge>
                         </TableCell>
                         <TableCell className="pr-6 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-9 w-9">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onSelect={() => handleOpenEditDialog(req)} className="cursor-pointer">
-                                <Edit className="mr-2 h-4 w-4" /> Edit / View
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => setRequestToDelete(req)} className="text-destructive focus:text-destructive cursor-pointer">
-                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {canModify(req) && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-9 w-9">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={() => handleOpenEditDialog(req)} className="cursor-pointer">
+                                  <Edit className="mr-2 h-4 w-4" /> Edit / View
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setRequestToDelete(req)} className="text-destructive focus:text-destructive cursor-pointer">
+                                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
