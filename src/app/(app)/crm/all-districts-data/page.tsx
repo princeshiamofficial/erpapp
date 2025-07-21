@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
 
 const districtsData = [
   {
@@ -110,7 +112,7 @@ export default function AllDistrictsDataPage() {
 
 
   return (
-    <div className="space-y-6 px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
+    <div className="space-y-6 px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8 pt-0">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
         <div>
           <h1 className="page-title">All Districts Data</h1>
@@ -128,14 +130,19 @@ export default function AllDistrictsDataPage() {
                     A comprehensive list of data for all divisions and their respective districts.
                   </CardDescription>
               </div>
-              <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search table..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-background h-10 rounded-md w-full"
-                />
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search table..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 bg-background h-10 rounded-md w-full"
+                  />
+                </div>
+                <Button className="h-10">
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add New Data
+                </Button>
               </div>
             </div>
         </CardHeader>
@@ -154,26 +161,25 @@ export default function AllDistrictsDataPage() {
               </TableHeader>
               <TableBody>
                 {filteredData.length > 0 ? filteredData.map((divisionData, divisionIndex) => {
-                  const totalRowsForDivision = divisionData.districts.reduce((sum, d) => sum + d.entries.length, 0);
-                  let isFirstRowOfDivision = true;
+                  let isFirstDivisionRow = true;
 
-                  return divisionData.districts.map((districtData, districtIndex) => {
-                    let isFirstRowOfDistrict = true;
+                  return divisionData.districts.flatMap((districtData, districtIndex) => {
+                    let isFirstDistrictRow = true;
 
                     return districtData.entries.map((entry, entryIndex) => {
-                      const divisionCell = isFirstRowOfDivision ? (
-                        <TableCell rowSpan={totalRowsForDivision} className="align-top font-semibold text-card-foreground border-r bg-muted/30 p-4 text-base pl-6">
+                      const divisionCell = isFirstDivisionRow ? (
+                        <TableCell rowSpan={divisionData.districts.reduce((sum, d) => sum + d.entries.length, 0)} className="align-top font-semibold text-card-foreground border-r bg-muted/30 p-4 text-base pl-6">
                           {divisionData.division}
                         </TableCell>
                       ) : null;
-                      isFirstRowOfDivision = false;
+                      isFirstDivisionRow = false;
 
-                      const districtCell = isFirstRowOfDistrict ? (
+                      const districtCell = isFirstDistrictRow ? (
                         <TableCell rowSpan={districtData.entries.length} className="align-top text-muted-foreground border-r p-4 font-medium">
                           {districtData.name}
                         </TableCell>
                       ) : null;
-                      isFirstRowOfDistrict = false;
+                      isFirstDistrictRow = false;
 
                       return (
                         <TableRow key={`${divisionIndex}-${districtIndex}-${entryIndex}`} className="hover:bg-muted/50">
@@ -202,3 +208,4 @@ export default function AllDistrictsDataPage() {
     </div>
   );
 }
+
