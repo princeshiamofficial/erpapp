@@ -5,9 +5,8 @@ import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Search, PlusCircle, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
 
 const districtsData = [
   {
@@ -156,7 +155,8 @@ export default function AllDistrictsDataPage() {
                   <TableHead>Job ID</TableHead>
                   <TableHead>Business Name</TableHead>
                   <TableHead>Address</TableHead>
-                  <TableHead className="pr-6">Phone</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead className="pr-6 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -188,14 +188,22 @@ export default function AllDistrictsDataPage() {
                           <TableCell className="p-4">{entry.jobId}</TableCell>
                           <TableCell className="p-4">{entry.businessName}</TableCell>
                           <TableCell className="p-4">{entry.address}</TableCell>
-                          <TableCell className="p-4 pr-6">{entry.phone}</TableCell>
+                          <TableCell className="p-4">{entry.phone}</TableCell>
+                          <TableCell className="p-4 pr-6 text-right">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary">
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       );
                     });
                   });
                 }) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                       No results found for "{searchTerm}".
                     </TableCell>
                   </TableRow>
@@ -208,4 +216,3 @@ export default function AllDistrictsDataPage() {
     </div>
   );
 }
-
