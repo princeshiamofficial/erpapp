@@ -30,7 +30,7 @@ import { format } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
-import { Pie, PieChart as RechartsPieChart, Cell, ResponsiveContainer } from "recharts";
+import { Pie, PieChart as RechartsPieChart, Cell, ResponsiveContainer, Label as RechartsLabel } from "recharts";
 
 
 type Category = 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
@@ -129,6 +129,8 @@ export default function PipeLinePage() {
     });
     return config;
   }, [leadsByCategoryChartData]);
+
+  const totalLeads = useMemo(() => filteredLeads.length, [filteredLeads]);
 
 
   const handleOpenAddDialog = () => {
@@ -376,19 +378,57 @@ export default function PipeLinePage() {
                 </Table>
                 </div>
             ) : (
-                <div className="p-4 sm:p-6 min-h-[400px] flex items-center justify-center">
+                <div className="p-4 sm:p-6 min-h-[400px] flex flex-col items-center justify-center">
                 {isLoading ? ( <Skeleton className="h-64 w-64 rounded-full" /> ) : 
                     leadsByCategoryChartData.length > 0 ? (
-                        <ChartContainer config={leadsChartConfig} className="mx-auto aspect-square w-full max-w-[300px]">
-                        <RechartsPieChart>
-                            <ChartTooltip content={<ChartTooltipContent nameKey="value" hideLabel />} />
-                            <Pie data={leadsByCategoryChartData} dataKey="value" nameKey="name" innerRadius={60} strokeWidth={5}>
-                                {leadsByCategoryChartData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                                ))}
+                        <ChartContainer config={leadsChartConfig} className="mx-auto aspect-square w-full max-w-[350px]">
+                          <RechartsPieChart>
+                            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" hideLabel />} />
+                            <Pie
+                              data={leadsByCategoryChartData}
+                              dataKey="value"
+                              nameKey="name"
+                              innerRadius={80}
+                              outerRadius={120}
+                              strokeWidth={2}
+                              activeIndex={0}
+                              labelLine={false}
+                            >
+                              <RechartsLabel
+                                content={({ viewBox }) => {
+                                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                                    return (
+                                      <text
+                                        x={viewBox.cx}
+                                        y={viewBox.cy}
+                                        textAnchor="middle"
+                                        dominantBaseline="middle"
+                                      >
+                                        <tspan
+                                          x={viewBox.cx}
+                                          y={viewBox.cy}
+                                          className="fill-foreground text-3xl font-bold"
+                                        >
+                                          {totalLeads.toLocaleString()}
+                                        </tspan>
+                                        <tspan
+                                          x={viewBox.cx}
+                                          y={(viewBox.cy || 0) + 20}
+                                          className="fill-muted-foreground"
+                                        >
+                                          Leads
+                                        </tspan>
+                                      </text>
+                                    )
+                                  }
+                                }}
+                              />
+                              {leadsByCategoryChartData.map((entry) => (
+                                <Cell key={entry.name} fill={entry.fill} className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2" />
+                              ))}
                             </Pie>
-                        </RechartsPieChart>
-                         <ChartLegend content={<ChartLegendContent nameKey="name" />} className="-mt-4 flex-wrap gap-2 [&>*]:basis-1/3 [&>*]:justify-center" />
+                          </RechartsPieChart>
+                          <ChartLegend content={<ChartLegendContent nameKey="name" />} className="-mt-4 flex-wrap gap-2 [&>*]:basis-1/3 [&>*]:justify-center" />
                         </ChartContainer>
                     ) : (
                          <div className="text-center text-muted-foreground">
