@@ -19,23 +19,26 @@ const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
     const divisionMap: Record<string, Record<string, DistrictDataEntry[]>> = {};
 
     orders.forEach(order => {
-        let foundDistrict: { name: string; division: string; } | null = null;
+        let longestMatch: { name: string; division: string; } | null = null;
         
         const lowercasedAddress = order.address.toLowerCase();
 
         for (const div of divisions) {
             for (const dist of div.districts) {
-                // Check if the full district name (lowercased) is present in the address string
-                if (lowercasedAddress.includes(dist.name.toLowerCase())) {
-                    foundDistrict = { name: dist.name, division: div.division };
-                    break;
+                const lowercasedDistName = dist.name.toLowerCase();
+                if (lowercasedAddress.includes(lowercasedDistName)) {
+                    // If we found a match, check if it's longer than any previous match.
+                    // This handles cases where an address might contain "Dhaka" and "Manikganj"
+                    // by preferring the longer, more specific match.
+                    if (!longestMatch || lowercasedDistName.length > longestMatch.name.length) {
+                        longestMatch = { name: dist.name, division: div.division };
+                    }
                 }
             }
-            if (foundDistrict) break;
         }
 
-        const districtName = foundDistrict ? foundDistrict.name : "Unknown";
-        const divisionName = foundDistrict ? foundDistrict.division : "Unknown";
+        const districtName = longestMatch ? longestMatch.name : "Unknown";
+        const divisionName = longestMatch ? longestMatch.division : "Unknown";
 
         if (!divisionMap[divisionName]) {
             divisionMap[divisionName] = {};
@@ -67,7 +70,7 @@ const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
         districts: Object.entries(districts).map(([name, entries]) => ({
             name,
             entries,
-        })),
+        })).sort((a,b) => a.name.localeCompare(b.name)), // Sort districts alphabetically
     }));
 };
 
