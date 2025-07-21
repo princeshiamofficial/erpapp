@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -29,7 +30,7 @@ import { format } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
-import { Pie, PieChart as RechartsPieChart, Cell, Bar, BarChart, CartesianGrid, XAxis, LabelList } from "recharts";
+import { Pie, PieChart as RechartsPieChart, Cell, Bar, BarChart, CartesianGrid, XAxis, LabelList, Label } from "recharts";
 import { getUsers } from '@/lib/user-service';
 
 
@@ -285,7 +286,7 @@ export default function PipeLinePage() {
                           strokeWidth={5}
                       >
                        {leadsByCategoryChartData.map((entry) => (
-                           <Cell key={`cell-${entry.name}`} fill={entry.fill} className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"/>
+                           <Cell key={`cell-${entry.name}`} fill={leadsChartConfig[entry.name as Category]?.color} className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"/>
                        ))}
                        <Label
                           content={({ viewBox }) => {
