@@ -43,7 +43,13 @@ const categoryColors: Record<Category, string> = {
   B2B: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-200 dark:border-red-700',
 };
 
-const CHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF", "#FF4560", "#775DD0", "#82ca9d", "#ffc658", "#d0ed57", "#a4de6c", "#8884d8" ];
+const categoryChartColors: Record<Category, string> = {
+    POP: "hsl(217 91% 60%)", // Blue
+    POG: "hsl(160 76% 45%)", // Green
+    OC: "hsl(25 95% 53%)",  // Orange
+    OD: "hsl(280 65% 65%)", // Purple
+    B2B: "hsl(0 72% 50%)",   // Red
+};
 
 
 const getInitials = (name: string) => {
@@ -120,11 +126,11 @@ export default function PipeLinePage() {
 
   const leadsChartConfig = useMemo(() => {
     const config: ChartConfig = {};
-    leadsByCategoryChartData.forEach((item, index) => {
-      const uniqueKey = item.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase();
-      config[uniqueKey] = {
-        label: item.name,
-        color: CHART_COLORS[index % CHART_COLORS.length],
+    leadsByCategoryChartData.forEach((item) => {
+      const categoryKey = item.name as Category;
+      config[categoryKey] = {
+        label: categoryKey,
+        color: categoryChartColors[categoryKey] || "#8884d8", // Fallback color
       };
     });
     return config;
@@ -392,11 +398,8 @@ export default function PipeLinePage() {
                                   dataKey="value"
                                   nameKey="name"
                                   innerRadius={60}
-                                  strokeWidth={5}
-                                  label={({ cx, cy, ...props }) => {
-                                      if (isNaN(cx) || isNaN(cy)) {
-                                          return null;
-                                      }
+                                  strokeWidth={2}
+                                  label={({ cx, cy }) => {
                                       return (
                                           <text
                                               x={cx}
@@ -422,11 +425,14 @@ export default function PipeLinePage() {
                                           </text>
                                       )
                                   }}
+                                  labelLine={false}
+                                  animationBegin={100}
+                                  animationDuration={500}
                               >
                               {leadsByCategoryChartData.map((entry) => (
                                   <Cell
                                   key={`cell-${entry.name}`}
-                                  fill={leadsChartConfig[entry.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()]?.color}
+                                  fill={leadsChartConfig[entry.name as Category]?.color}
                                   className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                                   />
                               ))}
