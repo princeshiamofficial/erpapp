@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet, Loader2, UploadCloud, User as UserIconLucide, Download, BarChart3, TableIcon, ChevronDown } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet, Loader2, UploadCloud, User as UserIconLucide, Download, BarChart3, TableIcon, ChevronDown, PieChart as PieChartIcon, Users, CalendarPlus, ListChecks, ClipboardCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
+import { format, isToday, parseISO } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
@@ -45,11 +45,11 @@ const categoryColors: Record<Category, string> = {
 };
 
 const categoryChartColors: Record<Category, string> = {
-    POP: "hsl(217 91% 60%)", // Blue
-    POG: "hsl(160 76% 45%)", // Green
-    OC: "hsl(25 95% 53%)",  // Orange
-    OD: "hsl(280 65% 65%)", // Purple
-    B2B: "hsl(0 72% 50%)",   // Red
+    POP: "hsl(217 91% 60%)",
+    POG: "hsl(160 76% 45%)",
+    OC: "hsl(25 95% 53%)",
+    OD: "hsl(280 65% 65%)",
+    B2B: "hsl(0 72% 50%)",
 };
 
 
@@ -58,6 +58,45 @@ const getInitials = (name: string) => {
     const names = name.split(' ');
     if (names.length === 1) return names[0].charAt(0).toUpperCase();
     return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+};
+
+
+interface SummaryCardProps {
+  title: string;
+  value: string;
+  icon: React.ElementType;
+  iconColorClass?: string;
+  circleBgClass?: string;
+  isLoading?: boolean;
+}
+
+const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, iconColorClass = "text-primary", circleBgClass = "bg-primary/10", isLoading }) => {
+  if (isLoading) {
+    return (
+      <Card className="bg-card p-4 shadow-md">
+        <div className="flex items-center space-x-4">
+          <Skeleton className="h-12 w-12 rounded-full" />
+          <div className="space-y-1.5">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-7 w-16" />
+          </div>
+        </div>
+      </Card>
+    );
+  }
+  return (
+    <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4">
+      <div className="flex items-center space-x-4">
+        <div className={`p-3 rounded-full ${circleBgClass}`}>
+          <Icon className={`h-6 w-6 ${iconColorClass}`} />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-2xl font-bold text-foreground">{value}</p>
+        </div>
+      </div>
+    </Card>
+  );
 };
 
 
@@ -158,7 +197,19 @@ export default function PipeLinePage() {
     return config;
   }, [leadsByCategoryChartData]);
 
-  const totalLeads = useMemo(() => filteredLeads.length, [filteredLeads]);
+  const summaryData = useMemo(() => {
+    const today = new Date();
+    const todayLeads = filteredLeads.filter(lead => isToday(parseISO(lead.date))).length;
+    const totalTasks = filteredLeads.filter(lead => lead.schedule && new Date(lead.schedule) >= today).length;
+    const todayTasks = filteredLeads.filter(lead => lead.schedule && isToday(parseISO(lead.schedule))).length;
+    
+    return {
+      totalLeads: filteredLeads.length,
+      todayLeads,
+      totalTasks,
+      todayTasks,
+    };
+  }, [filteredLeads]);
 
 
   const handleOpenAddDialog = () => {
@@ -280,7 +331,7 @@ export default function PipeLinePage() {
                                               y={viewBox.cy - 10}
                                               className="text-3xl font-bold"
                                           >
-                                              {totalLeads.toLocaleString()}
+                                              {summaryData.totalLeads.toLocaleString()}
                                           </tspan>
                                           <tspan
                                               x={viewBox.cx}
@@ -425,8 +476,8 @@ export default function PipeLinePage() {
                 className="w-full sm:w-auto h-10"
                 onClick={toggleViewMode}
             >
-                {viewMode === 'table' && <><BarChart3 className="mr-2 h-4 w-4" />View Chart</>}
-                {viewMode === 'chart' && <><TableIcon className="mr-2 h-4 w-4" />View Table</>}
+                {viewMode === 'table' ? <PieChartIcon className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}
+                View {viewMode === 'table' ? 'Chart' : 'Table'}
             </Button>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -437,6 +488,7 @@ export default function PipeLinePage() {
                     >
                         <FileSpreadsheet className="mr-2 h-4 w-4" />
                         Export/Import
+                        <ChevronDown className="ml-2 h-4 w-4" />
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -459,6 +511,13 @@ export default function PipeLinePage() {
               Add New Lead
             </Button>
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <SummaryCard title="Total Leads" value={summaryData.totalLeads.toLocaleString()} icon={Users} isLoading={isLoading} iconColorClass="text-blue-600" circleBgClass="bg-blue-100 dark:bg-blue-500/20" />
+          <SummaryCard title="Today's Leads" value={summaryData.todayLeads.toLocaleString()} icon={CalendarPlus} isLoading={isLoading} iconColorClass="text-green-600" circleBgClass="bg-green-100 dark:bg-green-500/20" />
+          <SummaryCard title="Total Tasks" value={summaryData.totalTasks.toLocaleString()} icon={ListChecks} isLoading={isLoading} iconColorClass="text-orange-600" circleBgClass="bg-orange-100 dark:bg-orange-500/20" />
+          <SummaryCard title="Today's Tasks" value={summaryData.todayTasks.toLocaleString()} icon={ClipboardCheck} isLoading={isLoading} iconColorClass="text-purple-600" circleBgClass="bg-purple-100 dark:bg-purple-500/20" />
         </div>
 
         <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
