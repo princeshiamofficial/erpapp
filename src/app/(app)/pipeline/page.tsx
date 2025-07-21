@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet, Loader2, UploadCloud, User as UserIcon, Download } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet, Loader2, UploadCloud, User as UserIcon, Download, BarChart3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -201,6 +201,15 @@ export default function PipeLinePage() {
             </p>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+                size="lg"
+                variant="outline"
+                className="w-full sm:w-auto h-10"
+                onClick={() => toast({ title: "Coming Soon!", description: "Chart view for leads will be available soon."})}
+            >
+                <BarChart3 className="mr-2 h-4 w-4" />
+                View Chart
+            </Button>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button
