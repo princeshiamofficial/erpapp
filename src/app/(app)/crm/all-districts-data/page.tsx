@@ -187,7 +187,7 @@ export default function AllDistrictsDataPage() {
                   {isLoading ? (
                     [...Array(5)].map((_, i) => (
                       <TableRow key={i}>
-                        <TableCell colSpan={7} className="p-0"><Skeleton className="h-14 w-full"/></TableCell>
+                        <TableCell colSpan={7} className="p-0"><Skeleton className="h-12 w-full"/></TableCell>
                       </TableRow>
                     ))
                   ) : filteredData.length > 0 ? filteredData.map((divisionData, divisionIndex) => {
@@ -198,14 +198,14 @@ export default function AllDistrictsDataPage() {
 
                       return districtData.entries.map((entry, entryIndex) => {
                         const divisionCell = isFirstDivisionRow ? (
-                          <TableCell rowSpan={divisionData.districts.reduce((sum, d) => sum + d.entries.length, 0)} className="align-top font-semibold text-card-foreground border-r bg-muted/30 p-4 text-base pl-6">
+                          <TableCell rowSpan={divisionData.districts.reduce((sum, d) => sum + d.entries.length, 0)} className="align-top font-semibold text-card-foreground border-r bg-muted/30 py-2 px-4 text-base pl-6">
                             {divisionData.division}
                           </TableCell>
                         ) : null;
                         isFirstDivisionRow = false;
 
                         const districtCell = isFirstDistrictRow ? (
-                          <TableCell rowSpan={districtData.entries.length} className="align-top text-muted-foreground border-r p-4 font-medium">
+                          <TableCell rowSpan={districtData.entries.length} className="align-top text-muted-foreground border-r py-2 px-4 font-medium">
                             {districtData.name}
                           </TableCell>
                         ) : null;
@@ -215,11 +215,11 @@ export default function AllDistrictsDataPage() {
                           <TableRow key={`${divisionIndex}-${districtIndex}-${entryIndex}`} className="hover:bg-muted/50">
                             {divisionCell}
                             {districtCell}
-                            <TableCell className="p-4">{entry.jobId}</TableCell>
-                            <TableCell className="p-4">{entry.businessName}</TableCell>
-                            <TableCell className="p-4">{entry.address}</TableCell>
-                            <TableCell className="p-4">{entry.phone}</TableCell>
-                            <TableCell className="p-4 pr-6 text-right">
+                            <TableCell className="py-2 px-4">{entry.jobId}</TableCell>
+                            <TableCell className="py-2 px-4">{entry.businessName}</TableCell>
+                            <TableCell className="py-2 px-4">{entry.address}</TableCell>
+                            <TableCell className="py-2 px-4">{entry.phone}</TableCell>
+                            <TableCell className="py-2 px-4 pr-6 text-right">
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => handleOpenEditDialog(entry)}>
                                   <Edit className="h-4 w-4" />
                               </Button>
