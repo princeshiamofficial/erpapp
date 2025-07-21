@@ -15,19 +15,19 @@ const rawData = {
     {
       "name": "Dhaka (ঢাকা)",
       "districts": [
-        "Dhaka (ঢাকা)",
+        "Dhaka (ঢাকা, Dhanmondi, Mohammadpur, Mirpur, Gulshan, গুলশান, banasree, Uttara, Paltan)",
         "Faridpur (ফরিদপুর)",
         "Gazipur (গাজীপুর)",
         "Gopalganj (গোপালগঞ্জ)",
         "Kishoreganj (কিশোরগঞ্জ)",
         "Madaripur (মাদারীপুর)",
-        "Manikganj (মানিকগঞ্জ)",
-        "Munshiganj (মুন্সীগঞ্জ)",
+        "Manikganj (মানিকগঞ্জ, Manikgonj)",
+        "Munshiganj (মুন্সীগঞ্জ, Munshigonj)",
         "Narayanganj (নারায়ণগঞ্জ)",
         "Narsingdi (নরসিংদী)",
         "Rajbari (রাজবাড়ী)",
         "Shariatpur (শরীয়তপুর)",
-        "Tangail (টাঙ্গাইল)"
+        "Tangail (টাঙ্গাইল, টাংগাইল)"
       ]
     },
     {
@@ -35,7 +35,7 @@ const rawData = {
       "districts": [
         "Chattogram (চট্টগ্রাম, Chittagong)",
         "Cox’s Bazar (কক্সবাজার)",
-        "Cumilla (কুমিল্লা)",
+        "Cumilla (কুমিল্লা, Comilla)",
         "Brahmanbaria (ব্রাহ্মণবাড়িয়া)",
         "Chandpur (চাঁদপুর)",
         "Feni (ফেনী)",
@@ -110,7 +110,7 @@ const rawData = {
     {
       "name": "Mymensingh (ময়মনসিংহ)",
       "districts": [
-        "Mymensingh (ময়মনসিংহ)",
+        "Mymensingh (ময়মনসিংহ, Mymonsingh)",
         "Jamalpur (জামালপুর)",
         "Netrokona (নেত্রকোনা)",
         "Sherpur (শেরপুর)"
