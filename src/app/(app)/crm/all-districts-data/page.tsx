@@ -2,18 +2,15 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import dynamic from 'next/dynamic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, DistrictDataEntry, DivisionData } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { divisions } from '@/lib/district-data';
-import { AddEditDistrictDataDialog } from '@/components/crm/AddEditDistrictDataDialog';
 
 
 const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
@@ -71,9 +68,6 @@ export default function AllDistrictsDataPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<DistrictDataEntry | null>(null);
-
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -91,14 +85,6 @@ export default function AllDistrictsDataPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-  
-  const handleDataSaved = () => {
-    setIsAddEditDialogOpen(false);
-    setEditingEntry(null);
-    toast({ title: "Success", description: "District data has been saved." });
-    fetchData();
-  };
-
 
   const filteredData = useMemo(() => {
     if (!searchTerm) {
@@ -187,27 +173,27 @@ export default function AllDistrictsDataPage() {
 
                       return districtData.entries.map((entry, entryIndex) => {
                         const divisionCell = isFirstDivisionRow ? (
-                          <TableCell rowSpan={divisionData.districts.reduce((sum, d) => sum + d.entries.length, 0)} className="align-top font-semibold text-card-foreground border-r bg-muted/30 py-0 px-4 text-xs pl-6">
+                          <TableCell rowSpan={divisionData.districts.reduce((sum, d) => sum + d.entries.length, 0)} className="align-top font-semibold text-card-foreground border-r bg-muted/30 py-3 px-4 text-sm pl-6">
                             {divisionData.division}
                           </TableCell>
                         ) : null;
                         isFirstDivisionRow = false;
 
                         const districtCell = isFirstDistrictRow ? (
-                          <TableCell rowSpan={districtData.entries.length} className="align-top text-muted-foreground border-r py-0 px-4 text-xs">
+                          <TableCell rowSpan={districtData.entries.length} className="align-top text-muted-foreground border-r py-3 px-4 text-sm">
                             {districtData.name}
                           </TableCell>
                         ) : null;
                         isFirstDistrictRow = false;
 
                         return (
-                          <TableRow key={`${divisionIndex}-${districtIndex}-${entryIndex}`} className="hover:bg-muted/50 text-xs">
+                          <TableRow key={`${divisionIndex}-${districtIndex}-${entryIndex}`} className="hover:bg-muted/50 text-sm">
                             {divisionCell}
                             {districtCell}
-                            <TableCell className="py-0 px-4">{entry.jobId}</TableCell>
-                            <TableCell className="py-0 px-4">{entry.businessName}</TableCell>
-                            <TableCell className="py-0 px-4">{entry.address}</TableCell>
-                            <TableCell className="py-0 px-4">{entry.phone}</TableCell>
+                            <TableCell className="py-2.5 px-4">{entry.jobId}</TableCell>
+                            <TableCell className="py-2.5 px-4">{entry.businessName}</TableCell>
+                            <TableCell className="py-2.5 px-4">{entry.address}</TableCell>
+                            <TableCell className="py-2.5 px-4">{entry.phone}</TableCell>
                           </TableRow>
                         );
                       });
@@ -225,12 +211,6 @@ export default function AllDistrictsDataPage() {
           </CardContent>
         </Card>
       </div>
-      <AddEditDistrictDataDialog 
-        isOpen={isAddEditDialogOpen}
-        onOpenChange={setIsAddEditDialogOpen}
-        onDataSaved={handleDataSaved}
-        entry={editingEntry}
-      />
     </>
   );
 }
