@@ -18,19 +18,19 @@ import Papa from 'papaparse';
 const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
     const divisionMap: Record<string, Record<string, DistrictDataEntry[]>> = {};
 
+    // Helper to clean up strings for looser matching
+    const simplifyString = (str: string) => str.replace(/['’.]/g, '').toLowerCase();
+
     orders.forEach(order => {
         let longestMatch: { name: string; division: string; } | null = null;
         
-        const lowercasedAddress = order.address.toLowerCase();
+        const simplifiedAddress = simplifyString(order.address);
 
         for (const div of divisions) {
             for (const dist of div.districts) {
-                const lowercasedDistName = dist.name.toLowerCase();
-                if (lowercasedAddress.includes(lowercasedDistName)) {
-                    // If we found a match, check if it's longer than any previous match.
-                    // This handles cases where an address might contain "Dhaka" and "Manikganj"
-                    // by preferring the longer, more specific match.
-                    if (!longestMatch || lowercasedDistName.length > longestMatch.name.length) {
+                const simplifiedDistName = simplifyString(dist.name);
+                if (simplifiedAddress.includes(simplifiedDistName)) {
+                    if (!longestMatch || simplifiedDistName.length > simplifyString(longestMatch.name).length) {
                         longestMatch = { name: dist.name, division: div.division };
                     }
                 }
