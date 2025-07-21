@@ -100,15 +100,17 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
             <Label htmlFor="quantity">Quantity *</Label>
             <Input id="quantity" type="number" value={quantity} onChange={e => setQuantity(e.target.value)} required min="1" />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="status">Status *</Label>
-            <Select value={status} onValueChange={(value) => setStatus(value as PurchaseRequestStatus)} required>
-              <SelectTrigger id="status"><SelectValue placeholder="Select status" /></SelectTrigger>
-              <SelectContent>
-                {STATUS_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+          {isEditMode && (
+            <div className="space-y-1">
+              <Label htmlFor="status">Status *</Label>
+              <Select value={status} onValueChange={(value) => setStatus(value as PurchaseRequestStatus)} required>
+                <SelectTrigger id="status"><SelectValue placeholder="Select status" /></SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-1">
             <Label htmlFor="notes">Notes (Optional)</Label>
             <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Add any relevant details or justification..."/>
