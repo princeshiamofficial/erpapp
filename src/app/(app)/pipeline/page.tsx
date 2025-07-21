@@ -30,7 +30,7 @@ import { format } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
-import { Pie, PieChart as RechartsPieChart, Cell, ResponsiveContainer, Label as RechartsLabel } from "recharts";
+import { Pie, PieChart as RechartsPieChart, Cell } from "recharts";
 
 
 type Category = 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
@@ -43,7 +43,7 @@ const categoryColors: Record<Category, string> = {
   B2B: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-200 dark:border-red-700',
 };
 
-const CHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF"];
+const CHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF", "#FF4560", "#775DD0", "#82ca9d", "#ffc658", "#d0ed57", "#a4de6c", "#8884d8" ];
 
 
 const getInitials = (name: string) => {
@@ -115,16 +115,16 @@ export default function PipeLinePage() {
     return Object.entries(categoryCounts).map(([name, value], index) => ({
       name,
       value,
-      fill: CHART_COLORS[index % CHART_COLORS.length],
     })).sort((a,b) => b.value - a.value);
   }, [filteredLeads]);
 
   const leadsChartConfig = useMemo(() => {
     const config: ChartConfig = {};
-    leadsByCategoryChartData.forEach((item) => {
-      config[item.name] = {
+    leadsByCategoryChartData.forEach((item, index) => {
+      const uniqueKey = item.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase();
+      config[uniqueKey] = {
         label: item.name,
-        color: item.fill,
+        color: CHART_COLORS[index % CHART_COLORS.length],
       };
     });
     return config;
@@ -381,54 +381,61 @@ export default function PipeLinePage() {
                 <div className="p-4 sm:p-6 min-h-[400px] flex flex-col items-center justify-center">
                 {isLoading ? ( <Skeleton className="h-64 w-64 rounded-full" /> ) : 
                     leadsByCategoryChartData.length > 0 ? (
-                        <ChartContainer config={leadsChartConfig} className="mx-auto aspect-square w-full max-w-[350px]">
+                        <ChartContainer config={leadsChartConfig} className="mx-auto aspect-square w-full max-w-[300px]">
                           <RechartsPieChart>
-                            <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" hideLabel />} />
-                            <Pie
-                              data={leadsByCategoryChartData}
-                              dataKey="value"
-                              nameKey="name"
-                              innerRadius={80}
-                              outerRadius={120}
-                              strokeWidth={2}
-                              activeIndex={0}
-                              labelLine={false}
-                            >
-                              <RechartsLabel
-                                content={({ viewBox }) => {
-                                  if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                                    return (
-                                      <text
-                                        x={viewBox.cx}
-                                        y={viewBox.cy}
-                                        textAnchor="middle"
-                                        dominantBaseline="middle"
-                                      >
-                                        <tspan
-                                          x={viewBox.cx}
-                                          y={viewBox.cy}
-                                          className="fill-foreground text-3xl font-bold"
-                                        >
-                                          {totalLeads.toLocaleString()}
-                                        </tspan>
-                                        <tspan
-                                          x={viewBox.cx}
-                                          y={(viewBox.cy || 0) + 20}
-                                          className="fill-muted-foreground"
-                                        >
-                                          Leads
-                                        </tspan>
-                                      </text>
-                                    )
-                                  }
-                                }}
+                              <ChartTooltip
+                              cursor={false}
+                              content={<ChartTooltipContent hideLabel />}
                               />
+                              <Pie
+                                  data={leadsByCategoryChartData}
+                                  dataKey="value"
+                                  nameKey="name"
+                                  innerRadius={60}
+                                  strokeWidth={5}
+                                  label={({ cx, cy, ...props }) => {
+                                      if (isNaN(cx) || isNaN(cy)) {
+                                          return null;
+                                      }
+                                      return (
+                                          <text
+                                              x={cx}
+                                              y={cy}
+                                              textAnchor="middle"
+                                              dominantBaseline="central"
+                                              className="fill-foreground text-center"
+                                          >
+                                              <tspan
+                                                  x={cx}
+                                                  y={cy - 10}
+                                                  className="text-3xl font-bold"
+                                              >
+                                                  {totalLeads.toLocaleString()}
+                                              </tspan>
+                                              <tspan
+                                                  x={cx}
+                                                  y={cy + 15}
+                                                  className="text-sm text-muted-foreground"
+                                              >
+                                                  Total Leads
+                                              </tspan>
+                                          </text>
+                                      )
+                                  }}
+                              >
                               {leadsByCategoryChartData.map((entry) => (
-                                <Cell key={entry.name} fill={entry.fill} className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2" />
+                                  <Cell
+                                  key={`cell-${entry.name}`}
+                                  fill={leadsChartConfig[entry.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase()]?.color}
+                                  className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                  />
                               ))}
-                            </Pie>
+                              </Pie>
                           </RechartsPieChart>
-                          <ChartLegend content={<ChartLegendContent nameKey="name" />} className="-mt-4 flex-wrap gap-2 [&>*]:basis-1/3 [&>*]:justify-center" />
+                          <ChartLegend
+                              content={<ChartLegendContent nameKey="name" />}
+                              className="-mt-4 flex-wrap gap-2 [&>*]:basis-1/3 [&>*]:justify-center"
+                          />
                         </ChartContainer>
                     ) : (
                          <div className="text-center text-muted-foreground">
