@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { Search, PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -22,13 +22,10 @@ const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
     orders.forEach(order => {
         let foundDistrict: { name: string; division: string; } | null = null;
         
-        // Split the address by commas and spaces to check each part
         const addressParts = order.address.toLowerCase().split(/[\s,]+/).map(p => p.trim().replace(/[.,!?:;]$/, ''));
 
-        // Iterate through all divisions and districts to find a match
         for (const div of divisions) {
             for (const dist of div.districts) {
-                // Check if any part of the address matches a district name
                 if (addressParts.includes(dist.name.toLowerCase())) {
                     foundDistrict = { name: dist.name, division: div.division };
                     break;
@@ -95,16 +92,6 @@ export default function AllDistrictsDataPage() {
     fetchData();
   }, [fetchData]);
   
-  const handleOpenAddDialog = () => {
-    setEditingEntry(null);
-    setIsAddEditDialogOpen(true);
-  };
-
-  const handleOpenEditDialog = (entry: DistrictDataEntry) => {
-    setEditingEntry(entry);
-    setIsAddEditDialogOpen(true);
-  };
-  
   const handleDataSaved = () => {
     setIsAddEditDialogOpen(false);
     setEditingEntry(null);
@@ -169,9 +156,6 @@ export default function AllDistrictsDataPage() {
                       className="pl-10 bg-background h-10 rounded-md w-full"
                     />
                   </div>
-                  <Button className="h-10" onClick={handleOpenAddDialog}>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Data
-                  </Button>
                 </div>
               </div>
           </CardHeader>
@@ -186,14 +170,13 @@ export default function AllDistrictsDataPage() {
                     <TableHead className="text-xs py-2">Business Name</TableHead>
                     <TableHead className="text-xs py-2">Address</TableHead>
                     <TableHead className="text-xs py-2">Phone</TableHead>
-                    <TableHead className="pr-6 text-right text-xs py-2">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     [...Array(5)].map((_, i) => (
                       <TableRow key={i}>
-                        <TableCell colSpan={7} className="p-0"><Skeleton className="h-12 w-full"/></TableCell>
+                        <TableCell colSpan={6} className="p-0"><Skeleton className="h-12 w-full"/></TableCell>
                       </TableRow>
                     ))
                   ) : filteredData.length > 0 ? filteredData.map((divisionData, divisionIndex) => {
@@ -225,21 +208,13 @@ export default function AllDistrictsDataPage() {
                             <TableCell className="py-0 px-4">{entry.businessName}</TableCell>
                             <TableCell className="py-0 px-4">{entry.address}</TableCell>
                             <TableCell className="py-0 px-4">{entry.phone}</TableCell>
-                            <TableCell className="py-0 px-4 pr-6 text-right">
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-primary" onClick={() => handleOpenEditDialog(entry)}>
-                                  <Edit className="h-3 w-3" />
-                              </Button>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive">
-                                  <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </TableCell>
                           </TableRow>
                         );
                       });
                     });
                   }) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center">
+                      <TableCell colSpan={6} className="h-24 text-center">
                         No results found{searchTerm ? ` for "${searchTerm}"` : ''}.
                       </TableCell>
                     </TableRow>
