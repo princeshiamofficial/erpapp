@@ -1,8 +1,11 @@
 
 "use client";
 
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 
 const districtsData = [
   {
@@ -78,6 +81,34 @@ const districtsData = [
 ];
 
 export default function AllDistrictsDataPage() {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredData = useMemo(() => {
+    if (!searchTerm) {
+      return districtsData;
+    }
+
+    const lowercasedSearchTerm = searchTerm.toLowerCase();
+
+    return districtsData.map(division => {
+      const filteredDistricts = division.districts.map(district => {
+        const filteredEntries = district.entries.filter(entry =>
+          entry.jobId.toLowerCase().includes(lowercasedSearchTerm) ||
+          entry.businessName.toLowerCase().includes(lowercasedSearchTerm) ||
+          entry.address.toLowerCase().includes(lowercasedSearchTerm) ||
+          entry.phone.toLowerCase().includes(lowercasedSearchTerm) ||
+          district.name.toLowerCase().includes(lowercasedSearchTerm) ||
+          division.division.toLowerCase().includes(lowercasedSearchTerm)
+        );
+        return { ...district, entries: filteredEntries };
+      }).filter(district => district.entries.length > 0);
+
+      return { ...division, districts: filteredDistricts };
+    }).filter(division => division.districts.length > 0);
+
+  }, [searchTerm]);
+
+
   return (
     <div className="space-y-6 px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
@@ -90,17 +121,30 @@ export default function AllDistrictsDataPage() {
       </div>
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
-          <CardTitle>District Data</CardTitle>
-          <CardDescription>
-            A comprehensive list of data for all divisions and their respective districts.
-          </CardDescription>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex-grow">
+                  <CardTitle>District Data</CardTitle>
+                  <CardDescription>
+                    A comprehensive list of data for all divisions and their respective districts.
+                  </CardDescription>
+              </div>
+              <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search table..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-background h-10 rounded-md w-full"
+                />
+              </div>
+            </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[180px] text-base pl-6">Division</TableHead>
+                  <TableHead className="w-[200px] text-base pl-6">Division</TableHead>
                   <TableHead className="w-[180px] text-base">District</TableHead>
                   <TableHead>Job ID</TableHead>
                   <TableHead>Business Name</TableHead>
@@ -109,7 +153,7 @@ export default function AllDistrictsDataPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {districtsData.map((divisionData, divisionIndex) => {
+                {filteredData.length > 0 ? filteredData.map((divisionData, divisionIndex) => {
                   const totalRowsForDivision = divisionData.districts.reduce((sum, d) => sum + d.entries.length, 0);
                   let isFirstRowOfDivision = true;
 
@@ -143,7 +187,13 @@ export default function AllDistrictsDataPage() {
                       );
                     });
                   });
-                })}
+                }) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                      No results found for "{searchTerm}".
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
