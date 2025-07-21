@@ -198,28 +198,28 @@ export default function AllDistrictsDataPage() {
 
                       return districtData.entries.map((entry, entryIndex) => {
                         const divisionCell = isFirstDivisionRow ? (
-                          <TableCell rowSpan={divisionData.districts.reduce((sum, d) => sum + d.entries.length, 0)} className="align-top font-semibold text-card-foreground border-r bg-muted/30 py-1 px-4 text-base pl-6">
+                          <TableCell rowSpan={divisionData.districts.reduce((sum, d) => sum + d.entries.length, 0)} className="align-top font-semibold text-card-foreground border-r bg-muted/30 py-0 px-4 text-base pl-6">
                             {divisionData.division}
                           </TableCell>
                         ) : null;
                         isFirstDivisionRow = false;
 
                         const districtCell = isFirstDistrictRow ? (
-                          <TableCell rowSpan={districtData.entries.length} className="align-top text-muted-foreground border-r py-1 px-4 font-medium">
+                          <TableCell rowSpan={districtData.entries.length} className="align-top text-muted-foreground border-r py-0 px-4 font-medium">
                             {districtData.name}
                           </TableCell>
                         ) : null;
                         isFirstDistrictRow = false;
 
                         return (
-                          <TableRow key={`${divisionIndex}-${districtIndex}-${entryIndex}`} className="hover:bg-muted/50">
+                          <TableRow key={`${divisionIndex}-${districtIndex}-${entryIndex}`} className="hover:bg-muted/50 text-xs">
                             {divisionCell}
                             {districtCell}
-                            <TableCell className="py-1 px-4">{entry.jobId}</TableCell>
-                            <TableCell className="py-1 px-4">{entry.businessName}</TableCell>
-                            <TableCell className="py-1 px-4">{entry.address}</TableCell>
-                            <TableCell className="py-1 px-4">{entry.phone}</TableCell>
-                            <TableCell className="py-1 px-4 pr-6 text-right">
+                            <TableCell className="py-0 px-4">{entry.jobId}</TableCell>
+                            <TableCell className="py-0 px-4">{entry.businessName}</TableCell>
+                            <TableCell className="py-0 px-4">{entry.address}</TableCell>
+                            <TableCell className="py-0 px-4">{entry.phone}</TableCell>
+                            <TableCell className="py-0 px-4 pr-6 text-right">
                               <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => handleOpenEditDialog(entry)}>
                                   <Edit className="h-4 w-4" />
                               </Button>
