@@ -48,10 +48,10 @@ const navItems: NavItem[] = [
     isHeader: true,
     label: "CRM", 
     icon: Shield, 
-    roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"], 
+    roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"], 
     href: "",
     subItems: [
-      { href: "/pipeline", label: "Pipe Line", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
+      { href: "/pipeline", label: "Pipe Line", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
       { href: "/crm/all-districts-data", label: "All Districts Data", icon: Map, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
     ]
   },
