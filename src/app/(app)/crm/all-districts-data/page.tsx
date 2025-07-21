@@ -39,9 +39,13 @@ const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
             divisionMap[divisionName][districtName] = [];
         }
 
+        const companyNameParts = order.companyName.split('•').map(part => part.trim());
+        const jobId = companyNameParts.length > 1 ? companyNameParts[0] : order.id;
+        const businessName = companyNameParts.length > 1 ? companyNameParts.slice(1).join(' • ').trim() : order.companyName;
+
         divisionMap[divisionName][districtName].push({
-            jobId: order.id,
-            businessName: order.companyName,
+            jobId: jobId,
+            businessName: businessName,
             address: order.address,
             phone: order.phoneNumber,
         });
