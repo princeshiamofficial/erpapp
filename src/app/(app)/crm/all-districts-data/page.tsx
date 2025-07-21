@@ -18,8 +18,7 @@ import Papa from 'papaparse';
 const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
     const divisionMap: Record<string, Record<string, DistrictDataEntry[]>> = {};
 
-    // Helper to clean up strings for looser matching
-    const simplifyString = (str: string) => str.replace(/['’.]/g, '').toLowerCase();
+    const simplifyString = (str: string) => str.replace(/['’.,]/g, '').toLowerCase();
 
     orders.forEach(order => {
         let longestMatch: { name: string; division: string; } | null = null;
@@ -28,10 +27,13 @@ const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
 
         for (const div of divisions) {
             for (const dist of div.districts) {
-                const simplifiedDistName = simplifyString(dist.name);
-                if (simplifiedAddress.includes(simplifiedDistName)) {
-                    if (!longestMatch || simplifiedDistName.length > simplifyString(longestMatch.name).length) {
-                        longestMatch = { name: dist.name, division: div.division };
+                const namesToMatch = [dist.name, ...(dist.aliases || [])];
+                for (const name of namesToMatch) {
+                    const simplifiedDistName = simplifyString(name);
+                    if (simplifiedAddress.includes(simplifiedDistName)) {
+                        if (!longestMatch || simplifiedDistName.length > simplifyString(longestMatch.name).length) {
+                            longestMatch = { name: dist.name, division: div.division };
+                        }
                     }
                 }
             }
