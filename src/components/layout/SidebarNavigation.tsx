@@ -22,7 +22,8 @@ import {
   MessageCircle,
   Landmark,
   Shield, 
-  ChevronDown
+  ChevronDown,
+  Map // Added Map icon
 } from "lucide-react";
 import type { UserRole, GlobalSettings } from "@/types";
 import { cn } from "@/lib/utils";
@@ -51,6 +52,7 @@ const navItems: NavItem[] = [
     href: "",
     subItems: [
       { href: "/pipeline", label: "Pipe Line", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
+      { href: "/crm/all-districts-data", label: "All Districts Data", icon: Map, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
     ]
   },
   { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
@@ -168,12 +170,13 @@ export function SidebarNavigation() {
                       if (!subItem.roles.includes(userRole) || (subItem.href === "/finance-manager" && !canUserLogExpense)) {
                         return null;
                       }
+                      const isSubActive = subItem.href && (pathname === subItem.href || pathname.startsWith(subItem.href));
                       return (
                         <SidebarMenuSubItem key={subItem.href}>
                            <Link href={subItem.href} passHref legacyBehavior>
                             <SidebarMenuSubButton
                               asChild
-                              isActive={pathname.startsWith(subItem.href)}
+                              isActive={isSubActive}
                               disabled={subItem.disabled}
                             >
                                 <a className="flex items-center w-full">
