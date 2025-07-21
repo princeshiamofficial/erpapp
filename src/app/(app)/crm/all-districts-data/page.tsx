@@ -5,12 +5,14 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Search, FileSpreadsheet } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, DistrictDataEntry, DivisionData } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { divisions } from '@/lib/district-data';
+import Papa from 'papaparse';
 
 
 const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
@@ -117,6 +119,44 @@ export default function AllDistrictsDataPage() {
 
   }, [districtData, searchTerm]);
 
+  const handleExport = () => {
+    if (filteredData.length === 0) {
+      toast({
+        title: "No Data to Export",
+        description: "There is no data matching the current filters.",
+      });
+      return;
+    }
+
+    const flattenedData = filteredData.flatMap(division =>
+      division.districts.flatMap(district =>
+        district.entries.map(entry => ({
+          Division: division.division,
+          District: district.name,
+          'Job ID': entry.jobId,
+          'Business Name': entry.businessName,
+          Address: entry.address,
+          Phone: entry.phone,
+        }))
+      )
+    );
+
+    const csv = Papa.unparse(flattenedData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'districts_data_export.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export Successful",
+      description: "District data has been downloaded as a CSV file.",
+    });
+  };
 
   return (
     <>
@@ -148,6 +188,15 @@ export default function AllDistrictsDataPage() {
                       className="pl-10 bg-background h-10 rounded-md w-full"
                     />
                   </div>
+                  <Button
+                    onClick={handleExport}
+                    variant="outline"
+                    className="h-10 w-full sm:w-auto"
+                    disabled={isLoading}
+                  >
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Export
+                  </Button>
                 </div>
               </div>
           </CardHeader>
