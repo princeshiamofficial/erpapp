@@ -53,7 +53,13 @@ const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
         });
     });
 
-    return Object.entries(divisionMap).map(([division, districts]) => ({
+    const sortedDivisions = Object.entries(divisionMap).sort(([divisionA], [divisionB]) => {
+      if (divisionA === 'Unknown') return 1;
+      if (divisionB === 'Unknown') return -1;
+      return divisionA.localeCompare(divisionB);
+    });
+
+    return sortedDivisions.map(([division, districts]) => ({
         division,
         districts: Object.entries(districts).map(([name, entries]) => ({
             name,
