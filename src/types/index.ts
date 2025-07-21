@@ -270,3 +270,20 @@ export interface Lead {
   crmId: string;
   crmName: string;
 }
+
+export interface DistrictDataEntry {
+    jobId: string;
+    businessName: string;
+    address: string;
+    phone: string;
+}
+
+export interface DistrictInfo {
+    name: string;
+    entries: DistrictDataEntry[];
+}
+
+export interface DivisionData {
+    division: string;
+    districts: DistrictInfo[];
+}
