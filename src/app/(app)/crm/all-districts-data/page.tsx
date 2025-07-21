@@ -18,10 +18,12 @@ import Papa from 'papaparse';
 const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
     const divisionMap: Record<string, Record<string, DistrictDataEntry[]>> = {};
 
-    const simplifyString = (str: string) => str.replace(/['’.,]/g, '').toLowerCase();
+    // More aggressive simplification for robust matching
+    const simplifyString = (str: string) => str.replace(/['’.,\s-]/g, '').toLowerCase();
 
     orders.forEach(order => {
         let longestMatch: { name: string; division: string; } | null = null;
+        let longestMatchLength = 0;
         
         const simplifiedAddress = simplifyString(order.address);
 
@@ -30,8 +32,9 @@ const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
                 const namesToMatch = [dist.name, ...(dist.aliases || [])];
                 for (const name of namesToMatch) {
                     const simplifiedDistName = simplifyString(name);
-                    if (simplifiedAddress.includes(simplifiedDistName)) {
-                        if (!longestMatch || simplifiedDistName.length > simplifyString(longestMatch.name).length) {
+                    if (simplifiedDistName.length > 0 && simplifiedAddress.includes(simplifiedDistName)) {
+                        if (simplifiedDistName.length > longestMatchLength) {
+                            longestMatchLength = simplifiedDistName.length;
                             longestMatch = { name: dist.name, division: div.division };
                         }
                     }
@@ -234,14 +237,14 @@ export default function AllDistrictsDataPage() {
 
                       return districtData.entries.map((entry, entryIndex) => {
                         const divisionCell = isFirstDivisionRow ? (
-                          <TableCell rowSpan={divisionData.districts.reduce((sum, d) => sum + d.entries.length, 0)} className="align-top font-semibold text-card-foreground border-r bg-muted/30 py-3 px-4 text-sm pl-6">
+                          <TableCell rowSpan={divisionData.districts.reduce((sum, d) => sum + d.entries.length, 0)} className="align-top font-semibold text-card-foreground border-r bg-muted/30 py-4 px-4 text-sm pl-6">
                             {divisionData.division}
                           </TableCell>
                         ) : null;
                         isFirstDivisionRow = false;
 
                         const districtCell = isFirstDistrictRow ? (
-                          <TableCell rowSpan={districtData.entries.length} className="align-top text-muted-foreground border-r py-3 px-4 text-sm">
+                          <TableCell rowSpan={districtData.entries.length} className="align-top text-muted-foreground border-r py-4 px-4 text-sm">
                             {districtData.name}
                           </TableCell>
                         ) : null;
@@ -251,10 +254,10 @@ export default function AllDistrictsDataPage() {
                           <TableRow key={`${divisionIndex}-${districtIndex}-${entryIndex}`} className="hover:bg-muted/50 text-sm">
                             {divisionCell}
                             {districtCell}
-                            <TableCell className="py-2.5 px-4">{entry.jobId}</TableCell>
-                            <TableCell className="py-2.5 px-4">{entry.businessName}</TableCell>
-                            <TableCell className="py-2.5 px-4">{entry.address}</TableCell>
-                            <TableCell className="py-2.5 px-4">{entry.phone}</TableCell>
+                            <TableCell className="py-3 px-4">{entry.jobId}</TableCell>
+                            <TableCell className="py-3 px-4">{entry.businessName}</TableCell>
+                            <TableCell className="py-3 px-4">{entry.address}</TableCell>
+                            <TableCell className="py-3 px-4">{entry.phone}</TableCell>
                           </TableRow>
                         );
                       });
