@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet, Loader2, UploadCloud, User as UserIcon } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet, Loader2, UploadCloud, User as UserIcon, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -28,6 +28,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 
 type Category = 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
@@ -200,25 +201,28 @@ export default function PipeLinePage() {
             </p>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => setIsImportOpen(true)}
-              className="w-full sm:w-auto h-10"
-            >
-              <UploadCloud className="mr-2 h-4 w-4" />
-              Import from Sheet
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={handleExport}
-              className="w-full sm:w-auto h-10"
-              disabled={filteredLeads.length === 0}
-            >
-              <FileSpreadsheet className="mr-2 h-4 w-4" />
-              Export to Sheet
-            </Button>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button
+                        size="lg"
+                        variant="outline"
+                        className="w-full sm:w-auto h-10"
+                    >
+                        <FileSpreadsheet className="mr-2 h-4 w-4" />
+                        Sheet Actions
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem onSelect={() => setIsImportOpen(true)} className="cursor-pointer">
+                        <UploadCloud className="mr-2 h-4 w-4" />
+                        Import from Sheet
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={handleExport} disabled={filteredLeads.length === 0} className="cursor-pointer">
+                        <Download className="mr-2 h-4 w-4" />
+                        Export to Sheet
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               size="lg"
               onClick={handleOpenAddDialog}
