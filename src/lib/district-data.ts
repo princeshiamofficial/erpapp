@@ -1,7 +1,9 @@
 
 export type District = {
   name: string;
-  thanas?: string[]; // Optional thanas
+  // Thanas are now optional and not included in the default data structure for simplicity.
+  // They can be added later if needed.
+  thanas?: string[];
 };
 
 export type Division = {
@@ -9,89 +11,47 @@ export type Division = {
   districts: District[];
 };
 
-export const divisions: Division[] = [
+// Data based on the provided JSON structure for divisions and districts of Bangladesh.
+const divisionData = [
   {
-    division: 'Dhaka Division',
-    districts: [
-      {
-        name: 'Dhaka',
-        thanas: [
-          'Dhanmondi', 'Tejgaon', 'Gulshan', 'Banani', 'Uttara East', 'Uttara West', 'Mirpur', 'Pallabi', 'Mohammadpur', 'Badda', 'Rampura', 'Shahbagh', 'Motijheel', 'Paltan', 'Wari', 'Kotwali', 'Hazaribagh', 'Kalabagan', 'New Market', 'Sabujbagh', 'Khilgaon', 'Khilkhet', 'Turag', 'Jatrabari', 'Demra'
-        ],
-      },
-      {
-        name: 'Gazipur',
-        thanas: [
-          'Bason', 'Gacha', 'Joydebpur', 'Kashimpur', 'Konabari', 'Pubail', 'Tongi East', 'Tongi West', 'Kaliakoir', 'Kaliganj', 'Kapasia', 'Sreepur', 'Tongi'
-        ],
-      },
-      {
-        name: 'Kishoreganj',
-        thanas: [
-          'Kishoreganj', 'Karimganj', 'Tarail', 'Hossainpur', 'Pakundia', 'Katiadi', 'Bajitpur', 'Kuliarchar', 'Bhairab', 'Austagram', 'Mithamoin', 'Itna', 'Nikli'
-        ],
-      },
-      {
-        name: 'Manikganj',
-        thanas: [
-          'Manikganj Sadar', 'Singair', 'Saturia', 'Harirampur', 'Shibalaya (Shibaloy)', 'Daulatpur', 'Ghior'
-        ],
-      },
-      {
-        name: 'Munshiganj',
-        thanas: [
-          'Gazaria', 'Lohajang (Louhajang)', 'Munshiganj Sadar', 'Sirajdikhan', 'Sreenagar', 'Tongibari'
-        ],
-      },
-      {
-        name: 'Narayanganj',
-        thanas: [
-          'Narayanganj', 'Fatulla Model', 'Siddhirganj', 'Bandar', 'Rupganj', 'Sonargaon', 'Araihazar'
-        ],
-      },
-      {
-        name: 'Narsingdi',
-        thanas: [
-          'Narsingdi', 'Raipura', 'Shibpur', 'Belabo', 'Monohardi (Monohordi)', 'Palash'
-        ],
-      },
-      {
-        name: 'Tangail',
-        thanas: [
-          'Tangail', 'Delduar', 'Nagarpur', 'Mirzapur', 'Basail', 'Sakhipur', 'Kalihati', 'Ghatail', 'Madhupur', 'Dhanbari', 'Gopalpur', 'Bhuapur', 'Jamuna'
-        ],
-      },
-      {
-        name: 'Faridpur',
-        thanas: [
-          'Kotwali', 'Madhukhali', 'Boalmari', 'Alfadanga', 'Nagarkanda', 'Bhanga (Vanga)', 'Sadarpur', 'Saltha', 'Char Bhadrasan'
-        ],
-      },
-      {
-        name: 'Gopalganj',
-        thanas: [
-          'Gopalganj', 'Kotalipara', 'Kashiani', 'Muksudpur', 'Tungipara'
-        ],
-      },
-      {
-        name: 'Madaripur',
-        thanas: [
-          'Madaripur/Shibchar', 'Kalkini', 'Rajoir', 'Dasar'
-        ],
-      },
-      {
-        name: 'Rajbari',
-        thanas: [
-          'Rajbari', 'Goalanda', 'Pangsha', 'Baliakandi', 'Kalukhali'
-        ],
-      },
-      {
-        name: 'Shariatpur',
-        thanas: [
-          'Shariatpur', 'Damudya', 'Naria', 'Zanjira (Janjira)', 'Bhedarganj', 'Gosairhat', 'Vedorgaon (Vedorgonj/Sakhipur)'
-        ],
-      },
-    ],
+    "name": "Dhaka",
+    "districts": [ "Dhaka", "Faridpur", "Gazipur", "Gopalganj", "Kishoreganj", "Madaripur", "Manikganj", "Munshiganj", "Narayanganj", "Narsingdi", "Rajbari", "Shariatpur", "Tangail" ]
   },
-  // Add other divisions here if needed
+  {
+    "name": "Chattogram",
+    "districts": [ "Chattogram", "Cox’s Bazar", "Cumilla", "Brahmanbaria", "Chandpur", "Feni", "Lakshmipur", "Noakhali", "Khagrachari", "Bandarban", "Rangamati" ]
+  },
+  {
+    "name": "Khulna",
+    "districts": [ "Khulna", "Bagerhat", "Satkhira", "Jessore", "Jhenaidah", "Magura", "Narail", "Chuadanga", "Meherpur", "Kushtia" ]
+  },
+  {
+    "name": "Rajshahi",
+    "districts": [ "Rajshahi", "Bogura", "Chapainawabganj", "Joypurhat", "Naogaon", "Natore", "Pabna", "Sirajganj" ]
+  },
+  {
+    "name": "Barishal",
+    "districts": [ "Barishal", "Barguna", "Bhola", "Jhalokathi", "Patuakhali", "Pirojpur" ]
+  },
+  {
+    "name": "Sylhet",
+    "districts": [ "Sylhet", "Habiganj", "Moulvibazar", "Sunamganj" ]
+  },
+  {
+    "name": "Rangpur",
+    "districts": [ "Rangpur", "Dinajpur", "Kurigram", "Gaibandha", "Lalmonirhat", "Nilphamari", "Panchagarh", "Thakurgaon" ]
+  },
+  {
+    "name": "Mymensingh",
+    "districts": [ "Mymensingh", "Jamalpur", "Netrokona", "Sherpur" ]
+  }
 ];
+
+// Transform the raw data to match the expected 'Division' type structure.
+export const divisions: Division[] = divisionData.map(division => ({
+  division: division.name, // The top-level name is the division name
+  districts: division.districts.map(districtName => ({
+    name: districtName,
+    thanas: [] // Thanas array is initialized as empty for future use
+  }))
+}));
