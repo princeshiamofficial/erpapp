@@ -390,16 +390,17 @@ export default function PipeLinePage() {
                         <ChartContainer config={leadsChartConfig} className="mx-auto aspect-square w-full max-w-[300px]">
                           <RechartsPieChart>
                               <ChartTooltip
-                              cursor={false}
-                              content={<ChartTooltipContent hideLabel />}
+                                cursor={false}
+                                content={<ChartTooltipContent hideLabel />}
                               />
                               <Pie
                                   data={leadsByCategoryChartData}
                                   dataKey="value"
                                   nameKey="name"
                                   innerRadius={60}
-                                  strokeWidth={2}
+                                  strokeWidth={5}
                                   label={({ cx, cy }) => {
+                                      if (isNaN(cx) || isNaN(cy)) return null;
                                       return (
                                           <text
                                               x={cx}
@@ -426,8 +427,6 @@ export default function PipeLinePage() {
                                       )
                                   }}
                                   labelLine={false}
-                                  animationBegin={100}
-                                  animationDuration={500}
                               >
                               {leadsByCategoryChartData.map((entry) => (
                                   <Cell
