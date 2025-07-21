@@ -33,7 +33,7 @@ const rawData = {
     {
       "name": "Chattogram (চট্টগ্রাম)",
       "districts": [
-        "Chattogram (চট্টগ্রাম)",
+        "Chattogram (চট্টগ্রাম, Chittagong)",
         "Cox’s Bazar (কক্সবাজার)",
         "Cumilla (কুমিল্লা)",
         "Brahmanbaria (ব্রাহ্মণবাড়িয়া)",
@@ -123,8 +123,8 @@ const parseName = (nameString: string): { name: string; aliases: string[] } => {
   const match = nameString.match(/^(.*?)\s*\((.*?)\)$/);
   if (match) {
     const englishName = match[1].trim();
-    const bengaliName = match[2].trim();
-    const aliases = [bengaliName];
+    const otherNames = match[2].split(',').map(s => s.trim());
+    const aliases = [...otherNames];
 
     // Special handling for Cox's Bazar
     if (englishName.toLowerCase().includes("cox")) {
