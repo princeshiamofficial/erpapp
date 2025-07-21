@@ -3,7 +3,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 
 const districtsData = [
@@ -13,16 +12,16 @@ const districtsData = [
       {
         name: 'District 1',
         entries: [
-          { jobId: '', name: '', businessName: '', address: '', phone: '' },
-          { jobId: '', name: '', businessName: '', address: '', phone: '' },
-          { jobId: '', name: '', businessName: '', address: '', phone: '' },
+          { jobId: 'J001', name: 'Alice', businessName: 'Alice\'s Wonderland', address: '123 Main St', phone: '555-0101' },
+          { jobId: 'J002', name: 'Bob', businessName: 'Bob\'s Burgers', address: '456 Oak Ave', phone: '555-0102' },
+          { jobId: 'J003', name: 'Charlie', businessName: 'Charlie\'s Chocolate', address: '789 Pine Ln', phone: '555-0103' },
         ],
       },
       {
         name: 'District 2',
         entries: [
-          { jobId: '', name: '', businessName: '', address: '', phone: '' },
-          { jobId: '', name: '', businessName: '', address: '', phone: '' },
+          { jobId: 'J004', name: 'Diana', businessName: 'Diana\'s Diner', address: '101 Maple Dr', phone: '555-0104' },
+          { jobId: 'J005', name: 'Eve', businessName: 'Eve\'s Eatery', address: '212 Birch Rd', phone: '555-0105' },
         ],
       },
     ],
@@ -31,19 +30,19 @@ const districtsData = [
     division: 'Division 2',
     districts: [
       {
-        name: 'District 1',
+        name: 'District 3',
         entries: [
-          { jobId: '', name: '', businessName: '', address: '', phone: '' },
-          { jobId: '', name: '', businessName: '', address: '', phone: '' },
+          { jobId: 'J006', name: 'Frank', businessName: 'Frank\'s Fish', address: '321 Elm Ct', phone: '555-0106' },
+          { jobId: 'J007', name: 'Grace', businessName: 'Grace\'s Grill', address: '654 Spruce Blvd', phone: '555-0107' },
         ],
       },
       {
-        name: 'District 2',
+        name: 'District 4',
         entries: [
-          { jobId: '', name: '', businessName: '', address: '', phone: '' },
-          { jobId: '', name: '', businessName: '', address: '', phone: '' },
-          { jobId: '', name: '', businessName: '', address: '', phone: '' },
-          { jobId: '', name: '', businessName: '', address: '', phone: '' },
+          { jobId: 'J008', name: 'Heidi', businessName: 'Heidi\'s Hangar', address: '987 Cedar Way', phone: '555-0108' },
+          { jobId: 'J009', name: 'Ivan', businessName: 'Ivan\'s Ice Cream', address: '111 Redwood St', phone: '555-0109' },
+          { jobId: 'J010', name: 'Judy', businessName: 'Judy\'s Juices', address: '222 Aspen Ave', phone: '555-0110' },
+          { jobId: 'J011', name: 'Mallory', businessName: 'Mallory\'s Market', address: '333 Willow Ln', phone: '555-0111' },
         ],
       },
     ],
@@ -52,20 +51,20 @@ const districtsData = [
 
 export default function AllDistrictsDataPage() {
   return (
-    <div className="space-y-6 p-1 sm:p-0">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
         <div>
           <h1 className="page-title">All Districts Data</h1>
           <p className="page-description">
-            View and manage district information.
+            View and manage district information across all divisions.
           </p>
         </div>
       </div>
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-        <CardHeader>
+        <CardHeader className="border-b p-5">
           <CardTitle>District Data</CardTitle>
           <CardDescription>
-            Data for all divisions and districts.
+            A comprehensive list of data for all divisions and their respective districts.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -73,13 +72,13 @@ export default function AllDistrictsDataPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[150px]">Division</TableHead>
-                  <TableHead className="w-[150px]">District</TableHead>
+                  <TableHead className="w-[180px] text-base pl-6">Division</TableHead>
+                  <TableHead className="w-[180px] text-base">District</TableHead>
                   <TableHead>Job ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Business Name</TableHead>
                   <TableHead>Address</TableHead>
-                  <TableHead>Phone</TableHead>
+                  <TableHead className="pr-6">Phone</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -92,28 +91,28 @@ export default function AllDistrictsDataPage() {
 
                     return districtData.entries.map((entry, entryIndex) => {
                       const divisionCell = isFirstRowOfDivision ? (
-                        <TableCell rowSpan={totalRowsForDivision} className="align-top font-semibold text-card-foreground border-r">
+                        <TableCell rowSpan={totalRowsForDivision} className="align-top font-semibold text-card-foreground border-r bg-muted/30 p-4 text-base pl-6">
                           {divisionData.division}
                         </TableCell>
                       ) : null;
                       isFirstRowOfDivision = false;
 
                       const districtCell = isFirstRowOfDistrict ? (
-                        <TableCell rowSpan={districtData.entries.length} className="align-top text-muted-foreground border-r">
+                        <TableCell rowSpan={districtData.entries.length} className="align-top text-muted-foreground border-r p-4 font-medium">
                           {districtData.name}
                         </TableCell>
                       ) : null;
                       isFirstRowOfDistrict = false;
 
                       return (
-                        <TableRow key={`${divisionIndex}-${districtIndex}-${entryIndex}`}>
+                        <TableRow key={`${divisionIndex}-${districtIndex}-${entryIndex}`} className="hover:bg-muted/50">
                           {divisionCell}
                           {districtCell}
-                          <TableCell><Input className="h-8" value={entry.jobId} readOnly /></TableCell>
-                          <TableCell><Input className="h-8" value={entry.name} readOnly /></TableCell>
-                          <TableCell><Input className="h-8" value={entry.businessName} readOnly /></TableCell>
-                          <TableCell><Input className="h-8" value={entry.address} readOnly /></TableCell>
-                          <TableCell><Input className="h-8" value={entry.phone} readOnly /></TableCell>
+                          <TableCell className="p-4">{entry.jobId}</TableCell>
+                          <TableCell className="p-4">{entry.name}</TableCell>
+                          <TableCell className="p-4">{entry.businessName}</TableCell>
+                          <TableCell className="p-4">{entry.address}</TableCell>
+                          <TableCell className="p-4 pr-6">{entry.phone}</TableCell>
                         </TableRow>
                       );
                     });
