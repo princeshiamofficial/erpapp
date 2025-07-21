@@ -1,5 +1,4 @@
 
-
 export type UserRole = "ADMIN" | "CRM" | "DESIGNER_REPRESENTATIVE" | "SYSTEM_ADMIN" | "VENDOR" | "LR";
 
 export interface User {
@@ -286,4 +285,17 @@ export interface DistrictInfo {
 export interface DivisionData {
     division: string;
     districts: DistrictInfo[];
+}
+
+export type PurchaseRequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Purchased';
+
+export interface PurchaseRequest {
+  id: string;
+  date: string; // ISO string
+  item: string;
+  quantity: number;
+  status: PurchaseRequestStatus;
+  requestedByUserId: string;
+  requestedByUserName: string;
+  notes?: string | null;
 }
