@@ -21,11 +21,12 @@ const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
     orders.forEach(order => {
         let foundDistrict: { name: string; division: string; } | null = null;
         
-        const addressParts = order.address.toLowerCase().split(/[\s,]+/).map(p => p.trim().replace(/[.,!?:;]$/, ''));
+        const lowercasedAddress = order.address.toLowerCase();
 
         for (const div of divisions) {
             for (const dist of div.districts) {
-                if (addressParts.includes(dist.name.toLowerCase())) {
+                // Check if the full district name (lowercased) is present in the address string
+                if (lowercasedAddress.includes(dist.name.toLowerCase())) {
                     foundDistrict = { name: dist.name, division: div.division };
                     break;
                 }
