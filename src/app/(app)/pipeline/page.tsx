@@ -30,7 +30,7 @@ import { format } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
-import { Pie, PieChart as RechartsPieChart, Cell, Bar, BarChart, CartesianGrid, XAxis, LabelList, Label } from "recharts";
+import { Pie, PieChart as RechartsPieChart, Cell, Label } from "recharts";
 import { getUsers } from '@/lib/user-service';
 
 
@@ -79,7 +79,7 @@ export default function PipeLinePage() {
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  const [viewMode, setViewMode] = useState<'table' | 'chart' | 'graph'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
 
   const fetchLeadsAndUsers = useCallback(async () => {
     if (!currentUser) return;
@@ -143,20 +143,6 @@ export default function PipeLinePage() {
       value,
       fill: categoryChartColors[name as Category] || "#8884d8",
     })).sort((a,b) => b.value - a.value);
-  }, [filteredLeads]);
-  
-  const leadsByDayGraphData = useMemo(() => {
-    const dayCounts: Record<string, number> = {};
-    filteredLeads.forEach(lead => {
-        try {
-            const day = format(new Date(lead.date), 'yyyy-MM-dd');
-            dayCounts[day] = (dayCounts[day] || 0) + 1;
-        } catch(e) { /* ignore invalid dates */ }
-    });
-    return Object.entries(dayCounts).map(([date, count]) => ({
-      date,
-      count
-    })).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [filteredLeads]);
 
 
@@ -258,12 +244,8 @@ export default function PipeLinePage() {
     }
   };
   
-  const cycleViewMode = () => {
-    setViewMode(prev => {
-        if (prev === 'table') return 'chart';
-        if (prev === 'chart') return 'graph';
-        return 'table';
-    });
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'table' ? 'chart' : 'table');
   };
 
   const renderCurrentView = () => {
@@ -282,11 +264,11 @@ export default function PipeLinePage() {
                           data={leadsByCategoryChartData}
                           dataKey="value"
                           nameKey="name"
-                          innerRadius={60}
-                          strokeWidth={5}
+                          innerRadius={80}
+                          strokeWidth={2}
                       >
                        {leadsByCategoryChartData.map((entry) => (
-                           <Cell key={`cell-${entry.name}`} fill={leadsChartConfig[entry.name as Category]?.color} className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"/>
+                           <Cell key={`cell-${entry.name}`} fill={entry.fill} className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"/>
                        ))}
                        <Label
                           content={({ viewBox }) => {
@@ -328,34 +310,6 @@ export default function PipeLinePage() {
         }
         </div>
       );
-    }
-    
-    if (viewMode === 'graph') {
-        return (
-            <div className="p-4 sm:p-6 h-[450px] flex flex-col items-center justify-center">
-                {isLoading ? <Skeleton className="h-full w-full" /> :
-                leadsByDayGraphData.length > 0 ? (
-                   <ChartContainer config={{count: {label: "Leads"}}} className="w-full h-full">
-                        <BarChart data={leadsByDayGraphData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
-                            <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                            <XAxis 
-                                dataKey="date" 
-                                tickLine={false}
-                                axisLine={false}
-                                tickMargin={8}
-                                tickFormatter={(value) => format(new Date(value), 'd MMM')}
-                            />
-                            <ChartTooltip content={<ChartTooltipContent />} />
-                            <Bar dataKey="count" fill="hsl(var(--primary))" radius={4}>
-                                <LabelList position="top" offset={5} className="fill-foreground" fontSize={12} />
-                            </Bar>
-                        </BarChart>
-                    </ChartContainer>
-                ) : (
-                    <div className="text-center text-muted-foreground"><p>No data to display in graph.</p></div>
-                )}
-            </div>
-        );
     }
 
     return (
@@ -469,11 +423,10 @@ export default function PipeLinePage() {
                 size="lg"
                 variant="outline"
                 className="w-full sm:w-auto h-10"
-                onClick={cycleViewMode}
+                onClick={toggleViewMode}
             >
                 {viewMode === 'table' && <><BarChart3 className="mr-2 h-4 w-4" />View Chart</>}
-                {viewMode === 'chart' && <><BarChart3 className="mr-2 h-4 w-4" />View Graph</>}
-                {viewMode === 'graph' && <><TableIcon className="mr-2 h-4 w-4" />View Table</>}
+                {viewMode === 'chart' && <><TableIcon className="mr-2 h-4 w-4" />View Table</>}
             </Button>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
