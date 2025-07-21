@@ -1,16 +1,15 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet, Loader2, UploadCloud, User as UserIcon, Download, BarChart3, TableIcon } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet, Loader2, UploadCloud, User as UserIconLucide, Download, BarChart3, TableIcon, ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
-import type { Lead } from '@/types';
+import type { Lead, User } from '@/types';
 import { getLeads, deleteLeadAction } from './actions';
 import { AddEditLeadDialog } from '@/components/pipeline/AddEditLeadDialog';
 import { ImportLeadsDialog } from '@/components/pipeline/ImportLeadsDialog';
@@ -30,7 +29,8 @@ import { format } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
-import { Pie, PieChart as RechartsPieChart, Cell } from "recharts";
+import { Pie, PieChart as RechartsPieChart, Cell, Bar, BarChart, CartesianGrid, XAxis, LabelList } from "recharts";
+import { getUsers } from '@/lib/user-service';
 
 
 type Category = 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
@@ -66,6 +66,9 @@ export default function PipeLinePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const { currentUser } = useAuth();
+  
+  const [allCrmUsers, setAllCrmUsers] = useState<User[]>([]);
+  const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
 
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -75,28 +78,44 @@ export default function PipeLinePage() {
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'chart' | 'graph'>('table');
 
-  const fetchLeads = useCallback(async () => {
+  const fetchLeadsAndUsers = useCallback(async () => {
+    if (!currentUser) return;
     setIsLoading(true);
     try {
-      const fetchedLeads = await getLeads();
+      const promises: [Promise<Lead[]>, Promise<User[]>?] = [getLeads()];
+      if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
+        promises.push(getUsers());
+      }
+      const [fetchedLeads, fetchedUsers] = await Promise.all(promises);
+
       setLeads(fetchedLeads.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+
+      if (fetchedUsers) {
+        setAllCrmUsers(fetchedUsers.filter(u => u.role === 'CRM'));
+      }
+
     } catch (error) {
-      toast({ title: "Error fetching leads", description: "Could not load pipeline data.", variant: "destructive" });
+      toast({ title: "Error fetching data", description: "Could not load pipeline or user data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, currentUser]);
 
   useEffect(() => {
-    fetchLeads();
-  }, [fetchLeads]);
+    fetchLeadsAndUsers();
+  }, [fetchLeadsAndUsers]);
 
   const filteredLeads = useMemo(() => {
     let roleFilteredLeads = leads;
+    
     if (currentUser?.role === 'CRM') {
       roleFilteredLeads = leads.filter(lead => lead.crmId === currentUser.id);
+    } else if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
+      if (selectedCrmId !== 'all') {
+        roleFilteredLeads = leads.filter(lead => lead.crmId === selectedCrmId);
+      }
     }
     
     if (!searchTerm) return roleFilteredLeads;
@@ -110,7 +129,7 @@ export default function PipeLinePage() {
       lead.category.toLowerCase().includes(lowercasedFilter) ||
       (lead.crmName && lead.crmName.toLowerCase().includes(lowercasedFilter))
     );
-  }, [leads, searchTerm, currentUser]);
+  }, [leads, searchTerm, currentUser, selectedCrmId]);
   
   const leadsByCategoryChartData = useMemo(() => {
     const categoryCounts = filteredLeads.reduce((acc, lead) => {
@@ -121,8 +140,24 @@ export default function PipeLinePage() {
     return Object.entries(categoryCounts).map(([name, value], index) => ({
       name,
       value,
+      fill: categoryChartColors[name as Category] || "#8884d8",
     })).sort((a,b) => b.value - a.value);
   }, [filteredLeads]);
+  
+  const leadsByDayGraphData = useMemo(() => {
+    const dayCounts: Record<string, number> = {};
+    filteredLeads.forEach(lead => {
+        try {
+            const day = format(new Date(lead.date), 'yyyy-MM-dd');
+            dayCounts[day] = (dayCounts[day] || 0) + 1;
+        } catch(e) { /* ignore invalid dates */ }
+    });
+    return Object.entries(dayCounts).map(([date, count]) => ({
+      date,
+      count
+    })).sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [filteredLeads]);
+
 
   const leadsChartConfig = useMemo(() => {
     const config: ChartConfig = {};
@@ -130,7 +165,7 @@ export default function PipeLinePage() {
       const categoryKey = item.name as Category;
       config[categoryKey] = {
         label: categoryKey,
-        color: categoryChartColors[categoryKey] || "#8884d8", // Fallback color
+        color: categoryChartColors[categoryKey],
       };
     });
     return config;
@@ -156,12 +191,12 @@ export default function PipeLinePage() {
   const handleLeadSaved = () => {
     setIsAddEditOpen(false);
     setEditingLead(null);
-    fetchLeads();
+    fetchLeadsAndUsers();
   };
   
   const handleLeadsImported = () => {
     setIsImportOpen(false);
-    fetchLeads();
+    fetchLeadsAndUsers();
   };
 
   const handleDeleteRequest = (lead: Lead) => {
@@ -178,7 +213,7 @@ export default function PipeLinePage() {
     const result = await deleteLeadAction(leadToDelete.id);
     if (result.success) {
       toast({ title: "Lead Deleted", description: `Lead "${leadToDelete.contactName}" has been removed.`});
-      fetchLeads();
+      fetchLeadsAndUsers();
     } else {
       toast({ title: "Error", description: result.error || "Could not delete lead.", variant: "destructive" });
     }
@@ -221,6 +256,194 @@ export default function PipeLinePage() {
       toast({ title: "Export Successful", description: "Your leads have been downloaded as a CSV file." });
     }
   };
+  
+  const cycleViewMode = () => {
+    setViewMode(prev => {
+        if (prev === 'table') return 'chart';
+        if (prev === 'chart') return 'graph';
+        return 'table';
+    });
+  };
+
+  const renderCurrentView = () => {
+    if (viewMode === 'chart') {
+      return (
+        <div className="p-4 sm:p-6 min-h-[400px] flex flex-col items-center justify-center">
+        {isLoading ? ( <Skeleton className="h-64 w-64 rounded-full" /> ) : 
+            leadsByCategoryChartData.length > 0 ? (
+                <ChartContainer config={leadsChartConfig} className="mx-auto aspect-square w-full max-w-[300px]">
+                  <RechartsPieChart>
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
+                      <Pie
+                          data={leadsByCategoryChartData}
+                          dataKey="value"
+                          nameKey="name"
+                          innerRadius={60}
+                          strokeWidth={5}
+                      >
+                       {leadsByCategoryChartData.map((entry) => (
+                           <Cell key={`cell-${entry.name}`} fill={entry.fill} className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"/>
+                       ))}
+                       <Label
+                          content={({ viewBox }) => {
+                              if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                                  return (
+                                      <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-center">
+                                          <tspan
+                                              x={viewBox.cx}
+                                              y={viewBox.cy - 10}
+                                              className="text-3xl font-bold"
+                                          >
+                                              {totalLeads.toLocaleString()}
+                                          </tspan>
+                                          <tspan
+                                              x={viewBox.cx}
+                                              y={viewBox.cy + 15}
+                                              className="text-sm text-muted-foreground"
+                                          >
+                                              Total Leads
+                                          </tspan>
+                                      </text>
+                                  )
+                              }
+                              return null;
+                          }}
+                        />
+                      </Pie>
+                  </RechartsPieChart>
+                   <ChartLegend
+                      content={<ChartLegendContent nameKey="name" />}
+                      className="-mt-4 flex-wrap gap-2 [&>*]:basis-1/3 [&>*]:justify-center"
+                  />
+                </ChartContainer>
+            ) : (
+                 <div className="text-center text-muted-foreground">
+                    <p>No data to display in chart.</p>
+                </div>
+            )
+        }
+        </div>
+      );
+    }
+    
+    if (viewMode === 'graph') {
+        return (
+            <div className="p-4 sm:p-6 h-[450px] flex flex-col items-center justify-center">
+                {isLoading ? <Skeleton className="h-full w-full" /> :
+                leadsByDayGraphData.length > 0 ? (
+                   <ChartContainer config={{count: {label: "Leads"}}} className="w-full h-full">
+                        <BarChart data={leadsByDayGraphData} margin={{ top: 20, right: 10, left: -20, bottom: 5 }}>
+                            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                            <XAxis 
+                                dataKey="date" 
+                                tickLine={false}
+                                axisLine={false}
+                                tickMargin={8}
+                                tickFormatter={(value) => format(new Date(value), 'd MMM')}
+                            />
+                            <ChartTooltip content={<ChartTooltipContent />} />
+                            <Bar dataKey="count" fill="hsl(var(--primary))" radius={4}>
+                                <LabelList position="top" offset={5} className="fill-foreground" fontSize={12} />
+                            </Bar>
+                        </BarChart>
+                    </ChartContainer>
+                ) : (
+                    <div className="text-center text-muted-foreground"><p>No data to display in graph.</p></div>
+                )}
+            </div>
+        );
+    }
+
+    return (
+        <div className="overflow-x-auto">
+        <Table>
+            <TableHeader>
+            <TableRow>
+                <TableHead className="pl-6 w-[120px]">Date</TableHead>
+                <TableHead className="min-w-[200px]">Name</TableHead>
+                <TableHead>Business Name</TableHead>
+                {currentUser?.role !== 'CRM' && <TableHead>Assigned To</TableHead>}
+                <TableHead>Phone</TableHead>
+                <TableHead>Source</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead className="max-w-[250px]">Notes</TableHead>
+                <TableHead className="pr-6 text-right">Action</TableHead>
+            </TableRow>
+            </TableHeader>
+            <TableBody>
+            {isLoading ? (
+                [...Array(5)].map((_, i) => (
+                <TableRow key={`skel-${i}`}>
+                    <TableCell colSpan={currentUser?.role !== 'CRM' ? 10 : 9} className="p-0"><Skeleton className="h-16 w-full"/></TableCell>
+                </TableRow>
+                ))
+            ) : filteredLeads.length > 0 ? (
+                filteredLeads.map((lead) => (
+                <TableRow key={lead.id} className="hover:bg-muted/50 transition-colors">
+                    <TableCell className="pl-6 text-muted-foreground text-xs whitespace-nowrap">{format(new Date(lead.date), 'd MMM yyyy')}</TableCell>
+                    <TableCell>
+                        <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9 text-sm border bg-muted shrink-0">
+                                <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(lead.contactName)}</AvatarFallback>
+                            </Avatar>
+                            <span className="text-foreground font-medium">{lead.contactName}</span>
+                        </div>
+                    </TableCell>
+                    <TableCell className="font-medium text-foreground">{lead.businessName}</TableCell>
+                    {currentUser?.role !== 'CRM' && (
+                        <TableCell className="text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1.5" title={lead.crmName}>
+                                <UserIconLucide className="h-3.5 w-3.5 shrink-0" />
+                                <span className="truncate">{lead.crmName}</span>
+                            </div>
+                        </TableCell>
+                    )}
+                    <TableCell className="text-muted-foreground">{lead.phone}</TableCell>
+                    <TableCell>
+                    <Badge variant="secondary">{lead.source}</Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{lead.address}</TableCell>
+                    <TableCell>
+                    <Badge className={cn(categoryColors[lead.category as Category] || 'bg-gray-100 text-gray-800')}>
+                        {lead.category}
+                    </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs truncate max-w-xs" title={lead.notes}>
+                    {lead.notes || 'N/A'}
+                    </TableCell>
+                    <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" title="Edit Lead" onClick={() => handleOpenEditDialog(lead)}>
+                        <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" title="Delete Lead" onClick={() => handleDeleteRequest(lead)}>
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                    </TableCell>
+                </TableRow>
+                ))
+            ) : (
+                <TableRow>
+                <TableCell colSpan={currentUser?.role !== 'CRM' ? 10 : 9} className="text-center py-12 h-[300px]">
+                    <p className="text-lg text-muted-foreground font-medium">No leads in the pipeline.</p>
+                    <p className="text-sm text-muted-foreground">Click "Add New Lead" to get started.</p>
+                </TableCell>
+                </TableRow>
+            )}
+            </TableBody>
+        </Table>
+        </div>
+    );
+  };
+
+  const selectedCrmName = useMemo(() => {
+    if (selectedCrmId === 'all') return "All CRs";
+    return allCrmUsers.find(u => u.id === selectedCrmId)?.name || "Select CR";
+  }, [selectedCrmId, allCrmUsers]);
+
 
   if (!currentUser) {
       return (
@@ -245,10 +468,11 @@ export default function PipeLinePage() {
                 size="lg"
                 variant="outline"
                 className="w-full sm:w-auto h-10"
-                onClick={() => setViewMode(prev => prev === 'table' ? 'chart' : 'table')}
+                onClick={cycleViewMode}
             >
-                {viewMode === 'table' ? <BarChart3 className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}
-                {viewMode === 'table' ? 'View Chart' : 'View Table'}
+                {viewMode === 'table' && <><BarChart3 className="mr-2 h-4 w-4" />View Chart</>}
+                {viewMode === 'chart' && <><BarChart3 className="mr-2 h-4 w-4" />View Graph</>}
+                {viewMode === 'graph' && <><TableIcon className="mr-2 h-4 w-4" />View Table</>}
             </Button>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -292,164 +516,40 @@ export default function PipeLinePage() {
                   {currentUser.role === 'CRM' ? "Displaying your assigned leads." : "All potential leads are listed here."}
                 </CardDescription>
               </div>
-              <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search pipeline..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-background h-10 rounded-md w-full"
-                />
+              <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+                {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full sm:w-auto flex-shrink-0 h-10">
+                        <UserIconLucide className="mr-2 h-4 w-4 text-muted-foreground" />
+                        <span className="truncate">{selectedCrmName}</span>
+                        <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onSelect={() => setSelectedCrmId('all')}>All CRs</DropdownMenuItem>
+                      {allCrmUsers.map(crm => (
+                        <DropdownMenuItem key={crm.id} onSelect={() => setSelectedCrmId(crm.id)}>
+                          {crm.name}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+                <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                    placeholder="Search pipeline..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 bg-background h-10 rounded-md w-full"
+                    />
+                </div>
               </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            {viewMode === 'table' ? (
-                <div className="overflow-x-auto">
-                <Table>
-                    <TableHeader>
-                    <TableRow>
-                        <TableHead className="pl-6 w-[120px]">Date</TableHead>
-                        <TableHead className="min-w-[200px]">Name</TableHead>
-                        <TableHead>Business Name</TableHead>
-                        {currentUser.role !== 'CRM' && <TableHead>Assigned To</TableHead>}
-                        <TableHead>Phone</TableHead>
-                        <TableHead>Source</TableHead>
-                        <TableHead>Address</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead className="max-w-[250px]">Notes</TableHead>
-                        <TableHead className="pr-6 text-right">Action</TableHead>
-                    </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                    {isLoading ? (
-                        [...Array(5)].map((_, i) => (
-                        <TableRow key={`skel-${i}`}>
-                            <TableCell colSpan={currentUser.role !== 'CRM' ? 10 : 9} className="p-0"><Skeleton className="h-16 w-full"/></TableCell>
-                        </TableRow>
-                        ))
-                    ) : filteredLeads.length > 0 ? (
-                        filteredLeads.map((lead) => (
-                        <TableRow key={lead.id} className="hover:bg-muted/50 transition-colors">
-                            <TableCell className="pl-6 text-muted-foreground text-xs whitespace-nowrap">{format(new Date(lead.date), 'd MMM yyyy')}</TableCell>
-                            <TableCell>
-                                <div className="flex items-center gap-3">
-                                    <Avatar className="h-9 w-9 text-sm border bg-muted shrink-0">
-                                        <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(lead.contactName)}</AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-foreground font-medium">{lead.contactName}</span>
-                                </div>
-                            </TableCell>
-                            <TableCell className="font-medium text-foreground">{lead.businessName}</TableCell>
-                            {currentUser.role !== 'CRM' && (
-                                <TableCell className="text-xs text-muted-foreground">
-                                    <div className="flex items-center gap-1.5" title={lead.crmName}>
-                                        <UserIcon className="h-3.5 w-3.5 shrink-0" />
-                                        <span className="truncate">{lead.crmName}</span>
-                                    </div>
-                                </TableCell>
-                            )}
-                            <TableCell className="text-muted-foreground">{lead.phone}</TableCell>
-                            <TableCell>
-                            <Badge variant="secondary">{lead.source}</Badge>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">{lead.address}</TableCell>
-                            <TableCell>
-                            <Badge className={cn(categoryColors[lead.category as Category] || 'bg-gray-100 text-gray-800')}>
-                                {lead.category}
-                            </Badge>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground text-xs truncate max-w-xs" title={lead.notes}>
-                            {lead.notes || 'N/A'}
-                            </TableCell>
-                            <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" title="Edit Lead" onClick={() => handleOpenEditDialog(lead)}>
-                                <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" title="Delete Lead" onClick={() => handleDeleteRequest(lead)}>
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                            </TableCell>
-                        </TableRow>
-                        ))
-                    ) : (
-                        <TableRow>
-                        <TableCell colSpan={currentUser.role !== 'CRM' ? 10 : 9} className="text-center py-12 h-[300px]">
-                            <p className="text-lg text-muted-foreground font-medium">No leads in the pipeline.</p>
-                            <p className="text-sm text-muted-foreground">Click "Add New Lead" to get started.</p>
-                        </TableCell>
-                        </TableRow>
-                    )}
-                    </TableBody>
-                </Table>
-                </div>
-            ) : (
-                <div className="p-4 sm:p-6 min-h-[400px] flex flex-col items-center justify-center">
-                {isLoading ? ( <Skeleton className="h-64 w-64 rounded-full" /> ) : 
-                    leadsByCategoryChartData.length > 0 ? (
-                        <ChartContainer config={leadsChartConfig} className="mx-auto aspect-square w-full max-w-[300px]">
-                          <RechartsPieChart>
-                              <ChartTooltip
-                                cursor={false}
-                                content={<ChartTooltipContent hideLabel />}
-                              />
-                              <Pie
-                                  data={leadsByCategoryChartData}
-                                  dataKey="value"
-                                  nameKey="name"
-                                  innerRadius={60}
-                                  strokeWidth={5}
-                                  label={({ cx, cy }) => {
-                                      if (isNaN(cx) || isNaN(cy)) return null;
-                                      return (
-                                          <text
-                                              x={cx}
-                                              y={cy}
-                                              textAnchor="middle"
-                                              dominantBaseline="central"
-                                              className="fill-foreground text-center"
-                                          >
-                                              <tspan
-                                                  x={cx}
-                                                  y={cy - 10}
-                                                  className="text-3xl font-bold"
-                                              >
-                                                  {totalLeads.toLocaleString()}
-                                              </tspan>
-                                              <tspan
-                                                  x={cx}
-                                                  y={cy + 15}
-                                                  className="text-sm text-muted-foreground"
-                                              >
-                                                  Total Leads
-                                              </tspan>
-                                          </text>
-                                      )
-                                  }}
-                                  labelLine={false}
-                              >
-                              {leadsByCategoryChartData.map((entry) => (
-                                  <Cell
-                                  key={`cell-${entry.name}`}
-                                  fill={leadsChartConfig[entry.name as Category]?.color}
-                                  className="focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                                  />
-                              ))}
-                              </Pie>
-                          </RechartsPieChart>
-                          <ChartLegend
-                              content={<ChartLegendContent nameKey="name" />}
-                              className="-mt-4 flex-wrap gap-2 [&>*]:basis-1/3 [&>*]:justify-center"
-                          />
-                        </ChartContainer>
-                    ) : (
-                         <div className="text-center text-muted-foreground">
-                            <p>No data to display in chart.</p>
-                        </div>
-                    )
-                }
-                </div>
-            )}
+            {renderCurrentView()}
           </CardContent>
         </Card>
       </div>
