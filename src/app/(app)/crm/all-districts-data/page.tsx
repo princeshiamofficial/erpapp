@@ -23,7 +23,7 @@ const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
         let foundDistrict: { name: string; division: string; } | null = null;
         
         // Split the address by commas and spaces to check each part
-        const addressParts = order.address.toLowerCase().split(/[\s,]+/).map(p => p.trim());
+        const addressParts = order.address.toLowerCase().split(/[\s,]+/).map(p => p.trim().replace(/[.,!?:;]$/, ''));
 
         // Iterate through all divisions and districts to find a match
         for (const div of divisions) {
