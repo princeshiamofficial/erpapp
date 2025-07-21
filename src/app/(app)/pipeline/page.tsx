@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet, Loader2, UploadCloud, User as UserIcon, Download, BarChart3 } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet, Loader2, UploadCloud, User as UserIcon, Download, BarChart3, TableIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,6 +29,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
+import { Pie, PieChart as RechartsPieChart, Cell, ResponsiveContainer } from "recharts";
 
 
 type Category = 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
@@ -40,6 +42,9 @@ const categoryColors: Record<Category, string> = {
   OD: 'bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200 dark:bg-purple-900/50 dark:text-purple-200 dark:border-purple-700',
   B2B: 'bg-red-100 text-red-800 border-red-200 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-200 dark:border-red-700',
 };
+
+const CHART_COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#AF19FF"];
+
 
 const getInitials = (name: string) => {
     if (!name) return '??';
@@ -63,6 +68,8 @@ export default function PipeLinePage() {
 
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
 
   const fetchLeads = useCallback(async () => {
     setIsLoading(true);
@@ -98,6 +105,31 @@ export default function PipeLinePage() {
       (lead.crmName && lead.crmName.toLowerCase().includes(lowercasedFilter))
     );
   }, [leads, searchTerm, currentUser]);
+  
+  const leadsByCategoryChartData = useMemo(() => {
+    const categoryCounts = filteredLeads.reduce((acc, lead) => {
+      acc[lead.category] = (acc[lead.category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(categoryCounts).map(([name, value], index) => ({
+      name,
+      value,
+      fill: CHART_COLORS[index % CHART_COLORS.length],
+    })).sort((a,b) => b.value - a.value);
+  }, [filteredLeads]);
+
+  const leadsChartConfig = useMemo(() => {
+    const config: ChartConfig = {};
+    leadsByCategoryChartData.forEach((item) => {
+      config[item.name] = {
+        label: item.name,
+        color: item.fill,
+      };
+    });
+    return config;
+  }, [leadsByCategoryChartData]);
+
 
   const handleOpenAddDialog = () => {
     setEditingLead(null);
@@ -205,10 +237,10 @@ export default function PipeLinePage() {
                 size="lg"
                 variant="outline"
                 className="w-full sm:w-auto h-10"
-                onClick={() => toast({ title: "Coming Soon!", description: "Chart view for leads will be available soon."})}
+                onClick={() => setViewMode(prev => prev === 'table' ? 'chart' : 'table')}
             >
-                <BarChart3 className="mr-2 h-4 w-4" />
-                View Chart
+                {viewMode === 'table' ? <BarChart3 className="mr-2 h-4 w-4" /> : <TableIcon className="mr-2 h-4 w-4" />}
+                {viewMode === 'table' ? 'View Chart' : 'View Table'}
             </Button>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -264,84 +296,108 @@ export default function PipeLinePage() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="pl-6 w-[120px]">Date</TableHead>
-                    <TableHead className="min-w-[200px]">Name</TableHead>
-                    <TableHead>Business Name</TableHead>
-                    {currentUser.role !== 'CRM' && <TableHead>Assigned To</TableHead>}
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Source</TableHead>
-                    <TableHead>Address</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="max-w-[250px]">Notes</TableHead>
-                    <TableHead className="pr-6 text-right">Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    [...Array(5)].map((_, i) => (
-                      <TableRow key={`skel-${i}`}>
-                        <TableCell colSpan={currentUser.role !== 'CRM' ? 10 : 9} className="p-0"><Skeleton className="h-16 w-full"/></TableCell>
-                      </TableRow>
-                    ))
-                  ) : filteredLeads.length > 0 ? (
-                    filteredLeads.map((lead) => (
-                      <TableRow key={lead.id} className="hover:bg-muted/50 transition-colors">
-                        <TableCell className="pl-6 text-muted-foreground text-xs whitespace-nowrap">{format(new Date(lead.date), 'd MMM yyyy')}</TableCell>
-                        <TableCell>
-                            <div className="flex items-center gap-3">
-                                <Avatar className="h-9 w-9 text-sm border bg-muted shrink-0">
-                                    <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(lead.contactName)}</AvatarFallback>
-                                </Avatar>
-                                <span className="text-foreground font-medium">{lead.contactName}</span>
-                            </div>
-                        </TableCell>
-                        <TableCell className="font-medium text-foreground">{lead.businessName}</TableCell>
-                        {currentUser.role !== 'CRM' && (
-                            <TableCell className="text-xs text-muted-foreground">
-                                <div className="flex items-center gap-1.5" title={lead.crmName}>
-                                    <UserIcon className="h-3.5 w-3.5 shrink-0" />
-                                    <span className="truncate">{lead.crmName}</span>
+            {viewMode === 'table' ? (
+                <div className="overflow-x-auto">
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead className="pl-6 w-[120px]">Date</TableHead>
+                        <TableHead className="min-w-[200px]">Name</TableHead>
+                        <TableHead>Business Name</TableHead>
+                        {currentUser.role !== 'CRM' && <TableHead>Assigned To</TableHead>}
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Source</TableHead>
+                        <TableHead>Address</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead className="max-w-[250px]">Notes</TableHead>
+                        <TableHead className="pr-6 text-right">Action</TableHead>
+                    </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                    {isLoading ? (
+                        [...Array(5)].map((_, i) => (
+                        <TableRow key={`skel-${i}`}>
+                            <TableCell colSpan={currentUser.role !== 'CRM' ? 10 : 9} className="p-0"><Skeleton className="h-16 w-full"/></TableCell>
+                        </TableRow>
+                        ))
+                    ) : filteredLeads.length > 0 ? (
+                        filteredLeads.map((lead) => (
+                        <TableRow key={lead.id} className="hover:bg-muted/50 transition-colors">
+                            <TableCell className="pl-6 text-muted-foreground text-xs whitespace-nowrap">{format(new Date(lead.date), 'd MMM yyyy')}</TableCell>
+                            <TableCell>
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="h-9 w-9 text-sm border bg-muted shrink-0">
+                                        <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(lead.contactName)}</AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-foreground font-medium">{lead.contactName}</span>
                                 </div>
                             </TableCell>
-                        )}
-                        <TableCell className="text-muted-foreground">{lead.phone}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{lead.source}</Badge>
+                            <TableCell className="font-medium text-foreground">{lead.businessName}</TableCell>
+                            {currentUser.role !== 'CRM' && (
+                                <TableCell className="text-xs text-muted-foreground">
+                                    <div className="flex items-center gap-1.5" title={lead.crmName}>
+                                        <UserIcon className="h-3.5 w-3.5 shrink-0" />
+                                        <span className="truncate">{lead.crmName}</span>
+                                    </div>
+                                </TableCell>
+                            )}
+                            <TableCell className="text-muted-foreground">{lead.phone}</TableCell>
+                            <TableCell>
+                            <Badge variant="secondary">{lead.source}</Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{lead.address}</TableCell>
+                            <TableCell>
+                            <Badge className={cn(categoryColors[lead.category as Category] || 'bg-gray-100 text-gray-800')}>
+                                {lead.category}
+                            </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-xs truncate max-w-xs" title={lead.notes}>
+                            {lead.notes || 'N/A'}
+                            </TableCell>
+                            <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" title="Edit Lead" onClick={() => handleOpenEditDialog(lead)}>
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" title="Delete Lead" onClick={() => handleDeleteRequest(lead)}>
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                            </TableCell>
+                        </TableRow>
+                        ))
+                    ) : (
+                        <TableRow>
+                        <TableCell colSpan={currentUser.role !== 'CRM' ? 10 : 9} className="text-center py-12 h-[300px]">
+                            <p className="text-lg text-muted-foreground font-medium">No leads in the pipeline.</p>
+                            <p className="text-sm text-muted-foreground">Click "Add New Lead" to get started.</p>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{lead.address}</TableCell>
-                        <TableCell>
-                           <Badge className={cn(categoryColors[lead.category as Category] || 'bg-gray-100 text-gray-800')}>
-                            {lead.category}
-                           </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-xs truncate max-w-xs" title={lead.notes}>
-                          {lead.notes || 'N/A'}
-                        </TableCell>
-                        <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" title="Edit Lead" onClick={() => handleOpenEditDialog(lead)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" title="Delete Lead" onClick={() => handleDeleteRequest(lead)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={currentUser.role !== 'CRM' ? 10 : 9} className="text-center py-12 h-[300px]">
-                        <p className="text-lg text-muted-foreground font-medium">No leads in the pipeline.</p>
-                        <p className="text-sm text-muted-foreground">Click "Add New Lead" to get started.</p>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                        </TableRow>
+                    )}
+                    </TableBody>
+                </Table>
+                </div>
+            ) : (
+                <div className="p-4 sm:p-6 min-h-[400px] flex items-center justify-center">
+                {isLoading ? ( <Skeleton className="h-64 w-64 rounded-full" /> ) : 
+                    leadsByCategoryChartData.length > 0 ? (
+                        <ChartContainer config={leadsChartConfig} className="mx-auto aspect-square w-full max-w-[300px]">
+                        <RechartsPieChart>
+                            <ChartTooltip content={<ChartTooltipContent nameKey="value" hideLabel />} />
+                            <Pie data={leadsByCategoryChartData} dataKey="value" nameKey="name" innerRadius={60} strokeWidth={5}>
+                                {leadsByCategoryChartData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                                ))}
+                            </Pie>
+                        </RechartsPieChart>
+                         <ChartLegend content={<ChartLegendContent nameKey="name" />} className="-mt-4 flex-wrap gap-2 [&>*]:basis-1/3 [&>*]:justify-center" />
+                        </ChartContainer>
+                    ) : (
+                         <div className="text-center text-muted-foreground">
+                            <p>No data to display in chart.</p>
+                        </div>
+                    )
+                }
+                </div>
+            )}
           </CardContent>
         </Card>
       </div>
