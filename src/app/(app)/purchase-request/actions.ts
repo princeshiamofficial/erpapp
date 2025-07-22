@@ -44,7 +44,7 @@ export async function addPurchaseRequestAction(
 
 export async function updatePurchaseRequestAction(
   requestId: string,
-  updates: Partial<Omit<PurchaseRequest, 'id' | 'requestedByUserId' | 'requestedByUserName' | 'requestId'>>
+  updates: Partial<Omit<PurchaseRequest, 'id' | 'requestedByUserId' | 'requestedByUserName'>>
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const success = await updatePurchaseRequest(requestId, updates);
