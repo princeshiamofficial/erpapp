@@ -94,6 +94,7 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
     if (isEditMode) {
       requestData.status = status;
       requestData.price = status === 'Purchased' ? numericPrice : null;
+      requestData.requestId = requestId; // Ensure requestId is passed in update payload
     }
 
     let result;
@@ -153,13 +154,13 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
             <Label htmlFor="notes">Notes (Optional)</Label>
             <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Add any relevant details or justification..."/>
           </div>
-          <DialogFooter className="pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : (isEditMode ? "Save Changes" : "Create Request")}
-            </Button>
-          </DialogFooter>
         </form>
+        <DialogFooter className="pt-4 border-t">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+          <Button type="submit" disabled={isSubmitting} onClick={handleSubmit}>
+            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : (isEditMode ? "Save Changes" : "Create Request")}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
