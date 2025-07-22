@@ -3,11 +3,18 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import type { PurchaseRequest, PurchaseRequestStatus, User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { addPurchaseRequestAction, updatePurchaseRequestAction } from '@/app/(app)/purchase-request/actions';
@@ -100,7 +107,7 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
             <Label htmlFor="quantity">Quantity *</Label>
             <Input id="quantity" type="number" value={quantity} onChange={e => setQuantity(e.target.value)} required min="1" />
           </div>
-          {isEditMode && (
+          {isEditMode && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && (
             <div className="space-y-1">
               <Label htmlFor="status">Status *</Label>
               <Select value={status} onValueChange={(value) => setStatus(value as PurchaseRequestStatus)} required>
