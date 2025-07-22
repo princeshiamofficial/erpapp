@@ -65,9 +65,9 @@ export default function PurchaseRequestPage() {
     if (!searchTerm) return userFilteredRequests;
     
     return userFilteredRequests.filter(req =>
-      req.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      req.requestedByUserName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (req.id && req.id.toLowerCase().includes(searchTerm.toLowerCase()))
+      (req.item && req.item.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (req.requestedByUserName && req.requestedByUserName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (req.requestId && req.requestId.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [requests, searchTerm, currentUser]);
 
@@ -197,8 +197,8 @@ export default function PurchaseRequestPage() {
                     ))
                   ) : filteredRequests.length > 0 ? (
                     filteredRequests.map((req, index) => (
-                      <TableRow key={req.id || index} className="hover:bg-muted/50 transition-colors">
-                        <TableCell className="pl-6 font-mono text-xs text-primary">{req.id?.substring(0,8)}...</TableCell>
+                      <TableRow key={req.id || `req-${index}`} className="hover:bg-muted/50 transition-colors">
+                        <TableCell className="pl-6 font-mono text-sm text-primary">{req.requestId}</TableCell>
                         <TableCell className="text-card-foreground font-medium">{req.item}</TableCell>
                         <TableCell className="text-card-foreground">{req.quantity}</TableCell>
                         <TableCell className="text-muted-foreground">{req.requestedByUserName}</TableCell>

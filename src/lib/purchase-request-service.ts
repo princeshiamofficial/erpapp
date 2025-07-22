@@ -48,7 +48,13 @@ export const getPurchaseRequests = async (): Promise<PurchaseRequest[]> => {
             id: doc.id,
             ...doc.data
         } as PurchaseRequest));
-        return requests.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        // Sort by the numeric part of the requestId if it exists, otherwise by date
+        return requests.sort((a, b) => {
+            const idA = a.requestId ? parseInt(a.requestId.split('-')[1] || '0', 10) : 0;
+            const idB = b.requestId ? parseInt(b.requestId.split('-')[1] || '0', 10) : 0;
+            if (idB !== idA) return idB - idA;
+            return new Date(b.date).getTime() - new Date(a.date).getTime();
+        });
     }
     return [];
   } catch (error) {
@@ -57,21 +63,31 @@ export const getPurchaseRequests = async (): Promise<PurchaseRequest[]> => {
   }
 };
 
-export const addPurchaseRequest = async (requestData: Omit<PurchaseRequest, 'id'>): Promise<PurchaseRequest | null> => {
+export const addPurchaseRequest = async (requestData: Omit<PurchaseRequest, 'id' | 'requestId'>): Promise<PurchaseRequest | null> => {
   try {
     await ensureCollectionExists();
-    const newId = uuidv4();
-    const payload = {
-        id: newId,
-        data: requestData
+    
+    // Generate sequential request ID
+    const allRequests = await getPurchaseRequests();
+    let maxId = 0;
+    allRequests.forEach(req => {
+        if (req.requestId && req.requestId.startsWith('PR-')) {
+            const numPart = parseInt(req.requestId.split('-')[1], 10);
+            if (!isNaN(numPart) && numPart > maxId) {
+                maxId = numPart;
+            }
+        }
+    });
+    const newRequestId = `PR-${String(maxId + 1).padStart(3, '0')}`;
+
+    const newRequestData = {
+        ...requestData,
+        requestId: newRequestId, // Add the custom, human-readable ID
     };
-    // The API might assign its own ID, so we adjust based on the response.
-    // Assuming the API creates a document with a random ID and returns it.
-    // If we need to set our own ID, the endpoint might be different (e.g., using PUT with a specific ID).
-    // Let's assume a POST creates with a new random ID for now.
+
     const newDoc = await fetchFromApi(`collections/${COLLECTION_NAME}/documents`, {
         method: 'POST',
-        body: JSON.stringify({ data: { ...requestData, id: newId } }),
+        body: JSON.stringify({ data: newRequestData }),
     });
 
     return {
@@ -80,12 +96,12 @@ export const addPurchaseRequest = async (requestData: Omit<PurchaseRequest, 'id'
     } as PurchaseRequest;
   } catch (error) {
     console.error("Error adding purchase request via API:", error);
-    if (error instanceof Error) throw error; 
+    if (error instanceof Error) throw error;
     return null;
   }
 };
 
-export const updatePurchaseRequest = async (requestId: string, updates: Partial<Omit<PurchaseRequest, 'id' | 'requestedByUserId' | 'requestedByUserName'>>): Promise<boolean> => {
+export const updatePurchaseRequest = async (requestId: string, updates: Partial<Omit<PurchaseRequest, 'id' | 'requestedByUserId' | 'requestedByUserName' | 'requestId'>>): Promise<boolean> => {
   try {
     await ensureCollectionExists();
     const payload = {
