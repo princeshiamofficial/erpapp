@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useCallback, FormEvent, useRef, useMemo } from 'react';
@@ -36,13 +37,9 @@ const formatCurrency = (value: number | null | undefined): string => {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
-const formatDate = (dateString: string | undefined, relative: boolean = false) => {
+const formatDate = (dateString: string | undefined) => {
   if (!dateString) return "Loading date...";
   try {
-    const date = new Date(dateString);
-    if (relative) {
-      return formatDistanceToNowStrict(date, { addSuffix: true });
-    }
     // Using a consistent format string avoids locale-based hydration mismatches
     return formatDateFns(parseISO(dateString), "d MMM yyyy, h:mm a");
   } catch (e) {
@@ -337,7 +334,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <span className="text-muted-foreground">&middot;</span>
             <button onClick={() => { const isOpeningNewReplyForm = !replyingTo || replyingTo.formUnderId !== comment.id; const targetNameForMention = comment.userName || "User"; const parentIdForReply = isReply ? parentCommentId! : comment.id; setReplyingTo(isOpeningNewReplyForm ? { parentId: parentIdForReply, targetName: targetNameForMention, formUnderId: comment.id } : null); if (isOpeningNewReplyForm) { setCurrentReplyText(`@${targetNameForMention.replace(/\s+/g, '')} `); setTimeout(() => replyTextareaRef.current?.focus(), 0); } else { setCurrentReplyText(''); } }} className="font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 px-1.5 py-0.5 rounded-sm transition-colors">Reply</button>
             <span className="text-muted-foreground">&middot;</span>
-            <span className="text-muted-foreground" title={isClient ? formatDate(comment.timestamp) : 'Loading date...'}>{isClient ? formatDistanceToNowStrict(new Date(comment.timestamp), { addSuffix: true }) : <Skeleton className="h-3 w-10 inline-block" />}</span>
+            <span className="text-muted-foreground" title={isClient ? formatDate(comment.timestamp) : 'Loading date...'}>{isClient ? formatDistanceToNowStrict(parseISO(comment.timestamp), { addSuffix: true }) : <Skeleton className="h-3 w-10 inline-block" />}</span>
           </div>
           {replyingTo?.formUnderId === comment.id && (
              <Popover open={mentionQuery !== null && mentionSuggestions.length > 0} onOpenChange={(open) => { if (!open) { setMentionQuery(null); setActiveMentionStartIndex(null); setMentionSuggestions([]); } }}>
@@ -406,7 +403,13 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   const totalAdvancePaid = allAdvancePaymentRecords.reduce((sum, record) => sum + record.amount, 0);
   const shippingCharge = order.shippingCharge || 0;
   const grandTotal = netPayable + shippingCharge;
-  const amountDue = grandTotal - totalAdvancePaid;
+  
+  const isDeliveredByCourier = packzyStatus === 'delivered';
+  const isDeliveredInternally = order.currentStatus === 'delivered';
+  const isConsideredDelivered = isDeliveredByCourier || isDeliveredInternally;
+  
+  const amountDue = isConsideredDelivered ? 0 : (grandTotal - totalAdvancePaid);
+
 
   return (
     <main className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
@@ -425,7 +428,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
            {(!packzyStatus || packzyStatus === 'unavailable') && (
             <div className="mt-4 pt-4 border-t border-border/30">
               <h3 className="text-lg font-semibold mb-1 text-foreground flex items-center">{getStatusIcon(order.currentStatus, "h-7 w-7")}Current Status: <span className="ml-2 text-2xl font-bold" style={{ color: currentStatusInfo.color }}>{currentStatusInfo.name}</span></h3>
-              <div className="text-xs text-muted-foreground mt-1.5 ml-[40px] sm:ml-[44px]">{isClient ? (lastStatusUpdateEntry ? `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp, true)} by ${lastStatusUpdateEntry.changedByUserName}` : "Status pending.") : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}</div>
+              <div className="text-xs text-muted-foreground mt-1.5 ml-[40px] sm:ml-[44px]">{isClient ? (lastStatusUpdateEntry ? `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp)} by ${lastStatusUpdateEntry.changedByUserName}` : "Status pending.") : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}</div>
             </div>
            )}
 
@@ -433,7 +436,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <div className="mt-4 pt-4 border-t border-border/30">
               <h3 className="text-lg font-semibold mb-1 text-foreground flex items-center">
                 <Truck className="h-7 w-7 mr-2 text-primary/80"/>
-                Courier Status (Steadfast)
+                Courier Status (Packzy)
               </h3>
               <div className="ml-[40px] sm:ml-[44px]">
               {isLoadingPackzyStatus ? (
@@ -457,7 +460,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <p className="font-bold text-foreground">Color Hut</p>
             <p className="text-muted-foreground text-sm">9/A Kajla Bus Stand, Donia,Jatrabari,Dhaka- 1236</p>
             <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
-            <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${formatDate(order.createdAt, false)} by ${order.crmUserName}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
+            <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${formatDate(order.createdAt)} by ${order.crmUserName}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
           </div>
           <div className="text-left sm:text-right mt-4 sm:mt-0">
             <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
@@ -506,7 +509,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 <TableBody>
                   {allAdvancePaymentRecords.map((record) => (
                     <TableRow key={record.id} className="hover:bg-muted/50 transition-colors">
-                      <TableCell className="text-xs text-muted-foreground">{isClient ? formatDate(record.date, false) : <Skeleton className="h-4 w-24"/>}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{isClient ? formatDate(record.date) : <Skeleton className="h-4 w-24"/>}</TableCell>
                       <TableCell className="font-medium text-green-600">{formatCurrency(record.amount)}</TableCell>
                       <TableCell className="text-card-foreground">{record.paymentMethod || 'N/A'}</TableCell>
                       <TableCell className="text-xs text-muted-foreground">{record.notes || 'N/A'}</TableCell>
@@ -531,7 +534,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               </div>
             )}
             {totalAdvancePaid > 0 && (<div className="flex justify-between mb-2"><span className="text-md text-muted-foreground">Total Advance Paid:</span><span className="text-md font-medium text-green-600">- {formatCurrency(totalAdvancePaid)}</span></div>)}
-            {orderSubtotal > 0 && amountDue <= 0.01 ? (<div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end"><div className="absolute -left-8 -top-4 sm:-left-12 sm:-top-6 transform -rotate-[15deg] border-4 border-green-500 text-green-500 font-bold uppercase text-3xl sm:text-4xl px-3 py-1 rounded-md shadow-lg bg-background/80 dark:bg-card/80 backdrop-blur-sm">PAID</div></div>)
+            {isConsideredDelivered || (orderSubtotal > 0 && amountDue <= 0.01) ? (<div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end"><div className="absolute -left-8 -top-4 sm:-left-12 sm:-top-6 transform -rotate-[15deg] border-4 border-green-500 text-green-500 font-bold uppercase text-3xl sm:text-4xl px-3 py-1 rounded-md shadow-lg bg-background/80 dark:bg-card/80 backdrop-blur-sm">PAID</div></div>)
             : (orderSubtotal > 0 && amountDue > 0.01) && (<><Separator className="my-2 bg-border/50" /><div className="flex justify-between"><span className="text-lg font-bold text-primary">Amount Due:</span><span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span></div></>)}
           </div>
         </div>
@@ -550,7 +553,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
               <div className={`absolute -left-[1.20rem] sm:-left-[1.45rem] top-1 h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center ring-4 ring-background transition-all duration-200 ${index === 0 ? 'bg-primary shadow-lg' : 'bg-muted border-2 border-border group-hover:bg-primary/20 group-hover:border-primary/50'}`}>{index === 0 ? <CheckCircle className={`h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground`} /> : getStatusIcon(entry.status, "h-4 w-4 sm:h-4 sm:w-4 !mr-0 group-hover:text-primary")}</div>
               <div className="flex-1 pt-px ml-2 sm:ml-3">
                 <p className={`font-semibold text-md sm:text-lg ${index === 0 ? 'text-primary' : 'text-foreground group-hover:text-primary/90'}`}>{entryStatusInfo.name}</p>
-                <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5"><CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" />{isClient ? formatDate(entry.timestamp, false) : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}<span className="mx-1.5 hidden sm:inline">&bull;</span><span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span></div>
+                <div className="text-xs sm:text-sm text-muted-foreground flex items-center flex-wrap mt-0.5"><CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 opacity-70 flex-shrink-0" />{isClient ? formatDate(entry.timestamp) : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}<span className="mx-1.5 hidden sm:inline">&bull;</span><span className="block sm:inline w-full sm:w-auto mt-0.5 sm:mt-0">{entry.changedByUserName}</span></div>
                 {entry.notes && <p className="text-sm sm:text-md mt-2 sm:mt-2.5 bg-muted/50 p-3 sm:p-4 rounded-lg border border-border/40 text-foreground/80 shadow-sm">{entry.notes}</p>}
               </div>
             </div>);})}</div>
@@ -583,5 +586,3 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     </main>
   );
 }
-
-    
