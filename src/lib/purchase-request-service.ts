@@ -62,6 +62,17 @@ export const getPurchaseRequests = async (): Promise<PurchaseRequest[]> => {
   }
 };
 
+export const getPurchaseRequestById = async (requestId: string): Promise<PurchaseRequest | null> => {
+    if (!requestId) return null;
+    try {
+        const response = await fetchFromApi(`collections/${COLLECTION_NAME}/documents/${requestId}`);
+        return { id: response.id, ...response.data } as PurchaseRequest;
+    } catch (error) {
+        console.error(`Error fetching purchase request by ID ${requestId} via API:`, error);
+        return null;
+    }
+};
+
 export const addPurchaseRequest = async (requestData: Omit<PurchaseRequest, 'id' | 'requestId'>): Promise<PurchaseRequest | null> => {
   try {
     await ensureCollectionExists();
@@ -99,7 +110,7 @@ export const addPurchaseRequest = async (requestData: Omit<PurchaseRequest, 'id'
   }
 };
 
-export const updatePurchaseRequest = async (requestId: string, updates: Partial<Omit<PurchaseRequest, 'id' | 'requestedByUserId' | 'requestedByUserName' | 'requestId'>>): Promise<boolean> => {
+export const updatePurchaseRequest = async (requestId: string, updates: Partial<Omit<PurchaseRequest, 'id'>>): Promise<boolean> => {
   try {
     await ensureCollectionExists();
     const payload = {

@@ -8,6 +8,7 @@ import {
   addPurchaseRequest,
   updatePurchaseRequest,
   deletePurchaseRequest,
+  getPurchaseRequestById, // Import the new function
 } from '@/lib/purchase-request-service';
 
 export async function getPurchaseRequestsAction(): Promise<PurchaseRequest[]> {
@@ -47,7 +48,19 @@ export async function updatePurchaseRequestAction(
   updates: Partial<Omit<PurchaseRequest, 'id' | 'requestedByUserId' | 'requestedByUserName'>>
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const success = await updatePurchaseRequest(requestId, updates);
+    const existingRequest = await getPurchaseRequestById(requestId);
+    if (!existingRequest) {
+        return { success: false, error: "Purchase request not found." };
+    }
+
+    // Ensure the original requester's info is preserved
+    const finalUpdates = {
+        ...updates,
+        requestedByUserId: existingRequest.requestedByUserId,
+        requestedByUserName: existingRequest.requestedByUserName,
+    };
+
+    const success = await updatePurchaseRequest(requestId, finalUpdates);
     if (success) {
       revalidatePath("/(app)/purchase-request");
       return { success: true };
