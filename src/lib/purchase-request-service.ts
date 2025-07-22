@@ -48,7 +48,6 @@ export const getPurchaseRequests = async (): Promise<PurchaseRequest[]> => {
             id: doc.id,
             ...doc.data
         } as PurchaseRequest));
-        // Sort by the numeric part of the requestId if it exists, otherwise by date
         return requests.sort((a, b) => {
             const idA = a.requestId ? parseInt(a.requestId.split('-')[1] || '0', 10) : 0;
             const idB = b.requestId ? parseInt(b.requestId.split('-')[1] || '0', 10) : 0;
@@ -67,7 +66,6 @@ export const addPurchaseRequest = async (requestData: Omit<PurchaseRequest, 'id'
   try {
     await ensureCollectionExists();
     
-    // Generate sequential request ID
     const allRequests = await getPurchaseRequests();
     let maxId = 0;
     allRequests.forEach(req => {
@@ -82,7 +80,7 @@ export const addPurchaseRequest = async (requestData: Omit<PurchaseRequest, 'id'
 
     const newRequestData = {
         ...requestData,
-        requestId: newRequestId, // Add the custom, human-readable ID
+        requestId: newRequestId,
     };
 
     const newDoc = await fetchFromApi(`collections/${COLLECTION_NAME}/documents`, {

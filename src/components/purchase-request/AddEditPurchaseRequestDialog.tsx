@@ -35,6 +35,7 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
   const [quantity, setQuantity] = useState('');
   const [status, setStatus] = useState<PurchaseRequestStatus>('Pending');
   const [notes, setNotes] = useState('');
+  const [price, setPrice] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -47,11 +48,13 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
         setQuantity(request.quantity.toString());
         setStatus(request.status);
         setNotes(request.notes || '');
+        setPrice((request.price || '').toString());
       } else {
         setItem('');
         setQuantity('');
         setStatus('Pending');
         setNotes('');
+        setPrice('');
       }
     }
   }, [isOpen, request, isEditMode]);
@@ -63,21 +66,40 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
       toast({ title: "Validation Error", description: "Please provide a valid item name and a positive quantity.", variant: "destructive" });
       return;
     }
+    
+    let numericPrice: number | null = null;
+    if (status === 'Purchased') {
+      if (!price.trim()) {
+        toast({ title: "Validation Error", description: "Price is required when status is 'Purchased'.", variant: "destructive" });
+        return;
+      }
+      numericPrice = parseFloat(price);
+      if (isNaN(numericPrice) || numericPrice < 0) {
+        toast({ title: "Validation Error", description: "Please enter a valid, non-negative price.", variant: "destructive" });
+        return;
+      }
+    }
 
     setIsSubmitting(true);
-    const requestData = {
+    const requestData: any = {
       date: new Date().toISOString(),
       item: item.trim(),
       quantity: numericQuantity,
-      status,
       notes: notes.trim() || null,
     };
+    
+    if (isEditMode) {
+      requestData.status = status;
+      requestData.price = status === 'Purchased' ? numericPrice : null;
+    }
 
     let result;
     if (isEditMode) {
       result = await updatePurchaseRequestAction(request.id, requestData);
     } else {
-      result = await addPurchaseRequestAction(requestData, currentUser);
+      // Add action doesn't include status or price
+      const addData = { ...requestData, status: 'Pending' };
+      result = await addPurchaseRequestAction(addData, currentUser);
     }
 
     setIsSubmitting(false);
@@ -107,7 +129,7 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
             <Label htmlFor="quantity">Quantity *</Label>
             <Input id="quantity" type="number" value={quantity} onChange={e => setQuantity(e.target.value)} required min="1" />
           </div>
-          {isEditMode && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && (
+          {(isEditMode && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) && (
             <div className="space-y-1">
               <Label htmlFor="status">Status *</Label>
               <Select value={status} onValueChange={(value) => setStatus(value as PurchaseRequestStatus)} required>
@@ -116,6 +138,12 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
                   {STATUS_OPTIONS.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+          {isEditMode && status === 'Purchased' && (
+            <div className="space-y-1">
+              <Label htmlFor="price">Price (BDT) *</Label>
+              <Input id="price" type="number" value={price} onChange={e => setPrice(e.target.value)} required min="0" placeholder="e.g. 1500.00" />
             </div>
           )}
           <div className="space-y-1">

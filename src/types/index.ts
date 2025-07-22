@@ -299,4 +299,5 @@ export interface PurchaseRequest {
   requestedByUserId: string;
   requestedByUserName: string;
   notes?: string | null;
+  price?: number | null;
 }

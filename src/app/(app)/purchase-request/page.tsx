@@ -21,6 +21,10 @@ import { format } from 'date-fns';
 const AddEditPurchaseRequestDialog = dynamic(() => import('@/components/purchase-request/AddEditPurchaseRequestDialog').then(mod => mod.AddEditPurchaseRequestDialog));
 const DeletePurchaseRequestDialog = dynamic(() => import('@/components/purchase-request/DeletePurchaseRequestDialog').then(mod => mod.DeletePurchaseRequestDialog));
 
+const formatCurrency = (value?: number | null): string => {
+  if (value === undefined || value === null) return 'N/A';
+  return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
+};
 
 export default function PurchaseRequestPage() {
   const { currentUser } = useAuth();
@@ -176,6 +180,7 @@ export default function PurchaseRequestPage() {
                     <TableHead className="pl-6">Request ID</TableHead>
                     <TableHead>Item Description</TableHead>
                     <TableHead>Quantity</TableHead>
+                    <TableHead>Price</TableHead>
                     <TableHead>Requested By</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Status</TableHead>
@@ -189,6 +194,7 @@ export default function PurchaseRequestPage() {
                         <TableCell className="pl-6"><Skeleton className="h-5 w-20" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
@@ -201,6 +207,7 @@ export default function PurchaseRequestPage() {
                         <TableCell className="pl-6 font-mono text-sm text-primary">{req.requestId}</TableCell>
                         <TableCell className="text-card-foreground font-medium">{req.item}</TableCell>
                         <TableCell className="text-card-foreground">{req.quantity}</TableCell>
+                        <TableCell className="text-card-foreground font-semibold">{formatCurrency(req.price)}</TableCell>
                         <TableCell className="text-muted-foreground">{req.requestedByUserName}</TableCell>
                         <TableCell className="text-muted-foreground">{format(new Date(req.date), 'd MMM yyyy')}</TableCell>
                         <TableCell>
@@ -229,7 +236,7 @@ export default function PurchaseRequestPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center py-12 h-[300px]">
+                      <TableCell colSpan={8} className="text-center py-12 h-[300px]">
                         <ShoppingCart className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
                         <p className="text-lg text-muted-foreground font-medium">No purchase requests found.</p>
                         <p className="text-sm text-muted-foreground">

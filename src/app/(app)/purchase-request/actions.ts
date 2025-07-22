@@ -20,7 +20,7 @@ export async function getPurchaseRequestsAction(): Promise<PurchaseRequest[]> {
 }
 
 export async function addPurchaseRequestAction(
-  requestData: Omit<PurchaseRequest, 'id' | 'requestedByUserId' | 'requestedByUserName'>,
+  requestData: Omit<PurchaseRequest, 'id' | 'requestedByUserId' | 'requestedByUserName' | 'requestId' | 'price'>,
   currentUser: User
 ): Promise<{ success: boolean; request?: PurchaseRequest; error?: string }> {
   try {
@@ -28,6 +28,7 @@ export async function addPurchaseRequestAction(
       ...requestData,
       requestedByUserId: currentUser.id,
       requestedByUserName: currentUser.name,
+      price: null, // Always initialize price as null
     };
     const newRequest = await addPurchaseRequest(requestDataWithUser);
     if (newRequest) {
@@ -43,7 +44,7 @@ export async function addPurchaseRequestAction(
 
 export async function updatePurchaseRequestAction(
   requestId: string,
-  updates: Partial<Omit<PurchaseRequest, 'id' | 'requestedByUserId' | 'requestedByUserName'>>
+  updates: Partial<Omit<PurchaseRequest, 'id' | 'requestedByUserId' | 'requestedByUserName' | 'requestId'>>
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const success = await updatePurchaseRequest(requestId, updates);
