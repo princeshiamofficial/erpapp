@@ -45,7 +45,7 @@ const formatDate = (dateString: string | undefined, relative: boolean = false) =
       return formatDistanceToNowStrict(date, { addSuffix: true });
     }
     // Using a consistent format string avoids locale-based hydration mismatches
-    return formatDateFns(date, "d MMM yyyy, h:mm a");
+    return formatDateFns(parseISO(dateString), "d MMM yyyy, h:mm a");
   } catch (e) {
     return "Invalid Date";
   }
@@ -440,7 +440,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <div className="mt-4 pt-4 border-t border-border/30">
               <h3 className="text-lg font-semibold mb-1 text-foreground flex items-center">
                 <Truck className="h-7 w-7 mr-2 text-primary/80"/>
-                Courier Status (Steadfast)
+                Courier Status (Packzy)
               </h3>
               <div className="ml-[40px] sm:ml-[44px]">
               {isLoadingPackzyStatus ? (
@@ -468,7 +468,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
           </div>
           <div className="text-left sm:text-right mt-4 sm:mt-0">
             <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
-            <div className="text-sm text-muted-foreground">Date: {isClient ? formatDate(order.createdAt) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
+            <div className="text-sm text-muted-foreground">Date: {isClient ? formatDate(order.createdAt, false) : <div className="h-4 w-56"><Skeleton className="h-full w-full" /></div>}</div>
             <div className="mt-2"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
           </div>
         </div>

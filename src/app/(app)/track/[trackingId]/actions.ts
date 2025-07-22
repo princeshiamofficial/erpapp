@@ -179,8 +179,8 @@ export async function getPackzyDeliveryStatusAction(trackingCode: string): Promi
     const responseData = await response.json();
 
     if (responseData.status !== 200) {
-      console.error('Steadfast API Error:', responseData);
-      return { error: responseData.message || 'Failed to fetch delivery status from Steadfast.' };
+      console.error('Packzy API Error:', responseData);
+      return { error: responseData.message || 'Failed to fetch delivery status from Packzy.' };
     }
 
     if (responseData.status === 200 && responseData.delivery_status === 'delivered') {
@@ -202,7 +202,7 @@ export async function getPackzyDeliveryStatusAction(trackingCode: string): Promi
     
     return { delivery_status: responseData.delivery_status };
   } catch (error) {
-    console.error('Error calling Steadfast API:', error);
+    console.error('Error calling Packzy API:', error);
     return { error: 'An unexpected error occurred while fetching delivery status.' };
   }
 }
