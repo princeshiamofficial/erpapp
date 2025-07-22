@@ -36,7 +36,7 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
   const [status, setStatus] = useState<PurchaseRequestStatus>('Pending');
   const [notes, setNotes] = useState('');
   const [price, setPrice] = useState('');
-  const [requestId, setRequestId] = useState(''); // Added state for Request ID
+  const [requestId, setRequestId] = useState(''); // State is kept for the description
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -50,14 +50,14 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
         setStatus(request.status);
         setNotes(request.notes || '');
         setPrice((request.price || '').toString());
-        setRequestId(request.requestId || ''); // Set the requestId for display
+        setRequestId(request.requestId || ''); // Set the requestId for display in description
       } else {
         setItem('');
         setQuantity('');
         setStatus('Pending');
         setNotes('');
         setPrice('');
-        setRequestId(''); // Clear for new requests
+        setRequestId(''); 
       }
     }
   }, [isOpen, request, isEditMode]);
@@ -124,12 +124,6 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="py-4 space-y-4">
-          {isEditMode && (
-            <div className="space-y-1">
-              <Label htmlFor="request-id">Request ID</Label>
-              <Input id="request-id" value={requestId} readOnly disabled className="bg-muted/50 font-mono" />
-            </div>
-          )}
           <div className="space-y-1">
             <Label htmlFor="item-name">Item Name *</Label>
             <Input id="item-name" value={item} onChange={e => setItem(e.target.value)} required />
