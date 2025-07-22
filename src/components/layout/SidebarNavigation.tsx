@@ -121,15 +121,7 @@ export function SidebarNavigation() {
   const renderNavItems = (items: NavItem[]) => {
     return items.map((item) => {
       
-      let shouldShowItem;
-      if (userRole === 'LR') {
-        shouldShowItem = item.href === '/projects';
-      } else {
-        shouldShowItem = item.roles.includes(userRole);
-        if (item.href === "/finance-manager" && !canUserLogExpense) {
-          shouldShowItem = false;
-        }
-      }
+      const shouldShowItem = item.roles.includes(userRole);
 
       if (!shouldShowItem) return null;
 
