@@ -86,7 +86,7 @@ export async function addLeadsBatchAction(
 
 export async function updateLeadAction(
   leadId: string,
-  updates: Partial<Omit<Lead, 'id' | 'crmId' | 'crmName'>> // crmId/Name can't be updated this way
+  updates: Partial<Omit<Lead, 'id'>>
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const success = await updateLead(leadId, updates);
