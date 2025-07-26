@@ -1,5 +1,6 @@
 
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -11,6 +12,7 @@ import { parseISO } from 'date-fns';
 import { getUserById as getUserFromDb } from "@/lib/user-service";
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import io from 'socket.io-client';
 
 interface CreateOrderDialogFormData {
   jobId: string;
@@ -142,6 +144,11 @@ export async function createOrderAction(
 
     const createdOrder = await addOrderService(newOrderDataForService);
     if (!createdOrder) return { error: "Failed to create order due to a service error." };
+
+    // Emit event after successful creation
+    const socket = io({ path: '/api/socket_io'});
+    socket.emit('new_order', createdOrder);
+    socket.disconnect();
 
     revalidatePath("/(app)/orders");
     revalidatePath("/(app)/dashboard");
