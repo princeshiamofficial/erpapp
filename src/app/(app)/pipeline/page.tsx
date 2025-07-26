@@ -60,20 +60,35 @@ const getInitials = (name: string) => {
     return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
+type SummaryCardFilterType = 'all' | 'todayLeads' | 'totalTasks' | 'todayTasks';
 
 interface SummaryCardProps {
   title: string;
   value: string;
   icon: React.ElementType;
+  isLoading?: boolean;
   iconColorClass?: string;
   circleBgClass?: string;
-  isLoading?: boolean;
+  onClick?: () => void;
+  isActive?: boolean;
 }
 
-const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, iconColorClass = "text-primary", circleBgClass = "bg-primary/10", isLoading }) => {
+const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, isLoading, iconColorClass = "text-primary", circleBgClass = "bg-primary/10", onClick, isActive }) => {
+  const cardContent = (
+    <>
+      <div className={`p-3 rounded-full ${circleBgClass}`}>
+        <Icon className={`h-6 w-6 ${iconColorClass}`} />
+      </div>
+      <div>
+        <p className="text-sm font-medium text-muted-foreground">{title}</p>
+        <p className="text-2xl font-bold text-foreground">{value}</p>
+      </div>
+    </>
+  );
+
   if (isLoading) {
     return (
-      <Card className="bg-card p-4 shadow-md">
+      <Card className="p-4 shadow-md">
         <div className="flex items-center space-x-4">
           <Skeleton className="h-12 w-12 rounded-full" />
           <div className="space-y-1.5">
@@ -84,16 +99,18 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
       </Card>
     );
   }
+
   return (
-    <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4">
+    <Card
+      onClick={onClick}
+      className={cn(
+        "shadow-md transition-all duration-200 bg-card p-4",
+        onClick && "cursor-pointer hover:shadow-lg hover:-translate-y-1",
+        isActive && "ring-2 ring-primary shadow-lg"
+      )}
+    >
       <div className="flex items-center space-x-4">
-        <div className={`p-3 rounded-full ${circleBgClass}`}>
-          <Icon className={`h-6 w-6 ${iconColorClass}`} />
-        </div>
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-2xl font-bold text-foreground">{value}</p>
-        </div>
+        {cardContent}
       </div>
     </Card>
   );
@@ -119,6 +136,8 @@ export default function PipeLinePage() {
   const [isDeleting, setIsDeleting] = useState(false);
   
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
+  const [activeFilter, setActiveFilter] = useState<SummaryCardFilterType>('all');
+
 
   const fetchLeadsAndUsers = useCallback(async () => {
     if (!currentUser) return;
@@ -148,28 +167,41 @@ export default function PipeLinePage() {
   }, [fetchLeadsAndUsers]);
 
   const filteredLeads = useMemo(() => {
-    let roleFilteredLeads = leads;
-    
-    if (currentUser?.role === 'CRM') {
-      roleFilteredLeads = leads.filter(lead => lead.crmId === currentUser.id);
-    } else if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
-      if (selectedCrmId !== 'all') {
-        roleFilteredLeads = leads.filter(lead => lead.crmId === selectedCrmId);
-      }
-    }
-    
-    if (!searchTerm) return roleFilteredLeads;
+    let baseLeads = leads;
 
+    // Apply role-based filtering first
+    if (currentUser?.role === 'CRM') {
+        baseLeads = leads.filter(lead => lead.crmId === currentUser.id);
+    } else if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
+        if (selectedCrmId !== 'all') {
+            baseLeads = leads.filter(lead => lead.crmId === selectedCrmId);
+        }
+    }
+
+    // Apply active filter from summary cards
+    if (activeFilter !== 'all') {
+        const today = new Date();
+        if (activeFilter === 'todayLeads') {
+            baseLeads = baseLeads.filter(lead => isToday(parseISO(lead.date)));
+        } else if (activeFilter === 'totalTasks') {
+            baseLeads = baseLeads.filter(lead => lead.schedule && new Date(lead.schedule) >= today);
+        } else if (activeFilter === 'todayTasks') {
+            baseLeads = baseLeads.filter(lead => lead.schedule && isToday(parseISO(lead.schedule)));
+        }
+    }
+
+    // Apply search term to the already filtered list
+    if (!searchTerm) return baseLeads;
     const lowercasedFilter = searchTerm.toLowerCase();
-    return roleFilteredLeads.filter(lead =>
-      lead.contactName.toLowerCase().includes(lowercasedFilter) ||
-      lead.businessName.toLowerCase().includes(lowercasedFilter) ||
-      lead.phone.toLowerCase().includes(lowercasedFilter) ||
-      lead.source.toLowerCase().includes(lowercasedFilter) ||
-      lead.category.toLowerCase().includes(lowercasedFilter) ||
-      (lead.crmName && lead.crmName.toLowerCase().includes(lowercasedFilter))
+    return baseLeads.filter(lead =>
+        lead.contactName.toLowerCase().includes(lowercasedFilter) ||
+        lead.businessName.toLowerCase().includes(lowercasedFilter) ||
+        lead.phone.toLowerCase().includes(lowercasedFilter) ||
+        lead.source.toLowerCase().includes(lowercasedFilter) ||
+        lead.category.toLowerCase().includes(lowercasedFilter) ||
+        (lead.crmName && lead.crmName.toLowerCase().includes(lowercasedFilter))
     );
-  }, [leads, searchTerm, currentUser, selectedCrmId]);
+}, [leads, searchTerm, currentUser, selectedCrmId, activeFilter]);
   
   const leadsByCategoryChartData = useMemo(() => {
     const categoryCounts = filteredLeads.reduce((acc, lead) => {
@@ -198,18 +230,28 @@ export default function PipeLinePage() {
   }, [leadsByCategoryChartData]);
 
   const summaryData = useMemo(() => {
+    // This calculation should be based on the base set of leads, before summary card filtering is applied
+    let baseFilteredLeads = leads;
+    if (currentUser?.role === 'CRM') {
+      baseFilteredLeads = leads.filter(lead => lead.crmId === currentUser.id);
+    } else if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
+      if (selectedCrmId !== 'all') {
+        baseFilteredLeads = leads.filter(lead => lead.crmId === selectedCrmId);
+      }
+    }
+
     const today = new Date();
-    const todayLeads = filteredLeads.filter(lead => isToday(parseISO(lead.date))).length;
-    const totalTasks = filteredLeads.filter(lead => lead.schedule && new Date(lead.schedule) >= today).length;
-    const todayTasks = filteredLeads.filter(lead => lead.schedule && isToday(parseISO(lead.schedule))).length;
+    const todayLeads = baseFilteredLeads.filter(lead => isToday(parseISO(lead.date))).length;
+    const totalTasks = baseFilteredLeads.filter(lead => lead.schedule && new Date(lead.schedule) >= today).length;
+    const todayTasks = baseFilteredLeads.filter(lead => lead.schedule && isToday(parseISO(lead.schedule))).length;
     
     return {
-      totalLeads: filteredLeads.length,
+      totalLeads: baseFilteredLeads.length,
       todayLeads,
       totalTasks,
       todayTasks,
     };
-  }, [filteredLeads]);
+  }, [leads, currentUser, selectedCrmId]);
 
 
   const handleOpenAddDialog = () => {
@@ -331,14 +373,14 @@ export default function PipeLinePage() {
                                               y={viewBox.cy - 10}
                                               className="text-3xl font-bold"
                                           >
-                                              {summaryData.totalLeads.toLocaleString()}
+                                              {filteredLeads.length.toLocaleString()}
                                           </tspan>
                                           <tspan
                                               x={viewBox.cx}
                                               y={viewBox.cy + 15}
                                               className="text-sm text-muted-foreground"
                                           >
-                                              Total Leads
+                                              Filtered Leads
                                           </tspan>
                                       </text>
                                   )
@@ -514,10 +556,46 @@ export default function PipeLinePage() {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <SummaryCard title="Total Leads" value={summaryData.totalLeads.toLocaleString()} icon={Users} isLoading={isLoading} iconColorClass="text-blue-600" circleBgClass="bg-blue-100 dark:bg-blue-500/20" />
-          <SummaryCard title="Today's Leads" value={summaryData.todayLeads.toLocaleString()} icon={CalendarPlus} isLoading={isLoading} iconColorClass="text-green-600" circleBgClass="bg-green-100 dark:bg-green-500/20" />
-          <SummaryCard title="Total Tasks" value={summaryData.totalTasks.toLocaleString()} icon={ListChecks} isLoading={isLoading} iconColorClass="text-orange-600" circleBgClass="bg-orange-100 dark:bg-orange-500/20" />
-          <SummaryCard title="Today's Tasks" value={summaryData.todayTasks.toLocaleString()} icon={ClipboardCheck} isLoading={isLoading} iconColorClass="text-purple-600" circleBgClass="bg-purple-100 dark:bg-purple-500/20" />
+          <SummaryCard 
+            title="Total Leads" 
+            value={summaryData.totalLeads.toLocaleString()} 
+            icon={Users} 
+            isLoading={isLoading} 
+            iconColorClass="text-blue-600" 
+            circleBgClass="bg-blue-100 dark:bg-blue-500/20"
+            onClick={() => setActiveFilter(prev => prev === 'all' ? 'all' : 'all')}
+            isActive={activeFilter === 'all'}
+           />
+          <SummaryCard 
+            title="Today's Leads" 
+            value={summaryData.todayLeads.toLocaleString()} 
+            icon={CalendarPlus} 
+            isLoading={isLoading} 
+            iconColorClass="text-green-600" 
+            circleBgClass="bg-green-100 dark:bg-green-500/20" 
+            onClick={() => setActiveFilter(prev => prev === 'todayLeads' ? 'all' : 'todayLeads')}
+            isActive={activeFilter === 'todayLeads'}
+          />
+          <SummaryCard 
+            title="Total Tasks" 
+            value={summaryData.totalTasks.toLocaleString()} 
+            icon={ListChecks} 
+            isLoading={isLoading} 
+            iconColorClass="text-orange-600" 
+            circleBgClass="bg-orange-100 dark:bg-orange-500/20" 
+            onClick={() => setActiveFilter(prev => prev === 'totalTasks' ? 'all' : 'totalTasks')}
+            isActive={activeFilter === 'totalTasks'}
+          />
+          <SummaryCard 
+            title="Today's Tasks" 
+            value={summaryData.todayTasks.toLocaleString()} 
+            icon={ClipboardCheck} 
+            isLoading={isLoading} 
+            iconColorClass="text-purple-600" 
+            circleBgClass="bg-purple-100 dark:bg-purple-500/20" 
+            onClick={() => setActiveFilter(prev => prev === 'todayTasks' ? 'all' : 'todayTasks')}
+            isActive={activeFilter === 'todayTasks'}
+          />
         </div>
 
         <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
