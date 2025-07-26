@@ -140,8 +140,11 @@ export default function PipeLinePage() {
   
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
   const [activeFilter, setActiveFilter] = useState<SummaryCardFilterType>('all');
+  
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     setSelectedDateRange({
       from: subDays(new Date(), 29),
       to: new Date(),
@@ -176,6 +179,10 @@ export default function PipeLinePage() {
   }, [fetchLeadsAndUsers]);
 
   const filteredLeads = useMemo(() => {
+    if (!isClient) {
+        return []; // Return empty array on server render to prevent mismatch
+    }
+
     let baseLeads = leads;
 
     // Apply role-based filtering first
@@ -226,7 +233,7 @@ export default function PipeLinePage() {
         lead.category.toLowerCase().includes(lowercasedFilter) ||
         (lead.crmName && lead.crmName.toLowerCase().includes(lowercasedFilter))
     );
-}, [leads, searchTerm, currentUser, selectedCrmId, activeFilter, selectedDateRange]);
+}, [leads, searchTerm, currentUser, selectedCrmId, activeFilter, selectedDateRange, isClient]);
   
   const leadsByCategoryChartData = useMemo(() => {
     const categoryCounts = filteredLeads.reduce((acc, lead) => {
@@ -255,6 +262,7 @@ export default function PipeLinePage() {
   }, [leadsByCategoryChartData]);
 
   const summaryData = useMemo(() => {
+    if (!isClient) return { totalLeads: 0, todayLeads: 0, totalTasks: 0, todayTasks: 0 };
     let baseFilteredLeads = leads;
     if (currentUser?.role === 'CRM') {
       baseFilteredLeads = leads.filter(lead => lead.crmId === currentUser.id);
@@ -264,7 +272,6 @@ export default function PipeLinePage() {
       }
     }
 
-    const today = new Date();
     const todayLeads = baseFilteredLeads.filter(lead => isToday(parseISO(lead.date))).length;
     const totalTasks = baseFilteredLeads.filter(lead => !!lead.schedule).length;
     const todayTasks = baseFilteredLeads.filter(lead => lead.schedule && isToday(parseISO(lead.schedule))).length;
@@ -275,7 +282,7 @@ export default function PipeLinePage() {
       totalTasks,
       todayTasks,
     };
-  }, [leads, currentUser, selectedCrmId]);
+  }, [leads, currentUser, selectedCrmId, isClient]);
 
 
   const handleOpenAddDialog = () => {
@@ -716,3 +723,4 @@ export default function PipeLinePage() {
     </>
   );
 }
+
