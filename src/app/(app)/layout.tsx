@@ -129,6 +129,12 @@ export default function AuthenticatedLayout({
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
 
+  // New state to prevent server-side rendering of the layout.
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   useEffect(() => {
     async function fetchSettings() {
       if (currentUser) {
@@ -188,7 +194,7 @@ export default function AuthenticatedLayout({
   }, [isLoading, isLoadingSettings, globalSettings, currentUser]);
 
 
-  if ((isLoading || (!currentUser && !isSuspendedDialogOpen)) && showLoadingScreen) {
+  if (!isClient || ((isLoading || !currentUser) && showLoadingScreen)) {
     return (
       <AnimatePresence>
         {showLoadingScreen && (
