@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet, Loader2, UploadCloud, User as UserIconLucide, Download, BarChart3, TableIcon, ChevronDown, PieChart as PieChartIcon, Users, CalendarPlus, ListChecks, ClipboardCheck } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, FileSpreadsheet, Loader2, UploadCloud, User as UserIconLucide, Download, BarChart3, TableIcon, ChevronDown, PieChart as PieChartIcon, Users, CalendarPlus, ListChecks, ClipboardCheck, CalendarDays as CalendarIconLucide } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -26,12 +26,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format, isToday, parseISO } from 'date-fns';
+import { format, isToday, parseISO, isWithinInterval, subDays } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from "@/components/ui/chart";
 import { Pie, PieChart as RechartsPieChart, Cell, Label } from "recharts";
 import { getUsers } from '@/lib/user-service';
+import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
+import type { DateRange } from "react-day-picker";
 
 
 type Category = 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
@@ -126,6 +128,7 @@ export default function PipeLinePage() {
   
   const [allCrmUsers, setAllCrmUsers] = useState<User[]>([]);
   const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
 
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -138,6 +141,12 @@ export default function PipeLinePage() {
   const [viewMode, setViewMode] = useState<'table' | 'chart'>('table');
   const [activeFilter, setActiveFilter] = useState<SummaryCardFilterType>('all');
 
+  useEffect(() => {
+    setSelectedDateRange({
+      from: subDays(new Date(), 29),
+      to: new Date(),
+    });
+  }, []);
 
   const fetchLeadsAndUsers = useCallback(async () => {
     if (!currentUser) return;
@@ -177,6 +186,23 @@ export default function PipeLinePage() {
             baseLeads = leads.filter(lead => lead.crmId === selectedCrmId);
         }
     }
+    
+    // Apply Date Range Filter
+    if (selectedDateRange?.from) {
+      const startDate = new Date(selectedDateRange.from);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = selectedDateRange.to ? new Date(selectedDateRange.to) : startDate;
+      endDate.setHours(23, 59, 59, 999);
+
+      baseLeads = baseLeads.filter(lead => {
+        try {
+          const leadDate = parseISO(lead.date);
+          return isWithinInterval(leadDate, { start: startDate, end: endDate });
+        } catch (e) {
+          return false;
+        }
+      });
+    }
 
     // Apply active filter from summary cards
     if (activeFilter !== 'all') {
@@ -200,7 +226,7 @@ export default function PipeLinePage() {
         lead.category.toLowerCase().includes(lowercasedFilter) ||
         (lead.crmName && lead.crmName.toLowerCase().includes(lowercasedFilter))
     );
-}, [leads, searchTerm, currentUser, selectedCrmId, activeFilter]);
+}, [leads, searchTerm, currentUser, selectedCrmId, activeFilter, selectedDateRange]);
   
   const leadsByCategoryChartData = useMemo(() => {
     const categoryCounts = filteredLeads.reduce((acc, lead) => {
@@ -229,7 +255,6 @@ export default function PipeLinePage() {
   }, [leadsByCategoryChartData]);
 
   const summaryData = useMemo(() => {
-    // This calculation should be based on the base set of leads, before summary card filtering is applied
     let baseFilteredLeads = leads;
     if (currentUser?.role === 'CRM') {
       baseFilteredLeads = leads.filter(lead => lead.crmId === currentUser.id);
@@ -338,6 +363,10 @@ export default function PipeLinePage() {
   
   const toggleViewMode = () => {
     setViewMode(prev => prev === 'table' ? 'chart' : 'table');
+  };
+
+  const handleDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
+    setSelectedDateRange(range);
   };
 
   const renderCurrentView = () => {
@@ -554,7 +583,7 @@ export default function PipeLinePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <SummaryCard 
             title="Total Leads" 
             value={summaryData.totalLeads.toLocaleString()} 
@@ -607,6 +636,13 @@ export default function PipeLinePage() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+                {selectedDateRange && (
+                  <DateRangePicker
+                    initialRange={selectedDateRange}
+                    onDateRangeChange={handleDateRangeChange}
+                    className="w-full sm:w-auto"
+                  />
+                )}
                 {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -680,5 +716,3 @@ export default function PipeLinePage() {
     </>
   );
 }
-
-    
