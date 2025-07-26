@@ -513,7 +513,7 @@ export default function PipeLinePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <SummaryCard title="Total Leads" value={summaryData.totalLeads.toLocaleString()} icon={Users} isLoading={isLoading} iconColorClass="text-blue-600" circleBgClass="bg-blue-100 dark:bg-blue-500/20" />
           <SummaryCard title="Today's Leads" value={summaryData.todayLeads.toLocaleString()} icon={CalendarPlus} isLoading={isLoading} iconColorClass="text-green-600" circleBgClass="bg-green-100 dark:bg-green-500/20" />
           <SummaryCard title="Total Tasks" value={summaryData.totalTasks.toLocaleString()} icon={ListChecks} isLoading={isLoading} iconColorClass="text-orange-600" circleBgClass="bg-orange-100 dark:bg-orange-500/20" />
