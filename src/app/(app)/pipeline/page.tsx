@@ -180,11 +180,10 @@ export default function PipeLinePage() {
 
     // Apply active filter from summary cards
     if (activeFilter !== 'all') {
-        const today = new Date();
         if (activeFilter === 'todayLeads') {
             baseLeads = baseLeads.filter(lead => isToday(parseISO(lead.date)));
         } else if (activeFilter === 'totalTasks') {
-            baseLeads = baseLeads.filter(lead => lead.schedule && new Date(lead.schedule) >= today);
+            baseLeads = baseLeads.filter(lead => !!lead.schedule);
         } else if (activeFilter === 'todayTasks') {
             baseLeads = baseLeads.filter(lead => lead.schedule && isToday(parseISO(lead.schedule)));
         }
@@ -242,7 +241,7 @@ export default function PipeLinePage() {
 
     const today = new Date();
     const todayLeads = baseFilteredLeads.filter(lead => isToday(parseISO(lead.date))).length;
-    const totalTasks = baseFilteredLeads.filter(lead => lead.schedule && new Date(lead.schedule) >= today).length;
+    const totalTasks = baseFilteredLeads.filter(lead => !!lead.schedule).length;
     const todayTasks = baseFilteredLeads.filter(lead => lead.schedule && isToday(parseISO(lead.schedule))).length;
     
     return {
@@ -681,3 +680,5 @@ export default function PipeLinePage() {
     </>
   );
 }
+
+    
