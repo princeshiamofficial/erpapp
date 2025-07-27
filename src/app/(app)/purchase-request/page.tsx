@@ -6,14 +6,25 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, MoreVertical, Loader2, ShoppingCart, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Search, MoreVertical, Loader2, ShoppingCart, Edit, Trash2, StickyNote } from "lucide-react"; // Added StickyNote
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import { useToast } from '@/hooks/use-toast';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"; // Added Tooltip components
 import type { PurchaseRequest, PurchaseRequestStatus, User } from '@/types';
 import { getPurchaseRequestsAction, deletePurchaseRequestAction } from './actions';
 import { format } from 'date-fns';
@@ -178,13 +189,14 @@ export default function PurchaseRequestPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="pl-6">Request ID</TableHead>
-                    <TableHead>Item Description</TableHead>
-                    <TableHead>Quantity</TableHead>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Qty</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Requested By</TableHead>
                     <TableHead>Approved By</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Notes</TableHead>
                     <TableHead className="pr-6 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -200,46 +212,63 @@ export default function PurchaseRequestPage() {
                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-6 rounded-full" /></TableCell>
                         <TableCell className="pr-6 text-right"><Skeleton className="h-9 w-9 inline-block rounded-md" /></TableCell>
                       </TableRow>
                     ))
                   ) : filteredRequests.length > 0 ? (
-                    filteredRequests.map((req, index) => (
-                      <TableRow key={req.id || `req-${index}`} className="hover:bg-muted/50 transition-colors">
-                        <TableCell className="pl-6 font-mono text-sm text-primary">{req.requestId}</TableCell>
-                        <TableCell className="text-card-foreground font-medium">{req.item}</TableCell>
-                        <TableCell className="text-card-foreground">{req.quantity}</TableCell>
-                        <TableCell className="text-card-foreground font-semibold">{formatCurrency(req.price)}</TableCell>
-                        <TableCell className="text-muted-foreground">{req.requestedByUserName}</TableCell>
-                        <TableCell className="text-muted-foreground">{req.approvedByUserName || 'N/A'}</TableCell>
-                        <TableCell className="text-muted-foreground">{format(new Date(req.date), 'd MMM yyyy')}</TableCell>
-                        <TableCell>
-                          <Badge className={getStatusBadgeClass(req.status)}>{req.status}</Badge>
-                        </TableCell>
-                        <TableCell className="pr-6 text-right">
-                          {canModify(req) && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-9 w-9">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => handleOpenEditDialog(req)} className="cursor-pointer">
-                                  <Edit className="mr-2 h-4 w-4" /> Edit / View
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => setRequestToDelete(req)} className="text-destructive focus:text-destructive cursor-pointer">
-                                  <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    <TooltipProvider>
+                      {filteredRequests.map((req, index) => (
+                        <TableRow key={req.id || `req-${index}`} className="hover:bg-muted/50 transition-colors">
+                          <TableCell className="pl-6 font-mono text-sm text-primary">{req.requestId}</TableCell>
+                          <TableCell className="text-card-foreground font-medium">{req.item}</TableCell>
+                          <TableCell className="text-card-foreground">{req.quantity}</TableCell>
+                          <TableCell className="text-card-foreground font-semibold">{formatCurrency(req.price)}</TableCell>
+                          <TableCell className="text-muted-foreground">{req.requestedByUserName}</TableCell>
+                          <TableCell className="text-muted-foreground">{req.approvedByUserName || 'N/A'}</TableCell>
+                          <TableCell className="text-muted-foreground">{format(new Date(req.date), 'd MMM yyyy')}</TableCell>
+                          <TableCell>
+                            <Badge className={getStatusBadgeClass(req.status)}>{req.status}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            {req.notes ? (
+                               <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <StickyNote className="h-5 w-5 text-muted-foreground cursor-pointer" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p className="max-w-xs whitespace-pre-wrap">{req.notes}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                                <span className="text-muted-foreground text-xs">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="pr-6 text-right">
+                            {canModify(req) && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-9 w-9">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onSelect={() => handleOpenEditDialog(req)} className="cursor-pointer">
+                                    <Edit className="mr-2 h-4 w-4" /> Edit / View
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onSelect={() => setRequestToDelete(req)} className="text-destructive focus:text-destructive cursor-pointer">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TooltipProvider>
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center py-12 h-[300px]">
+                      <TableCell colSpan={10} className="text-center py-12 h-[300px]">
                         <ShoppingCart className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
                         <p className="text-lg text-muted-foreground font-medium">No purchase requests found.</p>
                         <p className="text-sm text-muted-foreground">
