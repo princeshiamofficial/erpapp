@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/tooltip"; // Added Tooltip components
 import type { PurchaseRequest, PurchaseRequestStatus, User } from '@/types';
 import { getPurchaseRequestsAction, deletePurchaseRequestAction } from './actions';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 
 const AddEditPurchaseRequestDialog = dynamic(() => import('@/components/purchase-request/AddEditPurchaseRequestDialog').then(mod => mod.AddEditPurchaseRequestDialog));
 const DeletePurchaseRequestDialog = dynamic(() => import('@/components/purchase-request/DeletePurchaseRequestDialog').then(mod => mod.DeletePurchaseRequestDialog));
@@ -37,13 +37,16 @@ const formatCurrency = (value?: number | null): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
-const formatDateSafe = (dateString: string | undefined | null, formatString: string) => {
-    if (!dateString) return 'N/A';
+const formatDateSafe = (dateInput: string | Date | undefined | null, formatString: string) => {
+    if (!dateInput) return 'N/A';
     try {
-        const date = parseISO(dateString);
+        const date = typeof dateInput === 'string' ? parseISO(dateInput) : dateInput;
+        if (!isValid(date)) {
+            throw new Error('Invalid date parsed');
+        }
         return format(date, formatString);
     } catch (e) {
-        console.warn(`Invalid date value found: ${dateString}`);
+        console.warn(`Invalid date value found: ${dateInput}`);
         return 'Invalid Date';
     }
 }
