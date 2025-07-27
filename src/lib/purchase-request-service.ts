@@ -48,11 +48,13 @@ export const getPurchaseRequests = async (): Promise<PurchaseRequest[]> => {
             id: doc.id,
             ...doc.data
         } as PurchaseRequest));
+        // Sort by human-readable ID descending as the primary sort key
         return requests.sort((a, b) => {
             const idA = a.requestId ? parseInt(a.requestId.split('-')[1] || '0', 10) : 0;
             const idB = b.requestId ? parseInt(b.requestId.split('-')[1] || '0', 10) : 0;
             if (idB !== idA) return idB - idA;
-            return new Date(b.date).getTime() - new Date(a.date).getTime();
+            // Fallback to creation date if IDs are the same or malformed
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
     }
     return [];
@@ -73,7 +75,7 @@ export const getPurchaseRequestById = async (requestId: string): Promise<Purchas
     }
 };
 
-export const addPurchaseRequest = async (requestData: Omit<PurchaseRequest, 'id' | 'requestId'>): Promise<PurchaseRequest | null> => {
+export const addPurchaseRequest = async (requestData: Omit<PurchaseRequest, 'id' | 'requestId' | 'createdAt' | 'updatedAt'>): Promise<PurchaseRequest | null> => {
   try {
     await ensureCollectionExists();
     
@@ -93,7 +95,7 @@ export const addPurchaseRequest = async (requestData: Omit<PurchaseRequest, 'id'
     const newRequestData = {
         ...requestData,
         requestId: newRequestId,
-        date: now,
+        createdAt: now,
         updatedAt: now,
     };
 

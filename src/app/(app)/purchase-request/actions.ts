@@ -8,7 +8,7 @@ import {
   addPurchaseRequest,
   updatePurchaseRequest,
   deletePurchaseRequest,
-  getPurchaseRequestById, // Import the new function
+  getPurchaseRequestById,
 } from '@/lib/purchase-request-service';
 
 export async function getPurchaseRequestsAction(): Promise<PurchaseRequest[]> {
@@ -21,7 +21,7 @@ export async function getPurchaseRequestsAction(): Promise<PurchaseRequest[]> {
 }
 
 export async function addPurchaseRequestAction(
-  requestData: Omit<PurchaseRequest, 'id' | 'requestedByUserId' | 'requestedByUserName' | 'requestId' | 'price' | 'date' | 'updatedAt'>,
+  requestData: Omit<PurchaseRequest, 'id' | 'requestedByUserId' | 'requestedByUserName' | 'requestId' | 'price' | 'createdAt' | 'updatedAt'>,
   currentUser: User
 ): Promise<{ success: boolean; request?: PurchaseRequest; error?: string }> {
   try {

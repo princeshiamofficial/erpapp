@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, MoreVertical, Loader2, ShoppingCart, Edit, Trash2, StickyNote } from "lucide-react"; // Added StickyNote
+import { PlusCircle, Search, MoreVertical, Loader2, ShoppingCart, Edit, Trash2, StickyNote } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import { useToast } from '@/hooks/use-toast';
@@ -24,7 +24,7 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip"; // Added Tooltip components
+} from "@/components/ui/tooltip";
 import type { PurchaseRequest, PurchaseRequestStatus, User } from '@/types';
 import { getPurchaseRequestsAction, deletePurchaseRequestAction } from './actions';
 import { format, parseISO, isValid } from 'date-fns';
@@ -40,17 +40,15 @@ const formatCurrency = (value?: number | null): string => {
 const formatDateSafe = (dateInput: string | Date | undefined | null, formatString: string = 'd MMM yyyy') => {
     if (!dateInput) return 'N/A';
     try {
-        const date = (typeof dateInput === 'string' && !dateInput.endsWith('Z')) 
-            ? parseISO(dateInput) 
-            : new Date(dateInput);
-
+        const date = typeof dateInput === 'string' ? parseISO(dateInput) : new Date(dateInput);
         if (!isValid(date)) {
-            throw new Error('Invalid date parsed');
+            console.warn(`formatDateSafe received an invalid date value:`, dateInput);
+            return 'Invalid Date';
         }
         return format(date, formatString);
     } catch (e) {
-        console.warn(`Invalid date value found: ${dateInput}`);
-        return 'Invalid Date';
+        console.error(`Error formatting date: ${dateInput}`, e);
+        return 'Format Error';
     }
 }
 
@@ -244,8 +242,8 @@ export default function PurchaseRequestPage() {
                           <TableCell className="text-muted-foreground">{req.requestedByUserName}</TableCell>
                           <TableCell className="text-muted-foreground">{req.approvedByUserName || 'N/A'}</TableCell>
                           <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                            <div>Created: {formatDateSafe(req.date, 'd MMM yyyy')}</div>
-                            <div className="text-gray-400">Updated: {formatDateSafe(req.updatedAt, 'd MMM yyyy')}</div>
+                            <div>Created: {formatDateSafe(req.createdAt)}</div>
+                            <div className="text-gray-400">Updated: {formatDateSafe(req.updatedAt)}</div>
                           </TableCell>
                           <TableCell>
                             <Badge className={getStatusBadgeClass(req.status)}>{req.status}</Badge>

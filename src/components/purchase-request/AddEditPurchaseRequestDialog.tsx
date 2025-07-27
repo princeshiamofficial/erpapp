@@ -105,9 +105,11 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
 
     let result;
     if (isEditMode) {
-      result = await updatePurchaseRequestAction(request.id, requestData);
+      // For edit, we need to pass the existing createdAt to preserve it
+      const editData = { ...requestData, createdAt: request.createdAt };
+      result = await updatePurchaseRequestAction(request.id, editData);
     } else {
-      // Add action doesn't include status or price
+      // Add action handles createdAt and updatedAt automatically
       const addData = { ...requestData, status: 'Pending' };
       result = await addPurchaseRequestAction(addData, currentUser);
     }
