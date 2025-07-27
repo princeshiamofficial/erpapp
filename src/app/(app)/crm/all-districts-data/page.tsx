@@ -14,6 +14,7 @@ import { getOrders } from '@/lib/order-service';
 import { divisions } from '@/lib/district-data';
 import Papa from 'papaparse';
 import { format, parseISO } from 'date-fns';
+import { useAuth } from '@/contexts/auth-context';
 
 
 const formatDate = (dateString?: string) => {
@@ -91,6 +92,7 @@ const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
 };
 
 export default function AllDistrictsDataPage() {
+  const { currentUser } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [districtData, setDistrictData] = useState<DivisionData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -209,15 +211,17 @@ export default function AllDistrictsDataPage() {
                       className="pl-10 bg-background h-10 rounded-md w-full"
                     />
                   </div>
-                  <Button
-                    onClick={handleExport}
-                    variant="outline"
-                    className="h-10 w-full sm:w-auto"
-                    disabled={isLoading}
-                  >
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Export
-                  </Button>
+                  {currentUser?.role === 'SYSTEM_ADMIN' && (
+                    <Button
+                      onClick={handleExport}
+                      variant="outline"
+                      className="h-10 w-full sm:w-auto"
+                      disabled={isLoading}
+                    >
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Export
+                    </Button>
+                  )}
                 </div>
               </div>
           </CardHeader>
