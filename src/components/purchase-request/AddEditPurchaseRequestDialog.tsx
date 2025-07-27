@@ -90,7 +90,7 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
       notes: notes.trim() || null,
     };
     
-    if (isEditMode) {
+    if (isEditMode && request) {
       requestData.status = status;
       requestData.price = status === 'Purchased' ? numericPrice : null;
       requestData.requestId = requestId;
@@ -101,13 +101,14 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
         requestData.approvedByUserName = currentUser.name;
       }
 
+      // Preserve created at on update
+      requestData.createdAt = request.createdAt;
+
     }
 
     let result;
     if (isEditMode) {
-      // For edit, we need to pass the existing createdAt to preserve it
-      const editData = { ...requestData, createdAt: request.createdAt };
-      result = await updatePurchaseRequestAction(request.id, editData);
+      result = await updatePurchaseRequestAction(request.id, requestData);
     } else {
       // Add action handles createdAt and updatedAt automatically
       const addData = { ...requestData, status: 'Pending' };

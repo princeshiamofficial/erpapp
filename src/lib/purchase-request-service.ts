@@ -54,7 +54,9 @@ export const getPurchaseRequests = async (): Promise<PurchaseRequest[]> => {
             const idB = b.requestId ? parseInt(b.requestId.split('-')[1] || '0', 10) : 0;
             if (idB !== idA) return idB - idA;
             // Fallback to creation date if IDs are the same or malformed
-            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dateB - dateA;
         });
     }
     return [];
@@ -118,13 +120,22 @@ export const addPurchaseRequest = async (requestData: Omit<PurchaseRequest, 'id'
 export const updatePurchaseRequest = async (requestId: string, updates: Partial<Omit<PurchaseRequest, 'id'>>): Promise<boolean> => {
   try {
     await ensureCollectionExists();
+    
+    const existingRequest = await getPurchaseRequestById(requestId);
+    if (!existingRequest) {
+        throw new Error("Purchase request not found.");
+    }
+    
     const finalUpdates = {
         ...updates,
+        createdAt: existingRequest.createdAt, // Preserve original creation date
         updatedAt: new Date().toISOString()
     };
+    
     const payload = {
         data: finalUpdates
     };
+    
     await fetchFromApi(`collections/${COLLECTION_NAME}/documents/${requestId}`, {
         method: 'PUT',
         body: JSON.stringify(payload)

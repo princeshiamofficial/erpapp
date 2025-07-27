@@ -40,7 +40,7 @@ const formatCurrency = (value?: number | null): string => {
 const formatDateSafe = (dateInput: string | Date | undefined | null, formatString: string = 'd MMM yyyy') => {
     if (!dateInput) return 'N/A';
     try {
-        const date = typeof dateInput === 'string' ? parseISO(dateInput) : new Date(dateInput);
+        const date = typeof dateInput === 'string' ? parseISO(dateInput) : dateInput;
         if (!isValid(date)) {
             console.warn(`formatDateSafe received an invalid date value:`, dateInput);
             return 'Invalid Date';
@@ -242,8 +242,12 @@ export default function PurchaseRequestPage() {
                           <TableCell className="text-muted-foreground">{req.requestedByUserName}</TableCell>
                           <TableCell className="text-muted-foreground">{req.approvedByUserName || 'N/A'}</TableCell>
                           <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                            <div>Created: {formatDateSafe(req.createdAt)}</div>
-                            <div className="text-gray-400">Updated: {formatDateSafe(req.updatedAt)}</div>
+                             <div title={`Created: ${formatDateSafe(req.createdAt, "PPP p")}`}>
+                                Created: {formatDateSafe(req.createdAt)}
+                            </div>
+                             <div title={`Updated: ${formatDateSafe(req.updatedAt, "PPP p")}`}>
+                                Updated: {formatDateSafe(req.updatedAt)}
+                            </div>
                           </TableCell>
                           <TableCell>
                             <Badge className={getStatusBadgeClass(req.status)}>{req.status}</Badge>

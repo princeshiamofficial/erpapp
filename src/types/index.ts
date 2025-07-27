@@ -305,7 +305,7 @@ export type PurchaseRequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Purch
 export interface PurchaseRequest {
   id: string;
   requestId: string;
-  createdAt: string; // Renamed from 'date'
+  createdAt: string; 
   updatedAt: string;
   item: string;
   quantity: number;
