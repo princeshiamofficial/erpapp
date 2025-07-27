@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/tooltip"; // Added Tooltip components
 import type { PurchaseRequest, PurchaseRequestStatus, User } from '@/types';
 import { getPurchaseRequestsAction, deletePurchaseRequestAction } from './actions';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 
 const AddEditPurchaseRequestDialog = dynamic(() => import('@/components/purchase-request/AddEditPurchaseRequestDialog').then(mod => mod.AddEditPurchaseRequestDialog));
 const DeletePurchaseRequestDialog = dynamic(() => import('@/components/purchase-request/DeletePurchaseRequestDialog').then(mod => mod.DeletePurchaseRequestDialog));
@@ -36,6 +36,17 @@ const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
+
+const formatDateSafe = (dateString: string | undefined | null, formatString: string) => {
+    if (!dateString) return 'N/A';
+    try {
+        const date = parseISO(dateString);
+        return format(date, formatString);
+    } catch (e) {
+        console.warn(`Invalid date value found: ${dateString}`);
+        return 'Invalid Date';
+    }
+}
 
 export default function PurchaseRequestPage() {
   const { currentUser } = useAuth();
@@ -230,11 +241,11 @@ export default function PurchaseRequestPage() {
                             <Tooltip>
                               <TooltipTrigger>
                                 <span className="underline decoration-dashed cursor-help">
-                                  {format(new Date(req.date), 'd MMM yyyy')}
+                                  {formatDateSafe(req.date, 'd MMM yyyy')}
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Last Updated: {req.updatedAt ? format(new Date(req.updatedAt), 'd MMM yyyy, h:mm a') : 'N/A'}</p>
+                                <p>Last Updated: {formatDateSafe(req.updatedAt, 'd MMM yyyy, h:mm a')}</p>
                               </TooltipContent>
                             </Tooltip>
                           </TableCell>
