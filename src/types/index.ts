@@ -284,11 +284,15 @@ export interface Lead {
 }
 
 export interface DistrictDataEntry {
+    id?: string; // Optional Firestore ID
     jobId: string;
     businessName: string;
     address: string;
     phone: string;
-    orderDate: string;
+    orderDate: string; // ISO String
+    // These are added for manual entries
+    division?: string;
+    district?: string;
 }
 
 export interface DistrictInfo {

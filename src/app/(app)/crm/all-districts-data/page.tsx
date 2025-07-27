@@ -11,6 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, DistrictDataEntry, DivisionData } from '@/types';
 import { getOrders } from '@/lib/order-service';
+import { getManualDistrictData } from '@/lib/district-data-service'; // Import new service
 import { divisions } from '@/lib/district-data';
 import Papa from 'papaparse';
 import { format, parseISO } from 'date-fns';
@@ -21,19 +22,18 @@ import { AddEditDistrictDataDialog } from '@/components/crm/AddEditDistrictDataD
 const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
     try {
-        // Using "MMM d, yyyy" format for a clean, single-line date
         return format(parseISO(dateString), 'MMM d, yyyy');
     } catch (e) {
         return 'Invalid Date';
     }
 };
 
-const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
+const formatDistrictData = (orders: TrackingLink[], manualEntries: DistrictDataEntry[]): DivisionData[] => {
     const divisionMap: Record<string, Record<string, DistrictDataEntry[]>> = {};
 
-    // More aggressive simplification for robust matching
     const simplifyString = (str: string) => str.replace(/['’.,\s-]/g, '').toLowerCase();
 
+    // Process orders from tracking links
     orders.forEach(order => {
         let longestMatch: { name: string; division: string; } | null = null;
         let longestMatchLength = 0;
@@ -58,24 +58,30 @@ const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
         const districtName = longestMatch ? longestMatch.name : "Unknown";
         const divisionName = longestMatch ? longestMatch.division : "Unknown";
 
-        if (!divisionMap[divisionName]) {
-            divisionMap[divisionName] = {};
-        }
-        if (!divisionMap[divisionName][districtName]) {
-            divisionMap[divisionName][districtName] = [];
-        }
+        if (!divisionMap[divisionName]) divisionMap[divisionName] = {};
+        if (!divisionMap[divisionName][districtName]) divisionMap[divisionName][districtName] = [];
 
         const companyNameParts = order.companyName.split('•').map(part => part.trim());
         const jobId = companyNameParts.length > 1 ? companyNameParts[0] : order.id;
         const businessName = companyNameParts.length > 1 ? companyNameParts.slice(1).join(' • ').trim() : order.companyName;
 
         divisionMap[divisionName][districtName].push({
-            jobId: jobId,
-            businessName: businessName,
+            jobId,
+            businessName,
             address: order.address,
             phone: order.phoneNumber,
             orderDate: order.createdAt,
         });
+    });
+
+    // Process manual entries
+    manualEntries.forEach(entry => {
+        const divisionName = entry.division || 'Unknown';
+        const districtName = entry.district || 'Unknown';
+
+        if (!divisionMap[divisionName]) divisionMap[divisionName] = {};
+        if (!divisionMap[divisionName][districtName]) divisionMap[divisionName][districtName] = [];
+        divisionMap[divisionName][districtName].push(entry);
     });
 
     const sortedDivisions = Object.entries(divisionMap).sort(([divisionA], [divisionB]) => {
@@ -89,7 +95,7 @@ const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
         districts: Object.entries(districts).map(([name, entries]) => ({
             name,
             entries,
-        })).sort((a,b) => a.name.localeCompare(b.name)), // Sort districts alphabetically
+        })).sort((a,b) => a.name.localeCompare(b.name)),
     }));
 };
 
@@ -104,8 +110,11 @@ export default function AllDistrictsDataPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-        const fetchedOrders = await getOrders();
-        const formattedData = formatDistrictData(fetchedOrders);
+        const [fetchedOrders, fetchedManualEntries] = await Promise.all([
+            getOrders(),
+            getManualDistrictData()
+        ]);
+        const formattedData = formatDistrictData(fetchedOrders, fetchedManualEntries);
         setDistrictData(formattedData);
     } catch (error) {
         console.error("Failed to fetch order data for districts page:", error);
@@ -186,12 +195,8 @@ export default function AllDistrictsDataPage() {
   
   const handleDataSaved = () => {
     setIsAddEditDialogOpen(false);
-    toast({
-      title: "Success",
-      description: "District data has been saved. Note: This is a demo and data is not persisted.",
-    });
     // In a real app, you would refetch data here:
-    // fetchData();
+    fetchData();
   };
 
 

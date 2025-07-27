@@ -23,6 +23,7 @@ import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { addManualDistrictDataAction } from '@/app/(app)/crm/all-districts-data/actions';
 
 
 interface AddEditDistrictDataDialogProps {
@@ -49,10 +50,8 @@ export function AddEditDistrictDataDialog({ isOpen, onOpenChange, onDataSaved, e
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && entry) {
-        // In a real scenario, you'd find the division/district for the entry's address
-        // For now, we'll leave it blank or pre-fill if possible
-        setSelectedDivision('');
-        setSelectedDistrict('');
+        setSelectedDivision(entry.division || '');
+        setSelectedDistrict(entry.district || '');
         setJobId(entry.jobId);
         setOrderDate(entry.orderDate ? new Date(entry.orderDate) : new Date());
         setBusinessName(entry.businessName);
@@ -69,7 +68,7 @@ export function AddEditDistrictDataDialog({ isOpen, onOpenChange, onDataSaved, e
         setPhone('');
       }
     }
-  }, [isOpen, entry, isEditMode, toast]);
+  }, [isOpen, entry, isEditMode]);
   
   const handleDivisionChange = (divisionName: string) => {
     setSelectedDivision(divisionName);
@@ -78,7 +77,7 @@ export function AddEditDistrictDataDialog({ isOpen, onOpenChange, onDataSaved, e
 
   const districtOptions = divisions.find(d => d.division === selectedDivision)?.districts || [];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedDivision || !selectedDistrict || !jobId || !orderDate || !businessName || !address || !phone) {
       toast({
@@ -88,10 +87,10 @@ export function AddEditDistrictDataDialog({ isOpen, onOpenChange, onDataSaved, e
       });
       return;
     }
-    // In a real implementation, you would save the data here.
-    // For this UI-only change, we'll just simulate a success.
+    
     setIsSubmitting(true);
-    console.log("Submitting Data:", {
+    
+    const dataToSave = {
         division: selectedDivision,
         district: selectedDistrict,
         jobId,
@@ -99,11 +98,26 @@ export function AddEditDistrictDataDialog({ isOpen, onOpenChange, onDataSaved, e
         businessName,
         address,
         phone,
-    });
-    setTimeout(() => {
-        setIsSubmitting(false);
+    };
+    
+    // In a real implementation, you would save the data here.
+    const result = await addManualDistrictDataAction(dataToSave);
+    
+    setIsSubmitting(false);
+
+    if (result.success) {
+        toast({
+            title: "Success",
+            description: "District data has been saved.",
+        });
         onDataSaved();
-    }, 1000);
+    } else {
+        toast({
+            title: "Error",
+            description: result.error || "Could not save district data.",
+            variant: "destructive"
+        });
+    }
   };
 
   return (
