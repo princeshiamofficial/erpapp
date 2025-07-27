@@ -182,6 +182,7 @@ export default function PurchaseRequestPage() {
                     <TableHead>Quantity</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Requested By</TableHead>
+                    <TableHead>Approved By</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead className="pr-6 text-right">Actions</TableHead>
@@ -197,6 +198,7 @@ export default function PurchaseRequestPage() {
                         <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
                         <TableCell className="pr-6 text-right"><Skeleton className="h-9 w-9 inline-block rounded-md" /></TableCell>
                       </TableRow>
@@ -209,6 +211,7 @@ export default function PurchaseRequestPage() {
                         <TableCell className="text-card-foreground">{req.quantity}</TableCell>
                         <TableCell className="text-card-foreground font-semibold">{formatCurrency(req.price)}</TableCell>
                         <TableCell className="text-muted-foreground">{req.requestedByUserName}</TableCell>
+                        <TableCell className="text-muted-foreground">{req.approvedByUserName || 'N/A'}</TableCell>
                         <TableCell className="text-muted-foreground">{format(new Date(req.date), 'd MMM yyyy')}</TableCell>
                         <TableCell>
                           <Badge className={getStatusBadgeClass(req.status)}>{req.status}</Badge>
@@ -236,7 +239,7 @@ export default function PurchaseRequestPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-12 h-[300px]">
+                      <TableCell colSpan={9} className="text-center py-12 h-[300px]">
                         <ShoppingCart className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
                         <p className="text-lg text-muted-foreground font-medium">No purchase requests found.</p>
                         <p className="text-sm text-muted-foreground">

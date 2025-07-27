@@ -94,7 +94,14 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
     if (isEditMode) {
       requestData.status = status;
       requestData.price = status === 'Purchased' ? numericPrice : null;
-      requestData.requestId = requestId; // Ensure requestId is passed in update payload
+      requestData.requestId = requestId;
+
+      // If the status is being changed to Approved or Purchased, and there's no approver yet
+      if ((status === 'Approved' || status === 'Purchased') && !request.approvedByUserId) {
+        requestData.approvedByUserId = currentUser.id;
+        requestData.approvedByUserName = currentUser.name;
+      }
+
     }
 
     let result;

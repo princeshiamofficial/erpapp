@@ -313,4 +313,6 @@ export interface PurchaseRequest {
   requestedByUserName: string;
   notes?: string | null;
   price?: number | null;
+  approvedByUserId?: string | null;
+  approvedByUserName?: string | null;
 }
