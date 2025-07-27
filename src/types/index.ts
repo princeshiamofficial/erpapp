@@ -288,6 +288,7 @@ export interface DistrictDataEntry {
     businessName: string;
     address: string;
     phone: string;
+    orderDate: string;
 }
 
 export interface DistrictInfo {

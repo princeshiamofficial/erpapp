@@ -13,7 +13,17 @@ import type { TrackingLink, DistrictDataEntry, DivisionData } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { divisions } from '@/lib/district-data';
 import Papa from 'papaparse';
+import { format, parseISO } from 'date-fns';
 
+
+const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    try {
+        return format(parseISO(dateString), 'd MMM yyyy');
+    } catch (e) {
+        return 'Invalid Date';
+    }
+};
 
 const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
     const divisionMap: Record<string, Record<string, DistrictDataEntry[]>> = {};
@@ -61,6 +71,7 @@ const formatDistrictData = (orders: TrackingLink[]): DivisionData[] => {
             businessName: businessName,
             address: order.address,
             phone: order.phoneNumber,
+            orderDate: order.createdAt,
         });
     });
 
@@ -143,6 +154,7 @@ export default function AllDistrictsDataPage() {
           Division: division.division,
           District: district.name,
           'Job ID': entry.jobId,
+          'Order Date': formatDate(entry.orderDate),
           'Business Name': entry.businessName,
           Address: entry.address,
           Phone: entry.phone,
@@ -217,6 +229,7 @@ export default function AllDistrictsDataPage() {
                     <TableHead className="w-[200px] text-xs pl-6 py-2">Division</TableHead>
                     <TableHead className="w-[180px] text-xs py-2">District</TableHead>
                     <TableHead className="text-xs py-2">Job ID</TableHead>
+                    <TableHead className="text-xs py-2">Order Date</TableHead>
                     <TableHead className="text-xs py-2">Business Name</TableHead>
                     <TableHead className="text-xs py-2">Address</TableHead>
                     <TableHead className="text-xs py-2">Phone</TableHead>
@@ -226,7 +239,7 @@ export default function AllDistrictsDataPage() {
                   {isLoading ? (
                     [...Array(5)].map((_, i) => (
                       <TableRow key={i}>
-                        <TableCell colSpan={6} className="p-0"><Skeleton className="h-12 w-full"/></TableCell>
+                        <TableCell colSpan={7} className="p-0"><Skeleton className="h-12 w-full"/></TableCell>
                       </TableRow>
                     ))
                   ) : filteredData.length > 0 ? filteredData.map((divisionData, divisionIndex) => {
@@ -255,6 +268,7 @@ export default function AllDistrictsDataPage() {
                             {divisionCell}
                             {districtCell}
                             <TableCell className="py-3 px-4">{entry.jobId}</TableCell>
+                            <TableCell className="py-3 px-4">{formatDate(entry.orderDate)}</TableCell>
                             <TableCell className="py-3 px-4">{entry.businessName}</TableCell>
                             <TableCell className="py-3 px-4">{entry.address}</TableCell>
                             <TableCell className="py-3 px-4">{entry.phone}</TableCell>
@@ -264,7 +278,7 @@ export default function AllDistrictsDataPage() {
                     });
                   }) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
+                      <TableCell colSpan={7} className="h-24 text-center">
                         No results found{searchTerm ? ` for "${searchTerm}"` : ''}.
                       </TableCell>
                     </TableRow>
