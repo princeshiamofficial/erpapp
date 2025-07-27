@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, FileSpreadsheet } from 'lucide-react';
+import { Search, FileSpreadsheet, PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, DistrictDataEntry, DivisionData } from '@/types';
@@ -15,6 +15,7 @@ import { divisions } from '@/lib/district-data';
 import Papa from 'papaparse';
 import { format, parseISO } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
+import { AddEditDistrictDataDialog } from '@/components/crm/AddEditDistrictDataDialog';
 
 
 const formatDate = (dateString?: string) => {
@@ -97,6 +98,7 @@ export default function AllDistrictsDataPage() {
   const [districtData, setDistrictData] = useState<DivisionData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -180,6 +182,17 @@ export default function AllDistrictsDataPage() {
       description: "District data has been downloaded as a CSV file.",
     });
   };
+  
+  const handleDataSaved = () => {
+    setIsAddEditDialogOpen(false);
+    toast({
+      title: "Success",
+      description: "District data has been saved. Note: This is a demo and data is not persisted.",
+    });
+    // In a real app, you would refetch data here:
+    // fetchData();
+  };
+
 
   return (
     <>
@@ -212,15 +225,26 @@ export default function AllDistrictsDataPage() {
                     />
                   </div>
                   {currentUser?.role === 'SYSTEM_ADMIN' && (
-                    <Button
-                      onClick={handleExport}
-                      variant="outline"
-                      className="h-10 w-full sm:w-auto"
-                      disabled={isLoading}
-                    >
-                      <FileSpreadsheet className="mr-2 h-4 w-4" />
-                      Export
-                    </Button>
+                    <>
+                        <Button
+                          onClick={() => setIsAddEditDialogOpen(true)}
+                          variant="outline"
+                          className="h-10 w-full sm:w-auto"
+                          disabled={isLoading}
+                        >
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          Add New Data
+                        </Button>
+                        <Button
+                          onClick={handleExport}
+                          variant="outline"
+                          className="h-10 w-full sm:w-auto"
+                          disabled={isLoading}
+                        >
+                          <FileSpreadsheet className="mr-2 h-4 w-4" />
+                          Export
+                        </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -293,6 +317,13 @@ export default function AllDistrictsDataPage() {
           </CardContent>
         </Card>
       </div>
+      
+      <AddEditDistrictDataDialog
+        isOpen={isAddEditDialogOpen}
+        onOpenChange={setIsAddEditDialogOpen}
+        onDataSaved={handleDataSaved}
+      />
     </>
   );
 }
+
