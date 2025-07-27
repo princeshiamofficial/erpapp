@@ -243,7 +243,7 @@ export default function PurchaseRequestPage() {
                           <TableCell className="text-muted-foreground">
                             <Tooltip>
                               <TooltipTrigger>
-                                <span className="underline decoration-dashed cursor-help">
+                                <span className="cursor-help">
                                   {formatDateSafe(req.createdAt)}
                                 </span>
                               </TooltipTrigger>
