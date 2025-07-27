@@ -17,12 +17,13 @@ import Papa from 'papaparse';
 import { format, parseISO } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 import { AddEditDistrictDataDialog } from '@/components/crm/AddEditDistrictDataDialog';
+import { cn } from '@/lib/utils';
 
 
 const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
     try {
-        return format(parseISO(dateString), 'MMM d, yyyy');
+        return format(parseISO(dateString), 'd MMM, yyyy');
     } catch (e) {
         return 'Invalid Date';
     }
@@ -284,14 +285,26 @@ export default function AllDistrictsDataPage() {
 
                       return districtData.entries.map((entry, entryIndex) => {
                         const divisionCell = isFirstDivisionRow ? (
-                          <TableCell rowSpan={divisionData.districts.reduce((sum, d) => sum + d.entries.length, 0)} className="align-top font-semibold text-card-foreground border-r bg-muted/30 py-4 px-4 text-sm pl-6">
+                          <TableCell
+                            rowSpan={divisionData.districts.reduce((sum, d) => sum + d.entries.length, 0)}
+                            className={cn(
+                              "align-top font-semibold text-card-foreground border-r bg-muted/30 py-4 px-4 text-sm pl-6",
+                              divisionData.division === 'Unknown' && "bg-red-100/50 dark:bg-red-900/20 text-red-800 dark:text-red-200"
+                            )}
+                          >
                             {divisionData.division}
                           </TableCell>
                         ) : null;
                         isFirstDivisionRow = false;
 
                         const districtCell = isFirstDistrictRow ? (
-                          <TableCell rowSpan={districtData.entries.length} className="align-top text-muted-foreground border-r py-4 px-4 text-sm">
+                          <TableCell
+                            rowSpan={districtData.entries.length}
+                            className={cn(
+                              "align-top text-muted-foreground border-r py-4 px-4 text-sm",
+                              districtData.name === 'Unknown' && "bg-red-100/50 dark:bg-red-900/20 text-red-800 dark:text-red-200"
+                            )}
+                          >
                             {districtData.name}
                           </TableCell>
                         ) : null;
