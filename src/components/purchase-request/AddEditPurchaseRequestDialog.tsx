@@ -85,7 +85,6 @@ export function AddEditPurchaseRequestDialog({ isOpen, onOpenChange, onSave, req
 
     setIsSubmitting(true);
     const requestData: any = {
-      date: new Date().toISOString(),
       item: item.trim(),
       quantity: numericQuantity,
       notes: notes.trim() || null,

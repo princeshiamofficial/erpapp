@@ -88,10 +88,13 @@ export const addPurchaseRequest = async (requestData: Omit<PurchaseRequest, 'id'
         }
     });
     const newRequestId = `PR-${String(maxId + 1).padStart(3, '0')}`;
+    const now = new Date().toISOString();
 
     const newRequestData = {
         ...requestData,
         requestId: newRequestId,
+        date: now,
+        updatedAt: now,
     };
 
     const newDoc = await fetchFromApi(`collections/${COLLECTION_NAME}/documents`, {
@@ -113,8 +116,12 @@ export const addPurchaseRequest = async (requestData: Omit<PurchaseRequest, 'id'
 export const updatePurchaseRequest = async (requestId: string, updates: Partial<Omit<PurchaseRequest, 'id'>>): Promise<boolean> => {
   try {
     await ensureCollectionExists();
+    const finalUpdates = {
+        ...updates,
+        updatedAt: new Date().toISOString()
+    };
     const payload = {
-        data: updates
+        data: finalUpdates
     };
     await fetchFromApi(`collections/${COLLECTION_NAME}/documents/${requestId}`, {
         method: 'PUT',

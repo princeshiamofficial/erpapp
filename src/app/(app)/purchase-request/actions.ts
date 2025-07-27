@@ -21,7 +21,7 @@ export async function getPurchaseRequestsAction(): Promise<PurchaseRequest[]> {
 }
 
 export async function addPurchaseRequestAction(
-  requestData: Omit<PurchaseRequest, 'id' | 'requestedByUserId' | 'requestedByUserName' | 'requestId' | 'price'>,
+  requestData: Omit<PurchaseRequest, 'id' | 'requestedByUserId' | 'requestedByUserName' | 'requestId' | 'price' | 'date' | 'updatedAt'>,
   currentUser: User
 ): Promise<{ success: boolean; request?: PurchaseRequest; error?: string }> {
   try {

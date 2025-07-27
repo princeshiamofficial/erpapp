@@ -226,7 +226,18 @@ export default function PurchaseRequestPage() {
                           <TableCell className="text-card-foreground font-semibold">{formatCurrency(req.price)}</TableCell>
                           <TableCell className="text-muted-foreground">{req.requestedByUserName}</TableCell>
                           <TableCell className="text-muted-foreground">{req.approvedByUserName || 'N/A'}</TableCell>
-                          <TableCell className="text-muted-foreground">{format(new Date(req.date), 'd MMM yyyy')}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <span className="underline decoration-dashed cursor-help">
+                                  {format(new Date(req.date), 'd MMM yyyy')}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Last Updated: {req.updatedAt ? format(new Date(req.updatedAt), 'd MMM yyyy, h:mm a') : 'N/A'}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TableCell>
                           <TableCell>
                             <Badge className={getStatusBadgeClass(req.status)}>{req.status}</Badge>
                           </TableCell>

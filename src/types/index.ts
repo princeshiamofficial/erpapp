@@ -305,7 +305,8 @@ export type PurchaseRequestStatus = 'Pending' | 'Approved' | 'Rejected' | 'Purch
 export interface PurchaseRequest {
   id: string;
   requestId: string; // The human-readable ID, e.g., PR-001
-  date: string; // ISO string
+  date: string; // ISO string of creation
+  updatedAt?: string; // ISO string of last update
   item: string;
   quantity: number;
   status: PurchaseRequestStatus;
