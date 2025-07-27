@@ -432,7 +432,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
            {(!packzyStatus || packzyStatus === 'unavailable') && (
             <div className="mt-4 pt-4 border-t border-border/30">
               <h3 className="text-lg font-semibold mb-1 text-foreground flex items-center">{getStatusIcon(order.currentStatus, "h-7 w-7")}Current Status: <span className="ml-2 text-2xl font-bold" style={{ color: currentStatusInfo.color }}>{currentStatusInfo.name}</span></h3>
-              <div className="text-xs text-muted-foreground mt-1.5 ml-[40px] sm:ml-[44px]">{isClient ? (lastStatusUpdateEntry ? `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp, true)} by ${lastStatusUpdateEntry.changedByUserName}` : "Status pending.") : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}</div>
+              <div className="text-xs text-muted-foreground mt-1.5 ml-[40px] sm:ml-[44px]">{isClient ? (lastStatusUpdateEntry ? `Last status update: ${formatDate(lastStatusUpdateEntry.timestamp, true)} ${lastStatusUpdateEntry.changedByUserName}` : "Status pending.") : <div className="h-4 w-48"><Skeleton className="h-full w-full" /></div>}</div>
             </div>
            )}
 
@@ -464,7 +464,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <p className="font-bold text-foreground">Color Hut</p>
             <p className="text-muted-foreground text-sm">9/A Kajla Bus Stand, Donia,Jatrabari,Dhaka- 1236</p>
             <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
-            <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${formatDate(order.createdAt, false)} by ${order.crmUserName}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
+            <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${formatDate(order.createdAt, false)} ${order.crmUserName}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
           </div>
           <div className="text-left sm:text-right mt-4 sm:mt-0">
             <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>

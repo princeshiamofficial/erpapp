@@ -117,7 +117,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
           <p className="font-bold text-foreground">Color Hut</p>
           <p className="text-muted-foreground text-sm">9/A Kajla Bus Stand, Donia,Jatrabari,Dhaka- 1236</p>
           <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
-          <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${formatDate(order.createdAt)} by ${order.crmUserName}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
+          <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${formatDate(order.createdAt)} ${order.crmUserName}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
         </div>
         <div className="text-left sm:text-right mt-4 sm:mt-0">
           <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
@@ -195,7 +195,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
           {totalAdvancePaid > 0 && (
             <div className="flex justify-between mb-2">
               <span className="text-md text-muted-foreground">Total Advance Paid:</span>
-              <span className="text-md font-medium text-green-600">- {formatCurrency(totalAdvancePaid)}</span>
+              <span className="font-medium text-green-600">- {formatCurrency(totalAdvancePaid)}</span>
             </div>
           )}
 
