@@ -37,10 +37,13 @@ const formatCurrency = (value?: number | null): string => {
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
 
-const formatDateSafe = (dateInput: string | Date | undefined | null, formatString: string) => {
+const formatDateSafe = (dateInput: string | Date | undefined | null, formatString: string = 'd MMM yyyy') => {
     if (!dateInput) return 'N/A';
     try {
-        const date = typeof dateInput === 'string' ? parseISO(dateInput) : dateInput;
+        const date = (typeof dateInput === 'string' && !dateInput.endsWith('Z')) 
+            ? parseISO(dateInput) 
+            : new Date(dateInput);
+
         if (!isValid(date)) {
             throw new Error('Invalid date parsed');
         }
@@ -240,17 +243,9 @@ export default function PurchaseRequestPage() {
                           <TableCell className="text-card-foreground font-semibold">{formatCurrency(req.price)}</TableCell>
                           <TableCell className="text-muted-foreground">{req.requestedByUserName}</TableCell>
                           <TableCell className="text-muted-foreground">{req.approvedByUserName || 'N/A'}</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <span className="underline decoration-dashed cursor-help">
-                                  {formatDateSafe(req.date, 'd MMM yyyy')}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Last Updated: {formatDateSafe(req.updatedAt, 'd MMM yyyy, h:mm a')}</p>
-                              </TooltipContent>
-                            </Tooltip>
+                          <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                            <div>Created: {formatDateSafe(req.date, 'd MMM yyyy')}</div>
+                            <div className="text-gray-400">Updated: {formatDateSafe(req.updatedAt, 'd MMM yyyy')}</div>
                           </TableCell>
                           <TableCell>
                             <Badge className={getStatusBadgeClass(req.status)}>{req.status}</Badge>
