@@ -20,9 +20,17 @@ async function fetchFromApi(endpoint: string, options: RequestInit = {}) {
     const response = await fetch(`${API_URL}/${endpoint}`, { ...options, headers });
 
     if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to decode API error response.' }));
-        console.error("API Error Response:", errorData);
-        throw new Error(errorData.message || `API request failed with status ${response.status}`);
+        const errorText = await response.text();
+        let errorData = { message: `API request failed with status ${response.status}. Response: ${errorText}` };
+        try {
+            // Try to parse as JSON, but if it fails, use the raw text.
+            const parsedJson = JSON.parse(errorText);
+            errorData.message = parsedJson.message || errorData.message;
+        } catch (e) {
+            // Not a JSON response, the raw text is the best we have.
+        }
+        console.error("API Error Response:", errorData.message);
+        throw new Error(errorData.message);
     }
 
     return response.json();
