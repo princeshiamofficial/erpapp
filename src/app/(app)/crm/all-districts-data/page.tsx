@@ -21,7 +21,8 @@ import { AddEditDistrictDataDialog } from '@/components/crm/AddEditDistrictDataD
 const formatDate = (dateString?: string) => {
     if (!dateString) return 'N/A';
     try {
-        return format(parseISO(dateString), 'd MMM yyyy');
+        // Using "MMM d, yyyy" format for a clean, single-line date
+        return format(parseISO(dateString), 'MMM d, yyyy');
     } catch (e) {
         return 'Invalid Date';
     }
@@ -296,7 +297,7 @@ export default function AllDistrictsDataPage() {
                             {divisionCell}
                             {districtCell}
                             <TableCell className="py-3 px-4">{entry.jobId}</TableCell>
-                            <TableCell className="py-3 px-4">{formatDate(entry.orderDate)}</TableCell>
+                            <TableCell className="py-3 px-4 whitespace-nowrap">{formatDate(entry.orderDate)}</TableCell>
                             <TableCell className="py-3 px-4">{entry.businessName}</TableCell>
                             <TableCell className="py-3 px-4">{entry.address}</TableCell>
                             <TableCell className="py-3 px-4">{entry.phone}</TableCell>
@@ -326,4 +327,3 @@ export default function AllDistrictsDataPage() {
     </>
   );
 }
-
