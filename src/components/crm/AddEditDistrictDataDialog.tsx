@@ -139,7 +139,7 @@ export function AddEditDistrictDataDialog({ isOpen, onOpenChange, onDataSaved, e
           <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="job-id">Job ID *</Label>
-                <Input id="job-id" value={jobId} onChange={e => setJobId(e.target.value)} required placeholder="e.g., ORD-20240101-001" />
+                <Input id="job-id" value={jobId} onChange={e => setJobId(e.target.value)} required placeholder="e.g., 1911" />
               </div>
                <div className="space-y-1">
                 <Label htmlFor="order-date">Order Date *</Label>
