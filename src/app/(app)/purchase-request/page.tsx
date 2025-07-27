@@ -42,7 +42,6 @@ const formatDateSafe = (dateInput: string | Date | undefined | null, formatStrin
     try {
         const date = typeof dateInput === 'string' ? parseISO(dateInput) : dateInput;
         if (!isValid(date)) {
-            console.warn(`formatDateSafe received an invalid date value:`, dateInput);
             return 'Invalid Date';
         }
         return format(date, formatString);
@@ -241,13 +240,17 @@ export default function PurchaseRequestPage() {
                           <TableCell className="text-card-foreground font-semibold">{formatCurrency(req.price)}</TableCell>
                           <TableCell className="text-muted-foreground">{req.requestedByUserName}</TableCell>
                           <TableCell className="text-muted-foreground">{req.approvedByUserName || 'N/A'}</TableCell>
-                          <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                             <div title={`Created: ${formatDateSafe(req.createdAt, "PPP p")}`}>
-                                Created: {formatDateSafe(req.createdAt)}
-                            </div>
-                             <div title={`Updated: ${formatDateSafe(req.updatedAt, "PPP p")}`}>
-                                Updated: {formatDateSafe(req.updatedAt)}
-                            </div>
+                          <TableCell className="text-muted-foreground">
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <span className="underline decoration-dashed cursor-help">
+                                  {formatDateSafe(req.createdAt)}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Last Updated: {formatDateSafe(req.updatedAt, "PPP p")}</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </TableCell>
                           <TableCell>
                             <Badge className={getStatusBadgeClass(req.status)}>{req.status}</Badge>
