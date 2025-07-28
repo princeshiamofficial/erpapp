@@ -85,12 +85,18 @@ export default function PurchaseRequestPage() {
   }, [currentUser, fetchRequests]);
 
   const filteredRequests = useMemo(() => {
-    if (currentUser?.role === 'VENDOR') {
+    if (!currentUser) return [];
+    if (currentUser.role === 'VENDOR') {
       return [];
     }
-    
+
     let userFilteredRequests = requests;
 
+    // Filter by user role if not an admin
+    if (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
+        userFilteredRequests = requests.filter(req => req.requestedByUserId === currentUser.id);
+    }
+    
     if (!searchTerm) return userFilteredRequests;
     
     return userFilteredRequests.filter(req =>
