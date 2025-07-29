@@ -104,6 +104,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   useEffect(() => {
     setIsClient(true);
     setOrder(initialOrder);
+
     let storedReactorId = localStorage.getItem('CLIENT_REACTOR_ID_KEY');
     if (!storedReactorId) {
       storedReactorId = uuidv4();
@@ -464,7 +465,7 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <p className="font-bold text-foreground">Color Hut</p>
             <p className="text-muted-foreground text-sm">9/A Kajla Bus Stand, Donia,Jatrabari,Dhaka- 1236</p>
             <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
-            <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${formatDate(order.createdAt, false)} by ${order.crmUserName}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
+            <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp, false)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${order.crmUserName} ${formatDate(order.createdAt, false)}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
           </div>
           <div className="text-left sm:text-right mt-4 sm:mt-0">
             <p className="text-lg font-semibold">Invoice #: <span className="text-foreground">{order.id}</span></p>
