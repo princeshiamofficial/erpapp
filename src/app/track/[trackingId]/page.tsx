@@ -35,6 +35,7 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
     notFound();
   }
   
+  // This logic is no longer needed to restrict access, but could be used for other things later.
   let currentUser: User | null = null;
   const cookieStore = cookies();
   const userCookie = cookieStore.get('colorhut-user');
@@ -47,12 +48,6 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
     } catch (e) {
       console.error("Error parsing user cookie:", e);
     }
-  }
-  
-  const hasPermission = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN' || (globalSettingsResult.rolesAllowedToSeeFinancials?.includes(currentUser.role) ?? false));
-  
-  if (!orderDataResult.isPublic && !currentUser) {
-    return <RestrictedAccessClient />;
   }
 
   // Ensure data is plain before passing to Client Component
@@ -103,41 +98,6 @@ function TrackingPageSkeleton() {
             <Skeleton className="h-10 w-56 mb-1" />
             <Skeleton className="h-4 w-48" />
           </div>
-          <Skeleton className="h-px w-full my-8 bg-border/30" />
-          <div>
-            <Skeleton className="h-6 w-32 mb-5" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="space-y-1.5 p-3 bg-secondary/30 rounded-lg border border-border/20">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-5 w-full" />
-                </div>
-              ))}
-            </div>
-          </div>
-          <Skeleton className="h-px w-full my-8 bg-border/30" />
-          <div>
-            <Skeleton className="h-6 w-40 mb-6" />
-            <div className="space-y-6">
-              {[...Array(2)].map((_, i) => (
-                <div key={i} className="space-y-2 p-4 bg-muted/50 rounded-lg border border-border/40">
-                  <Skeleton className="h-5 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-       <div className="shadow-xl border border-border/40 bg-card rounded-xl">
-        <div className="bg-card p-6 sm:p-8 border-b border-border/40">
-          <Skeleton className="h-8 w-60 mb-1" />
-          <Skeleton className="h-5 w-80" />
-        </div>
-        <div className="p-6 sm:p-8 space-y-6">
-           <Skeleton className="h-24 w-full rounded-lg" />
-           <Skeleton className="h-10 w-32 rounded-lg" />
         </div>
       </div>
     </div>
