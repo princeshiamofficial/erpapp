@@ -1,6 +1,7 @@
 
 
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -13,6 +14,8 @@ import { getUserById as getUserFromDb } from "@/lib/user-service";
 import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import io from 'socket.io-client';
+import { adminApp } from '@/lib/firebase-admin';
+import type { messaging } from 'firebase-admin';
 
 interface CreateOrderDialogFormData {
   jobId: string;
@@ -137,9 +140,9 @@ export async function createOrderAction(
       specialClientDiscount: data.specialClientDiscount,
       shippingCharge: null, // Default to null
       orderNotes: data.orderNotes?.trim() || null,
+      initialStatusId: data.initialStatusId,
       crmUserId: currentUser.id,
       crmUserName: currentUser.name,
-      initialStatusId: data.initialStatusId,
     };
 
     const createdOrder = await addOrderService(newOrderDataForService);
@@ -396,6 +399,32 @@ export async function assignDrToOrderAction(
     const success = await updateOrderService(orderId, updatedOrderData);
     if (!success) {
       return { error: "Failed to update order with DR assignment." };
+    }
+
+    // Send push notification to the assigned DR
+    if (designerRepUser.fcmToken) {
+        try {
+            const notificationTitle = "New Design Assignment!";
+            const notificationBody = `You have been assigned to a new design order: ${orderId}.`;
+            const targetUrl = `/track/${orderId}`;
+            const fcmMessage: messaging.Message = {
+                token: designerRepUser.fcmToken,
+                notification: { title: notificationTitle, body: notificationBody, icon: '/icons/icon-192x192.png' },
+                data: { title: notificationTitle, body: notificationBody, iconUrl: '/icons/icon-192x192.png', targetUrl: targetUrl, click_action: targetUrl },
+                webpush: { notification: { icon: '/icons/icon-192x192.png', badge: '/icons/icon-72x72.png', sound: "default" }, fcmOptions: { link: targetUrl } },
+            };
+            if (adminApp && typeof adminApp.messaging === 'function') {
+                await adminApp.messaging().send(fcmMessage);
+                console.log(`[assignDrToOrderAction] Push notification sent to DR ${freshDrName} for order ${orderId}.`);
+            } else {
+                 console.warn("[assignDrToOrderAction] Firebase Admin SDK not properly initialized. Cannot send push notification for DR assignment.");
+            }
+        } catch (notifError) {
+            console.error(`[assignDrToOrderAction] Error sending push notification to DR ${freshDrName}:`, notifError);
+            // Don't fail the entire action, just log the error.
+        }
+    } else {
+        console.log(`[assignDrToOrderAction] DR ${freshDrName} does not have an FCM token. Skipping push notification.`);
     }
 
     const projectDocRef = doc(db, 'projects', orderId);
