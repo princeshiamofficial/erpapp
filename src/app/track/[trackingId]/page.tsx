@@ -1,16 +1,16 @@
 
 import { Suspense } from 'react';
-import dynamic from 'next/dynamic';
 import { getOrderById, incrementOrderViewCount } from '@/lib/order-service';
 import { getStatuses } from '@/lib/status-service';
 import { getGlobalSettings } from '@/lib/settings-service';
-import { getUsers, getUserById } from '@/lib/user-service';
+import { getUsers } from '@/lib/user-service';
 import { notFound } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Package } from 'lucide-react';
 import type { User } from '@/types';
+import { OrderDetailsLoader } from './OrderDetailsLoader';
 
-// The skeleton needs to be defined here because it's used in the loading state of dynamic import.
+// The skeleton needs to be defined here because it's used in the Suspense fallback.
 function TrackingPageSkeleton() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 sm:space-y-10 animate-pulse">
@@ -37,12 +37,6 @@ function TrackingPageSkeleton() {
     </div>
   );
 }
-
-
-const OrderDetailsClient = dynamic(() => import('./OrderDetailsClient').then(mod => mod.OrderDetailsClient), {
-  ssr: false,
-  loading: () => <TrackingPageSkeleton />,
-});
 
 
 interface PublicTrackingPageProps {
@@ -78,7 +72,7 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
   return (
     <div className="min-h-screen bg-background py-6 sm:py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary print:p-0 print:m-0 print:bg-white">
       <Suspense fallback={<TrackingPageSkeleton />}>
-        <OrderDetailsClient
+        <OrderDetailsLoader
             order={plainOrderData}
             allStatuses={plainAllStatuses}
             allUsersForMentions={plainAllUsers}
@@ -93,4 +87,3 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
     </div>
   );
 }
-
