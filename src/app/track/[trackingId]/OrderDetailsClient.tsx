@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, FormEvent, useRef, useMemo } from 'react';
@@ -13,7 +12,7 @@ import JsBarcode from 'jsbarcode';
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem, AdvancePaymentRecord } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Label } from '@/components/ui/label';
+import { Label } from "@/components/ui/label";
 import { getStatusById, getContrastTextColor } from '@/lib/status-service';
 import { submitCommentAction, submitClientReplyAction, toggleOrderCommentReactionAction, submitReplyAction, getPackzyDeliveryStatusAction, deleteCommentAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
@@ -461,18 +460,6 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   return (
     <>
-      <header className="text-center mb-8 sm:mb-12 bg-black print:hidden">
-        <div className="inline-block mb-2">
-            <Image
-              src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
-              alt="Color Hut Logo"
-              width={253}
-              height={64}
-              priority
-              className="object-contain mx-auto"
-            />
-        </div>
-      </header>
       <main className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
         <div className="shadow-2xl overflow-hidden border-border/40 bg-card hover:shadow-primary/10 transition-shadow duration-300 rounded-xl">
           <CardHeader className="bg-card p-6 sm:p-8 border-b border-border/40">
@@ -654,12 +641,14 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
                 <AlertTriangle className="h-6 w-6 text-destructive" />
                 Are you sure you want to delete this comment?
               </AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the comment:
+              <div className="pt-2">
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete the comment:
+                </AlertDialogDescription>
                 <blockquote className="mt-2 p-2 border-l-4 border-muted-foreground bg-muted text-muted-foreground italic rounded-r-md text-sm">
                   "{commentToDelete.text.substring(0, 100)}{commentToDelete.text.length > 100 ? '...' : ''}"
                 </blockquote>
-              </AlertDialogDescription>
+              </div>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setCommentToDelete(null)} disabled={isDeletingComment}>
