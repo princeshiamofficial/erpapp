@@ -43,7 +43,7 @@ import NextImage from 'next/image';
 
 const EDITABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
 const DELETABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'LR'];
-const FINANCIAL_VISIBILITY_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR']; // All roles can potentially see it
+const FINANCIAL_VISIBILITY_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'LR'];
 const EXPENSE_LOGGING_TARGET_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR']; // Roles that can be targeted for expense logging
 const NOTIFICATION_TARGET_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR'];
 const TOAST_SOUND_STORAGE_KEY = 'colorHutToastSoundUrl';
