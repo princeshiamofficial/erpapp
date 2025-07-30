@@ -402,8 +402,12 @@ export async function assignDrToOrderAction(
                 const titleTemplate = globalSettings.drAssignmentNotificationTitle || 'New Design Assigned By %assignerName%';
                 const bodyTemplate = globalSettings.drAssignmentNotificationBody || 'You have been assigned to a new design order: %orderId%.';
 
-                const notificationTitle = titleTemplate.replace(/%assignerName%/g, actingUser.name).replace(/%orderId%/g, orderId);
-                const notificationBody = bodyTemplate.replace(/%assignerName%/g, actingUser.name).replace(/%orderId%/g, orderId);
+                const companyNameParts = currentOrder.companyName.split('•').map(p => p.trim());
+                const jobId = companyNameParts.length > 1 ? companyNameParts[0] : currentOrder.id;
+                const company = companyNameParts.length > 1 ? companyNameParts.slice(1).join(' • ') : currentOrder.companyName;
+
+                const notificationTitle = titleTemplate.replace(/%assignerName%/g, actingUser.name).replace(/%orderId%/g, orderId).replace(/%company%/g, company).replace(/%jobid%/g, jobId);
+                const notificationBody = bodyTemplate.replace(/%assignerName%/g, actingUser.name).replace(/%orderId%/g, orderId).replace(/%company%/g, company).replace(/%jobid%/g, jobId);
                 const customSoundUrl = globalSettings.toastSoundUrl;
 
                 const targetUrl = `/track/${orderId}`;

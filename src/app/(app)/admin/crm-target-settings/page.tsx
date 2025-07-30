@@ -29,7 +29,7 @@ import {
   sendPushNotificationAction,
   updateProjectStageAccessAction,
   updateMaintenanceModeAction,
-  updateDrAssignmentNotificationTemplatesAction, // New
+  updateDrAssignmentNotificationTemplatesAction,
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -831,17 +831,17 @@ export default function CrmTargetSettingsPage() {
               <DraftingCompass className="h-6 w-6 text-primary" /> DR Assignment Notification
             </CardTitle>
             <CardDescription className="text-muted-foreground text-sm mt-0.5">
-              Customize the push notification sent when assigning a Designer Representative. Use <code className="bg-muted px-1 py-0.5 rounded text-xs">%assignerName%</code> and <code className="bg-muted px-1 py-0.5 rounded text-xs">%orderId%</code> for personalization.
+              Customize the push notification sent when assigning a Designer Representative. Use <code className="bg-muted px-1 py-0.5 rounded text-xs">%assignerName%</code>, <code className="bg-muted px-1 py-0.5 rounded text-xs">%orderId%</code>, <code className="bg-muted px-1 py-0.5 rounded text-xs">%company%</code>, and <code className="bg-muted px-1 py-0.5 rounded text-xs">%jobid%</code> for personalization.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
               <div className="space-y-1">
                 <Label htmlFor="drNotifTitle">Notification Title *</Label>
-                <Input id="drNotifTitle" value={drNotifTitle} onChange={(e) => setDrNotifTitle(e.target.value)} placeholder="e.g., New Task from %assignerName%" required disabled={isSubmittingDrNotif}/>
+                <Input id="drNotifTitle" value={drNotifTitle} onChange={(e) => setDrNotifTitle(e.target.value)} placeholder="e.g., New Task from %assignerName% for %company%" required disabled={isSubmittingDrNotif}/>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="drNotifBody">Notification Body *</Label>
-                <Textarea id="drNotifBody" value={drNotifBody} onChange={(e) => setDrNotifBody(e.target.value)} placeholder="e.g., You have been assigned to order %orderId%." required disabled={isSubmittingDrNotif}/>
+                <Textarea id="drNotifBody" value={drNotifBody} onChange={(e) => setDrNotifBody(e.target.value)} placeholder="e.g., You have been assigned to order %orderId% (Job ID: %jobid%)." required disabled={isSubmittingDrNotif}/>
               </div>
           </CardContent>
           <CardFooter className="border-t p-5 flex justify-end">
