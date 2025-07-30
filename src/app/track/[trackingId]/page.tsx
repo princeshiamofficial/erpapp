@@ -1,5 +1,6 @@
 
 import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { getOrderById, incrementOrderViewCount } from '@/lib/order-service';
 import { getStatuses } from '@/lib/status-service';
 import { getGlobalSettings } from '@/lib/settings-service';
@@ -7,76 +8,9 @@ import { getUsers, getUserById } from '@/lib/user-service';
 import { notFound } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Package } from 'lucide-react';
-import { cookies } from 'next/headers';
 import type { User } from '@/types';
-import { RestrictedAccessClient } from './RestrictedAccessClient';
-import { OrderDetailsLoader } from './OrderDetailsLoader';
 
-
-interface PublicTrackingPageProps {
-  params: { trackingId: string };
-}
-
-export default async function PublicTrackingPage({ params }: PublicTrackingPageProps) {
-  const trackingId = params.trackingId;
-
-  if (trackingId) {
-    await incrementOrderViewCount(trackingId);
-  }
-
-  const [orderDataResult, allStatusesResult, globalSettingsResult, allUsersResult] = await Promise.all([
-    getOrderById(trackingId),
-    getStatuses(),
-    getGlobalSettings(),
-    getUsers()
-  ]);
-
-  if (!orderDataResult) {
-    notFound();
-  }
-  
-  // This logic is no longer needed to restrict access, but could be used for other things later.
-  let currentUser: User | null = null;
-  const cookieStore = cookies();
-  const userCookie = cookieStore.get('colorhut-user');
-  if (userCookie) {
-    try {
-      const storedUser = JSON.parse(userCookie.value) as { id: string };
-      if (storedUser && storedUser.id) {
-        currentUser = await getUserById(storedUser.id);
-      }
-    } catch (e) {
-      console.error("Error parsing user cookie:", e);
-    }
-  }
-
-  // Ensure data is plain before passing to Client Component
-  const plainOrderData = JSON.parse(JSON.stringify(orderDataResult));
-  const plainAllStatuses = JSON.parse(JSON.stringify(allStatusesResult));
-  const plainGlobalSettings = JSON.parse(JSON.stringify(globalSettingsResult));
-  const plainAllUsers = JSON.parse(JSON.stringify(allUsersResult));
-
-  const areCommentsVisible = plainGlobalSettings.areCommentsVisibleOnPublicPage ?? true;
-
-  return (
-    <div className="min-h-screen bg-background py-6 sm:py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary print:p-0 print:m-0 print:bg-white">
-      <Suspense fallback={<TrackingPageSkeleton />}>
-        <OrderDetailsLoader
-            order={plainOrderData}
-            allStatuses={plainAllStatuses}
-            allUsersForMentions={plainAllUsers}
-            areCommentsVisible={areCommentsVisible}
-        />
-      </Suspense>
-
-      <footer className="text-center mt-16 sm:mt-20 py-8 sm:py-10 border-t border-border/30 print:hidden">
-        <p className="text-sm sm:text-md text-muted-foreground">&copy; {new Date().getFullYear()} <span className="font-bold">Color Hut</span>. All rights reserved.</p>
-        <p className="text-xs sm:text-sm text-muted-foreground/70 mt-1 sm:mt-1.5">Precision Order Tracking, Simplified.</p>
-      </footer>
-    </div>
-  );
-}
-
+// The skeleton needs to be defined here because it's used in the loading state of dynamic import.
 function TrackingPageSkeleton() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 sm:space-y-10 animate-pulse">
@@ -103,3 +37,60 @@ function TrackingPageSkeleton() {
     </div>
   );
 }
+
+
+const OrderDetailsClient = dynamic(() => import('./OrderDetailsClient').then(mod => mod.OrderDetailsClient), {
+  ssr: false,
+  loading: () => <TrackingPageSkeleton />,
+});
+
+
+interface PublicTrackingPageProps {
+  params: { trackingId: string };
+}
+
+export default async function PublicTrackingPage({ params }: PublicTrackingPageProps) {
+  const trackingId = params.trackingId;
+
+  if (trackingId) {
+    await incrementOrderViewCount(trackingId);
+  }
+
+  const [orderDataResult, allStatusesResult, globalSettingsResult, allUsersResult] = await Promise.all([
+    getOrderById(trackingId),
+    getStatuses(),
+    getGlobalSettings(),
+    getUsers()
+  ]);
+
+  if (!orderDataResult) {
+    notFound();
+  }
+  
+  // Ensure data is plain before passing to Client Component
+  const plainOrderData = JSON.parse(JSON.stringify(orderDataResult));
+  const plainAllStatuses = JSON.parse(JSON.stringify(allStatusesResult));
+  const plainGlobalSettings = JSON.parse(JSON.stringify(globalSettingsResult));
+  const plainAllUsers = JSON.parse(JSON.stringify(allUsersResult));
+
+  const areCommentsVisible = plainGlobalSettings.areCommentsVisibleOnPublicPage ?? true;
+
+  return (
+    <div className="min-h-screen bg-background py-6 sm:py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary print:p-0 print:m-0 print:bg-white">
+      <Suspense fallback={<TrackingPageSkeleton />}>
+        <OrderDetailsClient
+            order={plainOrderData}
+            allStatuses={plainAllStatuses}
+            allUsersForMentions={plainAllUsers}
+            areCommentsVisible={areCommentsVisible}
+        />
+      </Suspense>
+
+      <footer className="text-center mt-16 sm:mt-20 py-8 sm:py-10 border-t border-border/30 print:hidden">
+        <p className="text-sm sm:text-md text-muted-foreground">&copy; {new Date().getFullYear()} <span className="font-bold">Color Hut</span>. All rights reserved.</p>
+        <p className="text-xs sm:text-sm text-muted-foreground/70 mt-1 sm:mt-1.5">Precision Order Tracking, Simplified.</p>
+      </footer>
+    </div>
+  );
+}
+
