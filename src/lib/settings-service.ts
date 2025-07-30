@@ -34,6 +34,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   areCommentsVisibleOnPublicPage: true,
   rolesAllowedToEditOrders: ['SYSTEM_ADMIN', 'ADMIN'],
   rolesAllowedToDeleteOrders: ['SYSTEM_ADMIN'],
+  rolesAllowedToViewFinancials: ['SYSTEM_ADMIN', 'ADMIN'], // Added default
   toastSoundUrl: DEFAULT_TOAST_SOUND_URL,
   leaderboardBackgroundImageUrl: DEFAULT_LEADERBOARD_BACKGROUND_URL,
   expenseLoggingPermissions: DEFAULT_EXPENSE_LOGGING_PERMISSIONS,
@@ -68,6 +69,7 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         areCommentsVisibleOnPublicPage: data.areCommentsVisibleOnPublicPage ?? DEFAULT_GLOBAL_SETTINGS.areCommentsVisibleOnPublicPage,
         rolesAllowedToEditOrders: data.rolesAllowedToEditOrders ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToEditOrders,
         rolesAllowedToDeleteOrders: data.rolesAllowedToDeleteOrders ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToDeleteOrders,
+        rolesAllowedToViewFinancials: data.rolesAllowedToViewFinancials ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToViewFinancials, // Added getter logic
         toastSoundUrl: data.toastSoundUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.toastSoundUrl : data.toastSoundUrl,
         leaderboardBackgroundImageUrl: data.leaderboardBackgroundImageUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.leaderboardBackgroundImageUrl : data.leaderboardBackgroundImageUrl,
         expenseLoggingPermissions: fullExpensePerms,
@@ -203,6 +205,28 @@ export async function setRolesAllowedToDeleteOrders(roles: UserRole[]): Promise<
     return false;
   }
 }
+
+// Sets the roles allowed to view financial details
+export async function setRolesAllowedToViewFinancials(roles: UserRole[]): Promise<boolean> {
+  try {
+    const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+    const docSnap = await getDoc(settingsDocRef);
+    if (docSnap.exists()) {
+      await updateDoc(settingsDocRef, { rolesAllowedToViewFinancials: roles });
+    } else {
+      const initialData: GlobalSettings = {
+        ...DEFAULT_GLOBAL_SETTINGS,
+        rolesAllowedToViewFinancials: roles
+      };
+      await setDoc(settingsDocRef, initialData);
+    }
+    return true;
+  } catch (error) {
+    console.error("Error setting roles allowed to view financials:", error);
+    return false;
+  }
+}
+
 
 // Sets the toast sound URL
 export async function setToastSoundUrl(soundUrl: string | null): Promise<boolean> {

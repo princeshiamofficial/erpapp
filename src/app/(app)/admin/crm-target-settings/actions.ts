@@ -6,7 +6,8 @@ import {
   setCrmCompletionStatusIds,
   setCommentsVisibility,
   setRolesAllowedToEditOrders,
-  setRolesAllowedToDeleteOrders, // New
+  setRolesAllowedToDeleteOrders,
+  setRolesAllowedToViewFinancials, // New
   setToastSoundUrl,
   setLeaderboardBackgroundImageUrl,
   setExpenseLoggingPermissions, 
@@ -77,6 +78,21 @@ export async function updateRolesAllowedToDeleteOrdersAction(roles: UserRole[]):
     return { success: false, error: "Failed to update order deletion permissions in database." };
   } catch (error) {
     console.error("Error in updateRolesAllowedToDeleteOrdersAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updateRolesAllowedToViewFinancialsAction(roles: UserRole[]): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setRolesAllowedToViewFinancials(roles);
+    if (success) {
+      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/track/[trackingId]", "layout"); // Revalidate tracking page to reflect changes
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update financial visibility permissions in database." };
+  } catch (error) {
+    console.error("Error in updateRolesAllowedToViewFinancialsAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

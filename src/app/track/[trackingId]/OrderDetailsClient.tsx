@@ -22,7 +22,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { motion } from 'framer-motion';
 import { formatDistanceToNowStrict, parseISO, format as formatDateFns } from 'date-fns';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 
@@ -61,10 +61,19 @@ interface OrderDetailsClientProps {
   allStatuses: CustomStatus[];
   allUsersForMentions?: User[];
   areCommentsVisible: boolean;
+  rolesAllowedToViewFinancials: UserRole[]; // New prop
+  initialCurrentUser: User | null; // New prop for server-passed user
 }
 
-export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersForMentions = [], areCommentsVisible }: OrderDetailsClientProps) {
-  const { currentUser } = useAuth();
+export function OrderDetailsClient({ 
+  order: initialOrder, 
+  allStatuses, 
+  allUsersForMentions = [], 
+  areCommentsVisible, 
+  rolesAllowedToViewFinancials, 
+  initialCurrentUser 
+}: OrderDetailsClientProps) {
+  const { currentUser: authContextUser } = useAuth();
   const [order, setOrder] = useState(initialOrder);
   const [isClient, setIsClient] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -90,16 +99,21 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
   
   const [commentToDelete, setCommentToDelete] = useState<{ id: string; isReply: boolean; parentId?: string; text: string; } | null>(null);
   const [isDeletingComment, setIsDeletingComment] = useState(false);
+  
+  // Combine server-passed user and client-side user for the most up-to-date state
+  const currentUser = useMemo(() => authContextUser || initialCurrentUser, [authContextUser, initialCurrentUser]);
 
   const shouldShowFinancials = useMemo(() => {
     if (!currentUser) {
-      // If no user is logged in, financials are public/private based on order setting.
-      // Since restrictions were removed server-side, this defaults to showing for public view.
-      return true;
+      // If no user is logged in, public orders show everything.
+      // Private orders are blocked server-side so this case isn't hit for them.
+      return initialOrder.isPublic;
     }
-    const restrictedRoles: UserRole[] = ['CRM', 'DESIGNER_REPRESENTATIVE', 'LR'];
-    return !restrictedRoles.includes(currentUser.role);
-  }, [currentUser]);
+    // For logged-in users, check their role against the permission list
+    // System Admins always see everything
+    if (currentUser.role === 'SYSTEM_ADMIN') return true;
+    return rolesAllowedToViewFinancials?.includes(currentUser.role);
+  }, [currentUser, rolesAllowedToViewFinancials, initialOrder.isPublic]);
 
 
   useEffect(() => {

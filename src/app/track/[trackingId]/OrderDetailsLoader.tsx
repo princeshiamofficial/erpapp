@@ -1,9 +1,10 @@
+
 "use client";
 
 import dynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Package } from 'lucide-react';
-import type { TrackingLink, CustomStatus, User } from '@/types';
+import type { TrackingLink, CustomStatus, User, UserRole } from '@/types';
 
 // Define skeleton here as it's used in loading
 function TrackingPageSkeleton() {
@@ -43,15 +44,22 @@ interface OrderDetailsLoaderProps {
   allStatuses: CustomStatus[];
   allUsersForMentions: User[];
   areCommentsVisible: boolean;
+  rolesAllowedToViewFinancials: UserRole[];
+  currentUser: User | null;
 }
 
-export function OrderDetailsLoader({ order, allStatuses, allUsersForMentions, areCommentsVisible }: OrderDetailsLoaderProps) {
+export function OrderDetailsLoader({ order, allStatuses, allUsersForMentions, areCommentsVisible, rolesAllowedToViewFinancials, currentUser }: OrderDetailsLoaderProps) {
+  // Pass the currentUser to the client component
+  // The AuthProvider will hydrate the true current user state on the client side, but passing it from the server
+  // ensures the initial render has access to it for permission checks.
   return (
     <OrderDetailsClient
         order={order}
         allStatuses={allStatuses}
         allUsersForMentions={allUsersForMentions}
         areCommentsVisible={areCommentsVisible}
+        rolesAllowedToViewFinancials={rolesAllowedToViewFinancials}
+        initialCurrentUser={currentUser}
     />
   );
 }

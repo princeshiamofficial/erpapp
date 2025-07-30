@@ -7,10 +7,11 @@ import { getUsers } from '@/lib/user-service';
 import { notFound } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Package } from 'lucide-react';
-import type { User } from '@/types';
 import { OrderDetailsLoader } from './OrderDetailsLoader';
+import { cookies } from 'next/headers';
+import type { User } from '@/types';
 
-// The skeleton needs to be defined here because it's used in the Suspense fallback.
+
 function TrackingPageSkeleton() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 sm:space-y-10 animate-pulse">
@@ -61,7 +62,17 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
     notFound();
   }
   
-  // Ensure data is plain before passing to Client Component
+  const cookieStore = cookies();
+  const userCookie = cookieStore.get('colorhut-user');
+  let currentUser: User | null = null;
+  if (userCookie) {
+    try {
+      currentUser = JSON.parse(userCookie.value);
+    } catch (e) {
+      console.error("Failed to parse user cookie", e);
+    }
+  }
+  
   const plainOrderData = JSON.parse(JSON.stringify(orderDataResult));
   const plainAllStatuses = JSON.parse(JSON.stringify(allStatusesResult));
   const plainGlobalSettings = JSON.parse(JSON.stringify(globalSettingsResult));
@@ -77,6 +88,8 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
             allStatuses={plainAllStatuses}
             allUsersForMentions={plainAllUsers}
             areCommentsVisible={areCommentsVisible}
+            rolesAllowedToViewFinancials={plainGlobalSettings.rolesAllowedToViewFinancials ?? []}
+            currentUser={currentUser}
         />
       </Suspense>
 

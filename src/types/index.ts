@@ -162,6 +162,7 @@ export interface GlobalSettings {
   areCommentsVisibleOnPublicPage?: boolean;
   rolesAllowedToEditOrders?: UserRole[];
   rolesAllowedToDeleteOrders?: UserRole[];
+  rolesAllowedToViewFinancials?: UserRole[]; // New setting
   toastSoundUrl?: string | null;
   leaderboardBackgroundImageUrl?: string | null;
   leaderboardThemeSettings?: LeaderboardThemeSettings | null;
