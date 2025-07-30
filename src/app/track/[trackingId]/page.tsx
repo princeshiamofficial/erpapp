@@ -7,7 +7,6 @@ import { getGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service';
 import { notFound } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
-import Image from 'next/image';
 import { Package } from 'lucide-react';
 
 interface PublicTrackingPageProps {
@@ -42,20 +41,7 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
   const areCommentsVisible = plainGlobalSettings.areCommentsVisibleOnPublicPage ?? true;
 
   return (
-    <div className="min-h-screen bg-background py-6 sm:py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary">
-       <header className="text-center mb-8 sm:mb-12 bg-black">
-        <div className="inline-block mb-2">
-            <Image
-              src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
-              alt="Color Hut Logo"
-              width={253}
-              height={64}
-              priority
-              className="object-contain mx-auto"
-            />
-        </div>
-      </header>
-
+    <div className="min-h-screen bg-background py-6 sm:py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary print:p-0 print:m-0 print:bg-white">
       <Suspense fallback={<TrackingPageSkeleton />}>
         <OrderDetailsClient
             order={plainOrderData}
@@ -65,7 +51,7 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
         />
       </Suspense>
 
-      <footer className="text-center mt-16 sm:mt-20 py-8 sm:py-10 border-t border-border/30">
+      <footer className="text-center mt-16 sm:mt-20 py-8 sm:py-10 border-t border-border/30 print:hidden">
         <p className="text-sm sm:text-md text-muted-foreground">&copy; {new Date().getFullYear()} <span className="font-bold">Color Hut</span>. All rights reserved.</p>
         <p className="text-xs sm:text-sm text-muted-foreground/70 mt-1 sm:mt-1.5">Precision Order Tracking, Simplified.</p>
       </footer>
