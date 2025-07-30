@@ -22,17 +22,18 @@ import {
   updateCommentsVisibilityAction,
   updateRolesAllowedToEditOrdersAction,
   updateRolesAllowedToDeleteOrdersAction,
-  updateRolesAllowedToViewFinancialsAction, // New
+  updateRolesAllowedToViewFinancialsAction,
   updateToastSoundUrlAction,
   updateLeaderboardBackgroundImageUrlAction,
   updateExpenseLoggingPermissionsAction, 
   sendPushNotificationAction,
   updateProjectStageAccessAction,
   updateMaintenanceModeAction,
+  updateDrAssignmentNotificationTemplatesAction, // New
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon, Settings2, Briefcase, Trash2, PowerOff, DollarSign } from 'lucide-react';
+import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon, Settings2, Briefcase, Trash2, PowerOff, DollarSign, DraftingCompass } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
@@ -73,6 +74,8 @@ export default function CrmTargetSettingsPage() {
   const [projectStageAccess, setProjectStageAccess] = useState<Record<ProjectStatusType, UserRole[]>>({} as Record<ProjectStatusType, UserRole[]>);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
+  const [drNotifTitle, setDrNotifTitle] = useState('');
+  const [drNotifBody, setDrNotifBody] = useState('');
 
   // Notification states
   const [allUsers, setAllUsers] = useState<User[]>([]); // Users excluding System_Admin for targeting
@@ -102,6 +105,7 @@ export default function CrmTargetSettingsPage() {
   const [isSendingNotification, setIsSendingNotification] = useState(false);
   const [isSubmittingMaintenanceMode, setIsSubmittingMaintenanceMode] = useState(false);
   const [isLoadingUsersForNotifAndTokens, setIsLoadingUsersForNotifAndTokens] = useState(false);
+  const [isSubmittingDrNotif, setIsSubmittingDrNotif] = useState(false);
 
   // FCM Token Display State
   const [fcmUserSearchTerm, setFcmUserSearchTerm] = useState('');
@@ -129,6 +133,8 @@ export default function CrmTargetSettingsPage() {
       setProjectStageAccess(globalSettings.projectStageAccess || ({} as Record<ProjectStatusType, UserRole[]>));
       setMaintenanceMode(globalSettings.maintenanceMode ?? false);
       setMaintenanceMessage(globalSettings.maintenanceMessage ?? '');
+      setDrNotifTitle(globalSettings.drAssignmentNotificationTitle || '');
+      setDrNotifBody(globalSettings.drAssignmentNotificationBody || '');
 
       setAllUsers(fetchedUsersDb.filter(u => u.role !== 'SYSTEM_ADMIN')); // For notification targeting and FCM token list
       setAllTargetableUsersForExpensePerms(fetchedUsersDb.filter(u => u.role !== 'SYSTEM_ADMIN')); // For expense perm specific user picker
@@ -325,6 +331,22 @@ export default function CrmTargetSettingsPage() {
       toast({ title: "Update Failed", description: result.error || "Could not update maintenance mode.", variant: "destructive" });
     }
     setIsSubmittingMaintenanceMode(false);
+  };
+
+  const handleSaveDrNotification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!drNotifTitle.trim() || !drNotifBody.trim()) {
+      toast({ title: "Validation Error", description: "Title and body are required for the DR notification.", variant: "destructive" });
+      return;
+    }
+    setIsSubmittingDrNotif(true);
+    const result = await updateDrAssignmentNotificationTemplatesAction(drNotifTitle.trim(), drNotifBody.trim());
+    if (result.success) {
+      toast({ title: "Settings Updated", description: "DR assignment notification template saved." });
+    } else {
+      toast({ title: "Update Failed", description: result.error || "Could not save DR notification template.", variant: "destructive" });
+    }
+    setIsSubmittingDrNotif(false);
   };
 
   const handleNotificationRoleCheckboxChange = (role: UserRole, checked: boolean | "indeterminate") => {
@@ -711,97 +733,123 @@ export default function CrmTargetSettingsPage() {
 
       <Separator className="my-8" />
 
-      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5">
-          <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
-            <Music className="h-6 w-6 text-primary" /> Toast Notification Sound
-          </CardTitle>
-          <CardDescription className="text-muted-foreground text-sm mt-0.5">
-            Set a custom sound URL for toast notifications. Leave blank to use default or disable sound if default is none.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-6">
-          {isLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-5 w-24 rounded" />
-              <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              <Label htmlFor="toastSoundUrlInput">Sound URL</Label>
-              <Input
-                id="toastSoundUrlInput"
-                value={toastSoundUrl}
-                onChange={(e) => setToastSoundUrl(e.target.value)}
-                placeholder="e.g., https://example.com/sound.mp3 or /sounds/custom-toast.mp3"
-                disabled={isSubmittingToastSound}
-              />
-              <p className="text-xs text-muted-foreground">
-                Provide a full URL or a relative path from the public folder. Ensure the sound file is small for quick loading.
-              </p>
-            </div>
-          )}
-        </CardContent>
-        <CardFooter className="border-t p-5 flex justify-end">
-          <Button onClick={handleSaveToastSoundUrl} disabled={isLoading || isSubmittingToastSound}>
-            {isSubmittingToastSound ? "Saving..." : "Save Toast Sound"}
-          </Button>
-        </CardFooter>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+          <CardHeader className="border-b p-5">
+            <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
+              <Music className="h-6 w-6 text-primary" /> Toast Notification Sound
+            </CardTitle>
+            <CardDescription className="text-muted-foreground text-sm mt-0.5">
+              Set a custom sound URL for all app notifications. Leave blank to use default.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6">
+            {isLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-24 rounded" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label htmlFor="toastSoundUrlInput">Sound URL</Label>
+                <Input
+                  id="toastSoundUrlInput"
+                  value={toastSoundUrl}
+                  onChange={(e) => setToastSoundUrl(e.target.value)}
+                  placeholder="e.g., https://example.com/sound.mp3 or /sounds/custom-toast.mp3"
+                  disabled={isSubmittingToastSound}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Provide a full URL or a relative path. Ensure the file is small for quick loading.
+                </p>
+              </div>
+            )}
+          </CardContent>
+          <CardFooter className="border-t p-5 flex justify-end">
+            <Button onClick={handleSaveToastSoundUrl} disabled={isLoading || isSubmittingToastSound}>
+              {isSubmittingToastSound ? "Saving..." : "Save Sound Setting"}
+            </Button>
+          </CardFooter>
+        </Card>
+        
+        <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+          <CardHeader className="border-b p-5">
+            <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
+              <ImageIcon className="h-6 w-6 text-primary" /> Leaderboard Background Image
+            </CardTitle>
+            <CardDescription className="text-muted-foreground text-sm mt-0.5">
+              Set a custom background image URL for the leaderboard page.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6">
+            {isLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-5 w-32 rounded" />
+                <Skeleton className="h-10 w-full rounded-md" />
+                <Skeleton className="h-24 w-40 rounded-md mt-2" />
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label htmlFor="leaderboardBgUrlInput">Background Image URL</Label>
+                <Input
+                  id="leaderboardBgUrlInput"
+                  value={leaderboardBgUrl}
+                  onChange={(e) => setLeaderboardBgUrl(e.target.value)}
+                  placeholder="e.g., https://example.com/leaderboard-bg.jpg"
+                  disabled={isSubmittingLeaderboardBg}
+                />
+                {leaderboardBgUrl && (
+                  <div className="mt-4 p-2 border rounded-md inline-block bg-muted">
+                    <NextImage
+                      src={leaderboardBgUrl}
+                      alt="Leaderboard background preview"
+                      width={200}
+                      height={120}
+                      className="object-cover rounded"
+                      unoptimized={leaderboardBgUrl.startsWith('/')} 
+                      onError={(e) => { e.currentTarget.src = DEFAULT_LEADERBOARD_BACKGROUND_PLACEHOLDER; e.currentTarget.alt = 'Error loading image. Default shown.' }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+          <CardFooter className="border-t p-5 flex justify-end">
+            <Button onClick={handleSaveLeaderboardBgUrl} disabled={isLoading || isSubmittingLeaderboardBg}>
+              {isSubmittingLeaderboardBg ? "Saving..." : "Save Background"}
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
 
       <Separator className="my-8" />
+      
+      <form onSubmit={handleSaveDrNotification}>
+        <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+          <CardHeader className="border-b p-5">
+            <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
+              <DraftingCompass className="h-6 w-6 text-primary" /> DR Assignment Notification
+            </CardTitle>
+            <CardDescription className="text-muted-foreground text-sm mt-0.5">
+              Customize the push notification sent when assigning a Designer Representative. Use <code className="bg-muted px-1 py-0.5 rounded text-xs">%assignerName%</code> and <code className="bg-muted px-1 py-0.5 rounded text-xs">%orderId%</code> for personalization.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 space-y-4">
+              <div className="space-y-1">
+                <Label htmlFor="drNotifTitle">Notification Title *</Label>
+                <Input id="drNotifTitle" value={drNotifTitle} onChange={(e) => setDrNotifTitle(e.target.value)} placeholder="e.g., New Task from %assignerName%" required disabled={isSubmittingDrNotif}/>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="drNotifBody">Notification Body *</Label>
+                <Textarea id="drNotifBody" value={drNotifBody} onChange={(e) => setDrNotifBody(e.target.value)} placeholder="e.g., You have been assigned to order %orderId%." required disabled={isSubmittingDrNotif}/>
+              </div>
+          </CardContent>
+          <CardFooter className="border-t p-5 flex justify-end">
+            <Button type="submit" disabled={isSubmittingDrNotif}>{isSubmittingDrNotif ? "Saving..." : "Save DR Template"}</Button>
+          </CardFooter>
+        </Card>
+      </form>
 
-      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5">
-          <CardTitle className="text-card-foreground text-xl flex items-center gap-2">
-            <ImageIcon className="h-6 w-6 text-primary" /> Leaderboard Background Image
-          </CardTitle>
-          <CardDescription className="text-muted-foreground text-sm mt-0.5">
-            Set a custom background image URL for the leaderboard page. Leave blank to use the default image.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-6">
-          {isLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-5 w-32 rounded" />
-              <Skeleton className="h-10 w-full rounded-md" />
-              <Skeleton className="h-24 w-40 rounded-md mt-2" />
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              <Label htmlFor="leaderboardBgUrlInput">Background Image URL</Label>
-              <Input
-                id="leaderboardBgUrlInput"
-                value={leaderboardBgUrl}
-                onChange={(e) => setLeaderboardBgUrl(e.target.value)}
-                placeholder="e.g., https://example.com/leaderboard-bg.jpg or /images/leaderboard.png"
-                disabled={isSubmittingLeaderboardBg}
-              />
-              <p className="text-xs text-muted-foreground">
-                Provide a full URL or a relative path from the public folder.
-              </p>
-              {leaderboardBgUrl && (
-                <div className="mt-4 p-2 border rounded-md inline-block bg-muted">
-                  <NextImage
-                    src={leaderboardBgUrl}
-                    alt="Leaderboard background preview"
-                    width={200}
-                    height={120}
-                    className="object-cover rounded"
-                    unoptimized={leaderboardBgUrl.startsWith('/')} 
-                    onError={(e) => { e.currentTarget.src = DEFAULT_LEADERBOARD_BACKGROUND_PLACEHOLDER; e.currentTarget.alt = 'Error loading image. Default shown.' }}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-        <CardFooter className="border-t p-5 flex justify-end">
-          <Button onClick={handleSaveLeaderboardBgUrl} disabled={isLoading || isSubmittingLeaderboardBg}>
-            {isSubmittingLeaderboardBg ? "Saving..." : "Save Leaderboard Background"}
-          </Button>
-        </CardFooter>
-      </Card>
 
       <Separator className="my-8" />
 

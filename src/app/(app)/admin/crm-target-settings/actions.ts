@@ -7,12 +7,13 @@ import {
   setCommentsVisibility,
   setRolesAllowedToEditOrders,
   setRolesAllowedToDeleteOrders,
-  setRolesAllowedToViewFinancials, // New
+  setRolesAllowedToViewFinancials,
   setToastSoundUrl,
   setLeaderboardBackgroundImageUrl,
   setExpenseLoggingPermissions, 
   setProjectStageAccess, 
   setMaintenanceMode,
+  setDrAssignmentNotificationTemplates, // New
 } from "@/lib/settings-service";
 import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType } from "@/types"; 
 import { adminApp } from '@/lib/firebase-admin';
@@ -190,6 +191,24 @@ export async function updateMaintenanceModeAction(
     return { success: false, error: "Failed to update maintenance mode settings in database." };
   } catch (error) {
     console.error("Error in updateMaintenanceModeAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+// New action for DR assignment notification templates
+export async function updateDrAssignmentNotificationTemplatesAction(
+  title: string | null,
+  body: string | null
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setDrAssignmentNotificationTemplates(title, body);
+    if (success) {
+      revalidatePath("/(app)/admin/crm-target-settings");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update DR assignment notification templates in database." };
+  } catch (error) {
+    console.error("Error in updateDrAssignmentNotificationTemplatesAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

@@ -34,13 +34,15 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   areCommentsVisibleOnPublicPage: true,
   rolesAllowedToEditOrders: ['SYSTEM_ADMIN', 'ADMIN'],
   rolesAllowedToDeleteOrders: ['SYSTEM_ADMIN'],
-  rolesAllowedToViewFinancials: ['SYSTEM_ADMIN', 'ADMIN'], // Added default
+  rolesAllowedToViewFinancials: ['SYSTEM_ADMIN', 'ADMIN'],
   toastSoundUrl: DEFAULT_TOAST_SOUND_URL,
   leaderboardBackgroundImageUrl: DEFAULT_LEADERBOARD_BACKGROUND_URL,
   expenseLoggingPermissions: DEFAULT_EXPENSE_LOGGING_PERMISSIONS,
   projectStageAccess: DEFAULT_PROJECT_STAGE_ACCESS,
   maintenanceMode: false,
   maintenanceMessage: "The application is currently down for maintenance. We'll be back shortly!",
+  drAssignmentNotificationTitle: 'New Design Assigned By %assignerName%',
+  drAssignmentNotificationBody: 'You have been assigned to a new design order: %orderId%.',
 };
 
 // Gets global settings from Firestore
@@ -51,7 +53,6 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
 
     if (docSnap.exists()) {
       const data = docSnap.data();
-      // Ensure expenseLoggingPermissions has all its fields, defaulting if necessary
       const expensePerms = data.expenseLoggingPermissions || {};
       const fullExpensePerms: ExpenseLoggingPermissions = {
         mode: expensePerms.mode ?? DEFAULT_EXPENSE_LOGGING_PERMISSIONS.mode,
@@ -69,13 +70,15 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         areCommentsVisibleOnPublicPage: data.areCommentsVisibleOnPublicPage ?? DEFAULT_GLOBAL_SETTINGS.areCommentsVisibleOnPublicPage,
         rolesAllowedToEditOrders: data.rolesAllowedToEditOrders ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToEditOrders,
         rolesAllowedToDeleteOrders: data.rolesAllowedToDeleteOrders ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToDeleteOrders,
-        rolesAllowedToViewFinancials: data.rolesAllowedToViewFinancials ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToViewFinancials, // Added getter logic
+        rolesAllowedToViewFinancials: data.rolesAllowedToViewFinancials ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToViewFinancials,
         toastSoundUrl: data.toastSoundUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.toastSoundUrl : data.toastSoundUrl,
         leaderboardBackgroundImageUrl: data.leaderboardBackgroundImageUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.leaderboardBackgroundImageUrl : data.leaderboardBackgroundImageUrl,
         expenseLoggingPermissions: fullExpensePerms,
         projectStageAccess: { ...DEFAULT_PROJECT_STAGE_ACCESS, ...projectStageAccess },
         maintenanceMode: data.maintenanceMode ?? DEFAULT_GLOBAL_SETTINGS.maintenanceMode,
         maintenanceMessage: data.maintenanceMessage ?? DEFAULT_GLOBAL_SETTINGS.maintenanceMessage,
+        drAssignmentNotificationTitle: data.drAssignmentNotificationTitle ?? DEFAULT_GLOBAL_SETTINGS.drAssignmentNotificationTitle,
+        drAssignmentNotificationBody: data.drAssignmentNotificationBody ?? DEFAULT_GLOBAL_SETTINGS.drAssignmentNotificationBody,
       };
     } else {
       console.log("Global settings document not found, returning defaults. Creating document with defaults.");
@@ -338,6 +341,36 @@ export async function setMaintenanceMode(
     return true;
   } catch (error) {
     console.error("Error setting maintenance mode:", error);
+    return false;
+  }
+}
+
+// Sets the notification templates for DR assignment
+export async function setDrAssignmentNotificationTemplates(
+  title: string | null,
+  body: string | null
+): Promise<boolean> {
+  try {
+    const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+    const docSnap = await getDoc(settingsDocRef);
+    const updates: Partial<GlobalSettings> = {};
+    if (title !== null) {
+      updates.drAssignmentNotificationTitle = title;
+    }
+    if (body !== null) {
+      updates.drAssignmentNotificationBody = body;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      if (docSnap.exists()) {
+        await updateDoc(settingsDocRef, updates);
+      } else {
+        await setDoc(settingsDocRef, { ...DEFAULT_GLOBAL_SETTINGS, ...updates });
+      }
+    }
+    return true;
+  } catch (error) {
+    console.error("Error setting DR assignment notification templates:", error);
     return false;
   }
 }

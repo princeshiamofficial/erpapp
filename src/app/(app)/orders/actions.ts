@@ -31,7 +31,6 @@ interface CreateOrderDialogFormData {
   advancePaymentAmount?: string | null;
   advancePaymentMethod?: string | null;
   specialClientDiscount?: number | null;
-  // shippingCharge removed from here
   customPaymentMethodText?: string; 
   orderNotes?: string | null;
   initialStatusId: string;
@@ -103,7 +102,6 @@ export async function createOrderAction(
       parsedAdvancePaymentAmount = numAdvancePayment;
     }
     
-    // shipping charge parsing removed
     const netPayable = orderItemsTotal - (data.specialClientDiscount || 0);
     const grandTotal = netPayable; // No shipping charge here
     if (parsedAdvancePaymentAmount !== null && parsedAdvancePaymentAmount > grandTotal && grandTotal > 0) {
@@ -199,7 +197,6 @@ export async function updateOrderAction(
       }
     }
     
-    // Keep shipping charge handling here for the courier dialog to use
     if (updates.shippingCharge !== undefined) {
       const charge = Number(updates.shippingCharge);
       if (isNaN(charge) || charge < 0) {
@@ -298,7 +295,6 @@ export async function updateOrderAction(
     const updatedOrder = await getOrderById(orderId);
     if (!updatedOrder) return { success: false, error: "Failed to retrieve updated order after update." };
 
-    // --- Sync with Project ---
     const projectDocRef = doc(db, 'projects', orderId);
     try {
         const projectDocSnap = await getDoc(projectDocRef);
@@ -311,12 +307,12 @@ export async function updateOrderAction(
             if (finalUpdates.crmUserName) {
                 projectUpdates.assigneeName = finalUpdates.crmUserName;
             }
-             if (finalUpdates.designerRepresentativeName !== undefined) { // Check for undefined to handle removal
+             if (finalUpdates.designerRepresentativeName !== undefined) {
                 projectUpdates.designerRepresentativeName = finalUpdates.designerRepresentativeName;
             }
             projectUpdates.updatedAt = new Date().toISOString();
             
-            if(Object.keys(projectUpdates).length > 1) { // Check if more than just updatedAt changed
+            if(Object.keys(projectUpdates).length > 1) {
                  await updateDoc(projectDocRef, projectUpdates);
                  console.log(`[updateOrderAction] Synced project ${orderId} with updates:`, projectUpdates);
             }
@@ -324,8 +320,6 @@ export async function updateOrderAction(
     } catch (projectError) {
         console.warn(`[updateOrderAction] Failed to sync order update to project board for order ${orderId}. This is not a critical error. Error:`, projectError);
     }
-    // --- End Sync with Project ---
-
 
     revalidatePath("/(app)/orders");
     revalidatePath(`/track/${orderId}`);
@@ -334,7 +328,7 @@ export async function updateOrderAction(
     revalidatePath("/(app)/orders/monthly");
     revalidatePath("/(app)/deliveries/monthly");
     revalidatePath("/(app)/deliveries/weekly");
-    revalidatePath("/(app)/projects"); // Added revalidation for projects page
+    revalidatePath("/(app)/projects");
 
     return { success: true, order: updatedOrder };
   } catch (error: any) {
@@ -404,8 +398,14 @@ export async function assignDrToOrderAction(
             if (!adminApp || typeof adminApp.messaging !== 'function') {
                 console.warn("[assignDrToOrderAction] Firebase Admin SDK not properly initialized. Cannot send push notification for DR assignment.");
             } else {
-                const notificationTitle = `New Design Assigned By ${actingUser.name}`;
-                const notificationBody = `You have been assigned to a new design order: ${orderId}.`;
+                const globalSettings = await getGlobalSettings();
+                const titleTemplate = globalSettings.drAssignmentNotificationTitle || 'New Design Assigned By %assignerName%';
+                const bodyTemplate = globalSettings.drAssignmentNotificationBody || 'You have been assigned to a new design order: %orderId%.';
+
+                const notificationTitle = titleTemplate.replace(/%assignerName%/g, actingUser.name).replace(/%orderId%/g, orderId);
+                const notificationBody = bodyTemplate.replace(/%assignerName%/g, actingUser.name).replace(/%orderId%/g, orderId);
+                const customSoundUrl = globalSettings.toastSoundUrl;
+
                 const targetUrl = `/track/${orderId}`;
                 const fcmMessage: messaging.Message = {
                     token: designerRepUser.fcmToken,
@@ -418,13 +418,14 @@ export async function assignDrToOrderAction(
                         body: notificationBody,
                         iconUrl: '/icons/icon-192x192.png', 
                         targetUrl: targetUrl,
-                        click_action: targetUrl 
+                        click_action: targetUrl,
+                        ...(customSoundUrl && { customSoundUrl: customSoundUrl })
                     },
                     webpush: { 
                         notification: { 
                             icon: '/icons/icon-192x192.png', 
                             badge: '/icons/icon-72x72.png', 
-                            sound: "default" 
+                            ...(customSoundUrl ? {} : { sound: "default" }) 
                         }, 
                         fcmOptions: { 
                             link: targetUrl 
@@ -517,5 +518,3 @@ export async function deleteOrderAction(
     return { success: false, error: errorMessage };
   }
 }
-
-    

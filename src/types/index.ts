@@ -162,7 +162,7 @@ export interface GlobalSettings {
   areCommentsVisibleOnPublicPage?: boolean;
   rolesAllowedToEditOrders?: UserRole[];
   rolesAllowedToDeleteOrders?: UserRole[];
-  rolesAllowedToViewFinancials?: UserRole[]; // New setting
+  rolesAllowedToViewFinancials?: UserRole[];
   toastSoundUrl?: string | null;
   leaderboardBackgroundImageUrl?: string | null;
   leaderboardThemeSettings?: LeaderboardThemeSettings | null;
@@ -170,6 +170,8 @@ export interface GlobalSettings {
   projectStageAccess?: Record<ProjectStatusType, UserRole[]>;
   maintenanceMode?: boolean;
   maintenanceMessage?: string | null;
+  drAssignmentNotificationTitle?: string;
+  drAssignmentNotificationBody?: string;
 }
 
 export interface LeaderboardThemeSettings {
@@ -229,7 +231,7 @@ export interface Transaction {
   sentToUserName?: string | null;
   receivedFromUserId?: string | null;
   receivedFromUserName?: string | null;
-  documentUrl?: string | null; // Added documentUrl for attachments
+  documentUrl?: string | null;
 }
 
 export interface PersonalNote {
@@ -291,7 +293,6 @@ export interface DistrictDataEntry {
     address: string;
     phone: string;
     orderDate: string; // ISO String
-    // These are added for manual entries
     division?: string;
     district?: string;
 }
