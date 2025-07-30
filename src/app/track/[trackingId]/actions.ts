@@ -1,9 +1,10 @@
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
 import type { Comment, TrackingLink, User, UserRole } from "@/types";
-import { addCommentToOrder, addReplyToComment, toggleReaction, getOrderByTrackingCode, autoSettleOrderIfDelivered } from "@/lib/order-service"; 
+import { addCommentToOrder, addReplyToComment, toggleReaction, getOrderByTrackingCode, autoSettleOrderIfDelivered, deleteComment as deleteCommentFromOrder } from "@/lib/order-service"; 
 import { DELIVERED_STATUS_ID } from '@/lib/status-service';
 
 // For top-level comments from the main form (typically by client or general update)
@@ -156,6 +157,36 @@ export async function toggleOrderCommentReactionAction(
     return { error: error instanceof Error ? error.message : "Failed to toggle reaction." };
   }
 }
+
+export async function deleteCommentAction(
+  orderId: string,
+  targetCommentId: string,
+  isReply: boolean,
+  parentCommentIdIfReply: string | undefined,
+  actingUser: User | null
+): Promise<TrackingLink | { error: string }> {
+  if (!actingUser || actingUser.role !== 'SYSTEM_ADMIN') {
+    return { error: "Permission denied. Only System Administrators can delete comments." };
+  }
+
+  try {
+    const updatedOrder = await deleteCommentFromOrder(
+      orderId,
+      targetCommentId,
+      isReply,
+      parentCommentIdIfReply,
+    );
+    if (!updatedOrder) {
+      return { error: "Failed to delete comment from order." };
+    }
+    revalidatePath(`/track/${orderId}`);
+    return updatedOrder;
+  } catch (error) {
+    console.error("Error in deleteCommentAction:", error);
+    return { error: error instanceof Error ? error.message : "Failed to delete comment." };
+  }
+}
+
 
 export async function getPackzyDeliveryStatusAction(trackingCode: string): Promise<{ delivery_status: string } | { error: string }> {
   if (!trackingCode) {

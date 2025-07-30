@@ -665,6 +665,54 @@ export const toggleReaction = async (
   }
 };
 
+export const deleteComment = async (
+  orderId: string,
+  targetCommentId: string,
+  isReply: boolean,
+  parentCommentIdIfReply: string | undefined
+): Promise<TrackingLink | undefined> => {
+  try {
+    const orderRef = doc(db, ORDERS_COLLECTION, orderId);
+    return await runTransaction(db, async (transaction) => {
+      const orderDoc = await transaction.get(orderRef);
+      if (!orderDoc.exists()) {
+        throw new Error(`Order ${orderId} not found.`);
+      }
+      const order = { ...orderDoc.data(), id: orderDoc.id } as TrackingLink;
+      let comments = order.comments || [];
+
+      if (isReply) {
+        if (!parentCommentIdIfReply) throw new Error("parentCommentIdIfReply is required for a reply.");
+        const parentCommentIndex = comments.findIndex(c => c.id === parentCommentIdIfReply);
+        if (parentCommentIndex === -1) throw new Error(`Parent comment ${parentCommentIdIfReply} not found.`);
+        
+        const parentComment = comments[parentCommentIndex];
+        const initialReplyCount = parentComment.replies?.length || 0;
+        parentComment.replies = (parentComment.replies || []).filter(r => r.id !== targetCommentId);
+        if (parentComment.replies.length === initialReplyCount) {
+            console.warn(`Reply ${targetCommentId} not found in parent ${parentCommentIdIfReply}. No changes made.`);
+        }
+        comments[parentCommentIndex] = parentComment;
+      } else {
+        const initialCommentCount = comments.length;
+        comments = comments.filter(c => c.id !== targetCommentId);
+         if (comments.length === initialCommentCount) {
+            console.warn(`Comment ${targetCommentId} not found. No changes made.`);
+        }
+      }
+      
+      transaction.update(orderRef, { comments });
+      return { ...order, comments };
+    }).catch(error => {
+      console.error(`TRANSACTION FAILED for deleting comment ${targetCommentId} in order ${orderId}:`, error);
+      return undefined;
+    });
+  } catch (error) {
+    console.error(`Error deleting comment ${targetCommentId} in order ${orderId}:`, error);
+    return undefined;
+  }
+};
+
 export const incrementOrderViewCount = async (orderId: string): Promise<boolean> => {
   if (!orderId) return false;
   const orderRef = doc(db, ORDERS_COLLECTION, orderId);

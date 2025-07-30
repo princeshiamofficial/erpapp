@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, FormEvent, useRef, useMemo } from 'react';
@@ -7,14 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2 } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem, AdvancePaymentRecord } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Label } from '@/components/ui/label';
 import { getStatusById, getContrastTextColor } from '@/lib/status-service';
-import { submitCommentAction, submitClientReplyAction, toggleOrderCommentReactionAction, submitReplyAction, getPackzyDeliveryStatusAction } from './actions';
+import { submitCommentAction, submitClientReplyAction, toggleOrderCommentReactionAction, submitReplyAction, getPackzyDeliveryStatusAction, deleteCommentAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/auth-context';
@@ -23,6 +24,8 @@ import { motion } from 'framer-motion';
 import { formatDistanceToNowStrict, parseISO, format as formatDateFns } from 'date-fns';
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
 
 const CLIENT_AVATAR_URL = 'https://i.ibb.co/7dphf0LX/avatar-with-a-young-face-pictures-of-men-vector-46356734.jpg';
 
@@ -85,6 +88,10 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
 
   const [packzyStatus, setPackzyStatus] = useState<string | null>(null);
   const [isLoadingPackzyStatus, setIsLoadingPackzyStatus] = useState(false);
+  
+  const [commentToDelete, setCommentToDelete] = useState<{ id: string; isReply: boolean; parentId?: string; text: string; } | null>(null);
+  const [isDeletingComment, setIsDeletingComment] = useState(false);
+
 
   useEffect(() => {
     if (barcodeRef.current && order.id) {
@@ -244,6 +251,28 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
     }
   };
 
+  const handleDeleteComment = async () => {
+    if (!commentToDelete) return;
+
+    setIsDeletingComment(true);
+    const result = await deleteCommentAction(
+      order.id,
+      commentToDelete.id,
+      commentToDelete.isReply,
+      commentToDelete.parentId,
+      currentUser
+    );
+    setIsDeletingComment(false);
+    setCommentToDelete(null); // Close the dialog
+
+    if ('error' in result) {
+      toast({ title: "Deletion Failed", description: result.error, variant: "destructive" });
+    } else {
+      setOrder(result);
+      toast({ title: "Success", description: "The comment has been deleted." });
+    }
+  };
+
   const renderTextWithMentions = (text: string) => {
     if (!text) return '';
     return text.split(/(@[a-zA-Z0-9_]+)/g).map((part, index) => {
@@ -340,6 +369,19 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
             <span className="text-muted-foreground">&middot;</span>
             <button onClick={() => { const isOpeningNewReplyForm = !replyingTo || replyingTo.formUnderId !== comment.id; const targetNameForMention = comment.userName || "User"; const parentIdForReply = isReply ? parentCommentId! : comment.id; setReplyingTo(isOpeningNewReplyForm ? { parentId: parentIdForReply, targetName: targetNameForMention, formUnderId: comment.id } : null); if (isOpeningNewReplyForm) { setCurrentReplyText(`@${targetNameForMention.replace(/\s+/g, '')} `); setTimeout(() => replyTextareaRef.current?.focus(), 0); } else { setCurrentReplyText(''); } }} className="font-medium text-muted-foreground hover:text-primary hover:bg-primary/10 px-1.5 py-0.5 rounded-sm transition-colors">Reply</button>
             <span className="text-muted-foreground">&middot;</span>
+            {currentUser?.role === 'SYSTEM_ADMIN' && (
+              <>
+                <button 
+                  onClick={() => setCommentToDelete({ id: comment.id, isReply, parentId: parentCommentId, text: comment.text })}
+                  className="font-medium text-destructive hover:bg-destructive/10 px-1.5 py-0.5 rounded-sm transition-colors flex items-center gap-1"
+                  title="Delete Comment"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </button>
+                <span className="text-muted-foreground">&middot;</span>
+              </>
+            )}
             <span className="text-muted-foreground" title={isClient ? formatDate(comment.timestamp) : 'Loading date...'}>{isClient ? formatDate(comment.timestamp, true) : <Skeleton className="h-3 w-10 inline-block" />}</span>
           </div>
           {replyingTo?.formUnderId === comment.id && (
@@ -603,6 +645,37 @@ export function OrderDetailsClient({ order: initialOrder, allStatuses, allUsersF
           </CardContent>
         </Card>)}
       </main>
+
+      {commentToDelete && (
+        <AlertDialog open={!!commentToDelete} onOpenChange={() => setCommentToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
+                Are you sure you want to delete this comment?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the comment:
+                <blockquote className="mt-2 p-2 border-l-4 border-muted-foreground bg-muted text-muted-foreground italic rounded-r-md text-sm">
+                  "{commentToDelete.text.substring(0, 100)}{commentToDelete.text.length > 100 ? '...' : ''}"
+                </blockquote>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setCommentToDelete(null)} disabled={isDeletingComment}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteComment}
+                disabled={isDeletingComment}
+                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              >
+                {isDeletingComment ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting...</> : "Yes, delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   );
 }
