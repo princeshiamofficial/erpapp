@@ -1,17 +1,39 @@
 
 import { Suspense } from 'react';
-import { OrderDetailsClient } from './OrderDetailsClient';
 import { getOrderById, incrementOrderViewCount } from '@/lib/order-service';
 import { getStatuses } from '@/lib/status-service';
 import { getGlobalSettings } from '@/lib/settings-service';
-import { getUsers } from '@/lib/user-service';
+import { getUsers, getUserById } from '@/lib/user-service';
 import { notFound } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Package } from 'lucide-react';
+import { Package, Frown, Home, AlertTriangle } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { cookies } from 'next/headers';
+import type { User } from '@/types';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+
+const OrderDetailsClient = dynamic(() => import('./OrderDetailsClient').then(mod => mod.OrderDetailsClient), { 
+  ssr: false,
+  loading: () => <TrackingPageSkeleton /> 
+});
 
 interface PublicTrackingPageProps {
   params: { trackingId: string };
 }
+
+const RestrictedAccess = () => (
+  <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-4">
+      <AlertTriangle className="h-16 w-16 text-destructive mb-4" />
+      <h2 className="text-2xl font-bold">Access Restricted</h2>
+      <p className="text-muted-foreground mt-2">
+        This tracking link is private. Please log in to view the order details.
+      </p>
+      <Button asChild className="mt-6">
+        <Link href="/login">Go to Login</Link>
+      </Button>
+  </div>
+);
 
 export default async function PublicTrackingPage({ params }: PublicTrackingPageProps) {
   const trackingId = params.trackingId;
@@ -30,9 +52,28 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
   if (!orderDataResult) {
     notFound();
   }
+  
+  let currentUser: User | null = null;
+  const cookieStore = cookies();
+  const userCookie = cookieStore.get('colorhut-user');
+  if (userCookie) {
+    try {
+      const storedUser = JSON.parse(userCookie.value) as { id: string };
+      if (storedUser && storedUser.id) {
+        currentUser = await getUserById(storedUser.id);
+      }
+    } catch (e) {
+      console.error("Error parsing user cookie:", e);
+    }
+  }
+  
+  const hasPermission = currentUser && globalSettingsResult.rolesAllowedToSeeFinancials?.includes(currentUser.role);
+  
+  if (!orderDataResult.isPublic && !hasPermission) {
+    return <RestrictedAccess />;
+  }
 
   // Ensure data is plain before passing to Client Component
-  // This helps avoid issues with Next.js's handling of props derived from server-side dynamic APIs.
   const plainOrderData = JSON.parse(JSON.stringify(orderDataResult));
   const plainAllStatuses = JSON.parse(JSON.stringify(allStatusesResult));
   const plainGlobalSettings = JSON.parse(JSON.stringify(globalSettingsResult));
