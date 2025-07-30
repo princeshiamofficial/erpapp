@@ -1,9 +1,4 @@
 
-
-
-
-
-
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -409,7 +404,7 @@ export async function assignDrToOrderAction(
             if (!adminApp || typeof adminApp.messaging !== 'function') {
                 console.warn("[assignDrToOrderAction] Firebase Admin SDK not properly initialized. Cannot send push notification for DR assignment.");
             } else {
-                const notificationTitle = "New Design Assignment!";
+                const notificationTitle = `New Design Assigned By ${actingUser.name}`;
                 const notificationBody = `You have been assigned to a new design order: ${orderId}.`;
                 const targetUrl = `/track/${orderId}`;
                 const fcmMessage: messaging.Message = {
@@ -522,3 +517,5 @@ export async function deleteOrderAction(
     return { success: false, error: errorMessage };
   }
 }
+
+    
