@@ -313,7 +313,7 @@ export async function sendPushNotificationAction(
         webpush: { 
           notification: {
             icon: iconUrl || '/icons/icon-192x192.png', 
-            ...(soundUrl ? {} : { sound: "default" }) 
+            ...(soundUrl ? { sound: soundUrl } : { sound: "default" }) 
           },
           fcmOptions: {
             link: targetUrl || (typeof window !== 'undefined' ? window.location.origin : 'https://colorhut-57f5a.web.app') 

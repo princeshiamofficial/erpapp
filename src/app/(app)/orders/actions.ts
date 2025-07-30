@@ -425,7 +425,7 @@ export async function assignDrToOrderAction(
                         notification: { 
                             icon: '/icons/icon-192x192.png', 
                             badge: '/icons/icon-72x72.png', 
-                            ...(customSoundUrl ? {} : { sound: "default" }) 
+                            ...(customSoundUrl ? { sound: customSoundUrl } : { sound: "default" })
                         }, 
                         fcmOptions: { 
                             link: targetUrl 
