@@ -6,34 +6,16 @@ import { getGlobalSettings } from '@/lib/settings-service';
 import { getUsers, getUserById } from '@/lib/user-service';
 import { notFound } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Package, Frown, Home, AlertTriangle } from 'lucide-react';
-import dynamic from 'next/dynamic';
+import { Package } from 'lucide-react';
 import { cookies } from 'next/headers';
 import type { User } from '@/types';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
+import { RestrictedAccessClient } from './RestrictedAccessClient';
+import { OrderDetailsLoader } from './OrderDetailsLoader';
 
-const OrderDetailsClient = dynamic(() => import('./OrderDetailsClient').then(mod => mod.OrderDetailsClient), { 
-  ssr: false,
-  loading: () => <TrackingPageSkeleton /> 
-});
 
 interface PublicTrackingPageProps {
   params: { trackingId: string };
 }
-
-const RestrictedAccess = () => (
-  <div className="flex flex-col items-center justify-center min-h-[calc(100vh-150px)] text-center p-4">
-      <AlertTriangle className="h-16 w-16 text-destructive mb-4" />
-      <h2 className="text-2xl font-bold">Access Restricted</h2>
-      <p className="text-muted-foreground mt-2">
-        This tracking link is private. Please log in to view the order details.
-      </p>
-      <Button asChild className="mt-6">
-        <Link href="/login">Go to Login</Link>
-      </Button>
-  </div>
-);
 
 export default async function PublicTrackingPage({ params }: PublicTrackingPageProps) {
   const trackingId = params.trackingId;
@@ -67,10 +49,10 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
     }
   }
   
-  const hasPermission = currentUser && globalSettingsResult.rolesAllowedToSeeFinancials?.includes(currentUser.role);
+  const hasPermission = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN' || (globalSettingsResult.rolesAllowedToSeeFinancials?.includes(currentUser.role) ?? false));
   
-  if (!orderDataResult.isPublic && !hasPermission) {
-    return <RestrictedAccess />;
+  if (!orderDataResult.isPublic && !currentUser) {
+    return <RestrictedAccessClient />;
   }
 
   // Ensure data is plain before passing to Client Component
@@ -84,7 +66,7 @@ export default async function PublicTrackingPage({ params }: PublicTrackingPageP
   return (
     <div className="min-h-screen bg-background py-6 sm:py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary print:p-0 print:m-0 print:bg-white">
       <Suspense fallback={<TrackingPageSkeleton />}>
-        <OrderDetailsClient
+        <OrderDetailsLoader
             order={plainOrderData}
             allStatuses={plainAllStatuses}
             allUsersForMentions={plainAllUsers}

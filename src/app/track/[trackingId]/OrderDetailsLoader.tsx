@@ -1,0 +1,52 @@
+
+"use client";
+
+import dynamic from 'next/dynamic';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Package } from 'lucide-react';
+import type { TrackingLink, CustomStatus, User } from '@/types';
+
+// The skeleton needs to be defined here or imported if it's complex,
+// because the loading state is part of this client component.
+function TrackingPageSkeleton() {
+  return (
+    <div className="max-w-4xl mx-auto space-y-8 sm:space-y-10 animate-pulse">
+      <div className="shadow-2xl overflow-hidden border-border/40 bg-card rounded-xl">
+        <div className="bg-card p-6 sm:p-8 border-b border-border/40">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6">
+            <div className="h-16 w-16 sm:h-20 sm:w-20 bg-primary/10 rounded-lg border border-primary/20 flex items-center justify-center mb-4 sm:mb-0 flex-shrink-0">
+                <Package className="h-8 w-8 sm:h-10 sm:w-10 text-primary opacity-50" />
+            </div>
+            <div>
+              <Skeleton className="h-8 w-72 mb-2 sm:h-10" />
+              <Skeleton className="h-5 w-48 sm:h-6" />
+            </div>
+          </div>
+        </div>
+        <div className="p-6 sm:p-8 space-y-8">
+          <div>
+            <Skeleton className="h-7 w-40 mb-2" />
+            <Skeleton className="h-10 w-56 mb-1" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const OrderDetailsClient = dynamic(() => import('./OrderDetailsClient').then(mod => mod.OrderDetailsClient), {
+  ssr: false,
+  loading: () => <TrackingPageSkeleton />,
+});
+
+interface OrderDetailsLoaderProps {
+    order: TrackingLink;
+    allStatuses: CustomStatus[];
+    allUsersForMentions: User[];
+    areCommentsVisible: boolean;
+}
+
+export function OrderDetailsLoader(props: OrderDetailsLoaderProps) {
+  return <OrderDetailsClient {...props} />;
+}
