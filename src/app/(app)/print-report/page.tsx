@@ -75,7 +75,7 @@ export default function PrintReportPage() {
             </div>
             <Button size="lg" className="w-full sm:w-auto">
               <PlusCircle className="mr-2 h-5 w-5" />
-              Add New Info
+              Add New Task
             </Button>
           </div>
         </div>
