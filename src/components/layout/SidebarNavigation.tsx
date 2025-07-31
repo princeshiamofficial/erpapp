@@ -24,7 +24,8 @@ import {
   Shield, 
   ChevronDown,
   Map, // Added Map icon
-  ShoppingCart // Added ShoppingCart icon for Purchase Request
+  ShoppingCart, // Added ShoppingCart icon for Purchase Request
+  Printer
 } from "lucide-react";
 import type { UserRole, GlobalSettings } from "@/types";
 import { cn } from "@/lib/utils";
@@ -70,6 +71,7 @@ const navItems: NavItem[] = [
   { href: "/admin/service-management", label: "Service Options", icon: Settings2, roles: ["SYSTEM_ADMIN"] },
   { href: "/admin/crm-target-settings", label: "App Settings", icon: Target, roles: ["SYSTEM_ADMIN"] }, 
   { href: "/reports", label: "Reports", icon: BarChart3, roles: ["SYSTEM_ADMIN", "ADMIN"], disabled: true },
+  { href: "#", label: "Print Report", icon: Printer, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR"], disabled: true },
 ];
 
 export function SidebarNavigation() {
