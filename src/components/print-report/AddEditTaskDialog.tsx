@@ -28,7 +28,6 @@ interface AddEditTaskDialogProps {
 }
 
 export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, currentUser }: AddEditTaskDialogProps) {
-  const [creatorName, setCreatorName] = useState('');
   const [assignedLrName, setAssignedLrName] = useState('');
   const [taskNotes, setTaskNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,41 +38,31 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && task) {
-        setCreatorName(task.crmUserName);
         setAssignedLrName(task.designerRepresentativeName || '');
         setTaskNotes(task.orderNotes || '');
       } else {
-        // Reset form for add mode and pre-fill creator name
-        setCreatorName(currentUser.name);
         setAssignedLrName('');
         setTaskNotes('');
       }
     }
-  }, [isOpen, task, isEditMode, currentUser]);
+  }, [isOpen, task, isEditMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!creatorName.trim()) {
-      toast({ title: "Validation Error", description: "Creator Name is required.", variant: "destructive" });
-      return;
-    }
-
+    
     setIsSubmitting(true);
     let result;
 
     if (isEditMode && task) {
       const updates: Partial<TrackingLink> = {
-        // Creator name should not be editable in the dialog if it's auto-populated
         designerRepresentativeName: assignedLrName || null,
         orderNotes: taskNotes || null,
         updatedAt: new Date().toISOString(),
       };
-      // Keep existing crmUserName
       updates.crmUserName = task.crmUserName;
       
       result = await updateTaskAction(task.id, updates);
     } else {
-      // For adding, we need more fields to create a valid TrackingLink.
       const newTaskData: Omit<TrackingLink, 'id' | 'crmUserId' | 'crmUserName'> = {
         companyName: "New Task (Details pending)",
         address: "N/A",
@@ -110,10 +99,6 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="py-4 space-y-4">
-          <div className="space-y-1">
-            <Label htmlFor="creator-name">Creator Name</Label>
-            <Input id="creator-name" value={creatorName} readOnly className="bg-muted/50" />
-          </div>
           <div className="space-y-1">
             <Label htmlFor="assigned-lr-name">Assigned LR</Label>
             <Input id="assigned-lr-name" value={assignedLrName} onChange={e => setAssignedLrName(e.target.value)} />
