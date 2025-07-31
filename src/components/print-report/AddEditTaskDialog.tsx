@@ -28,7 +28,6 @@ interface AddEditTaskDialogProps {
 }
 
 export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, currentUser }: AddEditTaskDialogProps) {
-  const [assignedLrName, setAssignedLrName] = useState('');
   const [taskNotes, setTaskNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -38,10 +37,8 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && task) {
-        setAssignedLrName(task.designerRepresentativeName || '');
         setTaskNotes(task.orderNotes || '');
       } else {
-        setAssignedLrName('');
         setTaskNotes('');
       }
     }
@@ -55,7 +52,6 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
 
     if (isEditMode && task) {
       const updates: Partial<TrackingLink> = {
-        designerRepresentativeName: assignedLrName || null,
         orderNotes: taskNotes || null,
         updatedAt: new Date().toISOString(),
       };
@@ -68,7 +64,6 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
         address: "N/A",
         phoneNumber: "N/A",
         orderItems: [],
-        designerRepresentativeName: assignedLrName || null,
         createdAt: new Date().toISOString(),
         isPublic: false,
         currentStatus: "order-submitted", // Default status
@@ -99,10 +94,6 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="py-4 space-y-4">
-          <div className="space-y-1">
-            <Label htmlFor="assigned-lr-name">Assigned LR</Label>
-            <Input id="assigned-lr-name" value={assignedLrName} onChange={e => setAssignedLrName(e.target.value)} />
-          </div>
            <div className="space-y-1">
             <Label htmlFor="task-notes">Notes</Label>
             <Textarea id="task-notes" value={taskNotes} onChange={e => setTaskNotes(e.target.value)} placeholder="Add any relevant notes..."/>
