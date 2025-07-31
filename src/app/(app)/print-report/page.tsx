@@ -11,7 +11,8 @@ import { Search, Loader2, PlusCircle, Eye, Edit, MoreVertical, UserPlus } from '
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, OrderItem, User } from '@/types';
-import { getOrdersForReport, assignMeToAction } from './actions';
+import { getOrdersForReport } from '@/lib/report-service';
+import { assignMeToAction } from './actions';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 import {
