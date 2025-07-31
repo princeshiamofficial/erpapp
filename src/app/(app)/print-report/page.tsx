@@ -69,10 +69,6 @@ export default function PrintReportPage() {
     );
   }, [reportItems, searchTerm]);
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   return (
     <>
       <div className="space-y-6 p-4 sm:p-6 lg:p-8 print:p-0">
@@ -118,7 +114,7 @@ export default function PrintReportPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="pl-6 w-[150px]">Order ID</TableHead>
+                    <TableHead className="pl-6 w-[150px]">Task ID</TableHead>
                     <TableHead>Company</TableHead>
                     <TableHead>Model/Design</TableHead>
                     <TableHead>Lamination</TableHead>
