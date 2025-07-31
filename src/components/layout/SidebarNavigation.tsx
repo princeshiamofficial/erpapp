@@ -59,6 +59,7 @@ const navItems: NavItem[] = [
   },
   { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
   { href: "/tracking-links", label: "Tracking Links", icon: Link2, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
+  { href: "#", label: "Print Report", icon: Printer, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR"], disabled: true },
   { href: "/finance-manager", label: "Finance Manager", icon: DollarSign, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
   { href: "/purchase-request", label: "Purchase Request", icon: ShoppingCart, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "LR"] },
   { href: "/invoice", label: "Invoice", icon: FileText, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
@@ -71,7 +72,6 @@ const navItems: NavItem[] = [
   { href: "/admin/service-management", label: "Service Options", icon: Settings2, roles: ["SYSTEM_ADMIN"] },
   { href: "/admin/crm-target-settings", label: "App Settings", icon: Target, roles: ["SYSTEM_ADMIN"] }, 
   { href: "/reports", label: "Reports", icon: BarChart3, roles: ["SYSTEM_ADMIN", "ADMIN"], disabled: true },
-  { href: "#", label: "Print Report", icon: Printer, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR"], disabled: true },
 ];
 
 export function SidebarNavigation() {
