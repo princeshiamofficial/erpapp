@@ -15,11 +15,9 @@ import { format, parseISO } from 'date-fns';
 
 interface PrintReportItem {
   orderId: string;
-  companyName: string;
   orderDate: string;
-  model: string;
-  quantity: number;
-  lamination: string;
+  creatorName: string;
+  acceptedName: string;
 }
 
 export default function PrintReportPage() {
@@ -35,16 +33,12 @@ export default function PrintReportPage() {
       const fetchedOrders = await getOrdersForReport({ limit: 500, orderBy: 'createdAt', direction: 'desc' });
       
       // Flatten the orders into a list of printable items
-      const flattenedItems = fetchedOrders.flatMap(order => 
-        (order.orderItems || []).map(item => ({
+      const flattenedItems: PrintReportItem[] = fetchedOrders.map(order => ({
           orderId: order.id,
-          companyName: order.companyName,
           orderDate: order.createdAt,
-          model: item.model,
-          quantity: item.quantity,
-          lamination: item.lamination,
-        }))
-      );
+          creatorName: order.crmUserName,
+          acceptedName: order.designerRepresentativeName || 'N/A',
+        }));
       setReportItems(flattenedItems);
     } catch (error) {
       console.error("Failed to fetch report data:", error);
@@ -63,9 +57,8 @@ export default function PrintReportPage() {
     const lowercasedFilter = searchTerm.toLowerCase();
     return reportItems.filter(item =>
       item.orderId.toLowerCase().includes(lowercasedFilter) ||
-      item.companyName.toLowerCase().includes(lowercasedFilter) ||
-      item.model.toLowerCase().includes(lowercasedFilter) ||
-      item.lamination.toLowerCase().includes(lowercasedFilter)
+      item.creatorName.toLowerCase().includes(lowercasedFilter) ||
+      item.acceptedName.toLowerCase().includes(lowercasedFilter)
     );
   }, [reportItems, searchTerm]);
 
@@ -116,6 +109,8 @@ export default function PrintReportPage() {
                   <TableRow>
                     <TableHead className="pl-6 w-[150px]">Task ID</TableHead>
                     <TableHead className="pr-6">Task Date</TableHead>
+                    <TableHead>Creator Name</TableHead>
+                    <TableHead>Accepted Name</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -123,21 +118,25 @@ export default function PrintReportPage() {
                     [...Array(10)].map((_, i) => (
                       <TableRow key={`skel-report-${i}`}>
                         <TableCell className="pl-6"><Skeleton className="h-5 w-24" /></TableCell>
-                        <TableCell className="pr-6"><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                        <TableCell className="pr-6"><Skeleton className="h-5 w-32" /></TableCell>
                       </TableRow>
                     ))
                   ) : filteredItems.length > 0 ? (
                     filteredItems.map((item, index) => (
                       <TableRow key={`${item.orderId}-${index}`} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="pl-6 font-mono text-sm text-primary">{item.orderId}</TableCell>
-                        <TableCell className="pr-6 text-muted-foreground text-xs">
+                        <TableCell className="text-muted-foreground text-xs">
                           {format(parseISO(item.orderDate), 'd MMM, yyyy')}
                         </TableCell>
+                        <TableCell>{item.creatorName}</TableCell>
+                        <TableCell className="pr-6">{item.acceptedName}</TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={3} className="h-24 text-center">
+                      <TableCell colSpan={4} className="h-24 text-center">
                         {searchTerm ? `No items match "${searchTerm}".` : "No items to report."}
                       </TableCell>
                     </TableRow>
