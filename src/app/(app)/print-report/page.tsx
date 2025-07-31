@@ -1,151 +1,186 @@
 
 "use client";
 
-import React, { useState } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Printer, Loader2 } from 'lucide-react';
+import { Printer, Search, Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import type { ReportData } from '@/lib/report-service';
-import { generateReportAction } from './actions';
-import { format } from 'date-fns';
+import type { TrackingLink, OrderItem } from '@/types';
+import { getOrdersForReport } from '@/lib/report-service';
+import { format, parseISO } from 'date-fns';
+
+interface PrintReportItem {
+  orderId: string;
+  companyName: string;
+  orderDate: string;
+  model: string;
+  quantity: number;
+  lamination: string;
+}
 
 export default function PrintReportPage() {
-  const [reportTitle, setReportTitle] = useState('');
-  const [reportContent, setReportContent] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedReport, setGeneratedReport] = useState<ReportData | null>(null);
+  const [reportItems, setReportItems] = useState<PrintReportItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
-  const handleGenerateReport = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reportTitle.trim()) {
-      toast({ title: "Validation Error", description: "Report Title is required.", variant: "destructive" });
-      return;
-    }
-    setIsGenerating(true);
-    setGeneratedReport(null);
+  const fetchReportData = useCallback(async () => {
+    setIsLoading(true);
     try {
-      const result = await generateReportAction(reportTitle, reportContent);
-      if (result) {
-        setGeneratedReport(result);
-        toast({ title: "Report Generated", description: "Your custom report is ready to be printed." });
-      } else {
-        toast({ title: "Error", description: "Could not generate the report data.", variant: "destructive" });
-      }
+      // Fetch all orders using the report service
+      const fetchedOrders = await getOrdersForReport({ limit: 500, orderBy: 'createdAt', direction: 'desc' });
+      
+      // Flatten the orders into a list of printable items
+      const flattenedItems = fetchedOrders.flatMap(order => 
+        (order.orderItems || []).map(item => ({
+          orderId: order.id,
+          companyName: order.companyName,
+          orderDate: order.createdAt,
+          model: item.model,
+          quantity: item.quantity,
+          lamination: item.lamination,
+        }))
+      );
+      setReportItems(flattenedItems);
     } catch (error) {
-      toast({ title: "Error", description: "An unexpected error occurred while generating the report.", variant: "destructive" });
+      console.error("Failed to fetch report data:", error);
+      toast({ title: "Error", description: "Could not load data for the report.", variant: "destructive" });
     } finally {
-      setIsGenerating(false);
+      setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    fetchReportData();
+  }, [fetchReportData]);
+  
+  const filteredItems = useMemo(() => {
+    if (!searchTerm) return reportItems;
+    const lowercasedFilter = searchTerm.toLowerCase();
+    return reportItems.filter(item =>
+      item.orderId.toLowerCase().includes(lowercasedFilter) ||
+      item.companyName.toLowerCase().includes(lowercasedFilter) ||
+      item.model.toLowerCase().includes(lowercasedFilter) ||
+      item.lamination.toLowerCase().includes(lowercasedFilter)
+    );
+  }, [reportItems, searchTerm]);
 
   const handlePrint = () => {
     window.print();
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="print:hidden">
-        <Card className="shadow-xl border bg-card rounded-lg">
-          <CardHeader>
-            <CardTitle>Create Custom Report</CardTitle>
-            <CardDescription>Enter custom information to generate a printable report.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleGenerateReport} className="space-y-4">
-              <div className="space-y-1">
-                <Label htmlFor="reportTitle">Report Title *</Label>
+    <>
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8 print:p-0">
+        <div className="print:hidden">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
+            <div>
+              <h1 className="page-title">Print Production Report</h1>
+              <p className="page-description">
+                A summary of all items required for printing across all orders.
+              </p>
+            </div>
+            <Button size="lg" onClick={handlePrint} className="w-full sm:w-auto">
+              <Printer className="mr-2 h-5 w-5" />
+              Print Report
+            </Button>
+          </div>
+        </div>
+
+        {/* This is the main card that will be visible on screen and on the print-out */}
+        <Card className="shadow-xl border bg-card rounded-lg overflow-hidden print:shadow-none print:border-none print:rounded-none">
+          <CardHeader className="border-b p-5 print:border-b-2 print:border-black">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex-grow">
+                <CardTitle className="text-card-foreground text-xl print:text-2xl print:text-black">Production Task List</CardTitle>
+                <CardDescription className="text-muted-foreground text-sm mt-0.5 print:hidden">
+                  A detailed list of every item that needs to be printed. Use the search to filter.
+                </CardDescription>
+                 <p className="hidden print:block text-sm text-gray-600">Report generated on: {format(new Date(), "PPP p")}</p>
+              </div>
+              <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto print:hidden">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="reportTitle"
-                  value={reportTitle}
-                  onChange={(e) => setReportTitle(e.target.value)}
-                  placeholder="e.g., Monthly Sales Summary"
-                  required
-                  disabled={isGenerating}
+                  placeholder="Search items..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-background h-10 rounded-md w-full"
                 />
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="reportContent">Report Content / Notes (Optional)</Label>
-                <Textarea
-                  id="reportContent"
-                  value={reportContent}
-                  onChange={(e) => setReportContent(e.target.value)}
-                  placeholder="Add any details, notes, or custom information for your report..."
-                  rows={8}
-                  disabled={isGenerating}
-                />
-              </div>
-              <Button type="submit" disabled={isGenerating || !reportTitle.trim()}>
-                {isGenerating ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Generating...</> : "Generate Report"}
-              </Button>
-            </form>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="pl-6 w-[150px]">Order ID</TableHead>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Model/Design</TableHead>
+                    <TableHead>Lamination</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead className="pr-6">Order Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    [...Array(10)].map((_, i) => (
+                      <TableRow key={`skel-report-${i}`}>
+                        <TableCell className="pl-6"><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                        <TableCell className="pr-6"><Skeleton className="h-5 w-24" /></TableCell>
+                      </TableRow>
+                    ))
+                  ) : filteredItems.length > 0 ? (
+                    filteredItems.map((item, index) => (
+                      <TableRow key={`${item.orderId}-${index}`} className="hover:bg-muted/50 transition-colors">
+                        <TableCell className="pl-6 font-mono text-sm text-primary">{item.orderId}</TableCell>
+                        <TableCell>{item.companyName}</TableCell>
+                        <TableCell className="font-medium">{item.model}</TableCell>
+                        <TableCell>{item.lamination}</TableCell>
+                        <TableCell className="font-bold text-lg">{item.quantity}</TableCell>
+                        <TableCell className="pr-6 text-muted-foreground text-xs">
+                          {format(parseISO(item.orderDate), 'd MMM, yyyy')}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center">
+                        {searchTerm ? `No items match "${searchTerm}".` : "No items to report."}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {generatedReport && (
-        <div className="mt-8">
-          <div className="flex justify-between items-center mb-4 print:hidden">
-            <h2 className="text-xl font-bold">Generated Report Preview</h2>
-            <Button onClick={handlePrint} variant="outline">
-              <Printer className="mr-2 h-4 w-4" /> Print Report
-            </Button>
-          </div>
-          <div className="print-area p-8 border rounded-lg bg-white text-black shadow-lg">
-            <header className="text-center mb-8 border-b pb-4">
-               <h1 className="text-3xl font-bold text-gray-800">{generatedReport.title}</h1>
-               <p className="text-sm text-gray-500">Generated on: {format(new Date(generatedReport.generatedAt), "PPP p")}</p>
-            </header>
-            <main>
-              {generatedReport.customContent && (
-                <section className="mb-8">
-                  <h2 className="text-xl font-semibold border-b pb-2 mb-3">Notes & Details</h2>
-                  <div className="prose max-w-none whitespace-pre-wrap">
-                    {generatedReport.customContent}
-                  </div>
-                </section>
-              )}
-               <section>
-                  <h2 className="text-xl font-semibold border-b pb-2 mb-3">Order Summary Data</h2>
-                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left text-gray-500">
-                        <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                            <tr>
-                                <th scope="col" className="px-6 py-3">Order ID</th>
-                                <th scope="col" className="px-6 py-3">Company</th>
-                                <th scope="col" className="px-6 py-3">Date</th>
-                                <th scope="col" className="px-6 py-3">Status</th>
-                                <th scope="col" className="px-6 py-3">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {generatedReport.orders.map(order => (
-                                <tr key={order.id} className="bg-white border-b hover:bg-gray-50">
-                                    <td className="px-6 py-4 font-medium text-gray-900">{order.id}</td>
-                                    <td className="px-6 py-4">{order.companyName}</td>
-                                    <td className="px-6 py-4">{format(new Date(order.createdAt), "d MMM, yyyy")}</td>
-                                    <td className="px-6 py-4">{order.currentStatus}</td>
-                                    <td className="px-6 py-4 font-mono text-right">{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'BDT' }).format((order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0))}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                   </div>
-                   {generatedReport.orders.length === 0 && (
-                        <p className="text-center text-gray-500 py-8">No order data to display for this report.</p>
-                   )}
-               </section>
-            </main>
-             <footer className="text-center mt-12 pt-4 border-t">
-                <p className="text-xs text-gray-500">Color Hut - Report</p>
-            </footer>
-          </div>
-        </div>
-      )}
-    </div>
+       <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          .print-area, .print-area * {
+            visibility: visible;
+          }
+          .print-area {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
+        }
+      `}</style>
+    </>
   );
 }
