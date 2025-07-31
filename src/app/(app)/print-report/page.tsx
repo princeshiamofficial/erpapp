@@ -11,8 +11,8 @@ import { Search, Loader2, PlusCircle, Eye, Edit, MoreVertical, UserPlus } from '
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, OrderItem, User } from '@/types';
-import { getOrdersForReport } from '@/lib/report-service';
 import { assignMeToAction } from './actions';
+import { getOrdersForReport } from '@/lib/report-service';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 import {
@@ -194,7 +194,7 @@ export default function PrintReportPage() {
                       <TableRow key={`${item.orderId}-${index}`} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="pl-6 font-mono text-sm text-primary">{item.orderId}</TableCell>
                         <TableCell className="text-muted-foreground text-xs">
-                          {format(parseISO(item.orderDate), 'd MMM, yyyy')}
+                          {item.orderDate ? format(parseISO(item.orderDate), 'd MMM, yyyy') : 'N/A'}
                         </TableCell>
                         <TableCell>{item.creatorName}</TableCell>
                         <TableCell>{item.assignedLrName}</TableCell>
