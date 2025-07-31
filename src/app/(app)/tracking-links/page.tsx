@@ -188,7 +188,6 @@ export default function TrackingLinksPage() {
                   <TableHead>Company</TableHead>
                   <TableHead>Visibility</TableHead>
                   <TableHead>Order Status</TableHead>
-                  <TableHead>Views</TableHead>
                   <TableHead>CRM Contact</TableHead>
                   <TableHead>Assigned DR</TableHead>
                   <TableHead className="pr-6 text-right">Actions</TableHead>
@@ -202,7 +201,6 @@ export default function TrackingLinksPage() {
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
                       <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-10" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell className="pr-6 text-right space-x-2">
@@ -231,7 +229,6 @@ export default function TrackingLinksPage() {
                             {statusInfo.name}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-muted-foreground">{link.viewCount || 0}</TableCell>
                         <TableCell className="text-card-foreground">{link.crmUserName}</TableCell>
                         <TableCell className="text-card-foreground">{link.designerRepresentativeName || 'N/A'}</TableCell>
                         <TableCell className="pr-6 text-right whitespace-nowrap">
@@ -270,7 +267,7 @@ export default function TrackingLinksPage() {
                   })
                 ) : (
                     <TableRow>
-                        <TableCell colSpan={8} className="text-center py-12 h-[300px]">
+                        <TableCell colSpan={7} className="text-center py-12 h-[300px]">
                             <Link2 className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
                             <p className="text-lg text-muted-foreground font-medium">
                               {searchTerm ? "No tracking links match your search." : "No tracking links found."}
@@ -303,4 +300,3 @@ export default function TrackingLinksPage() {
     </div>
   );
 }
-

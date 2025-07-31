@@ -526,7 +526,7 @@ export async function autoSettleOrderIfDelivered(
 export const addCommentToOrder = async (orderId: string, commentData: Omit<Comment, 'id' | 'timestamp' | 'replies' | 'likes'>): Promise<TrackingLink | undefined> => {
   const orderRef = doc(db, ORDERS_COLLECTION, orderId);
   try {
-    await runTransaction(db, async (transaction) => {
+    return await runTransaction(db, async (transaction) => {
       const orderDoc = await transaction.get(orderRef);
       if (!orderDoc.exists()) {
         throw new Error("Order not found");
@@ -549,15 +549,12 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
       
       const updatedComments = [...currentComments, newComment];
       transaction.update(orderRef, { comments: updatedComments });
+      
+      // Return the updated order data after transaction update
+      const updatedOrderData = { ...orderData, comments: updatedComments };
+      return updatedOrderData;
+
     });
-
-    // After the transaction is successful, fetch the updated order
-    const updatedOrderDoc = await getDoc(orderRef);
-    if (updatedOrderDoc.exists()) {
-      return { id: updatedOrderDoc.id, ...updatedOrderDoc.data() } as TrackingLink;
-    }
-    return undefined;
-
   } catch (error) {
     console.error(`Transaction failed for adding comment to order ${orderId}:`, error);
     return undefined;
@@ -721,23 +718,3 @@ export const deleteComment = async (
     return undefined;
   }
 };
-
-export const incrementOrderViewCount = async (orderId: string): Promise<boolean> => {
-  if (!orderId) return false;
-  const orderRef = doc(db, ORDERS_COLLECTION, orderId);
-  try {
-    await runTransaction(db, async (transaction) => {
-      const orderDoc = await transaction.get(orderRef);
-      if (!orderDoc.exists()) {
-        return;
-      }
-      const currentViewCount = orderDoc.data().viewCount || 0;
-      transaction.update(orderRef, { viewCount: currentViewCount + 1 });
-    });
-    return true;
-  } catch (error) {
-    console.error(`Error incrementing view count for order ${orderId}:`, error);
-    return false;
-  }
-};
-

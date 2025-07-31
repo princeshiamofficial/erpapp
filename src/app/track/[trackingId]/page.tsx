@@ -1,6 +1,6 @@
 
 import { Suspense } from 'react';
-import { getOrderById, incrementOrderViewCount } from '@/lib/order-service';
+import { getOrderById } from '@/lib/order-service';
 import { getStatuses } from '@/lib/status-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service';
@@ -47,9 +47,10 @@ interface PublicTrackingPageProps {
 export default async function PublicTrackingPage({ params }: PublicTrackingPageProps) {
   const trackingId = params.trackingId;
 
-  if (trackingId) {
-    await incrementOrderViewCount(trackingId);
-  }
+  // View count increment has been removed to prevent quota exhaustion.
+  // if (trackingId) {
+  //   await incrementOrderViewCount(trackingId);
+  // }
 
   const [orderDataResult, allStatusesResult, globalSettingsResult, allUsersResult] = await Promise.all([
     getOrderById(trackingId),
