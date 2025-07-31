@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import type { TrackingLink } from '@/types';
+import type { TrackingLink, User } from '@/types'; // Import User
 import { addTaskAction, updateTaskAction } from '@/app/(app)/print-report/actions';
 
 interface AddEditTaskDialogProps {
@@ -24,9 +24,10 @@ interface AddEditTaskDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   onTaskSaved: () => void;
   task?: TrackingLink | null;
+  currentUser: User; // Add currentUser prop
 }
 
-export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task }: AddEditTaskDialogProps) {
+export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, currentUser }: AddEditTaskDialogProps) {
   const [creatorName, setCreatorName] = useState('');
   const [assignedLrName, setAssignedLrName] = useState('');
   const [taskNotes, setTaskNotes] = useState('');
@@ -42,13 +43,13 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task }: A
         setAssignedLrName(task.designerRepresentativeName || '');
         setTaskNotes(task.orderNotes || '');
       } else {
-        // Reset form for add mode
-        setCreatorName('');
+        // Reset form for add mode and pre-fill creator name
+        setCreatorName(currentUser.name);
         setAssignedLrName('');
         setTaskNotes('');
       }
     }
-  }, [isOpen, task, isEditMode]);
+  }, [isOpen, task, isEditMode, currentUser]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,31 +63,31 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task }: A
 
     if (isEditMode && task) {
       const updates: Partial<TrackingLink> = {
-        crmUserName: creatorName,
+        // Creator name should not be editable in the dialog if it's auto-populated
         designerRepresentativeName: assignedLrName || null,
         orderNotes: taskNotes || null,
         updatedAt: new Date().toISOString(),
       };
+      // Keep existing crmUserName
+      updates.crmUserName = task.crmUserName;
+      
       result = await updateTaskAction(task.id, updates);
     } else {
       // For adding, we need more fields to create a valid TrackingLink.
-      // This part is simplified as the primary focus is the dialog itself.
-      // A real implementation would require a more complete form.
-      const newTaskData: Omit<TrackingLink, 'id'> = {
+      const newTaskData: Omit<TrackingLink, 'id' | 'crmUserId' | 'crmUserName'> = {
         companyName: "New Task (Details pending)",
         address: "N/A",
         phoneNumber: "N/A",
         orderItems: [],
-        crmUserId: "TEMP_USER", // Placeholder
-        crmUserName: creatorName,
         designerRepresentativeName: assignedLrName || null,
         createdAt: new Date().toISOString(),
         isPublic: false,
         currentStatus: "order-submitted", // Default status
         statusHistory: [],
         comments: [],
+        orderNotes: taskNotes || null,
       };
-      result = await addTaskAction(newTaskData);
+      result = await addTaskAction(newTaskData, currentUser);
     }
     
     setIsSubmitting(false);
@@ -110,8 +111,8 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task }: A
         </DialogHeader>
         <form onSubmit={handleSubmit} className="py-4 space-y-4">
           <div className="space-y-1">
-            <Label htmlFor="creator-name">Creator Name *</Label>
-            <Input id="creator-name" value={creatorName} onChange={e => setCreatorName(e.target.value)} required />
+            <Label htmlFor="creator-name">Creator Name</Label>
+            <Input id="creator-name" value={creatorName} readOnly className="bg-muted/50" />
           </div>
           <div className="space-y-1">
             <Label htmlFor="assigned-lr-name">Assigned LR</Label>

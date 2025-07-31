@@ -3,6 +3,7 @@
 
 import type { ReportData, TrackingLink } from '@/lib/report-service'; // Added TrackingLink
 import { getOrdersForReport, addTask, updateTask } from '@/lib/report-service'; // Added addTask, updateTask
+import type { User } from '@/types';
 
 // Keep original action for potential other uses, though UI is changing
 export async function generateReportAction(
@@ -28,11 +29,20 @@ export async function generateReportAction(
 
 // New action to add a task (which is really an order)
 export async function addTaskAction(
-  taskData: Omit<TrackingLink, 'id'>
+  taskData: Omit<TrackingLink, 'id' | 'crmUserId' | 'crmUserName'>,
+  currentUser: User
 ): Promise<{ success: boolean; task?: TrackingLink; error?: string }> {
   try {
-    // The report service's addTask will handle creation logic
-    const newTask = await addTask(taskData);
+    if (!currentUser || !currentUser.id || !currentUser.name) {
+      return { success: false, error: "Current user information is missing." };
+    }
+    const taskDataWithUser = {
+      ...taskData,
+      crmUserId: currentUser.id,
+      crmUserName: currentUser.name,
+    };
+
+    const newTask = await addTask(taskDataWithUser);
     if (newTask) {
       return { success: true, task: newTask };
     }

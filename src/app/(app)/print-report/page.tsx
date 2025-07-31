@@ -20,6 +20,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from '@/contexts/auth-context';
+
 
 const AddEditTaskDialog = dynamic(() => import('@/components/print-report/AddEditTaskDialog').then(mod => mod.AddEditTaskDialog));
 
@@ -38,6 +40,7 @@ export default function PrintReportPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+  const { currentUser } = useAuth(); // Get current user
 
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TrackingLink | null>(null);
@@ -106,7 +109,7 @@ export default function PrintReportPage() {
                 A summary of all items required for printing across all orders.
               </p>
             </div>
-            <Button size="lg" className="w-full sm:w-auto" onClick={handleOpenAddDialog}>
+            <Button size="lg" className="w-full sm:w-auto" onClick={handleOpenAddDialog} disabled={!currentUser}>
               <PlusCircle className="mr-2 h-5 w-5" />
               Add New Task
             </Button>
@@ -202,12 +205,15 @@ export default function PrintReportPage() {
         </Card>
       </div>
       
-      <AddEditTaskDialog
-        isOpen={isAddEditOpen}
-        onOpenChange={setIsAddEditOpen}
-        onTaskSaved={handleTaskSaved}
-        task={editingTask}
-      />
+      {currentUser && (
+        <AddEditTaskDialog
+          isOpen={isAddEditOpen}
+          onOpenChange={setIsAddEditOpen}
+          onTaskSaved={handleTaskSaved}
+          task={editingTask}
+          currentUser={currentUser} 
+        />
+      )}
     </>
   );
 }
