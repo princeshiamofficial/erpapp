@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Printer, Search, Loader2 } from 'lucide-react';
+import { Search, Loader2, PlusCircle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, OrderItem } from '@/types';
@@ -84,9 +84,9 @@ export default function PrintReportPage() {
                 A summary of all items required for printing across all orders.
               </p>
             </div>
-            <Button size="lg" onClick={handlePrint} className="w-full sm:w-auto">
-              <Printer className="mr-2 h-5 w-5" />
-              Print Report
+            <Button size="lg" className="w-full sm:w-auto">
+              <PlusCircle className="mr-2 h-5 w-5" />
+              Add New Info
             </Button>
           </div>
         </div>
