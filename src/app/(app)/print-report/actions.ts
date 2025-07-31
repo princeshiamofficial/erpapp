@@ -1,11 +1,18 @@
 
 "use server";
 
-import type { ReportData, TrackingLink } from '@/lib/report-service'; // Added TrackingLink
-import { getOrdersForReport, addTask, updateTask } from '@/lib/report-service'; // Added addTask, updateTask
-import type { User } from '@/types';
+import { revalidatePath } from "next/cache";
+import type { TrackingLink, User } from '@/types';
+import { getOrdersForReport, addTask, updateTask } from '@/lib/report-service';
 
-// Keep original action for potential other uses, though UI is changing
+export interface ReportData {
+  title: string;
+  customContent: string | null;
+  generatedAt: string;
+  orders: TrackingLink[];
+}
+
+
 export async function generateReportAction(
   title: string,
   customContent: string | null
@@ -27,23 +34,32 @@ export async function generateReportAction(
   }
 }
 
-// New action to add a task (which is really an order)
 export async function addTaskAction(
-  taskData: Omit<TrackingLink, 'id' | 'crmUserId' | 'crmUserName'>,
+  taskData: Partial<Omit<TrackingLink, 'id' | 'crmUserId' | 'crmUserName'>>,
   currentUser: User
 ): Promise<{ success: boolean; task?: TrackingLink; error?: string }> {
   try {
     if (!currentUser || !currentUser.id || !currentUser.name) {
       return { success: false, error: "Current user information is missing." };
     }
-    const taskDataWithUser = {
+    const completeTaskData = {
+      companyName: "New Task (Details pending)",
+      address: "N/A",
+      phoneNumber: "N/A",
+      orderItems: [],
+      createdAt: new Date().toISOString(),
+      isPublic: false,
+      currentStatus: "order-submitted", 
+      statusHistory: [],
+      comments: [],
       ...taskData,
       crmUserId: currentUser.id,
       crmUserName: currentUser.name,
     };
 
-    const newTask = await addTask(taskDataWithUser);
+    const newTask = await addTask(completeTaskData as Omit<TrackingLink, 'id'>);
     if (newTask) {
+      revalidatePath('/(app)/print-report');
       return { success: true, task: newTask };
     }
     return { success: false, error: "Failed to add task to database." };
@@ -53,7 +69,6 @@ export async function addTaskAction(
   }
 }
 
-// New action to update a task
 export async function updateTaskAction(
   taskId: string,
   updates: Partial<Omit<TrackingLink, 'id'>>
@@ -61,11 +76,42 @@ export async function updateTaskAction(
   try {
     const success = await updateTask(taskId, updates);
     if (success) {
+      revalidatePath('/(app)/print-report');
       return { success: true };
     }
     return { success: false, error: "Failed to update task in database." };
   } catch (error) {
     console.error("Error in updateTaskAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function assignMeToAction(
+  orderId: string,
+  currentUser: User
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (currentUser.role !== 'LR') {
+      return { success: false, error: "Only LR users can self-assign tasks." };
+    }
+    const updates: Partial<TrackingLink> = {
+      designerRepresentativeId: currentUser.id,
+      designerRepresentativeName: currentUser.name,
+      designerRepresentativeAvatarUrl: currentUser.avatarUrl || null,
+      updatedAt: new Date().toISOString(),
+      updatedByUserId: currentUser.id,
+      updatedByUserName: currentUser.name,
+    };
+    const success = await updateTask(orderId, updates);
+    if (success) {
+      revalidatePath('/(app)/print-report');
+      revalidatePath('/(app)/projects');
+      revalidatePath(`/track/${orderId}`);
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update task assignment." };
+  } catch (error) {
+    console.error("Error in assignMeToAction:", error);
+    return { success: false, error: "An unexpected server error occurred." };
   }
 }

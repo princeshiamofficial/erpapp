@@ -7,11 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Loader2, PlusCircle, Eye, Edit, MoreVertical } from 'lucide-react';
+import { Search, Loader2, PlusCircle, Eye, Edit, MoreVertical, UserPlus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import type { TrackingLink, OrderItem } from '@/types';
-import { getOrdersForReport } from '@/lib/report-service';
+import type { TrackingLink, OrderItem, User } from '@/types';
+import { getOrdersForReport, assignMeToAction } from './actions';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 import {
@@ -31,7 +31,6 @@ interface PrintReportItem {
   orderDate: string;
   creatorName: string;
   assignedLrName: string;
-  // Add the full order object to pass to the dialog
   originalOrder: TrackingLink;
 }
 
@@ -40,7 +39,7 @@ export default function PrintReportPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
-  const { currentUser } = useAuth(); // Get current user
+  const { currentUser } = useAuth(); 
 
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TrackingLink | null>(null);
@@ -94,7 +93,36 @@ export default function PrintReportPage() {
   const handleTaskSaved = () => {
     setIsAddEditOpen(false);
     setEditingTask(null);
-    fetchReportData(); // Refetch data to show changes
+    fetchReportData(); 
+  };
+
+  const handleAssignMe = async (order: TrackingLink) => {
+    if (!currentUser) return;
+    
+    // Optimistic update
+    setReportItems(prevItems => prevItems.map(item => 
+      item.orderId === order.id 
+        ? { ...item, assignedLrName: currentUser.name, originalOrder: { ...item.originalOrder, designerRepresentativeId: currentUser.id, designerRepresentativeName: currentUser.name } }
+        : item
+    ));
+
+    const result = await assignMeToAction(order.id, currentUser);
+    if (!result.success) {
+      toast({
+        title: "Assignment Failed",
+        description: result.error || "Could not assign task.",
+        variant: "destructive",
+      });
+      // Revert optimistic update
+      setReportItems(prevItems => prevItems.map(item =>
+        item.orderId === order.id ? { ...item, assignedLrName: order.designerRepresentativeName || 'N/A', originalOrder: order } : item
+      ));
+    } else {
+      toast({
+        title: "Task Assigned",
+        description: `You have been assigned to task ${order.id}.`,
+      });
+    }
   };
 
 
@@ -170,24 +198,31 @@ export default function PrintReportPage() {
                         <TableCell>{item.creatorName}</TableCell>
                         <TableCell>{item.assignedLrName}</TableCell>
                         <TableCell className="pr-6 text-right">
-                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                               <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreVertical className="h-4 w-4" />
-                               </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => handleOpenEditDialog(item.originalOrder)} className="cursor-pointer">
-                                  <Edit className="mr-2 h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem asChild className="cursor-pointer">
-                                  <Link href={`/track/${item.orderId}`}>
-                                    <Eye className="mr-2 h-4 w-4" /> View
-                                  </Link>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                           {currentUser?.role === 'LR' && item.originalOrder.designerRepresentativeId !== currentUser.id ? (
+                             <Button variant="outline" size="sm" onClick={() => handleAssignMe(item.originalOrder)}>
+                               <UserPlus className="mr-2 h-4 w-4" />
+                               Assign Me
+                             </Button>
+                           ) : (
+                             <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                 <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="h-4 w-4" />
+                                 </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onSelect={() => handleOpenEditDialog(item.originalOrder)} className="cursor-pointer">
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem asChild className="cursor-pointer">
+                                    <Link href={`/track/${item.orderId}`}>
+                                      <Eye className="mr-2 h-4 w-4" /> View
+                                    </Link>
+                                  </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                           )}
                         </TableCell>
                       </TableRow>
                     ))
