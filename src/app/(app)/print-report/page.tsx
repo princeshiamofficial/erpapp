@@ -6,12 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Loader2, PlusCircle } from 'lucide-react';
+import { Search, Loader2, PlusCircle, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, OrderItem } from '@/types';
 import { getOrdersForReport } from '@/lib/report-service';
 import { format, parseISO } from 'date-fns';
+import Link from 'next/link';
 
 interface PrintReportItem {
   orderId: string;
@@ -108,9 +109,10 @@ export default function PrintReportPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="pl-6 w-[150px]">Task ID</TableHead>
-                    <TableHead className="pr-6">Task Date</TableHead>
+                    <TableHead>Task Date</TableHead>
                     <TableHead>Creator Name</TableHead>
                     <TableHead>Accepted Name</TableHead>
+                    <TableHead className="pr-6 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -120,7 +122,8 @@ export default function PrintReportPage() {
                         <TableCell className="pl-6"><Skeleton className="h-5 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                        <TableCell className="pr-6"><Skeleton className="h-5 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                        <TableCell className="pr-6 text-right"><Skeleton className="h-9 w-20 inline-block rounded-md" /></TableCell>
                       </TableRow>
                     ))
                   ) : filteredItems.length > 0 ? (
@@ -131,12 +134,19 @@ export default function PrintReportPage() {
                           {format(parseISO(item.orderDate), 'd MMM, yyyy')}
                         </TableCell>
                         <TableCell>{item.creatorName}</TableCell>
-                        <TableCell className="pr-6">{item.acceptedName}</TableCell>
+                        <TableCell>{item.acceptedName}</TableCell>
+                        <TableCell className="pr-6 text-right">
+                          <Link href={`/track/${item.orderId}`} passHref>
+                            <Button variant="outline" size="sm" className="h-9 px-3">
+                              <Eye className="mr-1.5 h-4 w-4" /> View
+                            </Button>
+                          </Link>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="h-24 text-center">
+                      <TableCell colSpan={5} className="h-24 text-center">
                         {searchTerm ? `No items match "${searchTerm}".` : "No items to report."}
                       </TableCell>
                     </TableRow>
