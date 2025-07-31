@@ -116,9 +116,6 @@ export default function PrintReportPage() {
                   <TableRow>
                     <TableHead className="pl-6 w-[150px]">Task ID</TableHead>
                     <TableHead>Company</TableHead>
-                    <TableHead>Model/Design</TableHead>
-                    <TableHead>Lamination</TableHead>
-                    <TableHead>Quantity</TableHead>
                     <TableHead className="pr-6">Order Date</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -128,9 +125,6 @@ export default function PrintReportPage() {
                       <TableRow key={`skel-report-${i}`}>
                         <TableCell className="pl-6"><Skeleton className="h-5 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                         <TableCell className="pr-6"><Skeleton className="h-5 w-24" /></TableCell>
                       </TableRow>
                     ))
@@ -139,9 +133,6 @@ export default function PrintReportPage() {
                       <TableRow key={`${item.orderId}-${index}`} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="pl-6 font-mono text-sm text-primary">{item.orderId}</TableCell>
                         <TableCell>{item.companyName}</TableCell>
-                        <TableCell className="font-medium">{item.model}</TableCell>
-                        <TableCell>{item.lamination}</TableCell>
-                        <TableCell className="font-bold text-lg">{item.quantity}</TableCell>
                         <TableCell className="pr-6 text-muted-foreground text-xs">
                           {format(parseISO(item.orderDate), 'd MMM, yyyy')}
                         </TableCell>
@@ -149,7 +140,7 @@ export default function PrintReportPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center">
+                      <TableCell colSpan={3} className="h-24 text-center">
                         {searchTerm ? `No items match "${searchTerm}".` : "No items to report."}
                       </TableCell>
                     </TableRow>
