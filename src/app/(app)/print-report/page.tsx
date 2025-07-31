@@ -22,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from '@/contexts/auth-context';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 
 const AddEditTaskDialog = dynamic(() => import('@/components/print-report/AddEditTaskDialog').then(mod => mod.AddEditTaskDialog));
