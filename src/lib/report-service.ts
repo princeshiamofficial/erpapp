@@ -143,3 +143,16 @@ export const updateTask = async (taskId: string, updates: Partial<Omit<TrackingL
         return false;
     }
 };
+
+export const deleteDoc = async (orderId: string): Promise<boolean> => {
+  try {
+    await ensureOrdersCollectionExists();
+    await fetchFromApi(`collections/${ORDERS_COLLECTION_NAME}/documents/${orderId}`, {
+        method: 'DELETE'
+    });
+    return true;
+  } catch (error) {
+    console.error(`Error deleting document ${orderId} via API:`, error);
+    return false;
+  }
+};

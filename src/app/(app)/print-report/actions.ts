@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { TrackingLink, User } from '@/types';
-import { getOrdersForReport, addTask, updateTask } from '@/lib/report-service';
+import { getOrdersForReport, addTask, updateTask, getTaskById as getOrderFromReportService, deleteDoc as deleteOrderFromReportService } from '@/lib/report-service'; // Use report-service functions
 
 export interface ReportData {
   title: string;
@@ -113,5 +113,20 @@ export async function assignMeToAction(
   } catch (error) {
     console.error("Error in assignMeToAction:", error);
     return { success: false, error: "An unexpected server error occurred." };
+  }
+}
+
+
+export async function deleteOrderAction(orderId: string): Promise<{ success: boolean, error?: string }> {
+  try {
+    const success = await deleteOrderFromReportService(orderId);
+    if (success) {
+      revalidatePath("/(app)/print-report");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to delete the task from the database." };
+  } catch (error) {
+    console.error("Error in deleteOrderAction for print-report:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected server error occurred." };
   }
 }
