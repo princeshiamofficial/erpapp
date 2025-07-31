@@ -28,7 +28,7 @@ interface AddEditTaskDialogProps {
 
 export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task }: AddEditTaskDialogProps) {
   const [creatorName, setCreatorName] = useState('');
-  const [acceptedName, setAcceptedName] = useState('');
+  const [assignedLrName, setAssignedLrName] = useState('');
   const [taskNotes, setTaskNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -39,12 +39,12 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task }: A
     if (isOpen) {
       if (isEditMode && task) {
         setCreatorName(task.crmUserName);
-        setAcceptedName(task.designerRepresentativeName || '');
+        setAssignedLrName(task.designerRepresentativeName || '');
         setTaskNotes(task.orderNotes || '');
       } else {
         // Reset form for add mode
         setCreatorName('');
-        setAcceptedName('');
+        setAssignedLrName('');
         setTaskNotes('');
       }
     }
@@ -63,7 +63,7 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task }: A
     if (isEditMode && task) {
       const updates: Partial<TrackingLink> = {
         crmUserName: creatorName,
-        designerRepresentativeName: acceptedName || null,
+        designerRepresentativeName: assignedLrName || null,
         orderNotes: taskNotes || null,
         updatedAt: new Date().toISOString(),
       };
@@ -79,7 +79,7 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task }: A
         orderItems: [],
         crmUserId: "TEMP_USER", // Placeholder
         crmUserName: creatorName,
-        designerRepresentativeName: acceptedName || null,
+        designerRepresentativeName: assignedLrName || null,
         createdAt: new Date().toISOString(),
         isPublic: false,
         currentStatus: "order-submitted", // Default status
@@ -114,8 +114,8 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task }: A
             <Input id="creator-name" value={creatorName} onChange={e => setCreatorName(e.target.value)} required />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="accepted-name">Accepted Name</Label>
-            <Input id="accepted-name" value={acceptedName} onChange={e => setAcceptedName(e.target.value)} />
+            <Label htmlFor="assigned-lr-name">Assigned LR</Label>
+            <Input id="assigned-lr-name" value={assignedLrName} onChange={e => setAssignedLrName(e.target.value)} />
           </div>
            <div className="space-y-1">
             <Label htmlFor="task-notes">Notes</Label>

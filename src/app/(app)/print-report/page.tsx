@@ -28,7 +28,7 @@ interface PrintReportItem {
   orderId: string;
   orderDate: string;
   creatorName: string;
-  acceptedName: string;
+  assignedLrName: string;
   // Add the full order object to pass to the dialog
   originalOrder: TrackingLink;
 }
@@ -52,7 +52,7 @@ export default function PrintReportPage() {
           orderId: order.id,
           orderDate: order.createdAt,
           creatorName: order.crmUserName,
-          acceptedName: order.designerRepresentativeName || 'N/A',
+          assignedLrName: order.designerRepresentativeName || 'N/A',
           originalOrder: order,
         }));
       setReportItems(flattenedItems);
@@ -74,7 +74,7 @@ export default function PrintReportPage() {
     return reportItems.filter(item =>
       item.orderId.toLowerCase().includes(lowercasedFilter) ||
       item.creatorName.toLowerCase().includes(lowercasedFilter) ||
-      item.acceptedName.toLowerCase().includes(lowercasedFilter)
+      item.assignedLrName.toLowerCase().includes(lowercasedFilter)
     );
   }, [reportItems, searchTerm]);
   
@@ -142,7 +142,7 @@ export default function PrintReportPage() {
                     <TableHead className="pl-6 w-[150px]">Task ID</TableHead>
                     <TableHead>Task Date</TableHead>
                     <TableHead>Creator Name</TableHead>
-                    <TableHead>Accepted Name</TableHead>
+                    <TableHead>Assigned LR</TableHead>
                     <TableHead className="pr-6 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -165,7 +165,7 @@ export default function PrintReportPage() {
                           {format(parseISO(item.orderDate), 'd MMM, yyyy')}
                         </TableCell>
                         <TableCell>{item.creatorName}</TableCell>
-                        <TableCell>{item.acceptedName}</TableCell>
+                        <TableCell>{item.assignedLrName}</TableCell>
                         <TableCell className="pr-6 text-right">
                            <DropdownMenu>
                             <DropdownMenuTrigger asChild>
