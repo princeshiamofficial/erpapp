@@ -7,11 +7,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Loader2, PlusCircle, Eye, Edit, MoreVertical, UserPlus } from 'lucide-react';
+import { Search, Loader2, PlusCircle, Eye, Edit, MoreVertical, UserPlus, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, OrderItem, User } from '@/types';
-import { assignMeToAction } from './actions';
+import { assignMeToAction, deleteOrderAction } from './actions';
 import { getOrdersForReport } from '@/lib/report-service';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
@@ -44,6 +44,9 @@ export default function PrintReportPage() {
 
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<TrackingLink | null>(null);
+  
+  const [taskToDelete, setTaskToDelete] = useState<TrackingLink | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
 
   const fetchReportData = useCallback(async () => {
@@ -123,6 +126,26 @@ export default function PrintReportPage() {
         title: "Task Assigned",
         description: `You have been assigned to task ${order.id}.`,
       });
+    }
+  };
+
+  const handleDeleteRequest = (order: TrackingLink) => {
+    setTaskToDelete(order);
+  };
+
+  const confirmDelete = async () => {
+    if (!taskToDelete) return;
+
+    setIsDeleting(true);
+    const result = await deleteOrderAction(taskToDelete.id);
+    setIsDeleting(false);
+
+    if (result.success) {
+        toast({ title: "Task Deleted", description: "The task has been successfully removed." });
+        setTaskToDelete(null);
+        fetchReportData();
+    } else {
+        toast({ title: "Deletion Failed", description: result.error || "Could not delete the task.", variant: "destructive" });
     }
   };
 
@@ -221,6 +244,11 @@ export default function PrintReportPage() {
                                       <Eye className="mr-2 h-4 w-4" /> View
                                     </Link>
                                   </DropdownMenuItem>
+                                   {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                                     <DropdownMenuItem onSelect={() => handleDeleteRequest(item.originalOrder)} className="cursor-pointer text-destructive focus:text-destructive">
+                                      <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                    </DropdownMenuItem>
+                                   )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                            )}
@@ -249,6 +277,26 @@ export default function PrintReportPage() {
           task={editingTask}
           currentUser={currentUser} 
         />
+      )}
+
+      {taskToDelete && (
+        <Dialog open={!!taskToDelete} onOpenChange={(open) => !open && setTaskToDelete(null)}>
+          <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Are you sure?</DialogTitle>
+                <DialogDescription>
+                    This will permanently delete task <span className="font-semibold">{taskToDelete.id}</span>. This action cannot be undone.
+                </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setTaskToDelete(null)} disabled={isDeleting}>Cancel</Button>
+                <Button variant="destructive" onClick={confirmDelete} disabled={isDeleting}>
+                    {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Delete
+                </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );
