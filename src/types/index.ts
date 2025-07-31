@@ -81,6 +81,7 @@ export interface AdvancePaymentRecord {
 
 export interface TrackingLink {
   id: string;
+  projectIdDisplay?: string; // New field for TD-XXX or ORD-XXX
   companyName: string;
   address: string;
   phoneNumber: string;

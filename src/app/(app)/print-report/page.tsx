@@ -37,6 +37,7 @@ const getInitials = (name: string | undefined): string => {
 
 interface PrintReportItem {
   orderId: string;
+  projectIdDisplay: string;
   orderDate: string;
   creatorName: string;
   creatorAvatarUrl?: string | null;
@@ -77,6 +78,7 @@ export default function PrintReportPage() {
         
         return {
             orderId: order.id,
+            projectIdDisplay: order.projectIdDisplay || order.id,
             orderDate: order.createdAt,
             creatorName: order.crmUserName,
             creatorAvatarUrl: creator?.avatarUrl,
@@ -102,7 +104,7 @@ export default function PrintReportPage() {
     if (!searchTerm) return reportItems;
     const lowercasedFilter = searchTerm.toLowerCase();
     return reportItems.filter(item =>
-      item.orderId.toLowerCase().includes(lowercasedFilter) ||
+      item.projectIdDisplay.toLowerCase().includes(lowercasedFilter) ||
       item.creatorName.toLowerCase().includes(lowercasedFilter) ||
       item.assignedLrName.toLowerCase().includes(lowercasedFilter)
     );
@@ -239,7 +241,7 @@ export default function PrintReportPage() {
                   ) : filteredItems.length > 0 ? (
                     filteredItems.map((item, index) => (
                       <TableRow key={`${item.orderId}-${index}`} className="hover:bg-muted/50 transition-colors">
-                        <TableCell className="pl-6 font-mono text-sm text-primary">{item.orderId}</TableCell>
+                        <TableCell className="pl-6 font-mono text-sm text-primary">{item.projectIdDisplay}</TableCell>
                         <TableCell className="text-muted-foreground text-xs">
                           {item.orderDate ? format(parseISO(item.orderDate), 'd MMM, yyyy') : 'N/A'}
                         </TableCell>
@@ -327,7 +329,7 @@ export default function PrintReportPage() {
             <DialogHeader>
                 <DialogTitle>Are you sure?</DialogTitle>
                 <DialogDescription>
-                    This will permanently delete task <span className="font-semibold">{taskToDelete.id}</span>. This action cannot be undone.
+                    This will permanently delete task <span className="font-semibold">{taskToDelete.projectIdDisplay || taskToDelete.id}</span>. This action cannot be undone.
                 </DialogDescription>
             </DialogHeader>
             <DialogFooter>

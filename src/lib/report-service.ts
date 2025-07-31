@@ -85,17 +85,42 @@ export const getOrdersForReport = async (options: GetOrdersOptions = {}): Promis
 export const addTask = async (taskData: Omit<TrackingLink, 'id'>): Promise<TrackingLink | null> => {
   try {
     await ensureOrdersCollectionExists();
-    // In this context, a "task" is an "order". We use the same collection.
-    // The ID generation logic would be similar to addOrder in order-service.ts
-    // For simplicity here, we'll let the API assign an ID.
+    
+    // Fetch all documents to find the highest existing TD- ID
+    const allTasksResponse = await fetchFromApi(`collections/${ORDERS_COLLECTION_NAME}/documents?limit=5000`);
+    let maxId = 0;
+    if (allTasksResponse && Array.isArray(allTasksResponse.documents)) {
+        allTasksResponse.documents.forEach((doc: { id: string, data: any }) => {
+            const docId = doc.data.projectIdDisplay || doc.id;
+            if (docId && typeof docId === 'string' && docId.startsWith('TD-')) {
+                const numPart = parseInt(docId.split('-')[1] || '0', 10);
+                if (!isNaN(numPart) && numPart > maxId) {
+                    maxId = numPart;
+                }
+            }
+        });
+    }
+
+    const newTaskId = `TD-${String(maxId + 1).padStart(3, '0')}`;
+    const newTaskWithId = { ...taskData, projectIdDisplay: newTaskId };
+
     const newDoc = await fetchFromApi(`collections/${ORDERS_COLLECTION_NAME}/documents`, {
         method: 'POST',
-        body: JSON.stringify({ data: taskData }),
+        body: JSON.stringify({ data: newTaskWithId }),
+    });
+    
+    // The API returns the document data but the ID is the auto-generated one.
+    // We need to update the created document with its own Firestore ID.
+    const firestoreId = newDoc.id;
+    await fetchFromApi(`collections/${ORDERS_COLLECTION_NAME}/documents/${firestoreId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ data: { ...newDoc.data, id: firestoreId } })
     });
 
     return {
-        id: newDoc.id,
-        ...newDoc.data
+        id: firestoreId,
+        ...newDoc.data,
+        projectIdDisplay: newTaskId
     } as TrackingLink;
   } catch (error) {
     console.error("Error adding task (order) via API:", error);
@@ -103,6 +128,7 @@ export const addTask = async (taskData: Omit<TrackingLink, 'id'>): Promise<Track
     return null;
   }
 };
+
 
 export const getTaskById = async (taskId: string): Promise<TrackingLink | null> => {
     if (!taskId) return null;

@@ -54,7 +54,11 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
       const updates: Partial<TrackingLink> = {
         orderNotes: taskNotes || null,
         updatedAt: new Date().toISOString(),
+        updatedByUserId: currentUser.id,
+        updatedByUserName: currentUser.name,
       };
+      // Keep existing crm user info
+      updates.crmUserId = task.crmUserId;
       updates.crmUserName = task.crmUserName;
       
       result = await updateTaskAction(task.id, updates);
@@ -90,10 +94,16 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit Task' : 'Add New Task'}</DialogTitle>
           <DialogDescription>
-            {isEditMode ? `Update details for Task ID: ${task.id}` : 'Fill in the details for a new production task.'}
+            {isEditMode ? `Update details for Task ID: ${task.projectIdDisplay || task.id}` : 'Fill in the details for a new production task.'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="py-4 space-y-4">
+           {isEditMode && (
+             <div className="space-y-1">
+               <Label>Task ID</Label>
+               <Input value={task.projectIdDisplay || task.id} readOnly disabled className="bg-muted/50" />
+             </div>
+           )}
            <div className="space-y-1">
             <Label htmlFor="task-notes">Notes</Label>
             <Textarea id="task-notes" value={taskNotes} onChange={e => setTaskNotes(e.target.value)} placeholder="Add any relevant notes..."/>
