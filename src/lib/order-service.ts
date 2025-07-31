@@ -524,14 +524,17 @@ export async function autoSettleOrderIfDelivered(
 
 
 export const addCommentToOrder = async (orderId: string, commentData: Omit<Comment, 'id' | 'timestamp' | 'replies' | 'likes'>): Promise<TrackingLink | undefined> => {
+  const orderRef = doc(db, ORDERS_COLLECTION, orderId);
   try {
-    const orderRef = doc(db, ORDERS_COLLECTION, orderId);
-    return await runTransaction(db, async (transaction) => {
+    await runTransaction(db, async (transaction) => {
       const orderDoc = await transaction.get(orderRef);
       if (!orderDoc.exists()) {
-        throw new Error(`Order ${orderId} not found.`);
+        throw new Error("Order not found");
       }
-      const order = { ...orderDoc.data(), id: orderDoc.id } as TrackingLink;
+      
+      const orderData = orderDoc.data() as TrackingLink;
+      const currentComments = orderData.comments || [];
+      
       const newComment: Comment = {
         id: uuidv4(),
         timestamp: new Date().toISOString(),
@@ -543,18 +546,24 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
         likes: { count: 0, reactedBy: [] },
         ...(commentData.userId && { userId: commentData.userId }),
       };
-      const updatedComments = [...(order.comments || []), newComment];
+      
+      const updatedComments = [...currentComments, newComment];
       transaction.update(orderRef, { comments: updatedComments });
-      return { ...order, comments: updatedComments };
-    }).catch(error => {
-      console.error(`TRANSACTION FAILED for adding comment to order ${orderId}:`, error);
-      return undefined;
     });
+
+    // After the transaction is successful, fetch the updated order
+    const updatedOrderDoc = await getDoc(orderRef);
+    if (updatedOrderDoc.exists()) {
+      return { id: updatedOrderDoc.id, ...updatedOrderDoc.data() } as TrackingLink;
+    }
+    return undefined;
+
   } catch (error) {
-    console.error(`Error adding comment to order ${orderId}:`, error);
+    console.error(`Transaction failed for adding comment to order ${orderId}:`, error);
     return undefined;
   }
 };
+
 
 export const addReplyToComment = async (
   orderId: string,
@@ -731,3 +740,4 @@ export const incrementOrderViewCount = async (orderId: string): Promise<boolean>
     return false;
   }
 };
+
