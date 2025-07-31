@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, OrderItem, User } from '@/types';
 import { assignMeToAction, deleteOrderAction } from './actions';
 import { getOrdersForReport } from '@/lib/report-service';
+import { getUsers } from '@/lib/user-service'; // Import getUsers
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 import {
@@ -23,21 +24,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from '@/contexts/auth-context';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Import Avatar components
 
 const AddEditTaskDialog = dynamic(() => import('@/components/print-report/AddEditTaskDialog').then(mod => mod.AddEditTaskDialog));
 
+const getInitials = (name: string | undefined): string => {
+  if (!name) return '??';
+  const names = name.split(' ');
+  if (names.length === 1) return names[0].charAt(0).toUpperCase();
+  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+};
 
 interface PrintReportItem {
   orderId: string;
   orderDate: string;
   creatorName: string;
+  creatorAvatarUrl?: string | null;
   assignedLrName: string;
+  assignedLrAvatarUrl?: string | null;
   originalOrder: TrackingLink;
 }
 
 export default function PrintReportPage() {
   const [reportItems, setReportItems] = useState<PrintReportItem[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
@@ -53,15 +63,28 @@ export default function PrintReportPage() {
   const fetchReportData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const fetchedOrders = await getOrdersForReport({ limit: 500, orderBy: 'createdAt', direction: 'desc' });
+      const [fetchedOrders, fetchedUsers] = await Promise.all([
+        getOrdersForReport({ limit: 500, orderBy: 'createdAt', direction: 'desc' }),
+        getUsers()
+      ]);
       
-      const flattenedItems: PrintReportItem[] = fetchedOrders.map(order => ({
-          orderId: order.id,
-          orderDate: order.createdAt,
-          creatorName: order.crmUserName,
-          assignedLrName: order.designerRepresentativeName || 'N/A',
-          originalOrder: order,
-        }));
+      setAllUsers(fetchedUsers);
+      const userMap = new Map(fetchedUsers.map(u => [u.id, u]));
+
+      const flattenedItems: PrintReportItem[] = fetchedOrders.map(order => {
+        const creator = userMap.get(order.crmUserId);
+        const assignedLr = order.designerRepresentativeId ? userMap.get(order.designerRepresentativeId) : null;
+        
+        return {
+            orderId: order.id,
+            orderDate: order.createdAt,
+            creatorName: order.crmUserName,
+            creatorAvatarUrl: creator?.avatarUrl,
+            assignedLrName: order.designerRepresentativeName || 'N/A',
+            assignedLrAvatarUrl: assignedLr?.avatarUrl,
+            originalOrder: order,
+        }
+      });
       setReportItems(flattenedItems);
     } catch (error) {
       console.error("Failed to fetch report data:", error);
@@ -107,7 +130,7 @@ export default function PrintReportPage() {
     // Optimistic update
     setReportItems(prevItems => prevItems.map(item => 
       item.orderId === order.id 
-        ? { ...item, assignedLrName: currentUser.name, originalOrder: { ...item.originalOrder, designerRepresentativeId: currentUser.id, designerRepresentativeName: currentUser.name } }
+        ? { ...item, assignedLrName: currentUser.name, assignedLrAvatarUrl: currentUser.avatarUrl, originalOrder: { ...item.originalOrder, designerRepresentativeId: currentUser.id, designerRepresentativeName: currentUser.name } }
         : item
     ));
 
@@ -120,7 +143,7 @@ export default function PrintReportPage() {
       });
       // Revert optimistic update
       setReportItems(prevItems => prevItems.map(item =>
-        item.orderId === order.id ? { ...item, assignedLrName: order.designerRepresentativeName || 'N/A', originalOrder: order } : item
+        item.orderId === order.id ? { ...item, assignedLrName: order.designerRepresentativeName || 'N/A', assignedLrAvatarUrl: allUsers.find(u => u.id === order.designerRepresentativeId)?.avatarUrl, originalOrder: order } : item
       ));
     } else {
       toast({
@@ -208,8 +231,8 @@ export default function PrintReportPage() {
                       <TableRow key={`skel-report-${i}`}>
                         <TableCell className="pl-6"><Skeleton className="h-5 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                        <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-32" /></div></TableCell>
+                        <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-32" /></div></TableCell>
                         <TableCell className="pr-6 text-right"><Skeleton className="h-9 w-20 inline-block rounded-md" /></TableCell>
                       </TableRow>
                     ))
@@ -220,8 +243,26 @@ export default function PrintReportPage() {
                         <TableCell className="text-muted-foreground text-xs">
                           {item.orderDate ? format(parseISO(item.orderDate), 'd MMM, yyyy') : 'N/A'}
                         </TableCell>
-                        <TableCell>{item.creatorName}</TableCell>
-                        <TableCell>{item.assignedLrName}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={item.creatorAvatarUrl || undefined} alt={item.creatorName} />
+                              <AvatarFallback>{getInitials(item.creatorName)}</AvatarFallback>
+                            </Avatar>
+                            <span>{item.creatorName}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                           {item.assignedLrName !== 'N/A' && (
+                             <Avatar className="h-8 w-8">
+                              <AvatarImage src={item.assignedLrAvatarUrl || undefined} alt={item.assignedLrName} />
+                              <AvatarFallback>{getInitials(item.assignedLrName)}</AvatarFallback>
+                            </Avatar>
+                           )}
+                            <span>{item.assignedLrName}</span>
+                          </div>
+                        </TableCell>
                         <TableCell className="pr-6 text-right">
                            {currentUser?.role === 'LR' && item.originalOrder.designerRepresentativeId !== currentUser.id ? (
                              <Button variant="outline" size="sm" onClick={() => handleAssignMe(item.originalOrder)}>
