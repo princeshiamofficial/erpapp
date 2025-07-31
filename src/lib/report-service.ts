@@ -104,12 +104,38 @@ export const addTask = async (taskData: Omit<TrackingLink, 'id'>): Promise<Track
   }
 };
 
+export const getTaskById = async (taskId: string): Promise<TrackingLink | null> => {
+    if (!taskId) return null;
+    try {
+        const response = await fetchFromApi(`collections/${ORDERS_COLLECTION_NAME}/documents/${taskId}`);
+        return { id: response.id, ...response.data } as TrackingLink;
+    } catch (error) {
+        console.error(`Error fetching task (order) by ID ${taskId} via API:`, error);
+        return null;
+    }
+};
+
 export const updateTask = async (taskId: string, updates: Partial<Omit<TrackingLink, 'id'>>): Promise<boolean> => {
     try {
         await ensureOrdersCollectionExists();
+        
+        // Fetch the existing document first to ensure we don't overwrite data.
+        const existingTask = await getTaskById(taskId);
+        if (!existingTask) {
+            throw new Error(`Task with ID ${taskId} not found.`);
+        }
+        
+        // Merge the updates with the existing data.
+        const finalData = {
+            ...existingTask,
+            ...updates,
+            id: undefined, // Don't write the id field back into the data object
+        };
+        delete finalData.id;
+
         await fetchFromApi(`collections/${ORDERS_COLLECTION_NAME}/documents/${taskId}`, {
             method: 'PUT',
-            body: JSON.stringify({ data: updates })
+            body: JSON.stringify({ data: finalData })
         });
         return true;
     } catch (error) {
