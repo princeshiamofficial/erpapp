@@ -81,3 +81,39 @@ export const getOrdersForReport = async (options: GetOrdersOptions = {}): Promis
     return [];
   }
 };
+
+export const addTask = async (taskData: Omit<TrackingLink, 'id'>): Promise<TrackingLink | null> => {
+  try {
+    await ensureOrdersCollectionExists();
+    // In this context, a "task" is an "order". We use the same collection.
+    // The ID generation logic would be similar to addOrder in order-service.ts
+    // For simplicity here, we'll let the API assign an ID.
+    const newDoc = await fetchFromApi(`collections/${ORDERS_COLLECTION_NAME}/documents`, {
+        method: 'POST',
+        body: JSON.stringify({ data: taskData }),
+    });
+
+    return {
+        id: newDoc.id,
+        ...newDoc.data
+    } as TrackingLink;
+  } catch (error) {
+    console.error("Error adding task (order) via API:", error);
+    if (error instanceof Error) throw error;
+    return null;
+  }
+};
+
+export const updateTask = async (taskId: string, updates: Partial<Omit<TrackingLink, 'id'>>): Promise<boolean> => {
+    try {
+        await ensureOrdersCollectionExists();
+        await fetchFromApi(`collections/${ORDERS_COLLECTION_NAME}/documents/${taskId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ data: updates })
+        });
+        return true;
+    } catch (error) {
+        console.error(`Error updating task (order) ${taskId} via API:`, error);
+        return false;
+    }
+};

@@ -2,23 +2,35 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Loader2, PlusCircle, Eye } from 'lucide-react';
+import { Search, Loader2, PlusCircle, Eye, Edit, MoreVertical } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, OrderItem } from '@/types';
 import { getOrdersForReport } from '@/lib/report-service';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+const AddEditTaskDialog = dynamic(() => import('@/components/print-report/AddEditTaskDialog').then(mod => mod.AddEditTaskDialog));
+
 
 interface PrintReportItem {
   orderId: string;
   orderDate: string;
   creatorName: string;
   acceptedName: string;
+  // Add the full order object to pass to the dialog
+  originalOrder: TrackingLink;
 }
 
 export default function PrintReportPage() {
@@ -27,18 +39,21 @@ export default function PrintReportPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
+  const [isAddEditOpen, setIsAddEditOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<TrackingLink | null>(null);
+
+
   const fetchReportData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Fetch all orders using the report service
       const fetchedOrders = await getOrdersForReport({ limit: 500, orderBy: 'createdAt', direction: 'desc' });
       
-      // Flatten the orders into a list of printable items
       const flattenedItems: PrintReportItem[] = fetchedOrders.map(order => ({
           orderId: order.id,
           orderDate: order.createdAt,
           creatorName: order.crmUserName,
           acceptedName: order.designerRepresentativeName || 'N/A',
+          originalOrder: order,
         }));
       setReportItems(flattenedItems);
     } catch (error) {
@@ -62,6 +77,23 @@ export default function PrintReportPage() {
       item.acceptedName.toLowerCase().includes(lowercasedFilter)
     );
   }, [reportItems, searchTerm]);
+  
+  const handleOpenAddDialog = () => {
+    setEditingTask(null);
+    setIsAddEditOpen(true);
+  };
+  
+  const handleOpenEditDialog = (order: TrackingLink) => {
+    setEditingTask(order);
+    setIsAddEditOpen(true);
+  };
+  
+  const handleTaskSaved = () => {
+    setIsAddEditOpen(false);
+    setEditingTask(null);
+    fetchReportData(); // Refetch data to show changes
+  };
+
 
   return (
     <>
@@ -74,14 +106,13 @@ export default function PrintReportPage() {
                 A summary of all items required for printing across all orders.
               </p>
             </div>
-            <Button size="lg" className="w-full sm:w-auto">
+            <Button size="lg" className="w-full sm:w-auto" onClick={handleOpenAddDialog}>
               <PlusCircle className="mr-2 h-5 w-5" />
               Add New Task
             </Button>
           </div>
         </div>
 
-        {/* This is the main card that will be visible on screen and on the print-out */}
         <Card className="shadow-xl border bg-card rounded-lg overflow-hidden print:shadow-none print:border-none print:rounded-none">
           <CardHeader className="border-b p-5 print:border-b-2 print:border-black">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -136,11 +167,24 @@ export default function PrintReportPage() {
                         <TableCell>{item.creatorName}</TableCell>
                         <TableCell>{item.acceptedName}</TableCell>
                         <TableCell className="pr-6 text-right">
-                          <Link href={`/track/${item.orderId}`} passHref>
-                            <Button variant="outline" size="sm" className="h-9 px-3">
-                              <Eye className="mr-1.5 h-4 w-4" /> View
-                            </Button>
-                          </Link>
+                           <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                               <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="h-4 w-4" />
+                               </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={() => handleOpenEditDialog(item.originalOrder)} className="cursor-pointer">
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild className="cursor-pointer">
+                                  <Link href={`/track/${item.orderId}`}>
+                                    <Eye className="mr-2 h-4 w-4" /> View
+                                  </Link>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))
@@ -157,23 +201,13 @@ export default function PrintReportPage() {
           </CardContent>
         </Card>
       </div>
-
-       <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .print-area, .print-area * {
-            visibility: visible;
-          }
-          .print-area {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-        }
-      `}</style>
+      
+      <AddEditTaskDialog
+        isOpen={isAddEditOpen}
+        onOpenChange={setIsAddEditOpen}
+        onTaskSaved={handleTaskSaved}
+        task={editingTask}
+      />
     </>
   );
 }
