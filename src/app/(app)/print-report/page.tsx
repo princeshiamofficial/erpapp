@@ -115,7 +115,7 @@ export default function PrintReportPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="pl-6 w-[150px]">Task ID</TableHead>
-                    <TableHead className="pr-6">Order Date</TableHead>
+                    <TableHead className="pr-6">Task Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
