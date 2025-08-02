@@ -29,7 +29,7 @@ const getInitialsForName = (name: string | undefined): string => {
   if (!name) return '??';
   const names = name.split(' ');
   if (names.length === 1) return names[0].charAt(0).toUpperCase();
-  return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
+  return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
 
@@ -65,16 +65,15 @@ export const getProjects = async (): Promise<Project[]> => {
 
     console.log(`[getProjects] Fetched ${allOrders.length} total orders.`);
     
-    const relevantOrdersForKanban = allOrders.filter(
-      (order) => order.currentStatus === ORDER_SUBMITTED_ID || order.currentStatus === READY_FOR_DESIGN_STATUS_ID
-    );
-    console.log(`[getProjects] Found ${relevantOrdersForKanban.length} orders with status '${ORDER_SUBMITTED_ID}' or '${READY_FOR_DESIGN_STATUS_ID}'.`);
+    const relevantOrdersForKanban = allOrders; // Show all orders as potential projects now
+    console.log(`[getProjects] Considering all ${relevantOrdersForKanban.length} orders for project board.`);
     
     const dynamicProjectsFromOrders = relevantOrdersForKanban
       .filter(order => {
         const alreadyExistsAsProject = existingProjectIds.has(order.id);
         if (alreadyExistsAsProject) {
-          console.log(`[getProjects] Order ${order.id} already exists as a project, skipping dynamic creation.`);
+          // This can be noisy, so maybe comment out if not needed for debugging.
+          // console.log(`[getProjects] Order ${order.id} already exists as a project, skipping dynamic creation.`);
         }
         return !alreadyExistsAsProject;
       })
@@ -87,18 +86,25 @@ export const getProjects = async (): Promise<Project[]> => {
         let projectStatus: ProjectStatusType;
         let crClearanceTimestamp: string | undefined = undefined;
         let onDesignTimestamp: string | undefined = undefined;
-
-        if (order.currentStatus === ORDER_SUBMITTED_ID) {
-          projectStatus = 'CR Clearance';
-          crClearanceTimestamp = order.createdAt || projectCreatedAt;
-        } else if (order.currentStatus === READY_FOR_DESIGN_STATUS_ID) {
-          projectStatus = 'On Design';
-          onDesignTimestamp = order.updatedAt || projectCreatedAt; // Assuming updatedAt reflects when it became ready for design
+        
+        // This is a simplified mapping. A more robust solution might involve
+        // looking at the `allStatuses` collection to map from order status to project status.
+        if (order.currentStatus === 'cancelled') {
+            projectStatus = 'Cancel';
+        } else if (order.currentStatus === 'delivered') {
+            projectStatus = 'Delivered';
+        } else if (order.currentStatus === 'shipped') {
+            projectStatus = 'Courier';
+        } else if (order.currentStatus === 'on-hold') {
+            projectStatus = 'On Hold';
+        } else if (order.currentStatus === 'logistics') {
+            projectStatus = 'Logistics';
+        } else if (order.currentStatus === 'ready-for-design' || order.currentStatus.toLowerCase().includes('design')) {
+            projectStatus = 'On Design';
         } else {
-          // Fallback, though filter should prevent this
-          projectStatus = 'CR Clearance'; 
-          crClearanceTimestamp = order.createdAt || projectCreatedAt;
+            projectStatus = 'CR Clearance';
         }
+
 
         const dynamicProject: Project = {
           id: order.id, 
@@ -119,7 +125,6 @@ export const getProjects = async (): Promise<Project[]> => {
           crClearanceAt: crClearanceTimestamp,
           onDesignAt: onDesignTimestamp,
         };
-        console.log(`[getProjects] Dynamically creating project for order ${order.id} with status ${projectStatus}:`, dynamicProject);
         return dynamicProject;
       });
 

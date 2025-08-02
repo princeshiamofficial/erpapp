@@ -24,7 +24,15 @@ import {
   Users,
   CalendarDays, 
   ChevronDown,
-  Loader2
+  Loader2,
+  Briefcase,
+  ClipboardCheck,
+  ClipboardX,
+  DraftingCompass,
+  PauseCircle,
+  Truck,
+  CheckCircle,
+  PackageCheck
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -37,11 +45,12 @@ import {
   Legend,
 } from 'recharts';
 import { ChartContainer } from '@/components/ui/chart';
-import type { TrackingLink, OrderItem, ServiceModelItem, User } from '@/types'; 
+import type { TrackingLink, OrderItem, ServiceModelItem, User, Project, ProjectStatusType } from '@/types'; 
 import { getOrders } from '@/lib/order-service';
 import { getModels } from '@/lib/service-options-service'; 
 import { useToast } from '@/hooks/use-toast';
 import { getUsers } from '@/lib/user-service';
+import { getProjects } from '@/lib/project-service';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const chartConfig = {
@@ -97,12 +106,38 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
   );
 };
 
+const ProjectStatusCard: React.FC<{ title: string; count: number; icon: React.ElementType; color: string; isLoading: boolean; }> = ({ title, count, icon: Icon, color, isLoading }) => {
+  if (isLoading) {
+    return (
+        <div className="flex items-center gap-3 p-3 bg-card rounded-lg shadow-sm">
+            <Skeleton className="h-8 w-8 rounded-md" />
+            <div className="space-y-1.5">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-5 w-10" />
+            </div>
+        </div>
+    )
+  }
+  return (
+    <div className="flex items-center gap-3 p-3 bg-card rounded-lg shadow-sm hover:shadow-md transition-shadow">
+      <div className="p-2 rounded-md" style={{ backgroundColor: `${color}1A`, color }}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <div>
+        <p className="text-xs text-muted-foreground">{title}</p>
+        <p className="font-bold text-lg text-foreground">{count}</p>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allModels, setAllModels] = useState<ServiceModelItem[]>([]); 
   const [allCrmUsers, setAllCrmUsers] = useState<User[]>([]);
   
@@ -140,18 +175,21 @@ export default function DashboardPage() {
     }
     setIsLoadingData(true);
     try {
-      const [fetchedOrders, fetchedModels, fetchedUsers] = await Promise.all([ 
+      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects] = await Promise.all([ 
         getOrders(),
         getModels(),
         getUsers(),
+        getProjects(),
       ]);
       setAllOrders(fetchedOrders);
+      setAllProjects(fetchedProjects);
       setAllModels(fetchedModels); 
       setAllCrmUsers(fetchedUsers.filter(u => u.role === 'CRM'));
     } catch (error) {
-      console.error("Failed to fetch orders or models for dashboard:", error);
+      console.error("Failed to fetch dashboard data:", error);
       toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive" });
       setAllOrders([]);
+      setAllProjects([]);
       setAllModels([]);
       setAllCrmUsers([]);
     } finally {
@@ -189,6 +227,18 @@ export default function DashboardPage() {
     
     return ordersToFilter;
   }, [allOrders, selectedDateRange, currentUser, selectedCrmId]);
+
+  const projectCounts = useMemo(() => {
+    const counts: Record<ProjectStatusType, number> = {
+      'CR Clearance': 0, 'Cancel': 0, 'On Design': 0, 'On Hold': 0, 'Logistics': 0, 'Courier': 0, 'Delivered': 0,
+    };
+    allProjects.forEach(p => {
+        if(counts[p.status] !== undefined) {
+            counts[p.status]++;
+        }
+    });
+    return counts;
+  }, [allProjects]);
 
   useEffect(() => {
     if (isLoadingData || !selectedDateRange) return;
@@ -320,6 +370,7 @@ export default function DashboardPage() {
   }
   
   if (!currentUser && !isAuthLoading) {
+    // This case should be handled by the layout now, but as a fallback:
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <p>Redirecting to login...</p>
@@ -377,6 +428,16 @@ export default function DashboardPage() {
   const isLoadingContent = isLoadingData || !selectedDateRange;
 
   const canSelectCR = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
+  
+  const projectStatusDisplayConfig = [
+    { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, color: '#3b82f6' },
+    { title: 'On Design', status: 'On Design', icon: DraftingCompass, color: '#8b5cf6' },
+    { title: 'Logistics', status: 'Logistics', icon: Truck, color: '#f97316' },
+    { title: 'Courier', status: 'Courier', icon: CheckCircle, color: '#16a34a' },
+    { title: 'Delivered', status: 'Delivered', icon: PackageCheck, color: '#65a30d' },
+    { title: 'On Hold', status: 'On Hold', icon: PauseCircle, color: '#a1a1aa' },
+    { title: 'Cancel', status: 'Cancel', icon: ClipboardX, color: '#ef4444' },
+  ];
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -537,6 +598,28 @@ export default function DashboardPage() {
           </Card>
         </>
       )}
+
+        <Card className="shadow-xl bg-card">
+            <CardHeader>
+              <CardTitle className="flex items-center text-xl text-foreground">
+                <Briefcase className="mr-2 h-6 w-6 text-primary" />
+                Project Status Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+              {projectStatusDisplayConfig.map(statusInfo => (
+                <ProjectStatusCard 
+                  key={statusInfo.status}
+                  title={statusInfo.title}
+                  count={projectCounts[statusInfo.status as ProjectStatusType]}
+                  icon={statusInfo.icon}
+                  color={statusInfo.color}
+                  isLoading={isLoadingContent}
+                />
+              ))}
+            </CardContent>
+        </Card>
     </div>
   );
 }
+
