@@ -54,12 +54,6 @@ function ProjectsPageSkeleton() {
   ];
    return (
       <div className="flex flex-col h-full space-y-4">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header pb-2 px-4 sm:px-0">
-              <div className="flex items-baseline gap-2">
-                  <h1 className="page-title text-2xl sm:text-3xl">Projects Kanban</h1>
-              </div>
-              <Skeleton className="h-10 w-10 rounded-md" /> 
-          </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 sm:px-0">
             <Skeleton className="h-10 w-full rounded-md" />
             <Skeleton className="h-10 w-full rounded-md" />
@@ -89,8 +83,10 @@ function ProjectsPageSkeleton() {
 
 export default async function ProjectsPage() {
   return (
-    <Suspense fallback={<ProjectsPageSkeleton />}>
-      <ProjectsPageData />
-    </Suspense>
+    <div className="flex flex-col h-full">
+      <Suspense fallback={<ProjectsPageSkeleton />}>
+        <ProjectsPageData />
+      </Suspense>
+    </div>
   );
 }
