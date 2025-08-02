@@ -5,8 +5,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Project, ProjectStatusType, CustomStatus, User, GlobalSettings } from '@/types'; 
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { 
-  Briefcase, 
-  RefreshCw,
   ClipboardCheck,
   ClipboardX,
   DraftingCompass,
