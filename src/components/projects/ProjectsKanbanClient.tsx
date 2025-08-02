@@ -316,7 +316,7 @@ export function ProjectsKanbanClient({ initialProjects, initialStatuses, initial
         onDragCancel={handleDragCancel}
         collisionDetection={closestCorners}
     >
-      <div className="flex flex-col h-full p-0 sm:p-6 lg:p-8 space-y-4">
+      <div className="flex flex-col h-full space-y-4">
         {currentUser?.role !== 'LR' && (
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header pb-2 px-4 sm:px-0">
             <div className="flex items-baseline gap-2">
