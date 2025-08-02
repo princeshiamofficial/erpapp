@@ -53,7 +53,8 @@ export function KanbanColumn({
         </div>
         <span className="text-xs px-2 py-0.5 bg-black/20 rounded-full">{isLoading ? <Skeleton className="h-4 w-4 inline-block" /> : projects.length}</span>
       </div>
-      <ScrollArea className="flex-1 p-3 bg-background/10">
+      <ScrollArea className="flex-1 p-3 bg-background/10 custom-scrollbar">
+        <div className="space-y-3">
         {isLoading && projects.length === 0 ? (
           <div className="space-y-3">
             <Skeleton className="h-20 w-full rounded-md" />
@@ -74,6 +75,7 @@ export function KanbanColumn({
             />
           ))
         )}
+        </div>
       </ScrollArea>
     </div>
   );

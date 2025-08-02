@@ -344,7 +344,7 @@ export function ProjectsKanbanClient({ initialProjects, initialStatuses, initial
         </div>
 
         {/* Kanban Board Section */}
-        <div className="flex-1 overflow-x-auto pb-4">
+        <div className="flex-1 overflow-x-auto pb-4 h-[calc(100vh-200px)]">
           <div className="flex space-x-4 h-full min-w-max px-4 sm:px-0">
             {visibleKanbanColumns.map((col) => (
               <KanbanColumn
