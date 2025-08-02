@@ -248,13 +248,22 @@ export default function DashboardPage() {
     const counts: Record<ProjectStatusType, number> = {
       'CR Clearance': 0, 'Cancel': 0, 'On Design': 0, 'On Hold': 0, 'Logistics': 0, 'Courier': 0, 'Delivered': 0,
     };
-    allProjects.forEach(p => {
+    
+    let projectsToCount = allProjects;
+
+    if (currentUser?.role === 'CRM') {
+        projectsToCount = allProjects.filter(p => p.assigneeId === currentUser.id);
+    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
+        projectsToCount = allProjects.filter(p => p.designerRepresentativeId === currentUser.id);
+    }
+
+    projectsToCount.forEach(p => {
         if(counts[p.status] !== undefined) {
             counts[p.status]++;
         }
     });
     return counts;
-  }, [allProjects]);
+  }, [allProjects, currentUser]);
 
   useEffect(() => {
     if (isLoadingData || !selectedDateRange) return;
