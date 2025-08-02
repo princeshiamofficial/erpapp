@@ -233,8 +233,8 @@ export default function PrintReportPage() {
                       <TableRow key={`skel-report-${i}`}>
                         <TableCell className="pl-6"><Skeleton className="h-5 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                        <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-32" /></div></TableCell>
-                        <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-32" /></div></TableCell>
+                        <TableCell><div className="flex items-center gap-2"><Skeleton className="h-6 w-6 rounded-full" /><Skeleton className="h-5 w-32" /></div></TableCell>
+                        <TableCell><div className="flex items-center gap-2"><Skeleton className="h-6 w-6 rounded-full" /><Skeleton className="h-5 w-32" /></div></TableCell>
                         <TableCell className="pr-6 text-right"><Skeleton className="h-9 w-20 inline-block rounded-md" /></TableCell>
                       </TableRow>
                     ))
@@ -247,9 +247,9 @@ export default function PrintReportPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
+                            <Avatar className="h-6 w-6">
                               <AvatarImage src={item.creatorAvatarUrl || undefined} alt={item.creatorName} />
-                              <AvatarFallback>{getInitials(item.creatorName)}</AvatarFallback>
+                              <AvatarFallback className="text-xs">{getInitials(item.creatorName)}</AvatarFallback>
                             </Avatar>
                             <span>{item.creatorName}</span>
                           </div>
@@ -257,9 +257,9 @@ export default function PrintReportPage() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                            {item.assignedLrName !== 'N/A' && (
-                             <Avatar className="h-8 w-8">
+                             <Avatar className="h-6 w-6">
                               <AvatarImage src={item.assignedLrAvatarUrl || undefined} alt={item.assignedLrName} />
-                              <AvatarFallback>{getInitials(item.assignedLrName)}</AvatarFallback>
+                              <AvatarFallback className="text-xs">{getInitials(item.assignedLrName)}</AvatarFallback>
                             </Avatar>
                            )}
                             <span>{item.assignedLrName}</span>
