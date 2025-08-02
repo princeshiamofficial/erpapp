@@ -12,11 +12,13 @@ import { RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { settleAllDeliveredOrdersAction } from '@/app/(app)/dashboard/actions';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/auth-context';
 
 
 export function AppHeader() {
   const [isSyncing, setIsSyncing] = useState(false);
   const { toast } = useToast();
+  const { currentUser } = useAuth();
 
   const handleSyncClick = async () => {
     setIsSyncing(true);
@@ -32,11 +34,11 @@ export function AppHeader() {
       let description = "No updates were necessary.";
 
       if (statusUpdateCount > 0 && settledCount > 0) {
-        description = `Updated ${statusUpdateCount} order status(es) and settled ${settledCount} due balance(s).`;
+        description = `Updated ${statusUpdateCount} order status(es) and settled ${settledCount} due balance(s). The page will now refresh.`;
       } else if (statusUpdateCount > 0) {
-        description = `Updated ${statusUpdateCount} order status(es) to 'Delivered' based on courier confirmation.`;
+        description = `Updated ${statusUpdateCount} order status(es) to 'Delivered' based on courier confirmation. The page will now refresh.`;
       } else if (settledCount > 0) {
-        description = `Successfully settled ${settledCount} delivered order(s) with a due balance.`;
+        description = `Successfully settled ${settledCount} delivered order(s) with a due balance. The page will now refresh.`;
       }
       
       toast({
@@ -45,10 +47,10 @@ export function AppHeader() {
       });
 
       if (statusUpdateCount > 0 || settledCount > 0) {
-        // Short delay to allow toast to be seen before reload
-        setTimeout(() => window.location.reload(), 1500);
-      } else {
-        setIsSyncing(false);
+        // The auto-refresh was removed as per the user request.
+        // Data will be stale until the user manually refreshes.
+        // A full page reload can be jarring. A better approach would be to
+        // re-fetch data within the components, but for now, we just stop the reload.
       }
     } else {
       toast({
@@ -56,9 +58,11 @@ export function AppHeader() {
         description: result.error || "An unexpected error occurred.",
         variant: "destructive",
       });
-      setIsSyncing(false);
     }
+    setIsSyncing(false); // Ensure loading state is always reset
   };
+
+  const showSyncButton = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN';
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/90 backdrop-blur-lg supports-[backdrop-filter]:bg-background/75 shadow-sm print:hidden">
@@ -75,17 +79,19 @@ export function AppHeader() {
         
         <div className="flex items-center space-x-1 sm:space-x-2">
           <NotificationBell />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-foreground hover:bg-accent hover:text-accent-foreground h-10 w-10"
-            title="Sync Data"
-            onClick={handleSyncClick}
-            disabled={isSyncing}
-          >
-            <RefreshCw className={cn("h-5 w-5", isSyncing && "animate-spin")} />
-            <span className="sr-only">Sync Data</span>
-          </Button>
+          {showSyncButton && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-foreground hover:bg-accent hover:text-accent-foreground h-10 w-10"
+              title="Sync Data"
+              onClick={handleSyncClick}
+              disabled={isSyncing}
+            >
+              <RefreshCw className={cn("h-5 w-5", isSyncing && "animate-spin")} />
+              <span className="sr-only">Sync Data</span>
+            </Button>
+          )}
           <UserNav />
         </div>
       </div>
