@@ -123,7 +123,12 @@ export function SidebarNavigation() {
   const renderNavItems = (items: NavItem[]) => {
     return items.map((item) => {
       
-      const shouldShowItem = item.roles.includes(userRole);
+      let shouldShowItem = item.roles.includes(userRole);
+
+      // Special check for Finance Manager
+      if (item.href === "/finance-manager" && !canUserLogExpense) {
+        shouldShowItem = false;
+      }
 
       if (!shouldShowItem) return null;
 
