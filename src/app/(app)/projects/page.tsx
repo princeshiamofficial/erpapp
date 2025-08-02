@@ -4,20 +4,21 @@ import type { Project, CustomStatus, GlobalSettings, User } from '@/types';
 import { getProjects } from '@/lib/project-service';
 import { getStatuses } from '@/lib/status-service'; 
 import { getGlobalSettings } from '@/lib/settings-service';
-import { Briefcase, RefreshCw } from 'lucide-react'; 
-import { Button } from '@/components/ui/button';
+import { Briefcase } from 'lucide-react'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProjectsKanbanClient } from '@/components/projects/ProjectsKanbanClient';
 import { cookies } from 'next/headers';
 
 
 async function ProjectsPageData() {
+  // Fetch all data on the server
   const [projects, statuses, globalSettings] = await Promise.all([
     getProjects(),
     getStatuses(),
     getGlobalSettings()
   ]);
 
+  // Get current user from cookie to pass to client component
   const cookieStore = cookies();
   const userCookie = cookieStore.get('colorhut-user');
   let currentUser: User | null = null;
@@ -29,6 +30,7 @@ async function ProjectsPageData() {
     }
   }
 
+  // Pass all fetched data as initial props to the client component
   return (
     <ProjectsKanbanClient
       initialProjects={projects}
@@ -39,6 +41,7 @@ async function ProjectsPageData() {
   );
 }
 
+// Skeleton component for a better loading experience during server render
 function ProjectsPageSkeleton() {
   const KANBAN_COLUMNS_CONFIG = [
     { title: 'CR Clearance', status: 'CR Clearance', headerBgClass: 'bg-sky-600' },
