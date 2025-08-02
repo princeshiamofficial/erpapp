@@ -7,13 +7,13 @@ import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { 
   Briefcase, 
   RefreshCw,
-  ClipboardCheck, // Added
-  ClipboardX,      // Added
-  DraftingCompass, // Added
-  PauseCircle,     // Added
-  Truck,           // Added
-  CheckCircle,     // Added
-  PackageCheck     // Added
+  ClipboardCheck,
+  ClipboardX,
+  DraftingCompass,
+  PauseCircle,
+  Truck,
+  CheckCircle,
+  PackageCheck
 } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
