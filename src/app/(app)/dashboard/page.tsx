@@ -124,13 +124,7 @@ export default function DashboardPage() {
   const [totalPurchaseReturn, setTotalPurchaseReturn] = useState(formatCurrency(0));
   const [expense, setExpense] = useState(formatCurrency(0));
   
-  const isDesignerRep = currentUser?.role === 'DESIGNER_REPRESENTATIVE';
-
-  useEffect(() => {
-    if (currentUser?.role === 'LR') {
-      router.replace('/projects');
-    }
-  }, [currentUser, router]);
+  const isDesignerRepOrLr = currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR';
 
   useEffect(() => {
     setSelectedDateRange({
@@ -140,7 +134,7 @@ export default function DashboardPage() {
   }, []);
 
   const fetchDashboardData = useCallback(async () => {
-    if (!currentUser || currentUser.role === 'LR') {
+    if (!currentUser) {
       setIsLoadingData(false);
       return;
     }
@@ -166,7 +160,7 @@ export default function DashboardPage() {
   }, [currentUser, toast]);
 
   useEffect(() => {
-    if (currentUser && currentUser.role !== 'LR') {
+    if (currentUser) {
       fetchDashboardData();
     }
   }, [fetchDashboardData, currentUser]);
@@ -317,7 +311,7 @@ export default function DashboardPage() {
   }, [selectedCrmId, allCrmUsers]);
 
 
-  if (isAuthLoading || currentUser?.role === 'LR') {
+  if (isAuthLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -396,7 +390,7 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {!isDesignerRep && (
+      {!isDesignerRepOrLr && (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <Card className="shadow-sm bg-card">

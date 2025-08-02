@@ -12,11 +12,8 @@ export default function HomePage() {
   useEffect(() => {
     if (!isLoading) {
       if (currentUser) {
-        if (currentUser.role === 'LR') {
-          router.replace('/projects');
-        } else {
-          router.replace('/dashboard');
-        }
+        // 'LR' role now goes to dashboard by default as per the change.
+        router.replace('/dashboard');
       } else {
         router.replace('/login');
       }
