@@ -123,6 +123,8 @@ export default function DashboardPage() {
   const [purchaseDue, setPurchaseDue] = useState(formatCurrency(0));
   const [totalPurchaseReturn, setTotalPurchaseReturn] = useState(formatCurrency(0));
   const [expense, setExpense] = useState(formatCurrency(0));
+  
+  const isDesignerRep = currentUser?.role === 'DESIGNER_REPRESENTATIVE';
 
   useEffect(() => {
     if (currentUser?.role === 'LR') {
@@ -394,149 +396,153 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <Card className="shadow-sm bg-card">
-          <CardContent className="p-3 sm:p-4 flex items-center justify-between">
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Users className="h-5 w-5 mr-2 text-primary/80" />
-              <span>Select CR</span>
-            </div>
-            {canSelectCR ? (
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="text-xs h-9 sm:h-10 truncate">
-                      {selectedCrmName} <ChevronDown className="ml-1.5 h-3.5 w-3.5 opacity-70" />
+      {!isDesignerRep && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <Card className="shadow-sm bg-card">
+              <CardContent className="p-3 sm:p-4 flex items-center justify-between">
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <Users className="h-5 w-5 mr-2 text-primary/80" />
+                  <span>Select CR</span>
+                </div>
+                {canSelectCR ? (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="text-xs h-9 sm:h-10 truncate">
+                          {selectedCrmName} <ChevronDown className="ml-1.5 h-3.5 w-3.5 opacity-70" />
+                        </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                        <DropdownMenuLabel>Filter by CRM</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => setSelectedCrmId('all')}>All CRs</DropdownMenuItem>
+                        {allCrmUsers.map(crm => (
+                            <DropdownMenuItem key={crm.id} onSelect={() => setSelectedCrmId(crm.id)}>
+                            {crm.name}
+                            </DropdownMenuItem>
+                        ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                ) : (
+                    <Button variant="outline" size="sm" className="text-xs h-9 sm:h-10" disabled>
+                        Your Data
                     </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                    <DropdownMenuLabel>Filter by CRM</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={() => setSelectedCrmId('all')}>All CRs</DropdownMenuItem>
-                    {allCrmUsers.map(crm => (
-                        <DropdownMenuItem key={crm.id} onSelect={() => setSelectedCrmId(crm.id)}>
-                        {crm.name}
-                        </DropdownMenuItem>
-                    ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            ) : (
-                <Button variant="outline" size="sm" className="text-xs h-9 sm:h-10" disabled>
-                    Your Data
-                </Button>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm bg-card">
-          <CardContent className="p-3 sm:p-4 flex items-center justify-between">
-            <div className="flex items-center text-sm text-muted-foreground">
-              <CalendarDays className="h-5 w-5 mr-2 text-primary/80" />
-              <span>Filter by Date</span>
-            </div>
-            {selectedDateRange ? (
-              <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={handleDateRangeChange} />
-            ) : (
-              <Skeleton className="h-10 w-full sm:w-[260px]"/>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-        {summaryCardData.map((card) => (
-          <SummaryCard
-            key={card.title}
-            title={card.title}
-            value={card.value}
-            icon={card.icon}
-            iconColorClass={card.iconColorClass}
-            circleBgClass={card.circleBgClass}
-            isLoading={isLoadingContent}
-          />
-        ))}
-      </div>
+                )}
+              </CardContent>
+            </Card>
+            <Card className="shadow-sm bg-card">
+              <CardContent className="p-3 sm:p-4 flex items-center justify-between">
+                <div className="flex items-center text-sm text-muted-foreground">
+                  <CalendarDays className="h-5 w-5 mr-2 text-primary/80" />
+                  <span>Filter by Date</span>
+                </div>
+                {selectedDateRange ? (
+                  <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={handleDateRangeChange} />
+                ) : (
+                  <Skeleton className="h-10 w-full sm:w-[260px]"/>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {summaryCardData.map((card) => (
+              <SummaryCard
+                key={card.title}
+                title={card.title}
+                value={card.value}
+                icon={card.icon}
+                iconColorClass={card.iconColorClass}
+                circleBgClass={card.circleBgClass}
+                isLoading={isLoadingContent}
+              />
+            ))}
+          </div>
 
-      <Card className="shadow-xl bg-card">
-        <CardHeader className="border-b">
-          <CardTitle className="flex items-center text-xl text-foreground">
-            <BarChartBig className="mr-2 h-6 w-6 text-primary" />
-            Sales ({currentDateRangeLabel})
-            {currentUser?.role === 'CRM' && <span className="ml-2 text-sm font-normal text-muted-foreground">(Your Sales)</span>}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">
-          {isLoadingContent ? ( 
-            <div className="flex items-center justify-center h-full">
-              <Skeleton className="h-full w-full" />
-            </div>
-          ) : (
-            <ChartContainer config={chartConfig} className="w-full h-full">
-              <RechartsLineChart
-                data={salesChartData}
-                margin={{
-                  top: 5,
-                  right: 10,
-                  left: -25, 
-                  bottom: 0,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border)/0.5)" />
-                <XAxis
-                  dataKey="date" 
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => {
-                    if (chartGranularity === 'hourly') {
-                      const hour = parseInt(value);
-                      if (isNaN(hour)) return value; 
-                      if (hour === 0) return '12 AM';
-                      if (hour === 12) return '12 PM';
-                      if (hour < 12) return `${hour} AM`;
-                      return `${hour - 12} PM`;
-                    }
-                    try {
-                      return format(parseISO(value), 'd MMM');
-                    } catch (e) { return value; } 
-                  }}
-                  className="text-xs"
-                  interval={chartGranularity === 'hourly' && salesChartData.length > 12 ? 'preserveStartEnd' : undefined} 
-                />
-                <YAxis
-                  tickLine={false}
-                  axisLine={false}
-                  tickMargin={8}
-                  tickFormatter={(value) => `৳${Number(value).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})}`}
-                  className="text-xs"
-                />
-                <Tooltip
-                  cursor={false}
-                  content={<CustomTooltipContent />}
-                />
-                <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '10px'}} />
-                <Line
-                  dataKey="sales"
-                  name="Sales" 
-                  type="monotone"
-                  stroke="var(--color-sales)"
-                  strokeWidth={2}
-                  dot={{
-                    r: 4,
-                    fill: "var(--color-sales)",
-                    strokeWidth: 2,
-                    stroke: "hsl(var(--background))",
-                  }}
-                  activeDot={{
-                     r: 6,
-                     fill: "var(--color-sales)",
-                     strokeWidth: 2,
-                     stroke: "hsl(var(--background))",
-                  }}
-                />
-              </RechartsLineChart>
-            </ChartContainer>
-          )}
-        </CardContent>
-      </Card>
+          <Card className="shadow-xl bg-card">
+            <CardHeader className="border-b">
+              <CardTitle className="flex items-center text-xl text-foreground">
+                <BarChartBig className="mr-2 h-6 w-6 text-primary" />
+                Sales ({currentDateRangeLabel})
+                {currentUser?.role === 'CRM' && <span className="ml-2 text-sm font-normal text-muted-foreground">(Your Sales)</span>}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">
+              {isLoadingContent ? ( 
+                <div className="flex items-center justify-center h-full">
+                  <Skeleton className="h-full w-full" />
+                </div>
+              ) : (
+                <ChartContainer config={chartConfig} className="w-full h-full">
+                  <RechartsLineChart
+                    data={salesChartData}
+                    margin={{
+                      top: 5,
+                      right: 10,
+                      left: -25, 
+                      bottom: 0,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border)/0.5)" />
+                    <XAxis
+                      dataKey="date" 
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tickFormatter={(value) => {
+                        if (chartGranularity === 'hourly') {
+                          const hour = parseInt(value);
+                          if (isNaN(hour)) return value; 
+                          if (hour === 0) return '12 AM';
+                          if (hour === 12) return '12 PM';
+                          if (hour < 12) return `${hour} AM`;
+                          return `${hour - 12} PM`;
+                        }
+                        try {
+                          return format(parseISO(value), 'd MMM');
+                        } catch (e) { return value; } 
+                      }}
+                      className="text-xs"
+                      interval={chartGranularity === 'hourly' && salesChartData.length > 12 ? 'preserveStartEnd' : undefined} 
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      tickFormatter={(value) => `৳${Number(value).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})}`}
+                      className="text-xs"
+                    />
+                    <Tooltip
+                      cursor={false}
+                      content={<CustomTooltipContent />}
+                    />
+                    <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '10px'}} />
+                    <Line
+                      dataKey="sales"
+                      name="Sales" 
+                      type="monotone"
+                      stroke="var(--color-sales)"
+                      strokeWidth={2}
+                      dot={{
+                        r: 4,
+                        fill: "var(--color-sales)",
+                        strokeWidth: 2,
+                        stroke: "hsl(var(--background))",
+                      }}
+                      activeDot={{
+                         r: 6,
+                         fill: "var(--color-sales)",
+                         strokeWidth: 2,
+                         stroke: "hsl(var(--background))",
+                      }}
+                    />
+                  </RechartsLineChart>
+                </ChartContainer>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
