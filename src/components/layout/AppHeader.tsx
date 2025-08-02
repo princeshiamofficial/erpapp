@@ -34,24 +34,18 @@ export function AppHeader() {
       let description = "No updates were necessary.";
 
       if (statusUpdateCount > 0 && settledCount > 0) {
-        description = `Updated ${statusUpdateCount} order status(es) and settled ${settledCount} due balance(s). The page will now refresh.`;
+        description = `Updated ${statusUpdateCount} order status(es) and settled ${settledCount} due balance(s).`;
       } else if (statusUpdateCount > 0) {
-        description = `Updated ${statusUpdateCount} order status(es) to 'Delivered' based on courier confirmation. The page will now refresh.`;
+        description = `Updated ${statusUpdateCount} order status(es) to 'Delivered' based on courier confirmation.`;
       } else if (settledCount > 0) {
-        description = `Successfully settled ${settledCount} delivered order(s) with a due balance. The page will now refresh.`;
+        description = `Successfully settled ${settledCount} delivered order(s) with a due balance.`;
       }
       
       toast({
         title: "Sync Complete",
         description,
       });
-
-      if (statusUpdateCount > 0 || settledCount > 0) {
-        // The auto-refresh was removed as per the user request.
-        // Data will be stale until the user manually refreshes.
-        // A full page reload can be jarring. A better approach would be to
-        // re-fetch data within the components, but for now, we just stop the reload.
-      }
+      
     } else {
       toast({
         title: "Sync Failed",
