@@ -254,7 +254,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
       }}
       transition={{ duration: 0.15, ease: "easeInOut" }}
       className={cn(
-        "relative group mb-3",
+        "relative group",
         isOverlay ? "z-50" : (isDragging ? "z-50" : "")
       )}
     >
@@ -265,7 +265,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
         )}
       >
         <CardContent className="p-3 space-y-2.5">
-          <div className={cn("flex justify-between items-start")}>
+          <div className="flex justify-between items-start">
             <span className="text-sm font-semibold text-foreground">{project.projectIdDisplay}</span>
             {!isOverlay && (
                  <Link
@@ -332,13 +332,13 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
             </div>
           )}
           
-          <div className={cn("flex items-center space-x-1.5 text-xs text-muted-foreground")}>
+          <div className="flex items-center space-x-1.5 text-xs text-muted-foreground">
             <Folder className="h-3.5 w-3.5" />
             <span className="truncate" title={project.categoryTag}>{project.categoryTag}</span>
           </div>
           
           {progressInfo.showProgressBar && (
-              <div className={cn("pt-1")}>
+              <div className="pt-1">
               <div className="flex items-center space-x-2 mb-1">
                   <StopwatchIcon className="h-4 w-4 text-primary shrink-0" />
                   <span className="text-xs font-medium text-muted-foreground truncate" title={progressInfo.displayText}>{progressInfo.displayText}</span>
@@ -351,7 +351,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
               </div>
           )}
 
-          <div className={cn("flex items-center justify-start mt-2")}>
+          <div className="flex items-center justify-start mt-2">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -426,5 +426,3 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
     </motion.div>
   );
 }
-
-    
