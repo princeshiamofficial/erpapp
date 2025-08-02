@@ -29,6 +29,8 @@ import { getGlobalSettings } from '@/lib/settings-service';
 import type { GlobalSettings } from '@/types';
 import { cn } from '@/lib/utils';
 import io from "socket.io-client";
+import { BottomNavigation } from '@/components/layout/BottomNavigation';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 
 const AccountSuspendedDialog = dynamic(() => import('@/components/auth/AccountSuspendedDialog').then(mod => mod.AccountSuspendedDialog));
@@ -129,6 +131,7 @@ export default function AuthenticatedLayout({
   const [showLoadingScreen, setShowLoadingScreen] = useState(true);
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+  const isMobile = useIsMobile();
 
   // New state to prevent server-side rendering of the layout.
   const [isClient, setIsClient] = useState(false);
@@ -286,6 +289,8 @@ export default function AuthenticatedLayout({
     return <MaintenancePage message={globalSettings?.maintenanceMessage ?? null} />;
   }
 
+  const showBottomNav = isMobile && currentUser?.role === 'LR';
+
   // Default layout for all other roles
   return (
     <SidebarProvider defaultOpen={true}>
@@ -328,9 +333,15 @@ export default function AuthenticatedLayout({
       </Sidebar>
       <SidebarInset>
         {currentUser && !isSuspendedDialogOpen && <AppHeader />}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-background min-h-[calc(100vh-4.5rem)] selection:bg-primary/20 selection:text-primary">
+        <main 
+          className={cn(
+            "flex-1 p-4 sm:p-6 lg:p-8 bg-background min-h-[calc(100vh-4.5rem)] selection:bg-primary/20 selection:text-primary",
+            showBottomNav && "pb-20" // Add padding to bottom if bottom nav is shown
+          )}
+        >
           {currentUser && !isSuspendedDialogOpen ? children : null}
         </main>
+        {showBottomNav && <BottomNavigation />}
       </SidebarInset>
 
       {isSuspendedDialogOpen && (
