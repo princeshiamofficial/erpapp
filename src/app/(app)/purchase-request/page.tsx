@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/tooltip";
 import type { PurchaseRequest, PurchaseRequestStatus, User } from '@/types';
 import { getPurchaseRequestsAction, deletePurchaseRequestAction } from './actions';
+import { getUsers } from '@/lib/user-service';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format, parseISO, isValid } from 'date-fns';
 
 const AddEditPurchaseRequestDialog = dynamic(() => import('@/components/purchase-request/AddEditPurchaseRequestDialog').then(mod => mod.AddEditPurchaseRequestDialog));
@@ -51,12 +53,21 @@ const formatDateSafe = (dateInput: string | Date | undefined | null, formatStrin
     }
 }
 
+const getInitials = (name: string | undefined): string => {
+  if (!name) return '??';
+  const names = name.split(' ');
+  if (names.length === 1) return names[0].charAt(0).toUpperCase();
+  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+};
+
+
 export default function PurchaseRequestPage() {
   const { currentUser } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
   const [requests, setRequests] = useState<PurchaseRequest[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -66,13 +77,17 @@ export default function PurchaseRequestPage() {
   const [requestToDelete, setRequestToDelete] = useState<PurchaseRequest | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchRequests = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const fetchedRequests = await getPurchaseRequestsAction();
+      const [fetchedRequests, fetchedUsers] = await Promise.all([
+        getPurchaseRequestsAction(),
+        getUsers()
+      ]);
       setRequests(fetchedRequests);
+      setAllUsers(fetchedUsers);
     } catch (error) {
-      toast({ title: "Error", description: "Could not load purchase requests.", variant: "destructive" });
+      toast({ title: "Error", description: "Could not load purchase requests or user data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -80,9 +95,9 @@ export default function PurchaseRequestPage() {
 
   useEffect(() => {
     if (currentUser) {
-      fetchRequests();
+      fetchData();
     }
-  }, [currentUser, fetchRequests]);
+  }, [currentUser, fetchData]);
 
   const filteredRequests = useMemo(() => {
     if (!currentUser) return [];
@@ -131,7 +146,7 @@ export default function PurchaseRequestPage() {
   const handleRequestSaved = () => {
     setIsAddEditOpen(false);
     setEditingRequest(null);
-    fetchRequests();
+    fetchData();
   };
 
   const handleDelete = async () => {
@@ -140,7 +155,7 @@ export default function PurchaseRequestPage() {
     const result = await deletePurchaseRequestAction(requestToDelete.id);
     if (result.success) {
       toast({ title: "Request Deleted", description: "The purchase request has been removed." });
-      fetchRequests();
+      fetchData();
     } else {
       toast({ title: "Error", description: result.error, variant: "destructive" });
     }
@@ -228,8 +243,8 @@ export default function PurchaseRequestPage() {
                         <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><div className="flex items-center gap-2"><Skeleton className="h-6 w-6 rounded-full" /><Skeleton className="h-5 w-24" /></div></TableCell>
+                        <TableCell><div className="flex items-center gap-2"><Skeleton className="h-6 w-6 rounded-full" /><Skeleton className="h-5 w-24" /></div></TableCell>
                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
                         <TableCell><Skeleton className="h-6 w-6 rounded-full" /></TableCell>
@@ -238,14 +253,35 @@ export default function PurchaseRequestPage() {
                     ))
                   ) : filteredRequests.length > 0 ? (
                     <TooltipProvider>
-                      {filteredRequests.map((req, index) => (
+                      {filteredRequests.map((req, index) => {
+                        const requester = allUsers.find(u => u.id === req.requestedByUserId);
+                        const approver = req.approvedByUserId ? allUsers.find(u => u.id === req.approvedByUserId) : null;
+                        return (
                         <TableRow key={req.id || `req-${index}`} className="hover:bg-muted/50 transition-colors">
                           <TableCell className="pl-6 font-mono text-sm text-primary">{req.requestId}</TableCell>
                           <TableCell className="text-card-foreground font-medium">{req.item}</TableCell>
                           <TableCell className="text-card-foreground">{req.quantity}</TableCell>
                           <TableCell className="text-card-foreground font-semibold">{formatCurrency(req.price)}</TableCell>
-                          <TableCell className="text-muted-foreground">{req.requestedByUserName}</TableCell>
-                          <TableCell className="text-muted-foreground">{req.approvedByUserName || 'N/A'}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6">
+                                    <AvatarImage src={requester?.avatarUrl || undefined} alt={req.requestedByUserName} />
+                                    <AvatarFallback className="text-xs">{getInitials(req.requestedByUserName)}</AvatarFallback>
+                                </Avatar>
+                                <span className="text-muted-foreground">{req.requestedByUserName}</span>
+                            </div>
+                          </TableCell>
+                           <TableCell>
+                             {req.approvedByUserName ? (
+                                <div className="flex items-center gap-2">
+                                    <Avatar className="h-6 w-6">
+                                        <AvatarImage src={approver?.avatarUrl || undefined} alt={req.approvedByUserName} />
+                                        <AvatarFallback className="text-xs">{getInitials(req.approvedByUserName)}</AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-muted-foreground">{req.approvedByUserName}</span>
+                                </div>
+                             ) : <span className="text-muted-foreground">N/A</span>}
+                          </TableCell>
                           <TableCell className="text-muted-foreground">
                             <Tooltip>
                               <TooltipTrigger>
@@ -295,7 +331,7 @@ export default function PurchaseRequestPage() {
                             )}
                           </TableCell>
                         </TableRow>
-                      ))}
+                      )})}
                     </TooltipProvider>
                   ) : (
                     <TableRow>
