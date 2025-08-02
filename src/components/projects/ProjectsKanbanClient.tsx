@@ -319,12 +319,6 @@ export function ProjectsKanbanClient({ initialProjects, initialStatuses, initial
       <div className="flex flex-col h-full space-y-4">
         {currentUser?.role !== 'LR' && (
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header pb-2 px-4 sm:px-0">
-            <div className="flex items-baseline gap-2">
-                <h1 className="page-title text-2xl sm:text-3xl">Projects Kanban</h1>
-            </div>
-            <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Projects">
-              <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
-            </Button>
           </div>
         )}
 
