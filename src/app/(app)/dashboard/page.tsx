@@ -45,13 +45,14 @@ import {
   Legend,
 } from 'recharts';
 import { ChartContainer } from '@/components/ui/chart';
-import type { TrackingLink, OrderItem, ServiceModelItem, User, Project, ProjectStatusType } from '@/types'; 
+import type { TrackingLink, OrderItem, ServiceModelItem, User, Project, ProjectStatusType, GlobalSettings } from '@/types'; 
 import { getOrders } from '@/lib/order-service';
 import { getModels } from '@/lib/service-options-service'; 
 import { useToast } from '@/hooks/use-toast';
 import { getUsers } from '@/lib/user-service';
 import { getProjects } from '@/lib/project-service';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { getGlobalSettings } from '@/lib/settings-service';
 
 const chartConfig = {
   sales: {
@@ -131,6 +132,17 @@ const ProjectStatusCard: React.FC<{ title: string; count: number; icon: React.El
   );
 }
 
+const ALL_PROJECT_STATUSES_CONFIG = [
+    { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, color: '#3b82f6' },
+    { title: 'Cancel', status: 'Cancel', icon: ClipboardX, color: '#ef4444' },
+    { title: 'On Design', status: 'On Design', icon: DraftingCompass, color: '#8b5cf6' },
+    { title: 'On Hold', status: 'On Hold', icon: PauseCircle, color: '#a1a1aa' },
+    { title: 'Logistics', status: 'Logistics', icon: Truck, color: '#f97316' },
+    { title: 'Courier', status: 'Courier', icon: CheckCircle, color: '#16a34a' },
+    { title: 'Delivered', status: 'Delivered', icon: PackageCheck, color: '#65a30d' },
+];
+
+
 export default function DashboardPage() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
@@ -140,6 +152,7 @@ export default function DashboardPage() {
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [allModels, setAllModels] = useState<ServiceModelItem[]>([]); 
   const [allCrmUsers, setAllCrmUsers] = useState<User[]>([]);
+  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
   const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Last 30 Days");
@@ -175,16 +188,18 @@ export default function DashboardPage() {
     }
     setIsLoadingData(true);
     try {
-      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects] = await Promise.all([ 
+      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings] = await Promise.all([ 
         getOrders(),
         getModels(),
         getUsers(),
         getProjects(),
+        getGlobalSettings(),
       ]);
       setAllOrders(fetchedOrders);
       setAllProjects(fetchedProjects);
       setAllModels(fetchedModels); 
       setAllCrmUsers(fetchedUsers.filter(u => u.role === 'CRM'));
+      setGlobalSettings(fetchedSettings);
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
       toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive" });
@@ -192,6 +207,7 @@ export default function DashboardPage() {
       setAllProjects([]);
       setAllModels([]);
       setAllCrmUsers([]);
+      setGlobalSettings(null);
     } finally {
       setIsLoadingData(false);
     }
@@ -370,7 +386,6 @@ export default function DashboardPage() {
   }
   
   if (!currentUser && !isAuthLoading) {
-    // This case should be handled by the layout now, but as a fallback:
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <p>Redirecting to login...</p>
@@ -429,15 +444,19 @@ export default function DashboardPage() {
 
   const canSelectCR = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
   
-  const projectStatusDisplayConfig = [
-    { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, color: '#3b82f6' },
-    { title: 'On Design', status: 'On Design', icon: DraftingCompass, color: '#8b5cf6' },
-    { title: 'Logistics', status: 'Logistics', icon: Truck, color: '#f97316' },
-    { title: 'Courier', status: 'Courier', icon: CheckCircle, color: '#16a34a' },
-    { title: 'Delivered', status: 'Delivered', icon: PackageCheck, color: '#65a30d' },
-    { title: 'On Hold', status: 'On Hold', icon: PauseCircle, color: '#a1a1aa' },
-    { title: 'Cancel', status: 'Cancel', icon: ClipboardX, color: '#ef4444' },
-  ];
+  const visibleProjectStatusDisplayConfig = useMemo(() => {
+    if (isLoadingContent || !currentUser || !globalSettings?.projectStageAccess) {
+        return [];
+    }
+    if (currentUser.role === 'SYSTEM_ADMIN') {
+        return ALL_PROJECT_STATUSES_CONFIG;
+    }
+    const userPermissions = globalSettings.projectStageAccess;
+    return ALL_PROJECT_STATUSES_CONFIG.filter(column => 
+        userPermissions[column.status as ProjectStatusType]?.includes(currentUser.role)
+    );
+  }, [currentUser, globalSettings, isLoadingContent]);
+
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -607,7 +626,7 @@ export default function DashboardPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-              {projectStatusDisplayConfig.map(statusInfo => (
+              {visibleProjectStatusDisplayConfig.map(statusInfo => (
                 <ProjectStatusCard 
                   key={statusInfo.status}
                   title={statusInfo.title}
@@ -622,4 +641,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
