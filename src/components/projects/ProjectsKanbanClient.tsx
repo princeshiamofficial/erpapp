@@ -4,7 +4,17 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Project, ProjectStatusType, CustomStatus, User, GlobalSettings } from '@/types'; 
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
-import { Briefcase, RefreshCw } from 'lucide-react'; 
+import { 
+  Briefcase, 
+  RefreshCw,
+  ClipboardCheck, // Added
+  ClipboardX,      // Added
+  DraftingCompass, // Added
+  PauseCircle,     // Added
+  Truck,           // Added
+  CheckCircle,     // Added
+  PackageCheck     // Added
+} from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
