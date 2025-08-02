@@ -40,6 +40,7 @@ import { getProjects } from '@/lib/project-service';
 import { getStatuses } from '@/lib/status-service'; 
 import { getGlobalSettings } from '@/lib/settings-service';
 import type { TrackingLink } from '@/types';
+import { Briefcase } from 'lucide-react';
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
 
@@ -314,12 +315,7 @@ export function ProjectsKanbanClient({ initialProjects, initialStatuses, initial
         onDragCancel={handleDragCancel}
         collisionDetection={closestCorners}
     >
-      <div className="flex flex-col h-full">
-        {currentUser?.role !== 'LR' && (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2 px-4 sm:px-0">
-          </div>
-        )}
-
+      <div className="flex flex-col h-full gap-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 sm:px-0">
           <Input
             placeholder="Search projects (ID, Name, Assignee, DR)..."
@@ -347,7 +343,7 @@ export function ProjectsKanbanClient({ initialProjects, initialStatuses, initial
         </div>
 
         <div className="flex-1 overflow-x-auto pb-4">
-          <div className="flex space-x-4 min-w-max px-4 sm:px-0">
+          <div className="flex space-x-4 min-w-max px-4 sm:px-0 h-full">
             {visibleKanbanColumns.map((col) => (
               <KanbanColumn
                 key={col.status}
