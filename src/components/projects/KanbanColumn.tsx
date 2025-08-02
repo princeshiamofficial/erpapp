@@ -42,19 +42,19 @@ export function KanbanColumn({
     <div 
       ref={setNodeRef}
       className={cn(
-        "w-[300px] shrink-0 flex flex-col bg-muted/30 rounded-lg overflow-hidden transition-all duration-200 ease-in-out",
+        "w-[300px] shrink-0 flex flex-col bg-muted/30 rounded-lg overflow-hidden transition-all duration-200 ease-in-out h-full",
         isOver ? 'border-primary ring-2 ring-primary shadow-xl scale-[1.01]' : 'border-border/30 shadow-sm' 
       )}
     >
-      <div className={`px-3 py-2.5 flex items-center justify-between ${headerBgClass} ${headerTextClass} rounded-t-lg`}>
+      <div className={`px-3 py-2.5 flex items-center justify-between ${headerBgClass} ${headerTextClass} rounded-t-lg shrink-0`}>
         <div className="flex items-center">
           <Icon className={`mr-2 h-4 w-4 ${headerIconClass}`} />
           <h2 className="font-semibold text-sm tracking-wide">{title}</h2>
         </div>
         <span className="text-xs px-2 py-0.5 bg-black/20 rounded-full">{isLoading ? <Skeleton className="h-4 w-4 inline-block" /> : projects.length}</span>
       </div>
-      <ScrollArea className="flex-1 p-3 bg-background/10 custom-scrollbar">
-        <div className="space-y-3">
+      <ScrollArea className="flex-1 bg-background/10 custom-scrollbar">
+        <div className="space-y-3 p-3">
         {isLoading && projects.length === 0 ? (
           <div className="space-y-3">
             <Skeleton className="h-20 w-full rounded-md" />
@@ -80,5 +80,3 @@ export function KanbanColumn({
     </div>
   );
 }
-    
-    

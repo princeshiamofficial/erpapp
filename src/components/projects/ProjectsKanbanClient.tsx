@@ -315,7 +315,7 @@ export function ProjectsKanbanClient({ initialProjects, initialStatuses, initial
         onDragCancel={handleDragCancel}
         collisionDetection={closestCorners}
     >
-      <div className="flex flex-col h-full gap-4">
+      <div className="flex flex-col h-full">
         {/* Filter Section */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 sm:px-0">
           <Input
@@ -344,7 +344,7 @@ export function ProjectsKanbanClient({ initialProjects, initialStatuses, initial
         </div>
 
         {/* Kanban Board Section */}
-        <div className="flex-1 overflow-x-auto pb-4 h-[calc(100vh-200px)]">
+        <div className="flex-1 mt-4 overflow-x-auto pb-4">
           <div className="flex space-x-4 h-full min-w-max px-4 sm:px-0">
             {visibleKanbanColumns.map((col) => (
               <KanbanColumn
