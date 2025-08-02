@@ -212,8 +212,8 @@ export default function PurchaseRequestPage() {
                     <TableHead>Item</TableHead>
                     <TableHead>Qty</TableHead>
                     <TableHead>Price</TableHead>
-                    <TableHead>Requested By</TableHead>
-                    <TableHead>Approved By</TableHead>
+                    <TableHead>Requested</TableHead>
+                    <TableHead>Approved</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Notes</TableHead>
