@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,30 +16,42 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import type { TrackingLink, User } from '@/types'; // Import User
+import type { TrackingLink, User, CustomStatus } from '@/types';
 import { addTaskAction, updateTaskAction } from '@/app/(app)/print-report/actions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface AddEditTaskDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onTaskSaved: () => void;
   task?: TrackingLink | null;
-  currentUser: User; // Add currentUser prop
+  currentUser: User;
+  allStatuses: CustomStatus[];
 }
 
-export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, currentUser }: AddEditTaskDialogProps) {
+const PRINT_STATUSES = ['Waiting', 'Printed'];
+
+export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, currentUser, allStatuses }: AddEditTaskDialogProps) {
   const [taskNotes, setTaskNotes] = useState('');
+  const [currentStatus, setCurrentStatus] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   const isEditMode = !!task;
 
+  const availableStatuses = useMemo(() => {
+    const combined = new Set(allStatuses.map(s => s.id).concat(PRINT_STATUSES));
+    return Array.from(combined);
+  }, [allStatuses]);
+
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && task) {
         setTaskNotes(task.orderNotes || '');
+        setCurrentStatus(task.currentStatus);
       } else {
         setTaskNotes('');
+        setCurrentStatus('Waiting'); // Default to 'Waiting' for new tasks
       }
     }
   }, [isOpen, task, isEditMode]);
@@ -50,30 +62,30 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
     setIsSubmitting(true);
     let result;
 
+    const updates: Partial<Omit<TrackingLink, 'id'>> = {
+      orderNotes: taskNotes || null,
+      updatedAt: new Date().toISOString(),
+      updatedByUserId: currentUser.id,
+      updatedByUserName: currentUser.name,
+      currentStatus: currentStatus,
+    };
+
     if (isEditMode && task) {
-      const updates: Partial<TrackingLink> = {
-        orderNotes: taskNotes || null,
-        updatedAt: new Date().toISOString(),
-        updatedByUserId: currentUser.id,
-        updatedByUserName: currentUser.name,
-      };
-      // Keep existing crm user info
       updates.crmUserId = task.crmUserId;
       updates.crmUserName = task.crmUserName;
       
       result = await updateTaskAction(task.id, updates);
     } else {
-      const newTaskData: Omit<TrackingLink, 'id' | 'crmUserId' | 'crmUserName'> = {
+      const newTaskData = {
         companyName: "New Task (Details pending)",
         address: "N/A",
         phoneNumber: "N/A",
         orderItems: [],
         createdAt: new Date().toISOString(),
         isPublic: false,
-        currentStatus: "order-submitted", // Default status
         statusHistory: [],
         comments: [],
-        orderNotes: taskNotes || null,
+        ...updates
       };
       result = await addTaskAction(newTaskData, currentUser);
     }
@@ -107,6 +119,20 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
            <div className="space-y-1">
             <Label htmlFor="task-notes">Notes</Label>
             <Textarea id="task-notes" value={taskNotes} onChange={e => setTaskNotes(e.target.value)} placeholder="Add any relevant notes..."/>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="status">Status</Label>
+            <Select value={currentStatus} onValueChange={setCurrentStatus}>
+              <SelectTrigger id="status">
+                <SelectValue placeholder="Select a status" />
+              </SelectTrigger>
+              <SelectContent>
+                {PRINT_STATUSES.map(status => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                ))}
+                <SelectItem value="order-submitted" disabled>Order Submitted</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>

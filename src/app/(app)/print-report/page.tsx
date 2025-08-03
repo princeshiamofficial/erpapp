@@ -14,7 +14,7 @@ import type { TrackingLink, OrderItem, User, CustomStatus } from '@/types';
 import { assignMeToAction, deleteOrderAction } from './actions';
 import { getOrdersForReport } from '@/lib/report-service';
 import { getUsers } from '@/lib/user-service'; 
-import { getStatuses, getContrastTextColor } from '@/lib/status-service'; // Import status helpers
+import { getStatuses, getContrastTextColor } from '@/lib/status-service';
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 import {
@@ -26,7 +26,7 @@ import {
 import { useAuth } from '@/contexts/auth-context';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge'; // Import Badge component
+import { Badge } from '@/components/ui/badge';
 
 const AddEditTaskDialog = dynamic(() => import('@/components/print-report/AddEditTaskDialog').then(mod => mod.AddEditTaskDialog));
 
@@ -51,7 +51,7 @@ interface PrintReportItem {
 export default function PrintReportPage() {
   const [reportItems, setReportItems] = useState<PrintReportItem[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]); // State for statuses
+  const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
@@ -70,11 +70,11 @@ export default function PrintReportPage() {
       const [fetchedOrders, fetchedUsers, fetchedStatuses] = await Promise.all([
         getOrdersForReport({ limit: 500, orderBy: 'createdAt', direction: 'desc' }),
         getUsers(),
-        getStatuses() // Fetch statuses
+        getStatuses()
       ]);
       
       setAllUsers(fetchedUsers);
-      setAllStatuses(fetchedStatuses); // Set statuses state
+      setAllStatuses(fetchedStatuses);
       const userMap = new Map(fetchedUsers.map(u => [u.id, u]));
 
       const flattenedItems: PrintReportItem[] = fetchedOrders.map(order => {
@@ -120,6 +120,10 @@ export default function PrintReportPage() {
     if (status) {
       return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
     }
+    // Fallback for statuses not in DB, like potentially "Waiting" or "Printed" if not added
+    if (statusId.toLowerCase() === 'waiting') return { name: 'Waiting', color: '#FBBF24', textColor: '#000000' };
+    if (statusId.toLowerCase() === 'printed') return { name: 'Printed', color: '#34D399', textColor: '#000000' };
+
     return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' };
   }, [allStatuses]);
 
@@ -142,7 +146,6 @@ export default function PrintReportPage() {
   const handleAssignMe = async (order: TrackingLink) => {
     if (!currentUser) return;
     
-    // Optimistic update
     setReportItems(prevItems => prevItems.map(item => 
       item.orderId === order.id 
         ? { ...item, assignedLrName: currentUser.name, assignedLrAvatarUrl: currentUser.avatarUrl, originalOrder: { ...item.originalOrder, designerRepresentativeId: currentUser.id, designerRepresentativeName: currentUser.name } }
@@ -156,7 +159,6 @@ export default function PrintReportPage() {
         description: result.error || "Could not assign task.",
         variant: "destructive",
       });
-      // Revert optimistic update
       setReportItems(prevItems => prevItems.map(item =>
         item.orderId === order.id ? { ...item, assignedLrName: order.designerRepresentativeName || 'N/A', assignedLrAvatarUrl: allUsers.find(u => u.id === order.designerRepresentativeId)?.avatarUrl, originalOrder: order } : item
       ));
@@ -342,7 +344,8 @@ export default function PrintReportPage() {
           onOpenChange={setIsAddEditOpen}
           onTaskSaved={handleTaskSaved}
           task={editingTask}
-          currentUser={currentUser} 
+          currentUser={currentUser}
+          allStatuses={allStatuses}
         />
       )}
 

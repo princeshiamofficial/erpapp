@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { TrackingLink, User } from '@/types';
-import { getOrdersForReport, addTask, updateTask, getTaskById as getOrderFromReportService, deleteDoc as deleteOrderFromReportService } from '@/lib/report-service'; // Use report-service functions
+import { getOrdersForReport, addTask as addTaskToReportService, updateTask as updateTaskInReportService, getTaskById as getOrderFromReportService, deleteDoc as deleteOrderFromReportService } from '@/lib/report-service'; // Use report-service functions
 
 export interface ReportData {
   title: string;
@@ -49,7 +49,7 @@ export async function addTaskAction(
       orderItems: [],
       createdAt: new Date().toISOString(),
       isPublic: false,
-      currentStatus: "order-submitted", 
+      currentStatus: taskData.currentStatus || "Waiting", 
       statusHistory: [],
       comments: [],
       ...taskData,
@@ -57,7 +57,7 @@ export async function addTaskAction(
       crmUserName: currentUser.name,
     };
 
-    const newTask = await addTask(completeTaskData as Omit<TrackingLink, 'id'>);
+    const newTask = await addTaskToReportService(completeTaskData as Omit<TrackingLink, 'id'>);
     if (newTask) {
       revalidatePath('/(app)/print-report');
       return { success: true, task: newTask };
@@ -74,7 +74,7 @@ export async function updateTaskAction(
   updates: Partial<Omit<TrackingLink, 'id'>>
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const success = await updateTask(taskId, updates);
+    const success = await updateTaskInReportService(taskId, updates);
     if (success) {
       revalidatePath('/(app)/print-report');
       return { success: true };
@@ -102,7 +102,7 @@ export async function assignMeToAction(
       updatedByUserId: currentUser.id,
       updatedByUserName: currentUser.name,
     };
-    const success = await updateTask(orderId, updates);
+    const success = await updateTaskInReportService(orderId, updates);
     if (success) {
       revalidatePath('/(app)/print-report');
       revalidatePath('/(app)/projects');
