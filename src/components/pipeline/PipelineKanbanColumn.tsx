@@ -18,6 +18,7 @@ interface PipelineKanbanColumnProps {
   isLoading?: boolean;
   currentUser: User | null;
   onEditLead: (lead: Lead) => void;
+  allCrmUsers: User[]; // Added prop
 }
 
 export function PipelineKanbanColumn({
@@ -29,6 +30,7 @@ export function PipelineKanbanColumn({
   isLoading = false,
   currentUser,
   onEditLead,
+  allCrmUsers, // Added prop
 }: PipelineKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
@@ -59,14 +61,18 @@ export function PipelineKanbanColumn({
               <p className="text-xs text-muted-foreground text-center italic">No leads in this stage.</p>
             </div>
           ) : (
-            leads.map(lead => (
-              <LeadCard
-                key={lead.id}
-                lead={lead}
-                currentUser={currentUser}
-                onEditLead={onEditLead}
-              />
-            ))
+            leads.map(lead => {
+              const crmUser = allCrmUsers.find(u => u.id === lead.crmId);
+              return (
+                <LeadCard
+                  key={lead.id}
+                  lead={lead}
+                  currentUser={currentUser}
+                  onEditLead={onEditLead}
+                  crmAvatarUrl={crmUser?.avatarUrl || undefined} // Pass avatar URL
+                />
+              )
+            })
           )}
         </div>
       </ScrollArea>

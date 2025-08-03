@@ -211,13 +211,14 @@ export default function PipeLinePage() {
                 isLoading={isLoading}
                 currentUser={currentUser}
                 onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }}
+                allCrmUsers={allCrmUsers}
               />
             ))}
           </div>
         </div>
       </div>
       <DragOverlay dropAnimation={null}>
-        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onEditLead={() => {}} /> : null}
+        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onEditLead={() => {}} crmAvatarUrl={allCrmUsers.find(u => u.id === activeLead.crmId)?.avatarUrl} /> : null}
       </DragOverlay>
 
       <AddEditLeadDialog

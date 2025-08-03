@@ -16,6 +16,7 @@ interface LeadCardProps {
   isOverlay?: boolean;
   currentUser: User | null;
   onEditLead: (lead: Lead) => void;
+  crmAvatarUrl?: string; // Added prop
 }
 
 const getInitials = (name: string | undefined) => {
@@ -25,7 +26,7 @@ const getInitials = (name: string | undefined) => {
   return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
-export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead }: LeadCardProps) {
+export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crmAvatarUrl }: LeadCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: lead.id,
     data: { lead },
@@ -76,6 +77,7 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead }: L
           <p className="text-xs text-muted-foreground truncate">{lead.businessName}</p>
           <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
             <Avatar className="h-6 w-6 text-xs">
+              <AvatarImage src={crmAvatarUrl || undefined} alt={lead.crmName} />
               <AvatarFallback>{getInitials(lead.crmName)}</AvatarFallback>
             </Avatar>
             <span>{lead.phone}</span>
