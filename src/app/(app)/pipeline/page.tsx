@@ -24,8 +24,8 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; category: LeadCategory; icon
   { title: 'POP', category: 'POP', icon: UserIcon, headerBgClass: 'bg-sky-600' },
   { title: 'POG', category: 'POG', icon: Users, headerBgClass: 'bg-blue-600' },
   { title: 'OC', category: 'OC', icon: BaggageClaim, headerBgClass: 'bg-purple-600' },
-  { title: 'OD', category: 'OD', icon: ShoppingCart, headerBgClass: 'bg-orange-600' },
-  { title: 'B2B', category: 'B2B', icon: Briefcase, headerBgClass: 'bg-green-600' },
+  { title: 'OD', category: 'OD', icon: ShoppingCart, headerBgClass: 'bg-green-600' },
+  { title: 'B2B', category: 'B2B', icon: Briefcase, headerBgClass: 'bg-orange-600' },
 ];
 
 export default function PipeLinePage() {
