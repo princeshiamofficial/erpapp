@@ -130,7 +130,6 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
                 {PRINT_STATUSES.map(status => (
                   <SelectItem key={status} value={status}>{status}</SelectItem>
                 ))}
-                <SelectItem value="order-submitted" disabled>Order Submitted</SelectItem>
               </SelectContent>
             </Select>
           </div>
