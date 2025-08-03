@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -53,6 +52,8 @@ import { getUsers } from '@/lib/user-service';
 import { getProjects } from '@/lib/project-service';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { getGlobalSettings } from '@/lib/settings-service';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const chartConfig = {
   sales: {
@@ -107,30 +108,6 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
   );
 };
 
-const ProjectStatusCard: React.FC<{ title: string; count: number; icon: React.ElementType; color: string; isLoading: boolean; }> = ({ title, count, icon: Icon, color, isLoading }) => {
-  if (isLoading) {
-    return (
-        <div className="flex items-center gap-3 p-3 bg-card rounded-lg shadow-sm">
-            <Skeleton className="h-8 w-8 rounded-md" />
-            <div className="space-y-1.5">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-5 w-10" />
-            </div>
-        </div>
-    )
-  }
-  return (
-    <div className="flex items-center gap-3 p-3 bg-card rounded-lg shadow-sm hover:shadow-md transition-shadow">
-      <div className="p-2 rounded-md" style={{ backgroundColor: `${color}1A`, color }}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div>
-        <p className="text-xs text-muted-foreground">{title}</p>
-        <p className="font-bold text-lg text-foreground">{count}</p>
-      </div>
-    </div>
-  );
-}
 
 const ALL_PROJECT_STATUSES_CONFIG = [
     { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, color: '#3b82f6' },
@@ -253,7 +230,7 @@ export default function DashboardPage() {
 
     if (currentUser?.role === 'CRM') {
         projectsToCount = allProjects.filter(p => p.assigneeId === currentUser.id);
-    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
+    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR') {
         projectsToCount = allProjects.filter(p => p.designerRepresentativeId === currentUser.id);
     }
 
@@ -627,26 +604,129 @@ export default function DashboardPage() {
         </>
       )}
 
-        <Card className="shadow-xl bg-card">
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl text-foreground">
-                <Briefcase className="mr-2 h-6 w-6 text-primary" />
-                Project Status Overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-              {visibleProjectStatusDisplayConfig.map(statusInfo => (
-                <ProjectStatusCard 
-                  key={statusInfo.status}
-                  title={statusInfo.title}
-                  count={projectCounts[statusInfo.status as ProjectStatusType]}
-                  icon={statusInfo.icon}
-                  color={statusInfo.color}
-                  isLoading={isLoadingContent}
-                />
-              ))}
-            </CardContent>
-        </Card>
+      <Card className="shadow-xl bg-card">
+        <CardHeader>
+          <CardTitle className="flex items-center text-xl text-foreground">
+            <Briefcase className="mr-2 h-6 w-6 text-primary" />
+            Project Status Overview
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ProjectStatusTimeline
+            projectCounts={projectCounts}
+            visibleSteps={visibleProjectStatusDisplayConfig}
+            isLoading={isLoadingContent}
+          />
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
+// New Timeline Component
+interface ProjectStatusTimelineProps {
+  projectCounts: Record<ProjectStatusType, number>;
+  visibleSteps: { title: string; status: ProjectStatusType; color: string }[];
+  isLoading: boolean;
+}
+
+const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCounts, visibleSteps, isLoading }) => {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const timelineSteps = visibleSteps.map((step, index) => ({
+    ...step,
+    count: projectCounts[step.status],
+    gradient: `linear-gradient(to right, ${step.color}, ${visibleSteps[index + 1]?.color || step.color})`,
+    shadowColor: step.color,
+  }));
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveIndex((prevIndex) => (prevIndex + 1) % timelineSteps.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [timelineSteps.length]);
+  
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-between p-4">
+        {[...Array(7)].map((_, i) => (
+          <div key={i} className="flex flex-col items-center gap-2">
+            <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-4 w-16" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (timelineSteps.length === 0) {
+    return (
+      <div className="text-center text-muted-foreground p-8">
+        No project stages are visible for your role.
+      </div>
+    );
+  }
+
+  const progressPercentage = (activeIndex / (timelineSteps.length - 1)) * 100;
+
+  return (
+    <div className="relative w-full p-8">
+      <div className="relative h-1 bg-muted rounded-full">
+        <motion.div
+          className="absolute top-0 left-0 h-full rounded-full"
+          style={{ background: timelineSteps[activeIndex].gradient }}
+          animate={{ width: `${progressPercentage}%` }}
+          transition={{ duration: 0.5, ease: 'easeInOut' }}
+        >
+          <motion.div
+            className="absolute right-0 top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-white"
+            style={{
+              boxShadow: `0 0 12px 3px ${timelineSteps[activeIndex].shadowColor}`,
+            }}
+            animate={{
+              scale: [1, 1.2, 1],
+            }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+            }}
+          />
+        </motion.div>
+      </div>
+
+      <div className="flex justify-between items-start mt-4">
+        {timelineSteps.map((step, index) => (
+          <motion.div
+            key={step.status}
+            className="flex flex-col items-center text-center w-24"
+            animate={{ scale: activeIndex === index ? 1.1 : 1 }}
+            transition={{ type: 'spring', stiffness: 300 }}
+          >
+            <div
+              className="h-6 w-6 rounded-full border-2 mb-2 flex items-center justify-center transition-all duration-300"
+              style={{
+                borderColor: step.color,
+                backgroundColor: activeIndex >= index ? step.color : 'hsl(var(--muted))',
+              }}
+            >
+              <AnimatePresence>
+                {activeIndex === index && (
+                  <motion.div
+                    className="h-3 w-3 rounded-full bg-white"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+            <p className="text-xs font-medium text-muted-foreground break-words">{step.title}</p>
+            <p className="text-xl font-bold" style={{ color: step.color }}>
+              {step.count}
+            </p>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+};
