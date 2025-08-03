@@ -5,19 +5,25 @@ import type { Lead, User } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Edit, CalendarDays } from 'lucide-react';
+import { Edit, CalendarDays, MapPin, StickyNote, Briefcase } from 'lucide-react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface LeadCardProps {
   lead: Lead;
   isOverlay?: boolean;
   currentUser: User | null;
   onEditLead: (lead: Lead) => void;
-  crmAvatarUrl?: string; // Added prop
+  crmAvatarUrl?: string;
 }
 
 const getInitials = (name: string | undefined) => {
@@ -91,6 +97,16 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crm
             <CalendarDays className="mr-1.5 h-3 w-3" />
             <span>{formatDateSafe(lead.date)}</span>
           </div>
+           
+           <div className="flex items-center text-xs text-muted-foreground pt-1">
+            <Briefcase className="mr-1.5 h-3 w-3" />
+            <span>Source: {lead.source}</span>
+          </div>
+
+          <div className="flex items-start text-xs text-muted-foreground pt-1">
+            <MapPin className="mr-1.5 h-3 w-3 mt-0.5 shrink-0" />
+            <span className="truncate">{lead.address}</span>
+          </div>
 
           {lead.schedule && (
             <div className="flex items-center text-xs text-blue-600 dark:text-blue-400 font-medium pt-1">
@@ -100,11 +116,27 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crm
           )}
 
           <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-            <Avatar className="h-6 w-6 text-xs">
-              <AvatarImage src={crmAvatarUrl || undefined} alt={lead.crmName} />
-              <AvatarFallback>{getInitials(lead.crmName)}</AvatarFallback>
-            </Avatar>
-            <span>{lead.phone}</span>
+            <div className="flex items-center">
+              <Avatar className="h-6 w-6 text-xs mr-2">
+                <AvatarImage src={crmAvatarUrl || undefined} alt={lead.crmName} />
+                <AvatarFallback>{getInitials(lead.crmName)}</AvatarFallback>
+              </Avatar>
+              <span>{lead.phone}</span>
+            </div>
+            {lead.notes && (
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={e => e.stopPropagation()}>
+                                <StickyNote className="h-3.5 w-3.5" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p className="max-w-xs whitespace-pre-wrap">{lead.notes}</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            )}
           </div>
         </CardContent>
       </Card>

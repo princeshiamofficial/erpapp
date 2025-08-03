@@ -18,7 +18,7 @@ interface PipelineKanbanColumnProps {
   isLoading?: boolean;
   currentUser: User | null;
   onEditLead: (lead: Lead) => void;
-  allCrmUsers: User[]; // Added prop
+  allCrmUsers: User[];
 }
 
 export function PipelineKanbanColumn({
@@ -30,7 +30,7 @@ export function PipelineKanbanColumn({
   isLoading = false,
   currentUser,
   onEditLead,
-  allCrmUsers, // Added prop
+  allCrmUsers,
 }: PipelineKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
@@ -69,7 +69,7 @@ export function PipelineKanbanColumn({
                   lead={lead}
                   currentUser={currentUser}
                   onEditLead={onEditLead}
-                  crmAvatarUrl={crmUser?.avatarUrl || undefined} // Pass avatar URL
+                  crmAvatarUrl={crmUser?.avatarUrl || undefined}
                 />
               )
             })
