@@ -13,7 +13,7 @@ import { getUsers } from '@/lib/user-service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, UserCheck, MessageSquare, PhoneCall, Briefcase, Tv, ShoppingBag } from 'lucide-react';
+import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, UserCheck, MessageSquare, PhoneCall, Briefcase, Tv, Contact } from 'lucide-react';
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
 import { LeadCard } from '@/components/pipeline/LeadCard';
 
@@ -21,7 +21,7 @@ const AddEditLeadDialog = dynamic(() => import('@/components/pipeline/AddEditLea
 const ImportLeadsDialog = dynamic(() => import('@/components/pipeline/ImportLeadsDialog').then(mod => mod.ImportLeadsDialog));
 
 const KANBAN_COLUMNS_CONFIG: Array<{ title: string; category: LeadCategory; icon: React.ElementType; headerBgClass: string }> = [
-  { title: 'POP', category: 'POP', icon: ShoppingBag, headerBgClass: 'bg-sky-600' },
+  { title: 'POP', category: 'POP', icon: Contact, headerBgClass: 'bg-sky-600' },
   { title: 'POG', category: 'POG', icon: Tv, headerBgClass: 'bg-blue-600' },
   { title: 'OC', category: 'OC', icon: UserCheck, headerBgClass: 'bg-purple-600' },
   { title: 'OD', category: 'OD', icon: MessageSquare, headerBgClass: 'bg-orange-600' },
