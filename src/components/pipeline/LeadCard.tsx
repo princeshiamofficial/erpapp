@@ -103,10 +103,19 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crm
             <span>Source: {lead.source}</span>
           </div>
 
-          <div className="flex items-start text-xs text-muted-foreground pt-1">
-            <MapPin className="mr-1.5 h-3 w-3 mt-0.5 shrink-0" />
-            <span className="truncate">{lead.address}</span>
-          </div>
+          <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <div className="flex items-start text-xs text-muted-foreground pt-1 cursor-help">
+                        <MapPin className="mr-1.5 h-3 w-3 mt-0.5 shrink-0" />
+                        <span className="truncate">{lead.address}</span>
+                    </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p className="max-w-xs whitespace-pre-wrap">{lead.address}</p>
+                </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           {lead.schedule && (
             <div className="flex items-center text-xs text-blue-600 dark:text-blue-400 font-medium pt-1">
