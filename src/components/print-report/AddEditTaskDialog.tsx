@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface AddEditTaskDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onTaskSaved: () => void;
+  onTaskSaved: (task: TrackingLink) => void;
   task?: TrackingLink | null;
   currentUser: User;
   allStatuses: CustomStatus[];
@@ -40,9 +40,9 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
   const isEditMode = !!task;
 
   const availableStatuses = useMemo(() => {
-    const combined = new Set(allStatuses.map(s => s.id).concat(PRINT_STATUSES));
-    return Array.from(combined);
-  }, [allStatuses]);
+    // Show only "Waiting" and "Printed" in the dropdown.
+    return PRINT_STATUSES;
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -92,9 +92,9 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
     
     setIsSubmitting(false);
 
-    if (result.success) {
+    if (result.success && result.task) {
       toast({ title: `Task ${isEditMode ? 'Updated' : 'Created'}`, description: "The task has been saved." });
-      onTaskSaved();
+      onTaskSaved(result.task); // Pass the new/updated task back to the parent
     } else {
       toast({ title: "Error", description: result.error || "Could not save the task.", variant: "destructive" });
     }
@@ -127,7 +127,7 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
                 <SelectValue placeholder="Select a status" />
               </SelectTrigger>
               <SelectContent>
-                {PRINT_STATUSES.map(status => (
+                {availableStatuses.map(status => (
                   <SelectItem key={status} value={status}>{status}</SelectItem>
                 ))}
               </SelectContent>

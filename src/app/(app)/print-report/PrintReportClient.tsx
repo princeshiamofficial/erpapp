@@ -149,10 +149,33 @@ export function PrintReportClient({ initialOrders, initialUsers, initialStatuses
     setIsAddEditOpen(true);
   };
   
-  const handleTaskSaved = () => {
+  const handleTaskSaved = (updatedTask: TrackingLink) => {
+    const isEditing = !!editingTask;
     setIsAddEditOpen(false);
     setEditingTask(null);
-    fetchReportData(); 
+
+    const userMap = new Map(allUsers.map(u => [u.id, u]));
+    const creator = userMap.get(updatedTask.crmUserId);
+    const assignedLr = updatedTask.designerRepresentativeId ? userMap.get(updatedTask.designerRepresentativeId) : null;
+    
+    const newReportItem: PrintReportItem = {
+      orderId: updatedTask.id,
+      projectIdDisplay: updatedTask.projectIdDisplay || updatedTask.id,
+      orderDate: updatedTask.createdAt,
+      creatorName: updatedTask.crmUserName,
+      creatorAvatarUrl: creator?.avatarUrl,
+      assignedLrName: updatedTask.designerRepresentativeName || 'N/A',
+      assignedLrAvatarUrl: assignedLr?.avatarUrl,
+      originalOrder: updatedTask,
+    };
+
+    if (isEditing) {
+      setReportItems(prevItems =>
+        prevItems.map(item => (item.orderId === updatedTask.id ? newReportItem : item))
+      );
+    } else {
+      setReportItems(prevItems => [newReportItem, ...prevItems]);
+    }
   };
 
   const handleAssignMe = async (order: TrackingLink) => {
@@ -194,7 +217,7 @@ export function PrintReportClient({ initialOrders, initialUsers, initialStatuses
     if (result.success) {
         toast({ title: "Task Deleted", description: "The task has been successfully removed." });
         setTaskToDelete(null);
-        fetchReportData();
+        setReportItems(prev => prev.filter(item => item.orderId !== taskToDelete.id)); // Optimistic UI update
     } else {
         toast({ title: "Deletion Failed", description: result.error || "Could not delete the task.", variant: "destructive" });
     }

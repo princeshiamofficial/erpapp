@@ -59,7 +59,7 @@ export async function addTaskAction(
 
     const newTask = await addTaskToReportService(completeTaskData as Omit<TrackingLink, 'id'>);
     if (newTask) {
-      revalidatePath('/(app)/print-report');
+      // No revalidation needed for optimistic UI
       return { success: true, task: newTask };
     }
     return { success: false, error: "Failed to add task to database." };
@@ -72,12 +72,13 @@ export async function addTaskAction(
 export async function updateTaskAction(
   taskId: string,
   updates: Partial<Omit<TrackingLink, 'id'>>
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; task?: TrackingLink; error?: string }> {
   try {
     const success = await updateTaskInReportService(taskId, updates);
     if (success) {
-      revalidatePath('/(app)/print-report');
-      return { success: true };
+      const updatedTask = await getOrderFromReportService(taskId); // Fetch the updated task to return
+      // No revalidation needed for optimistic UI
+      return { success: true, task: updatedTask ?? undefined };
     }
     return { success: false, error: "Failed to update task in database." };
   } catch (error) {
@@ -121,7 +122,7 @@ export async function deleteOrderAction(orderId: string): Promise<{ success: boo
   try {
     const success = await deleteOrderFromReportService(orderId);
     if (success) {
-      revalidatePath("/(app)/print-report");
+      // No revalidation needed for optimistic UI
       return { success: true };
     }
     return { success: false, error: "Failed to delete the task from the database." };
