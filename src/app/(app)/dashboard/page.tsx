@@ -34,6 +34,8 @@ import {
   CheckCircle,
   PackageCheck,
   PieChart as PieChartIcon,
+  User as UserIcon, // Added for new section
+  BaggageClaim, // Added for new section
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -49,7 +51,7 @@ import {
   Cell,
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart';
-import type { TrackingLink, OrderItem, ServiceModelItem, User, Project, ProjectStatusType, GlobalSettings, Lead } from '@/types'; 
+import type { TrackingLink, OrderItem, ServiceModelItem, User, Project, ProjectStatusType, GlobalSettings, Lead, LeadCategory } from '@/types'; 
 import { getOrders } from '@/lib/order-service';
 import { getModels } from '@/lib/service-options-service'; 
 import { useToast } from '@/hooks/use-toast';
@@ -132,6 +134,14 @@ const ALL_PROJECT_STATUSES_CONFIG: Array<{ title: string; status: ProjectStatusT
     { title: 'Logistics', status: 'Logistics', icon: Truck, color: '#78350f', gradient: 'linear-gradient(to right, #78350f, #a16207)', shadow: '0 4px 15px 0 rgba(120, 53, 15, 0.4)' },
     { title: 'Courier', status: 'Courier', icon: CheckCircle, color: '#16a34a', gradient: 'linear-gradient(to right, #16a34a, #4ade80)', shadow: '0 4px 15px 0 rgba(22, 163, 74, 0.4)' },
     { title: 'Delivered', status: 'Delivered', icon: PackageCheck, color: '#65a30d', gradient: 'linear-gradient(to right, #65a30d, #84cc16)', shadow: '0 4px 15px 0 rgba(101, 163, 13, 0.4)' },
+];
+
+const ALL_LEAD_CATEGORIES_CONFIG: Array<{ title: string; category: LeadCategory; icon: React.ElementType; color: string; gradient: string; shadow: string; }> = [
+    { title: 'POP', category: 'POP', icon: UserIcon, color: '#0ea5e9', gradient: 'linear-gradient(to right, #0ea5e9, #38bdf8)', shadow: '0 4px 15px 0 rgba(14, 165, 233, 0.4)' },
+    { title: 'POG', category: 'POG', icon: Users, color: '#1d4ed8', gradient: 'linear-gradient(to right, #1d4ed8, #3b82f6)', shadow: '0 4px 15px 0 rgba(29, 78, 216, 0.4)' },
+    { title: 'OC', category: 'OC', icon: BaggageClaim, color: '#9333ea', gradient: 'linear-gradient(to right, #9333ea, #a855f7)', shadow: '0 4px 15px 0 rgba(147, 51, 234, 0.4)' },
+    { title: 'OD', category: 'OD', icon: Briefcase, color: '#16a34a', gradient: 'linear-gradient(to right, #16a34a, #22c55e)', shadow: '0 4px 15px 0 rgba(22, 163, 74, 0.4)' },
+    { title: 'B2B', category: 'B2B', icon: ShoppingCart, color: '#ea580c', gradient: 'linear-gradient(to right, #ea580c, #f97316)', shadow: '0 4px 15px 0 rgba(234, 88, 12, 0.4)' },
 ];
 
 
@@ -279,6 +289,22 @@ export default function DashboardPage() {
     });
     return counts;
   }, [allProjects, currentUser]);
+  
+  const leadCategoryCounts = useMemo(() => {
+    const counts: Record<LeadCategory, number> = {
+        'POP': 0, 'POG': 0, 'OC': 0, 'OD': 0, 'B2B': 0
+    };
+    let leadsToCount = allLeads;
+    if (currentUser?.role === 'CRM') {
+        leadsToCount = allLeads.filter(l => l.crmId === currentUser.id);
+    }
+    leadsToCount.forEach(l => {
+        if(counts[l.category] !== undefined) {
+            counts[l.category]++;
+        }
+    });
+    return counts;
+  }, [allLeads, currentUser]);
 
   useEffect(() => {
     if (isLoadingData || !selectedDateRange) return;
@@ -686,10 +712,28 @@ export default function DashboardPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <ProjectStatusTimeline
-            projectCounts={projectCounts}
-            visibleSteps={visibleProjectStatusDisplayConfig}
+          <StatusTimeline
+            counts={projectCounts}
+            config={visibleProjectStatusDisplayConfig}
             isLoading={isLoadingContent}
+            title="Project Status"
+          />
+        </CardContent>
+      </Card>
+      
+      <Card className="shadow-xl bg-card">
+        <CardHeader>
+          <CardTitle className="flex items-center text-xl text-foreground">
+            <Users className="mr-2 h-6 w-6 text-primary" />
+            Pipeline Category Overview
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <StatusTimeline
+            counts={leadCategoryCounts}
+            config={ALL_LEAD_CATEGORIES_CONFIG}
+            isLoading={isLoadingContent}
+            title="Lead Category"
           />
         </CardContent>
       </Card>
@@ -697,28 +741,29 @@ export default function DashboardPage() {
   );
 }
 
-// New Timeline Component
-interface ProjectStatusTimelineProps {
-  projectCounts: Record<ProjectStatusType, number>;
-  visibleSteps: { title: string; status: ProjectStatusType; icon: React.ElementType; color: string; gradient: string; shadow: string; }[];
+// Generic Timeline Component
+interface StatusTimelineProps {
+  counts: Record<string, number>;
+  config: { title: string; icon: React.ElementType; color: string; gradient: string; shadow: string; [key:string]: any }[];
   isLoading: boolean;
+  title: string;
 }
 
-const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCounts, visibleSteps, isLoading }) => {
+const StatusTimeline: React.FC<StatusTimelineProps> = ({ counts, config, isLoading, title }) => {
   const [activeIndex, setActiveIndex] = useState(0);
 
   useEffect(() => {
-    if (isLoading || visibleSteps.length === 0) return;
+    if (isLoading || config.length === 0) return;
     const interval = setInterval(() => {
-      setActiveIndex((prevIndex) => (prevIndex + 1) % visibleSteps.length);
+      setActiveIndex((prevIndex) => (prevIndex + 1) % config.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, [isLoading, visibleSteps.length]);
+  }, [isLoading, config.length]);
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-between p-4">
-        {[...Array(7)].map((_, i) => (
+        {[...Array(5)].map((_, i) => (
           <div key={i} className="flex flex-col items-center gap-2 flex-1">
             <Skeleton className="h-12 w-12 rounded-full" />
             <Skeleton className="h-4 w-16" />
@@ -728,21 +773,21 @@ const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCo
     );
   }
 
-  if (visibleSteps.length === 0) {
+  if (config.length === 0) {
     return (
       <div className="text-center text-muted-foreground p-8">
-        No project stages are visible for your role.
+        No {title.toLowerCase()} stages are visible for your role.
       </div>
     );
   }
 
-  const progressPercentage = activeIndex > 0 ? (activeIndex / (visibleSteps.length - 1)) * 100 : 0;
+  const progressPercentage = activeIndex > 0 ? (activeIndex / (config.length - 1)) * 100 : 0;
   
   const getGradient = () => {
     if (activeIndex === 0) {
-        return visibleSteps[0]?.gradient || 'hsl(var(--primary))';
+        return config[0]?.gradient || 'hsl(var(--primary))';
     }
-    const colors = visibleSteps.slice(0, activeIndex + 1).map(step => step.color);
+    const colors = config.slice(0, activeIndex + 1).map(step => step.color);
     return `linear-gradient(to right, ${colors.join(', ')})`;
   };
 
@@ -759,17 +804,18 @@ const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCo
                 animate={{
                     width: `${progressPercentage}%`,
                     background: getGradient(),
-                    boxShadow: visibleSteps[activeIndex]?.shadow || 'none',
+                    boxShadow: config[activeIndex]?.shadow || 'none',
                 }}
                 transition={{ duration: 0.5, ease: 'easeInOut' }}
             />
         </div>
 
-        {visibleSteps.map((step, index) => {
+        {config.map((step, index) => {
           const isActive = index === activeIndex;
+          const key = step.status || step.category;
           return (
             <motion.div 
-              key={step.status} 
+              key={key} 
               className="relative z-10 flex flex-col items-center flex-1"
               animate={{ scale: isActive ? 1.1 : 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 15 }}
@@ -782,7 +828,7 @@ const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCo
                   borderColor: isActive ? step.color : 'hsl(var(--background))'
                 }}
               >
-                {projectCounts[step.status]}
+                {counts[key as keyof typeof counts]}
               </div>
               {/* The label */}
               <p className="mt-2 text-xs font-medium text-center text-muted-foreground transition-colors" style={{ color: isActive ? step.color : 'hsl(var(--muted-foreground))'}}>
