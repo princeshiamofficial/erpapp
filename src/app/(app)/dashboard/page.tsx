@@ -795,7 +795,7 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ counts, config, isLoadi
   };
 
   return (
-    <div className="w-full overflow-x-auto py-4 custom-scrollbar">
+    <div className="w-full overflow-x-auto py-4 custom-scrollbar-hidden">
       <div className="relative flex items-center justify-between min-w-[500px] px-2">
         {/* The background line */}
         <div className="absolute top-1/2 left-0 w-full h-1 bg-muted rounded-full transform -translate-y-[calc(50%+1rem)]"></div>
