@@ -228,10 +228,9 @@ export default function DashboardPage() {
     };
     
     let projectsToCount = allProjects;
-
     if (currentUser?.role === 'CRM') {
         projectsToCount = allProjects.filter(p => p.assigneeId === currentUser.id);
-    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR') {
+    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
         projectsToCount = allProjects.filter(p => p.designerRepresentativeId === currentUser.id);
     }
 
@@ -674,7 +673,7 @@ const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCo
   };
 
   return (
-    <div className="w-full overflow-x-auto py-4">
+    <div className="w-full overflow-x-auto py-4 custom-scrollbar-hidden">
       <div className="relative flex items-center justify-between min-w-[700px] px-4">
         {/* The background line */}
         <div className="absolute top-1/2 left-0 w-full h-1 bg-muted rounded-full transform -translate-y-[calc(50%+1rem)]"></div>
