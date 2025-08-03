@@ -41,7 +41,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
   const [phone, setPhone] = useState('');
   const [source, setSource] = useState('');
   const [address, setAddress] = useState('');
-  const [category, setCategory] = useState<Lead['category'] | ''>('');
+  const [category, setCategory] = useState<Lead['category']>('POG');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -69,7 +69,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setPhone('');
         setSource('');
         setAddress('');
-        setCategory('');
+        setCategory('POG');
         setNotes('');
       }
     }
@@ -167,17 +167,6 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
               <Label htmlFor="address">Address *</Label>
               <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required />
             </div>
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label htmlFor="category">Category *</Label>
-                  <Select value={category} onValueChange={(value) => setCategory(value as Lead['category'])} required>
-                    <SelectTrigger id="category"><SelectValue placeholder="Select a category" /></SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}
-                    </SelectContent>
-                  </Select>
-                </div>
-             </div>
             <div className="space-y-1">
               <Label htmlFor="notes">Notes (Optional)</Label>
               <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
