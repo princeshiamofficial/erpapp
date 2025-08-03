@@ -129,7 +129,7 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, onD
             <Tooltip>
                 <TooltipTrigger asChild>
                     <div className="flex items-start text-xs text-muted-foreground pt-1 cursor-help">
-                        <MapPin className="mr-1.5 h-3 w-3 mt-0.5 shrink-0" />
+                        <MapPin className="mr-1.5 h-3 w-3 mt-0.5 shrink-0 text-primary" />
                     </div>
                 </TooltipTrigger>
                 <TooltipContent>
