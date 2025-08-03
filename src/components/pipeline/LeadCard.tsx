@@ -24,6 +24,7 @@ interface LeadCardProps {
   currentUser: User | null;
   onEditLead: (lead: Lead) => void;
   crmAvatarUrl?: string;
+  headerBgClass: string; // New prop for the color
 }
 
 const getInitials = (name: string | undefined) => {
@@ -43,7 +44,7 @@ const formatDateSafe = (dateString?: string) => {
 };
 
 
-export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crmAvatarUrl }: LeadCardProps) {
+export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crmAvatarUrl, headerBgClass }: LeadCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: lead.id,
     data: { lead },
@@ -93,7 +94,10 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crm
           </div>
           <p className="text-xs text-muted-foreground truncate">{lead.businessName}</p>
           
-          <div className="inline-flex items-center rounded-md border border-muted-foreground/30 bg-muted/50 px-2 py-0.5 text-xs font-medium text-muted-foreground transition-colors mt-1">
+          <div className={cn(
+            "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold transition-colors mt-1",
+            headerBgClass ? `${headerBgClass} text-white/90 border-transparent` : "border-muted-foreground/30 bg-muted/50"
+          )}>
             <CalendarDays className="mr-1.5 h-3 w-3" />
             <span>{formatDateSafe(lead.date)}</span>
           </div>

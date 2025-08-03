@@ -70,6 +70,7 @@ export function PipelineKanbanColumn({
                   currentUser={currentUser}
                   onEditLead={onEditLead}
                   crmAvatarUrl={crmUser?.avatarUrl || undefined}
+                  headerBgClass={headerBgClass}
                 />
               )
             })
