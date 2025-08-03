@@ -663,7 +663,7 @@ const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCo
     );
   }
 
-  const progressPercentage = (activeIndex / (visibleSteps.length - 1)) * 100;
+  const progressPercentage = activeIndex > 0 ? (activeIndex / (visibleSteps.length - 1)) * 100 : 0;
 
   return (
     <div className="w-full overflow-x-auto py-4">
@@ -672,17 +672,16 @@ const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCo
         <div className="absolute top-1/2 left-0 w-full h-1 bg-muted rounded-full transform -translate-y-[calc(50%+1rem)]"></div>
 
         {/* The animated progress bar */}
-        <div className="absolute top-1/2 left-0 h-1 rounded-full transform -translate-y-[calc(50%+1rem)]">
-          <motion.div
-            className="absolute top-0 left-0 h-full rounded-full"
-            style={{ 
-              background: visibleSteps[activeIndex]?.gradient || 'hsl(var(--primary))',
-              boxShadow: visibleSteps[activeIndex]?.shadow || 'none'
-            }}
-            animate={{ width: `${progressPercentage}%` }}
-            transition={{ duration: 0.5, ease: 'easeInOut' }}
-          >
-          </motion.div>
+        <div className="absolute top-1/2 left-0 h-1 rounded-full transform -translate-y-[calc(50%+1rem)]" style={{ width: '100%' }}>
+            <motion.div
+                className="h-full rounded-full"
+                style={{ 
+                    background: visibleSteps[activeIndex]?.gradient || 'hsl(var(--primary))',
+                    boxShadow: visibleSteps[activeIndex]?.shadow || 'none',
+                }}
+                animate={{ width: `${progressPercentage}%` }}
+                transition={{ duration: 0.5, ease: 'easeInOut' }}
+            />
         </div>
 
         {visibleSteps.map((step, index) => {
