@@ -110,14 +110,14 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
 };
 
 
-const ALL_PROJECT_STATUSES_CONFIG = [
-    { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, color: '#0d9488' }, // Teal
-    { title: 'Cancel', status: 'Cancel', icon: ClipboardX, color: '#ef4444' }, // Red
-    { title: 'On Design', status: 'On Design', icon: DraftingCompass, color: '#3b82f6' }, // Blue
-    { title: 'On Hold', status: 'On Hold', icon: PauseCircle, color: '#f97316' }, // Orange
-    { title: 'Logistics', status: 'Logistics', icon: Truck, color: '#78350f' }, // Brown
-    { title: 'Courier', status: 'Courier', icon: CheckCircle, color: '#16a34a' }, // Green
-    { title: 'Delivered', status: 'Delivered', icon: PackageCheck, color: '#65a30d' }, // Lime Green
+const ALL_PROJECT_STATUSES_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: React.ElementType; color: string; gradient: string; shadow: string; }> = [
+    { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, color: '#3b82f6', gradient: 'linear-gradient(to right, #3b82f6, #60a5fa)', shadow: '0 4px 15px 0 rgba(59, 130, 246, 0.4)' },
+    { title: 'Cancel', status: 'Cancel', icon: ClipboardX, color: '#ef4444', gradient: 'linear-gradient(to right, #ef4444, #f87171)', shadow: '0 4px 15px 0 rgba(239, 68, 68, 0.4)' },
+    { title: 'On Design', status: 'On Design', icon: DraftingCompass, color: '#8b5cf6', gradient: 'linear-gradient(to right, #8b5cf6, #a78bfa)', shadow: '0 4px 15px 0 rgba(139, 92, 246, 0.4)' },
+    { title: 'On Hold', status: 'On Hold', icon: PauseCircle, color: '#f97316', gradient: 'linear-gradient(to right, #f97316, #fb923c)', shadow: '0 4px 15px 0 rgba(249, 115, 22, 0.4)' },
+    { title: 'Logistics', status: 'Logistics', icon: Truck, color: '#78350f', gradient: 'linear-gradient(to right, #78350f, #a16207)', shadow: '0 4px 15px 0 rgba(120, 53, 15, 0.4)' },
+    { title: 'Courier', status: 'Courier', icon: CheckCircle, color: '#16a34a', gradient: 'linear-gradient(to right, #16a34a, #4ade80)', shadow: '0 4px 15px 0 rgba(22, 163, 74, 0.4)' },
+    { title: 'Delivered', status: 'Delivered', icon: PackageCheck, color: '#65a30d', gradient: 'linear-gradient(to right, #65a30d, #84cc16)', shadow: '0 4px 15px 0 rgba(101, 163, 13, 0.4)' },
 ];
 
 
@@ -627,12 +627,21 @@ export default function DashboardPage() {
 // New Timeline Component
 interface ProjectStatusTimelineProps {
   projectCounts: Record<ProjectStatusType, number>;
-  visibleSteps: { title: string; status: ProjectStatusType; color: string }[];
+  visibleSteps: { title: string; status: ProjectStatusType; icon: React.ElementType; color: string; gradient: string; shadow: string; }[];
   isLoading: boolean;
 }
 
 const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCounts, visibleSteps, isLoading }) => {
-  
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  useEffect(() => {
+    if (isLoading || visibleSteps.length === 0) return;
+    const interval = setInterval(() => {
+      setActiveIndex((prevIndex) => (prevIndex + 1) % visibleSteps.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [isLoading, visibleSteps.length]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-between p-4">
@@ -653,30 +662,56 @@ const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCo
       </div>
     );
   }
-  
+
+  const progressPercentage = (activeIndex / (visibleSteps.length - 1)) * 100;
+
   return (
     <div className="w-full overflow-x-auto py-4">
-        <div className="relative flex items-center justify-between min-w-[700px] px-4">
-            {/* The connecting line */}
-            <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-200 dark:bg-gray-700 transform -translate-y-[calc(50%+1rem)]"></div>
+      <div className="relative flex items-center justify-between min-w-[700px] px-4">
+        {/* The background line */}
+        <div className="absolute top-1/2 left-0 w-full h-1 bg-muted rounded-full transform -translate-y-[calc(50%+1rem)]"></div>
 
-            {visibleSteps.map((step, index) => (
-                <div key={step.status} className="relative z-10 flex flex-col items-center flex-1">
-                    {/* The colored circle */}
-                    <div
-                        className="h-16 w-16 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-md border-4 border-background"
-                        style={{ backgroundColor: step.color }}
-                    >
-                        {projectCounts[step.status]}
-                    </div>
-                    {/* The label */}
-                    <p className="mt-2 text-xs font-medium text-center text-muted-foreground">
-                        {step.title}
-                    </p>
-                </div>
-            ))}
+        {/* The animated progress bar */}
+        <div className="absolute top-1/2 left-0 h-1 rounded-full transform -translate-y-[calc(50%+1rem)]">
+          <motion.div
+            className="absolute top-0 left-0 h-full rounded-full"
+            style={{ 
+              background: visibleSteps[activeIndex]?.gradient || 'hsl(var(--primary))',
+              boxShadow: visibleSteps[activeIndex]?.shadow || 'none'
+            }}
+            animate={{ width: `${progressPercentage}%` }}
+            transition={{ duration: 0.5, ease: 'easeInOut' }}
+          >
+          </motion.div>
         </div>
-    </div>
-);
 
+        {visibleSteps.map((step, index) => {
+          const isActive = index === activeIndex;
+          return (
+            <motion.div 
+              key={step.status} 
+              className="relative z-10 flex flex-col items-center flex-1"
+              animate={{ scale: isActive ? 1.1 : 1 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+            >
+              {/* The colored circle */}
+              <div
+                className="h-16 w-16 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg border-4 transition-all"
+                style={{
+                  backgroundColor: step.color,
+                  borderColor: isActive ? step.color : 'hsl(var(--background))'
+                }}
+              >
+                {projectCounts[step.status]}
+              </div>
+              {/* The label */}
+              <p className="mt-2 text-xs font-medium text-center text-muted-foreground transition-colors" style={{ color: isActive ? step.color : 'hsl(var(--muted-foreground))'}}>
+                {step.title}
+              </p>
+            </motion.div>
+          );
+        })}
+      </div>
+    </div>
+  );
 };
