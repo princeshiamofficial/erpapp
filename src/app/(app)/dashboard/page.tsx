@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -110,13 +111,13 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
 
 
 const ALL_PROJECT_STATUSES_CONFIG = [
-    { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, color: '#3b82f6' },
-    { title: 'Cancel', status: 'Cancel', icon: ClipboardX, color: '#ef4444' },
-    { title: 'On Design', status: 'On Design', icon: DraftingCompass, color: '#8b5cf6' },
-    { title: 'On Hold', status: 'On Hold', icon: PauseCircle, color: '#a1a1aa' },
-    { title: 'Logistics', status: 'Logistics', icon: Truck, color: '#f97316' },
-    { title: 'Courier', status: 'Courier', icon: CheckCircle, color: '#16a34a' },
-    { title: 'Delivered', status: 'Delivered', icon: PackageCheck, color: '#65a30d' },
+    { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, color: '#0d9488' }, // Teal
+    { title: 'Cancel', status: 'Cancel', icon: ClipboardX, color: '#ef4444' }, // Red
+    { title: 'On Design', status: 'On Design', icon: DraftingCompass, color: '#3b82f6' }, // Blue
+    { title: 'On Hold', status: 'On Hold', icon: PauseCircle, color: '#f97316' }, // Orange
+    { title: 'Logistics', status: 'Logistics', icon: Truck, color: '#78350f' }, // Brown
+    { title: 'Courier', status: 'Courier', icon: CheckCircle, color: '#16a34a' }, // Green
+    { title: 'Delivered', status: 'Delivered', icon: PackageCheck, color: '#65a30d' }, // Lime Green
 ];
 
 
@@ -631,29 +632,13 @@ interface ProjectStatusTimelineProps {
 }
 
 const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCounts, visibleSteps, isLoading }) => {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const timelineSteps = visibleSteps.map((step, index) => ({
-    ...step,
-    count: projectCounts[step.status],
-    gradient: `linear-gradient(to right, ${step.color}, ${visibleSteps[index + 1]?.color || step.color})`,
-    shadowColor: step.color,
-  }));
-  
-  useEffect(() => {
-    if (timelineSteps.length > 0) {
-      const interval = setInterval(() => {
-        setActiveIndex((prevIndex) => (prevIndex + 1) % timelineSteps.length);
-      }, 3000);
-      return () => clearInterval(interval);
-    }
-  }, [timelineSteps.length]);
   
   if (isLoading) {
     return (
       <div className="flex items-center justify-between p-4">
         {[...Array(7)].map((_, i) => (
-          <div key={i} className="flex flex-col items-center gap-2">
-            <Skeleton className="h-8 w-8 rounded-full" />
+          <div key={i} className="flex flex-col items-center gap-2 flex-1">
+            <Skeleton className="h-12 w-12 rounded-full" />
             <Skeleton className="h-4 w-16" />
           </div>
         ))}
@@ -661,77 +646,37 @@ const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCo
     );
   }
 
-  if (timelineSteps.length === 0) {
+  if (visibleSteps.length === 0) {
     return (
       <div className="text-center text-muted-foreground p-8">
         No project stages are visible for your role.
       </div>
     );
   }
-
-  const progressPercentage = (activeIndex / (timelineSteps.length - 1)) * 100;
-  const currentStep = timelineSteps[activeIndex];
-
+  
   return (
-    <div className="relative w-full p-8">
-      <div className="relative h-1 bg-muted rounded-full">
-        {currentStep && (
-          <motion.div
-            className="absolute top-0 left-0 h-full rounded-full"
-            style={{ background: currentStep.gradient }}
-            animate={{ width: `${progressPercentage}%` }}
-            transition={{ duration: 0.5, ease: 'easeInOut' }}
-          >
-            <motion.div
-              className="absolute right-0 top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-white"
-              style={{
-                boxShadow: `0 0 12px 3px ${currentStep.shadowColor}`,
-              }}
-              animate={{
-                scale: [1, 1.2, 1],
-              }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-              }}
-            />
-          </motion.div>
-        )}
-      </div>
+    <div className="w-full overflow-x-auto py-4">
+        <div className="relative flex items-center justify-between min-w-[700px] px-4">
+            {/* The connecting line */}
+            <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-200 dark:bg-gray-700 transform -translate-y-[calc(50%+1rem)]"></div>
 
-      <div className="flex justify-between items-start mt-4">
-        {timelineSteps.map((step, index) => (
-          <motion.div
-            key={step.status}
-            className="flex flex-col items-center text-center w-24"
-            animate={{ scale: activeIndex === index ? 1.1 : 1 }}
-            transition={{ type: 'spring', stiffness: 300 }}
-          >
-            <div
-              className="h-6 w-6 rounded-full border-2 mb-2 flex items-center justify-center transition-all duration-300"
-              style={{
-                borderColor: step.color,
-                backgroundColor: activeIndex >= index ? step.color : 'hsl(var(--muted))',
-              }}
-            >
-              <AnimatePresence>
-                {activeIndex === index && (
-                  <motion.div
-                    className="h-3 w-3 rounded-full bg-white"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                  />
-                )}
-              </AnimatePresence>
-            </div>
-            <p className="text-xs font-medium text-muted-foreground break-words">{step.title}</p>
-            <p className="text-xl font-bold" style={{ color: step.color }}>
-              {step.count}
-            </p>
-          </motion.div>
-        ))}
-      </div>
+            {visibleSteps.map((step, index) => (
+                <div key={step.status} className="relative z-10 flex flex-col items-center flex-1">
+                    {/* The colored circle */}
+                    <div
+                        className="h-16 w-16 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-md border-4 border-background"
+                        style={{ backgroundColor: step.color }}
+                    >
+                        {projectCounts[step.status]}
+                    </div>
+                    {/* The label */}
+                    <p className="mt-2 text-xs font-medium text-center text-muted-foreground">
+                        {step.title}
+                    </p>
+                </div>
+            ))}
+        </div>
     </div>
-  );
+);
+
 };
