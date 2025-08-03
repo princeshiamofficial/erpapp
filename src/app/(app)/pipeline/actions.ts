@@ -29,7 +29,7 @@ export async function addLeadAction(
       ...leadData,
       crmId: currentUser.id,
       crmName: currentUser.name,
-      category: 'POG', // Default category on single add
+      category: 'POP', // Default category on single add
     };
     const newLead = await addLead(leadDataWithUser);
     if (newLead) {
