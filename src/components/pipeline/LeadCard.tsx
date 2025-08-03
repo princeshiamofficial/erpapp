@@ -5,7 +5,7 @@ import type { Lead, User } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Edit, CalendarDays, MapPin, StickyNote, Bot } from 'lucide-react';
+import { Edit, CalendarDays, MapPin, StickyNote, Bot, Trash2 } from 'lucide-react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,7 @@ interface LeadCardProps {
   isOverlay?: boolean;
   currentUser: User | null;
   onEditLead: (lead: Lead) => void;
+  onDeleteLead: (lead: Lead) => void; // New prop
   crmAvatarUrl?: string;
   headerBgClass: string; 
 }
@@ -44,7 +45,7 @@ const formatDateSafe = (dateString?: string) => {
 };
 
 
-export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crmAvatarUrl, headerBgClass }: LeadCardProps) {
+export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, onDeleteLead, crmAvatarUrl, headerBgClass }: LeadCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: lead.id,
     data: { lead },
@@ -56,6 +57,7 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crm
   } : undefined;
   
   const canEdit = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
+  const canDelete = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN';
 
   return (
     <motion.div
@@ -81,16 +83,30 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crm
         <CardContent className="p-3 space-y-2.5">
           <div className="flex justify-between items-start">
             <span className="text-sm font-semibold text-foreground truncate">{lead.contactName}</span>
-            {canEdit && (
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={(e) => { e.stopPropagation(); onEditLead(lead); }}
-                >
-                    <Edit className="h-3.5 w-3.5" />
-                </Button>
-            )}
+            <div className="flex items-center">
+              {canEdit && (
+                  <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => { e.stopPropagation(); onEditLead(lead); }}
+                      title="Edit Lead"
+                  >
+                      <Edit className="h-3.5 w-3.5" />
+                  </Button>
+              )}
+              {canDelete && (
+                  <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => { e.stopPropagation(); onDeleteLead(lead); }}
+                      title="Delete Lead"
+                  >
+                      <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+              )}
+            </div>
           </div>
           <p className="text-xs text-muted-foreground truncate">{lead.businessName}</p>
           

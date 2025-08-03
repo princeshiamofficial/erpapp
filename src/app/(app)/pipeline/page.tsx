@@ -8,14 +8,16 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { DndContext, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { closestCorners } from '@dnd-kit/core';
-import { getLeads, updateLeadAction } from './actions';
+import { getLeads, updateLeadAction, deleteLeadAction } from './actions';
 import { getUsers } from '@/lib/user-service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim } from 'lucide-react';
+import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2 } from 'lucide-react';
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
 import { LeadCard } from '@/components/pipeline/LeadCard';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
 
 const AddEditLeadDialog = dynamic(() => import('@/components/pipeline/AddEditLeadDialog').then(mod => mod.AddEditLeadDialog));
 const ImportLeadsDialog = dynamic(() => import('@/components/pipeline/ImportLeadsDialog').then(mod => mod.ImportLeadsDialog));
@@ -44,6 +46,10 @@ export default function PipeLinePage() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
+
+  const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
+  const [isDeletingLead, setIsDeletingLead] = useState(false);
+
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
@@ -118,6 +124,27 @@ export default function PipeLinePage() {
     setEditingLead(null);
     fetchLeadsAndUsers();
   };
+  
+  const handleDeleteRequest = (lead: Lead) => {
+    setLeadToDelete(lead);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!leadToDelete) return;
+
+    setIsDeletingLead(true);
+    const result = await deleteLeadAction(leadToDelete.id);
+    setIsDeletingLead(false);
+
+    if (result.success) {
+      toast({ title: "Lead Deleted", description: `Lead for "${leadToDelete.contactName}" was deleted.` });
+      setLeads(prev => prev.filter(l => l.id !== leadToDelete.id));
+    } else {
+      toast({ title: "Error", description: result.error || "Could not delete the lead.", variant: "destructive" });
+    }
+    setLeadToDelete(null);
+  };
+
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveLead(event.active.data.current?.lead as Lead);
@@ -210,6 +237,7 @@ export default function PipeLinePage() {
                 isLoading={isLoading}
                 currentUser={currentUser}
                 onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }}
+                onDeleteLead={handleDeleteRequest}
                 allCrmUsers={allCrmUsers}
               />
             ))}
@@ -217,7 +245,7 @@ export default function PipeLinePage() {
         </div>
       </div>
       <DragOverlay dropAnimation={null}>
-        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onEditLead={() => {}} crmAvatarUrl={allCrmUsers.find(u => u.id === activeLead.crmId)?.avatarUrl} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
+        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onEditLead={() => {}} onDeleteLead={() => {}} crmAvatarUrl={allCrmUsers.find(u => u.id === activeLead.crmId)?.avatarUrl} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
       </DragOverlay>
 
       <AddEditLeadDialog
@@ -234,6 +262,31 @@ export default function PipeLinePage() {
         onLeadsImported={handleLeadSaved}
         currentUser={currentUser}
       />
+      
+      {leadToDelete && (
+        <AlertDialog open={!!leadToDelete} onOpenChange={() => setLeadToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-6 w-6 text-destructive" /> Are you absolutely sure?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently delete the lead for "<span className="font-semibold">{leadToDelete.contactName}</span>".
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeletingLead}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                onClick={handleConfirmDelete}
+                disabled={isDeletingLead}
+              >
+                {isDeletingLead ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Yes, delete lead"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </DndContext>
   );
 }
