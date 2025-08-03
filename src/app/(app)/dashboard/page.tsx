@@ -434,7 +434,7 @@ export default function DashboardPage() {
     if (isLoadingContent || !currentUser || !globalSettings?.projectStageAccess) {
         return [];
     }
-    if (currentUser.role === 'SYSTEM_ADMIN') {
+    if (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'LR') {
         return ALL_PROJECT_STATUSES_CONFIG;
     }
     const userPermissions = globalSettings.projectStageAccess;
@@ -445,7 +445,7 @@ export default function DashboardPage() {
 
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 custom-scrollbar-hidden">
       <div className="bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--primary))] text-primary-foreground p-6 sm:p-8 rounded-xl shadow-xl">
         <h1 className="text-3xl sm:text-4xl font-bold flex items-center">
           Welcome {currentUser?.name.split(' ')[0] || 'User'}
