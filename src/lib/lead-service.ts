@@ -91,6 +91,7 @@ export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> 
     await ensureCollectionExists(); // Ensure collection exists before adding
     const dataWithStatus = {
         ...leadData,
+        status: 'New Lead', // Set default status for new leads
     };
     const payload = {
         data: dataWithStatus

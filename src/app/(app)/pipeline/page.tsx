@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import type { Lead, User, LeadStatusType, LeadCategory } from '@/types';
+import type { Lead, User, LeadCategory, LeadStatusType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { DndContext, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent, DragOverlay } from '@dnd-kit/core';
@@ -17,6 +17,7 @@ import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, Shoppi
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
 import { LeadCard } from '@/components/pipeline/LeadCard';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import Papa from 'papaparse';
 
 
 const AddEditLeadDialog = dynamic(() => import('@/components/pipeline/AddEditLeadDialog').then(mod => mod.AddEditLeadDialog));
@@ -144,6 +145,46 @@ export default function PipeLinePage() {
     }
     setLeadToDelete(null);
   };
+  
+  const handleExport = () => {
+    if (filteredLeads.length === 0) {
+      toast({
+        title: "No Data to Export",
+        description: "There is no data matching the current filters.",
+      });
+      return;
+    }
+
+    const dataToExport = filteredLeads.map(lead => ({
+      date: lead.date,
+      contactName: lead.contactName,
+      businessName: lead.businessName,
+      phone: lead.phone,
+      source: lead.source,
+      address: lead.address,
+      category: lead.category,
+      status: lead.status,
+      notes: lead.notes,
+      schedule: lead.schedule,
+      crmName: lead.crmName
+    }));
+
+    const csv = Papa.unparse(dataToExport);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'pipeline_leads_export.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export Successful",
+      description: "Lead data has been downloaded as a CSV file.",
+    });
+  };
 
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -205,7 +246,14 @@ export default function PipeLinePage() {
           )}
            <div className="flex items-center gap-2">
              <Button
-              size="lg"
+                variant="outline"
+                className="w-full sm:w-auto h-10"
+                onClick={handleExport}
+                disabled={filteredLeads.length === 0}
+              >
+                  <Download className="mr-2 h-4 w-4" /> Export
+              </Button>
+             <Button
               variant="outline"
               className="w-full sm:w-auto h-10"
               onClick={() => setIsImportOpen(true)}
@@ -214,7 +262,6 @@ export default function PipeLinePage() {
                 Import
             </Button>
             <Button
-              size="lg"
               onClick={handleOpenAddDialog}
               className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10"
             >

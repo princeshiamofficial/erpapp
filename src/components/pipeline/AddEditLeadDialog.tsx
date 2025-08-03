@@ -41,7 +41,6 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
   const [phone, setPhone] = useState('');
   const [source, setSource] = useState('');
   const [address, setAddress] = useState('');
-  const [category, setCategory] = useState<Lead['category']>('POG');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -58,7 +57,6 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setPhone(lead.phone);
         setSource(lead.source);
         setAddress(lead.address);
-        setCategory(lead.category);
         setNotes(lead.notes || '');
       } else {
         // Reset for add mode
@@ -69,7 +67,6 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setPhone('');
         setSource('');
         setAddress('');
-        setCategory('POG');
         setNotes('');
       }
     }
@@ -77,7 +74,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!date || !contactName || !businessName || !phone || !source || !address || !category) {
+    if (!date || !contactName || !businessName || !phone || !source || !address) {
       toast({ title: "Validation Error", description: "Please fill in all required fields.", variant: "destructive" });
       return;
     }
@@ -87,12 +84,14 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
     const leadData = {
       date: date.toISOString(),
       schedule: schedule ? schedule.toISOString() : null,
-      contactName, businessName, phone, source, address, category,
+      contactName, businessName, phone, source, address,
       notes: notes || null,
+      // Category is set on the server-side action now
     };
 
     let result;
     if (isEditMode) {
+      // For editing, we don't change the category here. It's done via drag-and-drop.
       result = await updateLeadAction(lead.id, leadData);
     } else {
       result = await addLeadAction(leadData, currentUser);
