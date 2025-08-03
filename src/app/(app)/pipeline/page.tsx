@@ -58,11 +58,14 @@ export default function PipeLinePage() {
       const promises: [Promise<Lead[]>, Promise<User[]>?] = [getLeads()];
       if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
         promises.push(getUsers());
+      } else {
+        // If not admin, we still need the user list to find avatars
+        promises.push(getUsers());
       }
       const [fetchedLeads, fetchedUsers] = await Promise.all(promises);
       setLeads(fetchedLeads);
       if (fetchedUsers) {
-        setAllCrmUsers(fetchedUsers.filter(u => u.role === 'CRM'));
+        setAllCrmUsers(fetchedUsers.filter(u => u.role === 'CRM' || u.role === 'ADMIN' || u.role === 'SYSTEM_ADMIN'));
       }
     } catch (error) {
       toast({ title: "Error fetching data", description: "Could not load pipeline or user data.", variant: "destructive" });
