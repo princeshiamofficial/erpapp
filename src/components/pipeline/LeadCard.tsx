@@ -5,11 +5,12 @@ import type { Lead, User } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Edit } from 'lucide-react';
+import { Edit, CalendarDays } from 'lucide-react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { format, parseISO } from 'date-fns';
 
 interface LeadCardProps {
   lead: Lead;
@@ -25,6 +26,16 @@ const getInitials = (name: string | undefined) => {
   if (names.length === 1) return names[0].charAt(0).toUpperCase();
   return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
+
+const formatDateSafe = (dateString?: string) => {
+  if (!dateString) return 'No Date';
+  try {
+    return format(parseISO(dateString), 'd MMM, yyyy');
+  } catch (e) {
+    return 'Invalid Date';
+  }
+};
+
 
 export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crmAvatarUrl }: LeadCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -75,6 +86,12 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crm
             )}
           </div>
           <p className="text-xs text-muted-foreground truncate">{lead.businessName}</p>
+          
+          <div className="flex items-center text-xs text-muted-foreground pt-1">
+            <CalendarDays className="mr-1.5 h-3 w-3" />
+            <span>{formatDateSafe(lead.date)}</span>
+          </div>
+
           <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
             <Avatar className="h-6 w-6 text-xs">
               <AvatarImage src={crmAvatarUrl || undefined} alt={lead.crmName} />
