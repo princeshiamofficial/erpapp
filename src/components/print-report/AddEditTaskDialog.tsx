@@ -26,12 +26,11 @@ interface AddEditTaskDialogProps {
   onTaskSaved: (task: TrackingLink) => void;
   task?: TrackingLink | null;
   currentUser: User;
-  allStatuses: CustomStatus[];
 }
 
 const PRINT_STATUSES = ['Waiting', 'Printed'];
 
-export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, currentUser, allStatuses }: AddEditTaskDialogProps) {
+export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, currentUser }: AddEditTaskDialogProps) {
   const [taskNotes, setTaskNotes] = useState('');
   const [currentStatus, setCurrentStatus] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,10 +57,11 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    onOpenChange(false); // Close dialog immediately
+    onOpenChange(false); 
+
     const savingToast = toast({
       title: "Saving Task...",
-      description: "Your changes are being saved in the background.",
+      description: "Your changes are being saved.",
     });
 
     setIsSubmitting(true);
@@ -96,7 +96,6 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
     }
     
     setIsSubmitting(false);
-
     savingToast.dismiss(); 
 
     if (result.success && result.task) {

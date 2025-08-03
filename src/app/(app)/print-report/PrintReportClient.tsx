@@ -378,7 +378,6 @@ export function PrintReportClient({ initialOrders, initialUsers, initialStatuses
           onTaskSaved={handleTaskSaved}
           task={editingTask}
           currentUser={currentUser}
-          allStatuses={allStatuses}
         />
       )}
 
