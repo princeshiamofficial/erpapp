@@ -5,7 +5,7 @@ import type { Lead, User } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Edit, CalendarDays, MapPin, StickyNote, Briefcase, Bot } from 'lucide-react';
+import { Edit, CalendarDays, MapPin, StickyNote, Bot } from 'lucide-react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
@@ -105,8 +105,8 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crm
           </div>
            
            <div className="flex items-center text-xs text-muted-foreground pt-1">
-            <Briefcase className="mr-1.5 h-3 w-3" />
-            <span>Category: {lead.category}</span>
+            <Bot className="mr-1.5 h-3 w-3" />
+            <span>Source: {lead.source}</span>
           </div>
 
           <TooltipProvider>
@@ -130,22 +130,22 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crm
           )}
 
           <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
-            <div className="flex items-center">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center">
                     <Avatar className="h-6 w-6 text-xs mr-2 cursor-pointer">
                       <AvatarImage src={crmAvatarUrl || undefined} alt={lead.crmName} />
                       <AvatarFallback>{getInitials(lead.crmName)}</AvatarFallback>
                     </Avatar>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{lead.crmName}</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <span>{lead.phone}</span>
-            </div>
+                    <span>{lead.phone}</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{lead.crmName}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
             {lead.notes && (
                 <TooltipProvider>
                     <Tooltip>
