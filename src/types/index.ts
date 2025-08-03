@@ -273,6 +273,7 @@ export interface Project {
 }
 
 export type LeadStatusType = 'New Lead' | 'Contacted' | 'Qualified' | 'Proposal' | 'Closed';
+export type LeadCategory = 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
 
 export interface Lead {
   id: string;
@@ -282,7 +283,7 @@ export interface Lead {
   phone: string;
   source: string;
   address: string;
-  category: 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
+  category: LeadCategory;
   status: LeadStatusType;
   notes?: string | null;
   schedule?: string | null; // ISO string or null

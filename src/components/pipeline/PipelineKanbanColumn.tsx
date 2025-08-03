@@ -58,7 +58,7 @@ export function PipelineKanbanColumn({
             </div>
           ) : leads.length === 0 ? (
             <div className="flex items-center justify-center h-32">
-              <p className="text-xs text-muted-foreground text-center italic">No leads in this stage.</p>
+              <p className="text-xs text-muted-foreground text-center italic">No leads in this category.</p>
             </div>
           ) : (
             leads.map(lead => {

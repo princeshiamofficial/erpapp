@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import type { Lead, User, LeadStatusType } from '@/types';
+import type { Lead, User, LeadStatusType, LeadCategory } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { DndContext, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent, DragOverlay } from '@dnd-kit/core';
@@ -13,19 +13,19 @@ import { getUsers } from '@/lib/user-service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, UserCheck, MessageSquare, PhoneCall, Briefcase } from 'lucide-react';
+import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, UserCheck, MessageSquare, PhoneCall, Briefcase, Tv, ShoppingBag } from 'lucide-react';
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
 import { LeadCard } from '@/components/pipeline/LeadCard';
 
 const AddEditLeadDialog = dynamic(() => import('@/components/pipeline/AddEditLeadDialog').then(mod => mod.AddEditLeadDialog));
 const ImportLeadsDialog = dynamic(() => import('@/components/pipeline/ImportLeadsDialog').then(mod => mod.ImportLeadsDialog));
 
-const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: LeadStatusType; icon: React.ElementType; headerBgClass: string }> = [
-  { title: 'New Lead', status: 'New Lead', icon: Bot, headerBgClass: 'bg-sky-600' },
-  { title: 'Contacted', status: 'Contacted', icon: PhoneCall, headerBgClass: 'bg-blue-600' },
-  { title: 'Qualified', status: 'Qualified', icon: UserCheck, headerBgClass: 'bg-purple-600' },
-  { title: 'Proposal', status: 'Proposal', icon: MessageSquare, headerBgClass: 'bg-orange-600' },
-  { title: 'Closed', status: 'Closed', icon: Briefcase, headerBgClass: 'bg-green-600' },
+const KANBAN_COLUMNS_CONFIG: Array<{ title: string; category: LeadCategory; icon: React.ElementType; headerBgClass: string }> = [
+  { title: 'POP', category: 'POP', icon: ShoppingBag, headerBgClass: 'bg-sky-600' },
+  { title: 'POG', category: 'POG', icon: Tv, headerBgClass: 'bg-blue-600' },
+  { title: 'OC', category: 'OC', icon: UserCheck, headerBgClass: 'bg-purple-600' },
+  { title: 'OD', category: 'OD', icon: MessageSquare, headerBgClass: 'bg-orange-600' },
+  { title: 'B2B', category: 'B2B', icon: Briefcase, headerBgClass: 'bg-green-600' },
 ];
 
 export default function PipeLinePage() {
@@ -59,7 +59,6 @@ export default function PipeLinePage() {
       if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
         promises.push(getUsers());
       } else {
-        // If not admin, we still need the user list to find avatars
         promises.push(getUsers());
       }
       const [fetchedLeads, fetchedUsers] = await Promise.all(promises);
@@ -97,16 +96,13 @@ export default function PipeLinePage() {
     );
   }, [leads, searchTerm, currentUser, selectedCrmId]);
 
-  const leadsByStatus = useMemo(() => {
-    const grouped: Record<LeadStatusType, Lead[]> = {
-      'New Lead': [], 'Contacted': [], 'Qualified': [], 'Proposal': [], 'Closed': []
+  const leadsByCategory = useMemo(() => {
+    const grouped: Record<LeadCategory, Lead[]> = {
+      'POP': [], 'POG': [], 'OC': [], 'OD': [], 'B2B': []
     };
     filteredLeads.forEach(lead => {
-      const status = lead.status || 'New Lead';
-      if (grouped[status]) {
-        grouped[status].push(lead);
-      } else {
-        grouped['New Lead'].push(lead);
+      if (grouped[lead.category]) {
+        grouped[lead.category].push(lead);
       }
     });
     return grouped;
@@ -134,19 +130,19 @@ export default function PipeLinePage() {
     if (!over || !active.data.current?.lead) return;
     
     const lead = active.data.current.lead as Lead;
-    const newStatus = over.id as LeadStatusType;
-    const originalStatus = lead.status || 'New Lead';
+    const newCategory = over.id as LeadCategory;
+    const originalCategory = lead.category;
 
-    if (newStatus === originalStatus) return;
+    if (newCategory === originalCategory) return;
 
-    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: newStatus } : l));
+    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, category: newCategory } : l));
 
-    const result = await updateLeadAction(lead.id, { status: newStatus });
+    const result = await updateLeadAction(lead.id, { category: newCategory });
     if (!result.success) {
-      toast({ title: "Update Failed", description: result.error || "Could not update lead status.", variant: "destructive" });
-      setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, status: originalStatus } : l));
+      toast({ title: "Update Failed", description: result.error || "Could not update lead category.", variant: "destructive" });
+      setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, category: originalCategory } : l));
     } else {
-      toast({ title: "Lead Updated", description: `Lead "${lead.contactName}" moved to ${newStatus}.` });
+      toast({ title: "Lead Updated", description: `Lead "${lead.contactName}" moved to ${newCategory}.` });
     }
   };
 
@@ -158,7 +154,7 @@ export default function PipeLinePage() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
           <div>
             <h1 className="page-title">Sales Pipeline</h1>
-            <p className="page-description">Track and manage potential sales leads and opportunities.</p>
+            <p className="page-description">Track and manage potential sales leads and opportunities by category.</p>
           </div>
         </div>
 
@@ -205,11 +201,11 @@ export default function PipeLinePage() {
           <div className="flex space-x-4 h-full min-w-max px-4 sm:px-0">
             {KANBAN_COLUMNS_CONFIG.map((col) => (
               <PipelineKanbanColumn
-                key={col.status}
-                id={col.status}
+                key={col.category}
+                id={col.category}
                 title={col.title}
                 icon={col.icon}
-                leads={leadsByStatus[col.status] || []}
+                leads={leadsByCategory[col.category] || []}
                 headerBgClass={col.headerBgClass}
                 isLoading={isLoading}
                 currentUser={currentUser}
@@ -221,7 +217,7 @@ export default function PipeLinePage() {
         </div>
       </div>
       <DragOverlay dropAnimation={null}>
-        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onEditLead={() => {}} crmAvatarUrl={allCrmUsers.find(u => u.id === activeLead.crmId)?.avatarUrl} /> : null}
+        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onEditLead={() => {}} crmAvatarUrl={allCrmUsers.find(u => u.id === activeLead.crmId)?.avatarUrl} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
       </DragOverlay>
 
       <AddEditLeadDialog

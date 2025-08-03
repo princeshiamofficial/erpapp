@@ -5,7 +5,7 @@ import type { Lead, User } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Edit, CalendarDays, MapPin, StickyNote, Briefcase } from 'lucide-react';
+import { Edit, CalendarDays, MapPin, StickyNote, Briefcase, Bot } from 'lucide-react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Badge } from '@/components/ui/badge';
 
 interface LeadCardProps {
   lead: Lead;
@@ -24,7 +25,7 @@ interface LeadCardProps {
   currentUser: User | null;
   onEditLead: (lead: Lead) => void;
   crmAvatarUrl?: string;
-  headerBgClass: string; // New prop for the color
+  headerBgClass: string; 
 }
 
 const getInitials = (name: string | undefined) => {
@@ -41,6 +42,18 @@ const formatDateSafe = (dateString?: string) => {
   } catch (e) {
     return 'Invalid Date';
   }
+};
+
+const getStatusBadgeClass = (status: Lead['status']) => {
+    switch (status) {
+      case 'Contacted': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'Qualified': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'Proposal': return 'bg-orange-100 text-orange-800 border-orange-200';
+      case 'Closed': return 'bg-green-100 text-green-800 border-green-200';
+      case 'New Lead':
+      default:
+        return 'bg-sky-100 text-sky-800 border-sky-200';
+    }
 };
 
 
@@ -78,7 +91,7 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crm
           isOverlay ? "cursor-grabbing" : (isDragging ? "ring-2 ring-primary cursor-grabbing" : "cursor-grab active:cursor-grabbing")
         )}
       >
-        <CardContent className="p-3 space-y-2">
+        <CardContent className="p-3 space-y-2.5">
           <div className="flex justify-between items-start">
             <span className="text-sm font-semibold text-foreground truncate">{lead.contactName}</span>
             {canEdit && (
@@ -94,17 +107,20 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crm
           </div>
           <p className="text-xs text-muted-foreground truncate">{lead.businessName}</p>
           
-          <div className={cn(
-            "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold transition-colors mt-1",
-            headerBgClass ? `${headerBgClass} text-white/90 border-transparent` : "border-muted-foreground/30 bg-muted/50"
-          )}>
-            <CalendarDays className="mr-1.5 h-3 w-3" />
-            <span>{formatDateSafe(lead.date)}</span>
+          <div className="flex items-center justify-between">
+            <div className={cn(
+              "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold transition-colors",
+              headerBgClass ? `${headerBgClass} text-white/90 border-transparent` : "border-muted-foreground/30 bg-muted/50"
+            )}>
+              <CalendarDays className="mr-1.5 h-3 w-3" />
+              <span>{formatDateSafe(lead.date)}</span>
+            </div>
+             <Badge className={getStatusBadgeClass(lead.status)}>{lead.status}</Badge>
           </div>
            
            <div className="flex items-center text-xs text-muted-foreground pt-1">
             <Briefcase className="mr-1.5 h-3 w-3" />
-            <span>Source: {lead.source}</span>
+            <span>Category: {lead.category}</span>
           </div>
 
           <TooltipProvider>
