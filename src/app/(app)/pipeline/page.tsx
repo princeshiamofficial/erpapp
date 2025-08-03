@@ -13,11 +13,18 @@ import { getUsers } from '@/lib/user-service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2 } from 'lucide-react';
+import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown } from 'lucide-react';
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
 import { LeadCard } from '@/components/pipeline/LeadCard';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Papa from 'papaparse';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 const AddEditLeadDialog = dynamic(() => import('@/components/pipeline/AddEditLeadDialog').then(mod => mod.AddEditLeadDialog));
@@ -27,8 +34,8 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; category: LeadCategory; icon
   { title: 'POP', category: 'POP', icon: UserIcon, headerBgClass: 'bg-sky-600' },
   { title: 'POG', category: 'POG', icon: Users, headerBgClass: 'bg-blue-600' },
   { title: 'OC', category: 'OC', icon: BaggageClaim, headerBgClass: 'bg-purple-600' },
-  { title: 'OD', category: 'OD', icon: ShoppingCart, headerBgClass: 'bg-green-600' },
-  { title: 'B2B', category: 'B2B', icon: Briefcase, headerBgClass: 'bg-orange-600' },
+  { title: 'OD', category: 'OD', icon: Briefcase, headerBgClass: 'bg-green-600' },
+  { title: 'B2B', category: 'B2B', icon: ShoppingCart, headerBgClass: 'bg-orange-600' },
 ];
 
 export default function PipeLinePage() {
@@ -245,22 +252,24 @@ export default function PipeLinePage() {
             </Select>
           )}
            <div className="flex items-center gap-2">
-             <Button
-                variant="outline"
-                className="w-full sm:w-auto h-10"
-                onClick={handleExport}
-                disabled={filteredLeads.length === 0}
-              >
-                  <Download className="mr-2 h-4 w-4" /> Export
-              </Button>
-             <Button
-              variant="outline"
-              className="w-full sm:w-auto h-10"
-              onClick={() => setIsImportOpen(true)}
-             >
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Import
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full sm:w-auto h-10">
+                  Actions <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => setIsImportOpen(true)}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Import Leads
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleExport} disabled={filteredLeads.length === 0}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export Leads
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               onClick={handleOpenAddDialog}
               className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10"
