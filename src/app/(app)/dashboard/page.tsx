@@ -32,7 +32,8 @@ import {
   PauseCircle,
   Truck,
   CheckCircle,
-  PackageCheck
+  PackageCheck,
+  PieChart as PieChartIcon,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -42,15 +43,19 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
+  Legend as RechartsLegend,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts';
-import { ChartContainer } from '@/components/ui/chart';
-import type { TrackingLink, OrderItem, ServiceModelItem, User, Project, ProjectStatusType, GlobalSettings } from '@/types'; 
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart';
+import type { TrackingLink, OrderItem, ServiceModelItem, User, Project, ProjectStatusType, GlobalSettings, Lead } from '@/types'; 
 import { getOrders } from '@/lib/order-service';
 import { getModels } from '@/lib/service-options-service'; 
 import { useToast } from '@/hooks/use-toast';
 import { getUsers } from '@/lib/user-service';
 import { getProjects } from '@/lib/project-service';
+import { getLeads } from '@/lib/lead-service';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -62,6 +67,15 @@ const chartConfig = {
     color: "hsl(var(--chart-1))",
   },
 };
+
+const trafficSourcesChartConfig = {
+  "Facebook": { label: "Facebook", color: "hsl(var(--chart-3))" },
+  "WhatsApp": { label: "WhatsApp", color: "hsl(var(--chart-2))" },
+  "Office Visit": { label: "Office Visit", color: "hsl(var(--chart-5))" },
+  "Phone Call": { label: "Phone Call", color: "hsl(var(--chart-1))" },
+  "Others": { label: "Others", color: "hsl(var(--muted-foreground))" },
+} satisfies ChartConfig;
+
 
 const formatCurrency = (value: number): string => {
   const numberPart = value.toLocaleString('en-US', { 
@@ -131,6 +145,7 @@ export default function DashboardPage() {
   const [allModels, setAllModels] = useState<ServiceModelItem[]>([]); 
   const [allCrmUsers, setAllCrmUsers] = useState<User[]>([]);
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
+  const [allLeads, setAllLeads] = useState<Lead[]>([]);
   
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
   const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Last 30 Days");
@@ -166,18 +181,20 @@ export default function DashboardPage() {
     }
     setIsLoadingData(true);
     try {
-      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings] = await Promise.all([ 
+      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads] = await Promise.all([ 
         getOrders(),
         getModels(),
         getUsers(),
         getProjects(),
         getGlobalSettings(),
+        getLeads(),
       ]);
       setAllOrders(fetchedOrders);
       setAllProjects(fetchedProjects);
       setAllModels(fetchedModels); 
       setAllCrmUsers(fetchedUsers.filter(u => u.role === 'CRM'));
       setGlobalSettings(fetchedSettings);
+      setAllLeads(fetchedLeads);
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
       toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive" });
@@ -185,6 +202,7 @@ export default function DashboardPage() {
       setAllProjects([]);
       setAllModels([]);
       setAllCrmUsers([]);
+      setAllLeads([]);
       setGlobalSettings(null);
     } finally {
       setIsLoadingData(false);
@@ -221,6 +239,26 @@ export default function DashboardPage() {
     
     return ordersToFilter;
   }, [allOrders, selectedDateRange, currentUser, selectedCrmId]);
+
+  const trafficSourcesData = useMemo(() => {
+    if (!allLeads.length) return [];
+    const sourceCounts: Record<string, number> = {};
+    allLeads.forEach(lead => {
+      const source = lead.source || "Others";
+      sourceCounts[source] = (sourceCounts[source] || 0) + 1;
+    });
+
+    const total = allLeads.length;
+    if (total === 0) return [];
+
+    return Object.entries(sourceCounts)
+      .map(([name, value]) => ({
+        name,
+        value,
+        fill: trafficSourcesChartConfig[name as keyof typeof trafficSourcesChartConfig]?.color || "hsl(var(--muted-foreground))"
+      }))
+      .sort((a,b) => b.value - a.value);
+  }, [allLeads]);
 
   const projectCounts = useMemo(() => {
     const counts: Record<ProjectStatusType, number> = {
@@ -519,88 +557,124 @@ export default function DashboardPage() {
             ))}
           </div>
 
-          <Card className="shadow-xl bg-card">
-            <CardHeader className="border-b">
-              <CardTitle className="flex items-center text-xl text-foreground">
-                <BarChartBig className="mr-2 h-6 w-6 text-primary" />
-                Sales ({currentDateRangeLabel})
-                {currentUser?.role === 'CRM' && <span className="ml-2 text-sm font-normal text-muted-foreground">(Your Sales)</span>}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">
-              {isLoadingContent ? ( 
-                <div className="flex items-center justify-center h-full">
-                  <Skeleton className="h-full w-full" />
-                </div>
-              ) : (
-                <ChartContainer config={chartConfig} className="w-full h-full">
-                  <RechartsLineChart
-                    data={salesChartData}
-                    margin={{
-                      top: 5,
-                      right: 10,
-                      left: -25, 
-                      bottom: 0,
-                    }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border)/0.5)" />
-                    <XAxis
-                      dataKey="date" 
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      tickFormatter={(value) => {
-                        if (chartGranularity === 'hourly') {
-                          const hour = parseInt(value);
-                          if (isNaN(hour)) return value; 
-                          if (hour === 0) return '12 AM';
-                          if (hour === 12) return '12 PM';
-                          if (hour < 12) return `${hour} AM`;
-                          return `${hour - 12} PM`;
-                        }
-                        try {
-                          return format(parseISO(value), 'd MMM');
-                        } catch (e) { return value; } 
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <Card className="shadow-xl bg-card lg:col-span-3">
+              <CardHeader className="border-b">
+                <CardTitle className="flex items-center text-xl text-foreground">
+                  <BarChartBig className="mr-2 h-6 w-6 text-primary" />
+                  Sales ({currentDateRangeLabel})
+                  {currentUser?.role === 'CRM' && <span className="ml-2 text-sm font-normal text-muted-foreground">(Your Sales)</span>}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">
+                {isLoadingContent ? ( 
+                  <div className="flex items-center justify-center h-full">
+                    <Skeleton className="h-full w-full" />
+                  </div>
+                ) : (
+                  <ChartContainer config={chartConfig} className="w-full h-full">
+                    <RechartsLineChart
+                      data={salesChartData}
+                      margin={{
+                        top: 5,
+                        right: 10,
+                        left: -25, 
+                        bottom: 0,
                       }}
-                      className="text-xs"
-                      interval={chartGranularity === 'hourly' && salesChartData.length > 12 ? 'preserveStartEnd' : undefined} 
-                    />
-                    <YAxis
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={8}
-                      tickFormatter={(value) => `৳${Number(value).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})}`}
-                      className="text-xs"
-                    />
-                    <Tooltip
-                      cursor={false}
-                      content={<CustomTooltipContent />}
-                    />
-                    <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '10px'}} />
-                    <Line
-                      dataKey="sales"
-                      name="Sales" 
-                      type="monotone"
-                      stroke="var(--color-sales)"
-                      strokeWidth={2}
-                      dot={{
-                        r: 4,
-                        fill: "var(--color-sales)",
-                        strokeWidth: 2,
-                        stroke: "hsl(var(--background))",
-                      }}
-                      activeDot={{
-                         r: 6,
-                         fill: "var(--color-sales)",
-                         strokeWidth: 2,
-                         stroke: "hsl(var(--background))",
-                      }}
-                    />
-                  </RechartsLineChart>
-                </ChartContainer>
-              )}
-            </CardContent>
-          </Card>
+                    >
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border)/0.5)" />
+                      <XAxis
+                        dataKey="date" 
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        tickFormatter={(value) => {
+                          if (chartGranularity === 'hourly') {
+                            const hour = parseInt(value);
+                            if (isNaN(hour)) return value; 
+                            if (hour === 0) return '12 AM';
+                            if (hour === 12) return '12 PM';
+                            if (hour < 12) return `${hour} AM`;
+                            return `${hour - 12} PM`;
+                          }
+                          try {
+                            return format(parseISO(value), 'd MMM');
+                          } catch (e) { return value; } 
+                        }}
+                        className="text-xs"
+                        interval={chartGranularity === 'hourly' && salesChartData.length > 12 ? 'preserveStartEnd' : undefined} 
+                      />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        tickFormatter={(value) => `৳${Number(value).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})}`}
+                        className="text-xs"
+                      />
+                      <Tooltip
+                        cursor={false}
+                        content={<CustomTooltipContent />}
+                      />
+                      <RechartsLegend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '10px'}} />
+                      <Line
+                        dataKey="sales"
+                        name="Sales" 
+                        type="monotone"
+                        stroke="var(--color-sales)"
+                        strokeWidth={2}
+                        dot={{
+                          r: 4,
+                          fill: "var(--color-sales)",
+                          strokeWidth: 2,
+                          stroke: "hsl(var(--background))",
+                        }}
+                        activeDot={{
+                           r: 6,
+                           fill: "var(--color-sales)",
+                           strokeWidth: 2,
+                           stroke: "hsl(var(--background))",
+                        }}
+                      />
+                    </RechartsLineChart>
+                  </ChartContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-xl bg-card lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-xl text-foreground">
+                      <PieChartIcon className="mr-2 h-6 w-6 text-primary" />
+                      Traffic Sources
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="h-[350px] p-4">
+                  {isLoadingContent ? (
+                    <div className="flex items-center justify-center h-full">
+                      <Skeleton className="h-48 w-48 rounded-full" />
+                    </div>
+                  ) : trafficSourcesData.length > 0 ? (
+                      <ChartContainer config={trafficSourcesChartConfig} className="w-full h-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <ChartTooltip content={<ChartTooltipContent nameKey="value" hideLabel />} />
+                                <Pie data={trafficSourcesData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ percent }) => `${(percent * 100).toFixed(0)}%`}>
+                                    {trafficSourcesData.map((entry) => (
+                                        <Cell key={`cell-${entry.name}`} fill={entry.fill} />
+                                    ))}
+                                </Pie>
+                                <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">
+                        No lead source data available.
+                    </div>
+                  )}
+                </CardContent>
+            </Card>
+          </div>
         </>
       )}
 
