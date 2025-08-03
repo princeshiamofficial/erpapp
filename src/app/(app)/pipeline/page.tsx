@@ -13,7 +13,7 @@ import { getUsers } from '@/lib/user-service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, MessageSquare, PhoneCall, Briefcase, Users, Contact, BaggageClaim } from 'lucide-react';
+import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, Contact, BaggageClaim } from 'lucide-react';
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
 import { LeadCard } from '@/components/pipeline/LeadCard';
 
@@ -24,7 +24,7 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; category: LeadCategory; icon
   { title: 'POP', category: 'POP', icon: Contact, headerBgClass: 'bg-sky-600' },
   { title: 'POG', category: 'POG', icon: Users, headerBgClass: 'bg-blue-600' },
   { title: 'OC', category: 'OC', icon: BaggageClaim, headerBgClass: 'bg-purple-600' },
-  { title: 'OD', category: 'OD', icon: MessageSquare, headerBgClass: 'bg-orange-600' },
+  { title: 'OD', category: 'OD', icon: ShoppingCart, headerBgClass: 'bg-orange-600' },
   { title: 'B2B', category: 'B2B', icon: Briefcase, headerBgClass: 'bg-green-600' },
 ];
 
