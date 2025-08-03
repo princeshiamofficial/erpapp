@@ -108,7 +108,6 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crm
                 <TooltipTrigger asChild>
                     <div className="flex items-start text-xs text-muted-foreground pt-1 cursor-help">
                         <MapPin className="mr-1.5 h-3 w-3 mt-0.5 shrink-0" />
-                        <span className="truncate">{lead.address}</span>
                     </div>
                 </TooltipTrigger>
                 <TooltipContent>
