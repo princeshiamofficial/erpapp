@@ -675,11 +675,11 @@ const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCo
         <div className="absolute top-1/2 left-0 h-1 rounded-full transform -translate-y-[calc(50%+1rem)]" style={{ width: '100%' }}>
             <motion.div
                 className="h-full rounded-full"
-                style={{ 
+                animate={{
+                    width: `${progressPercentage}%`,
                     background: visibleSteps[activeIndex]?.gradient || 'hsl(var(--primary))',
                     boxShadow: visibleSteps[activeIndex]?.shadow || 'none',
                 }}
-                animate={{ width: `${progressPercentage}%` }}
                 transition={{ duration: 0.5, ease: 'easeInOut' }}
             />
         </div>
