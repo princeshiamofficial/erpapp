@@ -13,7 +13,7 @@ import { getUsers } from '@/lib/user-service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown } from 'lucide-react';
+import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check, ChevronsUpDown } from 'lucide-react';
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
 import { LeadCard } from '@/components/pipeline/LeadCard';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -22,9 +22,11 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from '@/lib/utils';
 
 
 const AddEditLeadDialog = dynamic(() => import('@/components/pipeline/AddEditLeadDialog').then(mod => mod.AddEditLeadDialog));
@@ -47,6 +49,7 @@ export default function PipeLinePage() {
   
   const [allCrmUsers, setAllCrmUsers] = useState<User[]>([]);
   const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
+  const [isCrmFilterOpen, setIsCrmFilterOpen] = useState(false);
   
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -109,6 +112,12 @@ export default function PipeLinePage() {
         (lead.crmName && lead.crmName.toLowerCase().includes(lowercasedFilter))
     );
   }, [leads, searchTerm, currentUser, selectedCrmId]);
+  
+  const selectedCrmName = useMemo(() => {
+    if (selectedCrmId === 'all') return 'All CRMs';
+    return allCrmUsers.find(u => u.id === selectedCrmId)?.name || 'Filter by CRM...';
+  }, [selectedCrmId, allCrmUsers]);
+
 
   const leadsByCategory = useMemo(() => {
     const grouped: Record<LeadCategory, Lead[]> = {
@@ -241,15 +250,47 @@ export default function PipeLinePage() {
             className="bg-card border-border/50 focus:border-primary"
           />
            {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && (
-            <Select value={selectedCrmId} onValueChange={setSelectedCrmId}>
-              <SelectTrigger className="bg-card border-border/50 focus:border-primary">
-                <SelectValue placeholder="Filter by CRM..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All CRMs</SelectItem>
-                {allCrmUsers.map(crm => <SelectItem key={crm.id} value={crm.id}>{crm.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Popover open={isCrmFilterOpen} onOpenChange={setIsCrmFilterOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" aria-expanded={isCrmFilterOpen} className="w-full justify-between bg-card border-border/50 focus:border-primary">
+                  <span className="truncate">{selectedCrmName}</span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width)] p-0">
+                <Command>
+                  <CommandInput placeholder="Search CRM..." />
+                  <CommandList>
+                    <CommandEmpty>No CRM found.</CommandEmpty>
+                    <CommandGroup>
+                      <CommandItem
+                        value="all"
+                        onSelect={() => {
+                          setSelectedCrmId('all');
+                          setIsCrmFilterOpen(false);
+                        }}
+                      >
+                        <Check className={cn("mr-2 h-4 w-4", selectedCrmId === 'all' ? "opacity-100" : "opacity-0")} />
+                        All CRMs
+                      </CommandItem>
+                      {allCrmUsers.map(crm => (
+                        <CommandItem
+                          key={crm.id}
+                          value={crm.name}
+                          onSelect={() => {
+                            setSelectedCrmId(crm.id);
+                            setIsCrmFilterOpen(false);
+                          }}
+                        >
+                          <Check className={cn("mr-2 h-4 w-4", crm.id === selectedCrmId ? "opacity-100" : "opacity-0")} />
+                          {crm.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           )}
            <div className="flex items-center gap-2">
             <DropdownMenu>
