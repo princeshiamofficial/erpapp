@@ -664,6 +664,14 @@ const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCo
   }
 
   const progressPercentage = activeIndex > 0 ? (activeIndex / (visibleSteps.length - 1)) * 100 : 0;
+  
+  const getGradient = () => {
+    if (activeIndex === 0) {
+        return visibleSteps[0]?.gradient || 'hsl(var(--primary))';
+    }
+    const colors = visibleSteps.slice(0, activeIndex + 1).map(step => step.color);
+    return `linear-gradient(to right, ${colors.join(', ')})`;
+  };
 
   return (
     <div className="w-full overflow-x-auto py-4">
@@ -677,7 +685,7 @@ const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCo
                 className="h-full rounded-full"
                 animate={{
                     width: `${progressPercentage}%`,
-                    background: visibleSteps[activeIndex]?.gradient || 'hsl(var(--primary))',
+                    background: getGradient(),
                     boxShadow: visibleSteps[activeIndex]?.shadow || 'none',
                 }}
                 transition={{ duration: 0.5, ease: 'easeInOut' }}
