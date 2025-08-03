@@ -17,7 +17,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Badge } from '@/components/ui/badge';
 
 interface LeadCardProps {
   lead: Lead;
@@ -42,18 +41,6 @@ const formatDateSafe = (dateString?: string) => {
   } catch (e) {
     return 'Invalid Date';
   }
-};
-
-const getStatusBadgeClass = (status: Lead['status']) => {
-    switch (status) {
-      case 'Contacted': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'Qualified': return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'Proposal': return 'bg-orange-100 text-orange-800 border-orange-200';
-      case 'Closed': return 'bg-green-100 text-green-800 border-green-200';
-      case 'New Lead':
-      default:
-        return 'bg-sky-100 text-sky-800 border-sky-200';
-    }
 };
 
 
@@ -115,7 +102,6 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crm
               <CalendarDays className="mr-1.5 h-3 w-3" />
               <span>{formatDateSafe(lead.date)}</span>
             </div>
-             <Badge className={getStatusBadgeClass(lead.status)}>{lead.status}</Badge>
           </div>
            
            <div className="flex items-center text-xs text-muted-foreground pt-1">
