@@ -92,6 +92,13 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crm
             <span>{formatDateSafe(lead.date)}</span>
           </div>
 
+          {lead.schedule && (
+            <div className="flex items-center text-xs text-blue-600 dark:text-blue-400 font-medium pt-1">
+              <CalendarDays className="mr-1.5 h-3 w-3" />
+              <span>Schedule: {formatDateSafe(lead.schedule)}</span>
+            </div>
+          )}
+
           <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
             <Avatar className="h-6 w-6 text-xs">
               <AvatarImage src={crmAvatarUrl || undefined} alt={lead.crmName} />
