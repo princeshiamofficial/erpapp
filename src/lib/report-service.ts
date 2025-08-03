@@ -1,4 +1,5 @@
 
+
 import type { TrackingLink } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -87,10 +88,21 @@ export const addTask = async (taskData: Omit<TrackingLink, 'id'>): Promise<Track
   try {
     await ensureOrdersCollectionExists();
     
-    // Optimized ID generation: Use a timestamp and random component for uniqueness.
-    const timestamp = Date.now();
-    const randomComponent = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-    const newTaskId = `TD-${timestamp}-${randomComponent}`;
+    // Fetch all orders that have a 'projectIdDisplay' starting with 'TID-'
+    const allOrdersResponse = await fetchFromApi(`collections/${ORDERS_COLLECTION_NAME}/documents?limit=9999`);
+    let maxId = 0;
+    if (allOrdersResponse && Array.isArray(allOrdersResponse.documents)) {
+        allOrdersResponse.documents.forEach((doc: { id: string, data: any }) => {
+            if (doc.data.projectIdDisplay && doc.data.projectIdDisplay.startsWith('TID-')) {
+                const numPart = parseInt(doc.data.projectIdDisplay.split('-')[1], 10);
+                if (!isNaN(numPart) && numPart > maxId) {
+                    maxId = numPart;
+                }
+            }
+        });
+    }
+
+    const newTaskId = `TID-${String(maxId + 1).padStart(3, '0')}`;
     
     const newTaskWithId = { ...taskData, projectIdDisplay: newTaskId };
 
@@ -99,8 +111,6 @@ export const addTask = async (taskData: Omit<TrackingLink, 'id'>): Promise<Track
         body: JSON.stringify({ data: newTaskWithId }),
     });
     
-    // The API returns the document data but the ID is the auto-generated one.
-    // We need to update the created document with its own Firestore ID.
     const firestoreId = newDoc.id;
     await fetchFromApi(`collections/${ORDERS_COLLECTION_NAME}/documents/${firestoreId}`, {
         method: 'PUT',
@@ -135,17 +145,15 @@ export const updateTask = async (taskId: string, updates: Partial<Omit<TrackingL
     try {
         await ensureOrdersCollectionExists();
         
-        // Fetch the existing document first to ensure we don't overwrite data.
         const existingTask = await getTaskById(taskId);
         if (!existingTask) {
             throw new Error(`Task with ID ${taskId} not found.`);
         }
         
-        // Merge the updates with the existing data.
         const finalData = {
             ...existingTask,
             ...updates,
-            id: undefined, // Don't write the id field back into the data object
+            id: undefined, 
         };
         delete finalData.id;
 
