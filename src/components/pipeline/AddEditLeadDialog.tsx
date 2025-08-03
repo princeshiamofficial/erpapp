@@ -31,7 +31,7 @@ interface AddEditLeadDialogProps {
   currentUser: User;
 }
 
-const CATEGORIES: Array<Lead['category']> = ['POP', 'POG', 'OC', 'OD', 'B2B'];
+const LEAD_SOURCES = ["Facebook", "WhatsApp", "Office Visit", "Phone Call", "Others"];
 
 export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, currentUser }: AddEditLeadDialogProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -167,7 +167,14 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
               </div>
               <div className="space-y-1">
                 <Label htmlFor="source">Source *</Label>
-                <Input id="source" value={source} onChange={(e) => setSource(e.target.value)} required />
+                <Select value={source} onValueChange={setSource} required>
+                  <SelectTrigger id="source">
+                    <SelectValue placeholder="Select a source" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LEAD_SOURCES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-1">
