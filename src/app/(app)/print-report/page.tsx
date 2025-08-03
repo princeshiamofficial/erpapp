@@ -10,10 +10,11 @@ import { Input } from '@/components/ui/input';
 import { Search, Loader2, PlusCircle, Eye, Edit, MoreVertical, UserPlus, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import type { TrackingLink, OrderItem, User } from '@/types';
+import type { TrackingLink, OrderItem, User, CustomStatus } from '@/types';
 import { assignMeToAction, deleteOrderAction } from './actions';
 import { getOrdersForReport } from '@/lib/report-service';
-import { getUsers } from '@/lib/user-service'; // Import getUsers
+import { getUsers } from '@/lib/user-service'; 
+import { getStatuses, getContrastTextColor } from '@/lib/status-service'; // Import status helpers
 import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 import {
@@ -24,7 +25,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from '@/contexts/auth-context';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Import Avatar components
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge'; // Import Badge component
 
 const AddEditTaskDialog = dynamic(() => import('@/components/print-report/AddEditTaskDialog').then(mod => mod.AddEditTaskDialog));
 
@@ -49,6 +51,7 @@ interface PrintReportItem {
 export default function PrintReportPage() {
   const [reportItems, setReportItems] = useState<PrintReportItem[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]); // State for statuses
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
@@ -64,12 +67,14 @@ export default function PrintReportPage() {
   const fetchReportData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedOrders, fetchedUsers] = await Promise.all([
+      const [fetchedOrders, fetchedUsers, fetchedStatuses] = await Promise.all([
         getOrdersForReport({ limit: 500, orderBy: 'createdAt', direction: 'desc' }),
-        getUsers()
+        getUsers(),
+        getStatuses() // Fetch statuses
       ]);
       
       setAllUsers(fetchedUsers);
+      setAllStatuses(fetchedStatuses); // Set statuses state
       const userMap = new Map(fetchedUsers.map(u => [u.id, u]));
 
       const flattenedItems: PrintReportItem[] = fetchedOrders.map(order => {
@@ -110,6 +115,14 @@ export default function PrintReportPage() {
     );
   }, [reportItems, searchTerm]);
   
+  const getStatusDisplayInfo = useCallback((statusId: string): { name: string; color: string; textColor: string } => {
+    const status = allStatuses.find(s => s.id === statusId);
+    if (status) {
+      return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
+    }
+    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' };
+  }, [allStatuses]);
+
   const handleOpenAddDialog = () => {
     setEditingTask(null);
     setIsAddEditOpen(true);
@@ -222,6 +235,7 @@ export default function PrintReportPage() {
                   <TableRow>
                     <TableHead className="pl-6 w-[150px]">Task ID</TableHead>
                     <TableHead>Task Date</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Creator Name</TableHead>
                     <TableHead>Assigned LR</TableHead>
                     <TableHead className="pr-6 text-right">Actions</TableHead>
@@ -233,75 +247,84 @@ export default function PrintReportPage() {
                       <TableRow key={`skel-report-${i}`}>
                         <TableCell className="pl-6"><Skeleton className="h-5 w-24" /></TableCell>
                         <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
                         <TableCell><div className="flex items-center gap-2"><Skeleton className="h-6 w-6 rounded-full" /><Skeleton className="h-5 w-32" /></div></TableCell>
                         <TableCell><div className="flex items-center gap-2"><Skeleton className="h-6 w-6 rounded-full" /><Skeleton className="h-5 w-32" /></div></TableCell>
                         <TableCell className="pr-6 text-right"><Skeleton className="h-9 w-20 inline-block rounded-md" /></TableCell>
                       </TableRow>
                     ))
                   ) : filteredItems.length > 0 ? (
-                    filteredItems.map((item, index) => (
-                      <TableRow key={`${item.orderId}-${index}`} className="hover:bg-muted/50 transition-colors">
-                        <TableCell className="pl-6 font-mono text-sm text-primary">{item.projectIdDisplay}</TableCell>
-                        <TableCell className="text-muted-foreground text-xs">
-                          {item.orderDate ? format(parseISO(item.orderDate), 'd MMM, yyyy') : 'N/A'}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
-                              <AvatarImage src={item.creatorAvatarUrl || undefined} alt={item.creatorName} />
-                              <AvatarFallback className="text-xs">{getInitials(item.creatorName)}</AvatarFallback>
-                            </Avatar>
-                            <span>{item.creatorName}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                           {item.assignedLrName !== 'N/A' && (
-                             <Avatar className="h-6 w-6">
-                              <AvatarImage src={item.assignedLrAvatarUrl || undefined} alt={item.assignedLrName} />
-                              <AvatarFallback className="text-xs">{getInitials(item.assignedLrName)}</AvatarFallback>
-                            </Avatar>
-                           )}
-                            <span>{item.assignedLrName}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="pr-6 text-right">
-                           {currentUser?.role === 'LR' && item.originalOrder.designerRepresentativeId !== currentUser.id ? (
-                             <Button variant="outline" size="sm" onClick={() => handleAssignMe(item.originalOrder)}>
-                               <UserPlus className="mr-2 h-4 w-4" />
-                               Assign Me
-                             </Button>
-                           ) : (
-                             <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                 <Button variant="ghost" size="icon" className="h-8 w-8">
-                                    <MoreVertical className="h-4 w-4" />
-                                 </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onSelect={() => handleOpenEditDialog(item.originalOrder)} className="cursor-pointer">
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Edit
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem asChild className="cursor-pointer">
-                                    <Link href={`/track/${item.orderId}`}>
-                                      <Eye className="mr-2 h-4 w-4" /> View
-                                    </Link>
-                                  </DropdownMenuItem>
-                                   {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
-                                     <DropdownMenuItem onSelect={() => handleDeleteRequest(item.originalOrder)} className="cursor-pointer text-destructive focus:text-destructive">
-                                      <Trash2 className="mr-2 h-4 w-4" /> Delete
+                    filteredItems.map((item, index) => {
+                      const statusInfo = getStatusDisplayInfo(item.originalOrder.currentStatus);
+                      return (
+                        <TableRow key={`${item.orderId}-${index}`} className="hover:bg-muted/50 transition-colors">
+                          <TableCell className="pl-6 font-mono text-sm text-primary">{item.projectIdDisplay}</TableCell>
+                          <TableCell className="text-muted-foreground text-xs">
+                            {item.orderDate ? format(parseISO(item.orderDate), 'd MMM, yyyy') : 'N/A'}
+                          </TableCell>
+                          <TableCell>
+                            <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
+                              {statusInfo.name}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={item.creatorAvatarUrl || undefined} alt={item.creatorName} />
+                                <AvatarFallback className="text-xs">{getInitials(item.creatorName)}</AvatarFallback>
+                              </Avatar>
+                              <span>{item.creatorName}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                            {item.assignedLrName !== 'N/A' && (
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={item.assignedLrAvatarUrl || undefined} alt={item.assignedLrName} />
+                                <AvatarFallback className="text-xs">{getInitials(item.assignedLrName)}</AvatarFallback>
+                              </Avatar>
+                            )}
+                              <span>{item.assignedLrName}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="pr-6 text-right">
+                            {currentUser?.role === 'LR' && item.originalOrder.designerRepresentativeId !== currentUser.id ? (
+                              <Button variant="outline" size="sm" onClick={() => handleAssignMe(item.originalOrder)}>
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                Assign Me
+                              </Button>
+                            ) : (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onSelect={() => handleOpenEditDialog(item.originalOrder)} className="cursor-pointer">
+                                      <Edit className="mr-2 h-4 w-4" />
+                                      Edit
                                     </DropdownMenuItem>
-                                   )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                           )}
-                        </TableCell>
-                      </TableRow>
-                    ))
+                                    <DropdownMenuItem asChild className="cursor-pointer">
+                                      <Link href={`/track/${item.orderId}`}>
+                                        <Eye className="mr-2 h-4 w-4" /> View
+                                      </Link>
+                                    </DropdownMenuItem>
+                                    {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                                      <DropdownMenuItem onSelect={() => handleDeleteRequest(item.originalOrder)} className="cursor-pointer text-destructive focus:text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                      </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center">
+                      <TableCell colSpan={6} className="h-24 text-center">
                         {searchTerm ? `No items match "${searchTerm}".` : "No items to report."}
                       </TableCell>
                     </TableRow>
