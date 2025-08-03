@@ -640,10 +640,12 @@ const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCo
   }));
   
   useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveIndex((prevIndex) => (prevIndex + 1) % timelineSteps.length);
-    }, 3000);
-    return () => clearInterval(interval);
+    if (timelineSteps.length > 0) {
+      const interval = setInterval(() => {
+        setActiveIndex((prevIndex) => (prevIndex + 1) % timelineSteps.length);
+      }, 3000);
+      return () => clearInterval(interval);
+    }
   }, [timelineSteps.length]);
   
   if (isLoading) {
@@ -668,30 +670,33 @@ const ProjectStatusTimeline: React.FC<ProjectStatusTimelineProps> = ({ projectCo
   }
 
   const progressPercentage = (activeIndex / (timelineSteps.length - 1)) * 100;
+  const currentStep = timelineSteps[activeIndex];
 
   return (
     <div className="relative w-full p-8">
       <div className="relative h-1 bg-muted rounded-full">
-        <motion.div
-          className="absolute top-0 left-0 h-full rounded-full"
-          style={{ background: timelineSteps[activeIndex].gradient }}
-          animate={{ width: `${progressPercentage}%` }}
-          transition={{ duration: 0.5, ease: 'easeInOut' }}
-        >
+        {currentStep && (
           <motion.div
-            className="absolute right-0 top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-white"
-            style={{
-              boxShadow: `0 0 12px 3px ${timelineSteps[activeIndex].shadowColor}`,
-            }}
-            animate={{
-              scale: [1, 1.2, 1],
-            }}
-            transition={{
-              duration: 1.5,
-              repeat: Infinity,
-            }}
-          />
-        </motion.div>
+            className="absolute top-0 left-0 h-full rounded-full"
+            style={{ background: currentStep.gradient }}
+            animate={{ width: `${progressPercentage}%` }}
+            transition={{ duration: 0.5, ease: 'easeInOut' }}
+          >
+            <motion.div
+              className="absolute right-0 top-1/2 -translate-y-1/2 h-3 w-3 rounded-full bg-white"
+              style={{
+                boxShadow: `0 0 12px 3px ${currentStep.shadowColor}`,
+              }}
+              animate={{
+                scale: [1, 1.2, 1],
+              }}
+              transition={{
+                duration: 1.5,
+                repeat: Infinity,
+              }}
+            />
+          </motion.div>
+        )}
       </div>
 
       <div className="flex justify-between items-start mt-4">
