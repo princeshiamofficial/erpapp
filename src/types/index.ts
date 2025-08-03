@@ -272,7 +272,6 @@ export interface Project {
   designerRepresentativeAvatarUrl?: string | null;
 }
 
-export type LeadStatusType = 'New Lead' | 'Contacted' | 'Qualified' | 'Proposal' | 'Closed';
 export type LeadCategory = 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
 
 export interface Lead {
@@ -284,7 +283,6 @@ export interface Lead {
   source: string;
   address: string;
   category: LeadCategory;
-  status: LeadStatusType;
   notes?: string | null;
   schedule?: string | null; // ISO string or null
   crmId: string;

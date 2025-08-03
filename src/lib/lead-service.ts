@@ -62,7 +62,6 @@ export const getLeads = async (): Promise<Lead[]> => {
     if (response && Array.isArray(response.documents)) {
         return response.documents.map((doc: { id: string, data: any }) => ({
             id: doc.id,
-            status: 'New Lead', // Assign a default status
             ...doc.data
         } as Lead));
     }
@@ -78,7 +77,7 @@ export const getLeadById = async (leadId: string): Promise<Lead | null> => {
     if (!leadId) return null;
     try {
         const doc = await fetchFromApi(`collections/${COLLECTION_NAME}/documents/${leadId}`);
-        return { id: doc.id, status: 'New Lead', ...doc.data } as Lead;
+        return { id: doc.id, ...doc.data } as Lead;
     } catch (error) {
         console.error(`Error fetching lead by ID ${leadId} via API:`, error);
         return null;
@@ -92,7 +91,6 @@ export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> 
     await ensureCollectionExists(); // Ensure collection exists before adding
     const dataWithStatus = {
         ...leadData,
-        status: leadData.status || 'New Lead',
     };
     const payload = {
         data: dataWithStatus

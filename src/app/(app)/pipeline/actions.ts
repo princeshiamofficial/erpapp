@@ -29,7 +29,6 @@ export async function addLeadAction(
       ...leadData,
       crmId: currentUser.id,
       crmName: currentUser.name,
-      status: leadData.status || 'New Lead', // Assign default status
     };
     const newLead = await addLead(leadDataWithUser);
     if (newLead) {
@@ -57,7 +56,6 @@ export async function addLeadsBatchAction(
               ...lead,
               crmId: currentUser.id,
               crmName: currentUser.name,
-              status: lead.status || 'New Lead', // Assign default status
             };
             const newLead = await addLead(leadDataWithUser);
             if (newLead) {

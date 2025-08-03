@@ -1,5 +1,6 @@
 
 
+
 import { db } from './firebase';
 import { collection, getDocs, doc, setDoc, updateDoc, query, orderBy, writeBatch, getDoc as getFirestoreDoc, deleteField } from 'firebase/firestore';
 import type { Project, ProjectStatusType, User, OrderLogEntry } from '@/types'; // Added User, OrderLogEntry
@@ -244,3 +245,4 @@ export const updateProjectStatus = async (
   }
 };
     
+
