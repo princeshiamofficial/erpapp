@@ -1,5 +1,6 @@
 
 import type { TrackingLink } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
 
 // These values would typically come from environment variables
 const API_URL = "https://colorhutbd.xyz/firestore/api/index.php";
@@ -86,22 +87,11 @@ export const addTask = async (taskData: Omit<TrackingLink, 'id'>): Promise<Track
   try {
     await ensureOrdersCollectionExists();
     
-    // Fetch all documents to find the highest existing TD- ID
-    const allTasksResponse = await fetchFromApi(`collections/${ORDERS_COLLECTION_NAME}/documents?limit=5000`);
-    let maxId = 0;
-    if (allTasksResponse && Array.isArray(allTasksResponse.documents)) {
-        allTasksResponse.documents.forEach((doc: { id: string, data: any }) => {
-            const docId = doc.data.projectIdDisplay || doc.id;
-            if (docId && typeof docId === 'string' && docId.startsWith('TD-')) {
-                const numPart = parseInt(docId.split('-')[1] || '0', 10);
-                if (!isNaN(numPart) && numPart > maxId) {
-                    maxId = numPart;
-                }
-            }
-        });
-    }
-
-    const newTaskId = `TD-${String(maxId + 1).padStart(3, '0')}`;
+    // Optimized ID generation: Use a timestamp and random component for uniqueness.
+    const timestamp = Date.now();
+    const randomComponent = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+    const newTaskId = `TD-${timestamp}-${randomComponent}`;
+    
     const newTaskWithId = { ...taskData, projectIdDisplay: newTaskId };
 
     const newDoc = await fetchFromApi(`collections/${ORDERS_COLLECTION_NAME}/documents`, {
