@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { Lead, User } from "@/types";
+import type { Lead, User, LeadStatusType } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addLeadAction, updateLeadAction } from '@/app/(app)/pipeline/actions';
 import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
@@ -32,6 +32,7 @@ interface AddEditLeadDialogProps {
 }
 
 const CATEGORIES: Array<Lead['category']> = ['POP', 'POG', 'OC', 'OD', 'B2B'];
+const STATUSES: LeadStatusType[] = ['New Lead', 'Contacted', 'Qualified', 'Proposal', 'Closed'];
 
 export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, currentUser }: AddEditLeadDialogProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -42,6 +43,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
   const [source, setSource] = useState('');
   const [address, setAddress] = useState('');
   const [category, setCategory] = useState<Lead['category'] | ''>('');
+  const [status, setStatus] = useState<LeadStatusType>('New Lead');
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -59,6 +61,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setSource(lead.source);
         setAddress(lead.address);
         setCategory(lead.category);
+        setStatus(lead.status || 'New Lead');
         setNotes(lead.notes || '');
       } else {
         // Reset for add mode
@@ -70,6 +73,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setSource('');
         setAddress('');
         setCategory('');
+        setStatus('New Lead');
         setNotes('');
       }
     }
@@ -88,6 +92,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
       date: date.toISOString(),
       schedule: schedule ? schedule.toISOString() : null,
       contactName, businessName, phone, source, address, category,
+      status,
       notes: notes || null,
     };
 
@@ -167,15 +172,26 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
               <Label htmlFor="address">Address *</Label>
               <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required />
             </div>
-             <div className="space-y-1">
-              <Label htmlFor="category">Category *</Label>
-              <Select value={category} onValueChange={(value) => setCategory(value as Lead['category'])} required>
-                <SelectTrigger id="category"><SelectValue placeholder="Select a category" /></SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}
-                </SelectContent>
-              </Select>
-            </div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="category">Category *</Label>
+                  <Select value={category} onValueChange={(value) => setCategory(value as Lead['category'])} required>
+                    <SelectTrigger id="category"><SelectValue placeholder="Select a category" /></SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map(cat => (<SelectItem key={cat} value={cat}>{cat}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                 <div className="space-y-1">
+                  <Label htmlFor="status">Status *</Label>
+                  <Select value={status} onValueChange={(value) => setStatus(value as LeadStatusType)} required>
+                    <SelectTrigger id="status"><SelectValue placeholder="Select a status" /></SelectTrigger>
+                    <SelectContent>
+                      {STATUSES.map(stat => (<SelectItem key={stat} value={stat}>{stat}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+             </div>
             <div className="space-y-1">
               <Label htmlFor="notes">Notes (Optional)</Label>
               <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />

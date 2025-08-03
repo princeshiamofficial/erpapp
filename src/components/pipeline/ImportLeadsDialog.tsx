@@ -102,6 +102,7 @@ export function ImportLeadsDialog({ isOpen, onOpenChange, onLeadsImported, curre
             source: row.source || 'CSV Import',
             address: row.address || '',
             category: row.category || 'POG',
+            status: row.status || 'New Lead',
             notes: row.notes || null,
             schedule: row.schedule ? new Date(row.schedule).toISOString() : null,
           });
