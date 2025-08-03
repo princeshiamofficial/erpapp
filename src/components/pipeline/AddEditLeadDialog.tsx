@@ -140,7 +140,15 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
                       {schedule ? format(schedule, "PPP") : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={schedule} onSelect={setSchedule} initialFocus /></PopoverContent>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={schedule}
+                      onSelect={setSchedule}
+                      disabled={{ before: new Date() }}
+                      initialFocus
+                    />
+                  </PopoverContent>
                 </Popover>
               </div>
             </div>
