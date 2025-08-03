@@ -40,7 +40,6 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
   const isEditMode = !!task;
 
   const availableStatuses = useMemo(() => {
-    // Show only "Waiting" and "Printed" in the dropdown.
     return PRINT_STATUSES;
   }, []);
 
@@ -51,7 +50,7 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
         setCurrentStatus(task.currentStatus);
       } else {
         setTaskNotes('');
-        setCurrentStatus('Waiting'); // Default to 'Waiting' for new tasks
+        setCurrentStatus('Waiting'); 
       }
     }
   }, [isOpen, task, isEditMode]);
@@ -59,6 +58,12 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    onOpenChange(false); // Close dialog immediately
+    const savingToast = toast({
+      title: "Saving Task...",
+      description: "Your changes are being saved in the background.",
+    });
+
     setIsSubmitting(true);
     let result;
 
@@ -92,9 +97,11 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
     
     setIsSubmitting(false);
 
+    savingToast.dismiss(); 
+
     if (result.success && result.task) {
       toast({ title: `Task ${isEditMode ? 'Updated' : 'Created'}`, description: "The task has been saved." });
-      onTaskSaved(result.task); // Pass the new/updated task back to the parent
+      onTaskSaved(result.task); 
     } else {
       toast({ title: "Error", description: result.error || "Could not save the task.", variant: "destructive" });
     }
@@ -136,8 +143,7 @@ export function AddEditTaskDialog({ isOpen, onOpenChange, onTaskSaved, task, cur
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSubmitting ? 'Saving...' : (isEditMode ? 'Save Changes' : 'Add Task')}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : (isEditMode ? 'Save Changes' : 'Add Task')}
             </Button>
           </DialogFooter>
         </form>
