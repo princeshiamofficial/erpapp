@@ -704,39 +704,42 @@ export default function DashboardPage() {
         </>
       )}
 
-      <Card className="shadow-xl bg-card">
-        <CardHeader>
-          <CardTitle className="flex items-center text-xl text-foreground">
-            <Briefcase className="mr-2 h-6 w-6 text-primary" />
-            Project Status Overview
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <StatusTimeline
-            counts={projectCounts}
-            config={visibleProjectStatusDisplayConfig}
-            isLoading={isLoadingContent}
-            title="Project Status"
-          />
-        </CardContent>
-      </Card>
-      
-      <Card className="shadow-xl bg-card">
-        <CardHeader>
-          <CardTitle className="flex items-center text-xl text-foreground">
-            <Users className="mr-2 h-6 w-6 text-primary" />
-            Pipeline Category Overview
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <StatusTimeline
-            counts={leadCategoryCounts}
-            config={ALL_LEAD_CATEGORIES_CONFIG}
-            isLoading={isLoadingContent}
-            title="Lead Category"
-          />
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <Card className="shadow-xl bg-card">
+          <CardHeader>
+            <CardTitle className="flex items-center text-xl text-foreground">
+              <Briefcase className="mr-2 h-6 w-6 text-primary" />
+              Project Status Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <StatusTimeline
+              counts={projectCounts}
+              config={visibleProjectStatusDisplayConfig}
+              isLoading={isLoadingContent}
+              title="Project Status"
+            />
+          </CardContent>
+        </Card>
+        
+        <Card className="shadow-xl bg-card">
+          <CardHeader>
+            <CardTitle className="flex items-center text-xl text-foreground">
+              <Users className="mr-2 h-6 w-6 text-primary" />
+              Pipeline Category Overview
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <StatusTimeline
+              counts={leadCategoryCounts}
+              config={ALL_LEAD_CATEGORIES_CONFIG}
+              isLoading={isLoadingContent}
+              title="Lead Category"
+            />
+          </CardContent>
+        </Card>
+      </div>
+
     </div>
   );
 }
@@ -792,8 +795,8 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ counts, config, isLoadi
   };
 
   return (
-    <div className="w-full overflow-x-auto py-4 custom-scrollbar-hidden">
-      <div className="relative flex items-center justify-between min-w-[700px] px-4">
+    <div className="w-full overflow-x-auto py-4 custom-scrollbar">
+      <div className="relative flex items-center justify-between min-w-[500px] px-2">
         {/* The background line */}
         <div className="absolute top-1/2 left-0 w-full h-1 bg-muted rounded-full transform -translate-y-[calc(50%+1rem)]"></div>
 
