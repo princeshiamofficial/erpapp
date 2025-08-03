@@ -129,10 +129,19 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crm
 
           <div className="flex items-center justify-between text-xs text-muted-foreground pt-1">
             <div className="flex items-center">
-              <Avatar className="h-6 w-6 text-xs mr-2">
-                <AvatarImage src={crmAvatarUrl || undefined} alt={lead.crmName} />
-                <AvatarFallback>{getInitials(lead.crmName)}</AvatarFallback>
-              </Avatar>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Avatar className="h-6 w-6 text-xs mr-2 cursor-pointer">
+                      <AvatarImage src={crmAvatarUrl || undefined} alt={lead.crmName} />
+                      <AvatarFallback>{getInitials(lead.crmName)}</AvatarFallback>
+                    </Avatar>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{lead.crmName}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <span>{lead.phone}</span>
             </div>
             {lead.notes && (
