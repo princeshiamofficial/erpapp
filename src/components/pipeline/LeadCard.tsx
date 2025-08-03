@@ -93,7 +93,7 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, crm
           </div>
           <p className="text-xs text-muted-foreground truncate">{lead.businessName}</p>
           
-          <div className="flex items-center text-xs text-muted-foreground pt-1">
+          <div className="inline-flex items-center rounded-md border border-muted-foreground/30 bg-muted/50 px-2 py-0.5 text-xs font-medium text-muted-foreground transition-colors mt-1">
             <CalendarDays className="mr-1.5 h-3 w-3" />
             <span>{formatDateSafe(lead.date)}</span>
           </div>
