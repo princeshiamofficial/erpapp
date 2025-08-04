@@ -57,6 +57,12 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
                     headers: { 'Api-Key': apiKey, 'Secret-Key': secretKey, 'Content-Type': 'application/json' },
                     cache: 'no-store',
                 });
+
+                if (!response.ok) {
+                    // This handles HTTP errors like 404, 500, etc.
+                    throw new Error(`Packzy API responded with status: ${response.status}`);
+                }
+
                 const data = await response.json();
 
                 if (data.status === 200 && data.delivery_status === 'delivered') {
@@ -71,8 +77,9 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
                     }
                 }
             } catch (courierError) {
+                // This catches network errors (failed to fetch) and thrown errors from response.ok check
                 console.error(`[SettleAction] Error fetching courier status for order ${order.id}:`, courierError);
-                // Continue to next order
+                // Continue to the next order without crashing the whole action
             }
         }
     }
