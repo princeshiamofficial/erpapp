@@ -62,6 +62,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { getGlobalSettings } from '@/lib/settings-service';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+
 
 const chartConfig = {
   sales: {
@@ -144,86 +146,89 @@ const ALL_LEAD_CATEGORIES_CONFIG: Array<{ title: string; category: LeadCategory;
     { title: 'B2B', category: 'B2B', icon: ShoppingCart, color: '#ea580c', gradient: 'linear-gradient(to right, #ea580c, #f97316)', shadow: '0 4px 15px 0 rgba(234, 88, 12, 0.4)' },
 ];
 
+const queryClient = new QueryClient();
 
 export default function DashboardPage() {
   const { currentUser, isLoading: isAuthLoading } = useAuth();
+  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthLoading && !currentUser) {
+      router.replace('/login');
+    }
+  }, [currentUser, isAuthLoading, router]);
+
+  if (isAuthLoading || !isClient) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return null; // Redirect is handled by the useEffect above
+  }
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <DashboardContent />
+    </QueryClientProvider>
+  );
+}
+
+
+function DashboardContent() {
+  const { currentUser } = useAuth();
   const { toast } = useToast();
-  const [isLoadingData, setIsLoadingData] = useState(true);
-  const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
-  const [allProjects, setAllProjects] = useState<Project[]>([]);
-  const [allModels, setAllModels] = useState<ServiceModelItem[]>([]); 
-  const [allCrmUsers, setAllCrmUsers] = useState<User[]>([]);
-  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
-  const [allLeads, setAllLeads] = useState<Lead[]>([]);
   
-  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 29), 
+    to: new Date(),
+  });
   const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Last 30 Days");
   const [selectedPredefinedValue, setSelectedPredefinedValue] = useState<PredefinedRange | "custom" | null>("last30Days");
   const [chartGranularity, setChartGranularity] = useState<'daily' | 'hourly'>('daily');
   const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
-
-
-  const [totalSales, setTotalSales] = useState(formatCurrency(0));
-  const [invoiceDue, setInvoiceDue] = useState(formatCurrency(0));
-  const [salesChartData, setSalesChartData] = useState<Array<{ date: string; sales: number; orders: number; }>>([]);
-  const [totalPurchase, setTotalPurchase] = useState(formatCurrency(0)); 
-
-  const [netValue, setNetValue] = useState(formatCurrency(0));
-  const [totalSellReturn, setTotalSellReturn] = useState(formatCurrency(0));
-  const [purchaseDue, setPurchaseDue] = useState(formatCurrency(0));
-  const [totalPurchaseReturn, setTotalPurchaseReturn] = useState(formatCurrency(0));
-  const [expense, setExpense] = useState(formatCurrency(0));
   
   const isDesignerRepOrLr = currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR';
 
-  useEffect(() => {
-    setSelectedDateRange({
-      from: subDays(new Date(), 29), 
-      to: new Date(),
-    });
-  }, []);
-
   const fetchDashboardData = useCallback(async () => {
     if (!currentUser) {
-      setIsLoadingData(false);
-      return;
+      return null;
     }
-    setIsLoadingData(true);
     try {
       const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads] = await Promise.all([ 
-        getOrders(),
-        getModels(),
-        getUsers(),
-        getProjects(),
-        getGlobalSettings(),
-        getLeads(),
+        getOrders(), getModels(), getUsers(), getProjects(), getGlobalSettings(), getLeads(),
       ]);
-      setAllOrders(fetchedOrders);
-      setAllProjects(fetchedProjects);
-      setAllModels(fetchedModels); 
-      setAllCrmUsers(fetchedUsers.filter(u => u.role === 'CRM'));
-      setGlobalSettings(fetchedSettings);
-      setAllLeads(fetchedLeads);
+      return { 
+        allOrders: fetchedOrders, allModels: fetchedModels, allUsers: fetchedUsers, 
+        allProjects: fetchedProjects, globalSettings: fetchedSettings, allLeads: fetchedLeads
+      };
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
       toast({ title: "Error", description: "Could not load dashboard data.", variant: "destructive" });
-      setAllOrders([]);
-      setAllProjects([]);
-      setAllModels([]);
-      setAllCrmUsers([]);
-      setAllLeads([]);
-      setGlobalSettings(null);
-    } finally {
-      setIsLoadingData(false);
+      throw new Error("Data fetch failed");
     }
   }, [currentUser, toast]);
 
-  useEffect(() => {
-    if (currentUser) {
-      fetchDashboardData();
-    }
-  }, [fetchDashboardData, currentUser]);
+  const { data: queryData, isLoading: isLoadingData } = useQuery({
+    queryKey: ['dashboardData', currentUser?.id],
+    queryFn: fetchDashboardData,
+    enabled: !!currentUser,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: true, 
+    retry: 1, 
+  });
+
+  const { allOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [] } = queryData || {};
+  const allCrmUsers = useMemo(() => allUsers.filter(u => u.role === 'CRM'), [allUsers]);
 
   const filteredOrders = useMemo(() => {
     if (!selectedDateRange?.from || !selectedDateRange?.to) return [];
@@ -306,9 +311,7 @@ export default function DashboardPage() {
     return counts;
   }, [allLeads, currentUser]);
 
-  useEffect(() => {
-    if (isLoadingData || !selectedDateRange) return;
-
+  const { totalSales, invoiceDue, totalPurchase, netValue, salesChartData } = useMemo(() => {
     let currentTotalSales = 0;
     let currentTotalAdvance = 0;
     let currentTotalPurchaseValue = 0;
@@ -329,14 +332,9 @@ export default function DashboardPage() {
         currentTotalAdvance += order.advancePayment;
       }
     });
-    
-    setTotalSales(formatCurrency(currentTotalSales));
-    setInvoiceDue(formatCurrency(currentTotalSales - currentTotalAdvance));
-    setTotalPurchase(formatCurrency(currentTotalPurchaseValue));
-    setNetValue(formatCurrency(currentTotalSales - currentTotalPurchaseValue));
 
+    let chartData: Array<{ date: string; sales: number; orders: number; }> = [];
     if (selectedPredefinedValue === 'today' || selectedPredefinedValue === 'yesterday') {
-      setChartGranularity('hourly');
       const hourlyData = new Map<number, { sales: number; orders: number }>();
       for (let i = 0; i < 24; i++) {
         hourlyData.set(i, { sales: 0, orders: 0 }); 
@@ -354,12 +352,10 @@ export default function DashboardPage() {
           }
         }
       });
-      const chartData = Array.from(hourlyData.entries())
+      chartData = Array.from(hourlyData.entries())
         .map(([hour, data]) => ({ date: hour.toString(), sales: data.sales, orders: data.orders })) 
         .sort((a, b) => parseInt(a.date) - parseInt(b.date));
-      setSalesChartData(chartData);
     } else if (selectedDateRange?.from && selectedDateRange?.to) {
-      setChartGranularity('daily');
       const dailyData = new Map<string, { sales: number; orders: number }>();
       let tempDatePointerForInit = new Date(selectedDateRange.from);
       tempDatePointerForInit.setHours(0,0,0,0);
@@ -386,16 +382,27 @@ export default function DashboardPage() {
           }
         }
       });
-      const chartData = Array.from(dailyData.entries())
+      chartData = Array.from(dailyData.entries())
         .map(([date, data]) => ({ date, sales: data.sales, orders: data.orders }))
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-      setSalesChartData(chartData);
+    }
+
+    return {
+      totalSales: formatCurrency(currentTotalSales),
+      invoiceDue: formatCurrency(currentTotalSales - currentTotalAdvance),
+      totalPurchase: formatCurrency(currentTotalPurchaseValue),
+      netValue: formatCurrency(currentTotalSales - currentTotalPurchaseValue),
+      salesChartData: chartData
+    };
+  }, [filteredOrders, allModels, selectedDateRange, selectedPredefinedValue]);
+
+  useEffect(() => {
+    if (selectedPredefinedValue === 'today' || selectedPredefinedValue === 'yesterday') {
+      setChartGranularity('hourly');
     } else {
-      setSalesChartData([]);
       setChartGranularity('daily');
     }
-  }, [isLoadingData, filteredOrders, selectedDateRange, allModels, selectedPredefinedValue, currentUser]);
-
+  }, [selectedPredefinedValue]);
 
   const handleDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
@@ -403,16 +410,16 @@ export default function DashboardPage() {
     setSelectedPredefinedValue(predefined);
   };
 
- const summaryCardDefinitions = [
+  const summaryCardDefinitions = useMemo(() => [
     { title: "Total Sales", value: totalSales, icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
     { title: "Net", value: netValue, icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData },
     { title: "Invoice due", value: invoiceDue, icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
-    { title: "Total Sell Return", value: totalSellReturn, icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
+    { title: "Total Sell Return", value: formatCurrency(0), icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
     { title: "Total purchase", value: totalPurchase, icon: Download, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
-    { title: "Purchase due", value: purchaseDue, icon: AlertTriangle, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
-    { title: "Total Purchase Return", value: totalPurchaseReturn, icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
-    { title: "Expense", value: expense, icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
-  ];
+    { title: "Purchase due", value: formatCurrency(0), icon: AlertTriangle, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
+    { title: "Total Purchase Return", value: formatCurrency(0), icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
+    { title: "Expense", value: formatCurrency(0), icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
+  ], [totalSales, netValue, invoiceDue, totalPurchase, isLoadingData]);
 
   const summaryCardData = useMemo(() => {
     if (currentUser?.role === 'VENDOR') {
@@ -421,7 +428,7 @@ export default function DashboardPage() {
       );
     }
     return summaryCardDefinitions;
-  }, [isLoadingData, totalSales, netValue, invoiceDue, totalSellReturn, totalPurchase, purchaseDue, totalPurchaseReturn, expense, currentUser, summaryCardDefinitions]);
+  }, [currentUser, summaryCardDefinitions]);
 
   const selectedCrmName = useMemo(() => {
     if (selectedCrmId === 'all') return "All CRs";
@@ -429,22 +436,6 @@ export default function DashboardPage() {
   }, [selectedCrmId, allCrmUsers]);
 
 
-  if (isAuthLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
-  if (!currentUser && !isAuthLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <p>Redirecting to login...</p>
-      </div>
-    );
-  }
-  
   const CustomTooltipContent = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const salesPayload = payload.find((p: any) => p.dataKey === 'sales');
@@ -494,7 +485,7 @@ export default function DashboardPage() {
     return null;
   };
 
-  const isLoadingContent = isLoadingData || !selectedDateRange;
+  const isLoadingContent = isLoadingData || !selectedDateRange || !globalSettings;
 
   const canSelectCR = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
   
@@ -502,15 +493,11 @@ export default function DashboardPage() {
     if (isLoadingContent || !currentUser || !globalSettings?.projectStageAccess) {
         return [];
     }
-    if (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'LR') {
-        return ALL_PROJECT_STATUSES_CONFIG.filter(column => {
-            if (currentUser.role === 'LR') {
-                const userPermissions = globalSettings.projectStageAccess;
-                return userPermissions[column.status as ProjectStatusType]?.includes(currentUser.role);
-            }
-            return true;
-        });
+    // If user is System Admin, show all configured stages
+    if (currentUser.role === 'SYSTEM_ADMIN') {
+        return ALL_PROJECT_STATUSES_CONFIG;
     }
+    // For all other roles, filter based on their permissions
     const userPermissions = globalSettings.projectStageAccess;
     return ALL_PROJECT_STATUSES_CONFIG.filter(column => 
         userPermissions[column.status as ProjectStatusType]?.includes(currentUser.role)
