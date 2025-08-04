@@ -448,7 +448,6 @@ export default function DashboardPage() {
   const CustomTooltipContent = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const salesPayload = payload.find((p: any) => p.dataKey === 'sales');
-      const ordersPayload = payload.find((p: any) => p.dataKey === 'orders');
 
       return (
         <div className="rounded-lg border bg-background p-2 shadow-sm">
@@ -708,7 +707,7 @@ export default function DashboardPage() {
         </>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <div className={cn("grid grid-cols-1 gap-6", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
         <Card className="shadow-xl bg-card">
           <CardHeader>
             <CardTitle className="flex items-center text-xl text-foreground">
@@ -726,22 +725,24 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
         
-        <Card className="shadow-xl bg-card">
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl text-foreground">
-              <Users className="mr-2 h-6 w-6 text-primary" />
-              Pipeline Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <StatusTimeline
-              counts={leadCategoryCounts}
-              config={ALL_LEAD_CATEGORIES_CONFIG}
-              isLoading={isLoadingContent}
-              title="Lead Category"
-            />
-          </CardContent>
-        </Card>
+        {currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' && (
+          <Card className="shadow-xl bg-card">
+            <CardHeader>
+              <CardTitle className="flex items-center text-xl text-foreground">
+                <Users className="mr-2 h-6 w-6 text-primary" />
+                Pipeline Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <StatusTimeline
+                counts={leadCategoryCounts}
+                config={ALL_LEAD_CATEGORIES_CONFIG}
+                isLoading={isLoadingContent}
+                title="Lead Category"
+              />
+            </CardContent>
+          </Card>
+        )}
       </div>
 
     </div>
