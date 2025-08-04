@@ -68,6 +68,10 @@ const chartConfig = {
     label: "Total Sales (BDT)",
     color: "hsl(var(--chart-1))",
   },
+  orders: {
+    label: "Orders",
+    color: "hsl(var(--chart-2))",
+  }
 };
 
 const trafficSourcesChartConfig = {
@@ -166,7 +170,7 @@ export default function DashboardPage() {
 
   const [totalSales, setTotalSales] = useState(formatCurrency(0));
   const [invoiceDue, setInvoiceDue] = useState(formatCurrency(0));
-  const [salesChartData, setSalesChartData] = useState<Array<{ date: string; sales: number }>>([]);
+  const [salesChartData, setSalesChartData] = useState<Array<{ date: string; sales: number; orders: number; }>>([]);
   const [totalPurchase, setTotalPurchase] = useState(formatCurrency(0)); 
 
   const [netValue, setNetValue] = useState(formatCurrency(0));
@@ -337,9 +341,9 @@ export default function DashboardPage() {
 
     if (selectedPredefinedValue === 'today' || selectedPredefinedValue === 'yesterday') {
       setChartGranularity('hourly');
-      const hourlySales = new Map<number, number>(); 
+      const hourlyData = new Map<number, { sales: number; orders: number }>();
       for (let i = 0; i < 24; i++) {
-        hourlySales.set(i, 0); 
+        hourlyData.set(i, { sales: 0, orders: 0 }); 
       }
       filteredOrders.forEach(order => {
         if (order.createdAt) {
@@ -347,26 +351,27 @@ export default function DashboardPage() {
             const orderDate = parseISO(order.createdAt);
             const hour = getHours(orderDate);
             const orderTotalForChart = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
-            hourlySales.set(hour, (hourlySales.get(hour) || 0) + orderTotalForChart);
+            const existing = hourlyData.get(hour) || { sales: 0, orders: 0 };
+            hourlyData.set(hour, { sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
           } catch (e) {
             console.error("Error processing order for hourly chart:", order.id, e);
           }
         }
       });
-      const chartData = Array.from(hourlySales.entries())
-        .map(([hour, sales]) => ({ date: hour.toString(), sales })) 
+      const chartData = Array.from(hourlyData.entries())
+        .map(([hour, data]) => ({ date: hour.toString(), sales: data.sales, orders: data.orders })) 
         .sort((a, b) => parseInt(a.date) - parseInt(b.date));
       setSalesChartData(chartData);
     } else if (selectedDateRange?.from && selectedDateRange?.to) {
       setChartGranularity('daily');
-      const dailySales = new Map<string, number>();
+      const dailyData = new Map<string, { sales: number; orders: number }>();
       let tempDatePointerForInit = new Date(selectedDateRange.from);
       tempDatePointerForInit.setHours(0,0,0,0);
       const endDateForInit = new Date(selectedDateRange.to); 
       endDateForInit.setHours(23,59,59,999);
       
       while (tempDatePointerForInit <= endDateForInit) { 
-          dailySales.set(format(tempDatePointerForInit, 'yyyy-MM-dd'), 0);
+          dailyData.set(format(tempDatePointerForInit, 'yyyy-MM-dd'), { sales: 0, orders: 0 });
           tempDatePointerForInit = addDays(tempDatePointerForInit, 1);
       }
       filteredOrders.forEach(order => {
@@ -375,17 +380,18 @@ export default function DashboardPage() {
             const orderDate = parseISO(order.createdAt);
             orderDate.setHours(0,0,0,0); 
             const orderDateStr = format(orderDate, 'yyyy-MM-dd');
-            if (dailySales.has(orderDateStr)) {
+            if (dailyData.has(orderDateStr)) {
               const orderTotalForChart = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
-              dailySales.set(orderDateStr, (dailySales.get(orderDateStr) || 0) + orderTotalForChart);
+              const existing = dailyData.get(orderDateStr) || { sales: 0, orders: 0 };
+              dailyData.set(orderDateStr, { sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
             }
           } catch (e) {
             console.error("Error processing order for daily chart:", order.id, e);
           }
         }
       });
-      const chartData = Array.from(dailySales.entries())
-        .map(([date, sales]) => ({ date, sales }))
+      const chartData = Array.from(dailyData.entries())
+        .map(([date, data]) => ({ date, sales: data.sales, orders: data.orders }))
         .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       setSalesChartData(chartData);
     } else {
@@ -473,13 +479,13 @@ export default function DashboardPage() {
             {payload.map((entry: any, index: number) => (
               <div key={`item-${index}`} className="flex flex-col">
                  <span className="text-[0.70rem] uppercase text-muted-foreground" style={{ color: entry.color }}>
-                  {entry.name === 'sales' ? 'Sales' : entry.name}
+                  {entry.name === 'sales' ? 'Sales' : (entry.name === 'orders' ? 'Orders' : entry.name)}
                 </span>
                 <span
                   className="font-bold"
                   style={{ color: entry.color }}
                 >
-                  {formatCurrency(entry.value as number)}
+                  {entry.name === 'sales' ? formatCurrency(entry.value as number) : entry.value}
                 </span>
               </div>
             ))}
@@ -603,8 +609,8 @@ export default function DashboardPage() {
                       data={salesChartData}
                       margin={{
                         top: 5,
-                        right: 10,
-                        left: -25, 
+                        right: 20,
+                        left: -10, 
                         bottom: 0,
                       }}
                     >
@@ -631,10 +637,20 @@ export default function DashboardPage() {
                         interval={chartGranularity === 'hourly' && salesChartData.length > 12 ? 'preserveStartEnd' : undefined} 
                       />
                       <YAxis
+                        yAxisId="sales"
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}
                         tickFormatter={(value) => `৳${Number(value).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})}`}
+                        className="text-xs"
+                      />
+                      <YAxis
+                        yAxisId="orders"
+                        orientation="right"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        tickFormatter={(value) => `${value}`}
                         className="text-xs"
                       />
                       <Tooltip
@@ -643,6 +659,7 @@ export default function DashboardPage() {
                       />
                       <RechartsLegend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '10px'}} />
                       <Line
+                        yAxisId="sales"
                         dataKey="sales"
                         name="Sales" 
                         type="monotone"
@@ -657,6 +674,26 @@ export default function DashboardPage() {
                         activeDot={{
                            r: 6,
                            fill: "var(--color-sales)",
+                           strokeWidth: 2,
+                           stroke: "hsl(var(--background))",
+                        }}
+                      />
+                       <Line
+                        yAxisId="orders"
+                        dataKey="orders"
+                        name="Orders" 
+                        type="monotone"
+                        stroke="var(--color-orders)"
+                        strokeWidth={2}
+                        dot={{
+                          r: 4,
+                          fill: "var(--color-orders)",
+                          strokeWidth: 2,
+                          stroke: "hsl(var(--background))",
+                        }}
+                        activeDot={{
+                           r: 6,
+                           fill: "var(--color-orders)",
                            strokeWidth: 2,
                            stroke: "hsl(var(--background))",
                         }}
