@@ -713,7 +713,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center text-xl text-foreground">
               <Briefcase className="mr-2 h-6 w-6 text-primary" />
-              Project Status Overview
+              Project Overview
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -730,7 +730,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="flex items-center text-xl text-foreground">
               <Users className="mr-2 h-6 w-6 text-primary" />
-              Pipeline Category Overview
+              Pipeline Overview
             </CardTitle>
           </CardHeader>
           <CardContent>
