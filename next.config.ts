@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -36,6 +37,19 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
+  },
+  async headers() {
+    return [
+      {
+        source: '/(app)/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'private',
+          },
+        ],
+      },
+    ]
   },
 };
 
