@@ -503,7 +503,13 @@ export default function DashboardPage() {
         return [];
     }
     if (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'LR') {
-        return ALL_PROJECT_STATUSES_CONFIG;
+        return ALL_PROJECT_STATUSES_CONFIG.filter(column => {
+            if (currentUser.role === 'LR') {
+                const userPermissions = globalSettings.projectStageAccess;
+                return userPermissions[column.status as ProjectStatusType]?.includes(currentUser.role);
+            }
+            return true;
+        });
     }
     const userPermissions = globalSettings.projectStageAccess;
     return ALL_PROJECT_STATUSES_CONFIG.filter(column => 
