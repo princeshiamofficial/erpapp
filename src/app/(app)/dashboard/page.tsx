@@ -68,11 +68,7 @@ const chartConfig = {
     label: "Total Sales (BDT)",
     color: "hsl(var(--chart-1))",
   },
-  orders: {
-    label: "Orders",
-    color: "hsl(var(--chart-2))",
-  }
-};
+} satisfies ChartConfig;
 
 const trafficSourcesChartConfig = {
   "Facebook": { label: "Facebook", color: "hsl(var(--chart-3))" },
@@ -451,6 +447,9 @@ export default function DashboardPage() {
   
   const CustomTooltipContent = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      const salesPayload = payload.find((p: any) => p.dataKey === 'sales');
+      const ordersPayload = payload.find((p: any) => p.dataKey === 'orders');
+
       return (
         <div className="rounded-lg border bg-background p-2 shadow-sm">
           <div className="grid grid-cols-1 gap-2">
@@ -476,19 +475,19 @@ export default function DashboardPage() {
                 ) : 'N/A'}
               </span>
             </div>
-            {payload.map((entry: any, index: number) => (
-              <div key={`item-${index}`} className="flex flex-col">
-                 <span className="text-[0.70rem] uppercase text-muted-foreground" style={{ color: entry.color }}>
-                  {entry.name === 'sales' ? 'Sales' : (entry.name === 'orders' ? 'Orders' : entry.name)}
+            {salesPayload && (
+              <div className="flex flex-col">
+                 <span className="text-[0.70rem] uppercase text-muted-foreground" style={{ color: salesPayload.color }}>
+                  Sales ({salesPayload.payload.orders || 0} orders)
                 </span>
                 <span
                   className="font-bold"
-                  style={{ color: entry.color }}
+                  style={{ color: salesPayload.color }}
                 >
-                  {entry.name === 'sales' ? formatCurrency(entry.value as number) : entry.value}
+                  {formatCurrency(salesPayload.value as number)}
                 </span>
               </div>
-            ))}
+            )}
           </div>
         </div>
       );
@@ -637,20 +636,10 @@ export default function DashboardPage() {
                         interval={chartGranularity === 'hourly' && salesChartData.length > 12 ? 'preserveStartEnd' : undefined} 
                       />
                       <YAxis
-                        yAxisId="sales"
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}
                         tickFormatter={(value) => `৳${Number(value).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})}`}
-                        className="text-xs"
-                      />
-                      <YAxis
-                        yAxisId="orders"
-                        orientation="right"
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        tickFormatter={(value) => `${value}`}
                         className="text-xs"
                       />
                       <Tooltip
@@ -659,9 +648,7 @@ export default function DashboardPage() {
                       />
                       <RechartsLegend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '10px'}} />
                       <Line
-                        yAxisId="sales"
                         dataKey="sales"
-                        name="Sales" 
                         type="monotone"
                         stroke="var(--color-sales)"
                         strokeWidth={2}
@@ -674,26 +661,6 @@ export default function DashboardPage() {
                         activeDot={{
                            r: 6,
                            fill: "var(--color-sales)",
-                           strokeWidth: 2,
-                           stroke: "hsl(var(--background))",
-                        }}
-                      />
-                       <Line
-                        yAxisId="orders"
-                        dataKey="orders"
-                        name="Orders" 
-                        type="monotone"
-                        stroke="var(--color-orders)"
-                        strokeWidth={2}
-                        dot={{
-                          r: 4,
-                          fill: "var(--color-orders)",
-                          strokeWidth: 2,
-                          stroke: "hsl(var(--background))",
-                        }}
-                        activeDot={{
-                           r: 6,
-                           fill: "var(--color-orders)",
                            strokeWidth: 2,
                            stroke: "hsl(var(--background))",
                         }}
@@ -833,7 +800,7 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ counts, config, isLoadi
 
   return (
     <div className="w-full overflow-x-auto py-4 custom-scrollbar-hidden">
-      <div className="relative flex items-center justify-between min-w-[500px] px-2">
+      <div className="relative flex items-center justify-between min-w-max px-2">
         {/* The background line */}
         <div className="absolute top-1/2 left-0 w-full h-1 bg-muted rounded-full transform -translate-y-[calc(50%+1rem)]"></div>
 
@@ -856,7 +823,7 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ counts, config, isLoadi
           return (
             <motion.div 
               key={key} 
-              className="relative z-10 flex flex-col items-center flex-1"
+              className="relative z-10 flex flex-col items-center flex-1 min-w-[90px]"
               animate={{ scale: isActive ? 1.1 : 1 }}
               transition={{ type: 'spring', stiffness: 300, damping: 15 }}
             >
