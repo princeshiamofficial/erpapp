@@ -36,9 +36,9 @@ const getInitials = (name: string) => {
 
 const PodiumItem: React.FC<{ user: CrmPerformanceData; rank: number; isCenter?: boolean }> = ({ user, rank, isCenter }) => {
   const rankColors = {
-    1: "bg-[hsl(var(--leaderboard-rank-badge-bg))]", 
-    2: "bg-slate-400", // Silver-ish for rank 2
-    3: "bg-yellow-600",  // Bronze-ish for rank 3
+    1: "bg-[hsl(var(--leaderboard-gold))]", 
+    2: "bg-[hsl(var(--leaderboard-silver))]", // Silver-ish for rank 2
+    3: "bg-[hsl(var(--leaderboard-bronze))]",  // Bronze-ish for rank 3
   };
 
   return (

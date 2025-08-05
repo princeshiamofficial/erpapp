@@ -60,13 +60,15 @@
     --leaderboard-text-light: 35 85% 95%;   /* Very light warm off-white/cream */
     
     --leaderboard-list-area-bg: 25 40% 20%; /* Darker brownish-orange for the list container */
-    --leaderboard-list-item-bg: 30 60% 96%; /* Warm very light beige/off-white for list items */
+    --leaderboard-list-item-bg: 30 60% 98%; /* Warm very light beige/off-white for list items */
     --leaderboard-list-item-bg-dark: 25 35% 22%; /* Darker item bg for dark mode */
 
     --leaderboard-list-text: 20 50% 25%;      /* Dark warm brown for list text on light items */
     --leaderboard-list-text-dark: 35 70% 85%; /* Lighter text for list items in dark mode */
     
     --leaderboard-gold: 38 100% 58%;        /* Vibrant, clear gold-yellow */
+    --leaderboard-silver: 210 15% 75%;      /* Cool, light silver */
+    --leaderboard-bronze: 28 50% 45%;       /* Warm, desaturated orange/brown */
     --leaderboard-rank-badge-bg: hsl(var(--leaderboard-gold)); 
     --leaderboard-rank-badge-text: 25 60% 15%; /* Dark brown text for gold badges */
     
@@ -133,6 +135,8 @@
     --leaderboard-list-text: hsl(var(--leaderboard-list-text-dark));
     
     --leaderboard-gold: 38 100% 58%;        
+    --leaderboard-silver: 210 15% 75%;
+    --leaderboard-bronze: 28 50% 45%; 
     --leaderboard-rank-badge-bg: hsl(var(--leaderboard-gold)); 
     --leaderboard-rank-badge-text: 25 60% 15%; 
     
