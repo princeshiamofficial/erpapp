@@ -57,7 +57,6 @@ export function SalesPerformanceClient({ allOrders }: SalesPerformanceClientProp
                     <Button variant="ghost" size="sm"><Layers className="h-4 w-4"/></Button>
                 </div>
                  <Button variant="default" size="sm"><TrendingUp className="h-4 w-4 mr-2"/>Trend</Button>
-                <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2"/>Export</Button>
             </div>
         </div>
       </CardHeader>
