@@ -408,7 +408,7 @@ function DashboardContent() {
   const handleDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
     setCurrentDateRangeLabel(label);
-    setSelectedPredefinedValue(predefined);
+    setSelectedPredefined(predefined);
   };
 
   const summaryCardDefinitions = useMemo(() => [
@@ -511,6 +511,11 @@ function DashboardContent() {
     }
     return allOrders;
   }, [allOrders, currentUser]);
+  
+  const canSeeSalesPerformance = useMemo(() => {
+    if (!currentUser) return false;
+    return ['SYSTEM_ADMIN', 'ADMIN', 'CRM'].includes(currentUser.role);
+  }, [currentUser]);
 
 
   return (
@@ -746,13 +751,14 @@ function DashboardContent() {
         )}
       </div>
 
-      <div className="mt-6">
-        <SalesPerformanceClient 
-            allOrders={salesPerformanceOrders} 
-            allCrmUsers={allCrmUsers}
-        />
-      </div>
-
+      {canSeeSalesPerformance && (
+        <div className="mt-6">
+          <SalesPerformanceClient 
+              allOrders={salesPerformanceOrders} 
+              allCrmUsers={allCrmUsers}
+          />
+        </div>
+      )}
     </div>
   );
 }

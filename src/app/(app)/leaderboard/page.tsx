@@ -182,6 +182,11 @@ export default function LeaderboardPage() {
 
   const isLoadingContent = isAuthLoading || isLoadingData || !selectedDateRange;
 
+  const canSeeSalesPerformance = useMemo(() => {
+    if (!currentUser) return false;
+    return ['SYSTEM_ADMIN', 'ADMIN', 'CRM'].includes(currentUser.role);
+  }, [currentUser]);
+
   if (isLoadingContent) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--leaderboard-bg-main-start))] to-[hsl(var(--leaderboard-bg-main-end))] text-[hsl(var(--leaderboard-text-light))] p-4 relative overflow-hidden">
@@ -255,12 +260,14 @@ export default function LeaderboardPage() {
         timePeriodLabel={currentDateRangeLabel}
       />
 
-      <div className="relative z-10 mt-8 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12">
-        <SalesPerformanceClient 
-          allOrders={salesPerformanceOrders} 
-          allCrmUsers={allUsers.filter(u => u.role === 'CRM')} 
-        />
-      </div>
+      {canSeeSalesPerformance && (
+        <div className="relative z-10 mt-8 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12">
+          <SalesPerformanceClient 
+            allOrders={salesPerformanceOrders} 
+            allCrmUsers={allUsers.filter(u => u.role === 'CRM')} 
+          />
+        </div>
+      )}
     </div>
   );
 }
