@@ -45,9 +45,12 @@ export default function LeaderboardPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   
-  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
-      from: startOfDay(new Date()),
-      to: endOfDay(new Date()),
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(() => {
+    const today = new Date();
+    return {
+      from: startOfDay(today),
+      to: endOfDay(today),
+    };
   });
   const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Today");
 
@@ -137,7 +140,7 @@ export default function LeaderboardPage() {
     } finally {
       setIsLoadingData(false);
     }
-  }, [currentUser, toast]);
+  }, [currentUser]);
 
   useEffect(() => {
     // Data is now fetched on first load if user is available.
