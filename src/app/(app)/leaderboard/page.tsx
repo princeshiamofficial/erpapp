@@ -16,6 +16,8 @@ import {
   parseISO,
   subDays,
   differenceInDays,
+  startOfDay,
+  endOfDay,
 } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
@@ -43,7 +45,10 @@ export default function LeaderboardPage() {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   
-  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
+      from: startOfDay(new Date()),
+      to: endOfDay(new Date()),
+  });
   const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Today");
 
   const [allUsers, setAllUsers] = useState<User[]>([]);
@@ -51,13 +56,6 @@ export default function LeaderboardPage() {
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
 
   const [currentLeaderboardBackground, setCurrentLeaderboardBackground] = useState<string | null | undefined>(undefined);
-
-  useEffect(() => {
-    setSelectedDateRange({
-        from: new Date(),
-        to: new Date(),
-    });
-  }, []);
 
   const calculatePerformance = useCallback((
     crmUsers: User[],
@@ -142,10 +140,12 @@ export default function LeaderboardPage() {
   }, [currentUser, toast]);
 
   useEffect(() => {
-    if (!isAuthLoading) {
-      // No automatic fetch on load
+    // Data is now fetched on first load if user is available.
+    if (currentUser && !isAuthLoading) {
+      fetchData();
     }
-  }, [isAuthLoading]);
+  }, [currentUser, isAuthLoading, fetchData]);
+
 
   useEffect(() => {
     if (isLoadingData || !allUsers.length || !globalSettings || !selectedDateRange) return;
@@ -259,4 +259,3 @@ export default function LeaderboardPage() {
     </div>
   );
 }
-
