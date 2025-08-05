@@ -3,13 +3,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Printer, ShoppingCart, Briefcase } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Briefcase } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/projects", label: "Projects", icon: Briefcase },
-  { href: "/print-report", label: "Print", icon: Printer },
   { href: "/purchase-request", label: "Request", icon: ShoppingCart },
 ];
 
@@ -18,7 +17,7 @@ export function BottomNavigation() {
 
   return (
     <div className="fixed bottom-0 left-0 z-50 w-full h-20 bg-card border-t border-border md:hidden">
-      <div className="grid h-full max-w-lg grid-cols-4 mx-auto">
+      <div className="grid h-full max-w-lg grid-cols-3 mx-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
           return (
