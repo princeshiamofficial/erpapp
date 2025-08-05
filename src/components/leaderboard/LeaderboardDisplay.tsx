@@ -68,7 +68,9 @@ const PodiumItem: React.FC<{ user: CrmPerformanceData; rank: number; isCenter?: 
       <p className="text-xs text-[hsl(var(--leaderboard-text-light))]/70 mt-0.5 truncate w-full px-1">
         {user.role?.replace(/_/g, ' ') || 'Member'}
       </p>
-      <p className="text-lg sm:text-xl font-bold mt-0.5 text-[hsl(var(--leaderboard-text-light))]">{user.ordersCompleted.toLocaleString()}</p>
+      <p className="text-lg sm:text-xl font-bold mt-0.5 text-[hsl(var(--leaderboard-text-light))]">
+        {user.ordersCompleted.toLocaleString()} / <span className="text-base opacity-70">{user.target.toLocaleString()}</span>
+      </p>
     </motion.div>
   );
 };
@@ -103,7 +105,7 @@ const RankListItem: React.FC<{ user: CrmPerformanceData; index: number }> = ({ u
       </p>
       <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-0.5">
         <Award className="h-3.5 w-3.5 mr-1 text-[hsl(var(--leaderboard-gold))]" />
-        {user.ordersCompleted.toLocaleString()} Sales
+        {user.ordersCompleted.toLocaleString()} / {user.target.toLocaleString()} Sales
       </div>
     </div>
     {user.pointChange !== undefined && user.pointChange !== 0 && (

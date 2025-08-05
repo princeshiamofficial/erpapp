@@ -21,7 +21,6 @@ interface SalesPerformanceClientProps {
 interface MonthlyData {
   name: string;
   sales: number;
-  target: number;
   crmSales: { [crmId: string]: number };
 }
 
@@ -48,7 +47,6 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
     const months: MonthlyData[] = Array.from({ length: 12 }, (_, i) => ({
       name: format(new Date(currentYear, i), 'MMM'),
       sales: 0,
-      target: 220000, 
       crmSales: {},
     }));
 
@@ -79,7 +77,6 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
               content={({ active, payload, label }) => <ChartTooltipContentCustom active={active} payload={payload} label={label} userMap={userMap} />}
             />
             <Line type="monotone" dataKey="sales" stroke="hsl(var(--primary))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
-            <Line type="monotone" dataKey="target" stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" strokeWidth={2} dot={false} />
             <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`}/>
           </RechartsLineChart>
@@ -98,7 +95,6 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
               content={({ active, payload, label }) => <ChartTooltipContentCustom active={active} payload={payload} label={label} userMap={userMap} />}
             />
             <Area type="monotone" dataKey="sales" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorSales)" />
-            <Area type="monotone" dataKey="target" stroke="hsl(var(--muted-foreground))" fill="hsl(var(--muted))" fillOpacity={0.2} />
              <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`}/>
           </RechartsAreaChart>
@@ -112,7 +108,6 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
               content={({ active, payload, label }) => <ChartTooltipContentCustom active={active} payload={payload} label={label} userMap={userMap} />}
             />
             <Bar dataKey="sales" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="target" fill="hsl(var(--muted))" radius={[4, 4, 0, 0]} />
             <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${Number(value) / 1000}k`}/>
           </RechartsBarChart>
@@ -167,11 +162,7 @@ const ChartTooltipContentCustom = ({ active, payload, label, userMap }: any) => 
                         <span className="text-sm text-muted-foreground">Total Sales:</span>
                         <span className="text-sm font-medium ml-auto">{formatCurrencyBdt(salesPayload?.value as number)}</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <div className="h-2.5 w-2.5 rounded-full bg-gray-300 dark:bg-gray-700"></div>
-                        <span className="text-sm text-muted-foreground">Target:</span>
-                        <span className="text-sm font-medium ml-auto">{formatCurrencyBdt(payload.find(p => p.dataKey === 'target')?.value as number)}</span>
-                    </div>
+                    
                     {crmBreakdown.length > 0 && (
                         <>
                             <div className="border-t border-dashed my-1"></div>
