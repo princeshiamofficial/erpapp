@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getUsers } from '@/lib/user-service';
@@ -61,7 +61,7 @@ export default function LeaderboardPage() {
 
   const calculatePerformance = useCallback((
     crmUsers: User[],
-    allOrders: TrackingLink[],
+    orders: TrackingLink[],
     globalSettings: GlobalSettings,
     dateRange: DateRange | undefined
   ): CrmPerformanceData[] => {
@@ -80,7 +80,7 @@ export default function LeaderboardPage() {
 
     const performanceDataList = crmUsers.map(crmUser => {
       // Filter orders created by this CRM within the date range
-      const ordersCreatedInPeriod = allOrders.filter(order => 
+      const ordersCreatedInPeriod = orders.filter(order => 
         order.crmUserId === crmUser.id &&
         order.createdAt && 
         isWithinInterval(parseISO(order.createdAt), { start: periodStart, end: periodEnd })
@@ -143,9 +143,9 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     if (!isAuthLoading) {
-      fetchData();
+      // No automatic fetch on load
     }
-  }, [isAuthLoading, fetchData]);
+  }, [isAuthLoading]);
 
   useEffect(() => {
     if (isLoadingData || !allUsers.length || !globalSettings || !selectedDateRange) return;
@@ -164,6 +164,14 @@ export default function LeaderboardPage() {
     setPerformanceData(mapDataForCurrentUser(newPerformanceData));
 
   }, [isLoadingData, allUsers, allOrders, globalSettings, selectedDateRange, currentUser, calculatePerformance]);
+  
+  const salesPerformanceOrders = useMemo(() => {
+    if (currentUser?.role === 'CRM') {
+      return allOrders.filter(order => order.crmUserId === currentUser.id);
+    }
+    return allOrders;
+  }, [allOrders, currentUser]);
+
 
   const handleDateRangeChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
@@ -246,8 +254,9 @@ export default function LeaderboardPage() {
       />
 
       <div className="relative z-10 mt-8 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12">
-        <SalesPerformanceClient allOrders={allOrders} />
+        <SalesPerformanceClient allOrders={salesPerformanceOrders} />
       </div>
     </div>
   );
 }
+
