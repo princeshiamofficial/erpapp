@@ -63,6 +63,7 @@ import { getGlobalSettings } from '@/lib/settings-service';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { SalesPerformanceClient } from '@/components/leaderboard/SalesPerformanceClient';
 
 
 const chartConfig = {
@@ -504,6 +505,13 @@ function DashboardContent() {
     );
   }, [currentUser, globalSettings, isLoadingContent]);
 
+  const salesPerformanceOrders = useMemo(() => {
+    if (currentUser?.role === 'CRM') {
+      return allOrders.filter(order => order.crmUserId === currentUser.id);
+    }
+    return allOrders;
+  }, [allOrders, currentUser]);
+
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 custom-scrollbar-hidden">
@@ -700,7 +708,7 @@ function DashboardContent() {
         </>
       )}
 
-      <div className={cn("grid grid-cols-1 gap-6", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
+      <div className={cn("grid grid-cols-1 gap-6 mt-6", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
         <Card className="shadow-xl bg-card">
           <CardHeader>
             <CardTitle className="flex items-center text-xl text-foreground">
@@ -736,6 +744,13 @@ function DashboardContent() {
             </CardContent>
           </Card>
         )}
+      </div>
+
+      <div className="mt-6">
+        <SalesPerformanceClient 
+            allOrders={salesPerformanceOrders} 
+            allCrmUsers={allCrmUsers}
+        />
       </div>
 
     </div>
