@@ -114,40 +114,39 @@ export default function LeaderboardPage() {
     return performanceDataList;
   }, []);
 
-
-  const fetchData = useCallback(async () => {
-    if (!currentUser) {
-      setIsLoadingData(false);
-      return;
-    }
-    setIsLoadingData(true);
-    setFetchError(null);
-    try {
-      const [fetchedUsers, fetchedOrders, fetchedSettings] = await Promise.all([
-        getUsers(),
-        getOrders(),
-        getGlobalSettings(),
-      ]);
-
-      setAllUsers(fetchedUsers);
-      setAllOrders(fetchedOrders);
-      setGlobalSettings(fetchedSettings);
-      setCurrentLeaderboardBackground(fetchedSettings.leaderboardBackgroundImageUrl);
-
-    } catch (error) {
-      console.error("Failed to fetch leaderboard data:", error);
-      setFetchError("Could not load leaderboard data. Please try again later.");
-    } finally {
-      setIsLoadingData(false);
-    }
-  }, [currentUser]);
-
   useEffect(() => {
-    // Data is now fetched on first load if user is available.
+    const fetchData = async () => {
+      if (!currentUser) {
+        setIsLoadingData(false);
+        return;
+      }
+      setIsLoadingData(true);
+      setFetchError(null);
+      try {
+        const [fetchedUsers, fetchedOrders, fetchedSettings] = await Promise.all([
+          getUsers(),
+          getOrders(),
+          getGlobalSettings(),
+        ]);
+
+        setAllUsers(fetchedUsers);
+        setAllOrders(fetchedOrders);
+        setGlobalSettings(fetchedSettings);
+        setCurrentLeaderboardBackground(fetchedSettings.leaderboardBackgroundImageUrl);
+
+      } catch (error) {
+        console.error("Failed to fetch leaderboard data:", error);
+        setFetchError("Could not load leaderboard data. Please try again later.");
+        toast({ title: "Error", description: "Could not load leaderboard data.", variant: "destructive" });
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
     if (currentUser && !isAuthLoading) {
       fetchData();
     }
-  }, [currentUser, isAuthLoading, fetchData]);
+  }, [currentUser, isAuthLoading, toast]);
 
 
   useEffect(() => {
