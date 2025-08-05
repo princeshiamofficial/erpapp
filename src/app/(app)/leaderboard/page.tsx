@@ -254,7 +254,10 @@ export default function LeaderboardPage() {
       />
 
       <div className="relative z-10 mt-8 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12">
-        <SalesPerformanceClient allOrders={salesPerformanceOrders} />
+        <SalesPerformanceClient 
+          allOrders={salesPerformanceOrders} 
+          allCrmUsers={allUsers.filter(u => u.role === 'CRM')} 
+        />
       </div>
     </div>
   );
