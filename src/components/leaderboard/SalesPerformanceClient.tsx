@@ -12,6 +12,7 @@ import type { TrackingLink, User } from '@/types';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface SalesPerformanceClientProps {
   allOrders: TrackingLink[];
@@ -39,13 +40,36 @@ const getInitials = (name: string | undefined): string => {
 
 export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerformanceClientProps) {
   const [chartType, setChartType] = useState<'bar' | 'line' | 'area'>('bar');
-  const currentYear = getYear(new Date());
+  const [selectedYear, setSelectedYear] = useState<number>(getYear(new Date()));
 
   const userMap = useMemo(() => new Map(allCrmUsers.map(u => [u.id, u])), [allCrmUsers]);
 
+  const availableYears = useMemo(() => {
+    if (!allOrders || allOrders.length === 0) {
+      return [getYear(new Date())];
+    }
+    const years = new Set(
+      allOrders
+        .map(order => {
+          try {
+            return getYear(parseISO(order.createdAt));
+          } catch {
+            return null;
+          }
+        })
+        .filter((year): year is number => year !== null)
+    );
+    const currentYear = getYear(new Date());
+    if (!years.has(currentYear)) {
+      years.add(currentYear);
+    }
+    return Array.from(years).sort((a, b) => b - a);
+  }, [allOrders]);
+
+
   const monthlySalesData: MonthlyData[] = useMemo(() => {
     const months: MonthlyData[] = Array.from({ length: 12 }, (_, i) => ({
-      name: format(new Date(currentYear, i), 'MMM'),
+      name: format(new Date(selectedYear, i), 'MMM'),
       sales: 0,
       crmSales: {},
     }));
@@ -53,7 +77,7 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
     allOrders.forEach(order => {
       try {
         const orderDate = parseISO(order.createdAt);
-        if (getYear(orderDate) === currentYear && order.crmUserId) {
+        if (getYear(orderDate) === selectedYear && order.crmUserId) {
           const monthIndex = getMonth(orderDate);
           const orderTotal = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
           months[monthIndex].sales += orderTotal;
@@ -65,7 +89,7 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
     });
 
     return months;
-  }, [allOrders, currentYear]);
+  }, [allOrders, selectedYear]);
 
   const renderChart = () => {
     switch (chartType) {
@@ -121,7 +145,7 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
             <div>
                 <CardTitle>Sales Performance Analysis</CardTitle>
-                <CardDescription>Monthly revenue trends and forecasting for {currentYear}</CardDescription>
+                <CardDescription>Monthly revenue trends and forecasting for {selectedYear}</CardDescription>
             </div>
             <div className="flex items-center gap-2 mt-2 sm:mt-0">
                 <div className="flex items-center bg-muted p-1 rounded-lg">
@@ -129,7 +153,16 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
                     <Button variant="ghost" size="sm" className={cn(chartType === 'line' && "bg-background shadow-sm")} onClick={() => setChartType('line')}><LineChart className="h-4 w-4"/></Button>
                     <Button variant="ghost" size="sm" className={cn(chartType === 'area' && "bg-background shadow-sm")} onClick={() => setChartType('area')}><AreaChart className="h-4 w-4"/></Button>
                 </div>
-                 <Button variant="default" size="sm"><TrendingUp className="h-4 w-4 mr-2"/>Trend</Button>
+                 <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value, 10))}>
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue placeholder="Select Year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableYears.map(year => (
+                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
             </div>
         </div>
       </CardHeader>
