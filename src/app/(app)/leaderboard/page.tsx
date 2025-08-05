@@ -19,7 +19,8 @@ import {
 } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
-import { type DateRange } from "react-day-picker";
+import type { DateRange } from "react-day-picker";
+import { SalesPerformanceClient } from '@/components/leaderboard/SalesPerformanceClient';
 
 // CrmPerformanceData type might be better defined within LeaderboardDisplay or a shared types file if complex
 export interface CrmPerformanceData {
@@ -243,6 +244,10 @@ export default function LeaderboardPage() {
         currentUser={currentUser}
         timePeriodLabel={currentDateRangeLabel}
       />
+
+      <div className="relative z-10 mt-8 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12">
+        <SalesPerformanceClient allOrders={allOrders} />
+      </div>
     </div>
   );
 }
