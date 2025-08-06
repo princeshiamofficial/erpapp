@@ -463,7 +463,7 @@ function DashboardContent() {
   const handleDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
     setCurrentDateRangeLabel(label);
-    setSelectedPredefined(predefined);
+    setSelectedPredefinedValue(predefined);
   };
 
   const summaryCardDefinitions = useMemo(() => [
@@ -800,7 +800,7 @@ function DashboardContent() {
                                   axisLine={false}
                                   tickLine={false}
                                 />
-                                <Tooltip
+                                <ChartTooltip
                                     cursor={{ fill: 'hsl(var(--muted))' }}
                                     content={({ active, payload }) => {
                                         if (active && payload && payload.length) {
