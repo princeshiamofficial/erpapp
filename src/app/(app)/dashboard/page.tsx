@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; 
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
@@ -34,8 +34,9 @@ import {
   CheckCircle,
   PackageCheck,
   PieChart as PieChartIcon,
-  User as UserIcon, // Added for new section
-  BaggageClaim, // Added for new section
+  User as UserIcon,
+  BaggageClaim,
+  MapPin, // For Top Sales Area
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -49,6 +50,9 @@ import {
   PieChart,
   Pie,
   Cell,
+  BarChart,
+  Bar,
+  LabelList,
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart';
 import type { TrackingLink, OrderItem, ServiceModelItem, User, Project, ProjectStatusType, GlobalSettings, Lead, LeadCategory } from '@/types'; 
@@ -64,6 +68,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { SalesPerformanceClient } from '@/components/leaderboard/SalesPerformanceClient';
+import { divisions } from '@/lib/district-data'; // Import divisions data
 
 
 const chartConfig = {
@@ -255,6 +260,41 @@ function DashboardContent() {
     
     return ordersToFilter;
   }, [allOrders, selectedDateRange, currentUser, selectedCrmId]);
+
+  const topSalesAreaData = useMemo(() => {
+    const salesByDivision: Record<string, number> = {};
+    const simplifyString = (str: string) => str.replace(/['’.,\s-]/g, '').toLowerCase();
+
+    allOrders.forEach(order => {
+        let longestMatch: { name: string; division: string; } | null = null;
+        let longestMatchLength = 0;
+        const simplifiedAddress = simplifyString(order.address);
+
+        for (const div of divisions) {
+            for (const dist of div.districts) {
+                const namesToMatch = [dist.name, ...(dist.aliases || [])];
+                for (const name of namesToMatch) {
+                    const simplifiedDistName = simplifyString(name);
+                    if (simplifiedDistName.length > 0 && simplifiedAddress.includes(simplifiedDistName)) {
+                        if (simplifiedDistName.length > longestMatchLength) {
+                            longestMatchLength = simplifiedDistName.length;
+                            longestMatch = { name: dist.name, division: div.division };
+                        }
+                    }
+                }
+            }
+        }
+        
+        const divisionName = longestMatch ? longestMatch.division : "Unknown";
+        const orderTotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+        salesByDivision[divisionName] = (salesByDivision[divisionName] || 0) + orderTotal;
+    });
+
+    return Object.entries(salesByDivision)
+        .map(([name, sales]) => ({ name, sales }))
+        .sort((a, b) => b.sales - a.sales);
+
+  }, [allOrders]);
 
   const trafficSourcesData = useMemo(() => {
     if (!allLeads.length) return [];
@@ -713,23 +753,57 @@ function DashboardContent() {
         </>
       )}
 
-      <div className={cn("grid grid-cols-1 gap-6 mt-6", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
-        <Card className="shadow-xl bg-card">
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl text-foreground">
-              <Briefcase className="mr-2 h-6 w-6 text-primary" />
-              Project Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <StatusTimeline
-              counts={projectCounts}
-              config={visibleProjectStatusDisplayConfig}
-              isLoading={isLoadingContent}
-              title="Project Status"
-            />
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-6 mt-6 xl:grid-cols-2">
+          <Card className="shadow-xl bg-card">
+              <CardHeader>
+                  <CardTitle className="flex items-center text-xl text-foreground">
+                      <MapPin className="mr-2 h-6 w-6 text-primary" />
+                      Top Sales Area
+                  </CardTitle>
+                  <CardDescription>Total sales revenue by division.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  {isLoadingContent ? (
+                      <Skeleton className="h-[400px] w-full" />
+                  ) : topSalesAreaData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={400}>
+                          <BarChart data={topSalesAreaData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                              <XAxis type="number" hide />
+                              <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 12 }} stroke="#888888" />
+                              <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<ChartTooltipContent formatter={(value) => formatCurrency(value as number)}/>}/>
+                              <Bar dataKey="sales" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]}>
+                                  <LabelList dataKey="sales" position="right" offset={8} className="fill-foreground" fontSize={12} formatter={(value: number) => value.toLocaleString()} />
+                              </Bar>
+                          </BarChart>
+                      </ResponsiveContainer>
+                  ) : (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                          No sales data available.
+                      </div>
+                  )}
+              </CardContent>
+          </Card>
+          
+          <Card className="shadow-xl bg-card">
+            <CardHeader>
+              <CardTitle className="flex items-center text-xl text-foreground">
+                <Briefcase className="mr-2 h-6 w-6 text-primary" />
+                Project Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <StatusTimeline
+                counts={projectCounts}
+                config={visibleProjectStatusDisplayConfig}
+                isLoading={isLoadingContent}
+                title="Project Status"
+              />
+            </CardContent>
+          </Card>
+        </div>
+
+
+      <div className={cn("grid grid-cols-1 gap-6 mt-6", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-1' : 'xl:grid-cols-1')}>
         
         {currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' && (
           <Card className="shadow-xl bg-card">
