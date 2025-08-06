@@ -271,6 +271,7 @@ function DashboardContent() {
   const topSalesAreaData = useMemo(() => {
     const salesByDivision: Record<string, number> = {};
     const simplifyString = (str: string) => str.replace(/['’.,\s-]/g, '').toLowerCase();
+    let totalSalesAllDivisions = 0;
 
     allOrders.forEach(order => {
         let longestMatch: { name: string; division: string; } | null = null;
@@ -295,10 +296,17 @@ function DashboardContent() {
         const divisionName = longestMatch ? longestMatch.division : "Unknown";
         const orderTotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
         salesByDivision[divisionName] = (salesByDivision[divisionName] || 0) + orderTotal;
+        totalSalesAllDivisions += orderTotal;
     });
+    
+    if (totalSalesAllDivisions === 0) return [];
 
     return Object.entries(salesByDivision)
-        .map(([name, sales]) => ({ name, sales }))
+        .map(([name, sales]) => ({ 
+            name, 
+            sales,
+            percentage: (sales / totalSalesAllDivisions) * 100
+        }))
         .sort((a, b) => b.sales - a.sales);
 
   }, [allOrders]);
@@ -800,7 +808,7 @@ function DashboardContent() {
                                                 <div className="rounded-lg border bg-background p-2 shadow-sm">
                                                     <div className="grid grid-cols-1 gap-1.5">
                                                         <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
-                                                        <span className="text-xs text-muted-foreground">Sales: {formatCurrency(payload[0].value as number)}</span>
+                                                        <span className="text-xs text-muted-foreground">Sales: {formatCurrency(payload[0].payload.sales as number)}</span>
                                                     </div>
                                                 </div>
                                             )
@@ -810,11 +818,12 @@ function DashboardContent() {
                                 />
                                 <Bar dataKey="sales" fill="url(#salesBarGradient)" radius={[0, 4, 4, 0]}>
                                     <LabelList 
-                                      dataKey="sales" 
+                                      dataKey="percentage" 
                                       position="right" 
                                       offset={8} 
                                       className="fill-foreground text-xs sm:text-sm font-medium" 
-                                      formatter={(value: number) => formatCurrency(value)} />
+                                      formatter={(value: number) => `${value.toFixed(1)}%`} 
+                                    />
                                 </Bar>
                             </BarChart>
                         </ResponsiveContainer>
