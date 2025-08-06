@@ -335,18 +335,26 @@ function DashboardContent() {
   
   const paymentMethodData = useMemo(() => {
     const counts: Record<string, number> = {};
+    let totalPayments = 0;
     filteredOrders.forEach(order => {
       if (Array.isArray(order.advancePayments)) {
         order.advancePayments.forEach(payment => {
           if (payment.paymentMethod) {
             counts[payment.paymentMethod] = (counts[payment.paymentMethod] || 0) + 1;
+            totalPayments++;
           }
         });
       }
     });
 
+    if (totalPayments === 0) return [];
+
     return Object.entries(counts)
-      .map(([name, count]) => ({ name, count }))
+      .map(([name, count]) => ({ 
+          name, 
+          count, 
+          percentage: (count / totalPayments) * 100 
+      }))
       .sort((a, b) => b.count - a.count);
   }, [filteredOrders]);
 
@@ -820,9 +828,30 @@ function DashboardContent() {
                             <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
                               <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={80} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
                               <XAxis type="number" hide />
-                              <ChartTooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<ChartTooltipContent />} />
-                              <Bar dataKey="count" fill="var(--color-count)" radius={[0, 4, 4, 0]} barSize={20}>
-                                  <LabelList dataKey="count" position="right" offset={8} className="fill-foreground text-xs font-medium" />
+                              <ChartTooltip
+                                cursor={{ fill: 'hsl(var(--muted))' }}
+                                content={({ active, payload }) => {
+                                  if (active && payload && payload.length) {
+                                    return (
+                                      <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                        <div className="grid grid-cols-1 gap-1.5">
+                                          <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
+                                          <span className="text-xs text-muted-foreground">Count: {payload[0].payload.count}</span>
+                                        </div>
+                                      </div>
+                                    )
+                                  }
+                                  return null;
+                                }}
+                              />
+                              <Bar dataKey="percentage" fill="var(--color-count)" radius={[0, 4, 4, 0]} barSize={20}>
+                                  <LabelList 
+                                      dataKey="percentage" 
+                                      position="right" 
+                                      offset={8} 
+                                      className="fill-foreground text-xs font-medium"
+                                      formatter={(value: number) => `${value.toFixed(1)}%`}
+                                  />
                               </Bar>
                             </RechartsBarChart>
                         </ChartContainer>
