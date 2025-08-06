@@ -37,7 +37,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from 'date-fns';
-import io from 'socket.io-client';
 
 const CreateOrderDialog = dynamic(() => import('@/components/orders/create-order-dialog').then(mod => mod.CreateOrderDialog));
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
@@ -110,24 +109,6 @@ export default function OrdersPage() {
       setIsLoading(false);
     }
   }, [currentUser, fetchOrderData]);
-
-  useEffect(() => {
-    const socket = io({
-      path: '/api/socket_io',
-    });
-
-    socket.on('new_order', (newOrder: TrackingLink) => {
-      toast({
-        title: "New Order Created!",
-        description: `Order ${newOrder.id} for ${newOrder.companyName} was just created.`,
-      });
-      fetchOrderData(); // Re-fetch all data to show the new order
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [fetchOrderData, toast]);
 
 
   const memoizedAvailableStatusesForDialog = useMemo(() => {

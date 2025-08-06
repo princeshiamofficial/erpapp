@@ -28,7 +28,6 @@ import { Progress } from '@/components/ui/progress';
 import { getGlobalSettings } from '@/lib/settings-service';
 import type { GlobalSettings } from '@/types';
 import { cn } from '@/lib/utils';
-import io from "socket.io-client";
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -136,27 +135,6 @@ export default function AuthenticatedLayout({
   const [isClient, setIsClient] = useState(false);
   useEffect(() => {
     setIsClient(true);
-  }, []);
-
-  useEffect(() => {
-    const socketInitializer = async () => {
-      await fetch('/api/socket');
-      const socket = io({
-        path: '/api/socket_io',
-      });
-
-      socket.on("connect", () => {
-        console.log("Connected to Socket.IO server!");
-      });
-
-      // You can add more socket event listeners here
-
-      return () => {
-        socket.disconnect();
-      };
-    };
-
-    socketInitializer();
   }, []);
 
   useEffect(() => {
