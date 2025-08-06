@@ -718,4 +718,3 @@ export const deleteComment = async (
     return undefined;
   }
 };
-
