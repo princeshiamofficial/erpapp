@@ -50,8 +50,8 @@ import {
   PieChart,
   Pie,
   Cell,
-  BarChart as RechartsBarChart,
   Bar,
+  BarChart as RechartsBarChart,
   LabelList,
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart';
@@ -782,93 +782,100 @@ function DashboardContent() {
         </>
       )}
 
-      <div className="grid grid-cols-1 gap-6 mt-6 xl:grid-cols-2">
-          <Card className="shadow-xl bg-card">
-              <CardHeader>
-                  <CardTitle className="flex items-center text-xl text-foreground">
-                      <MapPin className="mr-2 h-6 w-6 text-primary" />
-                      Top Sales Area
-                  </CardTitle>
-                  <CardDescription>Total sales revenue by division for the selected period.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                  {isLoadingContent ? (
-                      <Skeleton className="h-[400px] w-full" />
-                  ) : topSalesAreaData.length > 0 ? (
-                    <ChartContainer config={topSalesAreaChartConfig} className="w-full h-[400px]">
-                        <RechartsBarChart data={topSalesAreaData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
-                           <defs>
-                              <linearGradient id="salesBarGradient" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stopColor="hsl(var(--primary)/0.6)" />
-                                <stop offset="100%" stopColor="hsl(var(--primary))" />
-                              </linearGradient>
-                            </defs>
-                            <XAxis type="number" hide />
-                            <YAxis 
-                              dataKey="name" 
-                              type="category" 
-                              width={100} 
-                              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} 
-                              stroke="hsl(var(--border))" 
-                              axisLine={false}
-                              tickLine={false}
-                            />
-                            <ChartTooltip
-                                cursor={{ fill: 'hsl(var(--muted))' }}
-                                content={({ active, payload }) => {
-                                    if (active && payload && payload.length) {
-                                        return (
-                                            <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                                <div className="grid grid-cols-1 gap-1.5">
-                                                    <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
-                                                    <span className="text-xs text-muted-foreground">Sales: {formatCurrency(payload[0].payload.sales as number)}</span>
-                                                </div>
-                                            </div>
-                                        )
-                                    }
-                                    return null;
-                                }}
-                            />
-                            <Bar dataKey="sales" fill="url(#salesBarGradient)" radius={[0, 4, 4, 0]} barSize={20}>
-                                <LabelList 
-                                  dataKey="percentage" 
-                                  position="right" 
-                                  offset={8} 
-                                  className="fill-foreground text-xs sm:text-sm font-medium" 
-                                  formatter={(value: number) => `${value.toFixed(1)}%`} 
-                                />
-                            </Bar>
-                        </RechartsBarChart>
-                      </ChartContainer>
-                  ) : (
-                      <div className="flex items-center justify-center h-full text-muted-foreground p-8">
-                          No sales data available for the selected period.
-                      </div>
-                  )}
-              </CardContent>
-          </Card>
-          
-          <Card className="shadow-xl bg-card">
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl text-foreground">
-                <Briefcase className="mr-2 h-6 w-6 text-primary" />
-                Project Overview
-              </CardTitle>
-               <CardDescription>Project distribution by status for the selected period.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <StatusTimeline
-                counts={projectCounts}
-                config={visibleProjectStatusDisplayConfig}
-                isLoading={isLoadingContent}
-                title="Project Status"
-              />
-            </CardContent>
-          </Card>
-        </div>
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-6">
+        <Card className="shadow-xl bg-card">
+          <CardHeader>
+            <CardTitle className="flex items-center text-xl text-foreground">
+              <MapPin className="mr-2 h-6 w-6 text-primary" />
+              Top Sales Area
+            </CardTitle>
+            <CardDescription>Total sales revenue by division for the selected period.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingContent ? (
+              <Skeleton className="h-[400px] w-full" />
+            ) : topSalesAreaData.length > 0 ? (
+              <ChartContainer config={topSalesAreaChartConfig} className="w-full h-[400px]">
+                <RechartsBarChart data={topSalesAreaData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="salesBarGradient" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="hsl(var(--primary)/0.6)" />
+                      <stop offset="100%" stopColor="hsl(var(--primary))" />
+                    </linearGradient>
+                  </defs>
+                  <XAxis type="number" hide />
+                  <YAxis
+                    dataKey="name"
+                    type="category"
+                    width={100}
+                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                    stroke="hsl(var(--border))"
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <ChartTooltip
+                    cursor={{ fill: 'hsl(var(--muted))' }}
+                    content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                            return (
+                                <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                    <div className="grid grid-cols-1 gap-1.5">
+                                        <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
+                                        <span className="text-xs text-muted-foreground">Sales: {formatCurrency(payload[0].payload.sales as number)}</span>
+                                    </div>
+                                </div>
+                            )
+                        }
+                        return null;
+                    }}
+                  />
+                  <Bar dataKey="sales" fill="url(#salesBarGradient)" radius={[0, 4, 4, 0]} barSize={20}>
+                    <LabelList
+                      dataKey="percentage"
+                      position="right"
+                      offset={8}
+                      className="fill-foreground text-xs sm:text-sm font-medium"
+                      formatter={(value: number) => `${value.toFixed(1)}%`}
+                    />
+                  </Bar>
+                </RechartsBarChart>
+              </ChartContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-muted-foreground p-8">
+                No sales data available for the selected period.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {canSeeSalesPerformance && (
+          <SalesPerformanceClient
+            allOrders={salesPerformanceOrders}
+            allCrmUsers={allCrmUsers}
+          />
+        )}
+      </div>
 
 
-      <div className={cn("grid grid-cols-1 gap-6 mt-6", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-1' : 'xl:grid-cols-1')}>
+      <div className={cn("grid grid-cols-1 gap-6 mt-6", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
+        
+        <Card className="shadow-xl bg-card">
+          <CardHeader>
+            <CardTitle className="flex items-center text-xl text-foreground">
+              <Briefcase className="mr-2 h-6 w-6 text-primary" />
+              Project Overview
+            </CardTitle>
+             <CardDescription>Project distribution by status for the selected period.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <StatusTimeline
+              counts={projectCounts}
+              config={visibleProjectStatusDisplayConfig}
+              isLoading={isLoadingContent}
+              title="Project Status"
+            />
+          </CardContent>
+        </Card>
         
         {currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' && (
           <Card className="shadow-xl bg-card">
@@ -891,14 +898,6 @@ function DashboardContent() {
         )}
       </div>
 
-      {canSeeSalesPerformance && (
-        <div className="mt-6">
-          <SalesPerformanceClient 
-              allOrders={salesPerformanceOrders} 
-              allCrmUsers={allCrmUsers}
-          />
-        </div>
-      )}
     </div>
   );
 }
