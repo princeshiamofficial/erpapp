@@ -70,6 +70,7 @@ export function ProjectsKanbanClient({ initialProjects, initialStatuses, initial
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(initialGlobalSettings);
   const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [endDateFilter, setEndDateFilter] = useState<string>('all');
   const { toast } = useToast();
@@ -93,6 +94,16 @@ export function ProjectsKanbanClient({ initialProjects, initialStatuses, initial
     }),
     useSensor(KeyboardSensor)
   );
+  
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 300); // 300ms debounce delay
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchTerm]);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -123,10 +134,11 @@ export function ProjectsKanbanClient({ initialProjects, initialStatuses, initial
     }
     
     return roleFilteredProjects.filter(project => {
-      const matchesSearchTerm = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.projectIdDisplay.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.assigneeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (project.designerRepresentativeName || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearchTerm = debouncedSearchTerm.trim() === '' || 
+        project.name.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        project.projectIdDisplay.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        project.assigneeName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        (project.designerRepresentativeName || '').toLowerCase().includes(debouncedSearchTerm.toLowerCase());
 
       const matchesCategory = categoryFilter === 'all' || project.categoryTag === categoryFilter;
 
@@ -149,7 +161,7 @@ export function ProjectsKanbanClient({ initialProjects, initialStatuses, initial
       }
       return matchesSearchTerm && matchesCategory && matchesEndDate;
     });
-  }, [projects, searchTerm, categoryFilter, endDateFilter, currentUser]);
+  }, [projects, debouncedSearchTerm, categoryFilter, endDateFilter, currentUser]);
 
   const projectsByStatus = useMemo(() => {
     const grouped: Record<ProjectStatusType, Project[]> = {
