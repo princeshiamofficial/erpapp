@@ -334,13 +334,17 @@ function DashboardContent() {
   }, [filteredOrders]);
   
   const paymentMethodData = useMemo(() => {
-    const counts: Record<string, number> = {};
+    const stats: Record<string, { count: number, amount: number }> = {};
     let totalPayments = 0;
     filteredOrders.forEach(order => {
       if (Array.isArray(order.advancePayments)) {
         order.advancePayments.forEach(payment => {
           if (payment.paymentMethod) {
-            counts[payment.paymentMethod] = (counts[payment.paymentMethod] || 0) + 1;
+            if (!stats[payment.paymentMethod]) {
+              stats[payment.paymentMethod] = { count: 0, amount: 0 };
+            }
+            stats[payment.paymentMethod].count += 1;
+            stats[payment.paymentMethod].amount += payment.amount;
             totalPayments++;
           }
         });
@@ -349,14 +353,16 @@ function DashboardContent() {
 
     if (totalPayments === 0) return [];
 
-    return Object.entries(counts)
-      .map(([name, count]) => ({ 
-          name, 
-          count, 
-          percentage: (count / totalPayments) * 100 
+    return Object.entries(stats)
+      .map(([name, data]) => ({ 
+          name,
+          count: data.count, 
+          amount: data.amount,
+          percentage: (data.count / totalPayments) * 100 
       }))
       .sort((a, b) => b.count - a.count);
   }, [filteredOrders]);
+
 
 
   const trafficSourcesData = useMemo(() => {
@@ -836,7 +842,7 @@ function DashboardContent() {
                                       <div className="rounded-lg border bg-background p-2 shadow-sm">
                                         <div className="grid grid-cols-1 gap-1.5">
                                           <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
-                                          <span className="text-xs text-muted-foreground">Count: {payload[0].payload.count}</span>
+                                          <span className="text-xs text-muted-foreground">Amount: {formatCurrency(payload[0].payload.amount)}</span>
                                         </div>
                                       </div>
                                     )
