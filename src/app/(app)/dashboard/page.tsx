@@ -86,6 +86,13 @@ const trafficSourcesChartConfig = {
   "Others": { label: "Others", color: "hsl(var(--muted-foreground))" },
 } satisfies ChartConfig;
 
+const topSalesAreaChartConfig = {
+    sales: {
+        label: "Sales",
+        color: "hsl(var(--chart-1))",
+    },
+} satisfies ChartConfig;
+
 
 const formatCurrency = (value: number): string => {
   const numberPart = value.toLocaleString('en-US', { 
@@ -687,7 +694,7 @@ function DashboardContent() {
                         tickFormatter={(value) => `৳${Number(value).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})}`}
                         className="text-xs"
                       />
-                      <Tooltip
+                      <ChartTooltip
                         cursor={false}
                         content={<CustomTooltipContent />}
                       />
@@ -766,16 +773,18 @@ function DashboardContent() {
                   {isLoadingContent ? (
                       <Skeleton className="h-[400px] w-full" />
                   ) : topSalesAreaData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={400}>
-                          <BarChart data={topSalesAreaData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                              <XAxis type="number" hide />
-                              <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 12 }} stroke="#888888" />
-                              <Tooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<ChartTooltipContent formatter={(value) => formatCurrency(value as number)}/>}/>
-                              <Bar dataKey="sales" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]}>
-                                  <LabelList dataKey="sales" position="right" offset={8} className="fill-foreground" fontSize={12} formatter={(value: number) => value.toLocaleString()} />
-                              </Bar>
-                          </BarChart>
-                      </ResponsiveContainer>
+                      <ChartContainer config={topSalesAreaChartConfig} className="w-full h-[400px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={topSalesAreaData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                                <XAxis type="number" hide />
+                                <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 12 }} stroke="#888888" />
+                                <ChartTooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<ChartTooltipContent formatter={(value) => formatCurrency(value as number)}/>}/>
+                                <Bar dataKey="sales" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]}>
+                                    <LabelList dataKey="sales" position="right" offset={8} className="fill-foreground" fontSize={12} formatter={(value: number) => value.toLocaleString()} />
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                      </ChartContainer>
                   ) : (
                       <div className="flex items-center justify-center h-full text-muted-foreground">
                           No sales data available.
