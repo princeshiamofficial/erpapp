@@ -50,7 +50,7 @@ import {
   PieChart,
   Pie,
   Cell,
-  BarChart,
+  BarChart as RechartsBarChart,
   Bar,
   LabelList,
 } from 'recharts';
