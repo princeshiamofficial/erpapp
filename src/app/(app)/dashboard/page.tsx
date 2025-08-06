@@ -37,6 +37,7 @@ import {
   User as UserIcon,
   BaggageClaim,
   MapPin, // For Top Sales Area
+  Landmark, // For Payment Methods
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -91,6 +92,13 @@ const topSalesAreaChartConfig: ChartConfig = {
         label: "Sales",
         color: "hsl(var(--chart-1))",
     },
+};
+
+const paymentMethodsChartConfig: ChartConfig = {
+  count: {
+    label: "Count",
+    color: "hsl(var(--chart-2))",
+  },
 };
 
 
@@ -324,6 +332,24 @@ function DashboardContent() {
         .sort((a, b) => b.sales - a.sales);
 
   }, [filteredOrders]);
+  
+  const paymentMethodData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredOrders.forEach(order => {
+      if (Array.isArray(order.advancePayments)) {
+        order.advancePayments.forEach(payment => {
+          if (payment.paymentMethod) {
+            counts[payment.paymentMethod] = (counts[payment.paymentMethod] || 0) + 1;
+          }
+        });
+      }
+    });
+
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [filteredOrders]);
+
 
   const trafficSourcesData = useMemo(() => {
     if (!filteredLeads.length) return [];
@@ -745,39 +771,69 @@ function DashboardContent() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-xl bg-card lg:col-span-2">
-                <CardHeader>
-                  <CardTitle className="flex items-center text-xl text-foreground">
-                      <PieChartIcon className="mr-2 h-6 w-6 text-primary" />
-                      Traffic Sources
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="h-[350px] p-4">
-                  {isLoadingContent ? (
-                    <div className="flex items-center justify-center h-full">
-                      <Skeleton className="h-48 w-48 rounded-full" />
-                    </div>
-                  ) : trafficSourcesData.length > 0 ? (
-                      <ChartContainer config={trafficSourcesChartConfig} className="w-full h-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <ChartTooltip content={<ChartTooltipContent nameKey="value" hideLabel />} />
-                                <Pie data={trafficSourcesData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ percent }) => `${(percent * 100).toFixed(0)}%`}>
-                                    {trafficSourcesData.map((entry) => (
-                                        <Cell key={`cell-${entry.name}`} fill={entry.fill} />
-                                    ))}
-                                </Pie>
-                                <ChartLegend content={<ChartLegendContent nameKey="name" />} />
-                            </PieChart>
-                        </ResponsiveContainer>
-                      </ChartContainer>
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-muted-foreground">
-                        No lead source data available.
-                    </div>
-                  )}
-                </CardContent>
-            </Card>
+            <div className="lg:col-span-2 grid grid-cols-1 gap-6">
+                <Card className="shadow-xl bg-card">
+                    <CardHeader>
+                    <CardTitle className="flex items-center text-xl text-foreground">
+                        <PieChartIcon className="mr-2 h-6 w-6 text-primary" />
+                        Traffic Sources
+                    </CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[250px] p-4">
+                    {isLoadingContent ? (
+                        <div className="flex items-center justify-center h-full">
+                        <Skeleton className="h-40 w-40 rounded-full" />
+                        </div>
+                    ) : trafficSourcesData.length > 0 ? (
+                        <ChartContainer config={trafficSourcesChartConfig} className="w-full h-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <ChartTooltip content={<ChartTooltipContent nameKey="value" hideLabel />} />
+                                    <Pie data={trafficSourcesData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({ percent }) => `${(percent * 100).toFixed(0)}%`}>
+                                        {trafficSourcesData.map((entry) => (
+                                            <Cell key={`cell-${entry.name}`} fill={entry.fill} />
+                                        ))}
+                                    </Pie>
+                                    <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </ChartContainer>
+                    ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                            No lead source data available.
+                        </div>
+                    )}
+                    </CardContent>
+                </Card>
+                <Card className="shadow-xl bg-card">
+                    <CardHeader>
+                    <CardTitle className="flex items-center text-xl text-foreground">
+                        <Landmark className="mr-2 h-6 w-6 text-primary" />
+                        Payment Method Usage
+                    </CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[250px] p-4">
+                     {isLoadingContent ? (
+                        <Skeleton className="h-[200px] w-full" />
+                      ) : paymentMethodData.length > 0 ? (
+                        <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
+                            <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                              <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={80} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
+                              <XAxis type="number" hide />
+                              <ChartTooltip cursor={{ fill: 'hsl(var(--muted))' }} content={<ChartTooltipContent />} />
+                              <Bar dataKey="count" fill="var(--color-count)" radius={[0, 4, 4, 0]} barSize={20}>
+                                  <LabelList dataKey="count" position="right" offset={8} className="fill-foreground text-xs font-medium" />
+                              </Bar>
+                            </RechartsBarChart>
+                        </ChartContainer>
+                      ) : (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">
+                            No payment data for this period.
+                        </div>
+                      )}
+                    </CardContent>
+                </Card>
+            </div>
           </div>
         </>
       )}
