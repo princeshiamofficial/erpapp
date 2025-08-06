@@ -334,17 +334,22 @@ function DashboardContent() {
   }, [filteredOrders]);
   
   const paymentMethodData = useMemo(() => {
-    const stats: Record<string, { count: number, amount: number }> = {};
+    const stats: Record<string, { count: number; amount: number }> = {};
     let totalPayments = 0;
     filteredOrders.forEach(order => {
       if (Array.isArray(order.advancePayments)) {
         order.advancePayments.forEach(payment => {
           if (payment.paymentMethod) {
-            if (!stats[payment.paymentMethod]) {
-              stats[payment.paymentMethod] = { count: 0, amount: 0 };
+            let methodName = payment.paymentMethod;
+            // Filter and replace "System Auto-Settled" with "Courier"
+            if (methodName.toLowerCase() === 'system auto-settled') {
+              methodName = 'Courier';
             }
-            stats[payment.paymentMethod].count += 1;
-            stats[payment.paymentMethod].amount += payment.amount;
+            if (!stats[methodName]) {
+              stats[methodName] = { count: 0, amount: 0 };
+            }
+            stats[methodName].count += 1;
+            stats[methodName].amount += payment.amount;
             totalPayments++;
           }
         });
