@@ -775,10 +775,10 @@ function DashboardContent() {
                   ) : topSalesAreaData.length > 0 ? (
                       <ChartContainer config={topSalesAreaChartConfig} className="w-full h-[400px]">
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={topSalesAreaData} layout="vertical" margin={{ top: 5, right: 50, left: 10, bottom: 5 }}>
+                            <BarChart data={topSalesAreaData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
                                <defs>
                                   <linearGradient id="salesBarGradient" x1="0" y1="0" x2="1" y2="0">
-                                    <stop offset="0%" stopColor="hsl(var(--primary)/0.4)" />
+                                    <stop offset="0%" stopColor="hsl(var(--primary)/0.6)" />
                                     <stop offset="100%" stopColor="hsl(var(--primary))" />
                                   </linearGradient>
                                 </defs>
