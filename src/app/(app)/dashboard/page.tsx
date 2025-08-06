@@ -795,52 +795,50 @@ function DashboardContent() {
                   {isLoadingContent ? (
                       <Skeleton className="h-[400px] w-full" />
                   ) : topSalesAreaData.length > 0 ? (
-                      <ChartContainer config={topSalesAreaChartConfig} className="w-full h-[400px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={topSalesAreaData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
-                               <defs>
-                                  <linearGradient id="salesBarGradient" x1="0" y1="0" x2="1" y2="0">
-                                    <stop offset="0%" stopColor="hsl(var(--primary)/0.6)" />
-                                    <stop offset="100%" stopColor="hsl(var(--primary))" />
-                                  </linearGradient>
-                                </defs>
-                                <XAxis type="number" hide />
-                                <YAxis 
-                                  dataKey="name" 
-                                  type="category" 
-                                  width={100} 
-                                  tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} 
-                                  stroke="hsl(var(--border))" 
-                                  axisLine={false}
-                                  tickLine={false}
-                                />
-                                <ChartTooltip
-                                    cursor={{ fill: 'hsl(var(--muted))' }}
-                                    content={({ active, payload }) => {
-                                        if (active && payload && payload.length) {
-                                            return (
-                                                <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                                    <div className="grid grid-cols-1 gap-1.5">
-                                                        <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
-                                                        <span className="text-xs text-muted-foreground">Sales: {formatCurrency(payload[0].payload.sales as number)}</span>
-                                                    </div>
+                    <ChartContainer config={topSalesAreaChartConfig} className="w-full h-[400px]">
+                        <RechartsBarChart data={topSalesAreaData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
+                           <defs>
+                              <linearGradient id="salesBarGradient" x1="0" y1="0" x2="1" y2="0">
+                                <stop offset="0%" stopColor="hsl(var(--primary)/0.6)" />
+                                <stop offset="100%" stopColor="hsl(var(--primary))" />
+                              </linearGradient>
+                            </defs>
+                            <XAxis type="number" hide />
+                            <YAxis 
+                              dataKey="name" 
+                              type="category" 
+                              width={100} 
+                              tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} 
+                              stroke="hsl(var(--border))" 
+                              axisLine={false}
+                              tickLine={false}
+                            />
+                            <ChartTooltip
+                                cursor={{ fill: 'hsl(var(--muted))' }}
+                                content={({ active, payload }) => {
+                                    if (active && payload && payload.length) {
+                                        return (
+                                            <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                                <div className="grid grid-cols-1 gap-1.5">
+                                                    <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
+                                                    <span className="text-xs text-muted-foreground">Sales: {formatCurrency(payload[0].payload.sales as number)}</span>
                                                 </div>
-                                            )
-                                        }
-                                        return null;
-                                    }}
+                                            </div>
+                                        )
+                                    }
+                                    return null;
+                                }}
+                            />
+                            <Bar dataKey="sales" fill="url(#salesBarGradient)" radius={[0, 4, 4, 0]} barSize={20}>
+                                <LabelList 
+                                  dataKey="percentage" 
+                                  position="right" 
+                                  offset={8} 
+                                  className="fill-foreground text-xs sm:text-sm font-medium" 
+                                  formatter={(value: number) => `${value.toFixed(1)}%`} 
                                 />
-                                <Bar dataKey="sales" fill="url(#salesBarGradient)" radius={[0, 4, 4, 0]}>
-                                    <LabelList 
-                                      dataKey="percentage" 
-                                      position="right" 
-                                      offset={8} 
-                                      className="fill-foreground text-xs sm:text-sm font-medium" 
-                                      formatter={(value: number) => `${value.toFixed(1)}%`} 
-                                    />
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+                            </Bar>
+                        </RechartsBarChart>
                       </ChartContainer>
                   ) : (
                       <div className="flex items-center justify-center h-full text-muted-foreground p-8">
