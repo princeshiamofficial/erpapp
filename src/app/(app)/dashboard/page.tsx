@@ -243,20 +243,21 @@ function DashboardContent() {
   const { allOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [] } = queryData || {};
   const allCrmUsers = useMemo(() => allUsers.filter(u => u.role === 'CRM'), [allUsers]);
 
-  const filteredOrders = useMemo(() => {
-    if (!selectedDateRange?.from || !selectedDateRange?.to) return [];
-    
-    const startDate = new Date(selectedDateRange.from as Date);
-    startDate.setHours(0, 0, 0, 0); 
-
-    const endDate = new Date(selectedDateRange.to as Date);
+  const getDateRangeInterval = () => {
+    if (!selectedDateRange?.from || !selectedDateRange?.to) return null;
+    const startDate = new Date(selectedDateRange.from);
+    startDate.setHours(0, 0, 0, 0);
+    const endDate = new Date(selectedDateRange.to);
     endDate.setHours(23, 59, 59, 999);
+    return { start: startDate, end: endDate };
+  };
 
+  const filteredOrders = useMemo(() => {
+    const interval = getDateRangeInterval();
+    if (!interval) return [];
+    
     let ordersToFilter = allOrders.filter(order => 
-      order.createdAt && isWithinInterval(parseISO(order.createdAt), {
-        start: startDate, 
-        end: endDate
-      })
+      order.createdAt && isWithinInterval(parseISO(order.createdAt), interval)
     );
     
     if (currentUser?.role === 'CRM') {
@@ -268,12 +269,25 @@ function DashboardContent() {
     return ordersToFilter;
   }, [allOrders, selectedDateRange, currentUser, selectedCrmId]);
 
+  const filteredLeads = useMemo(() => {
+      const interval = getDateRangeInterval();
+      if (!interval) return [];
+      return allLeads.filter(lead => lead.date && isWithinInterval(parseISO(lead.date), interval));
+  }, [allLeads, selectedDateRange]);
+
+  const filteredProjects = useMemo(() => {
+      const interval = getDateRangeInterval();
+      if (!interval) return [];
+      return allProjects.filter(project => project.createdAt && isWithinInterval(parseISO(project.createdAt), interval));
+  }, [allProjects, selectedDateRange]);
+
+
   const topSalesAreaData = useMemo(() => {
     const salesByDivision: Record<string, number> = {};
     const simplifyString = (str: string) => str.replace(/['’.,\s-]/g, '').toLowerCase();
     let totalSalesAllDivisions = 0;
 
-    allOrders.forEach(order => {
+    filteredOrders.forEach(order => {
         let longestMatch: { name: string; division: string; } | null = null;
         let longestMatchLength = 0;
         const simplifiedAddress = simplifyString(order.address);
@@ -309,17 +323,17 @@ function DashboardContent() {
         }))
         .sort((a, b) => b.sales - a.sales);
 
-  }, [allOrders]);
+  }, [filteredOrders]);
 
   const trafficSourcesData = useMemo(() => {
-    if (!allLeads.length) return [];
+    if (!filteredLeads.length) return [];
     const sourceCounts: Record<string, number> = {};
-    allLeads.forEach(lead => {
+    filteredLeads.forEach(lead => {
       const source = lead.source || "Others";
       sourceCounts[source] = (sourceCounts[source] || 0) + 1;
     });
 
-    const total = allLeads.length;
+    const total = filteredLeads.length;
     if (total === 0) return [];
 
     return Object.entries(sourceCounts)
@@ -329,18 +343,18 @@ function DashboardContent() {
         fill: trafficSourcesChartConfig[name as keyof typeof trafficSourcesChartConfig]?.color || "hsl(var(--muted-foreground))"
       }))
       .sort((a,b) => b.value - a.value);
-  }, [allLeads]);
+  }, [filteredLeads]);
 
   const projectCounts = useMemo(() => {
     const counts: Record<ProjectStatusType, number> = {
       'CR Clearance': 0, 'Cancel': 0, 'On Design': 0, 'On Hold': 0, 'Logistics': 0, 'Courier': 0, 'Delivered': 0,
     };
     
-    let projectsToCount = allProjects;
+    let projectsToCount = filteredProjects;
     if (currentUser?.role === 'CRM') {
-        projectsToCount = allProjects.filter(p => p.assigneeId === currentUser.id);
+        projectsToCount = projectsToCount.filter(p => p.assigneeId === currentUser.id);
     } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
-        projectsToCount = allProjects.filter(p => p.designerRepresentativeId === currentUser.id);
+        projectsToCount = projectsToCount.filter(p => p.designerRepresentativeId === currentUser.id);
     }
 
     projectsToCount.forEach(p => {
@@ -349,15 +363,15 @@ function DashboardContent() {
         }
     });
     return counts;
-  }, [allProjects, currentUser]);
+  }, [filteredProjects, currentUser]);
   
   const leadCategoryCounts = useMemo(() => {
     const counts: Record<LeadCategory, number> = {
         'POP': 0, 'POG': 0, 'OC': 0, 'OD': 0, 'B2B': 0
     };
-    let leadsToCount = allLeads;
+    let leadsToCount = filteredLeads;
     if (currentUser?.role === 'CRM') {
-        leadsToCount = allLeads.filter(l => l.crmId === currentUser.id);
+        leadsToCount = leadsToCount.filter(l => l.crmId === currentUser.id);
     }
     leadsToCount.forEach(l => {
         if(counts[l.category] !== undefined) {
@@ -365,7 +379,7 @@ function DashboardContent() {
         }
     });
     return counts;
-  }, [allLeads, currentUser]);
+  }, [filteredLeads, currentUser]);
 
   const { totalSales, invoiceDue, totalPurchase, netValue, salesChartData } = useMemo(() => {
     let currentTotalSales = 0;
@@ -775,7 +789,7 @@ function DashboardContent() {
                       <MapPin className="mr-2 h-6 w-6 text-primary" />
                       Top Sales Area
                   </CardTitle>
-                  <CardDescription>Total sales revenue by division.</CardDescription>
+                  <CardDescription>Total sales revenue by division for the selected period.</CardDescription>
               </CardHeader>
               <CardContent>
                   {isLoadingContent ? (
@@ -830,7 +844,7 @@ function DashboardContent() {
                       </ChartContainer>
                   ) : (
                       <div className="flex items-center justify-center h-full text-muted-foreground p-8">
-                          No sales data available.
+                          No sales data available for the selected period.
                       </div>
                   )}
               </CardContent>
@@ -842,6 +856,7 @@ function DashboardContent() {
                 <Briefcase className="mr-2 h-6 w-6 text-primary" />
                 Project Overview
               </CardTitle>
+               <CardDescription>Project distribution by status for the selected period.</CardDescription>
             </CardHeader>
             <CardContent>
               <StatusTimeline
@@ -864,6 +879,7 @@ function DashboardContent() {
                 <Users className="mr-2 h-6 w-6 text-primary" />
                 Pipeline Overview
               </CardTitle>
+               <CardDescription>Lead distribution by category for the selected period.</CardDescription>
             </CardHeader>
             <CardContent>
               <StatusTimeline
