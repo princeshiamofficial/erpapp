@@ -462,7 +462,7 @@ export async function autoSettleOrderIfDelivered(
         id: uuidv4(),
         amount: dueAmount,
         date: new Date().toISOString(),
-        paymentMethod: "System Auto-Settled",
+        paymentMethod: "Courier",
         notes: settlementReason,
         recordedByUserId: actingUser.id,
         recordedByUserName: actingUser.name,
@@ -718,3 +718,4 @@ export const deleteComment = async (
     return undefined;
   }
 };
+
