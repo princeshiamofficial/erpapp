@@ -352,39 +352,52 @@ function DashboardContent() {
   }, [filteredOrders]);
   
   const paymentMethodData = useMemo(() => {
+    const interval = getDateRangeInterval();
+    if (!interval) return [];
+
     const stats: Record<string, { count: number; amount: number }> = {};
-    let totalPayments = 0;
-    filteredOrders.forEach(order => {
+    let totalPaymentsCount = 0;
+
+    let ordersForPayments = allOrders;
+    if (currentUser?.role === 'CRM') {
+        ordersForPayments = allOrders.filter(order => order.crmUserId === currentUser.id);
+    } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
+        ordersForPayments = allOrders.filter(order => order.crmUserId === selectedCrmId);
+    }
+
+    ordersForPayments.forEach(order => {
       if (Array.isArray(order.advancePayments)) {
         order.advancePayments.forEach(payment => {
-          if (payment.paymentMethod) {
-            let methodName = payment.paymentMethod;
-            // Filter and replace "System Auto-Settled" with "Courier"
-            if (methodName.toLowerCase() === 'system auto-settled') {
-              methodName = 'Courier';
-            }
-            if (!stats[methodName]) {
-              stats[methodName] = { count: 0, amount: 0 };
-            }
-            stats[methodName].count += 1;
-            stats[methodName].amount += payment.amount;
-            totalPayments++;
+          if (payment.date && isWithinInterval(parseISO(payment.date), interval)) {
+              if (payment.paymentMethod) {
+                  let methodName = payment.paymentMethod;
+                  if (methodName.toLowerCase() === 'system auto-settled') {
+                      methodName = 'Courier';
+                  }
+                  if (!stats[methodName]) {
+                      stats[methodName] = { count: 0, amount: 0 };
+                  }
+                  stats[methodName].count += 1;
+                  stats[methodName].amount += payment.amount;
+                  totalPaymentsCount += 1;
+              }
           }
         });
       }
     });
 
-    if (totalPayments === 0) return [];
+    if (totalPaymentsCount === 0) return [];
 
     return Object.entries(stats)
-      .map(([name, data]) => ({ 
+      .map(([name, data]) => ({
           name,
-          count: data.count, 
+          count: data.count,
           amount: data.amount,
-          percentage: (data.count / totalPayments) * 100 
+          percentage: (data.count / totalPaymentsCount) * 100,
       }))
       .sort((a, b) => b.count - a.count);
-  }, [filteredOrders]);
+  }, [allOrders, selectedDateRange, currentUser, selectedCrmId]);
+
 
 
 
@@ -1134,4 +1147,5 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ counts, config, isLoadi
 };
 
     
+
 
