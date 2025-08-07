@@ -213,9 +213,15 @@ function DashboardContent() {
   const { currentUser } = useAuth();
   const { toast } = useToast();
   
-  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
-    from: subDays(new Date(), 29), 
-    to: new Date(),
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(() => {
+    if (typeof window === 'undefined') {
+        // Return a static, non-date value for SSR
+        return undefined;
+    }
+    return {
+        from: subDays(new Date(), 29),
+        to: new Date(),
+    };
   });
   const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Last 30 Days");
   const [selectedPredefinedValue, setSelectedPredefinedValue] = useState<PredefinedRange | "custom" | null>("last30Days");
@@ -1078,14 +1084,17 @@ interface StatusTimelineProps {
 
 const StatusTimeline: React.FC<StatusTimelineProps> = ({ counts, config, isLoading, title }) => {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => setIsClient(true), []);
+
 
   useEffect(() => {
-    if (isLoading || config.length === 0) return;
+    if (isLoading || config.length === 0 || !isClient) return;
     const interval = setInterval(() => {
       setActiveIndex((prevIndex) => (prevIndex + 1) % config.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, [isLoading, config.length]);
+  }, [isLoading, config.length, isClient]);
 
   if (isLoading) {
     return (
