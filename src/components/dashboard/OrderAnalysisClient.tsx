@@ -5,7 +5,7 @@ import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BarChart, LineChart, AreaChart, Layers, Download, Repeat, TrendingUp } from 'lucide-react';
-import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
+import { Bar, BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { parseISO, format, getYear, getMonth, startOfMonth, endOfMonth } from 'date-fns';
 import type { TrackingLink } from '@/types';
@@ -98,16 +98,52 @@ export function OrderAnalysisClient({ allOrders }: OrderAnalysisClientProps) {
   }, [allOrders, selectedYear]);
 
   const renderChart = () => {
-    return (
-      <RechartsBarChart data={monthlyOrderData}>
-        <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
-        <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-        <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))' }} />
-        <Legend />
-        <Bar dataKey="totalOrders" name="Total Orders" fill="var(--color-totalOrders)" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="reorders" name="Reorders" fill="var(--color-reorders)" radius={[4, 4, 0, 0]} />
-      </RechartsBarChart>
-    );
+    switch(chartType) {
+        case 'line':
+            return (
+                <RechartsLineChart data={monthlyOrderData}>
+                    <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
+                    <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))' }} />
+                    <Legend />
+                    <Line type="monotone" dataKey="totalOrders" name="Total Orders" stroke="var(--color-totalOrders)" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
+                    <Line type="monotone" dataKey="reorders" name="Reorders" stroke="var(--color-reorders)" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
+                </RechartsLineChart>
+            );
+        case 'area':
+             return (
+                <RechartsAreaChart data={monthlyOrderData}>
+                     <defs>
+                        <linearGradient id="colorTotalOrders" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="var(--color-totalOrders)" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="var(--color-totalOrders)" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorReorders" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="var(--color-reorders)" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="var(--color-reorders)" stopOpacity={0}/>
+                        </linearGradient>
+                    </defs>
+                    <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
+                    <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))' }} />
+                    <Legend />
+                    <Area type="monotone" dataKey="totalOrders" name="Total Orders" stroke="var(--color-totalOrders)" fill="url(#colorTotalOrders)" />
+                    <Area type="monotone" dataKey="reorders" name="Reorders" stroke="var(--color-reorders)" fill="url(#colorReorders)" />
+                </RechartsAreaChart>
+            );
+        case 'bar':
+        default:
+            return (
+                <RechartsBarChart data={monthlyOrderData}>
+                    <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
+                    <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                    <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))' }} />
+                    <Legend />
+                    <Bar dataKey="totalOrders" name="Total Orders" fill="var(--color-totalOrders)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="reorders" name="Reorders" fill="var(--color-reorders)" radius={[4, 4, 0, 0]} />
+                </RechartsBarChart>
+            );
+    }
   };
 
   return (
@@ -119,6 +155,11 @@ export function OrderAnalysisClient({ allOrders }: OrderAnalysisClientProps) {
                 <CardDescription>Total Orders vs. Reorders for {selectedYear}</CardDescription>
             </div>
             <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                <div className="flex items-center bg-muted p-1 rounded-lg">
+                    <Button variant="ghost" size="sm" className={cn(chartType === 'bar' && "bg-background shadow-sm")} onClick={() => setChartType('bar')}><BarChart className="h-4 w-4"/></Button>
+                    <Button variant="ghost" size="sm" className={cn(chartType === 'line' && "bg-background shadow-sm")} onClick={() => setChartType('line')}><LineChart className="h-4 w-4"/></Button>
+                    <Button variant="ghost" size="sm" className={cn(chartType === 'area' && "bg-background shadow-sm")} onClick={() => setChartType('area')}><AreaChart className="h-4 w-4"/></Button>
+                </div>
                  <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value, 10))}>
                     <SelectTrigger className="w-[120px]">
                       <SelectValue placeholder="Select Year" />
