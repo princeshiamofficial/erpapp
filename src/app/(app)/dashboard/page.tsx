@@ -876,7 +876,7 @@ function DashboardContent() {
                     <CardHeader>
                     <CardTitle className="flex items-center text-xl text-foreground">
                         <Landmark className="mr-2 h-6 w-6 text-primary" />
-                        Payment Method Usage
+                        Payment Analysis
                     </CardTitle>
                     </CardHeader>
                     <CardContent className="h-[250px] p-4">
