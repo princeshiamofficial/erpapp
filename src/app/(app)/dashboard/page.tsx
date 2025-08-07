@@ -77,6 +77,10 @@ const chartConfig = {
     label: "Total Sales (BDT)",
     color: "hsl(var(--chart-1))",
   },
+  orders: { // Added for CRM view
+    label: "Total Orders",
+    color: "hsl(var(--chart-1))",
+  },
 } satisfies ChartConfig;
 
 const trafficSourcesChartConfig = {
@@ -370,9 +374,7 @@ function DashboardContent() {
           if (payment.date && isWithinInterval(parseISO(payment.date), interval)) {
               if (payment.paymentMethod) {
                   let methodName = payment.paymentMethod;
-                  if (methodName.toLowerCase() === 'system auto-settled') {
-                      methodName = 'COD';
-                  } else if (methodName.toLowerCase() === 'courier') {
+                  if (methodName.toLowerCase() === 'system auto-settled' || methodName.toLowerCase() === 'courier') {
                       methodName = 'COD';
                   }
                   if (!stats[methodName]) {
@@ -449,30 +451,36 @@ function DashboardContent() {
     });
     return counts;
   }, [filteredLeads]);
-
-  const { totalSales, invoiceDue, totalPurchase, netValue, salesChartData, deliveredCount } = useMemo(() => {
+  
+  const { totalSales, invoiceDue, totalPurchase, netValue, salesChartData, deliveredCount, ordersWithDueCount } = useMemo(() => {
     let currentTotalSales = 0;
     let currentTotalAdvance = 0;
     let currentTotalPurchaseValue = 0;
     let currentDeliveredCount = 0;
+    let currentOrdersWithDueCount = 0;
 
     const deliveredStatusId = globalSettings?.crmCompletionStatusIds?.find(id => id === 'delivered') || 'delivered';
 
     filteredOrders.forEach(order => {
+      const orderTotal = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+      currentTotalSales += orderTotal;
+
       if (Array.isArray(order.orderItems)) {
         order.orderItems.forEach((item: OrderItem) => {
-          currentTotalSales += item.lineItemTotalPrice || 0;
           const modelDetails = allModels.find(m => m.name === item.model);
           if (modelDetails && typeof modelDetails.buyingPrice === 'number' && typeof item.quantity === 'number' && item.quantity > 0) {
             currentTotalPurchaseValue += (modelDetails.buyingPrice * item.quantity);
           }
         });
       }
-      if (Array.isArray(order.advancePayments) && order.advancePayments.length > 0) {
-        currentTotalAdvance += order.advancePayments.reduce((sum, payment) => sum + payment.amount, 0);
-      } else if (order.advancePayment) { 
-        currentTotalAdvance += order.advancePayment;
+      
+      const orderAdvance = (order.advancePayments || []).reduce((sum, p) => sum + p.amount, 0) + (order.advancePayment || 0);
+      currentTotalAdvance += orderAdvance;
+
+      if (orderTotal > orderAdvance) {
+        currentOrdersWithDueCount++;
       }
+
       if (order.currentStatus === deliveredStatusId) {
         currentDeliveredCount++;
       }
@@ -481,20 +489,16 @@ function DashboardContent() {
     let chartData: Array<{ date: string; sales: number; orders: number; }> = [];
     if (selectedPredefinedValue === 'today' || selectedPredefinedValue === 'yesterday') {
       const hourlyData = new Map<number, { sales: number; orders: number }>();
-      for (let i = 0; i < 24; i++) {
-        hourlyData.set(i, { sales: 0, orders: 0 }); 
-      }
+      for (let i = 0; i < 24; i++) hourlyData.set(i, { sales: 0, orders: 0 }); 
+      
       filteredOrders.forEach(order => {
         if (order.createdAt) {
           try {
-            const orderDate = parseISO(order.createdAt);
-            const hour = getHours(orderDate);
+            const hour = getHours(parseISO(order.createdAt));
             const orderTotalForChart = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
             const existing = hourlyData.get(hour) || { sales: 0, orders: 0 };
             hourlyData.set(hour, { sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
-          } catch (e) {
-            console.error("Error processing order for hourly chart:", order.id, e);
-          }
+          } catch (e) { /* ignore */ }
         }
       });
       chartData = Array.from(hourlyData.entries())
@@ -502,29 +506,22 @@ function DashboardContent() {
         .sort((a, b) => parseInt(a.date) - parseInt(b.date));
     } else if (selectedDateRange?.from && selectedDateRange?.to) {
       const dailyData = new Map<string, { sales: number; orders: number }>();
-      let tempDatePointerForInit = new Date(selectedDateRange.from);
-      tempDatePointerForInit.setHours(0,0,0,0);
-      const endDateForInit = new Date(selectedDateRange.to); 
-      endDateForInit.setHours(23,59,59,999);
-      
-      while (tempDatePointerForInit <= endDateForInit) { 
-          dailyData.set(format(tempDatePointerForInit, 'yyyy-MM-dd'), { sales: 0, orders: 0 });
-          tempDatePointerForInit = addDays(tempDatePointerForInit, 1);
+      let tempDate = new Date(selectedDateRange.from);
+      while (tempDate <= selectedDateRange.to) {
+          dailyData.set(format(tempDate, 'yyyy-MM-dd'), { sales: 0, orders: 0 });
+          tempDate = addDays(tempDate, 1);
       }
+      
       filteredOrders.forEach(order => {
         if (order.createdAt) {
           try {
-            const orderDate = parseISO(order.createdAt);
-            orderDate.setHours(0,0,0,0); 
-            const orderDateStr = format(orderDate, 'yyyy-MM-dd');
+            const orderDateStr = format(parseISO(order.createdAt), 'yyyy-MM-dd');
             if (dailyData.has(orderDateStr)) {
               const orderTotalForChart = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
               const existing = dailyData.get(orderDateStr) || { sales: 0, orders: 0 };
               dailyData.set(orderDateStr, { sales: existing.sales + orderTotalForChart, orders: existing.orders + 1 });
             }
-          } catch (e) {
-            console.error("Error processing order for daily chart:", order.id, e);
-          }
+          } catch (e) { /* ignore */ }
         }
       });
       chartData = Array.from(dailyData.entries())
@@ -539,8 +536,9 @@ function DashboardContent() {
       netValue: formatCurrency(currentTotalSales - currentTotalPurchaseValue),
       salesChartData: chartData,
       deliveredCount: currentDeliveredCount.toString(),
+      ordersWithDueCount: currentOrdersWithDueCount,
     };
-  }, [filteredOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings]);
+  }, [filteredOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser]);
 
 
   useEffect(() => {
@@ -557,36 +555,23 @@ function DashboardContent() {
     setSelectedPredefinedValue(predefined);
   };
 
-  const summaryCardDefinitions = useMemo(() => [
-    { title: "Total Sales", value: totalSales, icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
-    { title: "Delivered", value: deliveredCount, icon: PackageCheck, iconColorClass: "text-green-600", circleBgClass: "bg-green-100 dark:bg-green-500/20", isLoading: isLoadingData },
-    { title: "Net", value: netValue, icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData },
-    { title: "Invoice due", value: invoiceDue, icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
-    { title: "Total Sell Return", value: formatCurrency(0), icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
-    { title: "Total purchase", value: totalPurchase, icon: Download, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
-    { title: "Purchase due", value: formatCurrency(0), icon: AlertTriangle, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
-    { title: "Total Purchase Return", value: formatCurrency(0), icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
-    { title: "Expense", value: formatCurrency(0), icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
-  ], [totalSales, netValue, invoiceDue, totalPurchase, isLoadingData, deliveredCount]);
+  const summaryCardDefinitions = useMemo(() => {
+    const isCrm = currentUser?.role === 'CRM';
+    return [
+      { title: isCrm ? "Total Orders" : "Total Sales", value: isCrm ? filteredOrders.length.toString() : totalSales, icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
+      { title: isCrm ? "Orders with Due" : "Invoice due", value: isCrm ? ordersWithDueCount.toString() : invoiceDue, icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
+      { title: "Delivered", value: deliveredCount, icon: PackageCheck, iconColorClass: "text-green-600", circleBgClass: "bg-green-100 dark:bg-green-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'CRM'] },
+      { title: "Net", value: netValue, icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
+      { title: "Total Sell Return", value: formatCurrency(0), icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
+      { title: "Total purchase", value: totalPurchase, icon: Download, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
+      { title: "Purchase due", value: formatCurrency(0), icon: AlertTriangle, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
+      { title: "Total Purchase Return", value: formatCurrency(0), icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
+      { title: "Expense", value: formatCurrency(0), icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
+    ];
+  }, [totalSales, netValue, invoiceDue, totalPurchase, isLoadingData, deliveredCount, currentUser, filteredOrders.length, ordersWithDueCount]);
 
   const summaryCardData = useMemo(() => {
-    if (currentUser?.role === 'CRM') {
-      const crmCards = ["Total Sales", "Invoice due", "Delivered"];
-      return summaryCardDefinitions.filter(card => crmCards.includes(card.title));
-    }
-    if (currentUser?.role === 'ADMIN') {
-        const adminCards = ["Total Sales", "Net", "Invoice due", "Total purchase", "Purchase due"];
-        return summaryCardDefinitions.filter(card => adminCards.includes(card.title));
-    }
-    if (currentUser?.role === 'VENDOR') {
-      return summaryCardDefinitions.filter(card => 
-        card.title === "Total Sales" || card.title === "Invoice due" || card.title === "Net"
-      );
-    }
-    if (currentUser?.role === 'SYSTEM_ADMIN') {
-      return summaryCardDefinitions.filter(card => card.title !== 'Delivered');
-    }
-    return summaryCardDefinitions;
+    return summaryCardDefinitions.filter(card => !card.roles || card.roles.includes(currentUser?.role || ''));
   }, [currentUser, summaryCardDefinitions]);
 
   const selectedCrmName = useMemo(() => {
@@ -594,10 +579,12 @@ function DashboardContent() {
     return allCrmUsers.find(u => u.id === selectedCrmId)?.name || "Select CR";
   }, [selectedCrmId, allCrmUsers]);
 
+  const chartDataKey = currentUser?.role === 'CRM' ? 'orders' : 'sales';
+
 
   const CustomTooltipContent = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
-      const salesPayload = payload.find((p: any) => p.dataKey === 'sales');
+      const dataPayload = payload.find((p: any) => p.dataKey === chartDataKey);
 
       return (
         <div className="rounded-lg border bg-background p-2 shadow-sm">
@@ -624,16 +611,16 @@ function DashboardContent() {
                 ) : 'N/A'}
               </span>
             </div>
-            {salesPayload && (
+            {dataPayload && (
               <div className="flex flex-col">
-                 <span className="text-[0.70rem] uppercase text-muted-foreground" style={{ color: salesPayload.color }}>
-                  Sales ({salesPayload.payload.orders || 0} orders)
+                 <span className="text-[0.70rem] uppercase text-muted-foreground" style={{ color: dataPayload.color }}>
+                  {currentUser?.role === 'CRM' ? `Orders: ${dataPayload.payload.orders}` : `Sales (${dataPayload.payload.orders} orders)`}
                 </span>
                 <span
                   className="font-bold"
-                  style={{ color: salesPayload.color }}
+                  style={{ color: dataPayload.color }}
                 >
-                  {formatCurrency(salesPayload.value as number)}
+                  {currentUser?.role === 'CRM' ? dataPayload.value : formatCurrency(dataPayload.value as number)}
                 </span>
               </div>
             )}
@@ -763,8 +750,8 @@ function DashboardContent() {
               <CardHeader className="border-b">
                 <CardTitle className="flex items-center text-xl text-foreground">
                   <BarChartBig className="mr-2 h-6 w-6 text-primary" />
-                  Sales ({currentDateRangeLabel})
-                  {currentUser?.role === 'CRM' && <span className="ml-2 text-sm font-normal text-muted-foreground">(Your Sales)</span>}
+                  {currentUser?.role === 'CRM' ? 'Orders Overview' : 'Sales'} ({currentDateRangeLabel})
+                  {currentUser?.role === 'CRM' && <span className="ml-2 text-sm font-normal text-muted-foreground">(Your Orders)</span>}
                 </CardTitle>
               </CardHeader>
               <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">
@@ -809,7 +796,7 @@ function DashboardContent() {
                         tickLine={false}
                         axisLine={false}
                         tickMargin={8}
-                        tickFormatter={(value) => `৳${Number(value).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})}`}
+                        tickFormatter={(value) => currentUser?.role === 'CRM' ? value : `৳${Number(value).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})}`}
                         className="text-xs"
                       />
                       <ChartTooltip
@@ -818,7 +805,7 @@ function DashboardContent() {
                       />
                       <RechartsLegend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '10px'}} />
                       <Line
-                        dataKey="sales"
+                        dataKey={chartDataKey}
                         type="monotone"
                         stroke="var(--color-sales)"
                         strokeWidth={2}
