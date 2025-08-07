@@ -584,7 +584,6 @@ function DashboardContent() {
       );
     }
     if (currentUser?.role === 'SYSTEM_ADMIN') {
-      // For SYSTEM_ADMIN, show all cards except "Delivered"
       return summaryCardDefinitions.filter(card => card.title !== 'Delivered');
     }
     return summaryCardDefinitions;
@@ -872,55 +871,57 @@ function DashboardContent() {
                     )}
                     </CardContent>
                 </Card>
-                <Card className="shadow-xl bg-card">
-                    <CardHeader>
-                    <CardTitle className="flex items-center text-xl text-foreground">
-                        <Landmark className="mr-2 h-6 w-6 text-primary" />
-                        Payment Analysis
-                    </CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-[250px] p-4">
-                     {isLoadingContent ? (
-                        <Skeleton className="h-[200px] w-full" />
-                      ) : paymentMethodData.length > 0 ? (
-                        <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
-                            <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
-                              <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={80} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
-                              <XAxis type="number" hide />
-                              <ChartTooltip
-                                cursor={{ fill: 'hsl(var(--muted))' }}
-                                content={({ active, payload }) => {
-                                  if (active && payload && payload.length) {
-                                    return (
-                                      <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                        <div className="grid grid-cols-1 gap-1.5">
-                                          <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
-                                          <span className="text-xs text-muted-foreground">Amount: {formatCurrency(payload[0].payload.amount)}</span>
+                {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                  <Card className="shadow-xl bg-card">
+                      <CardHeader>
+                      <CardTitle className="flex items-center text-xl text-foreground">
+                          <Landmark className="mr-2 h-6 w-6 text-primary" />
+                          Payment Analysis
+                      </CardTitle>
+                      </CardHeader>
+                      <CardContent className="h-[250px] p-4">
+                      {isLoadingContent ? (
+                          <Skeleton className="h-[200px] w-full" />
+                        ) : paymentMethodData.length > 0 ? (
+                          <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
+                              <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
+                                <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={80} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
+                                <XAxis type="number" hide />
+                                <ChartTooltip
+                                  cursor={{ fill: 'hsl(var(--muted))' }}
+                                  content={({ active, payload }) => {
+                                    if (active && payload && payload.length) {
+                                      return (
+                                        <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                          <div className="grid grid-cols-1 gap-1.5">
+                                            <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
+                                            <span className="text-xs text-muted-foreground">Amount: {formatCurrency(payload[0].payload.amount)}</span>
+                                          </div>
                                         </div>
-                                      </div>
-                                    )
-                                  }
-                                  return null;
-                                }}
-                              />
-                              <Bar dataKey="percentage" fill="var(--color-count)" radius={[0, 4, 4, 0]} barSize={20}>
-                                  <LabelList 
-                                      dataKey="percentage" 
-                                      position="right" 
-                                      offset={8} 
-                                      className="fill-foreground text-xs font-medium"
-                                      formatter={(value: number) => `${value.toFixed(1)}%`}
-                                  />
-                              </Bar>
-                            </RechartsBarChart>
-                        </ChartContainer>
-                      ) : (
-                        <div className="flex items-center justify-center h-full text-muted-foreground">
-                            No payment data for this period.
-                        </div>
-                      )}
-                    </CardContent>
-                </Card>
+                                      )
+                                    }
+                                    return null;
+                                  }}
+                                />
+                                <Bar dataKey="percentage" fill="var(--color-count)" radius={[0, 4, 4, 0]} barSize={20}>
+                                    <LabelList 
+                                        dataKey="percentage" 
+                                        position="right" 
+                                        offset={8} 
+                                        className="fill-foreground text-xs font-medium"
+                                        formatter={(value: number) => `${value.toFixed(1)}%`}
+                                    />
+                                </Bar>
+                              </RechartsBarChart>
+                          </ChartContainer>
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-muted-foreground">
+                              No payment data for this period.
+                          </div>
+                        )}
+                      </CardContent>
+                  </Card>
+                )}
             </div>
           </div>
         </>
