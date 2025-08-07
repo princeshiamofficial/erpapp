@@ -550,6 +550,10 @@ function DashboardContent() {
       const crmCards = ["Total Sales", "Invoice due", "Delivered"];
       return summaryCardDefinitions.filter(card => crmCards.includes(card.title));
     }
+    if (currentUser?.role === 'ADMIN') {
+        const adminCards = ["Total Sales", "Net", "Invoice due", "Total purchase", "Purchase due"];
+        return summaryCardDefinitions.filter(card => adminCards.includes(card.title));
+    }
     if (currentUser?.role === 'VENDOR') {
       return summaryCardDefinitions.filter(card => 
         card.title === "Total Sales" || card.title === "Invoice due" || card.title === "Net"
