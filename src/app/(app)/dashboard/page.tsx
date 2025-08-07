@@ -270,7 +270,7 @@ function DashboardContent() {
     
     if (currentUser?.role === 'CRM') {
       ordersToFilter = ordersToFilter.filter(order => order.crmUserId === currentUser.id);
-    } else if (selectedCrmId !== 'all') {
+    } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
       ordersToFilter = ordersToFilter.filter(order => order.crmUserId === selectedCrmId);
     }
     
@@ -280,14 +280,32 @@ function DashboardContent() {
   const filteredLeads = useMemo(() => {
       const interval = getDateRangeInterval();
       if (!interval) return [];
-      return allLeads.filter(lead => lead.date && isWithinInterval(parseISO(lead.date), interval));
-  }, [allLeads, selectedDateRange]);
+      
+      let leadsToFilter = allLeads.filter(lead => lead.date && isWithinInterval(parseISO(lead.date), interval));
+      
+      if(currentUser?.role === 'CRM'){
+          leadsToFilter = leadsToFilter.filter(l => l.crmId === currentUser.id);
+      } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
+          leadsToFilter = leadsToFilter.filter(l => l.crmId === selectedCrmId);
+      }
+      return leadsToFilter;
+  }, [allLeads, selectedDateRange, currentUser, selectedCrmId]);
 
   const filteredProjects = useMemo(() => {
       const interval = getDateRangeInterval();
       if (!interval) return [];
-      return allProjects.filter(project => project.createdAt && isWithinInterval(parseISO(project.createdAt), interval));
-  }, [allProjects, selectedDateRange]);
+      
+      let projectsToFilter = allProjects.filter(project => project.createdAt && isWithinInterval(parseISO(project.createdAt), interval));
+      
+      if(currentUser?.role === 'CRM'){
+          projectsToFilter = projectsToFilter.filter(p => p.assigneeId === currentUser.id);
+      } else if(currentUser?.role === 'DESIGNER_REPRESENTATIVE'){
+          projectsToFilter = projectsToFilter.filter(p => p.designerRepresentativeId === currentUser.id);
+      } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
+          projectsToFilter = projectsToFilter.filter(p => p.assigneeId === selectedCrmId);
+      }
+      return projectsToFilter;
+  }, [allProjects, selectedDateRange, currentUser, selectedCrmId]);
 
 
   const topSalesAreaData = useMemo(() => {
@@ -396,11 +414,6 @@ function DashboardContent() {
     };
     
     let projectsToCount = filteredProjects;
-    if (currentUser?.role === 'CRM') {
-        projectsToCount = projectsToCount.filter(p => p.assigneeId === currentUser.id);
-    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
-        projectsToCount = projectsToCount.filter(p => p.designerRepresentativeId === currentUser.id);
-    }
 
     projectsToCount.forEach(p => {
         if(counts[p.status] !== undefined) {
@@ -408,23 +421,20 @@ function DashboardContent() {
         }
     });
     return counts;
-  }, [filteredProjects, currentUser]);
+  }, [filteredProjects]);
   
   const leadCategoryCounts = useMemo(() => {
     const counts: Record<LeadCategory, number> = {
         'POP': 0, 'POG': 0, 'OC': 0, 'OD': 0, 'B2B': 0
     };
     let leadsToCount = filteredLeads;
-    if (currentUser?.role === 'CRM') {
-        leadsToCount = leadsToCount.filter(l => l.crmId === currentUser.id);
-    }
     leadsToCount.forEach(l => {
         if(counts[l.category] !== undefined) {
             counts[l.category]++;
         }
     });
     return counts;
-  }, [filteredLeads, currentUser]);
+  }, [filteredLeads]);
 
   const { totalSales, invoiceDue, totalPurchase, netValue, salesChartData, deliveredCount } = useMemo(() => {
     let currentTotalSales = 0;
@@ -559,6 +569,10 @@ function DashboardContent() {
         card.title === "Total Sales" || card.title === "Invoice due" || card.title === "Net"
       );
     }
+    if (currentUser?.role === 'SYSTEM_ADMIN') {
+      // For SYSTEM_ADMIN, show all cards except "Delivered"
+      return summaryCardDefinitions.filter(card => card.title !== 'Delivered');
+    }
     return summaryCardDefinitions;
   }, [currentUser, summaryCardDefinitions]);
 
@@ -640,8 +654,11 @@ function DashboardContent() {
     if (currentUser?.role === 'CRM') {
       return allOrders.filter(order => order.crmUserId === currentUser.id);
     }
+    if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
+      return allOrders.filter(order => order.crmUserId === selectedCrmId);
+    }
     return allOrders;
-  }, [allOrders, currentUser]);
+  }, [allOrders, currentUser, selectedCrmId]);
   
   const canSeeSalesPerformance = useMemo(() => {
     if (!currentUser) return false;
