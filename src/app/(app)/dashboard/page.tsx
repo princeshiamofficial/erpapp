@@ -356,8 +356,7 @@ function DashboardContent() {
     if (!interval) return [];
 
     const stats: Record<string, { count: number; amount: number }> = {};
-    let totalPaymentsCount = 0;
-
+    
     let ordersForPayments = allOrders;
     if (currentUser?.role === 'CRM') {
         ordersForPayments = allOrders.filter(order => order.crmUserId === currentUser.id);
@@ -379,13 +378,13 @@ function DashboardContent() {
                   }
                   stats[methodName].count += 1;
                   stats[methodName].amount += payment.amount;
-                  totalPaymentsCount += 1;
               }
           }
         });
       }
     });
 
+    const totalPaymentsCount = Object.values(stats).reduce((sum, { count }) => sum + count, 0);
     if (totalPaymentsCount === 0) return [];
 
     return Object.entries(stats)
@@ -1145,7 +1144,3 @@ const StatusTimeline: React.FC<StatusTimelineProps> = ({ counts, config, isLoadi
     </div>
   );
 };
-
-    
-
-
