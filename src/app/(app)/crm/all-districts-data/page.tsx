@@ -200,6 +200,8 @@ export default function AllDistrictsDataPage() {
     fetchData();
   };
 
+  const canManageData = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'CRM';
+
 
   return (
     <>
@@ -231,7 +233,7 @@ export default function AllDistrictsDataPage() {
                       className="pl-10 bg-background h-10 rounded-md w-full"
                     />
                   </div>
-                  {currentUser?.role === 'SYSTEM_ADMIN' && (
+                  {canManageData && (
                     <>
                         <Button
                           onClick={() => setIsAddEditDialogOpen(true)}
