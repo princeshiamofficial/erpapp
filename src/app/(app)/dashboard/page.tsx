@@ -453,10 +453,14 @@ function DashboardContent() {
   }, [filteredLeads]);
   
   const { totalSales, invoiceDue, totalPurchase, netValue, salesChartData, deliveredCount, ordersWithDueCount } = useMemo(() => {
+    const interval = getDateRangeInterval();
+    if (!interval) {
+        return { totalSales: formatCurrency(0), invoiceDue: formatCurrency(0), totalPurchase: formatCurrency(0), netValue: formatCurrency(0), salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0 };
+    }
+
     let currentTotalSales = 0;
     let currentTotalAdvance = 0;
     let currentTotalPurchaseValue = 0;
-    let currentDeliveredCount = 0;
     let currentOrdersWithDueCount = 0;
 
     const deliveredStatusId = globalSettings?.crmCompletionStatusIds?.find(id => id === 'delivered') || 'delivered';
@@ -480,11 +484,27 @@ function DashboardContent() {
       if (orderTotal > orderAdvance) {
         currentOrdersWithDueCount++;
       }
-
-      if (order.currentStatus === deliveredStatusId) {
-        currentDeliveredCount++;
-      }
     });
+
+    let currentDeliveredCount = 0;
+    let crmFilteredOrders = allOrders; // Start with all orders
+    // Filter by CRM if applicable, for delivery count
+    if (currentUser?.role === 'CRM') {
+        crmFilteredOrders = allOrders.filter(order => order.crmUserId === currentUser.id);
+    } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
+        crmFilteredOrders = allOrders.filter(order => order.crmUserId === selectedCrmId);
+    }
+    
+    currentDeliveredCount = crmFilteredOrders.filter(order => 
+        (order.statusHistory || []).some(log => {
+            if (log.status !== deliveredStatusId) return false;
+            try {
+                return isWithinInterval(parseISO(log.timestamp), interval);
+            } catch (e) {
+                return false;
+            }
+        })
+    ).length;
 
     let chartData: Array<{ date: string; sales: number; orders: number; }> = [];
     if (selectedPredefinedValue === 'today' || selectedPredefinedValue === 'yesterday') {
@@ -538,7 +558,7 @@ function DashboardContent() {
       deliveredCount: currentDeliveredCount.toString(),
       ordersWithDueCount: currentOrdersWithDueCount,
     };
-  }, [filteredOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser]);
+  }, [filteredOrders, allOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId]);
 
 
   useEffect(() => {
