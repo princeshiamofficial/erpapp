@@ -60,7 +60,7 @@ export function OrderAnalysisClient({ allOrders }: OrderAnalysisClientProps) {
   }, [allOrders]);
 
   const monthlyOrderData: MonthlyData[] = useMemo(() => {
-    const customerOrderHistory: { [phone: string]: Date[] } = {};
+    const customerOrderHistory: { [jobId: string]: boolean } = {}; // Use Job ID as the key
     const months: MonthlyData[] = Array.from({ length: 12 }, (_, i) => ({
       name: format(new Date(selectedYear, i), 'MMM'),
       totalOrders: 0,
@@ -77,14 +77,16 @@ export function OrderAnalysisClient({ allOrders }: OrderAnalysisClientProps) {
         const monthIndex = getMonth(orderDate);
         months[monthIndex].totalOrders += 1;
         
-        if (order.phoneNumber) {
-          if (customerOrderHistory[order.phoneNumber]) {
-            // It's a reorder if there's a previous order recorded for this phone number
+        const companyNameParts = (order.companyName || '').split('•');
+        const jobId = companyNameParts.length > 1 ? companyNameParts[0].trim() : null;
+
+        if (jobId) {
+          if (customerOrderHistory[jobId]) {
+            // It's a reorder if we've seen this Job ID before
             months[monthIndex].reorders += 1;
-            customerOrderHistory[order.phoneNumber].push(orderDate);
           } else {
-            // First time seeing this customer
-            customerOrderHistory[order.phoneNumber] = [orderDate];
+            // First time seeing this Job ID
+            customerOrderHistory[jobId] = true;
           }
         }
       } catch(e) {
