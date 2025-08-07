@@ -69,6 +69,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { SalesPerformanceClient } from '@/components/leaderboard/SalesPerformanceClient';
+import { OrderAnalysisClient } from '@/components/dashboard/OrderAnalysisClient';
 import { divisions } from '@/lib/district-data'; // Import divisions data
 
 
@@ -463,8 +464,6 @@ function DashboardContent() {
     let currentTotalPurchaseValue = 0;
     let currentOrdersWithDueCount = 0;
 
-    const deliveredStatusId = globalSettings?.crmCompletionStatusIds?.find(id => id === 'delivered') || 'delivered';
-
     filteredOrders.forEach(order => {
       const orderTotal = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
       currentTotalSales += orderTotal;
@@ -478,7 +477,7 @@ function DashboardContent() {
         });
       }
       
-      const orderAdvance = (order.advancePayments || []).reduce((sum, p) => sum + p.amount, 0) + (order.advancePayment || 0);
+      const orderAdvance = (order.advancePayments || []).reduce((sum, p) => sum + p.amount, 0);
       currentTotalAdvance += orderAdvance;
 
       if (orderTotal > orderAdvance) {
@@ -487,15 +486,16 @@ function DashboardContent() {
     });
 
     let currentDeliveredCount = 0;
-    let crmFilteredOrders = allOrders; // Start with all orders
-    // Filter by CRM if applicable, for delivery count
+    let ordersForDeliveryCount = allOrders; // Start with all orders
     if (currentUser?.role === 'CRM') {
-        crmFilteredOrders = allOrders.filter(order => order.crmUserId === currentUser.id);
+        ordersForDeliveryCount = allOrders.filter(order => order.crmUserId === currentUser.id);
     } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
-        crmFilteredOrders = allOrders.filter(order => order.crmUserId === selectedCrmId);
+        ordersForDeliveryCount = allOrders.filter(order => order.crmUserId === selectedCrmId);
     }
     
-    currentDeliveredCount = crmFilteredOrders.filter(order => 
+    const deliveredStatusId = globalSettings?.crmCompletionStatusIds?.find(id => id === 'delivered') || 'delivered';
+    
+    currentDeliveredCount = ordersForDeliveryCount.filter(order => 
         (order.statusHistory || []).some(log => {
             if (log.status !== deliveredStatusId) return false;
             try {
@@ -578,7 +578,7 @@ function DashboardContent() {
   const summaryCardDefinitions = useMemo(() => {
     const isCrm = currentUser?.role === 'CRM';
     return [
-      { title: "Total Sales", value: isCrm ? filteredOrders.length.toString() : totalSales, icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
+      { title: isCrm ? "Sales" : "Total Sales", value: isCrm ? filteredOrders.length.toString() : totalSales, icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
       { title: "Invoice due", value: isCrm ? ordersWithDueCount.toString() : invoiceDue, icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
       { title: "Delivered", value: deliveredCount, icon: PackageCheck, iconColorClass: "text-green-600", circleBgClass: "bg-green-100 dark:bg-green-500/20", isLoading: isLoadingData, roles: ['CRM'] },
       { title: "Net", value: netValue, icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
@@ -945,70 +945,73 @@ function DashboardContent() {
 
       <div className={cn("grid grid-cols-1 gap-6 mt-6", canSeeAdminCharts ? "xl:grid-cols-2" : "xl:grid-cols-1")}>
         {canSeeAdminCharts && (
+          <>
             <Card className="shadow-xl bg-card">
-            <CardHeader>
-                <CardTitle className="flex items-center text-xl text-foreground">
-                <MapPin className="mr-2 h-6 w-6 text-primary" />
-                Top Sales Area
-                </CardTitle>
-                <CardDescription>Total sales revenue by division for the selected period.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {isLoadingContent ? (
-                <Skeleton className="h-[400px] w-full" />
-                ) : topSalesAreaData.length > 0 ? (
-                <ChartContainer config={topSalesAreaChartConfig} className="w-full h-[400px]">
-                    <RechartsBarChart data={topSalesAreaData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
-                    <defs>
-                        <linearGradient id="salesBarGradient" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="hsl(var(--primary)/0.6)" />
-                        <stop offset="100%" stopColor="hsl(var(--primary))" />
-                        </linearGradient>
-                    </defs>
-                    <XAxis type="number" hide />
-                    <YAxis
-                        dataKey="name"
-                        type="category"
-                        width={100}
-                        tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                        stroke="hsl(var(--border))"
-                        axisLine={false}
-                        tickLine={false}
-                    />
-                    <ChartTooltip
-                        cursor={{ fill: 'hsl(var(--muted))' }}
-                        content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
-                                return (
-                                    <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                        <div className="grid grid-cols-1 gap-1.5">
-                                            <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
-                                            <span className="text-xs text-muted-foreground">Sales: {formatCurrency(payload[0].payload.sales as number)}</span>
-                                        </div>
-                                    </div>
-                                )
-                            }
-                            return null;
-                        }}
-                    />
-                    <Bar dataKey="sales" fill="url(#salesBarGradient)" radius={[0, 4, 4, 0]} barSize={20}>
-                        <LabelList
-                        dataKey="percentage"
-                        position="right"
-                        offset={8}
-                        className="fill-foreground text-xs sm:text-sm font-medium"
-                        formatter={(value: number) => `${value.toFixed(1)}%`}
-                        />
-                    </Bar>
-                    </RechartsBarChart>
-                </ChartContainer>
-                ) : (
-                <div className="flex items-center justify-center h-full text-muted-foreground p-8">
-                    No sales data available for the selected period.
-                </div>
-                )}
-            </CardContent>
+              <CardHeader>
+                  <CardTitle className="flex items-center text-xl text-foreground">
+                  <MapPin className="mr-2 h-6 w-6 text-primary" />
+                  Top Sales Area
+                  </CardTitle>
+                  <CardDescription>Total sales revenue by division for the selected period.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  {isLoadingContent ? (
+                  <Skeleton className="h-[400px] w-full" />
+                  ) : topSalesAreaData.length > 0 ? (
+                  <ChartContainer config={topSalesAreaChartConfig} className="w-full h-[400px]">
+                      <RechartsBarChart data={topSalesAreaData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
+                      <defs>
+                          <linearGradient id="salesBarGradient" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="hsl(var(--primary)/0.6)" />
+                          <stop offset="100%" stopColor="hsl(var(--primary))" />
+                          </linearGradient>
+                      </defs>
+                      <XAxis type="number" hide />
+                      <YAxis
+                          dataKey="name"
+                          type="category"
+                          width={100}
+                          tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
+                          stroke="hsl(var(--border))"
+                          axisLine={false}
+                          tickLine={false}
+                      />
+                      <ChartTooltip
+                          cursor={{ fill: 'hsl(var(--muted))' }}
+                          content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                  return (
+                                      <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                          <div className="grid grid-cols-1 gap-1.5">
+                                              <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
+                                              <span className="text-xs text-muted-foreground">Sales: {formatCurrency(payload[0].payload.sales as number)}</span>
+                                          </div>
+                                      </div>
+                                  )
+                              }
+                              return null;
+                          }}
+                      />
+                      <Bar dataKey="sales" fill="url(#salesBarGradient)" radius={[0, 4, 4, 0]} barSize={20}>
+                          <LabelList
+                          dataKey="percentage"
+                          position="right"
+                          offset={8}
+                          className="fill-foreground text-xs sm:text-sm font-medium"
+                          formatter={(value: number) => `${value.toFixed(1)}%`}
+                          />
+                      </Bar>
+                      </RechartsBarChart>
+                  </ChartContainer>
+                  ) : (
+                  <div className="flex items-center justify-center h-full text-muted-foreground p-8">
+                      No sales data available for the selected period.
+                  </div>
+                  )}
+              </CardContent>
             </Card>
+            <OrderAnalysisClient allOrders={allOrders} />
+          </>
         )}
 
         {canSeeSalesPerformance && (
