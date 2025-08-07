@@ -200,7 +200,8 @@ export default function AllDistrictsDataPage() {
     fetchData();
   };
 
-  const canManageData = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'CRM';
+  const canAddData = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'CRM';
+  const canExportData = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN';
 
 
   return (
@@ -233,27 +234,27 @@ export default function AllDistrictsDataPage() {
                       className="pl-10 bg-background h-10 rounded-md w-full"
                     />
                   </div>
-                  {canManageData && (
-                    <>
-                        <Button
-                          onClick={() => setIsAddEditDialogOpen(true)}
-                          variant="outline"
-                          className="h-10 w-full sm:w-auto"
-                          disabled={isLoading}
-                        >
-                          <PlusCircle className="mr-2 h-4 w-4" />
-                          Add New Data
-                        </Button>
-                        <Button
-                          onClick={handleExport}
-                          variant="outline"
-                          className="h-10 w-full sm:w-auto"
-                          disabled={isLoading}
-                        >
-                          <FileSpreadsheet className="mr-2 h-4 w-4" />
-                          Export
-                        </Button>
-                    </>
+                  {canAddData && (
+                    <Button
+                      onClick={() => setIsAddEditDialogOpen(true)}
+                      variant="outline"
+                      className="h-10 w-full sm:w-auto"
+                      disabled={isLoading}
+                    >
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add New Data
+                    </Button>
+                  )}
+                   {canExportData && (
+                    <Button
+                      onClick={handleExport}
+                      variant="outline"
+                      className="h-10 w-full sm:w-auto"
+                      disabled={isLoading}
+                    >
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Export
+                    </Button>
                   )}
                 </div>
               </div>
