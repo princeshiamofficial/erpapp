@@ -48,7 +48,7 @@ import {
   CartesianGrid,
   Tooltip,
   Legend as RechartsLegend,
-  PieChart,
+  PieChart as RechartsPieChart,
   Pie,
   Cell,
   Bar,
@@ -426,10 +426,13 @@ function DashboardContent() {
     return counts;
   }, [filteredLeads, currentUser]);
 
-  const { totalSales, invoiceDue, totalPurchase, netValue, salesChartData } = useMemo(() => {
+  const { totalSales, invoiceDue, totalPurchase, netValue, salesChartData, deliveredCount } = useMemo(() => {
     let currentTotalSales = 0;
     let currentTotalAdvance = 0;
     let currentTotalPurchaseValue = 0;
+    let currentDeliveredCount = 0;
+
+    const deliveredStatusId = globalSettings?.crmCompletionStatusIds?.find(id => id === 'delivered') || 'delivered';
 
     filteredOrders.forEach(order => {
       if (Array.isArray(order.orderItems)) {
@@ -445,6 +448,9 @@ function DashboardContent() {
         currentTotalAdvance += order.advancePayments.reduce((sum, payment) => sum + payment.amount, 0);
       } else if (order.advancePayment) { 
         currentTotalAdvance += order.advancePayment;
+      }
+      if (order.currentStatus === deliveredStatusId) {
+        currentDeliveredCount++;
       }
     });
 
@@ -507,9 +513,11 @@ function DashboardContent() {
       invoiceDue: formatCurrency(currentTotalSales - currentTotalAdvance),
       totalPurchase: formatCurrency(currentTotalPurchaseValue),
       netValue: formatCurrency(currentTotalSales - currentTotalPurchaseValue),
-      salesChartData: chartData
+      salesChartData: chartData,
+      deliveredCount: currentDeliveredCount.toString(),
     };
-  }, [filteredOrders, allModels, selectedDateRange, selectedPredefinedValue]);
+  }, [filteredOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings]);
+
 
   useEffect(() => {
     if (selectedPredefinedValue === 'today' || selectedPredefinedValue === 'yesterday') {
@@ -522,11 +530,12 @@ function DashboardContent() {
   const handleDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
     setCurrentDateRangeLabel(label);
-    setSelectedPredefinedValue(predefined);
+    setSelectedPredefined(predefined);
   };
 
   const summaryCardDefinitions = useMemo(() => [
     { title: "Total Sales", value: totalSales, icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
+    { title: "Delivered", value: deliveredCount, icon: PackageCheck, iconColorClass: "text-green-600", circleBgClass: "bg-green-100 dark:bg-green-500/20", isLoading: isLoadingData },
     { title: "Net", value: netValue, icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData },
     { title: "Invoice due", value: invoiceDue, icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
     { title: "Total Sell Return", value: formatCurrency(0), icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
@@ -534,9 +543,13 @@ function DashboardContent() {
     { title: "Purchase due", value: formatCurrency(0), icon: AlertTriangle, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
     { title: "Total Purchase Return", value: formatCurrency(0), icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
     { title: "Expense", value: formatCurrency(0), icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData },
-  ], [totalSales, netValue, invoiceDue, totalPurchase, isLoadingData]);
+  ], [totalSales, netValue, invoiceDue, totalPurchase, isLoadingData, deliveredCount]);
 
   const summaryCardData = useMemo(() => {
+    if (currentUser?.role === 'CRM') {
+      const crmCards = ["Total Sales", "Invoice due", "Delivered"];
+      return summaryCardDefinitions.filter(card => crmCards.includes(card.title));
+    }
     if (currentUser?.role === 'VENDOR') {
       return summaryCardDefinitions.filter(card => 
         card.title === "Total Sales" || card.title === "Invoice due" || card.title === "Net"
@@ -806,7 +819,7 @@ function DashboardContent() {
                     ) : trafficSourcesData.length > 0 ? (
                         <ChartContainer config={trafficSourcesChartConfig} className="w-full h-full">
                             <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
+                                <RechartsPieChart>
                                     <ChartTooltip content={<ChartTooltipContent nameKey="value" hideLabel />} />
                                     <Pie data={trafficSourcesData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({ percent }) => `${(percent * 100).toFixed(0)}%`}>
                                         {trafficSourcesData.map((entry) => (
@@ -814,7 +827,7 @@ function DashboardContent() {
                                         ))}
                                     </Pie>
                                     <ChartLegend content={<ChartLegendContent nameKey="name" />} />
-                                </PieChart>
+                                </RechartsPieChart>
                             </ResponsiveContainer>
                         </ChartContainer>
                     ) : (
