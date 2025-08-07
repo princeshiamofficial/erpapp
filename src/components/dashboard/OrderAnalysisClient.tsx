@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { BarChart, LineChart, AreaChart, Layers, Download, Repeat, TrendingUp } from 'lucide-react';
 import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
-import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import { parseISO, format, getYear, getMonth, startOfMonth, endOfMonth } from 'date-fns';
 import type { TrackingLink } from '@/types';
 import { cn } from '@/lib/utils';
@@ -21,6 +21,17 @@ interface MonthlyData {
   totalOrders: number;
   reorders: number;
 }
+
+const orderAnalysisChartConfig = {
+  totalOrders: {
+    label: "Total Orders",
+    color: "hsl(var(--chart-1))",
+  },
+  reorders: {
+    label: "Reorders",
+    color: "hsl(var(--chart-2))",
+  },
+} satisfies ChartConfig;
 
 export function OrderAnalysisClient({ allOrders }: OrderAnalysisClientProps) {
   const [chartType, setChartType] = useState<'bar' | 'line' | 'area'>('bar');
@@ -91,8 +102,8 @@ export function OrderAnalysisClient({ allOrders }: OrderAnalysisClientProps) {
         <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
         <Tooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))' }} />
         <Legend />
-        <Bar dataKey="totalOrders" name="Total Orders" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="reorders" name="Reorders" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="totalOrders" name="Total Orders" fill="var(--color-totalOrders)" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="reorders" name="Reorders" fill="var(--color-reorders)" radius={[4, 4, 0, 0]} />
       </RechartsBarChart>
     );
   };
@@ -121,9 +132,11 @@ export function OrderAnalysisClient({ allOrders }: OrderAnalysisClientProps) {
       </CardHeader>
       <CardContent>
         <div className="h-[350px] w-full">
+          <ChartContainer config={orderAnalysisChartConfig} className="w-full h-full">
             <ResponsiveContainer width="100%" height="100%">
               {renderChart()}
-          </ResponsiveContainer>
+            </ResponsiveContainer>
+          </ChartContainer>
         </div>
       </CardContent>
     </Card>
