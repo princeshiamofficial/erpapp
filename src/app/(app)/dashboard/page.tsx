@@ -78,7 +78,7 @@ const chartConfig = {
     color: "hsl(var(--chart-1))",
   },
   orders: { // Added for CRM view
-    label: "Total Orders",
+    label: "Sales",
     color: "hsl(var(--chart-1))",
   },
 } satisfies ChartConfig;
@@ -578,8 +578,8 @@ function DashboardContent() {
   const summaryCardDefinitions = useMemo(() => {
     const isCrm = currentUser?.role === 'CRM';
     return [
-      { title: isCrm ? "Total Orders" : "Total Sales", value: isCrm ? filteredOrders.length.toString() : totalSales, icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
-      { title: isCrm ? "Orders with Due" : "Invoice due", value: isCrm ? ordersWithDueCount.toString() : invoiceDue, icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
+      { title: "Total Sales", value: isCrm ? filteredOrders.length.toString() : totalSales, icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
+      { title: "Invoice due", value: isCrm ? ordersWithDueCount.toString() : invoiceDue, icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
       { title: "Delivered", value: deliveredCount, icon: PackageCheck, iconColorClass: "text-green-600", circleBgClass: "bg-green-100 dark:bg-green-500/20", isLoading: isLoadingData, roles: ['CRM'] },
       { title: "Net", value: netValue, icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
       { title: "Total Sell Return", value: formatCurrency(0), icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
@@ -591,7 +591,12 @@ function DashboardContent() {
   }, [totalSales, netValue, invoiceDue, totalPurchase, isLoadingData, deliveredCount, currentUser, filteredOrders.length, ordersWithDueCount]);
 
   const summaryCardData = useMemo(() => {
-    return summaryCardDefinitions.filter(card => !card.roles || card.roles.includes(currentUser?.role || ''));
+    return summaryCardDefinitions.filter(card => {
+        if (!card.roles) return true;
+        if (currentUser?.role === 'ADMIN' && card.title === 'Delivered') return false;
+        if (currentUser?.role === 'SYSTEM_ADMIN' && card.title === 'Delivered') return false;
+        return card.roles.includes(currentUser?.role || '');
+    });
   }, [currentUser, summaryCardDefinitions]);
 
   const selectedCrmName = useMemo(() => {
@@ -634,7 +639,7 @@ function DashboardContent() {
             {dataPayload && (
               <div className="flex flex-col">
                  <span className="text-[0.70rem] uppercase text-muted-foreground" style={{ color: dataPayload.color }}>
-                  {currentUser?.role === 'CRM' ? `Orders: ${dataPayload.payload.orders}` : `Sales (${dataPayload.payload.orders} orders)`}
+                  {currentUser?.role === 'CRM' ? `Sales: ${dataPayload.payload.orders}` : `Sales (${dataPayload.payload.orders} orders)`}
                 </span>
                 <span
                   className="font-bold"
@@ -770,8 +775,8 @@ function DashboardContent() {
               <CardHeader className="border-b">
                 <CardTitle className="flex items-center text-xl text-foreground">
                   <BarChartBig className="mr-2 h-6 w-6 text-primary" />
-                  {currentUser?.role === 'CRM' ? 'Orders Overview' : 'Sales'} ({currentDateRangeLabel})
-                  {currentUser?.role === 'CRM' && <span className="ml-2 text-sm font-normal text-muted-foreground">(Your Orders)</span>}
+                  Sales ({currentDateRangeLabel})
+                  {currentUser?.role === 'CRM' && <span className="ml-2 text-sm font-normal text-muted-foreground">(Your Sales)</span>}
                 </CardTitle>
               </CardHeader>
               <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">
