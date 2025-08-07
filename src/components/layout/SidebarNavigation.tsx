@@ -55,6 +55,7 @@ const navItems: NavItem[] = [
     subItems: [
       { href: "/pipeline", label: "Pipe Line", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
       { href: "/crm/all-districts-data", label: "All Districts Data", icon: Map, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
+      { href: "/crm/sow", label: "SOW", icon: FileText, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
     ]
   },
   { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
