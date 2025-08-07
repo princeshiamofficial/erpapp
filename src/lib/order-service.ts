@@ -462,7 +462,7 @@ export async function autoSettleOrderIfDelivered(
         id: uuidv4(),
         amount: dueAmount,
         date: new Date().toISOString(),
-        paymentMethod: "Courier",
+        paymentMethod: "COD",
         notes: settlementReason,
         recordedByUserId: actingUser.id,
         recordedByUserName: actingUser.name,
