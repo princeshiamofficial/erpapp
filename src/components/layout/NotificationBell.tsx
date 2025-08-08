@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Bell, BellOff, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { initializeFCM, requestNotificationPermission } from '@/lib/notification-utils';
