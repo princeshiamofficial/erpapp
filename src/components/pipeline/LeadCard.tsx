@@ -65,7 +65,7 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, onD
   
   const canEdit = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
   const canDelete = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN';
-  const canTransfer = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN';
+  const canTransfer = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
 
 
   return (

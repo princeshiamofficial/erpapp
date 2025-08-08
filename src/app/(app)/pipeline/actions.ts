@@ -122,7 +122,7 @@ export async function transferLeadAction(
     newCrmId: string,
     actingUser: User
 ): Promise<{ success: boolean; error?: string }> {
-    if (actingUser.role !== 'ADMIN' && actingUser.role !== 'SYSTEM_ADMIN') {
+    if (!['ADMIN', 'SYSTEM_ADMIN', 'CRM'].includes(actingUser.role)) {
         return { success: false, error: "Permission denied." };
     }
     try {
