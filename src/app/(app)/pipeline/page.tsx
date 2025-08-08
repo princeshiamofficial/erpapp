@@ -52,6 +52,7 @@ export default function PipeLinePage() {
   const [allCrmUsers, setAllCrmUsers] = useState<User[]>([]);
   const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
   const [isCrmFilterOpen, setIsCrmFilterOpen] = useState(false);
+  const [crmSearchQuery, setCrmSearchQuery] = useState("");
   
   const [isAddEditOpen, setIsAddEditOpen] = useState(false);
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
@@ -122,6 +123,13 @@ export default function PipeLinePage() {
     if (selectedCrmId === 'all') return 'All CRMs';
     return allCrmUsers.find(u => u.id === selectedCrmId)?.name || 'Filter by CRM...';
   }, [selectedCrmId, allCrmUsers]);
+  
+  const filteredCrmUsersForDropdown = useMemo(() => {
+    if (!crmSearchQuery) return allCrmUsers;
+    return allCrmUsers.filter(user =>
+      user.name.toLowerCase().includes(crmSearchQuery.toLowerCase())
+    );
+  }, [allCrmUsers, crmSearchQuery]);
 
 
   const leadsByCategory = useMemo(() => {
@@ -276,7 +284,11 @@ export default function PipeLinePage() {
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width)] p-0">
                 <Command>
-                  <CommandInput placeholder="Search CRM..." />
+                  <CommandInput
+                    placeholder="Search CRM..."
+                    value={crmSearchQuery}
+                    onValueChange={setCrmSearchQuery}
+                  />
                   <CommandList>
                     <CommandEmpty>No CRM found.</CommandEmpty>
                     <CommandGroup>
@@ -290,7 +302,7 @@ export default function PipeLinePage() {
                         <Check className={cn("mr-2 h-4 w-4", selectedCrmId === 'all' ? "opacity-100" : "opacity-0")} />
                         All CRMs
                       </CommandItem>
-                      {allCrmUsers.map(crm => (
+                      {filteredCrmUsersForDropdown.map(crm => (
                         <CommandItem
                           key={crm.id}
                           value={crm.name}
