@@ -260,7 +260,7 @@ export interface Project {
   designerRepresentativeAvatarUrl?: string | null;
 }
 
-export type LeadCategory = 'POP' | 'POG' | 'OC' | 'OD' | 'B2B';
+export type LeadCategory = 'POP' | 'POG' | 'OC' | 'OD' | 'ROD';
 export type LeadStatusType = 'New Lead' | 'Contacted' | 'Qualified' | 'Proposal Sent' | 'Negotiation' | 'Won' | 'Lost';
 
 

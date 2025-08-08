@@ -39,7 +39,7 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; category: LeadCategory; icon
   { title: 'POG', category: 'POG', icon: Users, headerBgClass: 'bg-blue-600' },
   { title: 'OC', category: 'OC', icon: BaggageClaim, headerBgClass: 'bg-purple-600' },
   { title: 'OD', category: 'OD', icon: Briefcase, headerBgClass: 'bg-green-600' },
-  { title: 'B2B', category: 'B2B', icon: ShoppingCart, headerBgClass: 'bg-orange-600' },
+  { title: 'ROD', category: 'ROD', icon: ShoppingCart, headerBgClass: 'bg-orange-600' },
 ];
 
 export default function PipeLinePage() {
@@ -134,7 +134,7 @@ export default function PipeLinePage() {
 
   const leadsByCategory = useMemo(() => {
     const grouped: Record<LeadCategory, Lead[]> = {
-      'POP': [], 'POG': [], 'OC': [], 'OD': [], 'B2B': []
+      'POP': [], 'POG': [], 'OC': [], 'OD': [], 'ROD': []
     };
     filteredLeads.forEach(lead => {
       if (grouped[lead.category]) {

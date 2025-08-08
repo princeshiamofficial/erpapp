@@ -169,7 +169,7 @@ const ALL_LEAD_CATEGORIES_CONFIG: Array<{ title: string; category: LeadCategory;
     { title: 'POG', category: 'POG', icon: Users, color: '#1d4ed8', gradient: 'linear-gradient(to right, #1d4ed8, #3b82f6)', shadow: '0 4px 15px 0 rgba(29, 78, 216, 0.4)' },
     { title: 'OC', category: 'OC', icon: BaggageClaim, color: '#9333ea', gradient: 'linear-gradient(to right, #9333ea, #a855f7)', shadow: '0 4px 15px 0 rgba(147, 51, 234, 0.4)' },
     { title: 'OD', category: 'OD', icon: Briefcase, color: '#16a34a', gradient: 'linear-gradient(to right, #16a34a, #22c55e)', shadow: '0 4px 15px 0 rgba(22, 163, 74, 0.4)' },
-    { title: 'B2B', category: 'B2B', icon: ShoppingCart, color: '#ea580c', gradient: 'linear-gradient(to right, #ea580c, #f97316)', shadow: '0 4px 15px 0 rgba(234, 88, 12, 0.4)' },
+    { title: 'ROD', category: 'ROD', icon: ShoppingCart, color: '#ea580c', gradient: 'linear-gradient(to right, #ea580c, #f97316)', shadow: '0 4px 15px 0 rgba(234, 88, 12, 0.4)' },
 ];
 
 const queryClient = new QueryClient();
@@ -448,7 +448,7 @@ function DashboardContent() {
   
   const leadCategoryCounts = useMemo(() => {
     const counts: Record<LeadCategory, number> = {
-        'POP': 0, 'POG': 0, 'OC': 0, 'OD': 0, 'B2B': 0
+        'POP': 0, 'POG': 0, 'OC': 0, 'OD': 0, 'ROD': 0
     };
     let leadsToCount = filteredLeads;
     leadsToCount.forEach(l => {
