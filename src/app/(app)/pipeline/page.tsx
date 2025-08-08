@@ -31,6 +31,8 @@ import { cn } from '@/lib/utils';
 
 const AddEditLeadDialog = dynamic(() => import('@/components/pipeline/AddEditLeadDialog').then(mod => mod.AddEditLeadDialog));
 const ImportLeadsDialog = dynamic(() => import('@/components/pipeline/ImportLeadsDialog').then(mod => mod.ImportLeadsDialog));
+const TransferLeadDialog = dynamic(() => import('@/components/pipeline/TransferLeadDialog').then(mod => mod.TransferLeadDialog));
+
 
 const KANBAN_COLUMNS_CONFIG: Array<{ title: string; category: LeadCategory; icon: React.ElementType; headerBgClass: string }> = [
   { title: 'POP', category: 'POP', icon: UserIcon, headerBgClass: 'bg-sky-600' },
@@ -60,6 +62,9 @@ export default function PipeLinePage() {
 
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [isDeletingLead, setIsDeletingLead] = useState(false);
+
+  const [leadToTransfer, setLeadToTransfer] = useState<Lead | null>(null);
+  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
 
 
   const sensors = useSensors(
@@ -145,6 +150,18 @@ export default function PipeLinePage() {
   const handleDeleteRequest = (lead: Lead) => {
     setLeadToDelete(lead);
   };
+  
+  const handleTransferRequest = (lead: Lead) => {
+    setLeadToTransfer(lead);
+    setIsTransferDialogOpen(true);
+  };
+
+  const handleLeadTransferred = () => {
+    setIsTransferDialogOpen(false);
+    setLeadToTransfer(null);
+    fetchLeadsAndUsers();
+  }
+
 
   const handleConfirmDelete = async () => {
     if (!leadToDelete) return;
@@ -335,6 +352,7 @@ export default function PipeLinePage() {
                 currentUser={currentUser}
                 onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }}
                 onDeleteLead={handleDeleteRequest}
+                onTransferLead={handleTransferRequest}
                 allCrmUsers={allCrmUsers}
               />
             ))}
@@ -342,7 +360,7 @@ export default function PipeLinePage() {
         </div>
       </div>
       <DragOverlay dropAnimation={null}>
-        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onEditLead={() => {}} onDeleteLead={() => {}} crmAvatarUrl={allCrmUsers.find(u => u.id === activeLead.crmId)?.avatarUrl} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
+        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onEditLead={() => {}} onDeleteLead={() => {}} onTransferLead={() => {}} crmAvatarUrl={allCrmUsers.find(u => u.id === activeLead.crmId)?.avatarUrl} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
       </DragOverlay>
 
       <AddEditLeadDialog
@@ -359,6 +377,17 @@ export default function PipeLinePage() {
         onLeadsImported={handleLeadSaved}
         currentUser={currentUser}
       />
+
+      {leadToTransfer && (
+        <TransferLeadDialog
+            isOpen={isTransferDialogOpen}
+            onOpenChange={setIsTransferDialogOpen}
+            onLeadTransferred={handleLeadTransferred}
+            lead={leadToTransfer}
+            allCrmUsers={allCrmUsers.filter(u => u.id !== leadToTransfer.crmId)}
+            currentUser={currentUser}
+        />
+      )}
       
       {leadToDelete && (
         <AlertDialog open={!!leadToDelete} onOpenChange={() => setLeadToDelete(null)}>

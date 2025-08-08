@@ -9,6 +9,7 @@ import {
   updateLead,
   deleteLead
 } from '@/lib/lead-service';
+import { getUserById } from "@/lib/user-service";
 
 
 export async function getLeads(): Promise<Lead[]> {
@@ -114,4 +115,35 @@ export async function deleteLeadAction(leadId: string): Promise<{ success: boole
     console.error("Error in deleteLeadAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
+}
+
+export async function transferLeadAction(
+    leadId: string,
+    newCrmId: string,
+    actingUser: User
+): Promise<{ success: boolean; error?: string }> {
+    if (actingUser.role !== 'ADMIN' && actingUser.role !== 'SYSTEM_ADMIN') {
+        return { success: false, error: "Permission denied." };
+    }
+    try {
+        const newCrmUser = await getUserById(newCrmId);
+        if (!newCrmUser) {
+            return { success: false, error: "The new assigned user was not found." };
+        }
+
+        const updates = {
+            crmId: newCrmUser.id,
+            crmName: newCrmUser.name,
+        };
+
+        const success = await updateLead(leadId, updates);
+        if (success) {
+            revalidatePath("/(app)/pipeline");
+            return { success: true };
+        }
+        return { success: false, error: "Failed to update lead in the database during transfer." };
+    } catch (error) {
+        console.error("Error in transferLeadAction:", error);
+        return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred during lead transfer." };
+    }
 }

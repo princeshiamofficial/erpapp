@@ -18,7 +18,8 @@ interface PipelineKanbanColumnProps {
   isLoading?: boolean;
   currentUser: User | null;
   onEditLead: (lead: Lead) => void;
-  onDeleteLead: (lead: Lead) => void; // New prop
+  onDeleteLead: (lead: Lead) => void;
+  onTransferLead: (lead: Lead) => void; // New prop for transfer
   allCrmUsers: User[];
 }
 
@@ -31,7 +32,8 @@ export function PipelineKanbanColumn({
   isLoading = false,
   currentUser,
   onEditLead,
-  onDeleteLead, // New prop
+  onDeleteLead,
+  onTransferLead, // New prop
   allCrmUsers,
 }: PipelineKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
@@ -71,7 +73,8 @@ export function PipelineKanbanColumn({
                   lead={lead}
                   currentUser={currentUser}
                   onEditLead={onEditLead}
-                  onDeleteLead={onDeleteLead} // Pass down
+                  onDeleteLead={onDeleteLead}
+                  onTransferLead={onTransferLead}
                   crmAvatarUrl={crmUser?.avatarUrl || undefined}
                   headerBgClass={headerBgClass}
                 />
