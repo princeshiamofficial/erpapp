@@ -437,7 +437,7 @@ export default function ModelManagementPage() {
                 </div>
                 {itemIsReadyMade && (
                     <div className="space-y-1 pl-4 border-l-2 border-primary">
-                        <Label htmlFor="itemStockCount">{editingItem ? 'Add/Remove Stock' : 'Initial Stock Count'} *</Label>
+                        <Label htmlFor="itemStockCount">{editingItem ? 'Add/Remove Stock' : 'Initial Stock'} *</Label>
                         <Input 
                             id="itemStockCount"
                             type="number"
