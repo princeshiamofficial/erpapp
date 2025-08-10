@@ -95,7 +95,7 @@ export default function ReportPage() {
         );
 
         const hasBusinessCard = order.orderItems.some(item =>
-            item.model.toLowerCase().includes('business card')
+            item.model.toLowerCase().includes('business card') || item.model.toLowerCase().includes('visiting card')
         );
 
         if (hasDesignCharge) {
