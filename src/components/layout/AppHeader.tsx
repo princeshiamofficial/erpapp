@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar"; // Imported useSidebar
 import { UserNav } from "./UserNav";
 import Link from "next/link";
 import { Logo } from '@/components/layout/Logo';
@@ -22,6 +22,7 @@ export function AppHeader() {
   const { currentUser } = useAuth();
   const isMobile = useIsMobile();
   const isLRMobile = isMobile && currentUser?.role === 'LR';
+  const { setOpenMobile } = useSidebar(); // useSidebar hook
 
   const handleSyncClick = async () => {
     setIsSyncing(true);
@@ -66,8 +67,8 @@ export function AppHeader() {
       <div className="container flex h-[4.5rem] items-center justify-between max-w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center">
           {!isLRMobile && (
-            <div className="md:hidden"> {/* SidebarTrigger only on mobile, and not for LR */}
-              <SidebarTrigger className="text-foreground hover:bg-accent hover:text-accent-foreground -ml-2 p-1.5 rounded-md" />
+            <div className="md:hidden"> 
+              <SidebarTrigger onClick={() => setOpenMobile(true)} className="text-foreground hover:bg-accent hover:text-accent-foreground -ml-2 p-1.5 rounded-md" />
             </div>
           )}
            <Link href="/dashboard" className="flex md:hidden items-center space-x-2 text-primary hover:text-primary/80 transition-colors ml-2">
