@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -254,40 +255,46 @@ export async function updateOrderAction(
     if (updates.orderItems) {
       if (!Array.isArray(updates.orderItems) || updates.orderItems.length === 0) return { success: false, error: "Order must have at least one item." };
       
-      const stockChanges = new Map<string, number>(); // modelId -> quantityChange
+      const stockChanges = new Map<string, number>(); // modelId -> quantityChange (+ve means decrement stock, -ve means increment)
       const oldItemsMap = new Map(existingOrder.orderItems.map(item => [item.id, item]));
 
       for (const newItem of updates.orderItems) {
-          const oldItem = oldItemsMap.get(newItem.id);
-          const modelInfo = allModels.find(m => m.name === newItem.model);
-          if (!modelInfo || !modelInfo.isReadyMade) continue; // Only track ready-made
+        const oldItem = oldItemsMap.get(newItem.id);
+        const oldModel = oldItem ? allModels.find(m => m.name === oldItem.model) : undefined;
+        const newModel = allModels.find(m => m.name === newItem.model);
 
-          const newQuantity = newItem.quantity;
-          const oldQuantity = oldItem ? oldItem.quantity : 0;
-          const quantityChange = newQuantity - oldQuantity;
-
+        if (oldItem && oldItem.model !== newItem.model) {
+          // Model has changed for this item
+          if (oldModel && oldModel.isReadyMade) {
+            stockChanges.set(oldModel.id, (stockChanges.get(oldModel.id) || 0) - oldItem.quantity); // Return old item to stock
+          }
+          if (newModel && newModel.isReadyMade) {
+            stockChanges.set(newModel.id, (stockChanges.get(newModel.id) || 0) + newItem.quantity); // Deduct new item from stock
+          }
+        } else if (newModel && newModel.isReadyMade) {
+          // Model is the same (or it's a new item), just check quantity change
+          const quantityChange = newItem.quantity - (oldItem ? oldItem.quantity : 0);
           if (quantityChange !== 0) {
-              stockChanges.set(modelInfo.id, (stockChanges.get(modelInfo.id) || 0) + quantityChange);
+            stockChanges.set(newModel.id, (stockChanges.get(newModel.id) || 0) + quantityChange);
           }
-          if (oldItem) {
-              oldItemsMap.delete(newItem.id); // Mark as processed
-          }
+        }
+        if (oldItem) {
+          oldItemsMap.delete(newItem.id); // Mark as processed
+        }
       }
 
       // Items that were in old order but not in new one (removed)
       for (const removedItem of oldItemsMap.values()) {
-          const modelInfo = allModels.find(m => m.name === removedItem.model);
-          if (modelInfo && modelInfo.isReadyMade) {
-              stockChanges.set(modelInfo.id, (stockChanges.get(modelInfo.id) || 0) - removedItem.quantity);
-          }
+        const modelInfo = allModels.find(m => m.name === removedItem.model);
+        if (modelInfo && modelInfo.isReadyMade) {
+          stockChanges.set(modelInfo.id, (stockChanges.get(modelInfo.id) || 0) - removedItem.quantity); // Return removed item to stock
+        }
       }
 
-      // Stock validation removed to allow negative stock
-
-      // If validation passes, apply stock changes
+      // Apply stock changes
       for (const [modelId, quantityChange] of stockChanges.entries()) {
          if (quantityChange !== 0) {
-            await updateModelStock(modelId, -quantityChange); // Decrease stock if change is positive, increase if negative
+            await updateModelStock(modelId, -quantityChange); // quantityChange is +ve to decrease stock, -ve to increase
          }
       }
       finalUpdates.orderItems = updates.orderItems;
@@ -564,3 +571,4 @@ export async function deleteOrderAction(
     return { success: false, error: errorMessage };
   }
 }
+
