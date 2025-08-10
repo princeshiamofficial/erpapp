@@ -115,6 +115,7 @@ export default function SOWPage() {
       setIsLoading(true);
       try {
         const fetchedOrders = await getOrders();
+        // Generate data only on the client side to prevent hydration errors
         const data = generateBusinessLoyaltyData(fetchedOrders);
         setLoyaltyData(data);
       } catch (error) {
