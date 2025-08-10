@@ -94,6 +94,10 @@ export default function ReportPage() {
             item.model.toLowerCase().includes('x-banner')
         );
 
+        const hasBusinessCard = order.orderItems.some(item =>
+            item.model.toLowerCase().includes('business card')
+        );
+
         if (hasDesignCharge) {
           const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
           const existingDesignCharge = salesMap.get('Design Charge') || { sales: 0, quantity: 0 };
@@ -128,6 +132,13 @@ export default function ReportPage() {
             salesMap.set('X-Banner', {
                 sales: existingXBanner.sales + orderTotal,
                 quantity: existingXBanner.quantity + 1,
+            });
+        } else if (hasBusinessCard) {
+            const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+            const existingBusinessCard = salesMap.get('Business Card') || { sales: 0, quantity: 0 };
+            salesMap.set('Business Card', {
+                sales: existingBusinessCard.sales + orderTotal,
+                quantity: existingBusinessCard.quantity + 1,
             });
         } else {
           order.orderItems.forEach(item => {
