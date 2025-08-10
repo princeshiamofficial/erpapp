@@ -41,7 +41,7 @@ import { updateReportFiltersAction } from './actions';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
-import { isWithinInterval, parseISO, subDays } from 'date-fns';
+import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay } from 'date-fns';
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-BD', {
@@ -217,12 +217,14 @@ export default function ReportPage() {
   const productSalesData: ProductSalesData[] = useMemo(() => {
     let filteredOrdersByDate = orders;
     if (selectedDateRange?.from) {
+      const startDate = startOfDay(selectedDateRange.from);
+      const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
+
       filteredOrdersByDate = orders.filter(order => {
         if (!order.createdAt) return false;
         try {
           const orderDate = parseISO(order.createdAt);
-          const toDate = selectedDateRange.to || selectedDateRange.from; // Use 'from' date if 'to' is not set
-          return isWithinInterval(orderDate, { start: selectedDateRange.from!, end: toDate! });
+          return isWithinInterval(orderDate, { start: startDate, end: endDate });
         } catch {
           return false;
         }
