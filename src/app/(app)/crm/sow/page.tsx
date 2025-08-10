@@ -34,14 +34,20 @@ const generateBusinessLoyaltyData = (orders: TrackingLink[]): BusinessLoyalty[] 
     }
   });
 
-  const colorThemes = [
-    { gradientFrom: '#6EE7B7', gradientTo: 'rgba(52, 211, 153, 0.1)', progress: 'bg-green-500' }, // Teal
-    { gradientFrom: '#FBBF24', gradientTo: 'rgba(251, 191, 36, 0.1)', progress: 'bg-amber-500' }, // Amber
-    { gradientFrom: '#F87171', gradientTo: 'rgba(248, 113, 113, 0.1)', progress: 'bg-red-500' },   // Red
-    { gradientFrom: '#60A5FA', gradientTo: 'rgba(96, 165, 250, 0.1)', progress: 'bg-blue-500' },  // Blue
-  ];
+  const getColorThemeForScore = (score: number) => {
+    if (score <= 25) {
+      return { gradientFrom: '#F87171', gradientTo: 'rgba(248, 113, 113, 0.1)', progress: 'bg-red-500' };   // Red
+    } else if (score <= 50) {
+      return { gradientFrom: '#FBBF24', gradientTo: 'rgba(251, 191, 36, 0.1)', progress: 'bg-amber-500' }; // Amber
+    } else if (score <= 75) {
+      return { gradientFrom: '#60A5FA', gradientTo: 'rgba(96, 165, 250, 0.1)', progress: 'bg-blue-500' };  // Blue
+    } else {
+      return { gradientFrom: '#6EE7B7', gradientTo: 'rgba(52, 211, 153, 0.1)', progress: 'bg-green-500' }; // Teal/Green
+    }
+  };
 
-  return Object.entries(businesses).slice(0, 10).map(([name, orderCount], index) => {
+
+  return Object.entries(businesses).slice(0, 10).map(([name, orderCount]) => {
     const loyaltyScore = Math.min(99, 10 + orderCount * 12 + Math.floor(Math.random() * 15));
     return {
       id: name,
@@ -50,7 +56,7 @@ const generateBusinessLoyaltyData = (orders: TrackingLink[]): BusinessLoyalty[] 
       trendData: Array.from({ length: 10 }, (_, i) => ({
         value: Math.floor(loyaltyScore * (0.8 + (Math.random() * 0.4)) * ((i + 1) / 10)),
       })),
-      color: colorThemes[index % colorThemes.length],
+      color: getColorThemeForScore(loyaltyScore),
     };
   });
 };
