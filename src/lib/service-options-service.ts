@@ -158,9 +158,6 @@ export const updateModelStock = async (modelId: string, quantityChange: number):
             }
             const currentStock = modelDoc.data().stockCount || 0;
             const newStock = currentStock + quantityChange;
-            if (newStock < 0) {
-                throw new Error(`Cannot update stock for ${modelDoc.data().name}. Resulting stock would be negative.`);
-            }
             transaction.update(modelDocRef, { stockCount: newStock });
         });
         return true;

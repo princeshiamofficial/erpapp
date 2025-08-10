@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -319,7 +320,7 @@ export default function ModelManagementPage() {
                         {item.isReadyMade && (
                             <span className={cn(
                                 "text-xs font-semibold flex items-center gap-1",
-                                (item.stockCount ?? 0) < 0 ? "text-destructive" : "text-green-600"
+                                item.stockCount !== undefined && item.stockCount < 0 ? "text-destructive" : "text-green-600"
                             )}>
                                 <PackageCheck className="h-3.5 w-3.5" />
                                 Ready Made (Stock: {item.stockCount ?? 0})
