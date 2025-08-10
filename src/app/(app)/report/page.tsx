@@ -39,6 +39,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateReportFiltersAction } from './actions';
 import { AnimatePresence, motion } from 'framer-motion';
+import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
+import type { DateRange } from "react-day-picker";
+import { isWithinInterval, parseISO, subDays } from 'date-fns';
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-BD', {
@@ -165,6 +168,14 @@ export default function ReportPage() {
   const { toast } = useToast();
   const { currentUser } = useAuth();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 29),
+    to: new Date(),
+  });
+
+  const handleDateRangeChange = useCallback((range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
+    setSelectedDateRange(range);
+  }, []);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -195,7 +206,7 @@ export default function ReportPage() {
     const result = await updateReportFiltersAction(newFilters);
     if (result.success) {
       toast({ title: "Filters Saved", description: "Your report filter keywords have been updated." });
-      await fetchData(); // Re-fetch data to apply new filters
+      await fetchData();
       setIsSettingsOpen(false);
     } else {
       toast({ title: "Error", description: result.error || "Failed to save filters.", variant: "destructive" });
@@ -204,14 +215,28 @@ export default function ReportPage() {
 
 
   const productSalesData: ProductSalesData[] = useMemo(() => {
-    if (orders.length === 0 || !globalSettings) {
+    let filteredOrdersByDate = orders;
+    if (selectedDateRange?.from) {
+      filteredOrdersByDate = orders.filter(order => {
+        if (!order.createdAt) return false;
+        try {
+          const orderDate = parseISO(order.createdAt);
+          const toDate = selectedDateRange.to || selectedDateRange.from; // Use 'from' date if 'to' is not set
+          return isWithinInterval(orderDate, { start: selectedDateRange.from!, end: toDate! });
+        } catch {
+          return false;
+        }
+      });
+    }
+
+    if (filteredOrdersByDate.length === 0 || !globalSettings) {
       return [];
     }
   
     const salesMap: Map<string, { sales: number }> = new Map();
     const filters = globalSettings.reportProductFilters || [];
   
-    orders.forEach(order => {
+    filteredOrdersByDate.forEach(order => {
       let isConsolidated = false;
   
       if (!order.orderItems || order.orderItems.length === 0) {
@@ -248,7 +273,7 @@ export default function ReportPage() {
         percentage: (data.sales / totalSales) * 100,
       }))
       .sort((a, b) => b.sales - a.sales);
-  }, [orders, globalSettings]);
+  }, [orders, globalSettings, selectedDateRange]);
   
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
 
@@ -257,19 +282,26 @@ export default function ReportPage() {
     <>
       <div className="space-y-6 p-1 sm:p-0">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <CardTitle>Product Sales Performance</CardTitle>
               <CardDescription>
                 An overview of sales distribution across all products.
               </CardDescription>
             </div>
-            {isAdmin && (
-              <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} disabled={!globalSettings}>
-                <Settings className="h-5 w-5" />
-                <span className="sr-only">Configure Report Filters</span>
-              </Button>
-            )}
+             <div className="flex items-center gap-2 w-full sm:w-auto">
+                <DateRangePicker 
+                  initialRange={selectedDateRange} 
+                  onDateRangeChange={handleDateRangeChange}
+                  className="w-full sm:w-auto"
+                />
+                {isAdmin && (
+                  <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} disabled={!globalSettings}>
+                    <Settings className="h-5 w-5" />
+                    <span className="sr-only">Configure Report Filters</span>
+                  </Button>
+                )}
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
@@ -311,7 +343,7 @@ export default function ReportPage() {
                   <TableRow>
                     <TableCell colSpan={3} className="h-24 text-center">
                       <Package className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
-                      No sales data available. Create some orders to see performance data here.
+                      No sales data available for the selected period.
                     </TableCell>
                   </TableRow>
                 )}
