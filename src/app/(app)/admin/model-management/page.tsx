@@ -117,7 +117,8 @@ export default function ModelManagementPage() {
     setItemBuyingPrice((item.buyingPrice ?? 0).toString());
     setItemSellingPrice((item.sellingPrice ?? 0).toString());
     setItemIsReadyMade(item.isReadyMade ?? false);
-    setItemStockCount((item.stockCount ?? 0).toString());
+    // When editing, the stock count input should represent the CHANGE in stock, not the new total.
+    setItemStockCount('');
     setSelectedImageFile(null);
     setImagePreviewUrl(item.imageUrl || null);
     setIsAddEditDialogOpen(true);
@@ -159,7 +160,10 @@ export default function ModelManagementPage() {
     }
     const buyingPriceValue = parseFloat(itemBuyingPrice);
     const sellingPriceValue = parseFloat(itemSellingPrice);
-    const stockCountValue = itemIsReadyMade ? parseInt(itemStockCount, 10) : 0;
+    
+    // For ready-made items, itemStockCount is now the CHANGE in stock.
+    // For adding a new item, it's the initial stock.
+    const stockCountValue = itemIsReadyMade ? parseInt(itemStockCount || "0", 10) : 0;
 
     if (isNaN(buyingPriceValue) || buyingPriceValue < 0) {
       toast({ title: "Validation Error", description: "Buying Price must be a non-negative number.", variant: "destructive" });
@@ -217,11 +221,13 @@ export default function ModelManagementPage() {
 
     let result;
     if (editingItem) { 
+      // The stockCountValue here is the CHANGE to be applied.
       result = await updateModelAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, itemIsReadyMade, stockCountValue);
       if (result.success) {
         toast({ title: "Success", description: `Model "${itemName.trim()}" updated.` });
       }
     } else { 
+      // The stockCountValue here is the INITIAL stock.
       result = await addModelAction(itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, itemIsReadyMade, stockCountValue);
       if (result.success) {
         toast({ title: "Success", description: `Model "${itemName.trim()}" added.` });
@@ -431,7 +437,7 @@ export default function ModelManagementPage() {
                 </div>
                 {itemIsReadyMade && (
                     <div className="space-y-1 pl-4 border-l-2 border-primary">
-                        <Label htmlFor="itemStockCount">Stock Count*</Label>
+                        <Label htmlFor="itemStockCount">{editingItem ? 'Add/Remove Stock' : 'Initial Stock Count'} *</Label>
                         <Input 
                             id="itemStockCount"
                             type="number"
@@ -439,10 +445,10 @@ export default function ModelManagementPage() {
                             onChange={(e) => setItemStockCount(e.target.value)}
                             required={itemIsReadyMade}
                             disabled={isSubmitting}
-                            placeholder="e.g., 100"
+                            placeholder={editingItem ? "e.g., 50 to add, -20 to remove" : "e.g., 100"}
                             step="1"
                         />
-                         <p className="text-xs text-muted-foreground">Required for ready-made items. Can be negative.</p>
+                         <p className="text-xs text-muted-foreground">{editingItem ? 'Enter a positive number to add stock, or a negative number to remove it.' : 'Required for new ready-made items.'}</p>
                     </div>
                 )}
             </div>

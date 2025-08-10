@@ -1,7 +1,7 @@
 
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, orderBy, writeBatch, where, runTransaction } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, orderBy, writeBatch, where, runTransaction, getDoc } from 'firebase/firestore';
 import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -118,28 +118,47 @@ export const updateModel = async (id: string, name: string, buyingPrice?: number
   if (!name.trim()) {
     throw new Error("Model name cannot be empty.");
   }
-  const numBuyingPrice = buyingPrice === undefined || isNaN(Number(buyingPrice)) ? 0 : Number(buyingPrice);
-  const numSellingPrice = sellingPrice === undefined || isNaN(Number(sellingPrice)) ? 0 : Number(sellingPrice);
-  const finalStockCount = (isReadyMade && stockCount !== undefined) ? stockCount : 0;
-
+  
   try {
-    const modelsCol = collection(db, MODELS_COLLECTION);
-    const q = query(modelsCol, where("name", "==", name.trim()));
-    const existing = await getDocs(q);
-    if (!existing.empty && existing.docs.some(doc => doc.id !== id && doc.data().name.toLowerCase() === name.trim().toLowerCase())) {
-      throw new Error(`Another model with name "${name.trim()}" already exists.`);
-    }
+    const modelDocRef = doc(db, MODELS_COLLECTION, id);
 
-    const modelDoc = doc(db, MODELS_COLLECTION, id);
-    const updates = {
-      name: name.trim(),
-      buyingPrice: numBuyingPrice,
-      sellingPrice: numSellingPrice,
-      imageUrl: imageUrl || null,
-      isReadyMade: isReadyMade || false,
-      stockCount: finalStockCount,
-    };
-    await updateDoc(modelDoc, updates);
+    // Transaction to read current stock and update
+    await runTransaction(db, async (transaction) => {
+      const modelDoc = await transaction.get(modelDocRef);
+      if (!modelDoc.exists()) {
+        throw new Error("Document does not exist!");
+      }
+
+      // Check for name uniqueness if the name is being changed
+      if (name.trim().toLowerCase() !== modelDoc.data().name.toLowerCase()) {
+        const modelsCol = collection(db, MODELS_COLLECTION);
+        const q = query(modelsCol, where("name", "==", name.trim()));
+        const existing = await getDocs(q); // getDocs can be used inside transactions
+        if (!existing.empty && existing.docs.some(doc => doc.id !== id)) {
+          throw new Error(`Another model with name "${name.trim()}" already exists.`);
+        }
+      }
+
+      const numBuyingPrice = buyingPrice === undefined || isNaN(Number(buyingPrice)) ? 0 : Number(buyingPrice);
+      const numSellingPrice = sellingPrice === undefined || isNaN(Number(sellingPrice)) ? 0 : Number(sellingPrice);
+      
+      const currentStock = modelDoc.data().stockCount || 0;
+      const stockToAdd = isReadyMade && stockCount !== undefined ? stockCount : 0;
+      // The crucial change: add to existing stock instead of overwriting
+      const finalStockCount = currentStock + stockToAdd;
+      
+      const updates = {
+        name: name.trim(),
+        buyingPrice: numBuyingPrice,
+        sellingPrice: numSellingPrice,
+        imageUrl: imageUrl === undefined ? modelDoc.data().imageUrl : imageUrl,
+        isReadyMade: isReadyMade === undefined ? modelDoc.data().isReadyMade : isReadyMade,
+        stockCount: finalStockCount,
+      };
+
+      transaction.update(modelDocRef, updates);
+    });
+
     return true;
   } catch (error) {
     console.error("Error updating service model:", error);
@@ -147,6 +166,7 @@ export const updateModel = async (id: string, name: string, buyingPrice?: number
     return false;
   }
 };
+
 
 export const updateModelStock = async (modelId: string, quantityChange: number): Promise<boolean> => {
     const modelDocRef = doc(db, MODELS_COLLECTION, modelId);
@@ -157,7 +177,7 @@ export const updateModelStock = async (modelId: string, quantityChange: number):
                 throw new Error("Model not found for stock update.");
             }
             const currentStock = modelDoc.data().stockCount || 0;
-            const newStock = currentStock + quantityChange;
+            const newStock = currentStock + quantityChange; // This will correctly handle +/-
             transaction.update(modelDocRef, { stockCount: newStock });
         });
         return true;
