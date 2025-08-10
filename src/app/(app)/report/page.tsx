@@ -82,6 +82,10 @@ export default function ReportPage() {
           item.model.toLowerCase().includes('menu book')
         );
 
+        const hasMenuCard = order.orderItems.some(item =>
+            item.model.toLowerCase().includes('menu card')
+        );
+
         if (hasDesignCharge) {
           const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
           const existingDesignCharge = salesMap.get('Design Charge') || { sales: 0, quantity: 0 };
@@ -96,6 +100,13 @@ export default function ReportPage() {
             sales: existingMenuBook.sales + orderTotal,
             quantity: existingMenuBook.quantity + 1,
           });
+        } else if (hasMenuCard) {
+            const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+            const existingMenuCard = salesMap.get('Menu Card') || { sales: 0, quantity: 0 };
+            salesMap.set('Menu Card', {
+                sales: existingMenuCard.sales + orderTotal,
+                quantity: existingMenuCard.quantity + 1,
+            });
         } else {
           order.orderItems.forEach(item => {
             const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
