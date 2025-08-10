@@ -24,7 +24,7 @@ import type { TrackingLink, GlobalSettings } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
-import { Package, Settings, X, PlusCircle, AlertTriangle } from 'lucide-react';
+import { Package, Settings, X, PlusCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,6 +36,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label"; // Fixed: Added Label import
 import { updateReportFiltersAction } from './actions';
 import { AnimatePresence, motion } from 'framer-motion';
 
