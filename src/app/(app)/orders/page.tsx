@@ -37,6 +37,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from 'date-fns';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis
+} from "@/components/ui/pagination";
 
 const CreateOrderDialog = dynamic(() => import('@/components/orders/create-order-dialog').then(mod => mod.CreateOrderDialog));
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
@@ -52,6 +61,8 @@ const formatDate = (dateString: string | undefined) => {
     return "Invalid Date";
   }
 };
+
+const ITEMS_PER_PAGE = 25;
 
 export default function OrdersPage() {
   const { currentUser } = useAuth();
@@ -73,6 +84,7 @@ export default function OrdersPage() {
 
   const [orderToEdit, setOrderToEdit] = useState<TrackingLink | null>(null);
   const [isEditOrderDialogOpen, setIsEditOrderDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
 
   const fetchOrderData = useCallback(async () => {
@@ -134,6 +146,17 @@ export default function OrdersPage() {
       (order.designerRepresentativeName && order.designerRepresentativeName.toLowerCase().includes(lowerSearchTerm))
     ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [orders, searchTerm, currentUser]);
+
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredOrders, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
 
@@ -274,6 +297,40 @@ export default function OrdersPage() {
     setOrderToEdit(null);
   }, [currentUser, toast, fetchOrderData]);
 
+  const renderPagination = () => {
+    const pageNumbers = [];
+    const maxPagesToShow = 5; 
+    
+    if (totalPages <= maxPagesToShow) {
+      for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+    } else {
+      let startPage = Math.max(1, currentPage - 2);
+      let endPage = Math.min(totalPages, currentPage + 2);
+
+      if (currentPage < 3) endPage = maxPagesToShow;
+      else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
+      
+      if (startPage > 1) {
+        pageNumbers.push(1);
+        if (startPage > 2) pageNumbers.push('...');
+      }
+      for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      }
+    }
+    return pageNumbers.map((page, index) => (
+        <PaginationItem key={index}>
+        {page === '...' ? <PaginationEllipsis />
+        : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number);}} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
+            {page}
+          </PaginationLink>
+        }
+        </PaginationItem>
+    ));
+  };
+
 
   if (!currentUser) return (
     <div className="flex h-screen w-full items-center justify-center">
@@ -382,8 +439,8 @@ export default function OrdersPage() {
                       </TableCell>
                     </TableRow>
                   ))
-                ) : filteredOrders.length > 0 ? (
-                  filteredOrders.map((order) => {
+                ) : paginatedOrders.length > 0 ? (
+                  paginatedOrders.map((order) => {
                     const statusInfo = orderStatusDisplay[order.currentStatus] || { name: order.currentStatus, color: '#A1A1AA', textColor: '#FFFFFF' };
                     return (
                       <TableRow key={order.id} className="hover:bg-muted/50 transition-colors">
@@ -497,6 +554,31 @@ export default function OrdersPage() {
             </Table>
           </div>
         </CardContent>
+         <CardFooter className="py-4 border-t">
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#" 
+                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} 
+                    aria-disabled={currentPage === 1} 
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                  />
+                </PaginationItem>
+                {renderPagination()}
+                <PaginationItem>
+                  <PaginationNext 
+                    href="#" 
+                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} 
+                    aria-disabled={currentPage === totalPages} 
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </CardFooter>
       </Card>
 
       {statusesForDialog && selectedOrderForDrAssignment && currentUser && isAssignDrDialogOpen && (
