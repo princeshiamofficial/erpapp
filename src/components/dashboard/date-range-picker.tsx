@@ -30,6 +30,8 @@ import {
   endOfYear,
   subYears,
   isSameDay,
+  startOfDay, // Added
+  endOfDay,   // Added
 } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
@@ -127,10 +129,10 @@ export function DateRangePicker({
     const now = new Date();
     switch (value) {
       case "today":
-        return { from: now, to: now };
+        return { from: startOfDay(now), to: endOfDay(now) };
       case "yesterday":
         const yesterday = subDays(now, 1);
-        return { from: yesterday, to: yesterday };
+        return { from: startOfDay(yesterday), to: endOfDay(yesterday) };
       case "last7Days":
         return { from: subDays(now, 6), to: now };
       case "last30Days":
