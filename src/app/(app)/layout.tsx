@@ -23,11 +23,14 @@ export default async function AuthenticatedLayout({
   const cookieStore = cookies();
   const userCookie = cookieStore.get('colorhut-user');
   let currentUser: User | null = null;
-  if (userCookie) {
+  if (userCookie && userCookie.value) {
     try {
       currentUser = JSON.parse(userCookie.value);
     } catch (e) {
-      console.error("Failed to parse user cookie in layout", e);
+      console.error("Failed to parse user cookie in layout, it might be corrupted:", e);
+      // If parsing fails, we'll proceed with currentUser as null.
+      // The AppProviders will then handle redirecting to login.
+      currentUser = null;
     }
   }
 
