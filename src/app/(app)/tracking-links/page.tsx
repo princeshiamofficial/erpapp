@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Link2, Eye, Edit3, Search, ClipboardCopy, Check, RefreshCw, Loader2, MoreVertical } from "lucide-react"; 
 import { useAuth } from "@/contexts/auth-context";
@@ -22,8 +22,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis
+} from "@/components/ui/pagination";
+import { cn } from '@/lib/utils';
 
 const EditTrackingLinkDialog = dynamic(() => import('@/components/tracking-links/edit-tracking-link-dialog').then(mod => mod.EditTrackingLinkDialog));
+
+const ITEMS_PER_PAGE = 25;
 
 export default function TrackingLinksPage() {
   const { currentUser } = useAuth();
@@ -34,9 +46,9 @@ export default function TrackingLinksPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
 
-
   const [selectedLink, setSelectedLink] = useState<TrackingLink | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -115,13 +127,24 @@ export default function TrackingLinksPage() {
     );
   }, [trackingLinks, searchTerm]);
 
+  const totalPages = Math.ceil(filteredTrackingLinks.length / ITEMS_PER_PAGE);
+
+  const paginatedLinks = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredTrackingLinks.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredTrackingLinks, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
 
   useEffect(() => {
     if (allStatuses.length > 0) {
       const newDisplayInfoMap: Record<string, { name: string; color: string; textColor: string }> = {};
       const uniqueStatusIdsInScope = new Set<string>();
-      filteredTrackingLinks.forEach(link => uniqueStatusIdsInScope.add(link.currentStatus));
+      paginatedLinks.forEach(link => uniqueStatusIdsInScope.add(link.currentStatus));
       
       uniqueStatusIdsInScope.forEach(statusId => {
         newDisplayInfoMap[statusId] = getStatusDisplayInfoCallback(statusId);
@@ -136,7 +159,41 @@ export default function TrackingLinksPage() {
     } else if (Object.keys(orderStatusDisplay).length > 0) {
       setOrderStatusDisplay({});
     }
-  }, [filteredTrackingLinks, allStatuses, getStatusDisplayInfoCallback]);
+  }, [paginatedLinks, allStatuses, getStatusDisplayInfoCallback]);
+  
+  const renderPagination = () => {
+    const pageNumbers = [];
+    const maxPagesToShow = 5; 
+    
+    if (totalPages <= maxPagesToShow) {
+      for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+    } else {
+      let startPage = Math.max(1, currentPage - 2);
+      let endPage = Math.min(totalPages, currentPage + 2);
+
+      if (currentPage < 3) endPage = maxPagesToShow;
+      else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
+      
+      if (startPage > 1) {
+        pageNumbers.push(1);
+        if (startPage > 2) pageNumbers.push('...');
+      }
+      for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      }
+    }
+    return pageNumbers.map((page, index) => (
+        <PaginationItem key={index}>
+        {page === '...' ? <PaginationEllipsis />
+        : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number);}} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
+            {page}
+          </PaginationLink>
+        }
+        </PaginationItem>
+    ));
+  };
 
 
   if (!currentUser) return (
@@ -208,8 +265,8 @@ export default function TrackingLinksPage() {
                       </TableCell>
                     </TableRow>
                   ))
-                ) : filteredTrackingLinks.length > 0 ? (
-                  filteredTrackingLinks.map((link) => {
+                ) : paginatedLinks.length > 0 ? (
+                  paginatedLinks.map((link) => {
                     const statusInfo = orderStatusDisplay[link.currentStatus] || { name: link.currentStatus, color: '#A1A1AA', textColor: '#FFFFFF' };
                     return (
                       <TableRow key={link.id} className="hover:bg-muted/50 transition-colors">
@@ -282,6 +339,31 @@ export default function TrackingLinksPage() {
             </Table>
           </div>
         </CardContent>
+        <CardFooter className="py-4 border-t">
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#" 
+                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} 
+                    aria-disabled={currentPage === 1} 
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                  />
+                </PaginationItem>
+                {renderPagination()}
+                <PaginationItem>
+                  <PaginationNext 
+                    href="#" 
+                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} 
+                    aria-disabled={currentPage === totalPages} 
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </CardFooter>
       </Card>
 
       {selectedLink && currentUser && allStatuses.length > 0 && isEditDialogOpen && (
