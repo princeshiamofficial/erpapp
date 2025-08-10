@@ -613,6 +613,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                                       <AvatarFallback className="rounded-sm bg-muted text-xs">IMG</AvatarFallback>
                                     </Avatar>
                                     <span className="flex-1 truncate">{option.name}</span>
+                                    {option.isReadyMade && <span className="text-xs text-green-600 font-semibold">(Stock: {option.stockCount ?? 0})</span>}
                                     {option.sellingPrice !== undefined && <span className="ml-auto text-xs text-muted-foreground">({formatCurrencyBdt(option.sellingPrice)})</span>}
                                   </CommandItem>
                                 ))}
@@ -823,4 +824,3 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
-

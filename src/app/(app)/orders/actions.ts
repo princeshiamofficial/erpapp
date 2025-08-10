@@ -2,7 +2,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { TrackingLink, User, OrderItem, GlobalSettings, UserRole, OrderLogEntry, AdvancePaymentRecord } from "@/types";
+import type { TrackingLink, User, OrderItem, GlobalSettings, UserRole, OrderLogEntry, AdvancePaymentRecord, ServiceModelItem } from "@/types";
 import { addOrder as addOrderService, getOrderById, deleteOrder as deleteOrderFromDb, updateOrder as updateOrderService } from "@/lib/order-service"; // Renamed imports for clarity
 import { getGlobalSettings } from "@/lib/settings-service";
 import { v4 as uuidv4 } from 'uuid';
@@ -12,6 +12,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { adminApp } from '@/lib/firebase-admin';
 import type { messaging } from 'firebase-admin';
+import { getModels, updateModelStock } from '@/lib/service-options-service';
 
 interface CreateOrderDialogFormData {
   jobId: string;
@@ -65,6 +66,7 @@ export async function createOrderAction(
       return { error: "At least one order item is required." };
     }
 
+    const allModels = await getModels();
     let orderItemsTotal = 0;
     const processedOrderItems: OrderItem[] = [];
     for (const item of data.orderItems) {
@@ -74,6 +76,14 @@ export async function createOrderAction(
       if (!item.lamination?.trim()) return { error: `Lamination is required for model "${item.model}".` };
       if (item.unitPrice === undefined || item.unitPrice === null || isNaN(Number(item.unitPrice)) || Number(item.unitPrice) < 0) return { error: `Unit price is missing or invalid for model "${item.model}".` };
       if (item.lineItemTotalPrice === undefined || item.lineItemTotalPrice === null || isNaN(Number(item.lineItemTotalPrice)) || Number(item.lineItemTotalPrice) < 0) return { error: `Line item total price is missing or invalid for model "${item.model}".` };
+
+      // Stock check for ready-made items
+      const modelInfo = allModels.find(m => m.name === item.model.trim());
+      if (modelInfo && modelInfo.isReadyMade) {
+        if ((modelInfo.stockCount ?? 0) < quantity) {
+          return { error: `Insufficient stock for ${modelInfo.name}. Available: ${modelInfo.stockCount ?? 0}, Requested: ${quantity}.` };
+        }
+      }
 
       processedOrderItems.push({
         id: item.id || uuidv4(),
@@ -142,10 +152,20 @@ export async function createOrderAction(
     const createdOrder = await addOrderService(newOrderDataForService);
     if (!createdOrder) return { error: "Failed to create order due to a service error." };
 
+    // Update stock for ready-made items
+    for (const item of processedOrderItems) {
+      const modelInfo = allModels.find(m => m.name === item.model);
+      if (modelInfo && modelInfo.isReadyMade) {
+        await updateModelStock(modelInfo.id, -item.quantity);
+      }
+    }
+
+
     revalidatePath("/(app)/orders");
     revalidatePath("/(app)/dashboard");
     revalidatePath("/(app)/active-orders");
     revalidatePath("/(app)/orders/monthly");
+    revalidatePath("/(app)/admin/model-management");
     return createdOrder;
 
   } catch (error: any) {
@@ -174,6 +194,8 @@ export async function updateOrderAction(
 
     const existingOrder = await getOrderById(orderId);
     if (!existingOrder) return { success: false, error: `Order with ID ${orderId} not found.` };
+    
+    const allModels = await getModels();
 
     const finalUpdates: Partial<TrackingLink> = { ...updates };
     delete finalUpdates.newAdvancePaymentAmount;
@@ -233,20 +255,59 @@ export async function updateOrderAction(
     }
     
     if (updates.orderNotes !== undefined) finalUpdates.orderNotes = updates.orderNotes?.trim() || null;
-
+    
+    // STOCK ADJUSTMENT LOGIC
     if (updates.orderItems) {
       if (!Array.isArray(updates.orderItems) || updates.orderItems.length === 0) return { success: false, error: "Order must have at least one item." };
-      for (const item of updates.orderItems) {
-        if (!item.id?.trim()) return { success: false, error: "Each order item must have an ID." };
-        if (!item.model?.trim()) return { success: false, error: `Model is required for item ID ${item.id}.` };
-        if (item.quantity === undefined || isNaN(Number(item.quantity)) || Number(item.quantity) < 1) return { success: false, error: `Invalid quantity for item ID ${item.id}. Must be a positive number.` };
-        if (!item.lamination?.trim()) return { success: false, error: `Lamination is required for item ID ${item.id}.` };
-        if (item.unitPrice === undefined || item.unitPrice === null || isNaN(Number(item.unitPrice)) || Number(item.unitPrice) < 0) return { success: false, error: `Unit price is missing or invalid for item ID ${item.id}.` };
-        if (item.lineItemTotalPrice === undefined || item.lineItemTotalPrice === null || isNaN(Number(item.lineItemTotalPrice)) || Number(item.lineItemTotalPrice) < 0) return { success: false, error: `Line item total price is missing or invalid for item ID ${item.id}.` };
+      
+      const stockChanges = new Map<string, number>(); // modelId -> quantityChange
+      const oldItemsMap = new Map(existingOrder.orderItems.map(item => [item.id, item]));
+
+      for (const newItem of updates.orderItems) {
+          const oldItem = oldItemsMap.get(newItem.id);
+          const modelInfo = allModels.find(m => m.name === newItem.model);
+          if (!modelInfo || !modelInfo.isReadyMade) continue; // Only track ready-made
+
+          const newQuantity = newItem.quantity;
+          const oldQuantity = oldItem ? oldItem.quantity : 0;
+          const quantityChange = newQuantity - oldQuantity;
+
+          if (quantityChange !== 0) {
+              stockChanges.set(modelInfo.id, (stockChanges.get(modelInfo.id) || 0) + quantityChange);
+          }
+          if (oldItem) {
+              oldItemsMap.delete(newItem.id); // Mark as processed
+          }
       }
-       finalUpdates.orderItems = updates.orderItems;
+
+      // Items that were in old order but not in new one (removed)
+      for (const removedItem of oldItemsMap.values()) {
+          const modelInfo = allModels.find(m => m.name === removedItem.model);
+          if (modelInfo && modelInfo.isReadyMade) {
+              stockChanges.set(modelInfo.id, (stockChanges.get(modelInfo.id) || 0) - removedItem.quantity);
+          }
+      }
+
+      // Validate stock availability before proceeding
+      for (const [modelId, quantityChange] of stockChanges.entries()) {
+          if (quantityChange > 0) { // If we are taking from stock
+              const modelInfo = allModels.find(m => m.id === modelId);
+              if (modelInfo && (modelInfo.stockCount ?? 0) < quantityChange) {
+                  return { success: false, error: `Insufficient stock for ${modelInfo.name}. Required: ${quantityChange}, Available: ${modelInfo.stockCount ?? 0}.` };
+              }
+          }
+      }
+      
+      // If validation passes, apply stock changes
+      for (const [modelId, quantityChange] of stockChanges.entries()) {
+         if (quantityChange !== 0) {
+            await updateModelStock(modelId, -quantityChange); // Decrease stock if change is positive, increase if negative
+         }
+      }
+      finalUpdates.orderItems = updates.orderItems;
     }
-    
+
+
     // Handle new advance payment
     if (updates.newAdvancePaymentAmount && updates.newAdvancePaymentAmount > 0) {
         if (!updates.newAdvancePaymentMethod || !updates.newAdvancePaymentMethod.trim()) {
@@ -323,6 +384,7 @@ export async function updateOrderAction(
     revalidatePath("/(app)/deliveries/monthly");
     revalidatePath("/(app)/deliveries/weekly");
     revalidatePath("/(app)/projects");
+    revalidatePath("/(app)/admin/model-management");
 
     return { success: true, order: updatedOrder };
   } catch (error: any) {

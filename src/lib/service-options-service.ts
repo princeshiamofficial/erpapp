@@ -1,7 +1,7 @@
 
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, orderBy, writeBatch, where } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, orderBy, writeBatch, where, runTransaction } from 'firebase/firestore';
 import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -146,6 +146,28 @@ export const updateModel = async (id: string, name: string, buyingPrice?: number
     if (error instanceof Error) throw error;
     return false;
   }
+};
+
+export const updateModelStock = async (modelId: string, quantityChange: number): Promise<boolean> => {
+    const modelDocRef = doc(db, MODELS_COLLECTION, modelId);
+    try {
+        await runTransaction(db, async (transaction) => {
+            const modelDoc = await transaction.get(modelDocRef);
+            if (!modelDoc.exists()) {
+                throw new Error("Model not found for stock update.");
+            }
+            const currentStock = modelDoc.data().stockCount || 0;
+            const newStock = currentStock + quantityChange;
+            if (newStock < 0) {
+                throw new Error(`Cannot update stock for ${modelDoc.data().name}. Resulting stock would be negative.`);
+            }
+            transaction.update(modelDocRef, { stockCount: newStock });
+        });
+        return true;
+    } catch (error) {
+        console.error(`Error updating stock for model ${modelId}:`, error);
+        return false;
+    }
 };
 
 export const deleteModel = async (id: string): Promise<boolean> => {
