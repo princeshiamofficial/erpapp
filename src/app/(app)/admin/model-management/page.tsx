@@ -6,7 +6,7 @@ import NextImage from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle, Search, UploadCloud, ImageIcon } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle, Search, UploadCloud, ImageIcon, PackageCheck } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { ServiceModelItem } from "@/types";
@@ -20,13 +20,16 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch'; // For the checkbox
 
 interface ItemToEdit {
   id: string;
   name: string;
   buyingPrice: string;
   sellingPrice: string;
-  imageUrl?: string | null; 
+  imageUrl?: string | null;
+  isReadyMade?: boolean;
+  stockCount?: number;
 }
 interface ItemToDelete {
   id: string;
@@ -49,6 +52,9 @@ export default function ModelManagementPage() {
   const [itemName, setItemName] = useState('');
   const [itemBuyingPrice, setItemBuyingPrice] = useState('');
   const [itemSellingPrice, setItemSellingPrice] = useState('');
+  const [itemIsReadyMade, setItemIsReadyMade] = useState(false);
+  const [itemStockCount, setItemStockCount] = useState('');
+
   const [editingItem, setEditingItem] = useState<ItemToEdit | null>(null);
   const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
 
@@ -89,6 +95,8 @@ export default function ModelManagementPage() {
     setItemName('');
     setItemBuyingPrice('0');
     setItemSellingPrice('0');
+    setItemIsReadyMade(false);
+    setItemStockCount('0');
     setSelectedImageFile(null);
     setImagePreviewUrl(null);
     setIsAddEditDialogOpen(true);
@@ -100,11 +108,15 @@ export default function ModelManagementPage() {
       name: item.name, 
       buyingPrice: (item.buyingPrice ?? 0).toString(),
       sellingPrice: (item.sellingPrice ?? 0).toString(),
-      imageUrl: item.imageUrl
+      imageUrl: item.imageUrl,
+      isReadyMade: item.isReadyMade ?? false,
+      stockCount: item.stockCount ?? 0,
     });
     setItemName(item.name);
     setItemBuyingPrice((item.buyingPrice ?? 0).toString());
     setItemSellingPrice((item.sellingPrice ?? 0).toString());
+    setItemIsReadyMade(item.isReadyMade ?? false);
+    setItemStockCount((item.stockCount ?? 0).toString());
     setSelectedImageFile(null);
     setImagePreviewUrl(item.imageUrl || null);
     setIsAddEditDialogOpen(true);
@@ -146,6 +158,7 @@ export default function ModelManagementPage() {
     }
     const buyingPriceValue = parseFloat(itemBuyingPrice);
     const sellingPriceValue = parseFloat(itemSellingPrice);
+    const stockCountValue = itemIsReadyMade ? parseInt(itemStockCount, 10) : 0;
 
     if (isNaN(buyingPriceValue) || buyingPriceValue < 0) {
       toast({ title: "Validation Error", description: "Buying Price must be a non-negative number.", variant: "destructive" });
@@ -155,6 +168,11 @@ export default function ModelManagementPage() {
       toast({ title: "Validation Error", description: "Selling Price must be a non-negative number.", variant: "destructive" });
       return;
     }
+    if (itemIsReadyMade && (isNaN(stockCountValue) || stockCountValue < 0)) {
+        toast({ title: "Validation Error", description: "Stock count must be a non-negative integer for ready-made items.", variant: "destructive"});
+        return;
+    }
+
 
     setIsSubmitting(true);
     let finalImageUrl: string | null = editingItem?.imageUrl || null;
@@ -198,12 +216,12 @@ export default function ModelManagementPage() {
 
     let result;
     if (editingItem) { 
-      result = await updateModelAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl);
+      result = await updateModelAction(editingItem.id, itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, itemIsReadyMade, stockCountValue);
       if (result.success) {
         toast({ title: "Success", description: `Model "${itemName.trim()}" updated.` });
       }
     } else { 
-      result = await addModelAction(itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl);
+      result = await addModelAction(itemName.trim(), buyingPriceValue, sellingPriceValue, finalImageUrl, itemIsReadyMade, stockCountValue);
       if (result.success) {
         toast({ title: "Success", description: `Model "${itemName.trim()}" added.` });
       }
@@ -211,13 +229,6 @@ export default function ModelManagementPage() {
 
     if (result && result.success) {
       setIsAddEditDialogOpen(false);
-      setItemName('');
-      setItemBuyingPrice('');
-      setItemSellingPrice('');
-      setSelectedImageFile(null);
-      setImagePreviewUrl(null);
-      if(fileInputRef.current) fileInputRef.current.value = "";
-      setEditingItem(null);
       await fetchData();
     } else if (result) {
       toast({ title: "Error", description: result.error || `Could not save model.`, variant: "destructive" });
@@ -301,9 +312,17 @@ export default function ModelManagementPage() {
                       unoptimized={!item.imageUrl?.startsWith('https://colorhutbd.xyz')}
                   />
                   <div className="flex-1 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-x-2 sm:gap-x-4 items-center">
-                    <span className="font-medium text-foreground whitespace-nowrap overflow-hidden" title={item.name}>
-                      {item.name}
-                    </span>
+                    <div className="flex flex-col">
+                        <span className="font-medium text-foreground whitespace-nowrap overflow-hidden" title={item.name}>
+                        {item.name}
+                        </span>
+                        {item.isReadyMade && (
+                            <span className="text-xs text-green-600 font-semibold flex items-center gap-1">
+                                <PackageCheck className="h-3.5 w-3.5" />
+                                Ready Made (Stock: {item.stockCount ?? 0})
+                            </span>
+                        )}
+                    </div>
                     <span className="font-bold text-[hsl(var(--chart-1))] flex items-center justify-between min-w-[7rem] md:min-w-[7.5rem] py-1">
                       <span className="flex items-center">
                         <span className="text-muted-foreground/90 text-[0.75rem] sm:text-xs w-9 text-right mr-1.5 flex-shrink-0">Buy:</span>
@@ -356,7 +375,9 @@ export default function ModelManagementPage() {
         {renderItemList(filteredModels, 'Models', Layers)}
       </div>
 
-      <Dialog open={isAddEditDialogOpen} onOpenChange={setIsAddEditDialogOpen}>
+      <Dialog open={isAddEditDialogOpen} onOpenChange={(open) => {
+          if (!isSubmitting) setIsAddEditDialogOpen(open);
+      }}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editingItem ? 'Edit' : 'Add New'} Model</DialogTitle>
@@ -398,6 +419,29 @@ export default function ModelManagementPage() {
                   step="0.01"
                 />
               </div>
+            </div>
+            <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                    <Switch id="isReadyMade" checked={itemIsReadyMade} onCheckedChange={setItemIsReadyMade} disabled={isSubmitting}/>
+                    <Label htmlFor="isReadyMade">This is a ready-made item</Label>
+                </div>
+                {itemIsReadyMade && (
+                    <div className="space-y-1 pl-4 border-l-2 border-primary">
+                        <Label htmlFor="itemStockCount">Stock Count*</Label>
+                        <Input 
+                            id="itemStockCount"
+                            type="number"
+                            value={itemStockCount}
+                            onChange={(e) => setItemStockCount(e.target.value)}
+                            required={itemIsReadyMade}
+                            disabled={isSubmitting}
+                            placeholder="e.g., 100"
+                            min="0"
+                            step="1"
+                        />
+                         <p className="text-xs text-muted-foreground">Required for ready-made items.</p>
+                    </div>
+                )}
             </div>
             <div className="space-y-1">
               <Label htmlFor="modelImageFile">Model Image (Optional)</Label>

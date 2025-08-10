@@ -122,6 +122,8 @@ export interface ServiceModelItem {
   buyingPrice?: number;
   sellingPrice?: number;
   imageUrl?: string | null;
+  isReadyMade?: boolean;
+  stockCount?: number;
 }
 
 export interface ServiceLaminationItem {

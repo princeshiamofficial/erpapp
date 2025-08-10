@@ -1,4 +1,5 @@
 
+
 import { db } from './firebase';
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, query, orderBy, writeBatch, where } from 'firebase/firestore';
 import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem } from '@/types';
@@ -10,10 +11,10 @@ const PAYMENT_METHODS_COLLECTION = 'servicePaymentMethods';
 
 // Default options with prices for models
 const defaultModelsData: Array<Omit<ServiceModelItem, 'id'>> = [
-  { name: "Standard Gloss", buyingPrice: 5.00, sellingPrice: 10.00, imageUrl: 'https://placehold.co/100x100.png' },
-  { name: "Premium Matte", buyingPrice: 8.00, sellingPrice: 15.00, imageUrl: 'https://placehold.co/100x100.png' },
-  { name: "Eco-Friendly Recycled", buyingPrice: 7.00, sellingPrice: 12.50, imageUrl: 'https://placehold.co/100x100.png' },
-  { name: "Luxury Silk", buyingPrice: 10.00, sellingPrice: 18.75, imageUrl: 'https://placehold.co/100x100.png' }
+  { name: "Standard Gloss", buyingPrice: 5.00, sellingPrice: 10.00, imageUrl: 'https://placehold.co/100x100.png', isReadyMade: false, stockCount: 0 },
+  { name: "Premium Matte", buyingPrice: 8.00, sellingPrice: 15.00, imageUrl: 'https://placehold.co/100x100.png', isReadyMade: true, stockCount: 150 },
+  { name: "Eco-Friendly Recycled", buyingPrice: 7.00, sellingPrice: 12.50, imageUrl: 'https://placehold.co/100x100.png', isReadyMade: false, stockCount: 0 },
+  { name: "Luxury Silk", buyingPrice: 10.00, sellingPrice: 18.75, imageUrl: 'https://placehold.co/100x100.png', isReadyMade: true, stockCount: 75 }
 ];
 const defaultLaminationsData: string[] = ["None", "Glossy", "Matte", "Soft Touch", "Anti-Scuff Matte"];
 const defaultPaymentMethodsData: string[] = ["Cash", "Card", "Bank Transfer", "Mobile Banking", "Cheque", "Other"];
@@ -32,7 +33,9 @@ const seedDefaultModels = async (): Promise<ServiceModelItem[]> => {
       name: modelData.name, 
       buyingPrice: modelData.buyingPrice ?? 0,
       sellingPrice: modelData.sellingPrice ?? 0,
-      imageUrl: modelData.imageUrl ?? null
+      imageUrl: modelData.imageUrl ?? null,
+      isReadyMade: modelData.isReadyMade ?? false,
+      stockCount: modelData.stockCount ?? 0,
     };
     const docRef = doc(modelsRef, id);
     batch.set(docRef, newModel);
@@ -41,7 +44,7 @@ const seedDefaultModels = async (): Promise<ServiceModelItem[]> => {
 
   try {
     await batch.commit();
-    console.log('Default service models (with buying/selling prices) seeded in Firestore.');
+    console.log('Default service models (with stock tracking) seeded in Firestore.');
     return createdModels;
   } catch (error) {
     console.error("Error seeding default service models:", error);
@@ -65,7 +68,9 @@ export const getModels = async (): Promise<ServiceModelItem[]> => {
         name: data.name,
         buyingPrice: data.buyingPrice === undefined ? 0 : data.buyingPrice,
         sellingPrice: data.sellingPrice === undefined ? 0 : data.sellingPrice,
-        imageUrl: data.imageUrl || null
+        imageUrl: data.imageUrl || null,
+        isReadyMade: data.isReadyMade === undefined ? false : data.isReadyMade,
+        stockCount: data.stockCount === undefined ? 0 : data.stockCount,
       } as ServiceModelItem;
     });
   } catch (error) {
@@ -74,12 +79,13 @@ export const getModels = async (): Promise<ServiceModelItem[]> => {
   }
 };
 
-export const addModel = async (name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null): Promise<ServiceModelItem | null> => {
+export const addModel = async (name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCount?: number): Promise<ServiceModelItem | null> => {
   if (!name.trim()) {
     throw new Error("Model name cannot be empty.");
   }
   const numBuyingPrice = buyingPrice === undefined || isNaN(Number(buyingPrice)) ? 0 : Number(buyingPrice);
   const numSellingPrice = sellingPrice === undefined || isNaN(Number(sellingPrice)) ? 0 : Number(sellingPrice);
+  const finalStockCount = (isReadyMade && stockCount !== undefined) ? stockCount : 0;
 
   try {
     const modelsCol = collection(db, MODELS_COLLECTION);
@@ -90,7 +96,15 @@ export const addModel = async (name: string, buyingPrice?: number, sellingPrice?
     }
 
     const id = uuidv4();
-    const newModel: ServiceModelItem = { id, name: name.trim(), buyingPrice: numBuyingPrice, sellingPrice: numSellingPrice, imageUrl: imageUrl || null };
+    const newModel: ServiceModelItem = { 
+      id, 
+      name: name.trim(), 
+      buyingPrice: numBuyingPrice, 
+      sellingPrice: numSellingPrice, 
+      imageUrl: imageUrl || null,
+      isReadyMade: isReadyMade || false,
+      stockCount: finalStockCount,
+    };
     await setDoc(doc(modelsCol, id), newModel);
     return newModel;
   } catch (error) {
@@ -100,12 +114,13 @@ export const addModel = async (name: string, buyingPrice?: number, sellingPrice?
   }
 };
 
-export const updateModel = async (id: string, name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null): Promise<boolean> => {
+export const updateModel = async (id: string, name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCount?: number): Promise<boolean> => {
   if (!name.trim()) {
     throw new Error("Model name cannot be empty.");
   }
   const numBuyingPrice = buyingPrice === undefined || isNaN(Number(buyingPrice)) ? 0 : Number(buyingPrice);
   const numSellingPrice = sellingPrice === undefined || isNaN(Number(sellingPrice)) ? 0 : Number(sellingPrice);
+  const finalStockCount = (isReadyMade && stockCount !== undefined) ? stockCount : 0;
 
   try {
     const modelsCol = collection(db, MODELS_COLLECTION);
@@ -116,7 +131,15 @@ export const updateModel = async (id: string, name: string, buyingPrice?: number
     }
 
     const modelDoc = doc(db, MODELS_COLLECTION, id);
-    await updateDoc(modelDoc, { name: name.trim(), buyingPrice: numBuyingPrice, sellingPrice: numSellingPrice, imageUrl: imageUrl || null });
+    const updates = {
+      name: name.trim(),
+      buyingPrice: numBuyingPrice,
+      sellingPrice: numSellingPrice,
+      imageUrl: imageUrl || null,
+      isReadyMade: isReadyMade || false,
+      stockCount: finalStockCount,
+    };
+    await updateDoc(modelDoc, updates);
     return true;
   } catch (error) {
     console.error("Error updating service model:", error);
