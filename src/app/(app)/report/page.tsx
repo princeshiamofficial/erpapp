@@ -74,16 +74,27 @@ export default function ReportPage() {
     orders.forEach(order => {
       if (order.orderItems && Array.isArray(order.orderItems)) {
         
+        const hasDesignCharge = order.orderItems.some(item =>
+          item.model.toLowerCase().includes('design charge')
+        );
+        
         const hasMenuBook = order.orderItems.some(item =>
           item.model.toLowerCase().includes('menu book')
         );
 
-        if (hasMenuBook) {
+        if (hasDesignCharge) {
+          const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+          const existingDesignCharge = salesMap.get('Design Charge') || { sales: 0, quantity: 0 };
+          salesMap.set('Design Charge', {
+            sales: existingDesignCharge.sales + orderTotal,
+            quantity: existingDesignCharge.quantity + 1,
+          });
+        } else if (hasMenuBook) {
           const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
           const existingMenuBook = salesMap.get('Menu Book') || { sales: 0, quantity: 0 };
           salesMap.set('Menu Book', {
             sales: existingMenuBook.sales + orderTotal,
-            quantity: existingMenuBook.quantity + 1, // Each menu book order is counted as 1
+            quantity: existingMenuBook.quantity + 1,
           });
         } else {
           order.orderItems.forEach(item => {
