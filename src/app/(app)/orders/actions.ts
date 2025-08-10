@@ -77,13 +77,7 @@ export async function createOrderAction(
       if (item.unitPrice === undefined || item.unitPrice === null || isNaN(Number(item.unitPrice)) || Number(item.unitPrice) < 0) return { error: `Unit price is missing or invalid for model "${item.model}".` };
       if (item.lineItemTotalPrice === undefined || item.lineItemTotalPrice === null || isNaN(Number(item.lineItemTotalPrice)) || Number(item.lineItemTotalPrice) < 0) return { error: `Line item total price is missing or invalid for model "${item.model}".` };
 
-      // Stock check for ready-made items
-      const modelInfo = allModels.find(m => m.name === item.model.trim());
-      if (modelInfo && modelInfo.isReadyMade) {
-        if ((modelInfo.stockCount ?? 0) < quantity) {
-          return { error: `Insufficient stock for ${modelInfo.name}. Available: ${modelInfo.stockCount ?? 0}, Requested: ${quantity}.` };
-        }
-      }
+      // Stock validation removed to allow negative stock.
 
       processedOrderItems.push({
         id: item.id || uuidv4(),
@@ -288,16 +282,8 @@ export async function updateOrderAction(
           }
       }
 
-      // Validate stock availability before proceeding
-      for (const [modelId, quantityChange] of stockChanges.entries()) {
-          if (quantityChange > 0) { // If we are taking from stock
-              const modelInfo = allModels.find(m => m.id === modelId);
-              if (modelInfo && (modelInfo.stockCount ?? 0) < quantityChange) {
-                  return { success: false, error: `Insufficient stock for ${modelInfo.name}. Required: ${quantityChange}, Available: ${modelInfo.stockCount ?? 0}.` };
-              }
-          }
-      }
-      
+      // Stock validation removed to allow negative stock
+
       // If validation passes, apply stock changes
       for (const [modelId, quantityChange] of stockChanges.entries()) {
          if (quantityChange !== 0) {

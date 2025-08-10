@@ -317,7 +317,10 @@ export default function ModelManagementPage() {
                         {item.name}
                         </span>
                         {item.isReadyMade && (
-                            <span className="text-xs text-green-600 font-semibold flex items-center gap-1">
+                            <span className={cn(
+                                "text-xs font-semibold flex items-center gap-1",
+                                (item.stockCount ?? 0) < 0 ? "text-destructive" : "text-green-600"
+                            )}>
                                 <PackageCheck className="h-3.5 w-3.5" />
                                 Ready Made (Stock: {item.stockCount ?? 0})
                             </span>
