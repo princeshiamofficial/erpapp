@@ -1,13 +1,19 @@
 
 "use server";
 
-// This file is a placeholder for server actions related to the new Report page.
-// You can add functions here to fetch data for your reports.
+import { revalidatePath } from "next/cache";
+import { setReportProductFilters } from "@/lib/settings-service";
 
-export async function getSampleReportData() {
-  // Example function
-  console.log("Fetching report data...");
-  return {
-    message: "This is sample data from the server for the new report page."
-  };
+export async function updateReportFiltersAction(filters: string[]): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setReportProductFilters(filters);
+    if (success) {
+      revalidatePath("/(app)/report");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to save filters to the database." };
+  } catch (error) {
+    console.error("Error in updateReportFiltersAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected server error occurred." };
+  }
 }

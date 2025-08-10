@@ -163,6 +163,7 @@ export interface GlobalSettings {
   maintenanceMessage?: string | null;
   drAssignmentNotificationTitle?: string;
   drAssignmentNotificationBody?: string;
+  reportProductFilters?: string[];
 }
 
 export interface LeaderboardThemeSettings {

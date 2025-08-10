@@ -43,6 +43,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   maintenanceMessage: "The application is currently down for maintenance. We'll be back shortly!",
   drAssignmentNotificationTitle: 'New Design Assigned By %assignerName%',
   drAssignmentNotificationBody: 'You have been assigned to a new design order: %orderId%.',
+  reportProductFilters: ['Design Charge', 'Menu Book', 'Menu Card', 'Pizza Box', 'X-Banner', 'Business Card', 'Visiting Card'],
 };
 
 // Gets global settings from Firestore
@@ -79,6 +80,7 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         maintenanceMessage: data.maintenanceMessage ?? DEFAULT_GLOBAL_SETTINGS.maintenanceMessage,
         drAssignmentNotificationTitle: data.drAssignmentNotificationTitle ?? DEFAULT_GLOBAL_SETTINGS.drAssignmentNotificationTitle,
         drAssignmentNotificationBody: data.drAssignmentNotificationBody ?? DEFAULT_GLOBAL_SETTINGS.drAssignmentNotificationBody,
+        reportProductFilters: data.reportProductFilters ?? DEFAULT_GLOBAL_SETTINGS.reportProductFilters,
       };
     } else {
       console.log("Global settings document not found, returning defaults. Creating document with defaults.");
@@ -371,6 +373,27 @@ export async function setDrAssignmentNotificationTemplates(
     return true;
   } catch (error) {
     console.error("Error setting DR assignment notification templates:", error);
+    return false;
+  }
+}
+
+// New function to set the report product filters
+export async function setReportProductFilters(filters: string[]): Promise<boolean> {
+  try {
+    const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+    const docSnap = await getDoc(settingsDocRef);
+    if (docSnap.exists()) {
+      await updateDoc(settingsDocRef, { reportProductFilters: filters });
+    } else {
+      const initialData: GlobalSettings = {
+        ...DEFAULT_GLOBAL_SETTINGS,
+        reportProductFilters: filters,
+      };
+      await setDoc(settingsDocRef, initialData);
+    }
+    return true;
+  } catch (error) {
+    console.error("Error setting report product filters:", error);
     return false;
   }
 }
