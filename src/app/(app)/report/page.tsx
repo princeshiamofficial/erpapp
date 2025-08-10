@@ -1,6 +1,7 @@
+
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -18,22 +19,87 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { TrackingLink } from '@/types';
+import { getOrders } from '@/lib/order-service';
+import { useToast } from '@/hooks/use-toast';
+import { Package } from 'lucide-react';
 
 const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-BD', {
         style: 'currency',
-        currency: 'USD', // Using USD as a placeholder
+        currency: 'BDT',
     }).format(value);
 };
 
-const productSalesData = [
-  { product: "Premium Matte", sales: 12500, percentage: 45 },
-  { product: "Standard Gloss", sales: 8200, percentage: 29 },
-  { product: "Luxury Silk", sales: 4500, percentage: 16 },
-  { product: "Eco-Friendly Recycled", sales: 2700, percentage: 10 },
-];
+interface ProductSalesData {
+  product: string;
+  sales: number;
+  quantity: number;
+  percentage: number;
+}
 
 export default function ReportPage() {
+  const [orders, setOrders] = useState<TrackingLink[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchOrderData = async () => {
+      setIsLoading(true);
+      try {
+        const fetchedOrders = await getOrders();
+        setOrders(fetchedOrders);
+      } catch (error) {
+        console.error("Failed to fetch orders for report:", error);
+        toast({
+          title: "Error",
+          description: "Could not load order data for the report.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchOrderData();
+  }, [toast]);
+
+  const productSalesData: ProductSalesData[] = useMemo(() => {
+    if (orders.length === 0) {
+      return [];
+    }
+
+    const salesMap: Map<string, { sales: number; quantity: number }> = new Map();
+
+    orders.forEach(order => {
+      if (order.orderItems && Array.isArray(order.orderItems)) {
+        order.orderItems.forEach(item => {
+          const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
+          salesMap.set(item.model, {
+            sales: existing.sales + (item.lineItemTotalPrice || 0),
+            quantity: existing.quantity + (item.quantity || 0),
+          });
+        });
+      }
+    });
+
+    const totalSales = Array.from(salesMap.values()).reduce((acc, { sales }) => acc + sales, 0);
+
+    if (totalSales === 0) {
+      return [];
+    }
+
+    return Array.from(salesMap.entries())
+      .map(([product, data]) => ({
+        product,
+        sales: data.sales,
+        quantity: data.quantity,
+        percentage: (data.sales / totalSales) * 100,
+      }))
+      .sort((a, b) => b.sales - a.sales);
+  }, [orders]);
+
+
   return (
     <div className="space-y-6 p-1 sm:p-0">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
@@ -49,7 +115,7 @@ export default function ReportPage() {
         <CardHeader>
           <CardTitle>Product Sales Performance</CardTitle>
           <CardDescription>
-            An overview of sales distribution across different products.
+            An overview of sales distribution and quantity sold across all products.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -57,23 +123,48 @@ export default function ReportPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Product</TableHead>
+                <TableHead className="text-right">Quantity Sold</TableHead>
                 <TableHead className="text-right">Sales Amount</TableHead>
-                <TableHead className="text-center">Percentage</TableHead>
+                <TableHead className="w-[30%] text-center">Sales Percentage</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {productSalesData.map((item) => (
-                <TableRow key={item.product}>
-                  <TableCell className="font-medium">{item.product}</TableCell>
-                  <TableCell className="text-right font-mono">{formatCurrency(item.sales)}</TableCell>
-                  <TableCell className="text-center">
-                    <div className="flex items-center justify-center gap-4">
-                        <Progress value={item.percentage} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
-                        <Badge variant="outline" className="w-16 justify-center">{item.percentage}%</Badge>
-                    </div>
+              {isLoading ? (
+                [...Array(4)].map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-center gap-4">
+                        <Skeleton className="h-2.5 w-2/3" />
+                        <Skeleton className="h-6 w-16" />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : productSalesData.length > 0 ? (
+                productSalesData.map((item) => (
+                  <TableRow key={item.product}>
+                    <TableCell className="font-medium">{item.product}</TableCell>
+                    <TableCell className="text-right">{item.quantity.toLocaleString()}</TableCell>
+                    <TableCell className="text-right font-mono">{formatCurrency(item.sales)}</TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-4">
+                          <Progress value={item.percentage} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
+                          <Badge variant="outline" className="w-16 justify-center">{item.percentage.toFixed(1)}%</Badge>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-24 text-center">
+                    <Package className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
+                    No sales data available. Create some orders to see performance data here.
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </CardContent>
