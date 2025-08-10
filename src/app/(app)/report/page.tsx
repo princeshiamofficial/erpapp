@@ -208,71 +208,57 @@ export default function ReportPage() {
     if (orders.length === 0 || !globalSettings) {
       return [];
     }
-
+  
     const salesMap: Map<string, { sales: number; quantity: number }> = new Map();
     const filters = globalSettings.reportProductFilters || [];
-    const lowerCaseFilters = filters.map(f => f.toLowerCase());
-    
-    // Hardcode the special grouping for business/visiting cards
-    const businessCardKeywords = ['business card', 'visiting card'];
-
+  
     orders.forEach(order => {
-        let isConsolidated = false;
-        let consolidatedProductName = '';
-
-        if (!order.orderItems || order.orderItems.length === 0) {
-            return; // Skip orders with no items
+      let isConsolidated = false;
+      let consolidatedProductName = '';
+  
+      if (!order.orderItems || order.orderItems.length === 0) {
+        return; // Skip orders with no items
+      }
+      
+      // Check for any of the dynamic filters
+      for (const filter of filters) {
+        if (order.orderItems.some(item => item.model.toLowerCase().includes(filter.toLowerCase()))) {
+          consolidatedProductName = filter; // Use the original casing from the filter list
+          isConsolidated = true;
+          break; // Stop after the first match
         }
-        
-        // First, check for Business Card / Visiting Card consolidation
-        if (order.orderItems.some(item => businessCardKeywords.includes(item.model.toLowerCase()))) {
-            consolidatedProductName = "Business Card";
-            isConsolidated = true;
-        } else {
-            // Then, check other dynamic filters
-            for (const filter of filters) {
-                const lowerCaseFilter = filter.toLowerCase();
-                // Skip business/visiting card keywords if they exist in the dynamic filter list to avoid double processing
-                if (businessCardKeywords.includes(lowerCaseFilter)) continue;
-
-                if (order.orderItems.some(item => item.model.toLowerCase().includes(lowerCaseFilter))) {
-                    consolidatedProductName = filter; // Use the original casing from the filter list
-                    isConsolidated = true;
-                    break; 
-                }
-            }
-        }
-
-        if (isConsolidated) {
-            const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
-            const existing = salesMap.get(consolidatedProductName) || { sales: 0, quantity: 0 };
-            salesMap.set(consolidatedProductName, {
-                sales: existing.sales + orderTotal,
-                quantity: existing.quantity + 1, // Increment by 1 for the whole order
-            });
-        } else {
-            // If not consolidated, process each item individually
-            order.orderItems.forEach(item => {
-                const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
-                salesMap.set(item.model, {
-                    sales: existing.sales + (item.lineItemTotalPrice || 0),
-                    quantity: existing.quantity + (item.quantity || 0),
-                });
-            });
-        }
+      }
+  
+      if (isConsolidated) {
+        const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+        const existing = salesMap.get(consolidatedProductName) || { sales: 0, quantity: 0 };
+        salesMap.set(consolidatedProductName, {
+          sales: existing.sales + orderTotal,
+          quantity: existing.quantity + 1, // Increment by 1 for the whole order
+        });
+      } else {
+        // If not consolidated, process each item individually
+        order.orderItems.forEach(item => {
+          const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
+          salesMap.set(item.model, {
+            sales: existing.sales + (item.lineItemTotalPrice || 0),
+            quantity: existing.quantity + (item.quantity || 0),
+          });
+        });
+      }
     });
-
+  
     const totalSales = Array.from(salesMap.values()).reduce((acc, { sales }) => acc + sales, 0);
     if (totalSales === 0) return [];
-
+  
     return Array.from(salesMap.entries())
-        .map(([product, data]) => ({
-            product,
-            sales: data.sales,
-            quantity: data.quantity,
-            percentage: (data.sales / totalSales) * 100,
-        }))
-        .sort((a, b) => b.sales - a.sales);
+      .map(([product, data]) => ({
+        product,
+        sales: data.sales,
+        quantity: data.quantity,
+        percentage: (data.sales / totalSales) * 100,
+      }))
+      .sort((a, b) => b.sales - a.sales);
   }, [orders, globalSettings]);
   
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
