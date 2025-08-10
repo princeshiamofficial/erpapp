@@ -215,7 +215,7 @@ export default function ReportPage() {
       let isConsolidated = false;
   
       if (!order.orderItems || order.orderItems.length === 0) {
-        return; // Skip orders with no items
+        return; 
       }
       
       for (const filter of filters) {
@@ -256,15 +256,6 @@ export default function ReportPage() {
   return (
     <>
       <div className="space-y-6 p-1 sm:p-0">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
-          <div>
-            <h1 className="page-title">Reports</h1>
-            <p className="page-description">
-              View and generate reports for your business operations.
-            </p>
-          </div>
-        </div>
-
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
