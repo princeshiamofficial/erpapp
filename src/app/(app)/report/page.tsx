@@ -24,7 +24,7 @@ import type { TrackingLink, GlobalSettings } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { useToast } from '@/hooks/use-toast';
-import { Package, Settings, X, PlusCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { Package, Settings, X, PlusCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import {
@@ -50,7 +50,6 @@ const formatCurrency = (value: number) => {
 interface ProductSalesData {
   product: string;
   sales: number;
-  quantity: number;
   percentage: number;
 }
 
@@ -209,40 +208,31 @@ export default function ReportPage() {
       return [];
     }
   
-    const salesMap: Map<string, { sales: number; quantity: number }> = new Map();
+    const salesMap: Map<string, { sales: number }> = new Map();
     const filters = globalSettings.reportProductFilters || [];
   
     orders.forEach(order => {
       let isConsolidated = false;
-      let consolidatedProductName = '';
   
       if (!order.orderItems || order.orderItems.length === 0) {
         return; // Skip orders with no items
       }
       
-      // Check for any of the dynamic filters
       for (const filter of filters) {
         if (order.orderItems.some(item => item.model.toLowerCase().includes(filter.toLowerCase()))) {
-          consolidatedProductName = filter; // Use the original casing from the filter list
+          const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+          const existing = salesMap.get(filter) || { sales: 0 };
+          salesMap.set(filter, { sales: existing.sales + orderTotal });
           isConsolidated = true;
-          break; // Stop after the first match
+          break; 
         }
       }
   
-      if (isConsolidated) {
-        const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
-        const existing = salesMap.get(consolidatedProductName) || { sales: 0, quantity: 0 };
-        salesMap.set(consolidatedProductName, {
-          sales: existing.sales + orderTotal,
-          quantity: existing.quantity + 1, // Increment by 1 for the whole order
-        });
-      } else {
-        // If not consolidated, process each item individually
+      if (!isConsolidated) {
         order.orderItems.forEach(item => {
-          const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
+          const existing = salesMap.get(item.model) || { sales: 0 };
           salesMap.set(item.model, {
             sales: existing.sales + (item.lineItemTotalPrice || 0),
-            quantity: existing.quantity + (item.quantity || 0),
           });
         });
       }
@@ -255,7 +245,6 @@ export default function ReportPage() {
       .map(([product, data]) => ({
         product,
         sales: data.sales,
-        quantity: data.quantity,
         percentage: (data.sales / totalSales) * 100,
       }))
       .sort((a, b) => b.sales - a.sales);
@@ -281,7 +270,7 @@ export default function ReportPage() {
             <div>
               <CardTitle>Product Sales Performance</CardTitle>
               <CardDescription>
-                An overview of sales distribution and quantity sold across all products.
+                An overview of sales distribution across all products.
               </CardDescription>
             </div>
             {isAdmin && (
@@ -296,7 +285,6 @@ export default function ReportPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Product</TableHead>
-                  <TableHead className="text-right">Quantity Sold</TableHead>
                   <TableHead className="text-right">Sales Amount</TableHead>
                   <TableHead className="w-[30%] text-center">Sales Percentage</TableHead>
                 </TableRow>
@@ -306,7 +294,6 @@ export default function ReportPage() {
                   [...Array(4)].map((_, i) => (
                     <TableRow key={i}>
                       <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                      <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
                       <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
                       <TableCell>
                         <div className="flex items-center justify-center gap-4">
@@ -320,7 +307,6 @@ export default function ReportPage() {
                   productSalesData.map((item) => (
                     <TableRow key={item.product}>
                       <TableCell className="font-medium">{item.product}</TableCell>
-                      <TableCell className="text-right">{item.quantity.toLocaleString()}</TableCell>
                       <TableCell className="text-right font-mono">{formatCurrency(item.sales)}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-4">
@@ -332,7 +318,7 @@ export default function ReportPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
+                    <TableCell colSpan={3} className="h-24 text-center">
                       <Package className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
                       No sales data available. Create some orders to see performance data here.
                     </TableCell>
