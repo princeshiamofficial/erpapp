@@ -2,8 +2,6 @@
 "use client";
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3 } from 'lucide-react';
 
 export default function ReportPage() {
   return (
@@ -17,21 +15,7 @@ export default function ReportPage() {
         </div>
       </div>
 
-      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-        <CardHeader>
-          <CardTitle>Reporting Dashboard</CardTitle>
-          <CardDescription>
-            This section is under construction. More reporting features will be available soon.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col items-center justify-center min-h-[400px] text-center">
-            <BarChart3 className="h-24 w-24 text-muted-foreground opacity-30 mb-4" />
-            <h3 className="text-xl font-semibold text-muted-foreground">Coming Soon</h3>
-            <p className="text-muted-foreground mt-2">
-                Advanced reporting capabilities are being developed.
-            </p>
-        </CardContent>
-      </Card>
+      {/* The card has been removed as per your request */}
     </div>
   );
 }
