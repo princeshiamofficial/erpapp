@@ -36,7 +36,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label"; // Fixed: Added Label import
+import { Label } from "@/components/ui/label";
 import { updateReportFiltersAction } from './actions';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -208,63 +208,71 @@ export default function ReportPage() {
     if (orders.length === 0 || !globalSettings) {
       return [];
     }
-    
-    const filters = globalSettings.reportProductFilters || [];
-    const lowerCaseFilters = filters.map(f => f.toLowerCase());
-    const visitingCardFilters = ['visiting card', 'business card']; // Special case
 
     const salesMap: Map<string, { sales: number; quantity: number }> = new Map();
+    const filters = globalSettings.reportProductFilters || [];
+    const lowerCaseFilters = filters.map(f => f.toLowerCase());
+    
+    // Hardcode the special grouping for business/visiting cards
+    const businessCardKeywords = ['business card', 'visiting card'];
 
     orders.forEach(order => {
-      let consolidatedProduct: string | null = null;
-      let consolidated = false;
+        let isConsolidated = false;
+        let consolidatedProductName = '';
 
-      // Check for Business/Visiting Card first
-      if (order.orderItems?.some(item => visitingCardFilters.includes(item.model.toLowerCase()))) {
-          consolidatedProduct = "Business Card";
-          consolidated = true;
-      } else {
-        // Check other dynamic filters
-        for (const filter of lowerCaseFilters) {
-            if (visitingCardFilters.includes(filter)) continue; // Skip as it's handled above
+        if (!order.orderItems || order.orderItems.length === 0) {
+            return; // Skip orders with no items
+        }
+        
+        // First, check for Business Card / Visiting Card consolidation
+        if (order.orderItems.some(item => businessCardKeywords.includes(item.model.toLowerCase()))) {
+            consolidatedProductName = "Business Card";
+            isConsolidated = true;
+        } else {
+            // Then, check other dynamic filters
+            for (const filter of filters) {
+                const lowerCaseFilter = filter.toLowerCase();
+                // Skip business/visiting card keywords if they exist in the dynamic filter list to avoid double processing
+                if (businessCardKeywords.includes(lowerCaseFilter)) continue;
 
-            if (order.orderItems?.some(item => item.model.toLowerCase().includes(filter))) {
-                consolidatedProduct = filters.find(f => f.toLowerCase() === filter) || filter;
-                consolidated = true;
-                break;
+                if (order.orderItems.some(item => item.model.toLowerCase().includes(lowerCaseFilter))) {
+                    consolidatedProductName = filter; // Use the original casing from the filter list
+                    isConsolidated = true;
+                    break; 
+                }
             }
         }
-      }
 
-      if (consolidated && consolidatedProduct) {
-        const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
-        const existing = salesMap.get(consolidatedProduct) || { sales: 0, quantity: 0 };
-        salesMap.set(consolidatedProduct, {
-          sales: existing.sales + orderTotal,
-          quantity: existing.quantity + 1,
-        });
-      } else if (order.orderItems && Array.isArray(order.orderItems)) {
-        order.orderItems.forEach(item => {
-          const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
-          salesMap.set(item.model, {
-            sales: existing.sales + (item.lineItemTotalPrice || 0),
-            quantity: existing.quantity + (item.quantity || 0),
-          });
-        });
-      }
+        if (isConsolidated) {
+            const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+            const existing = salesMap.get(consolidatedProductName) || { sales: 0, quantity: 0 };
+            salesMap.set(consolidatedProductName, {
+                sales: existing.sales + orderTotal,
+                quantity: existing.quantity + 1, // Increment by 1 for the whole order
+            });
+        } else {
+            // If not consolidated, process each item individually
+            order.orderItems.forEach(item => {
+                const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
+                salesMap.set(item.model, {
+                    sales: existing.sales + (item.lineItemTotalPrice || 0),
+                    quantity: existing.quantity + (item.quantity || 0),
+                });
+            });
+        }
     });
 
     const totalSales = Array.from(salesMap.values()).reduce((acc, { sales }) => acc + sales, 0);
     if (totalSales === 0) return [];
 
     return Array.from(salesMap.entries())
-      .map(([product, data]) => ({
-        product,
-        sales: data.sales,
-        quantity: data.quantity,
-        percentage: (data.sales / totalSales) * 100,
-      }))
-      .sort((a, b) => b.sales - a.sales);
+        .map(([product, data]) => ({
+            product,
+            sales: data.sales,
+            quantity: data.quantity,
+            percentage: (data.sales / totalSales) * 100,
+        }))
+        .sort((a, b) => b.sales - a.sales);
   }, [orders, globalSettings]);
   
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
