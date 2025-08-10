@@ -73,13 +73,27 @@ export default function ReportPage() {
 
     orders.forEach(order => {
       if (order.orderItems && Array.isArray(order.orderItems)) {
-        order.orderItems.forEach(item => {
-          const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
-          salesMap.set(item.model, {
-            sales: existing.sales + (item.lineItemTotalPrice || 0),
-            quantity: existing.quantity + (item.quantity || 0),
+        
+        const hasMenuBook = order.orderItems.some(item =>
+          item.model.toLowerCase().includes('menu book')
+        );
+
+        if (hasMenuBook) {
+          const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+          const existingMenuBook = salesMap.get('Menu Book') || { sales: 0, quantity: 0 };
+          salesMap.set('Menu Book', {
+            sales: existingMenuBook.sales + orderTotal,
+            quantity: existingMenuBook.quantity + 1, // Each menu book order is counted as 1
           });
-        });
+        } else {
+          order.orderItems.forEach(item => {
+            const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
+            salesMap.set(item.model, {
+              sales: existing.sales + (item.lineItemTotalPrice || 0),
+              quantity: existing.quantity + (item.quantity || 0),
+            });
+          });
+        }
       }
     });
 
