@@ -90,6 +90,10 @@ export default function ReportPage() {
             item.model.toLowerCase().includes('pizza box')
         );
 
+        const hasXBanner = order.orderItems.some(item =>
+            item.model.toLowerCase().includes('x-banner')
+        );
+
         if (hasDesignCharge) {
           const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
           const existingDesignCharge = salesMap.get('Design Charge') || { sales: 0, quantity: 0 };
@@ -117,6 +121,13 @@ export default function ReportPage() {
             salesMap.set('Pizza Box', {
                 sales: existingPizzaBox.sales + orderTotal,
                 quantity: existingPizzaBox.quantity + 1,
+            });
+        } else if (hasXBanner) {
+            const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+            const existingXBanner = salesMap.get('X-Banner') || { sales: 0, quantity: 0 };
+            salesMap.set('X-Banner', {
+                sales: existingXBanner.sales + orderTotal,
+                quantity: existingXBanner.quantity + 1,
             });
         } else {
           order.orderItems.forEach(item => {
