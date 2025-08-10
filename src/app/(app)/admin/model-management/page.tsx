@@ -168,8 +168,8 @@ export default function ModelManagementPage() {
       toast({ title: "Validation Error", description: "Selling Price must be a non-negative number.", variant: "destructive" });
       return;
     }
-    if (itemIsReadyMade && (isNaN(stockCountValue) || stockCountValue < 0)) {
-        toast({ title: "Validation Error", description: "Stock count must be a non-negative integer for ready-made items.", variant: "destructive"});
+    if (itemIsReadyMade && isNaN(stockCountValue)) {
+        toast({ title: "Validation Error", description: "Stock count must be a valid integer for ready-made items.", variant: "destructive"});
         return;
     }
 
@@ -439,10 +439,9 @@ export default function ModelManagementPage() {
                             required={itemIsReadyMade}
                             disabled={isSubmitting}
                             placeholder="e.g., 100"
-                            min="0"
                             step="1"
                         />
-                         <p className="text-xs text-muted-foreground">Required for ready-made items.</p>
+                         <p className="text-xs text-muted-foreground">Required for ready-made items. Can be negative.</p>
                     </div>
                 )}
             </div>
