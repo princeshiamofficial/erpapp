@@ -91,9 +91,6 @@ export default function LeaderboardPage() {
       const dailyTarget = monthlyTarget / 30; // Assume 30 days in a month for simplicity
       const target = Math.round(dailyTarget * numDaysInRange);
 
-      const pointChange = Math.floor(Math.random() * 5) - 2;
-      const trend = pointChange > 0 ? 'up' : pointChange < 0 ? 'down' : 'same';
-
       return {
         userId: crmUser.id,
         userName: crmUser.name,
@@ -101,8 +98,8 @@ export default function LeaderboardPage() {
         ordersCompleted: ordersCreatedInPeriod, // This now represents orders CREATED
         target: target,
         role: crmUser.role,
-        trend,
-        pointChange: Math.abs(pointChange),
+        trend: 'same',
+        pointChange: 0,
       };
     });
 
@@ -154,16 +151,32 @@ export default function LeaderboardPage() {
 
     const crmUsers = allUsers.filter(user => user.role === 'CRM');
 
-    const mapDataForCurrentUser = (data: CrmPerformanceData[]): CrmPerformanceData[] => {
-      return data.map(d =>
-        currentUser && d.userId === currentUser.id
-          ? { ...d, userName: "You", role: currentUser.role as UserRole, userAvatar: currentUser.avatarUrl || d.userAvatar }
-          : d
-      );
+    // This function will now be called inside the useEffect hook to avoid hydration mismatch
+    const generateAndSetPerformanceData = () => {
+        let data = calculatePerformance(crmUsers, allOrders, globalSettings, selectedDateRange);
+        
+        // Add trend and point change logic here, on the client-side
+        data = data.map(d => {
+            const pointChange = Math.floor(Math.random() * 5) - 2;
+            const trend = pointChange > 0 ? 'up' : pointChange < 0 ? 'down' : 'same';
+            return {
+                ...d,
+                trend,
+                pointChange: Math.abs(pointChange)
+            };
+        });
+
+        // Highlight current user
+        data = data.map(d =>
+            currentUser && d.userId === currentUser.id
+            ? { ...d, userName: "You", role: currentUser.role as UserRole, userAvatar: currentUser.avatarUrl || d.userAvatar }
+            : d
+        );
+        
+        setPerformanceData(data);
     };
 
-    const newPerformanceData = calculatePerformance(crmUsers, allOrders, globalSettings, selectedDateRange);
-    setPerformanceData(mapDataForCurrentUser(newPerformanceData));
+    generateAndSetPerformanceData();
 
   }, [isLoadingData, allUsers, allOrders, globalSettings, selectedDateRange, currentUser, calculatePerformance]);
   
