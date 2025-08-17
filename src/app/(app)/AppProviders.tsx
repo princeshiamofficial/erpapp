@@ -63,18 +63,25 @@ export function AppProviders({
   const router = useRouter();
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [showLoadingScreen, setShowLoadingScreen] = useState(true);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // This effect handles the logout button which is now part of a server component layout
   useEffect(() => {
+    if (!isClient) return;
     const logoutButton = document.querySelector('[data-logout-button]');
     if (logoutButton) {
       const handleLogoutClick = () => logout();
       logoutButton.addEventListener('click', handleLogoutClick);
       return () => logoutButton.removeEventListener('click', handleLogoutClick);
     }
-  }, [logout]);
+  }, [logout, isClient]);
 
   useEffect(() => {
+    if (!isClient) return;
     let progressInterval: NodeJS.Timeout | undefined;
     if (isLoading) {
       setShowLoadingScreen(true);
@@ -98,22 +105,23 @@ export function AppProviders({
     return () => {
       if (progressInterval) clearInterval(progressInterval);
     };
-  }, [isLoading]);
+  }, [isLoading, isClient]);
 
   useEffect(() => {
+    if (!isClient) return;
     if (!isLoading && !currentUser && !isSuspendedDialogOpen) {
       router.replace('/login');
     }
-  }, [currentUser, isLoading, router, isSuspendedDialogOpen]);
+  }, [currentUser, isLoading, router, isSuspendedDialogOpen, isClient]);
 
   const inMaintenanceMode = useMemo(() => {
-    if (isLoading || !initialGlobalSettings) return false;
+    if (isLoading || !initialGlobalSettings || !isClient) return false;
     if (!initialGlobalSettings.maintenanceMode) return false;
     if (currentUser?.role === 'SYSTEM_ADMIN') return false;
     return true;
-  }, [isLoading, initialGlobalSettings, currentUser]);
+  }, [isLoading, initialGlobalSettings, currentUser, isClient]);
   
-  if (!currentUser && showLoadingScreen) {
+  if (!isClient || (!currentUser && showLoadingScreen)) {
       return (
       <AnimatePresence>
         {showLoadingScreen && (
