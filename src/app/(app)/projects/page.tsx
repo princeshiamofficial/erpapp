@@ -83,7 +83,7 @@ function ProjectsPageSkeleton() {
 
 export default async function ProjectsPage() {
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-[calc(100vh-theme(spacing.24))]">
       <Suspense fallback={<ProjectsPageSkeleton />}>
         <ProjectsPageData />
       </Suspense>
