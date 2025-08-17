@@ -259,7 +259,7 @@ export default function PipeLinePage() {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCorners}>
-      <div className="flex flex-col h-full p-1 sm:p-0">
+      <div className="flex flex-col h-[calc(100vh-theme(spacing.24))] p-1 sm:p-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
           <div>
             <h1 className="page-title">Sales Pipeline</h1>
