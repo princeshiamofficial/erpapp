@@ -328,15 +328,15 @@ export default function PipeLinePage() {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 mb-4 px-4 sm:px-0">
+        <div className="flex flex-col lg:flex-row gap-4 mb-4 px-4 sm:px-0">
           <Input
             placeholder="Search leads..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-card border-border/50 focus:border-primary flex-grow"
+            className="bg-card border-border/50 focus:border-primary lg:max-w-xs"
           />
-          <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
-             {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && (
+          <div className="flex-grow flex flex-col sm:flex-row items-center gap-2">
+            {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && (
               <Popover open={isCrmFilterOpen} onOpenChange={setIsCrmFilterOpen}>
                 <PopoverTrigger asChild>
                   <Button variant="outline" role="combobox" aria-expanded={isCrmFilterOpen} className="w-full sm:w-auto justify-between bg-card border-border/50 focus:border-primary h-10">
@@ -383,7 +383,8 @@ export default function PipeLinePage() {
                 </PopoverContent>
               </Popover>
             )}
-             <div className="flex items-center bg-muted p-1 rounded-md">
+
+            <div className="flex items-center bg-muted p-1 rounded-md ml-auto">
                 <Button
                     variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                     size="sm"
@@ -400,7 +401,7 @@ export default function PipeLinePage() {
                 >
                     <LayoutGrid className="h-4 w-4" />
                 </Button>
-             </div>
+            </div>
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="w-full sm:w-auto h-10">
