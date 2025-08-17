@@ -59,7 +59,7 @@ const ensureCollectionExists = async () => {
 export const getLeads = async (): Promise<Lead[]> => {
   try {
     await ensureCollectionExists(); // Ensure collection exists before fetching
-    const response = await fetchFromApi(`collections/${COLLECTION_NAME}/documents`);
+    const response = await fetchFromApi(`collections/${COLLECTION_NAME}/documents?limit=9999`);
     if (response && Array.isArray(response.documents)) {
         return response.documents.map((doc: { id: string, data: any }) => ({
             id: doc.id,
