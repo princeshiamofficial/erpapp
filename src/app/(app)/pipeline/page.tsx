@@ -13,9 +13,10 @@ import { getUsers } from '@/lib/user-service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check, ChevronsUpDown } from 'lucide-react';
+import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check, ChevronsUpDown, LayoutGrid, List } from 'lucide-react';
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
 import { LeadCard } from '@/components/pipeline/LeadCard';
+import { LeadListView } from '@/components/pipeline/LeadListView'; // New component
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Papa from 'papaparse';
 import {
@@ -66,6 +67,8 @@ export default function PipeLinePage() {
 
   const [leadToTransfer, setLeadToTransfer] = useState<Lead | null>(null);
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
+  
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
 
   const sensors = useSensors(
@@ -267,109 +270,139 @@ export default function PipeLinePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4 px-4 sm:px-0">
+        <div className="flex flex-col sm:flex-row gap-4 mb-4 px-4 sm:px-0">
           <Input
             placeholder="Search leads..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-card border-border/50 focus:border-primary"
+            className="bg-card border-border/50 focus:border-primary flex-grow"
           />
-           {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && (
-            <Popover open={isCrmFilterOpen} onOpenChange={setIsCrmFilterOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={isCrmFilterOpen} className="w-full justify-between bg-card border-border/50 focus:border-primary">
-                  <span className="truncate">{selectedCrmName}</span>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width)] p-0">
-                <Command>
-                  <CommandInput
-                    placeholder="Search CRM..."
-                    value={crmSearchQuery}
-                    onValueChange={setCrmSearchQuery}
-                  />
-                  <CommandList>
-                    <CommandEmpty>No CRM found.</CommandEmpty>
-                    <CommandGroup>
-                      <CommandItem
-                        value="all"
-                        onSelect={() => {
-                          setSelectedCrmId('all');
-                          setIsCrmFilterOpen(false);
-                        }}
-                      >
-                        <Check className={cn("mr-2 h-4 w-4", selectedCrmId === 'all' ? "opacity-100" : "opacity-0")} />
-                        All CRMs
-                      </CommandItem>
-                      {filteredCrmUsersForDropdown.map(crm => (
+          <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+             {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && (
+              <Popover open={isCrmFilterOpen} onOpenChange={setIsCrmFilterOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" aria-expanded={isCrmFilterOpen} className="w-full sm:w-auto justify-between bg-card border-border/50 focus:border-primary h-10">
+                    <span className="truncate">{selectedCrmName}</span>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width)] p-0">
+                  <Command>
+                    <CommandInput
+                      placeholder="Search CRM..."
+                      value={crmSearchQuery}
+                      onValueChange={setCrmSearchQuery}
+                    />
+                    <CommandList>
+                      <CommandEmpty>No CRM found.</CommandEmpty>
+                      <CommandGroup>
                         <CommandItem
-                          key={crm.id}
-                          value={crm.name}
+                          value="all"
                           onSelect={() => {
-                            setSelectedCrmId(crm.id);
+                            setSelectedCrmId('all');
                             setIsCrmFilterOpen(false);
                           }}
                         >
-                          <Check className={cn("mr-2 h-4 w-4", crm.id === selectedCrmId ? "opacity-100" : "opacity-0")} />
-                          {crm.name}
+                          <Check className={cn("mr-2 h-4 w-4", selectedCrmId === 'all' ? "opacity-100" : "opacity-0")} />
+                          All CRMs
                         </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          )}
-           <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="w-full sm:w-auto h-10">
-                  Actions <ChevronDown className="ml-2 h-4 w-4" />
+                        {filteredCrmUsersForDropdown.map(crm => (
+                          <CommandItem
+                            key={crm.id}
+                            value={crm.name}
+                            onSelect={() => {
+                              setSelectedCrmId(crm.id);
+                              setIsCrmFilterOpen(false);
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", crm.id === selectedCrmId ? "opacity-100" : "opacity-0")} />
+                            {crm.name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            )}
+             <div className="flex items-center bg-muted p-1 rounded-md">
+                <Button
+                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                    className="h-8"
+                >
+                    <List className="h-4 w-4" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => setIsImportOpen(true)}>
-                  <FileSpreadsheet className="mr-2 h-4 w-4" />
-                  Import Leads
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleExport} disabled={filteredLeads.length === 0}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Export Leads
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <Button
+                    variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('kanban')}
+                    className="h-8"
+                >
+                    <LayoutGrid className="h-4 w-4" />
+                </Button>
+             </div>
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full sm:w-auto h-10">
+                    Actions <ChevronDown className="ml-2 h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setIsImportOpen(true)}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                    Import Leads
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={handleExport} disabled={filteredLeads.length === 0}>
+                    <Download className="mr-2 h-4 w-4" />
+                    Export Leads
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            <Button
-              onClick={handleOpenAddDialog}
-              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10"
-            >
-              <PlusCircle className="mr-2 h-5 w-5" />
-              Add Lead
-            </Button>
-           </div>
-        </div>
-
-        <div className="flex-1 mt-4 overflow-x-auto pb-4">
-          <div className="flex space-x-4 h-full min-w-max px-4 sm:px-0">
-            {KANBAN_COLUMNS_CONFIG.map((col) => (
-              <PipelineKanbanColumn
-                key={col.category}
-                id={col.category}
-                title={col.title}
-                icon={col.icon}
-                leads={leadsByCategory[col.category] || []}
-                headerBgClass={col.headerBgClass}
-                isLoading={isLoading}
-                currentUser={currentUser}
-                onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }}
-                onDeleteLead={handleDeleteRequest}
-                onTransferLead={handleTransferRequest}
-                allCrmUsers={allCrmUsers}
-              />
-            ))}
+              <Button
+                onClick={handleOpenAddDialog}
+                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10"
+              >
+                <PlusCircle className="mr-2 h-5 w-5" />
+                Add Lead
+              </Button>
           </div>
         </div>
+
+        {viewMode === 'kanban' ? (
+          <div className="flex-1 mt-4 overflow-x-auto pb-4">
+            <div className="flex space-x-4 h-full min-w-max px-4 sm:px-0">
+              {KANBAN_COLUMNS_CONFIG.map((col) => (
+                <PipelineKanbanColumn
+                  key={col.category}
+                  id={col.category}
+                  title={col.title}
+                  icon={col.icon}
+                  leads={leadsByCategory[col.category] || []}
+                  headerBgClass={col.headerBgClass}
+                  isLoading={isLoading}
+                  currentUser={currentUser}
+                  onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }}
+                  onDeleteLead={handleDeleteRequest}
+                  onTransferLead={handleTransferRequest}
+                  allCrmUsers={allCrmUsers}
+                />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <LeadListView
+             leads={filteredLeads}
+             isLoading={isLoading}
+             currentUser={currentUser}
+             onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }}
+             onDeleteLead={handleDeleteRequest}
+             onTransferLead={handleTransferRequest}
+             allCrmUsers={allCrmUsers}
+          />
+        )}
       </div>
       <DragOverlay dropAnimation={null}>
         {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onEditLead={() => {}} onDeleteLead={() => {}} onTransferLead={() => {}} crmAvatarUrl={allCrmUsers.find(u => u.id === activeLead.crmId)?.avatarUrl} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
