@@ -55,20 +55,36 @@ const ensureCollectionExists = async () => {
     }
 };
 
-// Get all leads
+// Get all leads with pagination handling
 export const getLeads = async (): Promise<Lead[]> => {
   try {
-    await ensureCollectionExists(); // Ensure collection exists before fetching
-    const response = await fetchFromApi(`collections/${COLLECTION_NAME}/documents?limit=9999`);
-    if (response && Array.isArray(response.documents)) {
-        return response.documents.map((doc: { id: string, data: any }) => ({
+    await ensureCollectionExists();
+    
+    const allLeads: Lead[] = [];
+    let offset = 0;
+    const limit = 100; // Fetch in batches of 100
+    let hasMore = true;
+
+    while (hasMore) {
+      const response = await fetchFromApi(`collections/${COLLECTION_NAME}/documents?limit=${limit}&offset=${offset}`);
+      
+      if (response && Array.isArray(response.documents)) {
+        const leadsFromPage = response.documents.map((doc: { id: string, data: any }) => ({
             id: doc.id,
             ...doc.data
         } as Lead));
+        allLeads.push(...leadsFromPage);
+        
+        hasMore = response.pagination?.has_more ?? false;
+        offset += limit;
+      } else {
+        hasMore = false;
+      }
     }
-    return [];
+    
+    return allLeads;
   } catch (error) {
-    console.error("Error fetching leads via API:", error);
+    console.error("Error fetching leads via API with pagination:", error);
     return [];
   }
 };
