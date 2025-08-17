@@ -28,6 +28,15 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from '@/lib/utils';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis
+} from "@/components/ui/pagination";
 
 
 const AddEditLeadDialog = dynamic(() => import('@/components/pipeline/AddEditLeadDialog').then(mod => mod.AddEditLeadDialog));
@@ -42,6 +51,8 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; category: LeadCategory; icon
   { title: 'OD', category: 'OD', icon: Briefcase, headerBgClass: 'bg-green-600' },
   { title: 'ROD', category: 'ROD', icon: ShoppingCart, headerBgClass: 'bg-orange-600' },
 ];
+
+const ITEMS_PER_PAGE = 12;
 
 export default function PipeLinePage() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -69,6 +80,7 @@ export default function PipeLinePage() {
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
   
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [currentPage, setCurrentPage] = useState(1);
 
 
   const sensors = useSensors(
@@ -121,6 +133,18 @@ export default function PipeLinePage() {
         (lead.crmName && lead.crmName.toLowerCase().includes(lowercasedFilter))
     );
   }, [leads, searchTerm, currentUser, selectedCrmId]);
+  
+  const totalPages = Math.ceil(filteredLeads.length / ITEMS_PER_PAGE);
+
+  const paginatedLeads = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredLeads.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredLeads, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCrmId, viewMode]);
+
   
   const selectedCrmName = useMemo(() => {
     if (selectedCrmId === 'all') return 'All CRMs';
@@ -258,6 +282,40 @@ export default function PipeLinePage() {
     }
   };
 
+  const renderPagination = () => {
+    const pageNumbers = [];
+    const maxPagesToShow = 5; 
+    
+    if (totalPages <= maxPagesToShow) {
+      for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+    } else {
+      let startPage = Math.max(1, currentPage - 2);
+      let endPage = Math.min(totalPages, currentPage + 2);
+
+      if (currentPage < 3) endPage = maxPagesToShow;
+      else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
+      
+      if (startPage > 1) {
+        pageNumbers.push(1);
+        if (startPage > 2) pageNumbers.push('...');
+      }
+      for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      }
+    }
+    return pageNumbers.map((page, index) => (
+        <PaginationItem key={index}>
+        {page === '...' ? <PaginationEllipsis />
+        : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number);}} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
+            {page}
+          </PaginationLink>
+        }
+        </PaginationItem>
+    ));
+  };
+
   if (!currentUser) return null;
 
   return (
@@ -393,15 +451,42 @@ export default function PipeLinePage() {
             </div>
           </div>
         ) : (
-          <LeadListView
-             leads={filteredLeads}
-             isLoading={isLoading}
-             currentUser={currentUser}
-             onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }}
-             onDeleteLead={handleDeleteRequest}
-             onTransferLead={handleTransferRequest}
-             allCrmUsers={allCrmUsers}
-          />
+          <>
+            <LeadListView
+               leads={paginatedLeads}
+               isLoading={isLoading}
+               currentUser={currentUser}
+               onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }}
+               onDeleteLead={handleDeleteRequest}
+               onTransferLead={handleTransferRequest}
+               allCrmUsers={allCrmUsers}
+            />
+            {totalPages > 1 && (
+              <div className="mt-4 flex justify-center">
+                  <Pagination>
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious 
+                          href="#" 
+                          onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} 
+                          aria-disabled={currentPage === 1} 
+                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                        />
+                      </PaginationItem>
+                      {renderPagination()}
+                      <PaginationItem>
+                        <PaginationNext 
+                          href="#" 
+                          onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} 
+                          aria-disabled={currentPage === totalPages} 
+                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                        />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+              </div>
+            )}
+          </>
         )}
       </div>
       <DragOverlay dropAnimation={null}>

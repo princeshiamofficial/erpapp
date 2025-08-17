@@ -72,7 +72,7 @@ export function LeadListView({ leads, isLoading, currentUser, onEditLead, onDele
                 </TableHeader>
                 <TableBody>
                     {isLoading ? (
-                        [...Array(5)].map((_, i) => (
+                        [...Array(12)].map((_, i) => (
                             <TableRow key={`skel-${i}`}>
                                 <TableCell><div className="flex items-center gap-2"><Skeleton className="h-5 w-24" /></div></TableCell>
                                 <TableCell><Skeleton className="h-5 w-32" /></TableCell>
