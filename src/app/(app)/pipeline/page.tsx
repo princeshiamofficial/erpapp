@@ -112,8 +112,11 @@ export default function PipeLinePage() {
   }, [toast, currentUser]);
 
   useEffect(() => {
-    fetchLeadsAndUsers();
-  }, [fetchLeadsAndUsers]);
+    if (currentUser) {
+      fetchLeadsAndUsers();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
   const filteredLeads = useMemo(() => {
     let baseLeads = leads;
