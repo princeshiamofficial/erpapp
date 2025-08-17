@@ -1,4 +1,3 @@
-
 "use client";
 
 import type { Lead, User } from '@/types';
@@ -64,7 +63,6 @@ export function LeadListView({ leads, isLoading, currentUser, onEditLead, onDele
                         <TableHead>Phone</TableHead>
                         <TableHead>Source</TableHead>
                         <TableHead>Category</TableHead>
-                        <TableHead>Status</TableHead>
                         <TableHead>Assigned CRM</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -79,7 +77,6 @@ export function LeadListView({ leads, isLoading, currentUser, onEditLead, onDele
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                                 <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
-                                <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
                                 <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-24" /></div></TableCell>
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                 <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded-md" /></TableCell>
@@ -96,9 +93,6 @@ export function LeadListView({ leads, isLoading, currentUser, onEditLead, onDele
                                     <TableCell>{lead.source}</TableCell>
                                     <TableCell>
                                         <Badge variant="secondary">{lead.category}</Badge>
-                                    </TableCell>
-                                     <TableCell>
-                                        <Badge className={cn("border", getStatusBadgeClass(lead.status))}>{lead.status}</Badge>
                                     </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
@@ -121,7 +115,7 @@ export function LeadListView({ leads, isLoading, currentUser, onEditLead, onDele
                                                 {canEdit(lead) && <DropdownMenuItem onSelect={() => onEditLead(lead)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>}
                                                 {canTransfer(lead) && <DropdownMenuItem onSelect={() => onTransferLead(lead)} className="cursor-pointer"><Users className="mr-2 h-4 w-4"/> Transfer</DropdownMenuItem>}
                                                 {canDelete(lead) && <DropdownMenuItem onSelect={() => onDeleteLead(lead)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>}
-                                                {!canEdit(lead) && !canTransfer(lead) && !canDelete(lead) && <DropdownMenuItem disabled>No actions</DropdownMenuItem>}
+                                                {!canEdit(lead) && !canTransfer(lead) && !canDelete(lead) && <DropdownMenuItem disabled>No actions available</DropdownMenuItem>}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
                                     </TableCell>
@@ -130,7 +124,7 @@ export function LeadListView({ leads, isLoading, currentUser, onEditLead, onDele
                         })
                     ) : (
                         <TableRow>
-                            <TableCell colSpan={9} className="h-48 text-center text-muted-foreground">
+                            <TableCell colSpan={8} className="h-48 text-center text-muted-foreground">
                                 <div className="flex flex-col items-center gap-2">
                                     <Briefcase className="h-10 w-10 opacity-50" />
                                     <span>No leads found.</span>
