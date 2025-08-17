@@ -62,7 +62,7 @@ export const getLeads = async (): Promise<Lead[]> => {
     
     const allLeads: Lead[] = [];
     let offset = 0;
-    const limit = 100; // Fetch in batches of 100
+    const limit = 200; // Fetch in batches of 200
     let hasMore = true;
 
     while (hasMore) {
