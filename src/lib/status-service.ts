@@ -1,9 +1,10 @@
 
 
 import { db } from './firebase';
-import { collection, getDocs, doc, updateDoc, getDoc, query, where, writeBatch, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, getDoc, query, where, writeBatch, setDoc, deleteDoc as deleteFirestoreDoc } from 'firebase/firestore';
 import type { CustomStatus, UserRole } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
+import { fetchFromApi, ensureCollectionExists } from './api-helper';
 
 const STATUSES_COLLECTION = 'customOrderStatuses';
 export const READY_FOR_DESIGN_STATUS_ID = 'ready-for-design';
@@ -16,115 +17,74 @@ export const SHIPPED_STATUS_ID = 'shipped'; // Added SHIPPED_STATUS_ID
 export const DELIVERED_STATUS_ID = 'delivered';
 
 // Default statuses with names, colors, and default allowed roles
-const defaultStatusesData: Array<Omit<CustomStatus, 'id' | 'isSystemStatus' | 'isVisible'> & { defaultName: string, defaultAllowedRoles?: UserRole[] }> = [
-  { defaultName: 'Order Submitted', color: '#8B5CF6', defaultAllowedRoles: ['CRM', 'ADMIN', 'SYSTEM_ADMIN'] },
-  { defaultName: 'Ready for Design', color: '#14B8A6', defaultAllowedRoles: ['CRM', 'ADMIN', 'SYSTEM_ADMIN'] },
-  { defaultName: 'Design in Progress', color: '#3B82F6', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
-  { defaultName: 'Pending Client Approval', color: '#F59E0B', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
-  { defaultName: 'Changes Requested', color: '#EF4444', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
-  { defaultName: 'Approved for Production', color: '#10B981', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
-  { defaultName: 'In Production', color: '#0EA5E9', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
-  { defaultName: 'Quality Check', color: '#F97316', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] }, // ID: quality-check
-  { defaultName: 'Logistics', color: '#F97316', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN', 'LR'] }, // ID: logistics
-  { defaultName: 'Shipped', color: '#22C55E', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN', 'LR'] }, // ID: shipped
-  { defaultName: 'Delivered', color: '#65A30D', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN', 'LR'] },
-  { defaultName: 'Cancelled', color: '#71717A', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
-  { defaultName: 'On Hold', color: '#A1A1AA', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
+const defaultStatusesData: Array<Omit<CustomStatus, 'id' | 'isSystemStatus' | 'isVisible'> & { id: string, defaultName: string, defaultAllowedRoles?: UserRole[] }> = [
+  { id: ORDER_SUBMITTED_ID, defaultName: 'Order Submitted', color: '#8B5CF6', defaultAllowedRoles: ['CRM', 'ADMIN', 'SYSTEM_ADMIN'] },
+  { id: READY_FOR_DESIGN_STATUS_ID, defaultName: 'Ready for Design', color: '#14B8A6', defaultAllowedRoles: ['CRM', 'ADMIN', 'SYSTEM_ADMIN'] },
+  { id: 'design-in-progress', defaultName: 'Design in Progress', color: '#3B82F6', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
+  { id: 'pending-client-approval', defaultName: 'Pending Client Approval', color: '#F59E0B', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
+  { id: 'changes-requested', defaultName: 'Changes Requested', color: '#EF4444', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
+  { id: 'approved-for-production', defaultName: 'Approved for Production', color: '#10B981', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
+  { id: 'in-production', defaultName: 'In Production', color: '#0EA5E9', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
+  { id: QUALITY_CHECK_STATUS_ID, defaultName: 'Quality Check', color: '#F97316', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] }, // ID: quality-check
+  { id: LOGISTICS_STATUS_ID, defaultName: 'Logistics', color: '#F97316', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN', 'LR'] }, // ID: logistics
+  { id: SHIPPED_STATUS_ID, defaultName: 'Shipped', color: '#22C55E', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN', 'LR'] }, // ID: shipped
+  { id: DELIVERED_STATUS_ID, defaultName: 'Delivered', color: '#65A30D', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN', 'LR'] },
+  { id: CANCELLED_STATUS_ID, defaultName: 'Cancelled', color: '#71717A', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
+  { id: ON_HOLD_STATUS_ID, defaultName: 'On Hold', color: '#A1A1AA', defaultAllowedRoles: ['ADMIN', 'SYSTEM_ADMIN'] },
 ];
 
 export const seedDefaultStatuses = async (): Promise<CustomStatus[]> => {
-  const statusesRef = collection(db, STATUSES_COLLECTION);
-  const batch = writeBatch(db);
   const createdStatuses: CustomStatus[] = [];
-
-  defaultStatusesData.forEach(statusData => {
-    const id = statusData.defaultName.toLowerCase().replace(/\s+/g, '-');
+  await ensureCollectionExists(STATUSES_COLLECTION);
+  
+  for (const statusData of defaultStatusesData) {
     const newStatus: CustomStatus = {
-      id,
+      id: statusData.id,
       name: statusData.defaultName,
       color: statusData.color,
       isSystemStatus: true,
       isVisible: true,
-      allowedRoles: statusData.defaultAllowedRoles || [], // Default to empty if not specified
+      allowedRoles: statusData.defaultAllowedRoles || [],
     };
-    const docRef = doc(statusesRef, id);
-    batch.set(docRef, newStatus);
-    createdStatuses.push(newStatus);
-  });
-  try {
-    await batch.commit();
-    console.log('Default statuses seeded in Firestore with allowedRoles.');
-    return createdStatuses;
-  } catch (error) {
-     console.error("Error seeding default statuses:", error);
-     return [];
+
+    try {
+        await fetchFromApi(`collections/${STATUSES_COLLECTION}/documents`, {
+            method: 'POST',
+            body: JSON.stringify({ documentId: newStatus.id, data: newStatus })
+        });
+        createdStatuses.push(newStatus);
+    } catch(error) {
+        console.error(`Failed to seed status: ${newStatus.name}`, error);
+    }
   }
+  console.log('Default statuses seeded via API.');
+  return createdStatuses;
 };
 
 export const getStatuses = async (): Promise<CustomStatus[]> => {
-  const statusesCol = collection(db, STATUSES_COLLECTION);
-  let statuses: CustomStatus[] = [];
   try {
-    const snapshot = await getDocs(statusesCol);
-    if (snapshot.empty) {
-      console.log("No statuses found in Firestore, attempting to seed default statuses.");
-      statuses = await seedDefaultStatuses();
-    } else {
-      statuses = snapshot.docs.map(docSnap => ({ 
-        id: docSnap.id, 
-        ...docSnap.data(), 
-        isVisible: docSnap.data().isVisible !== false,
-        allowedRoles: docSnap.data().allowedRoles || [], // Ensure allowedRoles is always an array
-      } as CustomStatus));
-      
-      const batch = writeBatch(db);
-      let newStatusesAddedToBatch = false;
-
-      for (const defaultStatusData of defaultStatusesData) {
-        const expectedId = defaultStatusData.defaultName.toLowerCase().replace(/\s+/g, '-');
-        const existingStatus = statuses.find(s => s.id === expectedId);
-
-        if (!existingStatus) {
-          console.warn(`getStatuses: Default system status with ID '${expectedId}' (Name: "${defaultStatusData.defaultName}") was missing from Firestore. Re-creating it.`);
-          const newSystemStatus: CustomStatus = {
-            id: expectedId,
-            name: defaultStatusData.defaultName,
-            color: defaultStatusData.color,
-            isSystemStatus: true,
-            isVisible: true,
-            allowedRoles: defaultStatusData.defaultAllowedRoles || [],
-          };
-          const docRef = doc(db, STATUSES_COLLECTION, expectedId);
-          batch.set(docRef, newSystemStatus);
-          statuses.push(newSystemStatus); // Add to current list to avoid re-fetching immediately
-          newStatusesAddedToBatch = true;
-        } else if (existingStatus.isSystemStatus && (!existingStatus.allowedRoles || existingStatus.allowedRoles.length === 0) && defaultStatusData.defaultAllowedRoles && defaultStatusData.defaultAllowedRoles.length > 0) {
-          // If it's a system status and allowedRoles is missing/empty, but defaults exist, update it.
-          console.warn(`getStatuses: System status '${expectedId}' was missing default allowedRoles. Updating.`);
-          const docRef = doc(db, STATUSES_COLLECTION, expectedId);
-          batch.update(docRef, { allowedRoles: defaultStatusData.defaultAllowedRoles });
-          existingStatus.allowedRoles = defaultStatusData.defaultAllowedRoles; // Update in current list
-          newStatusesAddedToBatch = true;
-        }
-      }
-      
-      if (newStatusesAddedToBatch) {
-        try {
-          await batch.commit();
-          console.log('getStatuses: Missing default system statuses or their allowedRoles were re-seeded/updated.');
-        } catch (commitError) {
-          console.error('getStatuses: Error committing batch for re-seeding/updating system statuses:', commitError);
-        }
-      }
-    }
+    await ensureCollectionExists(STATUSES_COLLECTION);
+    const response = await fetchFromApi(`collections/${STATUSES_COLLECTION}/documents?limit=100`);
     
-    return statuses.sort((a, b) => {
-      if (a.isSystemStatus && !b.isSystemStatus) return -1;
-      if (!a.isSystemStatus && b.isSystemStatus) return 1;
-      return a.name.localeCompare(b.name);
-    });
+    if (response && Array.isArray(response.documents)) {
+      if (response.documents.length === 0) {
+        console.log("No statuses found, seeding defaults via API.");
+        return await seedDefaultStatuses();
+      }
+      return response.documents.map((doc: { id: string, data: any }) => ({
+        id: doc.id,
+        ...doc.data,
+        isVisible: doc.data.isVisible !== false,
+        allowedRoles: doc.data.allowedRoles || [],
+      } as CustomStatus)).sort((a, b) => {
+        if (a.isSystemStatus && !b.isSystemStatus) return -1;
+        if (!a.isSystemStatus && b.isSystemStatus) return 1;
+        return a.name.localeCompare(b.name);
+      });
+    }
+    return [];
   } catch (error) {
-    console.error("Error fetching statuses from Firestore:", error);
+    console.error("Error fetching statuses from API:", error);
     return [];
   }
 };
@@ -132,73 +92,42 @@ export const getStatuses = async (): Promise<CustomStatus[]> => {
 export const getStatusById = async (id: string): Promise<CustomStatus | undefined> => {
   if (!id) return undefined;
   try {
-    const docRef = doc(db, STATUSES_COLLECTION, id);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      const data = docSnap.data();
+    const response = await fetchFromApi(`collections/${STATUSES_COLLECTION}/documents/${id}`);
+    if (response && response.data) {
       return { 
-        id: docSnap.id, 
-        ...data, 
-        isVisible: data.isVisible !== false,
-        allowedRoles: data.allowedRoles || [],
+        id: response.id, 
+        ...response.data, 
+        isVisible: response.data.isVisible !== false,
+        allowedRoles: response.data.allowedRoles || [],
       } as CustomStatus;
     }
-    console.warn(`Status with ID "${id}" not found in Firestore.`);
     return undefined;
   } catch (error) {
-    console.error(`Error fetching status by ID "${id}" from Firestore:`, error);
+    console.error(`Error fetching status by ID "${id}" from API:`, error);
     return undefined;
-  }
-};
-
-export const getAllStatusNames = async (): Promise<string[]> => {
-  try {
-    const statuses = await getStatuses();
-    return statuses.map(status => status.name);
-  } catch (error) {
-    console.error("Error fetching all status names:", error);
-    return [];
-  }
-};
-
-export const getStatusName = async (id: string): Promise<string | null> => {
-  if (!id) return null;
-  try {
-    const status = await getStatusById(id);
-    return status ? status.name : null;
-  } catch (error) {
-    console.error(`Error fetching status name for ID "${id}":`, error);
-    return null;
   }
 };
 
 export const addStatus = async (name: string, color: string, isVisible: boolean, allowedRoles: UserRole[] = []): Promise<CustomStatus | null> => {
+  if (!name.trim()) {
+    throw new Error("Status name cannot be empty.");
+  }
   try {
-    const statusesCol = collection(db, STATUSES_COLLECTION);
-    const q = query(statusesCol, where("name", "==", name));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      throw new Error(`Status with name "${name}" already exists.`);
-    }
-
-    const newStatusId = uuidv4();
-    const newStatusData: CustomStatus = {
-      id: newStatusId,
-      name,
+    const newStatusData: Omit<CustomStatus, 'id'> = {
+      name: name.trim(),
       color,
       isSystemStatus: false,
       isVisible,
       allowedRoles,
     };
-
-    const docRef = doc(db, STATUSES_COLLECTION, newStatusId);
-    await setDoc(docRef, newStatusData);
-    return newStatusData;
+    const response = await fetchFromApi(`collections/${STATUSES_COLLECTION}/documents`, {
+        method: 'POST',
+        body: JSON.stringify({ data: newStatusData })
+    });
+    return { id: response.id, ...response.data } as CustomStatus;
   } catch (error) {
-    console.error("Error adding status to Firestore:", error);
-    if (error instanceof Error && error.message.includes("already exists")) {
-        throw error;
-    }
+    console.error("Error adding status via API:", error);
+    if (error instanceof Error) throw error;
     return null;
   }
 };
@@ -211,17 +140,13 @@ export async function updateStatus(
     allowedRoles: UserRole[], 
     actingUserRole?: UserRole
 ): Promise<boolean> {
-  console.log(`status-service/updateStatus: ID: '${id}', Name: '${name}', Color: '${color}', Visible: ${isVisible}, Roles: ${allowedRoles.join(',')}, Acting: ${actingUserRole}`);
   try {
-    const statusDocRef = doc(db, STATUSES_COLLECTION, id);
-    const statusSnapshot = await getDoc(statusDocRef);
-
-    if (!statusSnapshot.exists()) {
+    const existingStatus = await getStatusById(id);
+    if (!existingStatus) {
       throw new Error(`Status with ID "${id}" not found for update.`);
     }
-    const existingStatus = { id: statusSnapshot.id, ...statusSnapshot.data() } as CustomStatus;
     
-    const updates: Partial<CustomStatus> = {};
+    const updates: Partial<Omit<CustomStatus, 'id'>> = {};
     
     if (name !== existingStatus.name) {
       if (existingStatus.isSystemStatus && actingUserRole !== 'SYSTEM_ADMIN') {
@@ -229,13 +154,9 @@ export async function updateStatus(
       }
       updates.name = name;
     }
-    if (color !== existingStatus.color) {
-        updates.color = color;
-    }
-    if (isVisible !== (existingStatus.isVisible !== false)) {
-        updates.isVisible = isVisible;
-    }
-    // Compare allowedRoles arrays
+    if (color !== existingStatus.color) { updates.color = color; }
+    if (isVisible !== (existingStatus.isVisible !== false)) { updates.isVisible = isVisible; }
+
     const sortedNewRoles = [...allowedRoles].sort();
     const sortedExistingRoles = [...(existingStatus.allowedRoles || [])].sort();
     if (JSON.stringify(sortedNewRoles) !== JSON.stringify(sortedExistingRoles)) {
@@ -245,15 +166,18 @@ export async function updateStatus(
         updates.allowedRoles = allowedRoles;
     }
     
-    if (Object.keys(updates).length === 0) {
-        console.log('status-service/updateStatus: No actual changes. Skipping update.');
-        return true;
-    }
+    if (Object.keys(updates).length === 0) return true;
 
-    await updateDoc(statusDocRef, updates);
+    const dataToSend = { ...existingStatus, ...updates };
+    delete (dataToSend as any).id;
+    
+    await fetchFromApi(`collections/${STATUSES_COLLECTION}/documents/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ data: dataToSend })
+    });
     return true;
   } catch (error) {
-    console.error(`status-service/updateStatus: Error updating status ID '${id}':`, error);
+    console.error(`Error updating status ID '${id}' via API:`, error);
     if (error instanceof Error) throw error;
     return false;
   }
@@ -261,23 +185,22 @@ export async function updateStatus(
 
 export const deleteStatus = async (id: string): Promise<boolean> => {
   try {
-    const statusDocRef = doc(db, STATUSES_COLLECTION, id);
-    const statusSnapshot = await getDoc(statusDocRef);
-    if (!statusSnapshot.exists()) {
+    const statusToDelete = await getStatusById(id);
+    if (!statusToDelete) {
       throw new Error(`Status with ID "${id}" not found for deletion.`);
     }
-    const statusData = statusSnapshot.data() as CustomStatus;
-    if (statusData.isSystemStatus) {
+    if (statusToDelete.isSystemStatus) {
       throw new Error("System statuses cannot be deleted.");
     }
-    await deleteDoc(statusDocRef);
+    await fetchFromApi(`collections/${STATUSES_COLLECTION}/documents/${id}`, { method: 'DELETE' });
     return true;
   } catch (error) {
-    console.error("Error deleting status from Firestore:", error);
+    console.error("Error deleting status from API:", error);
     if (error instanceof Error) throw error;
     return false;
   }
 };
+
 
 export const getContrastTextColor = (hexColor: string): string => {
   try {
@@ -309,3 +232,4 @@ export const getContrastTextColor = (hexColor: string): string => {
     return '#000000';
   }
 };
+
