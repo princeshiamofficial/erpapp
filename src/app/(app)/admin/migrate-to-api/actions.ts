@@ -52,9 +52,9 @@ export async function migrateCollectionAction(
     let migratedCount = 0;
     for (const doc of sourceDocs) {
       try {
+        // The API expects the data under a 'data' key. The ID is passed in the URL.
+        // The payload should NOT contain the ID field itself.
         const payload = {
-          // The API expects the data under a 'data' key and the id at the top level
-          id: doc.id,
           data: doc.data
         };
         
@@ -68,7 +68,8 @@ export async function migrateCollectionAction(
       } catch (apiError) {
         const errorMessage = apiError instanceof Error ? apiError.message : 'Unknown API error';
         console.error(`Failed to migrate document ${doc.id} in collection ${collectionId}:`, errorMessage);
-        // Optionally, continue migrating other documents or stop on first error
+        // Stop on first error to prevent flooding with failures
+        return { success: false, collectionId, readCount, migratedCount, error: `Failed on doc ${doc.id}: ${errorMessage}` };
       }
     }
     
