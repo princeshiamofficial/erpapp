@@ -145,6 +145,7 @@ export async function createOrderAction(
     for (const item of processedOrderItems) {
       const modelInfo = allModels.find(m => m.name === item.model);
       if (modelInfo && modelInfo.isReadyMade) {
+        // Decrease stock by the quantity of the item
         await updateModelStock(modelInfo.id, -item.quantity);
       }
     }
@@ -258,32 +259,37 @@ export async function updateOrderAction(
 
         if (oldItem && oldItem.model !== newItem.model) {
           if (oldModel && oldModel.isReadyMade) {
-            stockChanges.set(oldModel.id, (stockChanges.get(oldModel.id) || 0) - oldItem.quantity); 
+            stockChanges.set(oldModel.id, (stockChanges.get(oldModel.id) || 0) + oldItem.quantity); // Re-add stock for old model
           }
           if (newModel && newModel.isReadyMade) {
-            stockChanges.set(newModel.id, (stockChanges.get(newModel.id) || 0) + newItem.quantity); 
+            stockChanges.set(newModel.id, (stockChanges.get(newModel.id) || 0) - newItem.quantity); // Decrease stock for new model
           }
         } else if (newModel && newModel.isReadyMade) {
           const quantityChange = newItem.quantity - (oldItem ? oldItem.quantity : 0);
           if (quantityChange !== 0) {
-            stockChanges.set(newModel.id, (stockChanges.get(newModel.id) || 0) + quantityChange);
+            stockChanges.set(newModel.id, (stockChanges.get(newModel.id) || 0) - quantityChange); // Adjust stock for quantity change
           }
         }
         if (oldItem) {
           oldItemsMap.delete(newItem.id); 
+        } else { // It's a completely new item in the order
+           if (newModel && newModel.isReadyMade) {
+             stockChanges.set(newModel.id, (stockChanges.get(newModel.id) || 0) - newItem.quantity);
+           }
         }
       }
-
+      
+      // Items that were removed from the order
       for (const removedItem of oldItemsMap.values()) {
         const modelInfo = allModels.find(m => m.name === removedItem.model);
         if (modelInfo && modelInfo.isReadyMade) {
-          stockChanges.set(modelInfo.id, (stockChanges.get(modelInfo.id) || 0) - removedItem.quantity); 
+          stockChanges.set(modelInfo.id, (stockChanges.get(modelInfo.id) || 0) + removedItem.quantity); // Re-add stock
         }
       }
 
       for (const [modelId, quantityChange] of stockChanges.entries()) {
          if (quantityChange !== 0) {
-            await updateModelStock(modelId, -quantityChange); 
+            await updateModelStock(modelId, quantityChange); 
          }
       }
       finalUpdates.orderItems = updates.orderItems;

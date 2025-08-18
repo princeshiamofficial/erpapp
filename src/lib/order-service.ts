@@ -109,29 +109,12 @@ export const addOrder = async (orderData: {
       finalCreatedAt = new Date().toISOString();
     }
 
+    // Simplified and more robust ID generation
     const currentDate = parseISO(finalCreatedAt);
     const dateString = format(currentDate, 'yyyyMMdd');
-    const idPrefixForDay = `ORD-${dateString}-`;
+    const uniquePart = uuidv4().split('-')[0].substring(0, 4).toUpperCase(); // Short unique part
+    const orderId = `ORD-${dateString}-${uniquePart}`;
     
-    // Fetch orders from the same day to determine the next sequence number
-    const response = await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents?filters[id][like]=${idPrefixForDay}%&limit=1000`);
-    let newSequence = 1;
-    if (response && Array.isArray(response.documents)) {
-        let maxSequence = 0;
-        response.documents.forEach((doc: {id: string}) => {
-            const parts = doc.id.split('-');
-            if (parts.length === 3) {
-                const seqNum = parseInt(parts[2], 10);
-                if (!isNaN(seqNum) && seqNum > maxSequence) {
-                    maxSequence = seqNum;
-                }
-            }
-        });
-        newSequence = maxSequence + 1;
-    }
-    
-    const orderId = `${idPrefixForDay}${String(newSequence).padStart(3, '0')}`;
-
     const initialLogEntry: OrderLogEntry = {
       id: uuidv4(), timestamp: finalCreatedAt, status: orderData.initialStatusId,
       changedByUserId: orderData.crmUserId, changedByUserName: orderData.crmUserName, notes: "Order created.",
@@ -340,7 +323,7 @@ export const addReplyToComment = async (
 };
 
 export const toggleReaction = async (
-  orderId: string, targetCommentId: string, isReply: boolean, parentCommentIdIfReply: string | undefined, reactorId: string, reactionType: 'like'
+  orderId: string, targetCommentId: string, isReply: boolean, parentCommentIdIfReply: string | undefined, reactorId: string, reactionType: 'like' 
 ): Promise<TrackingLink | undefined> => {
   try {
     const order = await getOrderById(orderId);
