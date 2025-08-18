@@ -11,11 +11,18 @@ import { Loader2, Database, Wand2, CheckCircle, AlertTriangle } from 'lucide-rea
 import { migrateCollectionAction, type CollectionId, type MigrationResult } from './actions';
 
 const MIGRATABLE_COLLECTIONS: CollectionId[] = [
+  'customOrderStatuses',
   'employees',
+  'globalSettings',
   'leads',
   'orders',
+  'personalTransactions',
   'projects',
   'purchaseRequests',
+  'serviceLaminations',
+  'serviceModels',
+  'servicePaymentMethods',
+  'users',
 ];
 
 

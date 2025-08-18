@@ -7,11 +7,19 @@ import { collection, getDocs, query } from 'firebase/firestore';
 import { fetchFromApi, ensureCollectionExists } from '@/lib/api-helper';
 
 export type CollectionId = 
+  | 'customOrderStatuses'
   | 'employees'
+  | 'globalSettings'
   | 'leads'
   | 'orders'
+  | 'personalTransactions'
   | 'projects'
-  | 'purchaseRequests';
+  | 'purchaseRequests'
+  | 'serviceLaminations'
+  | 'serviceModels'
+  | 'servicePaymentMethods'
+  | 'users';
+
 
 export interface MigrationResult {
   success: boolean;
@@ -45,6 +53,7 @@ export async function migrateCollectionAction(
     let migratedCount = 0;
     for (const doc of sourceDocs) {
       try {
+        // The API generates its own ID, so we only send the data.
         const payload = {
           data: doc.data
         };
