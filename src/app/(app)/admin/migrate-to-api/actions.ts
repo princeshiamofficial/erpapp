@@ -57,7 +57,7 @@ export async function migrateCollectionAction(
         // Correctly construct the payload with the original ID preserved
         const dataToMigrate = {
             ...doc.data(),
-            firestoreId: doc.id // Save the original Firestore ID into a new field
+            xid: doc.id // Save the original Firestore ID into a new field
         };
         
         const payload = {
@@ -88,3 +88,4 @@ export async function migrateCollectionAction(
     return { success: false, collectionId, readCount: 0, migratedCount: 0, error: errorMessage };
   }
 }
+
