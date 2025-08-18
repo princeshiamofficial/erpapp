@@ -8,17 +8,10 @@ import { fetchFromApi, ensureCollectionExists } from '@/lib/api-helper';
 
 export type CollectionId = 
   | 'employees'
-  | 'globalSettings'
   | 'leads'
   | 'orders'
-  | 'personalTransactions'
-  | 'personalUserNotes'
   | 'projects'
-  | 'purchaseRequests'
-  | 'serviceLaminations'
-  | 'serviceModels'
-  | 'servicePaymentMethods'
-  | 'customOrderStatuses';
+  | 'purchaseRequests';
 
 export interface MigrationResult {
   success: boolean;
@@ -37,10 +30,8 @@ export async function migrateCollectionAction(
   }
 
   try {
-    // 0. Ensure the collection exists in the API database before trying to write to it
     await ensureCollectionExists(collectionId);
 
-    // 1. Read all documents from the source Firestore collection
     const sourceCollectionRef = collection(db, collectionId);
     const q = query(sourceCollectionRef);
     const snapshot = await getDocs(q);
@@ -51,7 +42,6 @@ export async function migrateCollectionAction(
       return { success: true, collectionId, readCount: 0, migratedCount: 0 };
     }
 
-    // 2. Write each document to the new API database
     let migratedCount = 0;
     for (const doc of sourceDocs) {
       try {
@@ -59,8 +49,6 @@ export async function migrateCollectionAction(
           data: doc.data
         };
         
-        // POST to the collection endpoint to let the API generate a new document ID.
-        // This is the key change to fix the issue where custom IDs are not allowed.
         await fetchFromApi(`collections/${collectionId}/documents`, {
           method: 'POST',
           body: JSON.stringify(payload),
@@ -69,7 +57,6 @@ export async function migrateCollectionAction(
       } catch (apiError) {
         const errorMessage = apiError instanceof Error ? apiError.message : 'Unknown API error';
         console.error(`Failed to migrate document from old ID ${doc.id} in collection ${collectionId}:`, errorMessage);
-        // Stop on first error to prevent flooding with failures
         return { success: false, collectionId, readCount, migratedCount, error: `Failed on doc (old ID ${doc.id}): ${errorMessage}` };
       }
     }

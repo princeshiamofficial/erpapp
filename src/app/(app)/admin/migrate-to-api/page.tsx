@@ -12,17 +12,10 @@ import { migrateCollectionAction, type CollectionId, type MigrationResult } from
 
 const MIGRATABLE_COLLECTIONS: CollectionId[] = [
   'employees',
-  'globalSettings',
   'leads',
   'orders',
-  'personalTransactions',
-  'personalUserNotes',
   'projects',
   'purchaseRequests',
-  'serviceLaminations',
-  'serviceModels',
-  'servicePaymentMethods',
-  'customOrderStatuses'
 ];
 
 
@@ -151,4 +144,3 @@ export default function MigrateToApiPage() {
     </div>
   );
 }
-
