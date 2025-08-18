@@ -17,7 +17,7 @@ export const SHIPPED_STATUS_ID = 'shipped'; // Added SHIPPED_STATUS_ID
 export const DELIVERED_STATUS_ID = 'delivered';
 
 // Default statuses with names, colors, and default allowed roles
-const defaultStatusesData: Array<Omit<CustomStatus, 'id' | 'isSystemStatus' | 'isVisible'> & { id: string, defaultName: string, defaultAllowedRoles?: UserRole[] }> = [
+const defaultStatusesData: Array<Omit<CustomStatus, 'id' | 'isSystemStatus' | 'isVisible' | 'xid'> & { id: string, defaultName: string, defaultAllowedRoles?: UserRole[] }> = [
   { id: ORDER_SUBMITTED_ID, defaultName: 'Order Submitted', color: '#8B5CF6', defaultAllowedRoles: ['CRM', 'ADMIN', 'SYSTEM_ADMIN'] },
   { id: READY_FOR_DESIGN_STATUS_ID, defaultName: 'Ready for Design', color: '#14B8A6', defaultAllowedRoles: ['CRM', 'ADMIN', 'SYSTEM_ADMIN'] },
   { id: 'design-in-progress', defaultName: 'Design in Progress', color: '#3B82F6', defaultAllowedRoles: ['DESIGNER_REPRESENTATIVE', 'ADMIN', 'SYSTEM_ADMIN'] },
@@ -40,6 +40,7 @@ export const seedDefaultStatuses = async (): Promise<CustomStatus[]> => {
   for (const statusData of defaultStatusesData) {
     const newStatus: CustomStatus = {
       id: statusData.id,
+      xid: statusData.id, // Use the system ID as the xid for defaults
       name: statusData.defaultName,
       color: statusData.color,
       isSystemStatus: true,
@@ -74,6 +75,7 @@ export const getStatuses = async (): Promise<CustomStatus[]> => {
       return response.documents.map((doc: { id: string, data: any }) => ({
         id: doc.id,
         ...doc.data,
+        xid: doc.data.xid || doc.id, // Fallback for older data
         isVisible: doc.data.isVisible !== false,
         allowedRoles: doc.data.allowedRoles || [],
       } as CustomStatus)).sort((a, b) => {
@@ -96,7 +98,8 @@ export const getStatusById = async (id: string): Promise<CustomStatus | undefine
     if (response && response.data) {
       return { 
         id: response.id, 
-        ...response.data, 
+        ...response.data,
+        xid: response.data.xid || response.id, // Fallback
         isVisible: response.data.isVisible !== false,
         allowedRoles: response.data.allowedRoles || [],
       } as CustomStatus;
@@ -119,6 +122,7 @@ export const addStatus = async (name: string, color: string, isVisible: boolean,
       isSystemStatus: false,
       isVisible,
       allowedRoles,
+      xid: name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
     };
     const response = await fetchFromApi(`collections/${STATUSES_COLLECTION}/documents`, {
         method: 'POST',
@@ -153,6 +157,10 @@ export async function updateStatus(
         throw new Error("Only System Administrators can change the name of system statuses.");
       }
       updates.name = name;
+      // Also update the xid if it's not a system status
+      if (!existingStatus.isSystemStatus) {
+        updates.xid = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      }
     }
     if (color !== existingStatus.color) { updates.color = color; }
     if (isVisible !== (existingStatus.isVisible !== false)) { updates.isVisible = isVisible; }
@@ -232,4 +240,3 @@ export const getContrastTextColor = (hexColor: string): string => {
     return '#000000';
   }
 };
-

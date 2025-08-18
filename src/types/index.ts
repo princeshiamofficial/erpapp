@@ -32,6 +32,7 @@ export interface Employee {
 
 export interface CustomStatus {
   id: string;
+  xid: string; // A custom, URL-friendly identifier
   name: string;
   color: string;
   isSystemStatus?: boolean;
