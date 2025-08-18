@@ -1,13 +1,18 @@
 
 "use client";
 
+import dynamic from 'next/dynamic';
 import type { Lead, User } from '@/types';
-import { LeadCard } from './LeadCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { LucideIcon } from 'lucide-react';
 import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+
+const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod => mod.LeadCard), {
+  ssr: false,
+  loading: () => <Skeleton className="h-20 w-full rounded-md" />
+});
 
 interface PipelineKanbanColumnProps {
   id: string;

@@ -15,7 +15,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check, ChevronsUpDown, LayoutGrid, List } from 'lucide-react';
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
-import { LeadCard } from '@/components/pipeline/LeadCard';
 import { LeadListView } from '@/components/pipeline/LeadListView'; // New component
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Papa from 'papaparse';
@@ -37,8 +36,11 @@ import {
   PaginationPrevious,
   PaginationEllipsis
 } from "@/components/ui/pagination";
+import { Skeleton } from '@/components/ui/skeleton';
 
-
+const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod => mod.LeadCard), {
+  ssr: false,
+});
 const AddEditLeadDialog = dynamic(() => import('@/components/pipeline/AddEditLeadDialog').then(mod => mod.AddEditLeadDialog));
 const ImportLeadsDialog = dynamic(() => import('@/components/pipeline/ImportLeadsDialog').then(mod => mod.ImportLeadsDialog));
 const TransferLeadDialog = dynamic(() => import('@/components/pipeline/TransferLeadDialog').then(mod => mod.TransferLeadDialog));
@@ -112,10 +114,7 @@ export default function PipeLinePage() {
   }, [toast, currentUser]);
 
   useEffect(() => {
-    if (currentUser) {
-      fetchLeadsAndUsers();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchLeadsAndUsers();
   }, [currentUser]);
 
   const filteredLeads = useMemo(() => {
