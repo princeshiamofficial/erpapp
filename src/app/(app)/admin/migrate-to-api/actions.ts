@@ -59,16 +59,18 @@ export async function migrateCollectionAction(
           data: doc.data
         };
         
-        await fetchFromApi(`collections/${collectionId}/documents/${doc.id}`, {
-          method: 'PUT',
+        // POST to the collection endpoint to let the API generate a new document ID.
+        // This is the key change to fix the issue where custom IDs are not allowed.
+        await fetchFromApi(`collections/${collectionId}/documents`, {
+          method: 'POST',
           body: JSON.stringify(payload),
         });
         migratedCount++;
       } catch (apiError) {
         const errorMessage = apiError instanceof Error ? apiError.message : 'Unknown API error';
-        console.error(`Failed to migrate document ${doc.id} in collection ${collectionId}:`, errorMessage);
+        console.error(`Failed to migrate document from old ID ${doc.id} in collection ${collectionId}:`, errorMessage);
         // Stop on first error to prevent flooding with failures
-        return { success: false, collectionId, readCount, migratedCount, error: `Failed on doc ${doc.id}: ${errorMessage}` };
+        return { success: false, collectionId, readCount, migratedCount, error: `Failed on doc (old ID ${doc.id}): ${errorMessage}` };
       }
     }
     
