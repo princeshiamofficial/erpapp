@@ -5,7 +5,7 @@ import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, orderBy, wr
 import type { TrackingLink, Comment, OrderLogEntry, CustomStatus, UserRole, OrderItem, AdvancePaymentRecord, User } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { getStatuses, READY_FOR_DESIGN_STATUS_ID, DELIVERED_STATUS_ID } from './status-service';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { fetchFromApi, ensureCollectionExists } from './api-helper';
 import { getModels } from './service-options-service';
 
@@ -109,11 +109,24 @@ export const addOrder = async (orderData: {
       finalCreatedAt = new Date().toISOString();
     }
 
-    // Simplified and more robust ID generation
     const currentDate = parseISO(finalCreatedAt);
-    const dateString = format(currentDate, 'yyyyMMdd');
-    const uniquePart = uuidv4().split('-')[0].substring(0, 4).toUpperCase(); // Short unique part
-    const orderId = `ORD-${dateString}-${uniquePart}`;
+    const datePrefix = `ORD-${format(currentDate, 'yyyyMMdd')}`;
+    
+    // Fetch orders with the same date prefix to find the latest sequence number
+    const response = await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents?filters[id][like]=${datePrefix}-&orderBy=id&direction=desc&limit=1`);
+    
+    let newSequence = 1;
+    if (response && Array.isArray(response.documents) && response.documents.length > 0) {
+      const lastOrder = response.documents[0];
+      const lastId = lastOrder.id;
+      const lastSequenceStr = lastId.split('-').pop();
+      const lastSequence = parseInt(lastSequenceStr || '0', 10);
+      if (!isNaN(lastSequence)) {
+        newSequence = lastSequence + 1;
+      }
+    }
+    
+    const orderId = `${datePrefix}-${String(newSequence).padStart(3, '0')}`;
     
     const initialLogEntry: OrderLogEntry = {
       id: uuidv4(), timestamp: finalCreatedAt, status: orderData.initialStatusId,
