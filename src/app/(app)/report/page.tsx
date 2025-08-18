@@ -26,7 +26,7 @@ import { getGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service'; // Import getUsers
 import { useToast } from '@/hooks/use-toast';
 import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon } from 'lucide-react'; // Import UsersIcon
-import { useAuth } from '@/components/auth/auth-context'; // Corrected import path
+import { useAuth } from '@/contexts/auth-context'; // Corrected import path
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -291,21 +291,29 @@ export default function ReportPage() {
   }, [filteredOrdersByDate, globalSettings]);
   
   const designerPerformanceData: DesignerPerformanceData[] = useMemo(() => {
-    if (filteredOrdersByDate.length === 0 || allUsers.length === 0) {
-      return [];
+    if (orders.length === 0 || allUsers.length === 0 || !selectedDateRange?.from) {
+        return [];
     }
 
-    const designerMap = new Map<string, { name: string; count: number }>();
+    const startDate = startOfDay(selectedDateRange.from);
+    const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
 
+    const designerMap = new Map<string, { name: string; count: number }>();
     allUsers
       .filter(user => user.role === 'DESIGNER_REPRESENTATIVE')
       .forEach(dr => {
         designerMap.set(dr.id, { name: dr.name, count: 0 });
       });
 
-    filteredOrdersByDate.forEach(order => {
-      const isDelivered = order.statusHistory.some(h => h.status === DELIVERED_STATUS_ID);
-      if (isDelivered && order.designerRepresentativeId && designerMap.has(order.designerRepresentativeId)) {
+    orders.forEach(order => {
+      // Find a delivery event within the date range
+      const deliveryLog = order.statusHistory.find(h =>
+        h.status === DELIVERED_STATUS_ID &&
+        isWithinInterval(parseISO(h.timestamp), { start: startDate, end: endDate })
+      );
+      
+      // If a delivery happened in the range and the order has a DR
+      if (deliveryLog && order.designerRepresentativeId && designerMap.has(order.designerRepresentativeId)) {
         const designer = designerMap.get(order.designerRepresentativeId)!;
         designer.count += 1;
         designerMap.set(order.designerRepresentativeId, designer);
@@ -324,7 +332,7 @@ export default function ReportPage() {
       }))
       .sort((a, b) => b.ordersDelivered - a.ordersDelivered);
 
-  }, [filteredOrdersByDate, allUsers]);
+  }, [orders, allUsers, selectedDateRange]);
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
 
@@ -473,4 +481,3 @@ export default function ReportPage() {
     </>
   );
 }
-
