@@ -48,9 +48,8 @@ export const seedDefaultStatuses = async (): Promise<CustomStatus[]> => {
     };
 
     try {
-        // Construct the body exactly as per the user's curl example
         const requestBody = {
-            id: statusData.id, // The custom document ID
+            id: statusData.id,
             data: statusPayload
         };
         
@@ -132,19 +131,33 @@ export const addStatus = async (name: string, color: string, isVisible: boolean,
     throw new Error("Status name cannot be empty.");
   }
   try {
+    const customId = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
     const newStatusData: Omit<CustomStatus, 'id'> = {
       name: name.trim(),
       color,
       isSystemStatus: false,
       isVisible,
       allowedRoles,
-      xid: name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''),
+      xid: customId, // Set xid to the same as the custom id
     };
-    const response = await fetchFromApi(`collections/${STATUSES_COLLECTION}/documents`, {
+
+    const payload = {
+        id: customId,
+        data: newStatusData
+    };
+    
+    await fetchFromApi(`collections/${STATUSES_COLLECTION}/documents`, {
         method: 'POST',
-        body: JSON.stringify({ data: newStatusData })
+        body: JSON.stringify(payload)
     });
-    return { id: response.id, ...response.data } as CustomStatus;
+
+    const createdStatus: CustomStatus = {
+        id: customId,
+        ...newStatusData
+    };
+
+    return createdStatus;
   } catch (error) {
     console.error("Error adding status via API:", error);
     if (error instanceof Error) throw error;
