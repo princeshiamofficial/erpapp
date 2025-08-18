@@ -81,6 +81,7 @@ const navItems: NavItem[] = [
       { href: "/admin/statuses", label: "Status Management", icon: ListChecks, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/service-management", label: "Service Options", icon: Settings2, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/backup", label: "Data Backup", icon: DatabaseZap, roles: ["SYSTEM_ADMIN", "ADMIN"] },
+      { href: "/admin/migrate-to-api", label: "Migrate to API", icon: DatabaseZap, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/crm-target-settings", label: "App Settings", icon: Target, roles: ["SYSTEM_ADMIN"] }, 
     ]
   },
