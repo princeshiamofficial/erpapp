@@ -35,22 +35,8 @@ const getInitialsForName = (name: string | undefined): string => {
 
 
 export const getProjects = async (): Promise<Project[]> => {
-  console.log('[getProjects] Function called.');
-  let actualProjects: Project[] = [];
-  try {
-    await ensureCollectionExists(PROJECTS_COLLECTION);
-    // Removed orderBy from the API call to prevent server errors on missing fields/indexes
-    const response = await fetchFromApi(`collections/${PROJECTS_COLLECTION}/documents?limit=500`);
-    if (response && Array.isArray(response.documents)) {
-        actualProjects = response.documents.map((doc: {id: string, data: any}) => ({...doc.data, id: doc.id} as Project));
-        console.log(`[getProjects] Fetched ${actualProjects.length} actual projects from API.`);
-    }
-  } catch (error) {
-      console.error("[getProjects] Error fetching actual projects from API:", error);
-  }
-
-  const existingProjectIds = new Set(actualProjects.map(p => p.projectIdDisplay));
-
+  console.log('[getProjects] Function called. Generating projects from orders.');
+  
   let ordersToDisplayAsProjects: Project[] = [];
   try {
     const [allOrders, allUsers] = await Promise.all([
@@ -59,8 +45,7 @@ export const getProjects = async (): Promise<Project[]> => {
     ]);
     const userMap = new Map(allUsers.map(user => [user.id, user]));
 
-    const dynamicProjectsFromOrders = allOrders
-      .filter(order => !existingProjectIds.has(order.id))
+    ordersToDisplayAsProjects = allOrders
       .map(order => {
         const projectCreatedAt = order.createdAt || formatISO(new Date());
         const projectEndDate = formatISO(addDays(new Date(projectCreatedAt), 2)); 
@@ -95,15 +80,14 @@ export const getProjects = async (): Promise<Project[]> => {
         return dynamicProject;
       });
 
-    ordersToDisplayAsProjects = dynamicProjectsFromOrders;
   } catch (error) {
     console.error("[getProjects] Error fetching or processing orders for dynamic projects from API:", error);
+    // Return empty array on error to prevent site crash
+    return [];
   }
   
-  const combinedProjects = [...actualProjects, ...ordersToDisplayAsProjects];
-  
   // Perform sorting on the client-side after fetching all data
-  return combinedProjects.sort((a, b) => {
+  return ordersToDisplayAsProjects.sort((a, b) => {
     const dateACreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
     const dateBCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
     if (dateBCreated !== dateACreated) return dateBCreated - dateACreated;
