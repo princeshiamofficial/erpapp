@@ -43,19 +43,29 @@ export async function migrateCollectionAction(
     const sourceCollectionRef = collection(db, collectionId);
     const q = query(sourceCollectionRef);
     const snapshot = await getDocs(q);
-    const sourceDocs = snapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+    
+    // Explicitly create an array of objects to be migrated.
+    const sourceDocs = snapshot.docs.map(doc => {
+      // Create a new object that includes the document data AND the original ID.
+      const data = doc.data();
+      const dataWithId = {
+          ...data,
+          id: doc.id
+      };
+      return dataWithId;
+    });
 
     const readCount = sourceDocs.length;
     if (readCount === 0) {
-      return { success: true, collectionId, readCount: 0, migratedCount: 0 };
+      return { success: true, collectionId, readCount: 0, migratedCount: 0, error: "No documents to migrate." };
     }
 
     let migratedCount = 0;
-    for (const doc of sourceDocs) {
+    for (const docData of sourceDocs) {
       try {
-        // The API generates its own ID, so we only send the data.
+        // Wrap the complete data (including the original ID) inside the 'data' field for the API.
         const payload = {
-          data: doc.data
+          data: docData
         };
         
         await fetchFromApi(`collections/${collectionId}/documents`, {
@@ -65,8 +75,8 @@ export async function migrateCollectionAction(
         migratedCount++;
       } catch (apiError) {
         const errorMessage = apiError instanceof Error ? apiError.message : 'Unknown API error';
-        console.error(`Failed to migrate document from old ID ${doc.id} in collection ${collectionId}:`, errorMessage);
-        return { success: false, collectionId, readCount, migratedCount, error: `Failed on doc (old ID ${doc.id}): ${errorMessage}` };
+        console.error(`Failed to migrate document from original ID ${docData.id} in collection ${collectionId}:`, errorMessage);
+        return { success: false, collectionId, readCount, migratedCount, error: `Failed on doc (original ID ${docData.id}): ${errorMessage}` };
       }
     }
     

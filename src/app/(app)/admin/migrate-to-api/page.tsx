@@ -57,7 +57,7 @@ export default function MigrateToApiPage() {
       if (result.success) {
         toast({
           title: "Migration Successful",
-          description: `Migrated ${result.migratedCount} documents for ${collectionId}.`,
+          description: `Migrated ${result.migratedCount} of ${result.readCount} documents for ${collectionId}.`,
         });
         setMigrationStatus(prev => ({ ...prev, [collectionId]: 'success' }));
       } else {
@@ -137,7 +137,7 @@ export default function MigrateToApiPage() {
                 {migrationResults[collectionId] && (
                   <div className="px-6 pb-4 text-xs">
                      {migrationResults[collectionId]?.success ? (
-                         <p className="text-green-600 flex items-center gap-1.5"><CheckCircle className="h-4 w-4"/> Migrated: {migrationResults[collectionId]?.migratedCount}</p>
+                         <p className="text-green-600 flex items-center gap-1.5"><CheckCircle className="h-4 w-4"/> Migrated: {migrationResults[collectionId]?.migratedCount} / {migrationResults[collectionId]?.readCount}</p>
                      ) : (
                          <p className="text-destructive flex items-center gap-1.5"><AlertTriangle className="h-4 w-4"/> Error: {migrationResults[collectionId]?.error?.substring(0, 100)}...</p>
                      )}
