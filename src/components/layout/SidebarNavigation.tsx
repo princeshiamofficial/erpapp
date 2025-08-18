@@ -26,7 +26,8 @@ import {
   Map, // Added Map icon
   ShoppingCart, // Added ShoppingCart icon for Purchase Request
   Printer,
-  FolderHeart
+  FolderHeart,
+  DatabaseZap, // Added DatabaseZap icon for backup
 } from "lucide-react";
 import type { UserRole, GlobalSettings } from "@/types";
 import { cn } from "@/lib/utils";
@@ -69,10 +70,20 @@ const navItems: NavItem[] = [
   { href: "/report", label: "Report", icon: BarChart3, roles: ["SYSTEM_ADMIN", "ADMIN"] },
   { href: "/projects", label: "Projects", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "LR"] }, 
   { href: "/users", label: "User Management", icon: Users, roles: ["SYSTEM_ADMIN", "ADMIN"] },
-  { href: "/admin/model-management", label: "Model Management", icon: Layers, roles: ["SYSTEM_ADMIN", "ADMIN"] },
-  { href: "/admin/statuses", label: "Status Management", icon: ListChecks, roles: ["SYSTEM_ADMIN"] },
-  { href: "/admin/service-management", label: "Service Options", icon: Settings2, roles: ["SYSTEM_ADMIN"] },
-  { href: "/admin/crm-target-settings", label: "App Settings", icon: Target, roles: ["SYSTEM_ADMIN"] }, 
+  { 
+    isHeader: true,
+    label: "Administration", 
+    icon: Settings2, 
+    roles: ["SYSTEM_ADMIN", "ADMIN"], 
+    href: "",
+    subItems: [
+      { href: "/admin/model-management", label: "Model Management", icon: Layers, roles: ["SYSTEM_ADMIN", "ADMIN"] },
+      { href: "/admin/statuses", label: "Status Management", icon: ListChecks, roles: ["SYSTEM_ADMIN"] },
+      { href: "/admin/service-management", label: "Service Options", icon: Settings2, roles: ["SYSTEM_ADMIN"] },
+      { href: "/admin/backup", label: "Data Backup", icon: DatabaseZap, roles: ["SYSTEM_ADMIN", "ADMIN"] },
+      { href: "/admin/crm-target-settings", label: "App Settings", icon: Target, roles: ["SYSTEM_ADMIN"] }, 
+    ]
+  },
 ];
 
 export function SidebarNavigation() {
@@ -93,11 +104,13 @@ export function SidebarNavigation() {
   }, [currentUser]);
 
   useEffect(() => {
-    const crmMenu = navItems.find(item => item.label === 'CRM');
-    if (crmMenu?.subItems?.some(sub => sub.href && pathname.startsWith(sub.href))) {
-      setOpenMenus(prev => ({ ...prev, CRM: true }));
-    }
+    navItems.forEach(item => {
+      if (item.isHeader && item.subItems?.some(sub => sub.href && pathname.startsWith(sub.href))) {
+        setOpenMenus(prev => ({ ...prev, [item.label]: true }));
+      }
+    });
   }, [pathname]);
+
 
   const toggleMenu = (label: string) => {
     setOpenMenus(prev => ({ ...prev, [label]: !prev[label] }));
@@ -129,6 +142,11 @@ export function SidebarNavigation() {
       // Special check for Finance Manager
       if (item.href === "/finance-manager" && !canUserLogExpense) {
         shouldShowItem = false;
+      }
+      
+      // If it's a header, check if any sub-item should be shown
+      if (item.isHeader && item.subItems) {
+        shouldShowItem = item.subItems.some(sub => sub.roles.includes(userRole));
       }
 
       if (!shouldShowItem) return null;

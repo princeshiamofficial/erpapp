@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, ShieldHalf, RefreshCw, AlertTriangle, CreditCard } from "lucide-react";
+import { PlusCircle, Edit, Trash2, ShieldHalf, RefreshCw, AlertTriangle, CreditCard, ArrowRight } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { ServiceLaminationItem, ServicePaymentMethodItem } from "@/types"; 
@@ -227,11 +227,18 @@ export default function ServiceManagementPage() {
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 page-header">
         <div>
           <h1 className="page-title">Service Options Management</h1>
-          <p className="page-description">Configure Lamination and Payment Method options available for orders. <Link href="/admin/migrate-projects" className="text-primary hover:underline">Migrate Projects</Link></p>
+          <p className="page-description">Configure Lamination and Payment Method options available for orders. For more advanced settings, visit the new App Settings page.</p>
         </div>
-        <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
-          <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
-        </Button>
+        <div className="flex items-center gap-2">
+            <Link href="/admin/crm-target-settings" passHref>
+                <Button variant="outline">
+                    Go to App Settings <ArrowRight className="ml-2 h-4 w-4"/>
+                </Button>
+            </Link>
+            <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
+                <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+            </Button>
+        </div>
       </div>
 
       <div className="flex flex-col space-y-6">
@@ -286,4 +293,3 @@ export default function ServiceManagementPage() {
     </div>
   );
 }
-
