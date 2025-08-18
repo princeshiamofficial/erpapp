@@ -48,7 +48,7 @@ export const seedDefaultStatuses = async (): Promise<CustomStatus[]> => {
     };
 
     try {
-        // Construct the body as per the user's curl example
+        // Construct the body exactly as per the user's curl example
         const requestBody = {
             id: statusData.id, // The custom document ID
             data: statusPayload
@@ -71,6 +71,7 @@ export const seedDefaultStatuses = async (): Promise<CustomStatus[]> => {
   console.log('Default statuses seeded via API using custom IDs.');
   return createdStatuses;
 };
+
 
 export const getStatuses = async (): Promise<CustomStatus[]> => {
   try {
