@@ -54,14 +54,10 @@ export async function migrateCollectionAction(
     let migratedCount = 0;
     for (const doc of sourceDocs) {
       try {
-        // Correctly construct the payload with the original ID preserved
-        const dataToMigrate = {
-            ...doc.data(),
-            xid: doc.id // Save the original Firestore ID into a new field
-        };
-        
+        // Construct the payload with the original ID outside the data object
         const payload = {
-          data: dataToMigrate
+          id: doc.id, // Use the original Firestore ID as the custom ID for the new document
+          data: doc.data() // The document's data remains as is
         };
         
         await fetchFromApi(`collections/${collectionId}/documents`, {
@@ -72,7 +68,8 @@ export async function migrateCollectionAction(
       } catch (apiError) {
         const errorMessage = apiError instanceof Error ? apiError.message : 'Unknown API error';
         console.error(`Failed to migrate document with original ID ${doc.id} in collection ${collectionId}:`, errorMessage);
-        return { success: false, collectionId, readCount, migratedCount, error: `Failed on doc (original ID ${doc.id}): ${errorMessage}` };
+        // Stop on first error to prevent partial migrations and allow for easier debugging.
+        return { success: false, collectionId, readCount, migratedCount, error: `Failed on doc (ID ${doc.id}): ${errorMessage}` };
       }
     }
     
@@ -88,4 +85,3 @@ export async function migrateCollectionAction(
     return { success: false, collectionId, readCount: 0, migratedCount: 0, error: errorMessage };
   }
 }
-
