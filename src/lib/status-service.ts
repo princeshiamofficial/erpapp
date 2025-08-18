@@ -38,27 +38,37 @@ export const seedDefaultStatuses = async (): Promise<CustomStatus[]> => {
   await ensureCollectionExists(STATUSES_COLLECTION);
   
   for (const statusData of defaultStatusesData) {
-    const newStatus: CustomStatus = {
-      id: statusData.id,
-      xid: statusData.id, // Use the system ID as the xid for defaults
+    const statusPayload = {
       name: statusData.defaultName,
       color: statusData.color,
       isSystemStatus: true,
       isVisible: true,
       allowedRoles: statusData.defaultAllowedRoles || [],
+      xid: statusData.id,
     };
 
     try {
+        // Construct the body as per the user's curl example
+        const requestBody = {
+            id: statusData.id, // The custom document ID
+            data: statusPayload
+        };
+        
         await fetchFromApi(`collections/${STATUSES_COLLECTION}/documents`, {
             method: 'POST',
-            body: JSON.stringify({ documentId: newStatus.id, data: newStatus })
+            body: JSON.stringify(requestBody)
         });
-        createdStatuses.push(newStatus);
+        
+        createdStatuses.push({
+            id: statusData.id,
+            ...statusPayload
+        });
+
     } catch(error) {
-        console.error(`Failed to seed status: ${newStatus.name}`, error);
+        console.error(`Failed to seed status with custom ID: ${statusData.id}`, error);
     }
   }
-  console.log('Default statuses seeded via API.');
+  console.log('Default statuses seeded via API using custom IDs.');
   return createdStatuses;
 };
 
@@ -106,6 +116,11 @@ export const getStatusById = async (id: string): Promise<CustomStatus | undefine
     }
     return undefined;
   } catch (error) {
+    // If a document is not found, the API throws an error. We should handle this gracefully.
+    if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
+      console.warn(`Status with ID "${id}" not found in API database.`);
+      return undefined;
+    }
     console.error(`Error fetching status by ID "${id}" from API:`, error);
     return undefined;
   }
