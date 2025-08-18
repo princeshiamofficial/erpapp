@@ -53,7 +53,8 @@ export async function migrateCollectionAction(
     for (const doc of sourceDocs) {
       try {
         const payload = {
-          // The API expects the data under a 'data' key for creation/update
+          // The API expects the data under a 'data' key and the id at the top level
+          id: doc.id,
           data: doc.data
         };
         
