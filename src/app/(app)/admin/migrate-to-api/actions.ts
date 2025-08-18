@@ -44,14 +44,7 @@ export async function migrateCollectionAction(
     const q = query(sourceCollectionRef);
     const snapshot = await getDocs(q);
     
-    const sourceDocs = snapshot.docs.map(doc => {
-      const data = doc.data();
-      // Explicitly include the document ID within the data object
-      return {
-          ...data,
-          id: doc.id
-      };
-    });
+    const sourceDocs = snapshot.docs;
 
     const readCount = sourceDocs.length;
     if (readCount === 0) {
@@ -59,11 +52,16 @@ export async function migrateCollectionAction(
     }
 
     let migratedCount = 0;
-    for (const docData of sourceDocs) {
+    for (const doc of sourceDocs) {
       try {
-        // The API expects the entire document content (including the original ID) inside the 'data' field.
+        // Correctly construct the payload with the original ID preserved
+        const dataToMigrate = {
+            ...doc.data(),
+            firestoreId: doc.id // Save the original Firestore ID into a new field
+        };
+        
         const payload = {
-          data: docData
+          data: dataToMigrate
         };
         
         await fetchFromApi(`collections/${collectionId}/documents`, {
@@ -73,8 +71,8 @@ export async function migrateCollectionAction(
         migratedCount++;
       } catch (apiError) {
         const errorMessage = apiError instanceof Error ? apiError.message : 'Unknown API error';
-        console.error(`Failed to migrate document with original ID ${docData.id} in collection ${collectionId}:`, errorMessage);
-        return { success: false, collectionId, readCount, migratedCount, error: `Failed on doc (original ID ${docData.id}): ${errorMessage}` };
+        console.error(`Failed to migrate document with original ID ${doc.id} in collection ${collectionId}:`, errorMessage);
+        return { success: false, collectionId, readCount, migratedCount, error: `Failed on doc (original ID ${doc.id}): ${errorMessage}` };
       }
     }
     
