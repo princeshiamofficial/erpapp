@@ -44,15 +44,13 @@ export async function migrateCollectionAction(
     const q = query(sourceCollectionRef);
     const snapshot = await getDocs(q);
     
-    // Explicitly create an array of objects to be migrated.
     const sourceDocs = snapshot.docs.map(doc => {
-      // Create a new object that includes the document data AND the original ID.
       const data = doc.data();
-      const dataWithId = {
+      // Explicitly include the document ID within the data object
+      return {
           ...data,
           id: doc.id
       };
-      return dataWithId;
     });
 
     const readCount = sourceDocs.length;
@@ -63,7 +61,7 @@ export async function migrateCollectionAction(
     let migratedCount = 0;
     for (const docData of sourceDocs) {
       try {
-        // Wrap the complete data (including the original ID) inside the 'data' field for the API.
+        // The API expects the entire document content (including the original ID) inside the 'data' field.
         const payload = {
           data: docData
         };
@@ -75,7 +73,7 @@ export async function migrateCollectionAction(
         migratedCount++;
       } catch (apiError) {
         const errorMessage = apiError instanceof Error ? apiError.message : 'Unknown API error';
-        console.error(`Failed to migrate document from original ID ${docData.id} in collection ${collectionId}:`, errorMessage);
+        console.error(`Failed to migrate document with original ID ${docData.id} in collection ${collectionId}:`, errorMessage);
         return { success: false, collectionId, readCount, migratedCount, error: `Failed on doc (original ID ${docData.id}): ${errorMessage}` };
       }
     }
