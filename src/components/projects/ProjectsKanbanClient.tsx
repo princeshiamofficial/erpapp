@@ -54,21 +54,13 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; i
   { title: 'Delivered', status: 'Delivered', icon: PackageCheck, headerBgClass: 'bg-emerald-600', headerTextClass: 'text-emerald-50' },
 ];
 
-interface ProjectsKanbanClientProps {
-  initialProjects: Project[];
-  initialStatuses: CustomStatus[];
-  initialGlobalSettings: GlobalSettings;
-  currentUser: User | null;
-}
-
-export function ProjectsKanbanClient({ initialProjects, initialStatuses, initialGlobalSettings, currentUser: serverUser }: ProjectsKanbanClientProps) {
-  const { currentUser: authContextUser } = useAuth();
-  const currentUser = authContextUser || serverUser;
-
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
-  const [allStatuses, setAllStatuses] = useState<CustomStatus[]>(initialStatuses); 
-  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(initialGlobalSettings);
-  const [isLoading, setIsLoading] = useState(false);
+// No initial props are needed now, as the component fetches its own data.
+export function ProjectsKanbanClient() {
+  const { currentUser } = useAuth();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]); 
+  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // Start as true
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -123,6 +115,13 @@ export function ProjectsKanbanClient({ initialProjects, initialStatuses, initial
       setIsLoading(false);
     }
   }, [toast]);
+  
+  // Fetch data on component mount
+  useEffect(() => {
+    if (currentUser) {
+        fetchData();
+    }
+  }, [currentUser, fetchData]);
 
   const filteredProjects = useMemo(() => {
     let roleFilteredProjects = projects;
@@ -229,9 +228,8 @@ export function ProjectsKanbanClient({ initialProjects, initialStatuses, initial
       return;
     }
     
-    const settings = await getGlobalSettings();
-    if (currentUser.role !== 'SYSTEM_ADMIN') {
-        const permissions = settings.projectStageAccess;
+    if (currentUser.role !== 'SYSTEM_ADMIN' && globalSettings) {
+        const permissions = globalSettings.projectStageAccess;
         if (permissions && permissions[newStatus] && !permissions[newStatus].includes(currentUser.role)) {
             toast({
                 title: "Permission Denied",

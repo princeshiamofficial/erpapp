@@ -1,41 +1,15 @@
-
 import React, { Suspense } from 'react';
-import type { Project, CustomStatus, GlobalSettings, User } from '@/types'; 
-import { getProjects } from '@/lib/project-service';
-import { getStatuses } from '@/lib/status-service'; 
-import { getGlobalSettings } from '@/lib/settings-service';
-import { Briefcase } from 'lucide-react'; 
+import dynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ProjectsKanbanClient } from '@/components/projects/ProjectsKanbanClient';
-import { cookies } from 'next/headers';
 
-async function ProjectsPageData() {
-  const [projects, statuses, globalSettings] = await Promise.all([
-    getProjects(),
-    getStatuses(),
-    getGlobalSettings()
-  ]);
-
-  const cookieStore = cookies();
-  const userCookie = cookieStore.get('colorhut-user');
-  let currentUser: User | null = null;
-  if (userCookie) {
-    try {
-      currentUser = JSON.parse(userCookie.value);
-    } catch (e) {
-      console.error("Failed to parse user cookie on server", e);
-    }
+// Dynamically import the main client component with a custom loader
+const ProjectsKanbanClient = dynamic(
+  () => import('@/components/projects/ProjectsKanbanClient').then(mod => mod.ProjectsKanbanClient),
+  {
+    ssr: false, // This component is client-heavy, disable SSR for it
+    loading: () => <ProjectsPageSkeleton />,
   }
-
-  return (
-    <ProjectsKanbanClient
-      initialProjects={JSON.parse(JSON.stringify(projects))}
-      initialStatuses={JSON.parse(JSON.stringify(statuses))}
-      initialGlobalSettings={JSON.parse(JSON.stringify(globalSettings))}
-      currentUser={currentUser ? JSON.parse(JSON.stringify(currentUser)) : null}
-    />
-  );
-}
+);
 
 function ProjectsPageSkeleton() {
   const KANBAN_COLUMNS_CONFIG = [
@@ -75,12 +49,17 @@ function ProjectsPageSkeleton() {
   );
 }
 
-
+// The page component itself is now much simpler.
 export default async function ProjectsPage() {
   return (
     <div className="flex flex-col h-[calc(100vh-theme(spacing.24))]">
       <Suspense fallback={<ProjectsPageSkeleton />}>
-        <ProjectsPageData />
+        {/* 
+          The ProjectsKanbanClient is now dynamically loaded.
+          It will handle its own data fetching internally.
+          This makes the page shell load instantly while data is fetched on the client.
+        */}
+        <ProjectsKanbanClient />
       </Suspense>
     </div>
   );
