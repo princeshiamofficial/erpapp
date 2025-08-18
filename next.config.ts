@@ -10,6 +10,14 @@ const nextConfig: NextConfig = {
     // It's recommended to set this to `false` and fix TypeScript errors.
     ignoreBuildErrors: true,
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '2mb',
+      serverActions: {
+        maxDuration: 120, // Increase timeout to 120 seconds
+      },
+    },
+  },
   eslint: {
     // WARNING: Setting `ignoreDuringBuilds` to `true` allows your application to build
     // even if there are ESLint errors or warnings. This can hide code quality issues.
