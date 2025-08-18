@@ -1,4 +1,5 @@
 
+
 import { db } from './firebase';
 import { collection, getDocs, doc, setDoc, updateDoc, query, orderBy, writeBatch, getDoc as getFirestoreDoc, deleteField } from 'firebase/firestore';
 import type { Project, ProjectStatusType, User, OrderLogEntry } from '@/types'; 
@@ -38,7 +39,8 @@ export const getProjects = async (): Promise<Project[]> => {
   let actualProjects: Project[] = [];
   try {
     await ensureCollectionExists(PROJECTS_COLLECTION);
-    const response = await fetchFromApi(`collections/${PROJECTS_COLLECTION}/documents?limit=500&orderBy=createdAt&direction=desc`);
+    // Removed orderBy from the API call to prevent server errors on missing fields/indexes
+    const response = await fetchFromApi(`collections/${PROJECTS_COLLECTION}/documents?limit=500`);
     if (response && Array.isArray(response.documents)) {
         actualProjects = response.documents.map((doc: {id: string, data: any}) => ({...doc.data, id: doc.id} as Project));
         console.log(`[getProjects] Fetched ${actualProjects.length} actual projects from API.`);
@@ -100,6 +102,7 @@ export const getProjects = async (): Promise<Project[]> => {
   
   const combinedProjects = [...actualProjects, ...ordersToDisplayAsProjects];
   
+  // Perform sorting on the client-side after fetching all data
   return combinedProjects.sort((a, b) => {
     const dateACreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
     const dateBCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
