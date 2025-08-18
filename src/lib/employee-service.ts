@@ -1,21 +1,7 @@
 
-import { db } from './firebase';
-import {
-  collection,
-  getDocs,
-  doc,
-  setDoc,
-  updateDoc,
-  deleteDoc as deleteFirestoreDoc,
-  query,
-  orderBy,
-  writeBatch,
-  where,
-  limit,
-} from 'firebase/firestore';
+import { fetchFromApi, ensureCollectionExists } from './api-helper';
 import type { Employee } from '@/types';
-import { v4 as uuidv4 } from 'uuid';
-import { format, subDays, subYears } from 'date-fns';
+import { subYears } from 'date-fns';
 
 const EMPLOYEES_COLLECTION = 'employees';
 
@@ -25,96 +11,111 @@ const defaultEmployeesData: Array<Omit<Employee, 'id' | 'employeeId'>> = [
 ];
 
 export const seedDefaultEmployees = async (): Promise<Employee[]> => {
-  const employeesRef = collection(db, EMPLOYEES_COLLECTION);
-  const batch = writeBatch(db);
   const createdEmployees: Employee[] = [];
   let counter = 1;
-  defaultEmployeesData.forEach(empData => {
-    const id = uuidv4();
+
+  for (const empData of defaultEmployeesData) {
     const employeeId = `EMP-${String(counter++).padStart(3, '0')}`;
-    const newEmployee: Employee = {
+    const newEmployeeData = {
       ...empData,
-      id,
       employeeId
     };
-    const docRef = doc(employeesRef, id);
-    batch.set(docRef, newEmployee);
-    createdEmployees.push(newEmployee);
-  });
-  try {
-    await batch.commit();
-    return createdEmployees;
-  } catch (error) {
-    console.error("Error seeding default employees:", error);
-    return [];
+    try {
+      const newEmployee = await addEmployee(newEmployeeData);
+      if (newEmployee) {
+        createdEmployees.push(newEmployee);
+      }
+    } catch (error) {
+      console.error(`Error seeding employee ${empData.name}:`, error);
+    }
   }
+
+  return createdEmployees;
 };
 
-
 export const getEmployees = async (): Promise<Employee[]> => {
-  const employeesCol = collection(db, EMPLOYEES_COLLECTION);
-  const q = query(employeesCol, orderBy("employeeId", "asc"));
   try {
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-      return await seedDefaultEmployees();
+    await ensureCollectionExists(EMPLOYEES_COLLECTION);
+    const response = await fetchFromApi(`collections/${EMPLOYEES_COLLECTION}/documents?limit=500&orderBy=employeeId&direction=asc`);
+    if (response && Array.isArray(response.documents)) {
+        if (response.documents.length === 0) {
+            return await seedDefaultEmployees();
+        }
+        return response.documents.map((doc: { id: string, data: any }) => ({
+            id: doc.id,
+            ...doc.data
+        } as Employee));
     }
-    return snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as Employee));
+    return [];
   } catch (error) {
-    console.error("Error fetching employees:", error);
+    console.error("Error fetching employees via API:", error);
     return [];
   }
 };
 
 export const addEmployee = async (employeeData: Omit<Employee, 'id' | 'employeeId'>): Promise<Employee | null> => {
-    const employeesCol = collection(db, EMPLOYEES_COLLECTION);
     try {
-        const q = query(employeesCol, orderBy('employeeId', 'desc'), limit(1));
-        const querySnapshot = await getDocs(q);
+        await ensureCollectionExists(EMPLOYEES_COLLECTION);
+
+        const allEmployees = await getEmployees();
         let newIdNumber = 1;
-        if (!querySnapshot.empty) {
-            const lastEmployeeId = querySnapshot.docs[0].data().employeeId;
+        if (allEmployees.length > 0) {
+            const lastEmployeeId = allEmployees.sort((a,b) => {
+                const numA = parseInt(a.employeeId.split('-')[1] || '0');
+                const numB = parseInt(b.employeeId.split('-')[1] || '0');
+                return numB - numA;
+            })[0].employeeId;
             const lastNumber = parseInt(lastEmployeeId.split('-')[1], 10);
             if (!isNaN(lastNumber)) {
                 newIdNumber = lastNumber + 1;
             }
         }
+        
         const employeeId = `EMP-${String(newIdNumber).padStart(3, '0')}`;
-        const newDocId = uuidv4();
+        const newEmployeeData = { ...employeeData, employeeId };
 
-        const newEmployee: Employee = {
-            ...employeeData,
-            id: newDocId,
-            employeeId,
-        };
+        const newDoc = await fetchFromApi(`collections/${EMPLOYEES_COLLECTION}/documents`, {
+            method: 'POST',
+            body: JSON.stringify({ data: newEmployeeData }),
+        });
 
-        const employeeDocRef = doc(db, EMPLOYEES_COLLECTION, newDocId);
-        await setDoc(employeeDocRef, newEmployee);
-        return newEmployee;
+        // The API should return the full document with its new ID.
+        return {
+            id: newDoc.id,
+            ...newDoc.data
+        } as Employee;
     } catch (error) {
-        console.error("Error adding employee:", error);
+        console.error("Error adding employee via API:", error);
         return null;
     }
 };
 
 export const updateEmployee = async (employeeId: string, updates: Partial<Omit<Employee, 'id' | 'employeeId'>>): Promise<boolean> => {
     try {
-        const employeeDocRef = doc(db, EMPLOYEES_COLLECTION, employeeId);
-        await updateDoc(employeeDocRef, updates);
+        await ensureCollectionExists(EMPLOYEES_COLLECTION);
+        const existingEmployee = await fetchFromApi(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`);
+        const finalData = { ...existingEmployee.data, ...updates };
+
+        await fetchFromApi(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ data: finalData })
+        });
         return true;
     } catch (error) {
-        console.error(`Error updating employee ${employeeId}:`, error);
+        console.error(`Error updating employee ${employeeId} via API:`, error);
         return false;
     }
 };
 
 export const deleteEmployee = async (employeeId: string): Promise<boolean> => {
     try {
-        const employeeDocRef = doc(db, EMPLOYEES_COLLECTION, employeeId);
-        await deleteFirestoreDoc(employeeDocRef);
+        await ensureCollectionExists(EMPLOYEES_COLLECTION);
+        await fetchFromApi(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`, {
+            method: 'DELETE'
+        });
         return true;
     } catch (error) {
-        console.error(`Error deleting employee ${employeeId}:`, error);
+        console.error(`Error deleting employee ${employeeId} via API:`, error);
         return false;
     }
 };

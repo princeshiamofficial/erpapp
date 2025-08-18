@@ -1,28 +1,10 @@
 
-import { db } from './firebase';
-import {
-  collection,
-  addDoc,
-  getDocs,
-  doc,
-  updateDoc,
-  deleteDoc as deleteFirestoreDoc,
-  query,
-  where,
-  orderBy,
-  Timestamp,
-  serverTimestamp,
-  writeBatch,
-  setDoc,
-  getDoc,
-} from 'firebase/firestore';
-import type { Transaction, TransactionType, PersonalNote } from '@/types'; // Added PersonalNote
-import { v4 as uuidv4 } from 'uuid';
+import { fetchFromApi, ensureCollectionExists } from './api-helper';
+import type { Transaction, TransactionType, PersonalNote } from '@/types';
 
 const TRANSACTIONS_COLLECTION = 'personalTransactions';
-const NOTES_COLLECTION = 'personalUserNotes'; // New collection for notes
+const NOTES_COLLECTION = 'personalUserNotes';
 
-// Add a new transaction
 export async function addTransaction(
   userId: string,
   transactionData: {
@@ -35,7 +17,7 @@ export async function addTransaction(
     sentToUserName?: string | null;
     receivedFromUserId?: string | null;
     receivedFromUserName?: string | null;
-    documentUrl?: string | null; // Added documentUrl
+    documentUrl?: string | null;
   }
 ): Promise<Transaction | null> {
   if (!userId) {
@@ -43,173 +25,133 @@ export async function addTransaction(
     return null;
   }
   try {
-    const newTransactionRef = doc(collection(db, TRANSACTIONS_COLLECTION));
-    if (!newTransactionRef || !newTransactionRef.id) {
-        console.error("addTransaction: Failed to generate a valid document reference for new transaction.");
-        throw new Error("Failed to generate a valid document reference for new transaction.");
-    }
-    const newTransaction: Transaction = {
-      id: newTransactionRef.id,
+    await ensureCollectionExists(TRANSACTIONS_COLLECTION);
+    const dataWithUser = {
+      ...transactionData,
       userId,
-      type: transactionData.type,
-      amount: transactionData.amount,
-      category: transactionData.category,
-      description: transactionData.description || null,
-      date: transactionData.date,
-      createdAt: new Date().toISOString(),
-      sentToUserId: transactionData.sentToUserId || null,
-      sentToUserName: transactionData.sentToUserName || null,
-      receivedFromUserId: transactionData.receivedFromUserId || null,
-      receivedFromUserName: transactionData.receivedFromUserName || null,
-      documentUrl: transactionData.documentUrl || null, // Added documentUrl
+      createdAt: new Date().toISOString()
     };
-    await setDoc(newTransactionRef, newTransaction);
-    return newTransaction;
+    const newDoc = await fetchFromApi(`collections/${TRANSACTIONS_COLLECTION}/documents`, {
+        method: 'POST',
+        body: JSON.stringify({ data: dataWithUser }),
+    });
+
+    return { id: newDoc.id, ...newDoc.data } as Transaction;
   } catch (error) {
-    console.error("Error adding transaction to Firestore:", error);
-    if (error instanceof Error) {
-        console.error("Error name:", error.name);
-        console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
-    } else {
-        console.error("Non-Error object thrown:", error);
-    }
+    console.error("Error adding transaction via API:", error);
     return null;
   }
 }
 
-// Get transactions for a specific user, ordered by date descending
 export async function getTransactionsForUser(userId: string): Promise<Transaction[]> {
-  if (!userId) {
-    console.error("getTransactionsForUser: userId is required.");
-    return [];
-  }
+  if (!userId) return [];
   try {
-    const transactionsCol = collection(db, TRANSACTIONS_COLLECTION);
-    const q = query(transactionsCol, where("userId", "==", userId), orderBy("date", "desc"));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as Transaction));
+    await ensureCollectionExists(TRANSACTIONS_COLLECTION);
+    const response = await fetchFromApi(`collections/${TRANSACTIONS_COLLECTION}/documents?filters[userId][is]=${userId}&orderBy=date&direction=desc&limit=500`);
+    if (response && Array.isArray(response.documents)) {
+        return response.documents.map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as Transaction));
+    }
+    return [];
   } catch (error) {
-    console.error("Error fetching transactions for user:", error);
+    console.error("Error fetching user transactions via API:", error);
     return [];
   }
 }
 
-// Get all transactions (for System Admin), ordered by date descending
 export async function getAllTransactions(): Promise<Transaction[]> {
   try {
-    const transactionsCol = collection(db, TRANSACTIONS_COLLECTION);
-    const q = query(transactionsCol, orderBy("date", "desc"));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as Transaction));
+    await ensureCollectionExists(TRANSACTIONS_COLLECTION);
+    const response = await fetchFromApi(`collections/${TRANSACTIONS_COLLECTION}/documents?orderBy=date&direction=desc&limit=1000`);
+    if (response && Array.isArray(response.documents)) {
+        return response.documents.map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as Transaction));
+    }
+    return [];
   } catch (error) {
-    console.error("Error fetching all transactions:", error);
+    console.error("Error fetching all transactions via API:", error);
     return [];
   }
 }
 
-// Get a single transaction by ID
 export async function getTransactionById(transactionId: string): Promise<Transaction | null> {
   if (!transactionId) return null;
-  const transactionDocRef = doc(db, TRANSACTIONS_COLLECTION, transactionId);
   try {
-    const docSnap = await getDoc(transactionDocRef);
-    if (docSnap.exists()) {
-      return { ...docSnap.data(), id: docSnap.id } as Transaction;
-    }
-    return null;
+    const doc = await fetchFromApi(`collections/${TRANSACTIONS_COLLECTION}/documents/${transactionId}`);
+    return { id: doc.id, ...doc.data } as Transaction;
   } catch (error) {
-    console.error(`Error fetching transaction by ID "${transactionId}":`, error);
+    console.error(`Error fetching transaction ${transactionId} via API:`, error);
     return null;
   }
 }
 
-// Update a transaction
 export async function updateTransaction(
   transactionId: string,
   updates: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt'>>
 ): Promise<boolean> {
   try {
-    const transactionDoc = doc(db, TRANSACTIONS_COLLECTION, transactionId);
-    const sanitizedUpdates = { ...updates };
-    if (sanitizedUpdates.description === '') {
-        sanitizedUpdates.description = null;
-    }
-    if (sanitizedUpdates.documentUrl === undefined) { // Ensure if not passed, it's not set to null unintentionally unless explicitly null
-        delete sanitizedUpdates.documentUrl;
-    }
+    const existingDoc = await fetchFromApi(`collections/${TRANSACTIONS_COLLECTION}/documents/${transactionId}`);
+    const updatedData = { ...existingDoc.data, ...updates };
 
-    await updateDoc(transactionDoc, sanitizedUpdates);
+    const payload = { data: updatedData };
+    await fetchFromApi(`collections/${TRANSACTIONS_COLLECTION}/documents/${transactionId}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+    });
     return true;
   } catch (error) {
-    console.error("Error updating transaction:", error);
+    console.error("Error updating transaction via API:", error);
     return false;
   }
 }
 
-// Delete a transaction
 export async function deleteTransaction(transactionId: string): Promise<boolean> {
   try {
-    const transactionDoc = doc(db, TRANSACTIONS_COLLECTION, transactionId);
-    await deleteFirestoreDoc(transactionDoc);
+    await fetchFromApi(`collections/${TRANSACTIONS_COLLECTION}/documents/${transactionId}`, {
+        method: 'DELETE'
+    });
     return true;
   } catch (error) {
-    console.error("Error deleting transaction:", error);
+    console.error("Error deleting transaction via API:", error);
     return false;
   }
 }
-
-// --- Personal Notes Functions ---
 
 export async function addPersonalNote(
   noteData: Omit<PersonalNote, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<PersonalNote | null> {
-  if (!noteData.userId) {
-    console.error("addPersonalNote: userId is required.");
-    return null;
-  }
-  if (!noteData.title?.trim()) {
-    console.error("addPersonalNote: title is required.");
+  if (!noteData.userId || !noteData.title?.trim()) {
+    console.error("User ID and title are required for notes.");
     return null;
   }
   try {
-    const newNoteRef = doc(collection(db, NOTES_COLLECTION));
-    if (!newNoteRef || !newNoteRef.id) {
-        console.error("addPersonalNote: Failed to generate a valid document reference for new note.");
-        throw new Error("Failed to generate a valid document reference for new note.");
-    }
+    await ensureCollectionExists(NOTES_COLLECTION);
     const now = new Date().toISOString();
-    const newNote: PersonalNote = {
-      id: newNoteRef.id,
-      userId: noteData.userId,
-      title: noteData.title.trim(),
-      content: noteData.content?.trim() || "",
+    const dataToSave = {
+      ...noteData,
       createdAt: now,
       updatedAt: now,
     };
-    await setDoc(newNoteRef, newNote);
-    return newNote;
+    const newDoc = await fetchFromApi(`collections/${NOTES_COLLECTION}/documents`, {
+        method: 'POST',
+        body: JSON.stringify({ data: dataToSave }),
+    });
+    return { id: newDoc.id, ...newDoc.data } as PersonalNote;
   } catch (error) {
-    console.error("Error adding personal note to Firestore:", error);
+    console.error("Error adding personal note via API:", error);
     return null;
   }
 }
 
 export async function getPersonalNotesForUser(userId: string): Promise<PersonalNote[]> {
-  if (!userId) {
-    console.error("getPersonalNotesForUser: userId is required.");
-    return [];
-  }
+  if (!userId) return [];
   try {
-    const notesCol = collection(db, NOTES_COLLECTION);
-    // Fetch notes and sort them by `updatedAt` in descending order in the application code.
-    const q = query(notesCol, where("userId", "==", userId));
-    const snapshot = await getDocs(q);
-    const notes = snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as PersonalNote));
-    // Sort on the client-side (or server-side after fetching if this is a server action)
-    return notes.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    await ensureCollectionExists(NOTES_COLLECTION);
+    const response = await fetchFromApi(`collections/${NOTES_COLLECTION}/documents?filters[userId][is]=${userId}&orderBy=updatedAt&direction=desc&limit=500`);
+    if (response && Array.isArray(response.documents)) {
+      return response.documents.map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as PersonalNote));
+    }
+    return [];
   } catch (error) {
-    console.error("Error fetching personal notes for user:", error);
+    console.error("Error fetching personal notes via API:", error);
     return [];
   }
 }
@@ -219,37 +161,40 @@ export async function updatePersonalNote(
   updates: Partial<Omit<PersonalNote, 'id' | 'userId' | 'createdAt' | 'updatedAt'>>
 ): Promise<boolean> {
   if (!updates.title?.trim()) {
-    console.error("updatePersonalNote: title cannot be empty.");
-    return false; // Or throw an error
+    console.error("Note title cannot be empty.");
+    return false;
   }
   try {
-    const noteDocRef = doc(db, NOTES_COLLECTION, noteId);
-    const dataToUpdate = {
+    const existingDoc = await fetchFromApi(`collections/${NOTES_COLLECTION}/documents/${noteId}`);
+    const updatedData = {
+      ...existingDoc.data,
       ...updates,
       title: updates.title.trim(),
       content: updates.content?.trim() || "",
       updatedAt: new Date().toISOString(),
     };
-    await updateDoc(noteDocRef, dataToUpdate);
+    await fetchFromApi(`collections/${NOTES_COLLECTION}/documents/${noteId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ data: updatedData })
+    });
     return true;
   } catch (error) {
-    console.error("Error updating personal note:", error);
+    console.error("Error updating personal note via API:", error);
     return false;
   }
 }
 
 export async function deletePersonalNote(noteId: string, userIdVerifying: string): Promise<boolean> {
   try {
-    const noteDocRef = doc(db, NOTES_COLLECTION, noteId);
-    // Optional: Verify ownership before deleting if necessary, though server actions should handle this.
-    // const noteDoc = await getDoc(noteDocRef);
-    // if (noteDoc.exists() && noteDoc.data().userId === userIdVerifying) {
-    await deleteFirestoreDoc(noteDocRef);
+    // Ownership check can be done here if needed
+    // const note = await getPersonalNoteById(noteId);
+    // if (note?.userId !== userIdVerifying) return false;
+    await fetchFromApi(`collections/${NOTES_COLLECTION}/documents/${noteId}`, {
+        method: 'DELETE'
+    });
     return true;
-    // }
-    // return false; // If ownership check fails
   } catch (error) {
-    console.error("Error deleting personal note:", error);
+    console.error("Error deleting personal note via API:", error);
     return false;
   }
 }
