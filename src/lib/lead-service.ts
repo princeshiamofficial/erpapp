@@ -1,72 +1,21 @@
 
-
 import type { Lead } from '@/types';
+import { fetchFromApi, ensureCollectionExists } from './api-helper';
 
-// These values are now hardcoded as per your request.
-const API_URL = "https://colorhutbd.xyz/firestore/api/index.php";
-const API_KEY = "44dc62ef42385a594d319d2c4261914655453b46640d23d9f13ac9a21f7357de";
-const COLLECTION_NAME = 'leads'; // The collection to store leads in
-
-async function fetchFromApi(endpoint: string, options: RequestInit = {}) {
-    if (!API_URL || !API_KEY) {
-        throw new Error("API URL or API Key is not configured.");
-    }
-
-    const headers = {
-        'Content-Type': 'application/json',
-        'X-API-KEY': API_KEY,
-        ...options.headers,
-    };
-
-    const response = await fetch(`${API_URL}/${endpoint}`, { ...options, headers });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to decode API error response.' }));
-        console.error("API Error Response:", errorData);
-        throw new Error(errorData.message || `API request failed with status ${response.status}`);
-    }
-
-    return response.json();
-}
-
-// New function to ensure the collection exists
-const ensureCollectionExists = async () => {
-    try {
-        // First, try to get info about the collection. This is a lightweight check.
-        await fetchFromApi(`collections/${COLLECTION_NAME}`);
-    } catch (error) {
-        // If the error indicates "not found", we create it.
-        if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-            console.log(`Collection '${COLLECTION_NAME}' not found. Attempting to create it...`);
-            try {
-                await fetchFromApi('collections', {
-                    method: 'POST',
-                    body: JSON.stringify({ name: COLLECTION_NAME }),
-                });
-                console.log(`Collection '${COLLECTION_NAME}' created successfully.`);
-            } catch (creationError) {
-                console.error(`Failed to create collection '${COLLECTION_NAME}':`, creationError);
-                throw new Error(`Could not create required collection '${COLLECTION_NAME}'.`);
-            }
-        } else {
-            // Re-throw other errors (e.g., auth errors, server down)
-            throw error;
-        }
-    }
-};
+const COLLECTION_NAME = 'leads';
 
 // Get all leads with pagination handling
 export const getLeads = async (): Promise<Lead[]> => {
   try {
-    await ensureCollectionExists();
+    await ensureCollectionExists(COLLECTION_NAME);
     
     const allLeads: Lead[] = [];
     let offset = 0;
-    const limit = 200; // Fetch in batches of 200
+    const limit = 500; // Fetch in batches of 500
     let hasMore = true;
 
     while (hasMore) {
-      const response = await fetchFromApi(`collections/${COLLECTION_NAME}/documents?limit=${limit}&offset=${offset}`);
+      const response = await fetchFromApi(`collections/${COLLECTION_NAME}/documents?limit=${limit}&offset=${offset}&orderBy=date&direction=desc`);
       
       if (response && Array.isArray(response.documents)) {
         const leadsFromPage = response.documents.map((doc: { id: string, data: any }) => ({
@@ -105,7 +54,7 @@ export const getLeadById = async (leadId: string): Promise<Lead | null> => {
 // Add a new lead
 export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> => {
   try {
-    await ensureCollectionExists(); // Ensure collection exists before adding
+    await ensureCollectionExists(COLLECTION_NAME); 
     const dataWithStatus = {
         ...leadData,
         status: 'New Lead', // Set default status for new leads
@@ -132,15 +81,13 @@ export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> 
 // Update a lead
 export const updateLead = async (leadId: string, updates: Partial<Omit<Lead, 'id'>>): Promise<boolean> => {
   try {
-    await ensureCollectionExists();
+    await ensureCollectionExists(COLLECTION_NAME);
     
-    // First, fetch the existing lead to preserve creator info
     const existingLead = await getLeadById(leadId);
     if (!existingLead) {
         throw new Error("Lead to update not found.");
     }
     
-    // Merge updates with existing data
     const finalData = {
         ...existingLead,
         ...updates,
@@ -166,7 +113,7 @@ export const updateLead = async (leadId: string, updates: Partial<Omit<Lead, 'id
 // Delete a lead
 export const deleteLead = async (leadId: string): Promise<boolean> => {
   try {
-    await ensureCollectionExists(); // Ensure collection exists before deleting
+    await ensureCollectionExists(COLLECTION_NAME);
     await fetchFromApi(`collections/${COLLECTION_NAME}/documents/${leadId}`, {
         method: 'DELETE'
     });

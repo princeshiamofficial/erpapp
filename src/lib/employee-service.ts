@@ -39,7 +39,10 @@ export const getEmployees = async (): Promise<Employee[]> => {
     const response = await fetchFromApi(`collections/${EMPLOYEES_COLLECTION}/documents?limit=500&orderBy=employeeId&direction=asc`);
     if (response && Array.isArray(response.documents)) {
         if (response.documents.length === 0) {
-            return await seedDefaultEmployees();
+            // Seeding logic can be complex with API, might be better to handle on server or one-time script
+            // For now, we return empty if nothing is there.
+            // return await seedDefaultEmployees();
+            return [];
         }
         return response.documents.map((doc: { id: string, data: any }) => ({
             id: doc.id,
