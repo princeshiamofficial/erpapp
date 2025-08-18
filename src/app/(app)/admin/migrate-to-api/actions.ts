@@ -4,7 +4,7 @@
 import type { User } from '@/types';
 import { db } from '@/lib/firebase';
 import { collection, getDocs, query } from 'firebase/firestore';
-import { fetchFromApi } from '@/lib/api-helper';
+import { fetchFromApi, ensureCollectionExists } from '@/lib/api-helper';
 
 export type CollectionId = 
   | 'employees'
@@ -37,6 +37,9 @@ export async function migrateCollectionAction(
   }
 
   try {
+    // 0. Ensure the collection exists in the API database before trying to write to it
+    await ensureCollectionExists(collectionId);
+
     // 1. Read all documents from the source Firestore collection
     const sourceCollectionRef = collection(db, collectionId);
     const q = query(sourceCollectionRef);
@@ -52,14 +55,10 @@ export async function migrateCollectionAction(
     let migratedCount = 0;
     for (const doc of sourceDocs) {
       try {
-        // The API expects the data under a 'data' key. The ID is passed in the URL.
-        // The payload should NOT contain the ID field itself.
         const payload = {
           data: doc.data
         };
         
-        // Use a PUT request with the original ID to preserve it.
-        // This makes it an upsert operation.
         await fetchFromApi(`collections/${collectionId}/documents/${doc.id}`, {
           method: 'PUT',
           body: JSON.stringify(payload),
