@@ -20,6 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 type ItemType = 'lamination' | 'paymentMethod'; 
 interface ItemToEdit {
@@ -226,7 +227,7 @@ export default function ServiceManagementPage() {
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 page-header">
         <div>
           <h1 className="page-title">Service Options Management</h1>
-          <p className="page-description">Configure Lamination and Payment Method options available for orders.</p>
+          <p className="page-description">Configure Lamination and Payment Method options available for orders. <Link href="/admin/migrate-projects" className="text-primary hover:underline">Migrate Projects</Link></p>
         </div>
         <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
           <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
@@ -285,3 +286,4 @@ export default function ServiceManagementPage() {
     </div>
   );
 }
+
