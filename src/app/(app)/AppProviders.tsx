@@ -171,8 +171,9 @@ export function AppProviders({
     return <MaintenancePage message={initialGlobalSettings?.maintenanceMessage ?? null} />;
   }
 
+  // Moved localStorage access into a useEffect inside SidebarProvider, which is a client component
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider>
         {currentUser && !isSuspendedDialogOpen ? children : null}
         {isSuspendedDialogOpen && <AccountSuspendedDialog isOpen={isSuspendedDialogOpen} onConfirmLogout={logout} />}
     </SidebarProvider>
