@@ -4,15 +4,12 @@
 
 import { revalidatePath } from "next/cache";
 import type { TrackingLink, User, OrderItem, GlobalSettings, UserRole, OrderLogEntry, AdvancePaymentRecord, ServiceModelItem } from "@/types";
-import { addOrder as addOrderService, getOrderById, deleteOrder as deleteOrderFromDb, updateOrder as updateOrderService } from "@/lib/order-service"; // Renamed imports for clarity
+import { addOrder as addOrderService, getOrderById, deleteOrder as deleteOrderFromDb, updateOrder as updateOrderService } from "@/lib/order-service"; 
 import { getGlobalSettings } from "@/lib/settings-service";
 import { v4 as uuidv4 } from 'uuid';
 import { parseISO } from 'date-fns';
 import { getUserById as getUserFromDb } from "@/lib/user-service";
-import { db } from '@/lib/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { adminApp } from '@/lib/firebase-admin';
-import type { messaging } from 'firebase-admin';
+import { fetchFromApi } from '@/lib/api-helper';
 import { getModels, updateModelStock } from '@/lib/service-options-service';
 
 interface CreateOrderDialogFormData {
@@ -78,8 +75,6 @@ export async function createOrderAction(
       if (item.unitPrice === undefined || item.unitPrice === null || isNaN(Number(item.unitPrice)) || Number(item.unitPrice) < 0) return { error: `Unit price is missing or invalid for model "${item.model}".` };
       if (item.lineItemTotalPrice === undefined || item.lineItemTotalPrice === null || isNaN(Number(item.lineItemTotalPrice)) || Number(item.lineItemTotalPrice) < 0) return { error: `Line item total price is missing or invalid for model "${item.model}".` };
 
-      // Stock validation removed to allow negative stock.
-
       processedOrderItems.push({
         id: item.id || uuidv4(),
         model: item.model.trim(),
@@ -107,7 +102,7 @@ export async function createOrderAction(
     }
     
     const netPayable = orderItemsTotal - (data.specialClientDiscount || 0);
-    const grandTotal = netPayable; // No shipping charge here
+    const grandTotal = netPayable; 
     if (parsedAdvancePaymentAmount !== null && parsedAdvancePaymentAmount > grandTotal && grandTotal > 0) {
         return { error: `Advance payment (${parsedAdvancePaymentAmount}) cannot exceed grand total amount (${grandTotal}).` };
     }
@@ -137,7 +132,7 @@ export async function createOrderAction(
       advancePaymentAmount: parsedAdvancePaymentAmount, 
       advancePaymentMethod: finalAdvancePaymentMethod,
       specialClientDiscount: data.specialClientDiscount,
-      shippingCharge: null, // Default to null
+      shippingCharge: null,
       orderNotes: data.orderNotes?.trim() || null,
       initialStatusId: data.initialStatusId,
       crmUserId: currentUser.id,
@@ -147,7 +142,6 @@ export async function createOrderAction(
     const createdOrder = await addOrderService(newOrderDataForService);
     if (!createdOrder) return { error: "Failed to create order due to a service error." };
 
-    // Update stock for ready-made items
     for (const item of processedOrderItems) {
       const modelInfo = allModels.find(m => m.name === item.model);
       if (modelInfo && modelInfo.isReadyMade) {
@@ -251,11 +245,10 @@ export async function updateOrderAction(
     
     if (updates.orderNotes !== undefined) finalUpdates.orderNotes = updates.orderNotes?.trim() || null;
     
-    // STOCK ADJUSTMENT LOGIC
     if (updates.orderItems) {
       if (!Array.isArray(updates.orderItems) || updates.orderItems.length === 0) return { success: false, error: "Order must have at least one item." };
       
-      const stockChanges = new Map<string, number>(); // modelId -> quantityChange (+ve means decrement stock, -ve means increment)
+      const stockChanges = new Map<string, number>(); 
       const oldItemsMap = new Map(existingOrder.orderItems.map(item => [item.id, item]));
 
       for (const newItem of updates.orderItems) {
@@ -264,44 +257,39 @@ export async function updateOrderAction(
         const newModel = allModels.find(m => m.name === newItem.model);
 
         if (oldItem && oldItem.model !== newItem.model) {
-          // Model has changed for this item
           if (oldModel && oldModel.isReadyMade) {
-            stockChanges.set(oldModel.id, (stockChanges.get(oldModel.id) || 0) - oldItem.quantity); // Return old item to stock
+            stockChanges.set(oldModel.id, (stockChanges.get(oldModel.id) || 0) - oldItem.quantity); 
           }
           if (newModel && newModel.isReadyMade) {
-            stockChanges.set(newModel.id, (stockChanges.get(newModel.id) || 0) + newItem.quantity); // Deduct new item from stock
+            stockChanges.set(newModel.id, (stockChanges.get(newModel.id) || 0) + newItem.quantity); 
           }
         } else if (newModel && newModel.isReadyMade) {
-          // Model is the same (or it's a new item), just check quantity change
           const quantityChange = newItem.quantity - (oldItem ? oldItem.quantity : 0);
           if (quantityChange !== 0) {
             stockChanges.set(newModel.id, (stockChanges.get(newModel.id) || 0) + quantityChange);
           }
         }
         if (oldItem) {
-          oldItemsMap.delete(newItem.id); // Mark as processed
+          oldItemsMap.delete(newItem.id); 
         }
       }
 
-      // Items that were in old order but not in new one (removed)
       for (const removedItem of oldItemsMap.values()) {
         const modelInfo = allModels.find(m => m.name === removedItem.model);
         if (modelInfo && modelInfo.isReadyMade) {
-          stockChanges.set(modelInfo.id, (stockChanges.get(modelInfo.id) || 0) - removedItem.quantity); // Return removed item to stock
+          stockChanges.set(modelInfo.id, (stockChanges.get(modelInfo.id) || 0) - removedItem.quantity); 
         }
       }
 
-      // Apply stock changes
       for (const [modelId, quantityChange] of stockChanges.entries()) {
          if (quantityChange !== 0) {
-            await updateModelStock(modelId, -quantityChange); // quantityChange is +ve to decrease stock, -ve to increase
+            await updateModelStock(modelId, -quantityChange); 
          }
       }
       finalUpdates.orderItems = updates.orderItems;
     }
 
 
-    // Handle new advance payment
     if (updates.newAdvancePaymentAmount && updates.newAdvancePaymentAmount > 0) {
         if (!updates.newAdvancePaymentMethod || !updates.newAdvancePaymentMethod.trim()) {
             return { success: false, error: "Payment method is required for new advance payment." };
@@ -342,31 +330,30 @@ export async function updateOrderAction(
 
     const updatedOrder = await getOrderById(orderId);
     if (!updatedOrder) return { success: false, error: "Failed to retrieve updated order after update." };
-
-    const projectDocRef = doc(db, 'projects', orderId);
+    
     try {
-        const projectDocSnap = await getDoc(projectDocRef);
-        if (projectDocSnap.exists()) {
+        const project = await fetchFromApi(`collections/projects/documents/${orderId}`);
+        if (project && project.data) {
             console.log(`[updateOrderAction] Found persistent project for order ${orderId}. Syncing info.`);
             const projectUpdates: { [key: string]: any } = {};
-            if (finalUpdates.companyName) {
-                projectUpdates.name = finalUpdates.companyName;
-            }
-            if (finalUpdates.crmUserName) {
-                projectUpdates.assigneeName = finalUpdates.crmUserName;
-            }
-             if (finalUpdates.designerRepresentativeName !== undefined) {
-                projectUpdates.designerRepresentativeName = finalUpdates.designerRepresentativeName;
-            }
+            if (finalUpdates.companyName) projectUpdates.name = finalUpdates.companyName;
+            if (finalUpdates.crmUserName) projectUpdates.assigneeName = finalUpdates.crmUserName;
+            if (finalUpdates.designerRepresentativeName !== undefined) projectUpdates.designerRepresentativeName = finalUpdates.designerRepresentativeName;
             projectUpdates.updatedAt = new Date().toISOString();
             
             if(Object.keys(projectUpdates).length > 1) {
-                 await updateDoc(projectDocRef, projectUpdates);
+                 const payload = { data: { ...project.data, ...projectUpdates }};
+                 await fetchFromApi(`collections/projects/documents/${orderId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                 });
                  console.log(`[updateOrderAction] Synced project ${orderId} with updates:`, projectUpdates);
             }
         }
     } catch (projectError) {
-        console.warn(`[updateOrderAction] Failed to sync order update to project board for order ${orderId}. This is not a critical error. Error:`, projectError);
+        if (!(projectError instanceof Error && projectError.message.includes('not found'))) {
+          console.warn(`[updateOrderAction] Failed to sync order update to project board for order ${orderId}. This is not a critical error. Error:`, projectError);
+        }
     }
 
     revalidatePath("/(app)/orders");
@@ -440,79 +427,28 @@ export async function assignDrToOrderAction(
     if (!success) {
       return { error: "Failed to update order with DR assignment." };
     }
-
-    // Send push notification to the assigned DR
-    if (designerRepUser.fcmToken) {
-        try {
-            if (!adminApp || typeof adminApp.messaging !== 'function') {
-                console.warn("[assignDrToOrderAction] Firebase Admin SDK not properly initialized. Cannot send push notification for DR assignment.");
-            } else {
-                const globalSettings = await getGlobalSettings();
-                const titleTemplate = globalSettings.drAssignmentNotificationTitle || 'New Design Assigned By %assignerName%';
-                const bodyTemplate = globalSettings.drAssignmentNotificationBody || 'You have been assigned to a new design order: %orderId%.';
-
-                const companyNameParts = currentOrder.companyName.split('•').map(p => p.trim());
-                const jobId = companyNameParts.length > 1 ? companyNameParts[0] : currentOrder.id;
-                const company = companyNameParts.length > 1 ? companyNameParts.slice(1).join(' • ') : currentOrder.companyName;
-
-                const notificationTitle = titleTemplate.replace(/%assignerName%/g, actingUser.name).replace(/%orderId%/g, orderId).replace(/%company%/g, company).replace(/%jobid%/g, jobId);
-                const notificationBody = bodyTemplate.replace(/%assignerName%/g, actingUser.name).replace(/%orderId%/g, orderId).replace(/%company%/g, company).replace(/%jobid%/g, jobId);
-                const customSoundUrl = globalSettings.toastSoundUrl;
-
-                const targetUrl = `/track/${orderId}`;
-                const fcmMessage: messaging.Message = {
-                    token: designerRepUser.fcmToken,
-                    notification: { 
-                        title: notificationTitle, 
-                        body: notificationBody
-                    },
-                    data: { 
-                        title: notificationTitle, 
-                        body: notificationBody,
-                        iconUrl: '/icons/icon-192x192.png', 
-                        targetUrl: targetUrl,
-                        click_action: targetUrl,
-                        ...(customSoundUrl && { customSoundUrl: customSoundUrl })
-                    },
-                    webpush: { 
-                        notification: { 
-                            icon: '/icons/icon-192x192.png', 
-                            badge: '/icons/icon-72x72.png', 
-                            ...(customSoundUrl ? { sound: customSoundUrl } : { sound: "default" })
-                        }, 
-                        fcmOptions: { 
-                            link: targetUrl 
-                        } 
-                    },
-                };
-                
-                await adminApp.messaging().send(fcmMessage);
-                console.log(`[assignDrToOrderAction] Push notification sent to DR ${freshDrName} for order ${orderId}.`);
-            }
-        } catch (notifError) {
-            console.error(`[assignDrToOrderAction] Error sending push notification to DR ${freshDrName}:`, notifError);
-        }
-    } else {
-        console.log(`[assignDrToOrderAction] DR ${freshDrName} does not have an FCM token. Skipping push notification.`);
-    }
-
-    const projectDocRef = doc(db, 'projects', orderId);
+    
     try {
-        const projectDocSnap = await getDoc(projectDocRef);
-        if (projectDocSnap.exists()) {
-            console.log(`[assignDrToOrderAction] Found persistent project for order ${orderId}. Syncing DR assignment.`);
-            const projectUpdates = {
-                designerRepresentativeId: designerRepresentativeId,
-                designerRepresentativeName: freshDrName,
-                designerRepresentativeAvatarUrl: freshDrAvatarUrl,
-                status: 'On Design',
-                onDesignAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-            };
-            await updateDoc(projectDocRef, projectUpdates);
-        }
+      const project = await fetchFromApi(`collections/projects/documents/${orderId}`);
+      if (project && project.data) {
+        const projectUpdates = {
+          designerRepresentativeId: designerRepresentativeId,
+          designerRepresentativeName: freshDrName,
+          designerRepresentativeAvatarUrl: freshDrAvatarUrl,
+          status: 'On Design',
+          onDesignAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        const payload = { data: { ...project.data, ...projectUpdates }};
+        await fetchFromApi(`collections/projects/documents/${orderId}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+      }
     } catch (projectError) {
-        console.warn(`[assignDrToOrderAction] Failed to sync DR assignment to project board for order ${orderId}. This is not a critical error if project was not yet persistent. Error:`, projectError);
+        if (!(projectError instanceof Error && projectError.message.includes('not found'))) {
+          console.warn(`[assignDrToOrderAction] Failed to sync DR assignment to project board for order ${orderId}. This is not a critical error if project was not yet persistent. Error:`, projectError);
+        }
     }
 
     revalidatePath("/(app)/orders");
@@ -571,4 +507,3 @@ export async function deleteOrderAction(
     return { success: false, error: errorMessage };
   }
 }
-

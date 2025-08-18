@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -11,8 +12,8 @@ export async function updateTrackingLinkAction(
   orderId: string,
   updates: {
     isPublic?: boolean;
-    currentStatus?: string; // Status ID
-    statusNotes?: string; // Optional notes for status change
+    currentStatus?: string; 
+    statusNotes?: string; 
   },
   currentUser: User
 ): Promise<TrackingLink | { error: string }> {
@@ -26,14 +27,12 @@ export async function updateTrackingLinkAction(
       return { error: `Order ${orderId} not found.` };
     }
 
-    // Permission Checks
     if (currentUser.role === 'CRM' && currentOrder.crmUserId !== currentUser.id) {
       return { error: "Permission Denied: CRMs can only modify orders assigned to them." };
     }
     if (currentUser.role === 'DESIGNER_REPRESENTATIVE' && currentOrder.designerRepresentativeId !== currentUser.id) {
       return { error: "Permission Denied: Designer Representatives can only modify orders assigned to them." };
     }
-
 
     const dataToUpdate: Partial<TrackingLink> = {};
     let newLogEntries: OrderLogEntry[] = [];
@@ -44,7 +43,6 @@ export async function updateTrackingLinkAction(
     }
 
     if (updates.currentStatus && updates.currentStatus !== currentOrder.currentStatus) {
-      // Server-side permission check for status change based on allowedRoles
       if (currentUser.role !== 'SYSTEM_ADMIN') {
         const targetStatus = await getStatusById(updates.currentStatus);
         if (!targetStatus) {
@@ -83,7 +81,7 @@ export async function updateTrackingLinkAction(
     }
 
     if (Object.keys(dataToUpdate).length === 0) {
-      return currentOrder; // Return current order if no changes
+      return currentOrder;
     }
 
     const success = await updateOrder(orderId, dataToUpdate);

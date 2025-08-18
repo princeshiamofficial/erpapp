@@ -3,26 +3,19 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Project, ProjectStatusType, User, OrderLogEntry } from "@/types"; // Added User, OrderLogEntry
+import type { Project, ProjectStatusType, User, OrderLogEntry } from "@/types";
 import { updateProjectStatus as updateProjectStatusInDb } from '@/lib/project-service';
-import { getOrderById, updateOrder, autoSettleOrderIfDelivered } from "@/lib/order-service"; // Added autoSettleOrderIfDelivered
-import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_STATUS_ID, DELIVERED_STATUS_ID, ORDER_SUBMITTED_ID } from '@/lib/status-service'; // Added SHIPPED_STATUS_ID
-import { v4 as uuidv4 } from 'uuid'; // Added
+import { getOrderById, updateOrder, autoSettleOrderIfDelivered } from "@/lib/order-service"; 
+import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_STATUS_ID, DELIVERED_STATUS_ID, ORDER_SUBMITTED_ID } from '@/lib/status-service'; 
+import { v4 as uuidv4 } from 'uuid'; 
 import { getGlobalSettings } from '@/lib/settings-service';
+import { fetchFromApi } from '@/lib/api-helper';
 
-/**
- * Sanitizes a string for Packzy courier API compatibility.
- * This version is specifically designed to preserve Unicode characters including
- * letters, combining marks (like Bangla matras), and numbers, while stripping
- * out other symbols that might cause issues.
- * @param input The raw input string.
- * @returns A cleaned, trimmed string.
- */
 const sanitizeForPackzy = (input: string | null | undefined): string => {
   if (!input) return '';
   return input
-    .replace(/[^\p{L}\p{M}\p{N}.,\s-]/gu, '') // Keep letters, marks, numbers, ., ,, -, space
-    .replace(/\s+/g, ' ') // Collapse multiple spaces into one
+    .replace(/[^\p{L}\p{M}\p{N}.,\s-]/gu, '') 
+    .replace(/\s+/g, ' ') 
     .trim();
 };
 
@@ -30,7 +23,7 @@ const sanitizeForPackzy = (input: string | null | undefined): string => {
 export async function updateProjectStatusAction(
   project: Project,
   newStatus: ProjectStatusType,
-  actingUser: User // Added actingUser parameter
+  actingUser: User 
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const settings = await getGlobalSettings();
@@ -46,11 +39,9 @@ export async function updateProjectStatusAction(
       return { success: false, error: "Failed to update project status in database." };
     }
 
-    // If project status changed, update the corresponding order
-    const order = await getOrderById(project.id); // project.id is the order ID for dynamic projects
+    const order = await getOrderById(project.id); 
     if (order) {
       if (newStatus === 'Delivered') {
-        // Use the new auto-settle function which also handles status updates
         await autoSettleOrderIfDelivered(project.id, `System auto-settled: Project moved to '${newStatus}'.`, actingUser);
       } else {
         let targetOrderStatusId: string | null = null;
@@ -72,7 +63,6 @@ export async function updateProjectStatusAction(
           targetOrderStatusId = ORDER_SUBMITTED_ID;
           statusUpdateNote = `Order moved back to CR Clearance from project board by ${actingUser.name}.`;
         }
-
 
         if (targetOrderStatusId && statusUpdateNote) {
           const newLogEntry: OrderLogEntry = {

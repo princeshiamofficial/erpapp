@@ -15,10 +15,9 @@ export async function setGlobalTargetAction(targetType: 'monthly' | 'weekly', ne
   try {
     const success = await updateTargetInDb(targetType, newTarget);
     if (success) {
-      revalidatePath('/(app)/dashboard'); // Revalidate to reflect changes
+      revalidatePath('/(app)/dashboard'); 
       return { success: true };
     }
-    // Explicitly return error object if success is false
     return { success: false, error: "Failed to update target in database." };
   } catch (error) {
     console.error("Error in setGlobalTargetAction:", error);
@@ -40,7 +39,6 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
     let settledCount = 0;
     let statusUpdateCount = 0;
 
-    // Part 1: Proactively check courier statuses for non-delivered orders
     const ordersToCheckCourier = allOrders.filter(order => 
         order.currentStatus !== DELIVERED_STATUS_ID && order.packzyTrackingCode
     );
@@ -59,7 +57,6 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
                 });
 
                 if (!response.ok) {
-                    // This handles HTTP errors like 404, 500, etc.
                     throw new Error(`Packzy API responded with status: ${response.status}`);
                 }
 
@@ -77,15 +74,11 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
                     }
                 }
             } catch (courierError) {
-                // This catches network errors (failed to fetch) and thrown errors from response.ok check
                 console.error(`[SettleAction] Error fetching courier status for order ${order.id}:`, courierError);
-                // Continue to the next order without crashing the whole action
             }
         }
     }
 
-    // Part 2: Retroactively fix due amounts on already-delivered orders
-    // Re-fetch orders to get the updated list after Part 1's potential updates
     const updatedAllOrders = await getOrders();
     const deliveredOrdersWithDue = updatedAllOrders.filter(order => {
       if (order.currentStatus !== DELIVERED_STATUS_ID) {

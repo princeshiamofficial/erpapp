@@ -9,16 +9,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ProjectsKanbanClient } from '@/components/projects/ProjectsKanbanClient';
 import { cookies } from 'next/headers';
 
-
 async function ProjectsPageData() {
-  // Fetch all data on the server
   const [projects, statuses, globalSettings] = await Promise.all([
     getProjects(),
     getStatuses(),
     getGlobalSettings()
   ]);
 
-  // Get current user from cookie to pass to client component
   const cookieStore = cookies();
   const userCookie = cookieStore.get('colorhut-user');
   let currentUser: User | null = null;
@@ -30,18 +27,16 @@ async function ProjectsPageData() {
     }
   }
 
-  // Pass all fetched data as initial props to the client component
   return (
     <ProjectsKanbanClient
-      initialProjects={projects}
-      initialStatuses={statuses}
-      initialGlobalSettings={globalSettings}
-      currentUser={currentUser}
+      initialProjects={JSON.parse(JSON.stringify(projects))}
+      initialStatuses={JSON.parse(JSON.stringify(statuses))}
+      initialGlobalSettings={JSON.parse(JSON.stringify(globalSettings))}
+      currentUser={currentUser ? JSON.parse(JSON.stringify(currentUser)) : null}
     />
   );
 }
 
-// Skeleton component for a better loading experience during server render
 function ProjectsPageSkeleton() {
   const KANBAN_COLUMNS_CONFIG = [
     { title: 'CR Clearance', status: 'CR Clearance', headerBgClass: 'bg-sky-600' },

@@ -5,8 +5,6 @@ import { NextResponse } from 'next/server';
 import { getOrderByTrackingCode, autoSettleOrderIfDelivered } from '@/lib/order-service';
 import { getUsers } from '@/lib/user-service';
 
-// This is a simplified secret key for webhook verification.
-// In a production environment, you should use a more secure method like HMAC signature verification.
 const PACKZY_WEBHOOK_SECRET = 'your-super-secret-webhook-key-for-packzy';
 
 export async function POST(request: Request) {
@@ -30,12 +28,10 @@ export async function POST(request: Request) {
 
     if (!order) {
       console.log(`[Packzy Webhook] Order with tracking code ${tracking_code} not found.`);
-      // Return a 200 OK even if order not found, so Packzy doesn't keep retrying.
       return NextResponse.json({ success: true, message: 'Webhook acknowledged, order not found.' });
     }
 
     if (delivery_status.toLowerCase() === 'delivered') {
-      // Find a system admin to attribute the change to
       const allUsers = await getUsers();
       const systemAdmin = allUsers.find(u => u.role === 'SYSTEM_ADMIN');
       if (!systemAdmin) {
@@ -55,11 +51,9 @@ export async function POST(request: Request) {
 
       if (!success) {
          console.error(`[Packzy Webhook] Auto-settlement failed for order ${order.id}.`);
-         // Still return success to Packzy to avoid retries, but log the failure internally.
       }
     } else {
       console.log(`[Packzy Webhook] Received non-delivered status '${delivery_status}' for order ${order.id}. No action taken.`);
-      // In the future, you could add logic here to update the order status to reflect other states like 'in_transit'.
     }
 
     return NextResponse.json({ success: true, message: 'Webhook processed successfully' });
@@ -69,7 +63,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: 'Internal Server Error', details: errorMessage }, { status: 500 });
   }
 }
-
-// To use this webhook, provide this URL to Packzy:
-// https://<your-app-domain>/api/webhooks/packzy
-// And set the Authorization header to: Bearer your-super-secret-webhook-key-for-packzy
