@@ -1,15 +1,6 @@
 import React, { Suspense } from 'react';
-import dynamic from 'next/dynamic';
 import { Skeleton } from '@/components/ui/skeleton';
-
-// Dynamically import the main client component with a custom loader
-const ProjectsKanbanClient = dynamic(
-  () => import('@/components/projects/ProjectsKanbanClient').then(mod => mod.ProjectsKanbanClient),
-  {
-    ssr: false, // This component is client-heavy, disable SSR for it
-    loading: () => <ProjectsPageSkeleton />,
-  }
-);
+import { ProjectsKanbanClient } from '@/components/projects/ProjectsKanbanClient';
 
 function ProjectsPageSkeleton() {
   const KANBAN_COLUMNS_CONFIG = [
@@ -55,9 +46,9 @@ export default async function ProjectsPage() {
     <div className="flex flex-col h-[calc(100vh-theme(spacing.24))]">
       <Suspense fallback={<ProjectsPageSkeleton />}>
         {/* 
-          The ProjectsKanbanClient is now dynamically loaded.
-          It will handle its own data fetching internally.
-          This makes the page shell load instantly while data is fetched on the client.
+          The ProjectsKanbanClient is a Client Component that fetches its own data.
+          Wrapping it in Suspense allows Next.js to stream the page, showing the
+          skeleton fallback immediately while the client component loads and fetches data.
         */}
         <ProjectsKanbanClient />
       </Suspense>
