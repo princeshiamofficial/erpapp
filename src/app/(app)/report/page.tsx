@@ -20,12 +20,13 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { TrackingLink, GlobalSettings } from '@/types';
+import type { TrackingLink, GlobalSettings, User } from '@/types'; // Import User
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
+import { getUsers } from '@/lib/user-service'; // Import getUsers
 import { useToast } from '@/hooks/use-toast';
-import { Package, Settings, X, PlusCircle, Loader2 } from 'lucide-react';
-import { useAuth } from '@/contexts/auth-context';
+import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon } from 'lucide-react'; // Import UsersIcon
+import { useAuth } from '@/components/auth/auth-context'; // Corrected import path
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -42,6 +43,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay } from 'date-fns';
+import { DELIVERED_STATUS_ID } from '@/lib/status-service'; // Import delivered status ID
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-BD', {
@@ -55,6 +57,14 @@ interface ProductSalesData {
   sales: number;
   percentage: number;
 }
+
+interface DesignerPerformanceData {
+  designerId: string;
+  designerName: string;
+  ordersDelivered: number;
+  percentage: number;
+}
+
 
 interface ReportFilterSettingsDialogProps {
   isOpen: boolean;
@@ -164,6 +174,7 @@ function ReportFilterSettingsDialog({ isOpen, onOpenChange, initialFilters, onSa
 export default function ReportPage() {
   const [orders, setOrders] = useState<TrackingLink[]>([]);
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { currentUser } = useAuth();
@@ -180,12 +191,14 @@ export default function ReportPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedOrders, fetchedSettings] = await Promise.all([
+      const [fetchedOrders, fetchedSettings, fetchedUsers] = await Promise.all([
         getOrders(),
-        getGlobalSettings()
+        getGlobalSettings(),
+        getUsers(),
       ]);
       setOrders(fetchedOrders);
       setGlobalSettings(fetchedSettings);
+      setAllUsers(fetchedUsers);
     } catch (error) {
       console.error("Failed to fetch data for report:", error);
       toast({
@@ -213,24 +226,24 @@ export default function ReportPage() {
     }
   };
 
+  const filteredOrdersByDate = useMemo(() => {
+    if (!selectedDateRange?.from) return orders;
+
+    const startDate = startOfDay(selectedDateRange.from);
+    const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
+
+    return orders.filter(order => {
+      if (!order.createdAt) return false;
+      try {
+        const orderDate = parseISO(order.createdAt);
+        return isWithinInterval(orderDate, { start: startDate, end: endDate });
+      } catch {
+        return false;
+      }
+    });
+  }, [orders, selectedDateRange]);
 
   const productSalesData: ProductSalesData[] = useMemo(() => {
-    let filteredOrdersByDate = orders;
-    if (selectedDateRange?.from) {
-      const startDate = startOfDay(selectedDateRange.from);
-      const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
-
-      filteredOrdersByDate = orders.filter(order => {
-        if (!order.createdAt) return false;
-        try {
-          const orderDate = parseISO(order.createdAt);
-          return isWithinInterval(orderDate, { start: startDate, end: endDate });
-        } catch {
-          return false;
-        }
-      });
-    }
-
     if (filteredOrdersByDate.length === 0 || !globalSettings) {
       return [];
     }
@@ -275,84 +288,178 @@ export default function ReportPage() {
         percentage: (data.sales / totalSales) * 100,
       }))
       .sort((a, b) => b.sales - a.sales);
-  }, [orders, globalSettings, selectedDateRange]);
+  }, [filteredOrdersByDate, globalSettings]);
   
+  const designerPerformanceData: DesignerPerformanceData[] = useMemo(() => {
+    if (filteredOrdersByDate.length === 0 || allUsers.length === 0) {
+      return [];
+    }
+
+    const designerMap = new Map<string, { name: string; count: number }>();
+
+    allUsers
+      .filter(user => user.role === 'DESIGNER_REPRESENTATIVE')
+      .forEach(dr => {
+        designerMap.set(dr.id, { name: dr.name, count: 0 });
+      });
+
+    filteredOrdersByDate.forEach(order => {
+      const isDelivered = order.statusHistory.some(h => h.status === DELIVERED_STATUS_ID);
+      if (isDelivered && order.designerRepresentativeId && designerMap.has(order.designerRepresentativeId)) {
+        const designer = designerMap.get(order.designerRepresentativeId)!;
+        designer.count += 1;
+        designerMap.set(order.designerRepresentativeId, designer);
+      }
+    });
+
+    const totalDelivered = Array.from(designerMap.values()).reduce((acc, { count }) => acc + count, 0);
+    if (totalDelivered === 0) return [];
+
+    return Array.from(designerMap.entries())
+      .map(([id, data]) => ({
+        designerId: id,
+        designerName: data.name,
+        ordersDelivered: data.count,
+        percentage: (data.count / totalDelivered) * 100,
+      }))
+      .sort((a, b) => b.ordersDelivered - a.ordersDelivered);
+
+  }, [filteredOrdersByDate, allUsers]);
+
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
 
 
   return (
     <>
       <div className="space-y-6 p-1 sm:p-0">
-        <Card>
-          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <CardTitle>Product Sales Performance</CardTitle>
-              <CardDescription>
-                An overview of sales distribution across all products.
-              </CardDescription>
-            </div>
-             <div className="flex items-center gap-2 w-full sm:w-auto">
-                <DateRangePicker 
-                  initialRange={selectedDateRange} 
-                  onDateRangeChange={handleDateRangeChange}
-                  className="w-full sm:w-auto"
-                />
-                {isAdmin && (
-                  <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} disabled={!globalSettings}>
-                    <Settings className="h-5 w-5" />
-                    <span className="sr-only">Configure Report Filters</span>
-                  </Button>
-                )}
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead className="text-right">Sales Amount</TableHead>
-                  <TableHead className="w-[30%] text-center">Sales Percentage</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  [...Array(4)].map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                      <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-center gap-4">
-                          <Skeleton className="h-2.5 w-2/3" />
-                          <Skeleton className="h-6 w-16" />
-                        </div>
-                      </TableCell>
+        <div className="flex flex-col lg:flex-row gap-6">
+            <Card className="w-full lg:flex-1">
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle>Product Sales Performance</CardTitle>
+                  <CardDescription>
+                    An overview of sales distribution across all products.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <DateRangePicker 
+                      initialRange={selectedDateRange} 
+                      onDateRangeChange={handleDateRangeChange}
+                      className="w-full sm:w-auto"
+                    />
+                    {isAdmin && (
+                      <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} disabled={!globalSettings}>
+                        <Settings className="h-5 w-5" />
+                        <span className="sr-only">Configure Report Filters</span>
+                      </Button>
+                    )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Product</TableHead>
+                      <TableHead className="text-right">Sales Amount</TableHead>
+                      <TableHead className="w-[30%] text-center">Sales Percentage</TableHead>
                     </TableRow>
-                  ))
-                ) : productSalesData.length > 0 ? (
-                  productSalesData.map((item) => (
-                    <TableRow key={item.product}>
-                      <TableCell className="font-medium">{item.product}</TableCell>
-                      <TableCell className="text-right font-mono">{formatCurrency(item.sales)}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-4">
-                            <Progress value={item.percentage} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
-                            <Badge variant="outline" className="w-16 justify-center">{item.percentage.toFixed(1)}%</Badge>
-                        </div>
-                      </TableCell>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      [...Array(4)].map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center gap-4">
+                              <Skeleton className="h-2.5 w-2/3" />
+                              <Skeleton className="h-6 w-16" />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : productSalesData.length > 0 ? (
+                      productSalesData.map((item) => (
+                        <TableRow key={item.product}>
+                          <TableCell className="font-medium">{item.product}</TableCell>
+                          <TableCell className="text-right font-mono">{formatCurrency(item.sales)}</TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-4">
+                                <Progress value={item.percentage} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
+                                <Badge variant="outline" className="w-16 justify-center">{item.percentage.toFixed(1)}%</Badge>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3} className="h-24 text-center">
+                          <Package className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
+                          No sales data available for the selected period.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Card className="w-full lg:flex-1">
+              <CardHeader>
+                <CardTitle>Designer&apos;s Performance</CardTitle>
+                <CardDescription>
+                  Number of delivered orders completed by each designer.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Designer</TableHead>
+                      <TableHead className="text-right">Orders Delivered</TableHead>
+                      <TableHead className="w-[30%] text-center">Contribution</TableHead>
                     </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center">
-                      <Package className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
-                      No sales data available for the selected period.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? (
+                      [...Array(3)].map((_, i) => (
+                        <TableRow key={`skel-designer-${i}`}>
+                          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                          <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center gap-4">
+                              <Skeleton className="h-2.5 w-2/3" />
+                              <Skeleton className="h-6 w-16" />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : designerPerformanceData.length > 0 ? (
+                      designerPerformanceData.map((item) => (
+                        <TableRow key={item.designerId}>
+                          <TableCell className="font-medium">{item.designerName}</TableCell>
+                          <TableCell className="text-right font-mono">{item.ordersDelivered}</TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-4">
+                              <Progress value={item.percentage} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
+                              <Badge variant="outline" className="w-16 justify-center">{item.percentage.toFixed(1)}%</Badge>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={3} className="h-24 text-center">
+                          <UsersIcon className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
+                          No designer performance data available for this period.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+        </div>
       </div>
 
       {isAdmin && (
@@ -366,3 +473,4 @@ export default function ReportPage() {
     </>
   );
 }
+
