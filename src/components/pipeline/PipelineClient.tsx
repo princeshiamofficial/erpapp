@@ -9,7 +9,6 @@ import { useAuth } from '@/contexts/auth-context';
 import { DndContext, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { closestCorners } from '@dnd-kit/core';
 import { getLeads, updateLeadAction, deleteLeadAction } from '@/app/(app)/pipeline/actions';
-import { getUsers } from '@/lib/user-service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -56,9 +55,14 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; category: LeadCategory; icon
 
 const ITEMS_PER_PAGE = 12;
 
-export function PipelineClient() {
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+interface PipelineClientProps {
+  initialLeads: Lead[];
+  allUsers: User[];
+}
+
+export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) {
+  const [leads, setLeads] = useState<Lead[]>(initialLeads);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const { currentUser } = useAuth();
@@ -95,24 +99,19 @@ export function PipelineClient() {
     if (!currentUser) return;
     setIsLoading(true);
     try {
-      const promises: [Promise<Lead[]>, Promise<User[]>?] = [getLeads()];
-      if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
-        promises.push(getUsers());
-      } else {
-        promises.push(getUsers());
-      }
-      const [fetchedLeads, fetchedUsers] = await Promise.all(promises);
+      const fetchedLeads = await getLeads();
       setLeads(fetchedLeads);
-      if (fetchedUsers) {
-        setAllCrmUsers(fetchedUsers.filter(u => u.role === 'CRM' || u.role === 'ADMIN' || u.role === 'SYSTEM_ADMIN'));
-      }
     } catch (error) {
       toast({ title: "Error fetching data", description: "Could not load pipeline or user data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   }, [toast, currentUser]);
-  
+
+  useEffect(() => {
+    setAllCrmUsers(allUsers.filter(u => u.role === 'CRM' || u.role === 'ADMIN' || u.role === 'SYSTEM_ADMIN'));
+  }, [allUsers]);
+
   const filteredLeads = useMemo(() => {
     let baseLeads = leads;
     if (currentUser?.role === 'CRM') {
