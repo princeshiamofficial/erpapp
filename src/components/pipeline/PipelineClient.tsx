@@ -284,6 +284,10 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
     await handleUpdateLeadCategory(lead, newCategory);
   };
   
+  const handleDragCancel = () => {
+    setActiveLead(null);
+  };
+  
   const renderPagination = () => {
     const pageNumbers = [];
     const maxPagesToShow = 5; 
@@ -321,7 +325,7 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
   if (!currentUser) return null;
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} collisionDetection={closestCorners}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel} collisionDetection={closestCorners}>
       <div className="flex flex-col h-[calc(100vh-theme(spacing.24))] p-1 sm:p-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
           <div>
@@ -392,6 +396,7 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
                     size="sm"
                     onClick={() => setViewMode('list')}
                     className="h-8"
+                    disabled
                 >
                     <List className="h-4 w-4" />
                 </Button>
@@ -400,6 +405,7 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
                     size="sm"
                     onClick={() => setViewMode('kanban')}
                     className="h-8"
+                    disabled
                 >
                     <LayoutGrid className="h-4 w-4" />
                 </Button>
