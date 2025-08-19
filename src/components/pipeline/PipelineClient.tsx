@@ -112,10 +112,12 @@ export function PipelineClient() {
       setIsLoading(false);
     }
   }, [toast, currentUser]);
-
+  
   useEffect(() => {
-    fetchLeadsAndUsers();
-  }, [currentUser]);
+    if (currentUser) {
+      fetchLeadsAndUsers();
+    }
+  }, [currentUser, fetchLeadsAndUsers]);
 
   const filteredLeads = useMemo(() => {
     let baseLeads = leads;
