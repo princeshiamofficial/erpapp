@@ -1,11 +1,21 @@
+
 "use client";
 
-import type { Lead, User } from '@/types';
+import type { Lead, User, LeadCategory } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Edit, Trash2, Users, MoreVertical, Briefcase } from 'lucide-react';
+import { 
+    DropdownMenu, 
+    DropdownMenuContent, 
+    DropdownMenuItem, 
+    DropdownMenuTrigger,
+    DropdownMenuSub,
+    DropdownMenuSubTrigger,
+    DropdownMenuSubContent,
+    DropdownMenuPortal
+} from '@/components/ui/dropdown-menu';
+import { Edit, Trash2, Users, MoreVertical, Briefcase, FolderEdit } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,6 +28,7 @@ interface LeadListViewProps {
   onEditLead: (lead: Lead) => void;
   onDeleteLead: (lead: Lead) => void;
   onTransferLead: (lead: Lead) => void;
+  onUpdateLeadCategory: (lead: Lead, newCategory: LeadCategory) => void; // New prop
   allCrmUsers: User[];
 }
 
@@ -47,7 +58,9 @@ const getStatusBadgeClass = (status: string) => {
     return 'bg-yellow-100 text-yellow-800 border-yellow-200'; // Default for New Lead
 };
 
-export function LeadListView({ leads, isLoading, currentUser, onEditLead, onDeleteLead, onTransferLead, allCrmUsers }: LeadListViewProps) {
+const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'POG', 'OC', 'OD', 'ROD'];
+
+export function LeadListView({ leads, isLoading, currentUser, onEditLead, onDeleteLead, onTransferLead, onUpdateLeadCategory, allCrmUsers }: LeadListViewProps) {
   const canEdit = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
   const canDelete = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN';
   const canTransfer = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
@@ -113,6 +126,29 @@ export function LeadListView({ leads, isLoading, currentUser, onEditLead, onDele
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 {canEdit(lead) && <DropdownMenuItem onSelect={() => onEditLead(lead)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4"/> Edit</DropdownMenuItem>}
+                                                
+                                                {canEdit(lead) && (
+                                                    <DropdownMenuSub>
+                                                        <DropdownMenuSubTrigger className="cursor-pointer">
+                                                            <FolderEdit className="mr-2 h-4 w-4" /> Change Category
+                                                        </DropdownMenuSubTrigger>
+                                                        <DropdownMenuPortal>
+                                                            <DropdownMenuSubContent>
+                                                                {LEAD_CATEGORIES.map(category => (
+                                                                    <DropdownMenuItem 
+                                                                        key={category}
+                                                                        disabled={lead.category === category}
+                                                                        onSelect={() => onUpdateLeadCategory(lead, category)}
+                                                                        className="cursor-pointer"
+                                                                    >
+                                                                        {category}
+                                                                    </DropdownMenuItem>
+                                                                ))}
+                                                            </DropdownMenuSubContent>
+                                                        </DropdownMenuPortal>
+                                                    </DropdownMenuSub>
+                                                )}
+
                                                 {canTransfer(lead) && <DropdownMenuItem onSelect={() => onTransferLead(lead)} className="cursor-pointer"><Users className="mr-2 h-4 w-4"/> Transfer</DropdownMenuItem>}
                                                 {canDelete(lead) && <DropdownMenuItem onSelect={() => onDeleteLead(lead)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>}
                                                 {!canEdit(lead) && !canTransfer(lead) && !canDelete(lead) && <DropdownMenuItem disabled>No actions available</DropdownMenuItem>}

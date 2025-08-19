@@ -215,6 +215,22 @@ export function PipelineClient() {
     }
     setLeadToDelete(null);
   };
+
+  const handleUpdateLeadCategory = async (lead: Lead, newCategory: LeadCategory) => {
+    const originalCategory = lead.category;
+    if (newCategory === originalCategory) return;
+    
+    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, category: newCategory } : l));
+    
+    const result = await updateLeadAction(lead.id, { category: newCategory });
+
+    if (!result.success) {
+      toast({ title: "Update Failed", description: result.error || "Could not update lead category.", variant: "destructive" });
+      setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, category: originalCategory } : l));
+    } else {
+      toast({ title: "Lead Updated", description: `Lead "${lead.contactName}" moved to ${newCategory}.` });
+    }
+  };
   
   const handleExport = () => {
     if (filteredLeads.length === 0) {
@@ -269,21 +285,10 @@ export function PipelineClient() {
     
     const lead = active.data.current.lead as Lead;
     const newCategory = over.id as LeadCategory;
-    const originalCategory = lead.category;
-
-    if (newCategory === originalCategory) return;
-
-    setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, category: newCategory } : l));
-
-    const result = await updateLeadAction(lead.id, { category: newCategory });
-    if (!result.success) {
-      toast({ title: "Update Failed", description: result.error || "Could not update lead category.", variant: "destructive" });
-      setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, category: originalCategory } : l));
-    } else {
-      toast({ title: "Lead Updated", description: `Lead "${lead.contactName}" moved to ${newCategory}.` });
-    }
+    
+    await handleUpdateLeadCategory(lead, newCategory);
   };
-
+  
   const renderPagination = () => {
     const pageNumbers = [];
     const maxPagesToShow = 5; 
@@ -462,6 +467,7 @@ export function PipelineClient() {
                onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }}
                onDeleteLead={handleDeleteRequest}
                onTransferLead={handleTransferRequest}
+               onUpdateLeadCategory={handleUpdateLeadCategory}
                allCrmUsers={allCrmUsers}
             />
             {totalPages > 1 && (
