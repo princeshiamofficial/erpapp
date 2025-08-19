@@ -113,12 +113,6 @@ export function PipelineClient() {
     }
   }, [toast, currentUser]);
   
-  useEffect(() => {
-    if (currentUser) {
-      fetchLeadsAndUsers();
-    }
-  }, [currentUser, fetchLeadsAndUsers]);
-
   const filteredLeads = useMemo(() => {
     let baseLeads = leads;
     if (currentUser?.role === 'CRM') {
