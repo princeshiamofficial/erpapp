@@ -82,7 +82,7 @@ export default function ModelManagementPage() {
     } else if (currentUser) {
       router.replace('/dashboard');
     }
-  }, [currentUser, router, fetchData]);
+  }, [currentUser, router]);
 
   const filteredModels = useMemo(() => {
     if (!modelSearchTerm) return models;

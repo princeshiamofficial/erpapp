@@ -36,9 +36,9 @@ export async function addModelAction(name: string, buyingPrice?: number, selling
   }
 }
 
-export async function updateModelAction(id: string, name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCount?: number): Promise<{ success: boolean; error?: string }> {
+export async function updateModelAction(id: string, name: string, buyingPrice?: number, sellingPrice?: number, imageUrl?: string | null, isReadyMade?: boolean, stockCountChange?: number): Promise<{ success: boolean; error?: string }> {
   try {
-    const success = await updateModel(id, name, buyingPrice, sellingPrice, imageUrl, isReadyMade, stockCount);
+    const success = await updateModel(id, name, buyingPrice, sellingPrice, imageUrl, isReadyMade, stockCountChange);
     if (success) {
       revalidatePath(SERVICE_MANAGEMENT_PATH);
       revalidatePath(MODEL_MANAGEMENT_PATH);
