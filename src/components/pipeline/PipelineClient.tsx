@@ -36,6 +36,9 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Skeleton } from '@/components/ui/skeleton';
+import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
+import type { DateRange } from "react-day-picker";
+import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay } from 'date-fns';
 
 const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod => mod.LeadCard), {
   ssr: false,
@@ -54,6 +57,8 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; category: LeadCategory; icon
 ];
 
 const ITEMS_PER_PAGE = 12;
+
+const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'POG', 'OC', 'OD', 'ROD'];
 
 interface PipelineClientProps {
   initialLeads: Lead[];
@@ -87,7 +92,12 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
   
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [currentPage, setCurrentPage] = useState(1);
-
+  
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
+    from: subDays(new Date(), 29),
+    to: new Date(),
+  });
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
@@ -114,22 +124,46 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
 
   const filteredLeads = useMemo(() => {
     let baseLeads = leads;
+
     if (currentUser?.role === 'CRM') {
       baseLeads = leads.filter(lead => lead.crmId === currentUser.id);
     } else if (selectedCrmId !== 'all') {
       baseLeads = leads.filter(lead => lead.crmId === selectedCrmId);
     }
     
-    if (!searchTerm) return baseLeads;
-    const lowercasedFilter = searchTerm.toLowerCase();
-    return baseLeads.filter(lead =>
-        lead.contactName.toLowerCase().includes(lowercasedFilter) ||
-        lead.businessName.toLowerCase().includes(lowercasedFilter) ||
-        lead.phone.toLowerCase().includes(lowercasedFilter) ||
-        lead.source.toLowerCase().includes(lowercasedFilter) ||
-        (lead.crmName && lead.crmName.toLowerCase().includes(lowercasedFilter))
-    );
-  }, [leads, searchTerm, currentUser, selectedCrmId]);
+    // Date filter
+    if (selectedDateRange?.from) {
+      const startDate = startOfDay(selectedDateRange.from);
+      const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
+      baseLeads = baseLeads.filter(lead => {
+        try {
+          const leadDate = parseISO(lead.date);
+          return isWithinInterval(leadDate, { start: startDate, end: endDate });
+        } catch {
+          return false;
+        }
+      });
+    }
+
+    // Category filter (only for list view)
+    if (viewMode === 'list' && categoryFilter !== 'all') {
+      baseLeads = baseLeads.filter(lead => lead.category === categoryFilter);
+    }
+
+    // Search term filter
+    if (searchTerm) {
+      const lowercasedFilter = searchTerm.toLowerCase();
+      baseLeads = baseLeads.filter(lead =>
+          lead.contactName.toLowerCase().includes(lowercasedFilter) ||
+          lead.businessName.toLowerCase().includes(lowercasedFilter) ||
+          lead.phone.toLowerCase().includes(lowercasedFilter) ||
+          lead.source.toLowerCase().includes(lowercasedFilter) ||
+          (lead.crmName && lead.crmName.toLowerCase().includes(lowercasedFilter))
+      );
+    }
+
+    return baseLeads;
+  }, [leads, searchTerm, currentUser, selectedCrmId, selectedDateRange, categoryFilter, viewMode]);
   
   const totalPages = Math.ceil(filteredLeads.length / ITEMS_PER_PAGE);
 
@@ -140,8 +174,7 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, selectedCrmId, viewMode]);
-
+  }, [searchTerm, selectedCrmId, viewMode, selectedDateRange, categoryFilter]);
   
   const selectedCrmName = useMemo(() => {
     if (selectedCrmId === 'all') return 'All CRMs';
@@ -154,7 +187,6 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
       user.name.toLowerCase().includes(crmSearchQuery.toLowerCase())
     );
   }, [allCrmUsers, crmSearchQuery]);
-
 
   const leadsByCategory = useMemo(() => {
     const grouped: Record<LeadCategory, Lead[]> = {
@@ -194,14 +226,11 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
     fetchLeadsAndUsers();
   }
 
-
   const handleConfirmDelete = async () => {
     if (!leadToDelete) return;
-
     setIsDeletingLead(true);
     const result = await deleteLeadAction(leadToDelete.id);
     setIsDeletingLead(false);
-
     if (result.success) {
       toast({ title: "Lead Deleted", description: `Lead for "${leadToDelete.contactName}" was deleted.` });
       setLeads(prev => prev.filter(l => l.id !== leadToDelete.id));
@@ -214,11 +243,8 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
   const handleUpdateLeadCategory = async (lead: Lead, newCategory: LeadCategory) => {
     const originalCategory = lead.category;
     if (newCategory === originalCategory) return;
-    
     setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, category: newCategory } : l));
-    
     const result = await updateLeadAction(lead.id, { category: newCategory });
-
     if (!result.success) {
       toast({ title: "Update Failed", description: result.error || "Could not update lead category.", variant: "destructive" });
       setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, category: originalCategory } : l));
@@ -229,27 +255,14 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
   
   const handleExport = () => {
     if (filteredLeads.length === 0) {
-      toast({
-        title: "No Data to Export",
-        description: "There is no data matching the current filters.",
-      });
+      toast({ title: "No Data to Export", description: "There is no data matching the current filters." });
       return;
     }
-
     const dataToExport = filteredLeads.map(lead => ({
-      date: lead.date,
-      contactName: lead.contactName,
-      businessName: lead.businessName,
-      phone: lead.phone,
-      source: lead.source,
-      address: lead.address,
-      category: lead.category,
-      status: lead.status,
-      notes: lead.notes,
-      schedule: lead.schedule,
-      crmName: lead.crmName
+      date: lead.date, contactName: lead.contactName, businessName: lead.businessName, phone: lead.phone,
+      source: lead.source, address: lead.address, category: lead.category, status: lead.status,
+      notes: lead.notes, schedule: lead.schedule, crmName: lead.crmName
     }));
-
     const csv = Papa.unparse(dataToExport);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -260,56 +273,31 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
-    toast({
-      title: "Export Successful",
-      description: "Lead data has been downloaded as a CSV file.",
-    });
+    toast({ title: "Export Successful", description: "Lead data has been downloaded as a CSV file." });
   };
 
-
-  const handleDragStart = (event: DragStartEvent) => {
-    setActiveLead(event.active.data.current?.lead as Lead);
-  };
-
+  const handleDragStart = (event: DragStartEvent) => { setActiveLead(event.active.data.current?.lead as Lead); };
   const handleDragEnd = async (event: DragEndEvent) => {
     setActiveLead(null);
     const { active, over } = event;
-
     if (!over || !active.data.current?.lead) return;
-    
     const lead = active.data.current.lead as Lead;
     const newCategory = over.id as LeadCategory;
-    
     await handleUpdateLeadCategory(lead, newCategory);
   };
-  
-  const handleDragCancel = () => {
-    setActiveLead(null);
-  };
+  const handleDragCancel = () => { setActiveLead(null); };
   
   const renderPagination = () => {
     const pageNumbers = [];
     const maxPagesToShow = 5; 
-    
     if (totalPages <= maxPagesToShow) {
       for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
     } else {
-      let startPage = Math.max(1, currentPage - 2);
-      let endPage = Math.min(totalPages, currentPage + 2);
-
-      if (currentPage < 3) endPage = maxPagesToShow;
-      else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
-      
-      if (startPage > 1) {
-        pageNumbers.push(1);
-        if (startPage > 2) pageNumbers.push('...');
-      }
+      let startPage = Math.max(1, currentPage - 2); let endPage = Math.min(totalPages, currentPage + 2);
+      if (currentPage < 3) endPage = maxPagesToShow; else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
+      if (startPage > 1) { pageNumbers.push(1); if (startPage > 2) pageNumbers.push('...'); }
       for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
-      if (endPage < totalPages) {
-        if (endPage < totalPages - 1) pageNumbers.push('...');
-        pageNumbers.push(totalPages);
-      }
+      if (endPage < totalPages) { if (endPage < totalPages - 1) pageNumbers.push('...'); pageNumbers.push(totalPages); }
     }
     return pageNumbers.map((page, index) => (
         <PaginationItem key={index}>
@@ -322,179 +310,79 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
     ));
   };
 
-  if (!currentUser) return null;
+  const handleDateRangeChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
+    setSelectedDateRange(range);
+  };
+
+  if (!currentUser) return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel} collisionDetection={closestCorners}>
       <div className="flex flex-col h-[calc(100vh-theme(spacing.24))] p-1 sm:p-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
-          <div>
-            <h1 className="page-title">Sales Pipeline</h1>
-            <p className="page-description">Track and manage potential sales leads and opportunities by category.</p>
-          </div>
+          <div><h1 className="page-title">Sales Pipeline</h1><p className="page-description">Track and manage potential sales leads and opportunities by category.</p></div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-4 mb-4 px-4 sm:px-0">
-          <Input
-            placeholder="Search leads..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="bg-card border-border/50 focus:border-primary lg:max-w-xs"
-          />
+          <Input placeholder="Search leads..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-card border-border/50 focus:border-primary lg:max-w-xs" />
           <div className="flex-grow flex flex-col sm:flex-row items-center gap-2">
             {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && (
-              <Popover open={isCrmFilterOpen} onOpenChange={setIsCrmFilterOpen}>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" role="combobox" aria-expanded={isCrmFilterOpen} className="w-full sm:w-auto justify-between bg-card border-border/50 focus:border-primary h-10">
-                    <span className="truncate">{selectedCrmName}</span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width)] p-0">
-                  <Command>
-                    <CommandInput
-                      placeholder="Search CRM..."
-                      value={crmSearchQuery}
-                      onValueChange={setCrmSearchQuery}
-                    />
-                    <CommandList>
-                      <CommandEmpty>No CRM found.</CommandEmpty>
-                      <CommandGroup>
-                        <CommandItem
-                          value="all"
-                          onSelect={() => {
-                            setSelectedCrmId('all');
-                            setIsCrmFilterOpen(false);
-                          }}
-                        >
-                          <Check className={cn("mr-2 h-4 w-4", selectedCrmId === 'all' ? "opacity-100" : "opacity-0")} />
-                          All CRMs
-                        </CommandItem>
-                        {filteredCrmUsersForDropdown.map(crm => (
-                          <CommandItem
-                            key={crm.id}
-                            value={crm.name}
-                            onSelect={() => {
-                              setSelectedCrmId(crm.id);
-                              setIsCrmFilterOpen(false);
-                            }}
-                          >
-                            <Check className={cn("mr-2 h-4 w-4", crm.id === selectedCrmId ? "opacity-100" : "opacity-0")} />
-                            {crm.name}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
+              <Popover open={isCrmFilterOpen} onOpenChange={setIsCrmFilterOpen}><PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" aria-expanded={isCrmFilterOpen} className="w-full sm:w-auto justify-between bg-card border-border/50 focus:border-primary h-10"><span className="truncate">{selectedCrmName}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button>
+              </PopoverTrigger><PopoverContent className="w-[--radix-popover-trigger-width)] p-0"><Command><CommandInput placeholder="Search CRM..." value={crmSearchQuery} onValueChange={setCrmSearchQuery} />
+                <CommandList><CommandEmpty>No CRM found.</CommandEmpty><CommandGroup>
+                  <CommandItem value="all" onSelect={() => { setSelectedCrmId('all'); setIsCrmFilterOpen(false); }}><Check className={cn("mr-2 h-4 w-4", selectedCrmId === 'all' ? "opacity-100" : "opacity-0")} />All CRMs</CommandItem>
+                  {filteredCrmUsersForDropdown.map(crm => (<CommandItem key={crm.id} value={crm.name} onSelect={() => { setSelectedCrmId(crm.id); setIsCrmFilterOpen(false); }}><Check className={cn("mr-2 h-4 w-4", crm.id === selectedCrmId ? "opacity-100" : "opacity-0")} />{crm.name}</CommandItem>))}
+                </CommandGroup></CommandList></Command></PopoverContent>
               </Popover>
             )}
-
+            <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={handleDateRangeChange} />
+            {viewMode === 'list' && (
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger className="w-full sm:w-[180px] bg-card border-border/50 focus:border-primary h-10"><SelectValue placeholder="Filter by category..." /></SelectTrigger>
+                <SelectContent><SelectItem value="all">All Categories</SelectItem>{LEAD_CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
+              </Select>
+            )}
             <div className="flex items-center bg-muted p-1 rounded-md ml-auto">
-                <Button
-                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('list')}
-                    className="h-8"
-                    disabled
-                >
-                    <List className="h-4 w-4" />
-                </Button>
-                <Button
-                    variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('kanban')}
-                    className="h-8"
-                    disabled
-                >
-                    <LayoutGrid className="h-4 w-4" />
-                </Button>
+              <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className="h-8"><List className="h-4 w-4" /></Button>
+              <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('kanban')} className="h-8"><LayoutGrid className="h-4 w-4" /></Button>
             </div>
-             <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="w-full sm:w-auto h-10">
-                    Actions <ChevronDown className="ml-2 h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => setIsImportOpen(true)}>
-                    <FileSpreadsheet className="mr-2 h-4 w-4" />
-                    Import Leads
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={handleExport} disabled={filteredLeads.length === 0}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Export Leads
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <Button
-                onClick={handleOpenAddDialog}
-                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10"
-              >
-                <PlusCircle className="mr-2 h-5 w-5" />
-                Add Lead
-              </Button>
+            <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" className="w-full sm:w-auto h-10">Actions <ChevronDown className="ml-2 h-4 w-4" /></Button></DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => setIsImportOpen(true)}><FileSpreadsheet className="mr-2 h-4 w-4" />Import Leads</DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleExport} disabled={filteredLeads.length === 0}><Download className="mr-2 h-4 w-4" />Export Leads</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button onClick={handleOpenAddDialog} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10"><PlusCircle className="mr-2 h-5 w-5" />Add Lead</Button>
           </div>
         </div>
 
         {viewMode === 'kanban' ? (
-          <div className="flex-1 mt-4 overflow-x-auto pb-4">
-            <div className="flex space-x-4 h-full min-w-max px-4 sm:px-0">
-              {KANBAN_COLUMNS_CONFIG.map((col) => (
-                <PipelineKanbanColumn
-                  key={col.category}
-                  id={col.category}
-                  title={col.title}
-                  icon={col.icon}
-                  leads={leadsByCategory[col.category] || []}
-                  headerBgClass={col.headerBgClass}
-                  isLoading={isLoading}
-                  currentUser={currentUser}
-                  onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }}
-                  onDeleteLead={handleDeleteRequest}
-                  onTransferLead={handleTransferRequest}
-                  allCrmUsers={allCrmUsers}
-                />
-              ))}
-            </div>
-          </div>
+          <div className="flex-1 mt-4 overflow-x-auto pb-4"><div className="flex space-x-4 h-full min-w-max px-4 sm:px-0">
+            {KANBAN_COLUMNS_CONFIG.map((col) => (
+              <PipelineKanbanColumn
+                key={col.category} id={col.category} title={col.title} icon={col.icon}
+                leads={leadsByCategory[col.category] || []} headerBgClass={col.headerBgClass}
+                isLoading={isLoading} currentUser={currentUser}
+                onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }}
+                onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest} allCrmUsers={allCrmUsers}
+              />
+            ))}
+          </div></div>
         ) : (
           <>
             <LeadListView
-               leads={paginatedLeads}
-               isLoading={isLoading}
-               currentUser={currentUser}
+               leads={paginatedLeads} isLoading={isLoading} currentUser={currentUser}
                onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }}
-               onDeleteLead={handleDeleteRequest}
-               onTransferLead={handleTransferRequest}
-               onUpdateLeadCategory={handleUpdateLeadCategory}
-               allCrmUsers={allCrmUsers}
+               onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest}
+               onUpdateLeadCategory={handleUpdateLeadCategory} allCrmUsers={allCrmUsers}
             />
             {totalPages > 1 && (
-              <div className="mt-4 flex justify-center">
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious 
-                          href="#" 
-                          onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} 
-                          aria-disabled={currentPage === 1} 
-                          className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
-                        />
-                      </PaginationItem>
-                      {renderPagination()}
-                      <PaginationItem>
-                        <PaginationNext 
-                          href="#" 
-                          onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} 
-                          aria-disabled={currentPage === totalPages} 
-                          className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-              </div>
+              <div className="mt-4 flex justify-center"><Pagination><PaginationContent>
+                <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
+                {renderPagination()}
+                <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
+              </PaginationContent></Pagination></div>
             )}
           </>
         )}
@@ -503,53 +391,13 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
         {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onEditLead={() => {}} onDeleteLead={() => {}} onTransferLead={() => {}} crmAvatarUrl={allCrmUsers.find(u => u.id === activeLead.crmId)?.avatarUrl} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
       </DragOverlay>
 
-      <AddEditLeadDialog
-        isOpen={isAddEditOpen}
-        onOpenChange={setIsAddEditOpen}
-        onLeadSaved={handleLeadSaved}
-        lead={editingLead}
-        currentUser={currentUser}
-      />
-      
-      <ImportLeadsDialog
-        isOpen={isImportOpen}
-        onOpenChange={setIsImportOpen}
-        onLeadsImported={handleLeadSaved}
-        currentUser={currentUser}
-      />
-
-      {leadToTransfer && (
-        <TransferLeadDialog
-            isOpen={isTransferDialogOpen}
-            onOpenChange={setIsTransferDialogOpen}
-            onLeadTransferred={handleLeadTransferred}
-            lead={leadToTransfer}
-            allCrmUsers={allCrmUsers.filter(u => u.id !== leadToTransfer.crmId)}
-            currentUser={currentUser}
-        />
-      )}
-      
+      <AddEditLeadDialog isOpen={isAddEditOpen} onOpenChange={setIsAddEditOpen} onLeadSaved={handleLeadSaved} lead={editingLead} currentUser={currentUser} />
+      <ImportLeadsDialog isOpen={isImportOpen} onOpenChange={setIsImportOpen} onLeadsImported={handleLeadSaved} currentUser={currentUser} />
+      {leadToTransfer && (<TransferLeadDialog isOpen={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen} onLeadTransferred={handleLeadTransferred} lead={leadToTransfer} allCrmUsers={allCrmUsers.filter(u => u.id !== leadToTransfer.crmId)} currentUser={currentUser}/>)}
       {leadToDelete && (
         <AlertDialog open={!!leadToDelete} onOpenChange={() => setLeadToDelete(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-6 w-6 text-destructive" /> Are you absolutely sure?
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete the lead for "<span className="font-semibold">{leadToDelete.contactName}</span>".
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeletingLead}>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                onClick={handleConfirmDelete}
-                disabled={isDeletingLead}
-              >
-                {isDeletingLead ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Yes, delete lead"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
+          <AlertDialogContent><AlertDialogHeader><AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-6 w-6 text-destructive" /> Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the lead for "<span className="font-semibold">{leadToDelete.contactName}</span>".</AlertDialogDescription></AlertDialogHeader>
+            <AlertDialogFooter><AlertDialogCancel disabled={isDeletingLead}>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" onClick={handleConfirmDelete} disabled={isDeletingLead}>{isDeletingLead ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Yes, delete lead"}</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       )}
