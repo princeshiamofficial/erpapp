@@ -12,7 +12,7 @@ import { getLeads, updateLeadAction, deleteLeadAction } from '@/app/(app)/pipeli
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check, ChevronsUpDown, LayoutGrid, List } from 'lucide-react';
+import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check, ChevronsUpDown, LayoutGrid, List, Calendar as CalendarIcon } from 'lucide-react';
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
 import { LeadListView } from '@/components/pipeline/LeadListView'; 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -39,6 +39,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay } from 'date-fns';
+import { LeadCalendarView } from './LeadCalendarView';
 
 const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod => mod.LeadCard), {
   ssr: false,
@@ -90,7 +91,7 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
   const [leadToTransfer, setLeadToTransfer] = useState<Lead | null>(null);
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
   
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'calendar'>('list');
   const [currentPage, setCurrentPage] = useState(1);
   
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>({
@@ -132,7 +133,7 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
     }
     
     // Date filter
-    if (selectedDateRange?.from) {
+    if (selectedDateRange?.from && viewMode !== 'calendar') { // Calendar view handles its own date range
       const startDate = startOfDay(selectedDateRange.from);
       const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
       baseLeads = baseLeads.filter(lead => {
@@ -336,7 +337,9 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
                 </CommandGroup></CommandList></Command></PopoverContent>
               </Popover>
             )}
-            <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={handleDateRangeChange} />
+            {viewMode !== 'calendar' && (
+              <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={handleDateRangeChange} />
+            )}
             {viewMode === 'list' && (
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-full sm:w-[180px] bg-card border-border/50 focus:border-primary h-10"><SelectValue placeholder="Filter by category..." /></SelectTrigger>
@@ -346,6 +349,7 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
             <div className="flex items-center bg-muted p-1 rounded-md ml-auto">
               <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className="h-8"><List className="h-4 w-4" /></Button>
               <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('kanban')} className="h-8"><LayoutGrid className="h-4 w-4" /></Button>
+              <Button variant={viewMode === 'calendar' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('calendar')} className="h-8"><CalendarIcon className="h-4 w-4" /></Button>
             </div>
             <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" className="w-full sm:w-auto h-10">Actions <ChevronDown className="ml-2 h-4 w-4" /></Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -369,7 +373,7 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
               />
             ))}
           </div></div>
-        ) : (
+        ) : viewMode === 'list' ? (
           <>
             <LeadListView
                leads={paginatedLeads} isLoading={isLoading} currentUser={currentUser}
@@ -385,6 +389,11 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
               </PaginationContent></Pagination></div>
             )}
           </>
+        ) : (
+          <LeadCalendarView 
+            leads={filteredLeads} 
+            onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }} 
+          />
         )}
       </div>
       <DragOverlay dropAnimation={null}>
