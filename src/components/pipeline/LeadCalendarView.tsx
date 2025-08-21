@@ -5,7 +5,7 @@ import React from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import type { Lead } from '@/types';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { parseISO } from 'date-fns';
+import { parseISO, format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
@@ -45,27 +45,31 @@ export function LeadCalendarView({ leads, onEditLead }: LeadCalendarViewProps) {
     const dayEvents = eventsByDate[dateKey] || [];
 
     if (dayEvents.length === 0) {
-      return <div className="p-1">{dayProps.date.getDate()}</div>;
+      return (
+        <div className="relative flex flex-col items-end justify-start p-1 w-full h-full">
+          <span className="text-xs text-muted-foreground">{dayProps.date.getDate()}</span>
+        </div>
+      );
     }
 
     return (
         <Popover>
             <PopoverTrigger asChild>
-                <div className="relative w-full h-full cursor-pointer hover:bg-accent rounded-md flex flex-col items-center justify-center p-1">
-                    <span className="absolute top-1 right-1 text-sm">{dayProps.date.getDate()}</span>
-                    <div className="flex flex-wrap gap-1 justify-center items-end mt-4">
-                        {dayEvents.slice(0, 2).map(lead => (
+                <div className="relative flex flex-col items-end justify-start p-1 w-full h-full cursor-pointer hover:bg-accent rounded-md transition-colors">
+                    <span className="text-xs font-medium">{dayProps.date.getDate()}</span>
+                     <div className="flex flex-wrap gap-1 justify-end mt-1">
+                        {dayEvents.slice(0, 3).map(lead => (
                             <div key={lead.id} className={cn("h-1.5 w-1.5 rounded-full", getCategoryClass(lead.category))}></div>
                         ))}
-                         {dayEvents.length > 2 && <span className="text-xs text-muted-foreground">+...</span>}
+                         {dayEvents.length > 3 && <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground"></div>}
                     </div>
                 </div>
             </PopoverTrigger>
             <PopoverContent className="w-64 p-2">
-                <div className="font-semibold text-sm mb-2">{dayProps.date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+                <div className="font-semibold text-sm mb-2">{format(dayProps.date, "PPP")}</div>
                 <div className="space-y-2">
                     {dayEvents.map(lead => (
-                        <div key={lead.id} className="p-1.5 rounded-md hover:bg-muted" onClick={() => onEditLead(lead)}>
+                        <div key={lead.id} className="p-1.5 rounded-md hover:bg-muted cursor-pointer" onClick={() => onEditLead(lead)}>
                             <div className="flex items-center gap-2">
                                 <div className={cn("h-2 w-2 rounded-full shrink-0", getCategoryClass(lead.category))}></div>
                                 <span className="text-xs font-medium truncate">{lead.contactName}</span>
@@ -80,11 +84,13 @@ export function LeadCalendarView({ leads, onEditLead }: LeadCalendarViewProps) {
   };
   
   return (
-    <div className="p-4 bg-card rounded-lg shadow-sm mt-4">
+    <div className="p-0 sm:p-4 bg-card rounded-lg shadow-sm mt-4">
       <Calendar
         mode="single"
         className="w-full"
-        components={{ Day: DayWithEvents }}
+        components={{
+            Day: DayWithEvents,
+        }}
       />
     </div>
   );
