@@ -120,7 +120,8 @@ export default function OrdersPage() {
     } else {
       setIsLoading(false);
     }
-  }, [currentUser, fetchOrderData]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
 
 
   const memoizedAvailableStatusesForDialog = useMemo(() => {
