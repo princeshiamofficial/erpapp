@@ -3,9 +3,11 @@
 
 import { updateGlobalSalesTarget as updateTargetInDb } from '@/lib/settings-service';
 import { revalidatePath } from 'next/cache';
-import { getOrders, autoSettleOrderIfDelivered } from '@/lib/order-service';
-import { DELIVERED_STATUS_ID } from '@/lib/status-service';
+import { getOrders, autoSettleOrderIfDelivered, getOrdersByStatusAndTracking, updateOrdersBatch } from '@/lib/order-service'; // Added getOrdersByStatusAndTracking and updateOrdersBatch
+import { DELIVERED_STATUS_ID, SHIPPED_STATUS_ID } from '@/lib/status-service'; // Added SHIPPED_STATUS_ID
 import { getUsers } from '@/lib/user-service';
+import { OrderLogEntry, TrackingLink } from '@/types'; // Added TrackingLink and OrderLogEntry
+import { v4 as uuidv4 } from 'uuid';
 
 export async function setGlobalTargetAction(targetType: 'monthly' | 'weekly', newTarget: number): Promise<{ success: boolean; error?: string }> {
   if (newTarget < 0 || isNaN(newTarget)) {
@@ -27,10 +29,9 @@ export async function setGlobalTargetAction(targetType: 'monthly' | 'weekly', ne
 
 export async function settleAllDeliveredOrdersAction(): Promise<{ success: boolean; settledCount: number; statusUpdateCount: number; error?: string }> {
   try {
-    let allOrders = await getOrders();
     const allUsers = await getUsers();
-    
     const systemAdmin = allUsers.find(u => u.role === 'SYSTEM_ADMIN');
+
     if (!systemAdmin) {
       return { success: false, settledCount: 0, statusUpdateCount: 0, error: "System Admin user not found to perform settlement." };
     }
@@ -39,12 +40,12 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
     let settledCount = 0;
     let statusUpdateCount = 0;
 
-    const ordersToCheckCourier = allOrders.filter(order => 
-        order.currentStatus !== DELIVERED_STATUS_ID && order.packzyTrackingCode
-    );
+    // Fetch only orders that are 'Shipped' and have a tracking code
+    const ordersToCheckCourier = await getOrdersByStatusAndTracking(SHIPPED_STATUS_ID);
+    const updatesForBatch: { id: string, data: Partial<TrackingLink> }[] = [];
 
     if (ordersToCheckCourier.length > 0) {
-        console.log(`[SettleAction] Checking courier status for ${ordersToCheckCourier.length} non-delivered orders with tracking codes.`);
+        console.log(`[SettleAction] Checking courier status for ${ordersToCheckCourier.length} shipped orders with tracking codes.`);
         const apiKey = 'vfei2q49dhy1rxqxjs6xntkkvc2odeax';
         const secretKey = 'n4wr4fhdohq0x3gmm8xg3pp1';
 
@@ -63,37 +64,46 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
                 const data = await response.json();
 
                 if (data.status === 200 && data.delivery_status === 'delivered') {
-                    console.log(`[SettleAction] Courier confirmed delivery for order ${order.id}. Auto-settling...`);
-                    const result = await autoSettleOrderIfDelivered(
-                        order.id, 
-                        "Manual sync: Courier confirmed delivery.", 
-                        actingUser
-                    );
-                    if (result) {
-                        statusUpdateCount++;
-                    }
+                    console.log(`[SettleAction] Courier confirmed delivery for order ${order.id}. Queuing for update.`);
+                    statusUpdateCount++;
+                    
+                    const logEntry: OrderLogEntry = {
+                      id: uuidv4(),
+                      timestamp: new Date().toISOString(),
+                      status: DELIVERED_STATUS_ID,
+                      changedByUserId: actingUser.id,
+                      changedByUserName: actingUser.name,
+                      notes: `Auto-updated to Delivered based on courier status sync.`,
+                    };
+
+                    updatesForBatch.push({
+                      id: order.id,
+                      data: {
+                        currentStatus: DELIVERED_STATUS_ID,
+                        statusHistory: [...order.statusHistory, logEntry]
+                      }
+                    });
                 }
             } catch (courierError) {
                 console.error(`[SettleAction] Error fetching courier status for order ${order.id}:`, courierError);
             }
         }
+
+        // Apply batch update if any orders were confirmed delivered
+        if (updatesForBatch.length > 0) {
+          const batchSuccess = await updateOrdersBatch(updatesForBatch);
+          if (!batchSuccess) {
+            console.error("[SettleAction] Batch update for delivered statuses failed.");
+            // Continue to settle dues, but log the error.
+          }
+        }
     }
 
-    const updatedAllOrders = await getOrders();
-    const deliveredOrdersWithDue = updatedAllOrders.filter(order => {
-      if (order.currentStatus !== DELIVERED_STATUS_ID) {
-        return false;
-      }
-      const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
-      const effectiveDiscount = order.specialClientDiscount || 0;
-      const netPayable = orderSubtotal - effectiveDiscount;
-      const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
-      const dueAmount = netPayable - totalAdvancePaid;
-      return dueAmount > 0.01;
-    });
+    // Now, fetch all delivered orders (including newly updated ones) with a due balance
+    const deliveredOrdersWithDue = await getOrdersByStatusAndTracking(DELIVERED_STATUS_ID, true);
 
     if (deliveredOrdersWithDue.length > 0) {
-        console.log(`[SettleAction] Found ${deliveredOrdersWithDue.length} internally delivered orders with a due balance. Settling...`);
+        console.log(`[SettleAction] Found ${deliveredOrdersWithDue.length} delivered orders with a due balance. Settling...`);
         for (const order of deliveredOrdersWithDue) {
           const result = await autoSettleOrderIfDelivered(
             order.id, 
@@ -106,9 +116,12 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
         }
     }
     
-    revalidatePath("/(app)/dashboard", "layout");
-    revalidatePath("/(app)/orders", "layout");
-    revalidatePath("/(app)/invoice", "layout");
+    // Only revalidate if changes were made
+    if (statusUpdateCount > 0 || settledCount > 0) {
+        revalidatePath("/(app)/dashboard", "layout");
+        revalidatePath("/(app)/orders", "layout");
+        revalidatePath("/(app)/invoice", "layout");
+    }
     
     return { success: true, settledCount, statusUpdateCount };
   } catch (error) {

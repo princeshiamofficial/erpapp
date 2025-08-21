@@ -82,6 +82,45 @@ export const getOrderByTrackingCode = async (trackingCode: string): Promise<Trac
   }
 };
 
+export const getOrdersByStatusAndTracking = async (statusId: string, onlyWithDue: boolean = false): Promise<TrackingLink[]> => {
+  try {
+    await ensureCollectionExists(ORDERS_COLLECTION);
+    
+    // Construct base filters
+    let apiFilters = `filters[currentStatus][is]=${statusId}`;
+
+    if (onlyWithDue) {
+      // Due balance logic requires fetching and calculating on the client/server-action side
+      // as the API doesn't support complex calculated field filters.
+      const response = await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents?${apiFilters}&limit=999`);
+      if (response && Array.isArray(response.documents)) {
+        const orders = response.documents.map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as TrackingLink));
+        return orders.filter(order => {
+          const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+          const effectiveDiscount = order.specialClientDiscount || 0;
+          const netPayable = orderSubtotal - effectiveDiscount;
+          const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
+          const dueAmount = netPayable - totalAdvancePaid;
+          return dueAmount > 0.01;
+        });
+      }
+      return [];
+
+    } else {
+      // Logic for orders that just need to be checked (have tracking code)
+      apiFilters += '&filters[packzyTrackingCode][is_not]=null';
+      const response = await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents?${apiFilters}&limit=999`);
+      if (response && Array.isArray(response.documents)) {
+        return response.documents.map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as TrackingLink));
+      }
+      return [];
+    }
+  } catch (error) {
+    console.error(`Error fetching orders with status ${statusId} from API:`, error);
+    return [];
+  }
+};
+
 
 export const addOrder = async (orderData: {
   companyName: string;
@@ -191,6 +230,21 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     console.error(`Error updating order ${id} via API:`, error);
     return false;
   }
+};
+
+export const updateOrdersBatch = async (updates: { id: string, data: Partial<TrackingLink> }[]): Promise<boolean> => {
+    if (updates.length === 0) return true;
+    try {
+        const payload = updates.map(u => ({ id: u.id, data: u.data }));
+        await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents`, {
+            method: 'PATCH',
+            body: JSON.stringify({ documents: payload })
+        });
+        return true;
+    } catch (error) {
+        console.error("Error performing batch update on orders via API:", error);
+        return false;
+    }
 };
 
 
