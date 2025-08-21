@@ -185,7 +185,7 @@ export default function FinanceManagerPage() {
       fetchFinancialData();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser]);
+  }, []);
 
   useEffect(() => {
     setSelectedUserIdFilter('all');
