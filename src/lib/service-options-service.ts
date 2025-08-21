@@ -1,7 +1,7 @@
 
 
 import { db } from './firebase';
-import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy, writeBatch, where, runTransaction, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy, writeBatch, where, runTransaction, getDoc, setDoc } from 'firebase/firestore';
 import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { fetchFromApi, ensureCollectionExists } from './api-helper';
@@ -146,63 +146,61 @@ export const deleteModel = async (id: string): Promise<boolean> => {
 // --- Lamination Functions ---
 
 const seedDefaultLaminations = async (): Promise<ServiceLaminationItem[]> => {
-  const laminationsRef = collection(db, LAMINATIONS_COLLECTION);
-  const batch = writeBatch(db);
+  await ensureCollectionExists(LAMINATIONS_COLLECTION);
   const createdLaminations: ServiceLaminationItem[] = [];
   const defaultLaminationsData: string[] = ["None", "Glossy", "Matte", "Soft Touch", "Anti-Scuff Matte"];
 
-  defaultLaminationsData.forEach(name => {
+  for (const name of defaultLaminationsData) {
     const id = uuidv4();
-    const newLamination: ServiceLaminationItem = { id, name };
-    const docRef = doc(laminationsRef, id);
-    batch.set(docRef, newLamination);
-    createdLaminations.push(newLamination);
-  });
-
-  try {
-    await batch.commit();
-    console.log('Default service laminations seeded in Firestore.');
-    return createdLaminations;
-  } catch (error) {
-    console.error("Error seeding default service laminations:", error);
-    return [];
+    const newLamination: Omit<ServiceLaminationItem, 'id'> = { name };
+    try {
+        const newDoc = await fetchFromApi(`collections/${LAMINATIONS_COLLECTION}/documents`, {
+            method: 'POST',
+            body: JSON.stringify({ id, data: newLamination }),
+        });
+        createdLaminations.push({ id, ...newDoc.data });
+    } catch (error) {
+        console.error(`Error seeding lamination "${name}" via API:`, error);
+    }
   }
+  console.log('Default service laminations seeded via API.');
+  return createdLaminations;
 };
 
 export const getLaminations = async (): Promise<ServiceLaminationItem[]> => {
-  const laminationsCol = collection(db, LAMINATIONS_COLLECTION);
-  const q = query(laminationsCol, orderBy("name", "asc"));
   try {
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-      console.log("No service laminations found, seeding defaults.");
-      return await seedDefaultLaminations();
+    await ensureCollectionExists(LAMINATIONS_COLLECTION);
+    const response = await fetchFromApi(`collections/${LAMINATIONS_COLLECTION}/documents?limit=100&orderBy=name&direction=asc`);
+    if (response && Array.isArray(response.documents)) {
+      if (response.documents.length === 0) {
+        console.log("No service laminations found, seeding defaults via API.");
+        return await seedDefaultLaminations();
+      }
+      return response.documents.map((doc: { id: string; data: any }) => ({
+        id: doc.id,
+        ...doc.data,
+      }));
     }
-    return snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as ServiceLaminationItem));
+    return [];
   } catch (error) {
-    console.error("Error fetching service laminations:", error);
+    console.error("Error fetching service laminations via API:", error);
     return [];
   }
 };
 
 export const addLamination = async (name: string): Promise<ServiceLaminationItem | null> => {
-   if (!name.trim()) {
+  if (!name.trim()) {
     throw new Error("Lamination name cannot be empty.");
   }
   try {
-    const laminationsCol = collection(db, LAMINATIONS_COLLECTION);
-     const q = query(laminationsCol, where("name", "==", name.trim()));
-    const existing = await getDocs(q);
-    if (!existing.empty && existing.docs.some(doc => doc.data().name.toLowerCase() === name.trim().toLowerCase())) {
-      throw new Error(`Lamination with name "${name.trim()}" already exists.`);
-    }
-
-    const id = uuidv4();
-    const newLamination: ServiceLaminationItem = { id, name: name.trim() };
-    await setDoc(doc(laminationsCol, id), newLamination);
-    return newLamination;
+    const newLaminationData: Omit<ServiceLaminationItem, 'id'> = { name: name.trim() };
+    const newDoc = await fetchFromApi(`collections/${LAMINATIONS_COLLECTION}/documents`, {
+      method: 'POST',
+      body: JSON.stringify({ data: newLaminationData }),
+    });
+    return { id: newDoc.id, ...newDoc.data };
   } catch (error) {
-    console.error("Error adding service lamination:", error);
+    console.error("Error adding service lamination via API:", error);
     if (error instanceof Error) throw error;
     return null;
   }
@@ -213,17 +211,14 @@ export const updateLamination = async (id: string, name: string): Promise<boolea
     throw new Error("Lamination name cannot be empty.");
   }
   try {
-    const laminationsCol = collection(db, LAMINATIONS_COLLECTION);
-    const q = query(laminationsCol, where("name", "==", name.trim()));
-    const existing = await getDocs(q);
-    if (!existing.empty && existing.docs.some(doc => doc.id !== id && doc.data().name.toLowerCase() === name.trim().toLowerCase())) {
-      throw new Error(`Another lamination with name "${name.trim()}" already exists.`);
-    }
-    const laminationDoc = doc(db, LAMINATIONS_COLLECTION, id);
-    await updateDoc(laminationDoc, { name: name.trim() });
+    const existingDoc = await fetchFromApi(`collections/${LAMINATIONS_COLLECTION}/documents/${id}`);
+    await fetchFromApi(`collections/${LAMINATIONS_COLLECTION}/documents/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ data: { ...existingDoc.data, name: name.trim() } }),
+    });
     return true;
   } catch (error) {
-    console.error("Error updating service lamination:", error);
+    console.error("Error updating service lamination via API:", error);
     if (error instanceof Error) throw error;
     return false;
   }
@@ -231,76 +226,78 @@ export const updateLamination = async (id: string, name: string): Promise<boolea
 
 export const deleteLamination = async (id: string): Promise<boolean> => {
   try {
-    const laminationDoc = doc(db, LAMINATIONS_COLLECTION, id);
-    await deleteDoc(laminationDoc);
+    await fetchFromApi(`collections/${LAMINATIONS_COLLECTION}/documents/${id}`, {
+      method: 'DELETE',
+    });
     return true;
   } catch (error) {
-    console.error("Error deleting service lamination:", error);
-    if (error instanceof Error) throw error; 
+    console.error("Error deleting service lamination via API:", error);
+    if (error instanceof Error) throw error;
     return false;
   }
 };
 
+
 // --- Payment Method Functions ---
 
 const seedDefaultPaymentMethods = async (): Promise<ServicePaymentMethodItem[]> => {
-  const paymentMethodsRef = collection(db, PAYMENT_METHODS_COLLECTION);
-  const batch = writeBatch(db);
+  await ensureCollectionExists(PAYMENT_METHODS_COLLECTION);
   const createdItems: ServicePaymentMethodItem[] = [];
   const defaultPaymentMethodsData: string[] = ["Cash", "Card", "Bank Transfer", "Mobile Banking", "Cheque", "Other"];
 
-  defaultPaymentMethodsData.forEach(name => {
+  for (const name of defaultPaymentMethodsData) {
     const id = uuidv4();
-    const newItem: ServicePaymentMethodItem = { id, name };
-    const docRef = doc(paymentMethodsRef, id);
-    batch.set(docRef, newItem);
-    createdItems.push(newItem);
-  });
-
-  try {
-    await batch.commit();
-    console.log('Default payment methods seeded in Firestore.');
-    return createdItems;
-  } catch (error) {
-    console.error("Error seeding default payment methods:", error);
-    return [];
+    const newItem: Omit<ServicePaymentMethodItem, 'id'> = { name };
+    try {
+      const newDoc = await fetchFromApi(`collections/${PAYMENT_METHODS_COLLECTION}/documents`, {
+        method: 'POST',
+        body: JSON.stringify({ id, data: newItem }),
+      });
+      createdItems.push({ id, ...newDoc.data });
+    } catch (error) {
+      console.error(`Error seeding payment method "${name}" via API:`, error);
+    }
   }
+  console.log('Default payment methods seeded via API.');
+  return createdItems;
 };
+
 
 export const getPaymentMethods = async (): Promise<ServicePaymentMethodItem[]> => {
-  const itemsCol = collection(db, PAYMENT_METHODS_COLLECTION);
-  const q = query(itemsCol, orderBy("name", "asc"));
   try {
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
-      console.log("No payment methods found, seeding defaults.");
-      return await seedDefaultPaymentMethods();
+    await ensureCollectionExists(PAYMENT_METHODS_COLLECTION);
+    const response = await fetchFromApi(`collections/${PAYMENT_METHODS_COLLECTION}/documents?limit=100&orderBy=name&direction=asc`);
+    if (response && Array.isArray(response.documents)) {
+        if (response.documents.length === 0) {
+            console.log("No payment methods found, seeding defaults via API.");
+            return await seedDefaultPaymentMethods();
+        }
+        return response.documents.map((doc: { id: string; data: any }) => ({
+            id: doc.id,
+            ...doc.data,
+        }));
     }
-    return snapshot.docs.map(docSnap => ({ ...docSnap.data(), id: docSnap.id } as ServicePaymentMethodItem));
-  } catch (error) {
-    console.error("Error fetching payment methods:", error);
     return [];
+  } catch (error) {
+      console.error("Error fetching payment methods via API:", error);
+      return [];
   }
 };
+
 
 export const addPaymentMethod = async (name: string): Promise<ServicePaymentMethodItem | null> => {
   if (!name.trim()) {
     throw new Error("Payment method name cannot be empty.");
   }
   try {
-    const itemsCol = collection(db, PAYMENT_METHODS_COLLECTION);
-    const q = query(itemsCol, where("name", "==", name.trim()));
-    const existing = await getDocs(q);
-    if (!existing.empty && existing.docs.some(doc => doc.data().name.toLowerCase() === name.trim().toLowerCase())) {
-      throw new Error(`Payment method with name "${name.trim()}" already exists.`);
-    }
-
-    const id = uuidv4();
-    const newItem: ServicePaymentMethodItem = { id, name: name.trim() };
-    await setDoc(doc(itemsCol, id), newItem);
-    return newItem;
+    const newItemData: Omit<ServicePaymentMethodItem, 'id'> = { name: name.trim() };
+    const newDoc = await fetchFromApi(`collections/${PAYMENT_METHODS_COLLECTION}/documents`, {
+      method: 'POST',
+      body: JSON.stringify({ data: newItemData }),
+    });
+    return { id: newDoc.id, ...newDoc.data };
   } catch (error) {
-    console.error("Error adding payment method:", error);
+    console.error("Error adding payment method via API:", error);
     if (error instanceof Error) throw error;
     return null;
   }
@@ -311,17 +308,14 @@ export const updatePaymentMethod = async (id: string, name: string): Promise<boo
     throw new Error("Payment method name cannot be empty.");
   }
   try {
-    const itemsCol = collection(db, PAYMENT_METHODS_COLLECTION);
-    const q = query(itemsCol, where("name", "==", name.trim()));
-    const existing = await getDocs(q);
-    if (!existing.empty && existing.docs.some(doc => doc.id !== id && doc.data().name.toLowerCase() === name.trim().toLowerCase())) {
-      throw new Error(`Another payment method with name "${name.trim()}" already exists.`);
-    }
-    const itemDoc = doc(db, PAYMENT_METHODS_COLLECTION, id);
-    await updateDoc(itemDoc, { name: name.trim() });
+    const existingDoc = await fetchFromApi(`collections/${PAYMENT_METHODS_COLLECTION}/documents/${id}`);
+    await fetchFromApi(`collections/${PAYMENT_METHODS_COLLECTION}/documents/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ data: { ...existingDoc.data, name: name.trim() } }),
+    });
     return true;
   } catch (error) {
-    console.error("Error updating payment method:", error);
+    console.error("Error updating payment method via API:", error);
     if (error instanceof Error) throw error;
     return false;
   }
@@ -329,12 +323,13 @@ export const updatePaymentMethod = async (id: string, name: string): Promise<boo
 
 export const deletePaymentMethod = async (id: string): Promise<boolean> => {
   try {
-    const itemDoc = doc(db, PAYMENT_METHODS_COLLECTION, id);
-    await deleteDoc(itemDoc);
+    await fetchFromApi(`collections/${PAYMENT_METHODS_COLLECTION}/documents/${id}`, {
+      method: 'DELETE',
+    });
     return true;
   } catch (error) {
-    console.error("Error deleting payment method:", error);
-    if (error instanceof Error) throw error; 
+    console.error("Error deleting payment method via API:", error);
+    if (error instanceof Error) throw error;
     return false;
   }
 };
