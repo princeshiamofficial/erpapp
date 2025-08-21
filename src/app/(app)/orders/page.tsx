@@ -115,13 +115,8 @@ export default function OrdersPage() {
 
   useEffect(() => {
     setIsClient(true);
-    if (currentUser) {
-      fetchOrderData();
-    } else {
-      setIsLoading(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser]);
+    fetchOrderData();
+  }, [fetchOrderData]);
 
 
   const memoizedAvailableStatusesForDialog = useMemo(() => {
