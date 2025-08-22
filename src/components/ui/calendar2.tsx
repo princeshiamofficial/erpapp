@@ -16,6 +16,17 @@ function Calendar2({
   showOutsideDays = true,
   ...props
 }: CalendarProps) {
+  
+  const dayColors = [
+    'text-red-500',      // Sunday
+    'text-orange-500',   // Monday
+    'text-amber-500',    // Tuesday
+    'text-lime-600',     // Wednesday
+    'text-sky-600',      // Thursday
+    'text-indigo-500',   // Friday
+    'text-purple-500',   // Saturday
+  ];
+
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
@@ -35,14 +46,18 @@ function Calendar2({
         table: "w-full border-collapse flex flex-col flex-grow",
         head_row: "flex",
         head_cell:
-          "text-muted-foreground rounded-md w-full font-normal text-xs shadow-md drop-shadow-sm",
+          "text-muted-foreground rounded-md w-full font-semibold text-xs shadow-sm", // Removed drop-shadow-sm for a cleaner look
         tbody: "flex-1 grid grid-cols-7 grid-rows-5 gap-px",
         row: "flex-1 contents",
         day_cell: 'p-0 relative',
         day: "h-full w-full",
       }}
       formatters={{
-        formatWeekdayName: (day) => format(day, "EEEEE"),
+        formatWeekdayName: (day, options) => (
+            <span className={cn('font-bold', dayColors[day.getDay()])}>
+                {format(day, "EE", { locale: options?.locale })}
+            </span>
+        ),
       }}
       components={{
         IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
