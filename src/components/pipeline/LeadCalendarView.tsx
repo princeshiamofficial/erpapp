@@ -101,11 +101,17 @@ export function LeadCalendarView({ leads, onEditLead }: LeadCalendarViewProps) {
   const eventsByDate = React.useMemo(() => {
     const events: Record<string, Lead[]> = {};
     leads.forEach(lead => {
-        const dateKey = lead.schedule ? parseISO(lead.schedule).toDateString() : parseISO(lead.date).toDateString();
-        if (!events[dateKey]) {
-            events[dateKey] = [];
+      if (lead.schedule) { // Only process leads that have a schedule date
+        try {
+            const dateKey = parseISO(lead.schedule).toDateString();
+            if (!events[dateKey]) {
+                events[dateKey] = [];
+            }
+            events[dateKey].push(lead);
+        } catch (e) {
+            console.error("Invalid schedule date found for lead:", lead.id, lead.schedule);
         }
-        events[dateKey].push(lead);
+      }
     });
     return events;
   }, [leads]);
