@@ -36,7 +36,7 @@ const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents:
         if (isPastDate && dayEvents.length > 0) {
             return 'bg-red-100 dark:bg-red-900/30';
         }
-        if (!isPastDate) {
+        if (!isPastDate && dayEvents.length > 0) {
             return 'bg-green-100 dark:bg-green-900/30';
         }
         return '';
@@ -46,7 +46,7 @@ const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents:
         <Popover>
             <PopoverTrigger asChild disabled={dayEvents.length === 0}>
                 <div className={cn(
-                    "relative flex flex-col items-start justify-start p-1.5 w-full h-full rounded-md transition-colors border border-border/30",
+                    "relative flex flex-col items-start justify-start p-1.5 w-full h-full rounded-md transition-colors border border-border/30 ml-1",
                     dayEvents.length > 0 && "cursor-pointer hover:bg-accent hover:border-primary/50",
                     cardBackgroundColor()
                 )}>
