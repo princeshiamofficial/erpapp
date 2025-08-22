@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -45,13 +46,13 @@ const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents:
         <Popover>
             <PopoverTrigger asChild disabled={dayEvents.length === 0}>
                 <div className={cn(
-                    "relative flex flex-col items-start justify-start p-1.5 w-full h-full rounded-md transition-colors border border-border/30 ml-1 shadow-sm",
+                    "relative flex flex-col items-start justify-start p-1.5 w-full h-[120px] rounded-md transition-colors border border-border/30 ml-1 shadow-sm", // Fixed height
                     dayEvents.length > 0 && "cursor-pointer hover:bg-accent hover:border-primary/50",
                     cardBackgroundColor()
                 )}>
                     <span className={cn(
-                        "flex items-center justify-center text-xs h-6 w-6 rounded-full font-semibold",
-                        isCurrentDay ? "bg-primary text-primary-foreground" : ""
+                        "flex items-center justify-center text-xs h-6 w-6 rounded-full font-medium",
+                        isCurrentDay ? "bg-primary text-primary-foreground font-semibold" : ""
                     )}>
                       {date.getDate()}
                     </span>
