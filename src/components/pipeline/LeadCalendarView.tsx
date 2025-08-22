@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Calendar } from '@/components/ui/calendar2';
+import { Calendar2 as Calendar } from '@/components/ui/calendar2';
 import type { Lead } from '@/types';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { parseISO, format, isToday, isBefore, startOfDay } from 'date-fns';
