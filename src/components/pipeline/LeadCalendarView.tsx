@@ -28,23 +28,14 @@ const getCategoryClass = (category: string) => {
 
 const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents: Lead[]; onEditLead: (lead: Lead) => void; }) => {
     const isCurrentDay = isToday(date);
-    const today = startOfDay(new Date());
-    const isPastDate = isBefore(date, today);
-
-    const cardBackgroundColor = () => {
-        if (dayEvents.length > 0) {
-            return isPastDate ? 'bg-red-100 dark:bg-red-900/20' : 'bg-green-100 dark:bg-green-900/20';
-        }
-        return 'bg-card';
-    };
-
+    
     return (
         <Popover>
             <PopoverTrigger asChild disabled={dayEvents.length === 0}>
                 <div className={cn(
-                    "relative flex flex-col items-start justify-start p-2 h-full rounded-lg transition-all w-full border-2 border-transparent",
-                    dayEvents.length > 0 && "cursor-pointer hover:border-primary",
-                    cardBackgroundColor(),
+                    "relative flex flex-col items-start justify-start p-2 h-full rounded-lg transition-all w-full border",
+                    dayEvents.length > 0 ? "cursor-pointer hover:border-primary bg-red-50" : "bg-card border-transparent",
+                    isCurrentDay && "border-primary"
                 )}>
                     <span className={cn(
                         "flex items-center justify-center text-xs h-6 w-6 rounded-full font-medium",
@@ -68,12 +59,12 @@ const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents:
                 </div>
             </PopoverTrigger>
             {dayEvents.length > 0 && (
-                <PopoverContent className="w-72 p-2">
+                <PopoverContent className="w-72 p-2 bg-red-50 border-red-200">
                     <div className="font-semibold text-sm mb-2 px-2 pt-1">{format(date, "PPP")}</div>
                     <ScrollArea className="max-h-60">
                         <div className="space-y-1 pr-2">
                             {dayEvents.map(lead => (
-                                <div key={lead.id} className="p-1.5 rounded-md hover:bg-muted" >
+                                <div key={lead.id} className="p-1.5 rounded-md hover:bg-red-100" >
                                     <div className="flex items-center gap-2">
                                         <div className={cn("h-2 w-2 rounded-full shrink-0", getCategoryClass(lead.category))}></div>
                                         <span className="text-xs font-medium truncate">{lead.contactName}</span>
@@ -113,13 +104,13 @@ export function LeadCalendarView({ leads, onEditLead }: LeadCalendarViewProps) {
   }, [leads]);
 
   return (
-    <div className="bg-card rounded-lg shadow-lg mt-4 h-full w-full flex flex-col p-1">
+    <div className="bg-card rounded-lg shadow-lg mt-4 h-full w-full flex flex-col">
       <Calendar
         mode="single"
         className="w-full flex-grow"
         classNames={{
           month: "flex flex-col flex-grow",
-          table: "flex-grow border-separate border-spacing-0.5", // Added spacing between cells
+          table: "flex-grow border-separate border-spacing-0",
           head_row: "flex-none",
           row: "flex-1 grid grid-cols-7",
           day_cell: 'p-0 relative',
