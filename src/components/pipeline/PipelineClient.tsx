@@ -319,7 +319,7 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel} collisionDetection={closestCorners}>
-      <div className="flex flex-col h-[calc(100vh-theme(spacing.24))] p-1 sm:p-0">
+      <div className="flex flex-col h-full p-1 sm:p-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
           <div><h1 className="page-title">Sales Pipeline</h1><p className="page-description">Track and manage potential sales leads and opportunities by category.</p></div>
         </div>
@@ -390,10 +390,12 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
             )}
           </>
         ) : (
-          <LeadCalendarView 
-            leads={filteredLeads} 
-            onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }} 
-          />
+          <div className="flex-1 mt-4 flex flex-col">
+            <LeadCalendarView 
+              leads={filteredLeads} 
+              onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }} 
+            />
+          </div>
         )}
       </div>
       <DragOverlay dropAnimation={null}>

@@ -113,13 +113,17 @@ export function LeadCalendarView({ leads, onEditLead }: LeadCalendarViewProps) {
   }, [leads]);
 
   return (
-    <div className="p-0 sm:p-4 bg-card rounded-lg shadow-lg mt-4">
+    <div className="bg-card rounded-lg shadow-lg mt-4 h-full w-full flex flex-col">
       <Calendar
         mode="single"
-        className="w-full"
+        className="w-full flex-grow"
         classNames={{
-          day_cell: 'h-24 w-full p-0',
-          head_cell: 'w-full',
+          month: "flex flex-col flex-grow",
+          table: "flex-grow border-separate border-spacing-0",
+          head_row: "flex-none",
+          row: "flex-1 grid grid-cols-7",
+          day_cell: 'p-0',
+          day: "h-full w-full",
         }}
         components={{
             Day: (props) => (
