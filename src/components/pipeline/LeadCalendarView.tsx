@@ -5,7 +5,7 @@ import React from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import type { Lead } from '@/types';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { parseISO, format, isToday } from 'date-fns';
+import { parseISO, format, isToday, isBefore, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -29,13 +29,26 @@ const getCategoryClass = (category: string) => {
 // Define DayWithEvents outside of LeadCalendarView to prevent re-creation on every render
 const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents: Lead[]; onEditLead: (lead: Lead) => void; }) => {
     const isCurrentDay = isToday(date);
+    const today = startOfDay(new Date());
+    const isPastDate = isBefore(date, today);
+
+    const cardBackgroundColor = () => {
+        if (isPastDate && dayEvents.length > 0) {
+            return 'bg-red-100 dark:bg-red-900/30';
+        }
+        if (!isPastDate) {
+            return 'bg-green-100 dark:bg-green-900/30';
+        }
+        return '';
+    };
 
     return (
         <Popover>
             <PopoverTrigger asChild disabled={dayEvents.length === 0}>
                 <div className={cn(
                     "relative flex flex-col items-start justify-start p-1.5 w-full h-full rounded-md transition-colors border border-border/30",
-                    dayEvents.length > 0 && "cursor-pointer hover:bg-accent hover:border-primary/50"
+                    dayEvents.length > 0 && "cursor-pointer hover:bg-accent hover:border-primary/50",
+                    cardBackgroundColor()
                 )}>
                     <span className={cn(
                         "flex items-center justify-center text-xs h-6 w-6 rounded-full",
