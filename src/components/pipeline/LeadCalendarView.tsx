@@ -45,7 +45,7 @@ const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents:
         <Popover>
             <PopoverTrigger asChild disabled={dayEvents.length === 0}>
                 <div className={cn(
-                    "relative flex flex-col items-start justify-start p-1.5 w-full h-full rounded-md transition-all duration-200 border border-border/30 ml-1 shadow-sm hover:shadow-md",
+                    "relative flex flex-col items-start justify-start p-1.5 w-full h-full rounded-md transition-colors border border-border/30 ml-1 shadow-sm",
                     dayEvents.length > 0 && "cursor-pointer hover:bg-accent hover:border-primary/50",
                     cardBackgroundColor()
                 )}>
