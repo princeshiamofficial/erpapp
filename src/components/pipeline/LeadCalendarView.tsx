@@ -98,7 +98,7 @@ export function LeadCalendarView({ leads, onEditLead }: LeadCalendarViewProps) {
   }, [leads]);
 
   return (
-    <div className="p-0 sm:p-4 bg-card rounded-lg shadow-sm mt-4">
+    <div className="p-0 sm:p-4 bg-card rounded-lg shadow-lg mt-4">
       <Calendar
         mode="single"
         className="w-full"
