@@ -34,38 +34,38 @@ const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents:
 
     const cardBackgroundColor = () => {
         if (isPastDate && dayEvents.length > 0) {
-            return 'bg-red-100 dark:bg-red-900/30';
+            return 'bg-destructive/10 dark:bg-destructive/20 border-destructive/20';
         }
         if (!isPastDate && dayEvents.length > 0) {
-            return 'bg-green-100 dark:bg-green-900/30';
+            return 'bg-green-100/80 dark:bg-green-900/30 border-green-500/20';
         }
-        return '';
+        return 'border-border/20';
     };
 
     return (
         <Popover>
             <PopoverTrigger asChild disabled={dayEvents.length === 0}>
                 <div className={cn(
-                    "relative flex flex-col items-start justify-start p-1.5 w-full h-full rounded-md transition-colors border border-border/30 ml-1",
-                    dayEvents.length > 0 && "cursor-pointer hover:bg-accent hover:border-primary/50",
+                    "relative flex flex-col items-start justify-start p-2 h-full rounded-md transition-colors",
+                    dayEvents.length > 0 && "cursor-pointer hover:bg-accent/50",
                     cardBackgroundColor()
                 )}>
                     <span className={cn(
-                        "flex items-center justify-center text-xs h-6 w-6 rounded-full",
-                        isCurrentDay ? "bg-primary text-primary-foreground font-semibold" : "font-medium"
+                        "flex items-center justify-center text-xs h-6 w-6 rounded-full font-medium",
+                        isCurrentDay ? "bg-primary text-primary-foreground" : "text-muted-foreground"
                     )}>
                       {date.getDate()}
                     </span>
-                     <div className="flex-grow w-full mt-1.5 space-y-1">
-                        {dayEvents.slice(0, 3).map(lead => (
+                     <div className="flex-grow w-full mt-1 space-y-1">
+                        {dayEvents.slice(0, 2).map(lead => (
                             <div key={lead.id} className="flex items-center gap-1.5 w-full">
                                 <div className={cn("h-1.5 w-1.5 rounded-full shrink-0", getCategoryClass(lead.category))}></div>
                                 <span className="text-xs text-foreground/80 truncate">{lead.contactName}</span>
                             </div>
                         ))}
-                         {dayEvents.length > 3 &&
+                         {dayEvents.length > 2 &&
                            <div className="text-xs text-muted-foreground ml-3.5 pt-0.5">
-                             + {dayEvents.length - 3} more
+                             + {dayEvents.length - 2} more
                            </div>
                          }
                     </div>
@@ -121,6 +121,9 @@ export function LeadCalendarView({ leads, onEditLead }: LeadCalendarViewProps) {
       <Calendar
         mode="single"
         className="w-full"
+        classNames={{
+          day_cell: 'h-24 w-full' // Ensure cells can grow
+        }}
         components={{
             Day: (props) => (
                 <DayWithEvents 
