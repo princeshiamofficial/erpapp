@@ -33,17 +33,17 @@ const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents:
 
     const cardBackgroundColor = () => {
         if (dayEvents.length > 0) {
-            return isPastDate ? 'bg-red-50' : 'bg-green-50/50';
+            return isPastDate ? 'bg-red-100 dark:bg-red-900/20' : 'bg-green-100 dark:bg-green-900/20';
         }
-        return '';
+        return 'bg-card';
     };
 
     return (
         <Popover>
             <PopoverTrigger asChild disabled={dayEvents.length === 0}>
                 <div className={cn(
-                    "relative flex flex-col items-start justify-start p-2 h-full rounded-md transition-colors w-full",
-                    dayEvents.length > 0 && "cursor-pointer hover:bg-accent/50",
+                    "relative flex flex-col items-start justify-start p-2 h-full rounded-lg transition-all w-full border-2 border-transparent",
+                    dayEvents.length > 0 && "cursor-pointer hover:border-primary",
                     cardBackgroundColor(),
                 )}>
                     <span className={cn(
@@ -113,16 +113,16 @@ export function LeadCalendarView({ leads, onEditLead }: LeadCalendarViewProps) {
   }, [leads]);
 
   return (
-    <div className="bg-card rounded-lg shadow-lg mt-4 h-full w-full flex flex-col">
+    <div className="bg-card rounded-lg shadow-lg mt-4 h-full w-full flex flex-col p-1">
       <Calendar
         mode="single"
         className="w-full flex-grow"
         classNames={{
           month: "flex flex-col flex-grow",
-          table: "flex-grow border-separate border-spacing-0",
+          table: "flex-grow border-separate border-spacing-0.5", // Added spacing between cells
           head_row: "flex-none",
           row: "flex-1 grid grid-cols-7",
-          day_cell: 'p-0',
+          day_cell: 'p-0 relative',
           day: "h-full w-full",
         }}
         components={{
