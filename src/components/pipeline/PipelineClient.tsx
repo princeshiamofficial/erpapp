@@ -319,8 +319,8 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel} collisionDetection={closestCorners}>
-      <div className="flex flex-col h-full p-1 sm:p-0">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
+      <div className="flex flex-col h-full">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header px-4 sm:px-0">
           <div><h1 className="page-title">Sales Pipeline</h1><p className="page-description">Track and manage potential sales leads and opportunities by category.</p></div>
         </div>
 
