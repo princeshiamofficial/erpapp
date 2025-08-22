@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import { Calendar } from '@/components/ui/calendar';
+import { Calendar2 as Calendar } from '@/components/ui/calendar2';
 import type { Lead } from '@/types';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { parseISO, format, isToday, isBefore, startOfDay } from 'date-fns';
@@ -26,36 +26,31 @@ const getCategoryClass = (category: string) => {
     }
 }
 
-// Define DayWithEvents outside of LeadCalendarView to prevent re-creation on every render
 const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents: Lead[]; onEditLead: (lead: Lead) => void; }) => {
     const isCurrentDay = isToday(date);
     const today = startOfDay(new Date());
     const isPastDate = isBefore(date, today);
 
     const cardBackgroundColor = () => {
-        if (isPastDate && dayEvents.length > 0) {
-            return 'bg-destructive/10 dark:bg-destructive/20 border-destructive/20';
+        if (dayEvents.length > 0) {
+            return isPastDate ? 'bg-red-50' : 'bg-green-50/50';
         }
-        if (!isPastDate && dayEvents.length > 0) {
-            return 'bg-green-100/80 dark:bg-green-900/30 border-green-500/20';
-        }
-        return 'border-border/20';
+        return '';
     };
 
     return (
         <Popover>
             <PopoverTrigger asChild disabled={dayEvents.length === 0}>
                 <div className={cn(
-                    "relative flex flex-col items-start justify-start p-2 h-full rounded-md transition-colors",
+                    "relative flex flex-col items-start justify-start p-2 h-full rounded-md transition-colors w-full",
                     dayEvents.length > 0 && "cursor-pointer hover:bg-accent/50",
                     cardBackgroundColor(),
-                    'ml-1' // Added margin to the left
                 )}>
                     <span className={cn(
                         "flex items-center justify-center text-xs h-6 w-6 rounded-full font-medium",
                         isCurrentDay ? "bg-primary text-primary-foreground" : "text-muted-foreground"
                     )}>
-                      {date.getDate()}
+                      {format(date, 'd')}
                     </span>
                      <div className="flex-grow w-full mt-1 space-y-1">
                         {dayEvents.slice(0, 2).map(lead => (
@@ -102,7 +97,7 @@ export function LeadCalendarView({ leads, onEditLead }: LeadCalendarViewProps) {
   const eventsByDate = React.useMemo(() => {
     const events: Record<string, Lead[]> = {};
     leads.forEach(lead => {
-      if (lead.schedule) { // Only process leads that have a schedule date
+      if (lead.schedule) { 
         try {
             const dateKey = parseISO(lead.schedule).toDateString();
             if (!events[dateKey]) {
@@ -118,12 +113,13 @@ export function LeadCalendarView({ leads, onEditLead }: LeadCalendarViewProps) {
   }, [leads]);
 
   return (
-    <div className="p-0 sm:p-4 bg-black rounded-lg shadow-lg mt-4">
+    <div className="p-0 sm:p-4 bg-card rounded-lg shadow-lg mt-4">
       <Calendar
         mode="single"
         className="w-full"
         classNames={{
-          day_cell: 'h-24 w-full' // Ensure cells can grow
+          day_cell: 'h-24 w-full p-0',
+          head_cell: 'w-full',
         }}
         components={{
             Day: (props) => (
