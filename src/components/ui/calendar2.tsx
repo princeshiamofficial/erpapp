@@ -34,14 +34,15 @@ function Calendar2({
         nav_button_next: "absolute right-1",
         table: "w-full border-collapse flex flex-col flex-grow",
         head_row: "flex",
-        head_cell: "text-muted-foreground rounded-md w-full font-normal text-xs",
+        head_cell:
+          "text-muted-foreground rounded-md w-full font-normal text-xs shadow-md drop-shadow-sm",
         tbody: "flex-1 grid grid-cols-7 grid-rows-5 gap-px",
         row: "flex-1 contents",
         day_cell: 'p-0 relative',
         day: "h-full w-full",
       }}
       formatters={{
-        formatWeekdayName: (day) => format(day, "EE"),
+        formatWeekdayName: (day) => format(day, "EEEEE"),
       }}
       components={{
         IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
