@@ -48,7 +48,8 @@ const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents:
                 <div className={cn(
                     "relative flex flex-col items-start justify-start p-2 h-full rounded-md transition-colors",
                     dayEvents.length > 0 && "cursor-pointer hover:bg-accent/50",
-                    cardBackgroundColor()
+                    cardBackgroundColor(),
+                    'ml-1' // Added margin to the left
                 )}>
                     <span className={cn(
                         "flex items-center justify-center text-xs h-6 w-6 rounded-full font-medium",
@@ -117,7 +118,7 @@ export function LeadCalendarView({ leads, onEditLead }: LeadCalendarViewProps) {
   }, [leads]);
 
   return (
-    <div className="p-0 sm:p-4 bg-card rounded-lg shadow-lg mt-4">
+    <div className="p-0 sm:p-4 bg-black rounded-lg shadow-lg mt-4">
       <Calendar
         mode="single"
         className="w-full"
