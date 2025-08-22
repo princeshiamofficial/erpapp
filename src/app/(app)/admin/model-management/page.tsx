@@ -82,7 +82,7 @@ export default function ModelManagementPage() {
     } else if (currentUser) {
       router.replace('/dashboard');
     }
-  }, [currentUser, router]);
+  }, [currentUser, router, fetchData]);
 
   const filteredModels = useMemo(() => {
     if (!modelSearchTerm) return models;
@@ -308,7 +308,6 @@ export default function ModelManagementPage() {
           <ul className="divide-y divide-border/50">
             {items.map((item) => (
               <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
-<<<<<<< HEAD
                 <div className="flex items-center gap-4 flex-1">
                    <NextImage
                       src={item.imageUrl || `https://placehold.co/64x64.png`}
@@ -347,18 +346,6 @@ export default function ModelManagementPage() {
                       <span className="font-mono text-sm sm:text-base">{formatCurrency(item.sellingPrice)}</span>
                     </span>
                   </div>
-=======
-                <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-x-4 items-center">
-                  <span className="font-medium text-foreground col-span-1 whitespace-nowrap overflow-hidden text-ellipsis" title={item.name}>{item.name}</span>
-                  <span className="text-xs sm:text-sm font-bold text-[hsl(var(--chart-1))] flex items-center col-span-1">
-                    <DollarSign className="h-3 w-3 mr-1 opacity-70" />
-                    Buy: {formatCurrency(item.buyingPrice)}
-                  </span>
-                  <span className="text-xs sm:text-sm font-bold text-[hsl(var(--chart-2))] flex items-center col-span-1">
-                    <DollarSign className="h-3 w-3 mr-1 opacity-70" />
-                     Sell: {formatCurrency(item.sellingPrice)}
-                  </span>
->>>>>>> 133d7c51 (single line name)
                 </div>
                 <div className="flex items-center gap-2 ml-4">
                   <Button variant="outline" size="icon" onClick={() => openEditDialog(item)} title={`Edit model`} className="h-8 w-8">
@@ -539,10 +526,3 @@ export default function ModelManagementPage() {
     </div>
   );
 }
-<<<<<<< HEAD
-=======
-
-    
-
-    
->>>>>>> 133d7c51 (single line name)
