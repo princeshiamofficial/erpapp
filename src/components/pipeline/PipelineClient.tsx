@@ -347,9 +347,9 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
               </Select>
             )}
             <div className="flex items-center bg-muted p-1 rounded-md ml-auto">
-              <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className="h-8"><List className="h-4 w-4" /></Button>
-              <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('kanban')} className="h-8"><LayoutGrid className="h-4 w-4" /></Button>
-              <Button variant={viewMode === 'calendar' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('calendar')} className="h-8"><CalendarIcon className="h-4 w-4" /></Button>
+              <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('list')} className="h-8" disabled><List className="h-4 w-4" /></Button>
+              <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('kanban')} className="h-8" disabled><LayoutGrid className="h-4 w-4" /></Button>
+              <Button variant={viewMode === 'calendar' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('calendar')} className="h-8" disabled><CalendarIcon className="h-4 w-4" /></Button>
             </div>
             <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" className="w-full sm:w-auto h-10">Actions <ChevronDown className="ml-2 h-4 w-4" /></Button></DropdownMenuTrigger>
               <DropdownMenuContent align="end">
