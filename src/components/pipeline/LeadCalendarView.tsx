@@ -50,8 +50,8 @@ const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents:
                     cardBackgroundColor()
                 )}>
                     <span className={cn(
-                        "flex items-center justify-center text-xs h-6 w-6 rounded-full",
-                        isCurrentDay ? "bg-primary text-primary-foreground font-semibold" : "font-medium"
+                        "flex items-center justify-center text-xs h-6 w-6 rounded-full font-semibold",
+                        isCurrentDay ? "bg-primary text-primary-foreground" : ""
                     )}>
                       {date.getDate()}
                     </span>
