@@ -41,11 +41,33 @@ export function AddEditDistrictDataDialog({ isOpen, onOpenChange, onDataSaved, e
   const [businessName, setBusinessName] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   const isEditMode = !!entry;
+
+  const validatePhone = (phoneNumber: string) => {
+    if (!phoneNumber) {
+      setPhoneError("Phone number is required.");
+    } else if (!phoneNumber.startsWith('0')) {
+      setPhoneError("Phone number must start with 0.");
+    } else if (phoneNumber.length !== 11) {
+      setPhoneError("Phone number must be exactly 11 digits long.");
+    } else {
+      setPhoneError(null);
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const numericValue = e.target.value.replace(/[^0-9]/g, '');
+    if (numericValue.length <= 11) {
+      setPhone(numericValue);
+      validatePhone(numericValue);
+    }
+  };
+
 
   useEffect(() => {
     if (isOpen) {
@@ -57,6 +79,7 @@ export function AddEditDistrictDataDialog({ isOpen, onOpenChange, onDataSaved, e
         setBusinessName(entry.businessName);
         setAddress(entry.address);
         setPhone(entry.phone);
+        setPhoneError(null);
       } else {
         // Reset form for add mode
         setSelectedDivision('');
@@ -66,6 +89,7 @@ export function AddEditDistrictDataDialog({ isOpen, onOpenChange, onDataSaved, e
         setBusinessName('');
         setAddress('');
         setPhone('');
+        setPhoneError(null);
       }
     }
   }, [isOpen, entry, isEditMode]);
@@ -79,6 +103,12 @@ export function AddEditDistrictDataDialog({ isOpen, onOpenChange, onDataSaved, e
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    validatePhone(phone); // Final validation check
+    if (phoneError) {
+      toast({ title: "Validation Error", description: phoneError, variant: "destructive" });
+      return;
+    }
+
     if (!selectedDivision || !selectedDistrict || !jobId || !orderDate || !businessName || !address || !phone) {
       toast({
         title: "Validation Error",
@@ -100,7 +130,6 @@ export function AddEditDistrictDataDialog({ isOpen, onOpenChange, onDataSaved, e
         phone,
     };
     
-    // In a real implementation, you would save the data here.
     const result = await addManualDistrictDataAction(dataToSave);
     
     setIsSubmitting(false);
@@ -184,7 +213,16 @@ export function AddEditDistrictDataDialog({ isOpen, onOpenChange, onDataSaved, e
           </div>
            <div className="space-y-1">
             <Label htmlFor="phone">Phone *</Label>
-            <Input id="phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="e.g., 01712345678"/>
+            <Input 
+                id="phone" 
+                type="tel" 
+                value={phone} 
+                onChange={handlePhoneChange} 
+                required 
+                placeholder="01xxxxxxxxx"
+                className={cn(phoneError && "border-destructive focus-visible:ring-destructive")}
+            />
+             {phoneError && <p className="text-xs text-destructive">{phoneError}</p>}
           </div>
           <div className="space-y-1">
             <Label htmlFor="address">Address *</Label>
@@ -193,7 +231,7 @@ export function AddEditDistrictDataDialog({ isOpen, onOpenChange, onDataSaved, e
 
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !!phoneError}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isSubmitting ? 'Saving...' : 'Save Data'}
             </Button>
