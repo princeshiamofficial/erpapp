@@ -11,6 +11,7 @@ import { getModels } from './service-options-service';
 
 const ORDERS_COLLECTION = 'orders';
 const PROJECTS_COLLECTION = 'projects';
+const SHIPPED_ORDERS_COLLECTION = 'shippedOrders'; // New collection name
 
 export const getOrders = async (): Promise<TrackingLink[]> => {
   try {
@@ -504,5 +505,44 @@ export const deleteComment = async (
   } catch (error) {
     console.error(`Error deleting comment ${targetCommentId} in order ${orderId} via API:`, error);
     return undefined;
+  }
+};
+
+// New functions for the shippedOrders collection
+export const addShippedOrderEntry = async (orderId: string, trackingCode: string): Promise<boolean> => {
+  try {
+    await ensureCollectionExists(SHIPPED_ORDERS_COLLECTION);
+    const payload = {
+      id: orderId,
+      data: { packzyTrackingCode: trackingCode, addedAt: new Date().toISOString() }
+    };
+    await fetchFromApi(`collections/${SHIPPED_ORDERS_COLLECTION}/documents`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    console.log(`[ShippedOrders] Added entry for order ${orderId}`);
+    return true;
+  } catch (error) {
+    console.error(`Error adding to shippedOrders collection for order ${orderId}:`, error);
+    return false;
+  }
+};
+
+export const deleteShippedOrderEntry = async (orderId: string): Promise<boolean> => {
+  try {
+    await ensureCollectionExists(SHIPPED_ORDERS_COLLECTION);
+    await fetchFromApi(`collections/${SHIPPED_ORDERS_COLLECTION}/documents/${orderId}`, {
+      method: 'DELETE'
+    });
+    console.log(`[ShippedOrders] Removed entry for order ${orderId}`);
+    return true;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      // It's okay if it's already gone, no need to throw an error.
+      console.warn(`[ShippedOrders] Tried to delete entry for order ${orderId}, but it was not found.`);
+      return true;
+    }
+    console.error(`Error deleting from shippedOrders collection for order ${orderId}:`, error);
+    return false;
   }
 };

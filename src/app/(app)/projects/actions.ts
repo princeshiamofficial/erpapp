@@ -1,11 +1,10 @@
 
-
 "use server";
 
 import { revalidatePath } from "next/cache";
 import type { Project, ProjectStatusType, User, OrderLogEntry } from "@/types";
 import { updateProjectStatus as updateProjectStatusInDb } from '@/lib/project-service';
-import { getOrderById, updateOrder, autoSettleOrderIfDelivered, unsettleOrderPayment } from "@/lib/order-service"; 
+import { getOrderById, updateOrder, autoSettleOrderIfDelivered, unsettleOrderPayment, addShippedOrderEntry } from "@/lib/order-service"; 
 import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_STATUS_ID, DELIVERED_STATUS_ID, ORDER_SUBMITTED_ID, READY_FOR_DESIGN_STATUS_ID } from '@/lib/status-service'; 
 import { v4 as uuidv4 } from 'uuid'; 
 import { getGlobalSettings } from '@/lib/settings-service';
@@ -242,6 +241,9 @@ export async function transferToCourierAction(
        console.error(`CRITICAL: Project ${project.id} status updated, but failed to update corresponding order ${order.id} with Packzy details.`);
        return { success: false, error: "Project status updated, but failed to update order details. Please check manually." };
     }
+    
+    // Add to the shippedOrders collection for quick sync checks
+    await addShippedOrderEntry(order.id, consignment.tracking_code);
 
     revalidatePath("/(app)/projects");
     revalidatePath(`/track/${order.id}`);
@@ -255,5 +257,3 @@ export async function transferToCourierAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
-
-    

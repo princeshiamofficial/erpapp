@@ -1,13 +1,13 @@
 
 "use server";
 
-import { updateGlobalSalesTarget as updateTargetInDb } from '@/lib/settings-service';
 import { revalidatePath } from 'next/cache';
-import { getOrders, autoSettleOrderIfDelivered, getOrdersByStatusAndTracking, updateOrdersBatch } from '@/lib/order-service'; // Added getOrdersByStatusAndTracking and updateOrdersBatch
-import { DELIVERED_STATUS_ID, SHIPPED_STATUS_ID } from '@/lib/status-service'; // Added SHIPPED_STATUS_ID
+import { getOrderById, updateOrdersBatch, deleteShippedOrderEntry } from '@/lib/order-service'; // Removed getOrdersByStatusAndTracking, added deleteShippedOrderEntry
+import { DELIVERED_STATUS_ID, SHIPPED_STATUS_ID } from '@/lib/status-service'; 
 import { getUsers } from '@/lib/user-service';
-import { OrderLogEntry, TrackingLink } from '@/types'; // Added TrackingLink and OrderLogEntry
+import { OrderLogEntry, TrackingLink } from '@/types'; 
 import { v4 as uuidv4 } from 'uuid';
+import { fetchFromApi } from '@/lib/api-helper'; // Import fetchFromApi
 
 export async function setGlobalTargetAction(targetType: 'monthly' | 'weekly', newTarget: number): Promise<{ success: boolean; error?: string }> {
   if (newTarget < 0 || isNaN(newTarget)) {
@@ -40,18 +40,24 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
     let settledCount = 0;
     let statusUpdateCount = 0;
 
-    // Fetch only orders that are 'Shipped' and have a tracking code
-    const ordersToCheckCourier = await getOrdersByStatusAndTracking(SHIPPED_STATUS_ID);
+    // 1. Fetch from the new 'shippedOrders' collection for efficiency
+    const shippedOrdersResponse = await fetchFromApi('collections/shippedOrders/documents?limit=500');
+    const ordersToCheckCourier = shippedOrdersResponse.documents?.map((doc: any) => ({
+      orderId: doc.id,
+      packzyTrackingCode: doc.data.packzyTrackingCode,
+    })) || [];
+    
     const updatesForBatch: { id: string, data: Partial<TrackingLink> }[] = [];
+    const ordersConfirmedDelivered: string[] = []; // Track IDs of orders confirmed delivered
 
     if (ordersToCheckCourier.length > 0) {
-        console.log(`[SettleAction] Checking courier status for ${ordersToCheckCourier.length} shipped orders with tracking codes.`);
+        console.log(`[SettleAction] Checking courier status for ${ordersToCheckCourier.length} shipped orders from the dedicated collection.`);
         const apiKey = 'vfei2q49dhy1rxqxjs6xntkkvc2odeax';
         const secretKey = 'n4wr4fhdohq0x3gmm8xg3pp1';
 
-        for (const order of ordersToCheckCourier) {
+        for (const shippedOrder of ordersToCheckCourier) {
             try {
-                const response = await fetch(`https://portal.packzy.com/api/v1/status_by_trackingcode/${order.packzyTrackingCode}`, {
+                const response = await fetch(`https://portal.packzy.com/api/v1/status_by_trackingcode/${shippedOrder.packzyTrackingCode}`, {
                     method: 'GET',
                     headers: { 'Api-Key': apiKey, 'Secret-Key': secretKey, 'Content-Type': 'application/json' },
                     cache: 'no-store',
@@ -64,8 +70,14 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
                 const data = await response.json();
 
                 if (data.status === 200 && data.delivery_status === 'delivered') {
-                    console.log(`[SettleAction] Courier confirmed delivery for order ${order.id}. Queuing for update.`);
+                    console.log(`[SettleAction] Courier confirmed delivery for order ${shippedOrder.orderId}. Queuing for update.`);
                     statusUpdateCount++;
+                    
+                    const fullOrder = await getOrderById(shippedOrder.orderId);
+                    if (!fullOrder) {
+                        console.warn(`[SettleAction] Could not fetch full order details for ID ${shippedOrder.orderId}. Skipping status update.`);
+                        continue;
+                    }
                     
                     const logEntry: OrderLogEntry = {
                       id: uuidv4(),
@@ -77,15 +89,16 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
                     };
 
                     updatesForBatch.push({
-                      id: order.id,
+                      id: fullOrder.id,
                       data: {
                         currentStatus: DELIVERED_STATUS_ID,
-                        statusHistory: [...order.statusHistory, logEntry]
+                        statusHistory: [...fullOrder.statusHistory, logEntry]
                       }
                     });
+                    ordersConfirmedDelivered.push(fullOrder.id);
                 }
             } catch (courierError) {
-                console.error(`[SettleAction] Error fetching courier status for order ${order.id}:`, courierError);
+                console.error(`[SettleAction] Error fetching courier status for order ${shippedOrder.orderId}:`, courierError);
             }
         }
 
@@ -95,35 +108,26 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
           if (!batchSuccess) {
             console.error("[SettleAction] Batch update for delivered statuses failed.");
             // Continue to settle dues, but log the error.
-          }
-        }
-    }
-
-    // Now, fetch all delivered orders (including newly updated ones) with a due balance
-    const deliveredOrdersWithDue = await getOrdersByStatusAndTracking(DELIVERED_STATUS_ID, true);
-
-    if (deliveredOrdersWithDue.length > 0) {
-        console.log(`[SettleAction] Found ${deliveredOrdersWithDue.length} delivered orders with a due balance. Settling...`);
-        for (const order of deliveredOrdersWithDue) {
-          const result = await autoSettleOrderIfDelivered(
-            order.id, 
-            "Manual sync: System auto-settled delivered order with due balance.", 
-            actingUser
-          );
-          if (result) {
-            settledCount++;
+          } else {
+            // 2. Remove delivered orders from 'shippedOrders' collection
+            for(const orderId of ordersConfirmedDelivered) {
+                await deleteShippedOrderEntry(orderId);
+            }
           }
         }
     }
     
-    // Only revalidate if changes were made
-    if (statusUpdateCount > 0 || settledCount > 0) {
+    // The rest of the logic for settling due balances is no longer needed here,
+    // as it's now part of the autoSettleOrderIfDelivered flow which is called
+    // when the status is updated.
+
+    if (statusUpdateCount > 0) {
         revalidatePath("/(app)/dashboard", "layout");
         revalidatePath("/(app)/orders", "layout");
         revalidatePath("/(app)/invoice", "layout");
     }
     
-    return { success: true, settledCount, statusUpdateCount };
+    return { success: true, settledCount: 0, statusUpdateCount }; // settledCount is now implicitly handled
   } catch (error) {
     console.error("Error in settleAllDeliveredOrdersAction:", error);
     return { success: false, settledCount: 0, statusUpdateCount: 0, error: error instanceof Error ? error.message : "An unexpected error occurred." };
