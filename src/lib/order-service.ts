@@ -261,6 +261,14 @@ export const deleteOrder = async (orderId: string): Promise<boolean> => {
              console.warn(`Could not delete corresponding project for order ${orderId}, it might not exist.`, projectError);
         }
     }
+     // Also attempt to delete from shippedOrders collection
+    try {
+        await deleteShippedOrderEntry(orderId);
+    } catch (shippedError) {
+        if (!(shippedError instanceof Error && shippedError.message.includes('not found'))) {
+            console.warn(`Could not delete from shippedOrders for order ${orderId}, it might not exist.`, shippedError);
+        }
+    }
     return true;
   } catch (error) {
     console.error(`Error deleting order ${orderId} via API:`, error);
@@ -508,22 +516,27 @@ export const deleteComment = async (
   }
 };
 
-// New functions for the shippedOrders collection
+// Updated function to handle upsert logic for shippedOrders
 export const addShippedOrderEntry = async (orderId: string, trackingCode: string): Promise<boolean> => {
   try {
     await ensureCollectionExists(SHIPPED_ORDERS_COLLECTION);
+    const data = { packzyTrackingCode: trackingCode, addedAt: new Date().toISOString() };
+    
+    // The API's POST to a collection with a provided ID will either create or overwrite, effectively an upsert.
     const payload = {
       id: orderId,
-      data: { packzyTrackingCode: trackingCode, addedAt: new Date().toISOString() }
+      data: data
     };
+    
     await fetchFromApi(`collections/${SHIPPED_ORDERS_COLLECTION}/documents`, {
       method: 'POST',
       body: JSON.stringify(payload)
     });
-    console.log(`[ShippedOrders] Added entry for order ${orderId}`);
+    
+    console.log(`[ShippedOrders] Upserted entry for order ${orderId}`);
     return true;
   } catch (error) {
-    console.error(`Error adding to shippedOrders collection for order ${orderId}:`, error);
+    console.error(`Error upserting to shippedOrders collection for order ${orderId}:`, error);
     return false;
   }
 };
