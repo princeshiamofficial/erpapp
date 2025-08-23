@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -17,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { Lead, User, CustomerType } from "@/types";
+import type { Lead, User, CustomerType, LeadCategory, LeadStatusType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { addLeadAction, updateLeadAction } from '@/app/(app)/pipeline/actions';
 import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
@@ -27,7 +28,7 @@ import { cn } from '@/lib/utils';
 interface AddEditLeadDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onLeadSaved: () => void;
+  onLeadSaved: (newLead?: Lead) => void;
   lead?: Lead | null;
   currentUser: User;
 }
@@ -129,22 +130,26 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
       contactName, businessName, phone, source, address,
       notes: notes || null,
       customerType: customerType || null,
-      // Category is set on the server-side action now
     };
 
     let result;
     if (isEditMode) {
-      // For editing, we don't change the category here. It's done via drag-and-drop.
       result = await updateLeadAction(lead.id, leadData);
+      if (result.success) {
+        onLeadSaved();
+      }
     } else {
-      result = await addLeadAction(leadData, currentUser);
+        const createData: Omit<Lead, 'id' | 'crmId' | 'crmName' | 'activityHistory' | 'category' | 'status'> & { category?: LeadCategory, status?: LeadStatusType } = leadData;
+        result = await addLeadAction(createData, currentUser);
+        if (result.success && result.lead) {
+            onLeadSaved(result.lead);
+        }
     }
     
     setIsSubmitting(false);
 
     if (result.success) {
       toast({ title: `Lead ${isEditMode ? 'Updated' : 'Added'}`, description: `Lead for "${contactName}" has been saved.` });
-      onLeadSaved();
     } else {
       toast({ title: "Error", description: result.error || `Could not ${isEditMode ? 'update' : 'add'} lead.`, variant: "destructive" });
     }
@@ -256,7 +261,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting || !!phoneError}>
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : (isEditMode ? 'Save Changes' : 'Add Lead')}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Adding...</> : (isEditMode ? 'Save Changes' : 'Add Lead')}
             </Button>
           </DialogFooter>
         </form>

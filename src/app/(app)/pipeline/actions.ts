@@ -3,7 +3,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Lead, User, LeadActivity } from '@/types';
+import type { Lead, User, LeadActivity, LeadCategory } from '@/types';
 import {
   getLeads as getLeadsFromDb,
   addLead,
@@ -30,7 +30,7 @@ export async function getLeadByIdAction(leadId: string): Promise<Lead | null> {
 
 
 export async function addLeadAction(
-  leadData: Omit<Lead, 'id' | 'crmId' | 'crmName' | 'activityHistory'>,
+  leadData: Omit<Lead, 'id' | 'crmId' | 'crmName' | 'activityHistory' | 'category' | 'status'> & { category?: LeadCategory, status?: LeadStatusType },
   currentUser: User
 ): Promise<{ success: boolean; lead?: Lead; error?: string }> {
   try {
@@ -52,7 +52,8 @@ export async function addLeadAction(
       ...leadData,
       crmId: currentUser.id,
       crmName: currentUser.name,
-      category: 'POP', // Default category on single add
+      category: leadData.category || 'POP', 
+      status: leadData.status || 'New Lead',
       activityHistory: [initialActivity],
     };
     const newLead = await addLead(leadDataWithUser);

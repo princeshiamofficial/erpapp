@@ -12,7 +12,7 @@ import { closestCorners } from '@dnd-kit/core';
 import { getLeads, updateLeadAction, deleteLeadAction } from '@/app/(app)/pipeline/actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check, ChevronsUpDown, LayoutGrid, List, Calendar as CalendarIcon, Eye } from 'lucide-react';
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
 import { LeadListView } from '@/components/pipeline/LeadListView'; 
@@ -211,10 +211,14 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
     setIsAddEditOpen(true);
   };
   
-  const handleLeadSaved = () => {
+  const handleLeadSaved = (newLead?: Lead) => {
     setIsAddEditOpen(false);
     setEditingLead(null);
-    fetchLeadsAndUsers();
+    if (newLead) {
+        setLeads(prevLeads => [newLead, ...prevLeads]);
+    } else {
+        fetchLeadsAndUsers(); // Fallback to refetch if new lead data isn't returned (e.g., on edit)
+    }
   };
 
   const handleLeadUpdatedFromView = () => {
