@@ -78,8 +78,8 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!date || !contactName || !businessName || !phone || !source || !address) {
-      toast({ title: "Validation Error", description: "Please fill in all required fields.", variant: "destructive" });
+    if (!date || !contactName || !businessName || !phone || !source || !address || !customerType) {
+      toast({ title: "Validation Error", description: "Please fill in all required fields, including Customer Type.", variant: "destructive" });
       return;
     }
 
@@ -183,8 +183,8 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
               </div>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="customerType">Customer Type (Optional)</Label>
-              <Select value={customerType} onValueChange={(value) => setCustomerType(value as CustomerType)}>
+              <Label htmlFor="customerType">Customer Type *</Label>
+              <Select value={customerType} onValueChange={(value) => setCustomerType(value as CustomerType)} required>
                 <SelectTrigger id="customerType">
                   <SelectValue placeholder="Select a customer type" />
                 </SelectTrigger>
