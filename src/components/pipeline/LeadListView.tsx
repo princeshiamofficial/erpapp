@@ -13,7 +13,8 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSub,
     DropdownMenuSubTrigger,
-    DropdownMenuPortal
+    DropdownMenuPortal,
+    DropdownMenuSubContent
 } from '@/components/ui/dropdown-menu';
 import { Edit, Trash2, Users, MoreVertical, Briefcase, FolderEdit, Eye } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
