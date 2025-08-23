@@ -4,7 +4,7 @@
 import { revalidatePath } from "next/cache";
 import type { Project, ProjectStatusType, User, OrderLogEntry } from "@/types";
 import { updateProjectStatus as updateProjectStatusInDb } from '@/lib/project-service';
-import { getOrderById, updateOrder, autoSettleOrderIfDelivered, unsettleOrderPayment, addShippedOrderEntry } from "@/lib/order-service"; 
+import { getOrderById, updateOrder, autoSettleOrderIfDelivered, unsettleOrderPayment, addShippedOrderEntry, deleteShippedOrderEntry } from "@/lib/order-service"; 
 import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_STATUS_ID, DELIVERED_STATUS_ID, ORDER_SUBMITTED_ID, READY_FOR_DESIGN_STATUS_ID } from '@/lib/status-service'; 
 import { v4 as uuidv4 } from 'uuid'; 
 import { getGlobalSettings } from '@/lib/settings-service';
@@ -37,6 +37,13 @@ export async function updateProjectStatusAction(
     const projectUpdateSuccess = await updateProjectStatusInDb(project.id, newStatus, project);
     if (!projectUpdateSuccess) {
       return { success: false, error: "Failed to update project status in database." };
+    }
+
+    // If the project status changed, attempt to remove it from the shippedOrders collection
+    // This handles cases where an item is moved from 'Courier' back to 'Logistics', for example.
+    // The deleteShippedOrderEntry function is safe and will not error if the entry doesn't exist.
+    if (newStatus !== 'Courier') {
+      await deleteShippedOrderEntry(project.id);
     }
 
     const order = await getOrderById(project.id); 
