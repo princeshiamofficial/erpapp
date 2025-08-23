@@ -102,33 +102,33 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
         changedByUserId: currentUser.id,
         changedByUserName: currentUser.name,
     };
-
-    // Optimistic UI Update
+    
     const originalLeadState = lead;
     const newLeadState: Lead = {
         ...lead,
         activityHistory: [...(lead.activityHistory || []), newActivityEntry],
     };
+
     setLead(newLeadState);
-    onLeadUpdated(newLeadState); // Instantly update the parent component's state
+    onLeadUpdated(newLeadState);
     setNewActivity('');
     setNewActivityNotes('');
     
-    // Background Server Update
+    // Pass the current state of the lead to the server action
     const result = await addLeadActivityAction(lead.id, {
       activity: newActivity,
       notes: newActivityNotes,
-    }, currentUser);
+    }, currentUser, newLeadState); // Passing newLeadState
     
     setIsSubmitting(false);
 
     if (result.success && result.lead) {
       toast({ title: "Activity Added", description: "New activity has been logged for this lead." });
-      setLead(result.lead); // Sync with the final state from the server
+      setLead(result.lead);
       onLeadUpdated(result.lead);
     } else {
       toast({ title: "Error", description: result.error || "Failed to add activity. Reverting change.", variant: "destructive" });
-      setLead(originalLeadState); // Revert on failure
+      setLead(originalLeadState);
       onLeadUpdated(originalLeadState);
     }
   };

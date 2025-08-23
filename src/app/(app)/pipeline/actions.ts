@@ -3,7 +3,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Lead, User, LeadActivity, LeadCategory } from '@/types';
+import type { Lead, User, LeadActivity, LeadCategory, LeadStatusType } from '@/types';
 import {
   getLeads as getLeadsFromDb,
   addLead,
@@ -71,14 +71,10 @@ export async function addLeadAction(
 export async function addLeadActivityAction(
   leadId: string,
   activityData: { activity: string; notes?: string | null },
-  currentUser: User
+  currentUser: User,
+  existingLead: Lead // Pass the current lead state from the client
 ): Promise<{ success: boolean; lead?: Lead; error?: string }> {
   try {
-    const lead = await getLeadById(leadId);
-    if (!lead) {
-      return { success: false, error: "Lead not found." };
-    }
-
     const newActivity: LeadActivity = {
       id: uuidv4(),
       timestamp: new Date().toISOString(),
@@ -88,13 +84,15 @@ export async function addLeadActivityAction(
       changedByUserName: currentUser.name,
     };
 
-    const updatedHistory = [...(lead.activityHistory || []), newActivity];
+    // Use the client's state of the lead to avoid race conditions
+    const updatedHistory = [...(existingLead.activityHistory || []), newActivity];
     const success = await updateLead(leadId, { activityHistory: updatedHistory });
 
     if (success) {
       revalidatePath("/(app)/pipeline");
-      const updatedLead = await getLeadById(leadId);
-      return { success: true, lead: updatedLead || undefined };
+      // Return the updated lead state directly instead of re-fetching
+      const updatedLead = { ...existingLead, activityHistory: updatedHistory };
+      return { success: true, lead: updatedLead };
     }
     return { success: false, error: "Failed to add activity to lead." };
   } catch (error) {
