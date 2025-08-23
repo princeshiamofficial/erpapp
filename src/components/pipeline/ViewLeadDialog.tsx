@@ -24,12 +24,13 @@ import { Loader2, Edit, Phone, Building, MapPin, StickyNote, Bot, CalendarDays, 
 import { format, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { v4 as uuidv4 } from 'uuid';
 
 
 interface ViewLeadDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onLeadUpdated: () => void;
+  onLeadUpdated: (updatedLead: Lead) => void;
   onEditRequest: (lead: Lead) => void;
   lead: Lead | null;
   currentUser: User;
@@ -92,20 +93,43 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
       return;
     }
     setIsSubmitting(true);
+
+    const newActivityEntry: LeadActivity = {
+        id: uuidv4(),
+        timestamp: new Date().toISOString(),
+        activity: newActivity,
+        notes: newActivityNotes,
+        changedByUserId: currentUser.id,
+        changedByUserName: currentUser.name,
+    };
+
+    // Optimistic UI Update
+    const originalLeadState = lead;
+    const newLeadState: Lead = {
+        ...lead,
+        activityHistory: [...(lead.activityHistory || []), newActivityEntry],
+    };
+    setLead(newLeadState);
+    onLeadUpdated(newLeadState); // Instantly update the parent component's state
+    setNewActivity('');
+    setNewActivityNotes('');
+    
+    // Background Server Update
     const result = await addLeadActivityAction(lead.id, {
       activity: newActivity,
       notes: newActivityNotes,
     }, currentUser);
+    
     setIsSubmitting(false);
 
-    if (result.success) {
+    if (result.success && result.lead) {
       toast({ title: "Activity Added", description: "New activity has been logged for this lead." });
-      setNewActivity('');
-      setNewActivityNotes('');
-      setLead(result.lead || null); // Update local state with the returned lead
-      onLeadUpdated(); // This will trigger a re-fetch in the parent
+      setLead(result.lead); // Sync with the final state from the server
+      onLeadUpdated(result.lead);
     } else {
-      toast({ title: "Error", description: result.error || "Failed to add activity.", variant: "destructive" });
+      toast({ title: "Error", description: result.error || "Failed to add activity. Reverting change.", variant: "destructive" });
+      setLead(originalLeadState); // Revert on failure
+      onLeadUpdated(originalLeadState);
     }
   };
 
