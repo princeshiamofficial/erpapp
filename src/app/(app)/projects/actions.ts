@@ -5,7 +5,7 @@
 import { revalidatePath } from "next/cache";
 import type { Project, ProjectStatusType, User, OrderLogEntry } from "@/types";
 import { updateProjectStatus as updateProjectStatusInDb } from '@/lib/project-service';
-import { getOrderById, updateOrder, autoSettleOrderIfDelivered } from "@/lib/order-service"; 
+import { getOrderById, updateOrder, autoSettleOrderIfDelivered, unsettleOrderPayment } from "@/lib/order-service"; 
 import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_STATUS_ID, DELIVERED_STATUS_ID, ORDER_SUBMITTED_ID } from '@/lib/status-service'; 
 import { v4 as uuidv4 } from 'uuid'; 
 import { getGlobalSettings } from '@/lib/settings-service';
@@ -34,6 +34,7 @@ export async function updateProjectStatusAction(
       }
     }
     
+    const originalStatus = project.status; // Capture original status before update
     const projectUpdateSuccess = await updateProjectStatusInDb(project.id, newStatus, project);
     if (!projectUpdateSuccess) {
       return { success: false, error: "Failed to update project status in database." };
@@ -41,9 +42,15 @@ export async function updateProjectStatusAction(
 
     const order = await getOrderById(project.id); 
     if (order) {
-      if (newStatus === 'Delivered') {
+      // If moving from Delivered to another state, unsettle the payment.
+      if (originalStatus === 'Delivered' && newStatus !== 'Delivered') {
+        const unsettleReason = `Payment unsettled: Project moved from 'Delivered' to '${newStatus}' by ${actingUser.name}.`;
+        await unsettleOrderPayment(project.id, unsettleReason, actingUser);
+      } else if (newStatus === 'Delivered') {
+        // If moving to Delivered, attempt auto-settle.
         await autoSettleOrderIfDelivered(project.id, `System auto-settled: Project moved to '${newStatus}'.`, actingUser);
       } else {
+        // Handle other status changes
         let targetOrderStatusId: string | null = null;
         let statusUpdateNote: string | null = null;
 
@@ -96,6 +103,7 @@ export async function updateProjectStatusAction(
     revalidatePath("/(app)/deliveries/monthly");
     revalidatePath("/(app)/deliveries/weekly");
     revalidatePath(`/track/${project.id}`);
+    revalidatePath("/(app)/invoice/[orderId]", "page");
     return { success: true };
   } catch (error) {
     console.error("Error in updateProjectStatusAction:", error);

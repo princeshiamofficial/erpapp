@@ -340,6 +340,57 @@ export async function autoSettleOrderIfDelivered(
   }
 }
 
+export const unsettleOrderPayment = async (
+    orderId: string, 
+    unsettleReason: string, 
+    actingUser: { id: string; name: string }
+): Promise<boolean> => {
+    try {
+        const order = await getOrderById(orderId);
+        if (!order) {
+            console.warn(`[unsettleOrderPayment] Order ${orderId} not found. Cannot unsettle.`);
+            return false;
+        }
+
+        const autoSettlePaymentIndex = (order.advancePayments || []).findIndex(
+            p => p.notes?.startsWith("System auto-settled:") || p.paymentMethod === "COD"
+        );
+
+        if (autoSettlePaymentIndex === -1) {
+            console.log(`[unsettleOrderPayment] No auto-settled payment found for order ${orderId}. No action needed.`);
+            return true; // No payment to remove, but not an error.
+        }
+
+        const updatedPayments = [...(order.advancePayments || [])];
+        updatedPayments.splice(autoSettlePaymentIndex, 1);
+
+        const updates: Partial<TrackingLink> = {
+            advancePayments: updatedPayments,
+            updatedAt: new Date().toISOString(),
+            updatedByUserId: actingUser.id,
+            updatedByUserName: actingUser.name,
+        };
+
+        const newStatusLogEntry: OrderLogEntry = {
+            id: uuidv4(),
+            timestamp: new Date().toISOString(),
+            status: order.currentStatus, // Keep current status but add note
+            changedByUserId: actingUser.id,
+            changedByUserName: actingUser.name,
+            notes: unsettleReason,
+        };
+        updates.statusHistory = [...order.statusHistory, newStatusLogEntry];
+
+        await updateOrder(orderId, updates);
+        console.log(`[unsettleOrderPayment] Successfully removed auto-settled payment for order ${orderId}.`);
+        return true;
+
+    } catch (error) {
+        console.error(`Error unsettling payment for order ${orderId}:`, error);
+        return false;
+    }
+};
+
 export const addCommentToOrder = async (orderId: string, commentData: Omit<Comment, 'id' | 'timestamp' | 'replies' | 'likes'>): Promise<TrackingLink | undefined> => {
   try {
     const order = await getOrderById(orderId);
