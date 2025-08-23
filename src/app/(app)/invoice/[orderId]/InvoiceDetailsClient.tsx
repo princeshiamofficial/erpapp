@@ -100,13 +100,10 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
   const totalAdvancePaid = allAdvancePaymentRecords.reduce((sum, record) => sum + record.amount, 0);
   const shippingCharge = order.shippingCharge || 0;
   const grandTotal = netPayable + shippingCharge;
+  const amountDue = grandTotal - totalAdvancePaid;
 
   const isDeliveredByCourier = packzyDeliveryStatus === 'delivered';
-  const isDeliveredInternally = order.currentStatus === 'delivered';
-  const isConsideredDelivered = isDeliveredByCourier || isDeliveredInternally;
-
-  const amountDue = isConsideredDelivered ? 0 : (grandTotal - totalAdvancePaid);
-  const showPaidBadge = (grandTotal > 0 && amountDue <= 0.01) || isConsideredDelivered;
+  const showPaidBadge = (grandTotal > 0 && amountDue <= 0.01) || isDeliveredByCourier;
 
 
   return (
