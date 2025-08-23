@@ -1,8 +1,9 @@
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Lead, User } from '@/types';
+import type { Lead, User, LeadActivity } from '@/types';
 import {
   getLeads as getLeadsFromDb,
   addLead,
@@ -10,6 +11,7 @@ import {
   deleteLead
 } from '@/lib/lead-service';
 import { getUserById } from "@/lib/user-service";
+import { v4 as uuidv4 } from 'uuid';
 
 
 export async function getLeads(): Promise<Lead[]> {
@@ -22,7 +24,7 @@ export async function getLeads(): Promise<Lead[]> {
 }
 
 export async function addLeadAction(
-  leadData: Omit<Lead, 'id' | 'crmId' | 'crmName'>,
+  leadData: Omit<Lead, 'id' | 'crmId' | 'crmName' | 'activityHistory'>,
   currentUser: User
 ): Promise<{ success: boolean; lead?: Lead; error?: string }> {
   try {
@@ -31,11 +33,21 @@ export async function addLeadAction(
       return { success: false, error: "Invalid phone number. It must be an 11-digit number starting with 0." };
     }
 
+    const initialActivity: LeadActivity = {
+      id: uuidv4(),
+      timestamp: new Date().toISOString(),
+      activity: "Lead Created",
+      notes: "Initial lead entry created.",
+      changedByUserId: currentUser.id,
+      changedByUserName: currentUser.name,
+    };
+
     const leadDataWithUser = {
       ...leadData,
       crmId: currentUser.id,
       crmName: currentUser.name,
       category: 'POP', // Default category on single add
+      activityHistory: [initialActivity],
     };
     const newLead = await addLead(leadDataWithUser);
     if (newLead) {
@@ -46,6 +58,41 @@ export async function addLeadAction(
   } catch (error) {
     console.error("Error in addLeadAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function addLeadActivityAction(
+  leadId: string,
+  activityData: { activity: string; notes?: string | null },
+  currentUser: User
+): Promise<{ success: boolean; lead?: Lead; error?: string }> {
+  try {
+    const lead = await getLeadsFromDb().then(leads => leads.find(l => l.id === leadId));
+    if (!lead) {
+      return { success: false, error: "Lead not found." };
+    }
+
+    const newActivity: LeadActivity = {
+      id: uuidv4(),
+      timestamp: new Date().toISOString(),
+      activity: activityData.activity,
+      notes: activityData.notes || null,
+      changedByUserId: currentUser.id,
+      changedByUserName: currentUser.name,
+    };
+
+    const updatedHistory = [...(lead.activityHistory || []), newActivity];
+    const success = await updateLead(leadId, { activityHistory: updatedHistory });
+
+    if (success) {
+      revalidatePath("/(app)/pipeline");
+      const updatedLead = await getLeadsFromDb().then(leads => leads.find(l => l.id === leadId));
+      return { success: true, lead: updatedLead };
+    }
+    return { success: false, error: "Failed to add activity to lead." };
+  } catch (error) {
+    console.error("Error in addLeadActivityAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected server error occurred." };
   }
 }
 

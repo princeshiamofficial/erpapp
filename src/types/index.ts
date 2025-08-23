@@ -268,6 +268,14 @@ export type LeadCategory = 'POP' | 'POG' | 'OC' | 'OD' | 'ROD';
 export type LeadStatusType = 'New Lead' | 'Contacted' | 'Qualified' | 'Proposal Sent' | 'Negotiation' | 'Won' | 'Lost';
 export type CustomerType = 'WARM' | 'COLD';
 
+export interface LeadActivity {
+  id: string;
+  timestamp: string; // ISO string
+  activity: string;
+  notes?: string | null;
+  changedByUserId: string;
+  changedByUserName: string;
+}
 
 export interface Lead {
   id: string;
@@ -284,6 +292,7 @@ export interface Lead {
   crmId: string;
   crmName: string;
   customerType?: CustomerType | null;
+  activityHistory?: LeadActivity[];
 }
 
 export interface DistrictDataEntry {

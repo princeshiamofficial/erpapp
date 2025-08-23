@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -12,7 +13,7 @@ import { getLeads, updateLeadAction, deleteLeadAction } from '@/app/(app)/pipeli
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check, ChevronsUpDown, LayoutGrid, List, Calendar as CalendarIcon } from 'lucide-react';
+import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check, ChevronsUpDown, LayoutGrid, List, Calendar as CalendarIcon, Eye } from 'lucide-react';
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
 import { LeadListView } from '@/components/pipeline/LeadListView'; 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -40,6 +41,7 @@ import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/da
 import type { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay } from 'date-fns';
 import { LeadCalendarView } from './LeadCalendarView';
+import { ViewLeadDialog } from './ViewLeadDialog';
 
 const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod => mod.LeadCard), {
   ssr: false,
@@ -90,6 +92,9 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
 
   const [leadToTransfer, setLeadToTransfer] = useState<Lead | null>(null);
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
+
+  const [leadToView, setLeadToView] = useState<Lead | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   
   const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'calendar'>('list');
   const [currentPage, setCurrentPage] = useState(1);
@@ -211,6 +216,10 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
     setEditingLead(null);
     fetchLeadsAndUsers();
   };
+
+  const handleLeadUpdatedFromView = () => {
+    fetchLeadsAndUsers(); // Re-fetch to get latest data
+  };
   
   const handleDeleteRequest = (lead: Lead) => {
     setLeadToDelete(lead);
@@ -315,6 +324,19 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
     setSelectedDateRange(range);
   };
 
+  const openViewDialog = (lead: Lead) => {
+    setLeadToView(lead);
+    setIsViewDialogOpen(true);
+  };
+  
+  const openEditDialogFromView = (lead: Lead) => {
+    setIsViewDialogOpen(false);
+    setLeadToView(null);
+    setEditingLead(lead);
+    setIsAddEditOpen(true);
+  };
+
+
   if (!currentUser) return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
 
   return (
@@ -368,8 +390,7 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
                 key={col.category} id={col.category} title={col.title} icon={col.icon}
                 leads={leadsByCategory[col.category] || []} headerBgClass={col.headerBgClass}
                 isLoading={isLoading} currentUser={currentUser}
-                onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }}
-                onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest} allCrmUsers={allCrmUsers}
+                onViewLead={openViewDialog} onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest} allCrmUsers={allCrmUsers}
               />
             ))}
           </div></div>
@@ -377,8 +398,7 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
           <>
             <LeadListView
                leads={paginatedLeads} isLoading={isLoading} currentUser={currentUser}
-               onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }}
-               onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest}
+               onViewLead={openViewDialog} onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest}
                onUpdateLeadCategory={handleUpdateLeadCategory} allCrmUsers={allCrmUsers}
             />
             {totalPages > 1 && (
@@ -393,18 +413,19 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
           <div className="flex-1 mt-4 flex flex-col">
             <LeadCalendarView 
               leads={filteredLeads} 
-              onEditLead={(lead) => { setEditingLead(lead); setIsAddEditOpen(true); }} 
+              onViewLead={openViewDialog}
             />
           </div>
         )}
       </div>
       <DragOverlay dropAnimation={null}>
-        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onEditLead={() => {}} onDeleteLead={() => {}} onTransferLead={() => {}} crmAvatarUrl={allCrmUsers.find(u => u.id === activeLead.crmId)?.avatarUrl} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
+        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onViewLead={() => {}} onDeleteLead={() => {}} onTransferLead={() => {}} crmAvatarUrl={allCrmUsers.find(u => u.id === activeLead.crmId)?.avatarUrl} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
       </DragOverlay>
 
       <AddEditLeadDialog isOpen={isAddEditOpen} onOpenChange={setIsAddEditOpen} onLeadSaved={handleLeadSaved} lead={editingLead} currentUser={currentUser} />
       <ImportLeadsDialog isOpen={isImportOpen} onOpenChange={setIsImportOpen} onLeadsImported={handleLeadSaved} currentUser={currentUser} />
       {leadToTransfer && (<TransferLeadDialog isOpen={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen} onLeadTransferred={handleLeadTransferred} lead={leadToTransfer} allCrmUsers={allCrmUsers.filter(u => u.id !== leadToTransfer.crmId)} currentUser={currentUser}/>)}
+      {leadToView && (<ViewLeadDialog isOpen={isViewDialogOpen} onOpenChange={setIsViewDialogOpen} onLeadUpdated={handleLeadUpdatedFromView} onEditRequest={openEditDialogFromView} lead={leadToView} currentUser={currentUser} />)}
       {leadToDelete && (
         <AlertDialog open={!!leadToDelete} onOpenChange={() => setLeadToDelete(null)}>
           <AlertDialogContent><AlertDialogHeader><AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-6 w-6 text-destructive" /> Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This action cannot be undone. This will permanently delete the lead for "<span className="font-semibold">{leadToDelete.contactName}</span>".</AlertDialogDescription></AlertDialogHeader>

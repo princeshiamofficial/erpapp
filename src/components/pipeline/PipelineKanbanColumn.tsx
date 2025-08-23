@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import dynamic from 'next/dynamic';
@@ -20,25 +21,29 @@ interface PipelineKanbanColumnProps {
   icon: LucideIcon;
   leads: Lead[];
   headerBgClass: string;
+  headerTextClass?: string;
+  headerIconClass?: string;
   isLoading?: boolean;
   currentUser: User | null;
-  onEditLead: (lead: Lead) => void;
+  onViewLead: (lead: Lead) => void;
   onDeleteLead: (lead: Lead) => void;
-  onTransferLead: (lead: Lead) => void; // New prop for transfer
+  onTransferLead: (lead: Lead) => void; 
   allCrmUsers: User[];
 }
 
 export function PipelineKanbanColumn({
   id,
-  title,
-  icon: Icon,
-  leads,
-  headerBgClass,
+  title, 
+  icon: Icon, 
+  leads, 
+  headerBgClass, 
+  headerTextClass = "text-white",
+  headerIconClass = "text-white",
   isLoading = false,
   currentUser,
-  onEditLead,
+  onViewLead,
   onDeleteLead,
-  onTransferLead, // New prop
+  onTransferLead, 
   allCrmUsers,
 }: PipelineKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
@@ -51,9 +56,9 @@ export function PipelineKanbanColumn({
         isOver ? 'border-primary ring-2 ring-primary shadow-xl scale-[1.01]' : 'border-border/30 shadow-sm'
       )}
     >
-      <div className={`px-3 py-2.5 flex items-center justify-between ${headerBgClass} text-white rounded-t-lg shrink-0`}>
+      <div className={`px-3 py-2.5 flex items-center justify-between ${headerBgClass} ${headerTextClass} rounded-t-lg shrink-0`}>
         <div className="flex items-center">
-          <Icon className="mr-2 h-4 w-4" />
+          <Icon className={`mr-2 h-4 w-4 ${headerIconClass}`} />
           <h2 className="font-semibold text-sm tracking-wide">{title}</h2>
         </div>
         <span className="text-xs px-2 py-0.5 bg-black/20 rounded-full">{isLoading ? <Skeleton className="h-4 w-4 inline-block" /> : leads.length}</span>
@@ -77,7 +82,7 @@ export function PipelineKanbanColumn({
                   key={lead.id}
                   lead={lead}
                   currentUser={currentUser}
-                  onEditLead={onEditLead}
+                  onViewLead={onViewLead}
                   onDeleteLead={onDeleteLead}
                   onTransferLead={onTransferLead}
                   crmAvatarUrl={crmUser?.avatarUrl || undefined}

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React from 'react';
@@ -12,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface LeadCalendarViewProps {
   leads: Lead[];
-  onEditLead: (lead: Lead) => void;
+  onViewLead: (lead: Lead) => void;
 }
 
 const getCategoryClass = (category: string) => {
@@ -27,7 +28,7 @@ const getCategoryClass = (category: string) => {
 }
 
 // Define DayWithEvents outside of LeadCalendarView to prevent re-creation on every render
-const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents: Lead[]; onEditLead: (lead: Lead) => void; }) => {
+const DayWithEvents = ({ date, dayEvents, onViewLead }: { date: Date; dayEvents: Lead[]; onViewLead: (lead: Lead) => void; }) => {
     const isCurrentDay = isToday(date);
     const today = startOfDay(new Date());
     const isPastDate = isBefore(date, today);
@@ -92,7 +93,7 @@ const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents:
                                             lead.customerType === 'WARM' && 'bg-purple-100 text-purple-800 hover:bg-purple-200',
                                             lead.customerType === 'COLD' && 'bg-blue-100 text-blue-800 hover:bg-blue-200',
                                           )}
-                                          onClick={() => onEditLead(lead)}
+                                          onClick={() => onViewLead(lead)}
                                         >
                                             View {lead.customerType} Lead
                                         </Button>
@@ -108,7 +109,7 @@ const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents:
 };
 
 
-export function LeadCalendarView({ leads, onEditLead }: LeadCalendarViewProps) {
+export function LeadCalendarView({ leads, onViewLead }: LeadCalendarViewProps) {
   const eventsByDate = React.useMemo(() => {
     const events: Record<string, Lead[]> = {};
     leads.forEach(lead => {
@@ -137,7 +138,7 @@ export function LeadCalendarView({ leads, onEditLead }: LeadCalendarViewProps) {
                 <DayWithEvents 
                     date={props.date} 
                     dayEvents={eventsByDate[props.date.toDateString()] || []}
-                    onEditLead={onEditLead}
+                    onViewLead={onViewLead}
                 />
             ),
         }}

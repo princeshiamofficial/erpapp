@@ -1,11 +1,12 @@
 
+
 "use client";
 
 import type { Lead, User } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Edit, CalendarDays, MapPin, StickyNote, Bot, Trash2, Users } from 'lucide-react';
+import { Edit, CalendarDays, MapPin, StickyNote, Bot, Trash2, Users, Eye } from 'lucide-react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
@@ -28,9 +29,9 @@ interface LeadCardProps {
   lead: Lead;
   isOverlay?: boolean;
   currentUser: User | null;
-  onEditLead: (lead: Lead) => void;
+  onViewLead: (lead: Lead) => void;
   onDeleteLead: (lead: Lead) => void;
-  onTransferLead: (lead: Lead) => void; // New prop for transfer
+  onTransferLead: (lead: Lead) => void; 
   crmAvatarUrl?: string;
   headerBgClass: string; 
 }
@@ -52,7 +53,7 @@ const formatDateSafe = (dateString?: string) => {
 };
 
 
-export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, onDeleteLead, onTransferLead, crmAvatarUrl, headerBgClass }: LeadCardProps) {
+export function LeadCard({ lead, isOverlay = false, currentUser, onViewLead, onDeleteLead, onTransferLead, crmAvatarUrl, headerBgClass }: LeadCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: lead.id,
     data: { lead },
@@ -63,7 +64,6 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, onD
     transform: CSS.Translate.toString(transform),
   } : undefined;
   
-  const canEdit = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
   const canDelete = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN';
   const canTransfer = currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
 
@@ -82,6 +82,7 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, onD
       }}
       transition={{ duration: 0.15, ease: "easeInOut" }}
       className={cn("relative group", isOverlay ? "z-50" : (isDragging ? "z-50" : ""))}
+      onClick={() => !isOverlay && onViewLead(lead)}
     >
       <Card
         className={cn(
@@ -106,10 +107,10 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onEditLead, onD
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                        {canEdit && <DropdownMenuItem onSelect={() => onEditLead(lead)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4"/> Edit Lead</DropdownMenuItem>}
+                        <DropdownMenuItem onSelect={() => onViewLead(lead)} className="cursor-pointer"><Eye className="mr-2 h-4 w-4"/> View Details</DropdownMenuItem>
                         {canTransfer && <DropdownMenuItem onSelect={() => onTransferLead(lead)} className="cursor-pointer"><Users className="mr-2 h-4 w-4"/> Transfer Lead</DropdownMenuItem>}
                         {canDelete && <DropdownMenuItem onSelect={() => onDeleteLead(lead)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Delete Lead</DropdownMenuItem>}
-                        {!canEdit && !canTransfer && !canDelete && <DropdownMenuItem disabled>No actions available</DropdownMenuItem>}
+                        {!canTransfer && !canDelete && <DropdownMenuItem disabled>No actions available</DropdownMenuItem>}
                     </DropdownMenuContent>
                  </DropdownMenu>
             </div>
