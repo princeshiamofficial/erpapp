@@ -83,6 +83,16 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
       return;
     }
 
+    const phoneRegex = /^0\d{10}$/;
+    if (!phoneRegex.test(phone)) {
+      toast({
+        title: "Validation Error",
+        description: "Invalid phone number. It must be an 11-digit number starting with 0.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     const leadData = {
@@ -168,7 +178,22 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="phone">Phone *</Label>
-                <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+                <Input
+                    id="phone"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => {
+                        const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                        if (numericValue.length <= 11) {
+                            setPhone(numericValue);
+                        }
+                    }}
+                    required
+                    pattern="0\d{10}"
+                    maxLength={11}
+                    title="Phone number must be an 11-digit number starting with 0."
+                    placeholder="01xxxxxxxxx"
+                />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="source">Source *</Label>

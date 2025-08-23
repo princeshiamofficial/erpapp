@@ -26,6 +26,11 @@ export async function addLeadAction(
   currentUser: User
 ): Promise<{ success: boolean; lead?: Lead; error?: string }> {
   try {
+    const phoneRegex = /^0\d{10}$/;
+    if (!phoneRegex.test(leadData.phone)) {
+      return { success: false, error: "Invalid phone number. It must be an 11-digit number starting with 0." };
+    }
+
     const leadDataWithUser = {
       ...leadData,
       crmId: currentUser.id,
@@ -91,6 +96,13 @@ export async function updateLeadAction(
   updates: Partial<Omit<Lead, 'id'>>
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    if (updates.phone) {
+        const phoneRegex = /^0\d{10}$/;
+        if (!phoneRegex.test(updates.phone)) {
+            return { success: false, error: "Invalid phone number. It must be an 11-digit number starting with 0." };
+        }
+    }
+    
     const success = await updateLead(leadId, updates);
     if (success) {
       revalidatePath("/(app)/pipeline");
