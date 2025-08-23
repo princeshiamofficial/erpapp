@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { DndContext, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { closestCorners } from '@dnd-kit/core';
 import { getLeads, updateLeadAction, deleteLeadAction } from '@/app/(app)/pipeline/actions';
+import { getUsers } from '@/lib/user-service'; // Added getUsers import
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -63,14 +64,10 @@ const ITEMS_PER_PAGE = 12;
 
 const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'POG', 'OC', 'OD', 'ROD'];
 
-interface PipelineClientProps {
-  initialLeads: Lead[];
-  allUsers: User[];
-}
-
-export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) {
-  const [leads, setLeads] = useState<Lead[]>(initialLeads);
-  const [isLoading, setIsLoading] = useState(false);
+export function PipelineClient() {
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const { currentUser } = useAuth();
@@ -115,14 +112,22 @@ export function PipelineClient({ initialLeads, allUsers }: PipelineClientProps) 
     if (!currentUser) return;
     setIsLoading(true);
     try {
-      const fetchedLeads = await getLeads();
+      const [fetchedLeads, fetchedUsers] = await Promise.all([
+        getLeads(),
+        getUsers()
+      ]);
       setLeads(fetchedLeads);
+      setAllUsers(fetchedUsers);
     } catch (error) {
       toast({ title: "Error fetching data", description: "Could not load pipeline or user data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   }, [toast, currentUser]);
+
+  useEffect(() => {
+    fetchLeadsAndUsers();
+  }, [fetchLeadsAndUsers]);
 
   useEffect(() => {
     setAllCrmUsers(allUsers.filter(u => u.role === 'CRM' || u.role === 'ADMIN' || u.role === 'SYSTEM_ADMIN'));

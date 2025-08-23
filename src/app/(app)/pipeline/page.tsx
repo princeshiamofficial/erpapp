@@ -3,8 +3,6 @@ import React, { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PipelineClient } from '@/components/pipeline/PipelineClient';
 import { Briefcase } from 'lucide-react';
-import { getLeads } from '@/app/(app)/pipeline/actions';
-import { getUsers } from '@/lib/user-service';
 
 function PipelinePageSkeleton() {
   return (
@@ -51,19 +49,11 @@ function PipelinePageSkeleton() {
 }
 
 
-export default async function PipeLinePage() {
-  // Fetch data on the server
-  const [initialLeads, allUsers] = await Promise.all([
-    getLeads(),
-    getUsers()
-  ]);
-
+export default function PipeLinePage() {
+  // Data fetching is now handled inside PipelineClient
   return (
     <Suspense fallback={<PipelinePageSkeleton />}>
-      <PipelineClient 
-        initialLeads={JSON.parse(JSON.stringify(initialLeads))} 
-        allUsers={JSON.parse(JSON.stringify(allUsers))}
-      />
+      <PipelineClient />
     </Suspense>
   );
 }
