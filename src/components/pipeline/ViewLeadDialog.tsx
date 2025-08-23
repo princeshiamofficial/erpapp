@@ -20,7 +20,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { addLeadActivityAction, getLeadByIdAction } from '@/app/(app)/pipeline/actions';
 import type { Lead, User, LeadActivity } from '@/types';
-import { Loader2, Edit, Phone, Building, MapPin, StickyNote, Bot, CalendarDays, User as UserIcon, Activity, Briefcase } from 'lucide-react';
+import { Loader2, Edit, Phone, Building, MapPin, StickyNote, Bot, CalendarDays, User as UserIcon, Activity, Briefcase, PhoneCall, FileText, Users, MessageSquare, PlusCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -54,6 +54,25 @@ const getCategoryClass = (category: string) => {
         case 'OD': return 'text-green-800 bg-green-100 border-green-200';
         case 'ROD': return 'text-orange-800 bg-orange-100 border-orange-200';
         default: return 'text-gray-800 bg-gray-100 border-gray-200';
+    }
+}
+
+const getActivityIcon = (activityType: string) => {
+    switch (activityType) {
+        case 'Follow-up Call':
+            return <PhoneCall className="h-4 w-4" />;
+        case 'Sent Proposal':
+            return <FileText className="h-4 w-4" />;
+        case 'Meeting':
+            return <Users className="h-4 w-4" />;
+        case 'Site Visit':
+            return <MapPin className="h-4 w-4" />;
+        case 'Negotiation':
+            return <MessageSquare className="h-4 w-4" />;
+        case 'Lead Created':
+             return <PlusCircle className="h-4 w-4" />;
+        default:
+            return <Activity className="h-4 w-4" />;
     }
 }
 
@@ -110,7 +129,7 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
     };
 
     setLead(newLeadState);
-    onLeadUpdated(newLeadState);
+    // Don't call onLeadUpdated here for optimistic UI to avoid re-rendering parent
     setNewActivity('');
     setNewActivityNotes('');
     
@@ -124,12 +143,11 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
 
     if (result.success && result.lead) {
       toast({ title: "Activity Added", description: "New activity has been logged for this lead." });
-      setLead(result.lead);
+      setLead(result.lead); // Update with the definitive state from the server
       onLeadUpdated(result.lead);
     } else {
       toast({ title: "Error", description: result.error || "Failed to add activity. Reverting change.", variant: "destructive" });
-      setLead(originalLeadState);
-      onLeadUpdated(originalLeadState);
+      setLead(originalLeadState); // Revert on failure
     }
   };
 
@@ -187,7 +205,7 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
                         <TimelineItem key={item.id}>
                             <TimelineConnector />
                             <TimelineHeader>
-                            <TimelineIcon><UserIcon className="h-4 w-4"/></TimelineIcon>
+                            <TimelineIcon>{getActivityIcon(item.activity)}</TimelineIcon>
                             <TimelineTitle>{item.activity}</TimelineTitle>
                             <span className="text-xs text-muted-foreground ml-auto">{formatDateSafe(item.timestamp, true)}</span>
                             </TimelineHeader>
