@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { addLeadAction, updateLeadAction } from '@/app/(app)/pipeline/actions';
 import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import { format, parseISO } from "date-fns";
+import { cn } from '@/lib/utils';
 
 interface AddEditLeadDialogProps {
   isOpen: boolean;
@@ -40,6 +41,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
   const [contactName, setContactName] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [phone, setPhone] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [source, setSource] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
@@ -48,6 +50,16 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
   const { toast } = useToast();
 
   const isEditMode = !!lead;
+
+  const validatePhone = (phoneNumber: string) => {
+    if (phoneNumber.length > 0 && !phoneNumber.startsWith('0')) {
+      setPhoneError("Phone number must start with 0.");
+    } else if (phoneNumber.length > 0 && phoneNumber.length !== 11) {
+      setPhoneError("Phone number must be 11 digits long.");
+    } else {
+      setPhoneError(null);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -61,6 +73,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setAddress(lead.address);
         setNotes(lead.notes || '');
         setCustomerType(lead.customerType || '');
+        setPhoneError(null); // Reset error on load
       } else {
         // Reset for add mode
         setDate(new Date());
@@ -72,12 +85,27 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setAddress('');
         setNotes('');
         setCustomerType('');
+        setPhoneError(null); // Reset error on load
       }
     }
   }, [isOpen, lead, isEditMode]);
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const numericValue = e.target.value.replace(/[^0-9]/g, '');
+    if (numericValue.length <= 11) {
+        setPhone(numericValue);
+        validatePhone(numericValue);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    validatePhone(phone); // Final validation check
+    if (phoneError) {
+        toast({ title: "Validation Error", description: phoneError, variant: "destructive" });
+        return;
+    }
+
     if (!date || !contactName || !businessName || !phone || !source || !address || !customerType) {
       toast({ title: "Validation Error", description: "Please fill in all required fields, including Customer Type.", variant: "destructive" });
       return;
@@ -182,18 +210,15 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
                     id="phone"
                     type="tel"
                     value={phone}
-                    onChange={(e) => {
-                        const numericValue = e.target.value.replace(/[^0-9]/g, '');
-                        if (numericValue.length <= 11) {
-                            setPhone(numericValue);
-                        }
-                    }}
+                    onChange={handlePhoneChange}
                     required
                     pattern="0\d{10}"
                     maxLength={11}
                     title="Phone number must be an 11-digit number starting with 0."
                     placeholder="01xxxxxxxxx"
+                    className={cn(phoneError && "border-destructive focus-visible:ring-destructive")}
                 />
+                {phoneError && <p className="text-xs text-destructive">{phoneError}</p>}
               </div>
               <div className="space-y-1">
                 <Label htmlFor="source">Source *</Label>
@@ -230,7 +255,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
           </div>
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !!phoneError}>
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : (isEditMode ? 'Save Changes' : 'Add Lead')}
             </Button>
           </DialogFooter>
