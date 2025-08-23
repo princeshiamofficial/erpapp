@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import type { Project, ProjectStatusType, User, OrderLogEntry } from "@/types";
 import { updateProjectStatus as updateProjectStatusInDb } from '@/lib/project-service';
 import { getOrderById, updateOrder, autoSettleOrderIfDelivered, unsettleOrderPayment } from "@/lib/order-service"; 
-import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_STATUS_ID, DELIVERED_STATUS_ID, ORDER_SUBMITTED_ID } from '@/lib/status-service'; 
+import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_STATUS_ID, DELIVERED_STATUS_ID, ORDER_SUBMITTED_ID, READY_FOR_DESIGN_STATUS_ID } from '@/lib/status-service'; 
 import { v4 as uuidv4 } from 'uuid'; 
 import { getGlobalSettings } from '@/lib/settings-service';
 import { fetchFromApi } from '@/lib/api-helper';
@@ -49,50 +49,72 @@ export async function updateProjectStatusAction(
       } else if (newStatus === 'Delivered') {
         // If moving to Delivered, attempt auto-settle.
         await autoSettleOrderIfDelivered(project.id, `System auto-settled: Project moved to '${newStatus}'.`, actingUser);
-      } else {
-        // Handle other status changes
-        let targetOrderStatusId: string | null = null;
-        let statusUpdateNote: string | null = null;
+      }
+      
+      let targetOrderStatusId: string | null = null;
+      let statusUpdateNote: string | null = null;
 
-        if (newStatus === 'Cancel' && order.currentStatus !== CANCELLED_STATUS_ID) {
-          targetOrderStatusId = CANCELLED_STATUS_ID;
-          statusUpdateNote = `Order cancelled from project board by ${actingUser.name}. Project status: Cancelled.`;
-        } else if (newStatus === 'On Hold' && order.currentStatus !== ON_HOLD_STATUS_ID) {
-          targetOrderStatusId = ON_HOLD_STATUS_ID;
-          statusUpdateNote = `Order put on hold from project board by ${actingUser.name}. Project status: On Hold.`;
-        } else if (newStatus === 'Logistics' && order.currentStatus !== LOGISTICS_STATUS_ID) {
-          targetOrderStatusId = LOGISTICS_STATUS_ID;
-          statusUpdateNote = `Order moved to Logistics via project board by ${actingUser.name}. Project status: Logistics.`;
-        } else if (newStatus === 'Courier' && order.currentStatus !== SHIPPED_STATUS_ID) {
-          targetOrderStatusId = SHIPPED_STATUS_ID;
-          statusUpdateNote = `Order shipped (project in Courier stage) by ${actingUser.name}. Project status: Courier.`;
-        } else if (newStatus === 'CR Clearance' && order.currentStatus !== ORDER_SUBMITTED_ID) {
-          targetOrderStatusId = ORDER_SUBMITTED_ID;
-          statusUpdateNote = `Order moved back to CR Clearance from project board by ${actingUser.name}.`;
-        }
-
-        if (targetOrderStatusId && statusUpdateNote) {
-          const newLogEntry: OrderLogEntry = {
-            id: uuidv4(),
-            timestamp: new Date().toISOString(),
-            status: targetOrderStatusId,
-            changedByUserId: actingUser.id,
-            changedByUserName: actingUser.name,
-            notes: statusUpdateNote,
-          };
-          const orderUpdateSuccess = await updateOrder(order.id, {
-            currentStatus: targetOrderStatusId,
-            statusHistory: [...order.statusHistory, newLogEntry],
-            updatedAt: new Date().toISOString(),
-            updatedByUserId: actingUser.id,
-            updatedByUserName: actingUser.name,
-          });
-
-          if (!orderUpdateSuccess) {
-            console.warn(`Project ${project.id} status updated to ${newStatus}, but failed to update corresponding order ${order.id} to target status ${targetOrderStatusId}.`);
-          } else {
-            console.log(`Order ${order.id} status updated to ${targetOrderStatusId} due to project ${project.id} being ${newStatus}.`);
+      switch (newStatus) {
+        case 'Cancel':
+          if (order.currentStatus !== CANCELLED_STATUS_ID) {
+            targetOrderStatusId = CANCELLED_STATUS_ID;
+            statusUpdateNote = `Order cancelled from project board by ${actingUser.name}.`;
           }
+          break;
+        case 'On Hold':
+          if (order.currentStatus !== ON_HOLD_STATUS_ID) {
+            targetOrderStatusId = ON_HOLD_STATUS_ID;
+            statusUpdateNote = `Order put on hold from project board by ${actingUser.name}.`;
+          }
+          break;
+        case 'Logistics':
+          if (order.currentStatus !== LOGISTICS_STATUS_ID) {
+            targetOrderStatusId = LOGISTICS_STATUS_ID;
+            statusUpdateNote = `Order moved to Logistics via project board by ${actingUser.name}.`;
+          }
+          break;
+        case 'Courier':
+           if (order.currentStatus !== SHIPPED_STATUS_ID) {
+            targetOrderStatusId = SHIPPED_STATUS_ID;
+            statusUpdateNote = `Order shipped (project in Courier stage) by ${actingUser.name}.`;
+          }
+          break;
+        case 'On Design':
+          if (order.currentStatus !== READY_FOR_DESIGN_STATUS_ID) {
+            targetOrderStatusId = READY_FOR_DESIGN_STATUS_ID;
+            statusUpdateNote = `Order moved to 'On Design' via project board by ${actingUser.name}.`;
+          }
+          break;
+        case 'CR Clearance':
+          if (order.currentStatus !== ORDER_SUBMITTED_ID) {
+            targetOrderStatusId = ORDER_SUBMITTED_ID;
+            statusUpdateNote = `Order moved back to CR Clearance from project board by ${actingUser.name}.`;
+          }
+          break;
+      }
+      
+
+      if (targetOrderStatusId && statusUpdateNote) {
+        const newLogEntry: OrderLogEntry = {
+          id: uuidv4(),
+          timestamp: new Date().toISOString(),
+          status: targetOrderStatusId,
+          changedByUserId: actingUser.id,
+          changedByUserName: actingUser.name,
+          notes: statusUpdateNote,
+        };
+        const orderUpdateSuccess = await updateOrder(order.id, {
+          currentStatus: targetOrderStatusId,
+          statusHistory: [...order.statusHistory, newLogEntry],
+          updatedAt: new Date().toISOString(),
+          updatedByUserId: actingUser.id,
+          updatedByUserName: actingUser.name,
+        });
+
+        if (!orderUpdateSuccess) {
+          console.warn(`Project ${project.id} status updated to ${newStatus}, but failed to update corresponding order ${order.id} to target status ${targetOrderStatusId}.`);
+        } else {
+          console.log(`Order ${order.id} status updated to ${targetOrderStatusId} due to project ${project.id} being ${newStatus}.`);
         }
       }
     }
@@ -233,3 +255,5 @@ export async function transferToCourierAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
+    
