@@ -84,7 +84,18 @@ const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents:
                                     </div>
                                     <p className="text-xs text-muted-foreground ml-4 truncate">{lead.businessName}</p>
                                     <div className="flex justify-end mt-1">
-                                        <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => onEditLead(lead)}>View Lead</Button>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          className={cn(
+                                            "h-6 text-xs px-2",
+                                            lead.customerType === 'WARM' && 'bg-purple-100 text-purple-800 hover:bg-purple-200',
+                                            lead.customerType === 'COLD' && 'bg-blue-100 text-blue-800 hover:bg-blue-200',
+                                          )}
+                                          onClick={() => onEditLead(lead)}
+                                        >
+                                            View {lead.customerType ? `(${lead.customerType})` : ''} Lead
+                                        </Button>
                                     </div>
                                 </div>
                             ))}
