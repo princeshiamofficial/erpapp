@@ -20,7 +20,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { addLeadActivityAction } from '@/app/(app)/pipeline/actions';
 import type { Lead, User, LeadActivity } from '@/types';
-import { Loader2, Edit, Phone, Building, MapPin, StickyNote, Bot, CalendarDays, User as UserIcon, Activity } from 'lucide-react';
+import { Loader2, Edit, Phone, Building, MapPin, StickyNote, Bot, CalendarDays, User as UserIcon, Activity, Briefcase } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
