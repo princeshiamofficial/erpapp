@@ -28,7 +28,7 @@ import { cn } from '@/lib/utils';
 interface AddEditLeadDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onLeadSaved: (newLead?: Lead) => void;
+  onLeadSaved: (savedLead?: Lead, isEdit?: boolean) => void;
   lead?: Lead | null;
   currentUser: User;
 }
@@ -135,14 +135,14 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
     let result;
     if (isEditMode) {
       result = await updateLeadAction(lead.id, leadData);
-      if (result.success) {
-        onLeadSaved();
+      if (result.success && result.lead) {
+        onLeadSaved(result.lead, true);
       }
     } else {
         const createData: Omit<Lead, 'id' | 'crmId' | 'crmName' | 'activityHistory' | 'category' | 'status'> & { category?: LeadCategory, status?: LeadStatusType } = leadData;
         result = await addLeadAction(createData, currentUser);
         if (result.success && result.lead) {
-            onLeadSaved(result.lead);
+            onLeadSaved(result.lead, false);
         }
     }
     
@@ -261,7 +261,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting || !!phoneError}>
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Adding...</> : (isEditMode ? 'Save Changes' : 'Add Lead')}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : (isEditMode ? 'Save Changes' : 'Add Lead')}
             </Button>
           </DialogFooter>
         </form>

@@ -148,7 +148,7 @@ export async function addLeadsBatchAction(
 export async function updateLeadAction(
   leadId: string,
   updates: Partial<Omit<Lead, 'id'>>
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; lead?: Lead; error?: string }> {
   try {
     if (updates.phone) {
         const phoneRegex = /^0\d{10}$/;
@@ -160,7 +160,8 @@ export async function updateLeadAction(
     const success = await updateLead(leadId, updates);
     if (success) {
       revalidatePath("/(app)/pipeline");
-      return { success: true };
+      const updatedLead = await getLeadById(leadId);
+      return { success: true, lead: updatedLead || undefined };
     }
     return { success: false, error: "Failed to update lead in database." };
   } catch (error) {

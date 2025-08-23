@@ -216,13 +216,17 @@ export function PipelineClient() {
     setIsAddEditOpen(true);
   };
   
-  const handleLeadSaved = (newLead?: Lead) => {
+  const handleLeadSaved = (savedLead?: Lead, isEdit?: boolean) => {
     setIsAddEditOpen(false);
     setEditingLead(null);
-    if (newLead) {
-        setLeads(prevLeads => [newLead, ...prevLeads]);
+    if (savedLead) {
+        if (isEdit) {
+            setLeads(prev => prev.map(l => (l.id === savedLead.id ? savedLead : l)));
+        } else {
+            setLeads(prev => [savedLead, ...prev]);
+        }
     } else {
-        fetchLeadsAndUsers(); // Fallback to refetch if new lead data isn't returned (e.g., on edit)
+        fetchLeadsAndUsers(); // Fallback to refetch if new lead data isn't returned
     }
   };
 
