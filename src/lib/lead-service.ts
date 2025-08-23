@@ -58,6 +58,7 @@ export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> 
     const dataWithStatus = {
         ...leadData,
         status: 'New Lead', // Set default status for new leads
+        customerType: leadData.customerType || null,
     };
     const payload = {
         data: dataWithStatus

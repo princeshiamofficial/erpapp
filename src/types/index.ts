@@ -266,6 +266,7 @@ export interface Project {
 
 export type LeadCategory = 'POP' | 'POG' | 'OC' | 'OD' | 'ROD';
 export type LeadStatusType = 'New Lead' | 'Contacted' | 'Qualified' | 'Proposal Sent' | 'Negotiation' | 'Won' | 'Lost';
+export type CustomerType = 'WARM' | 'COLD';
 
 
 export interface Lead {
@@ -282,6 +283,7 @@ export interface Lead {
   schedule?: string | null; // ISO string or null
   crmId: string;
   crmName: string;
+  customerType?: CustomerType | null;
 }
 
 export interface DistrictDataEntry {

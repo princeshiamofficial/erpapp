@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import type { Lead, User } from "@/types";
+import type { Lead, User, CustomerType } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addLeadAction, updateLeadAction } from '@/app/(app)/pipeline/actions';
 import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
@@ -32,6 +32,7 @@ interface AddEditLeadDialogProps {
 }
 
 const LEAD_SOURCES = ["Facebook", "WhatsApp", "Office Visit", "Phone Call", "Others"];
+const CUSTOMER_TYPES: CustomerType[] = ["WARM", "COLD"];
 
 export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, currentUser }: AddEditLeadDialogProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -42,6 +43,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
   const [source, setSource] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
+  const [customerType, setCustomerType] = useState<CustomerType | ''>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -58,6 +60,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setSource(lead.source);
         setAddress(lead.address);
         setNotes(lead.notes || '');
+        setCustomerType(lead.customerType || '');
       } else {
         // Reset for add mode
         setDate(new Date());
@@ -68,6 +71,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setSource('');
         setAddress('');
         setNotes('');
+        setCustomerType('');
       }
     }
   }, [isOpen, lead, isEditMode]);
@@ -86,6 +90,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
       schedule: schedule ? schedule.toISOString() : null,
       contactName, businessName, phone, source, address,
       notes: notes || null,
+      customerType: customerType || null,
       // Category is set on the server-side action now
     };
 
@@ -176,6 +181,18 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="customerType">Customer Type (Optional)</Label>
+              <Select value={customerType} onValueChange={(value) => setCustomerType(value as CustomerType)}>
+                <SelectTrigger id="customerType">
+                  <SelectValue placeholder="Select a customer type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="WARM">WARM</SelectItem>
+                  <SelectItem value="COLD">COLD</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <Label htmlFor="address">Address *</Label>
