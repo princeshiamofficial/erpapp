@@ -94,7 +94,7 @@ const DayWithEvents = ({ date, dayEvents, onEditLead }: { date: Date; dayEvents:
                                           )}
                                           onClick={() => onEditLead(lead)}
                                         >
-                                            View {lead.customerType ? `${lead.customerType}` : ''} Lead
+                                            View {lead.customerType} Lead
                                         </Button>
                                     </div>
                                 </div>
