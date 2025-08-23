@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, FormEvent, useMemo } from 'react';
+import React, { useState, FormEvent, useMemo, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { addLeadActivityAction } from '@/app/(app)/pipeline/actions';
+import { addLeadActivityAction, getLeadByIdAction } from '@/app/(app)/pipeline/actions';
 import type { Lead, User, LeadActivity } from '@/types';
 import { Loader2, Edit, Phone, Building, MapPin, StickyNote, Bot, CalendarDays, User as UserIcon, Activity, Briefcase } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -56,7 +56,8 @@ const getCategoryClass = (category: string) => {
     }
 }
 
-export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequest, lead, currentUser }: ViewLeadDialogProps) {
+export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequest, lead: initialLead, currentUser }: ViewLeadDialogProps) {
+  const [lead, setLead] = useState<Lead | null>(initialLead);
   const [newActivity, setNewActivity] = useState('');
   const [newActivityNotes, setNewActivityNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,6 +66,23 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
   const activityHistory = useMemo(() => {
     return [...(lead?.activityHistory || [])].sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [lead?.activityHistory]);
+
+  useEffect(() => {
+    setLead(initialLead); // Sync with prop when it changes
+  }, [initialLead]);
+
+  useEffect(() => {
+    if (isOpen && lead) {
+      const intervalId = setInterval(async () => {
+        const freshLead = await getLeadByIdAction(lead.id);
+        if (freshLead && JSON.stringify(freshLead) !== JSON.stringify(lead)) {
+            setLead(freshLead);
+        }
+      }, 200); // Poll every 0.2 seconds
+
+      return () => clearInterval(intervalId); // Cleanup on close
+    }
+  }, [isOpen, lead]);
 
 
   const handleSubmitActivity = async (e: FormEvent) => {
@@ -84,6 +102,7 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
       toast({ title: "Activity Added", description: "New activity has been logged for this lead." });
       setNewActivity('');
       setNewActivityNotes('');
+      setLead(result.lead || null); // Update local state with the returned lead
       onLeadUpdated(); // This will trigger a re-fetch in the parent
     } else {
       toast({ title: "Error", description: result.error || "Failed to add activity.", variant: "destructive" });

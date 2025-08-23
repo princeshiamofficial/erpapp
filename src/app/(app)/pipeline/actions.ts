@@ -8,9 +8,10 @@ import {
   getLeads as getLeadsFromDb,
   addLead,
   updateLead,
-  deleteLead
+  deleteLead,
+  getLeadById
 } from '@/lib/lead-service';
-import { getUserById } from "@/lib/user-service";
+import { getUserById as getUserFromDb } from "@/lib/user-service";
 import { v4 as uuidv4 } from 'uuid';
 
 
@@ -22,6 +23,11 @@ export async function getLeads(): Promise<Lead[]> {
     return [];
   }
 }
+
+export async function getLeadByIdAction(leadId: string): Promise<Lead | null> {
+    return getLeadById(leadId);
+}
+
 
 export async function addLeadAction(
   leadData: Omit<Lead, 'id' | 'crmId' | 'crmName' | 'activityHistory'>,
@@ -67,7 +73,7 @@ export async function addLeadActivityAction(
   currentUser: User
 ): Promise<{ success: boolean; lead?: Lead; error?: string }> {
   try {
-    const lead = await getLeadsFromDb().then(leads => leads.find(l => l.id === leadId));
+    const lead = await getLeadById(leadId);
     if (!lead) {
       return { success: false, error: "Lead not found." };
     }
@@ -86,8 +92,8 @@ export async function addLeadActivityAction(
 
     if (success) {
       revalidatePath("/(app)/pipeline");
-      const updatedLead = await getLeadsFromDb().then(leads => leads.find(l => l.id === leadId));
-      return { success: true, lead: updatedLead };
+      const updatedLead = await getLeadById(leadId);
+      return { success: true, lead: updatedLead || undefined };
     }
     return { success: false, error: "Failed to add activity to lead." };
   } catch (error) {
@@ -185,7 +191,7 @@ export async function transferLeadAction(
         return { success: false, error: "Permission denied." };
     }
     try {
-        const newCrmUser = await getUserById(newCrmId);
+        const newCrmUser = await getUserFromDb(newCrmId);
         if (!newCrmUser) {
             return { success: false, error: "The new assigned user was not found." };
         }
