@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -101,6 +101,15 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
     }
   };
 
+  const handleRemovePreview = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!isUploading) onOpenChange(open); }}>
       <DialogContent>
@@ -136,9 +145,12 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
               onClick={() => fileInputRef.current?.click()}
             >
               {previewUrl ? (
-                 <div className="text-center">
+                 <div className="text-center relative group/preview">
                     <NextImage src={previewUrl} alt="Preview" width={100} height={100} className="rounded-md object-cover max-h-24 w-auto mx-auto mb-2" />
                     <p className="text-xs text-muted-foreground truncate max-w-[200px]">{selectedFile?.name}</p>
+                    <button type="button" onClick={handleRemovePreview} className="absolute -top-2 -right-2 h-6 w-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover/preview:opacity-100 transition-opacity">
+                        <XCircle className="h-4 w-4" />
+                    </button>
                  </div>
               ) : (
                 <>
@@ -156,19 +168,14 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
               className="hidden"
               accept="image/jpeg,image/png,image/gif,image/webp"
             />
-            {previewUrl && (
-                <Button type="button" variant="ghost" size="sm" onClick={handleRemovePreview} className="text-xs text-destructive w-full">
-                    <XCircle className="h-4 w-4 mr-2" /> Remove Image
-                </Button>
-            )}
-
+            
              <DialogFooter className="pt-4 border-t">
               <Button variant="outline" onClick={() => setStep('initial')} disabled={isUploading}>Back</Button>
               <Button onClick={handleUploadAndConfirm} disabled={isUploading}>
                 {isUploading ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</>
                 ) : (
-                   "Submit with Proof"
+                   "Submit"
                 )}
               </Button>
             </DialogFooter>
@@ -179,4 +186,3 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
     </Dialog>
   );
 }
-
