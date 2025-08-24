@@ -73,10 +73,10 @@ const DayWithEvents = ({ date, dayEvents, onViewLead }: { date: Date; dayEvents:
                 </div>
             </PopoverTrigger>
             {dayEvents.length > 0 && (
-                <PopoverContent className="w-72 p-2">
-                    <div className="font-semibold text-sm mb-2 px-2 pt-1">{format(date, "PPP")}</div>
-                    <ScrollArea className="max-h-60">
-                        <div className="space-y-1 pr-2">
+                 <PopoverContent className="w-72 p-0 flex flex-col max-h-[20rem]">
+                    <div className="font-semibold text-sm mb-2 px-3 pt-3">{format(date, "PPP")}</div>
+                    <ScrollArea className="flex-1 px-1">
+                        <div className="space-y-1 p-2">
                             {dayEvents.map(lead => (
                                 <div key={lead.id} className="p-1.5 rounded-md hover:bg-muted" >
                                     <div className="flex items-center gap-2">
