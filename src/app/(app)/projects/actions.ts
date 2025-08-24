@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -61,7 +62,7 @@ export async function updateProjectStatusAction(
       switch (newStatus) {
         case 'Cancel': targetOrderStatusId = CANCELLED_STATUS_ID; statusUpdateNote = `Order cancelled from project board by ${actingUser.name}.`; break;
         case 'On Hold': targetOrderStatusId = ON_HOLD_STATUS_ID; statusUpdateNote = `Order put on hold from project board by ${actingUser.name}. Reason: ${notes || 'Not specified.'}`; break;
-        case 'Logistics': targetOrderStatusId = LOGISTICS_STATUS_ID; statusUpdateNote = `Order moved to Logistics. File uploaded: ${notes || 'N/A'}. Moved by ${actingUser.name}.`; break;
+        case 'Logistics': targetOrderStatusId = LOGISTICS_STATUS_ID; statusUpdateNote = `File upload confirmed by ${actingUser.name}. Confirmation details: ${notes || 'N/A'}.`; break;
         case 'Courier': targetOrderStatusId = SHIPPED_STATUS_ID; statusUpdateNote = `Order shipped (project in Courier stage) by ${actingUser.name}.`; break;
         case 'On Design': targetOrderStatusId = READY_FOR_DESIGN_STATUS_ID; statusUpdateNote = `Order moved to 'On Design' via project board by ${actingUser.name}.`; break;
         case 'CR Clearance': targetOrderStatusId = ORDER_SUBMITTED_ID; statusUpdateNote = `Order moved back to CR Clearance from project board by ${actingUser.name}.`; break;

@@ -1,42 +1,182 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { AlertCircle } from 'lucide-react';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { AlertCircle, UploadCloud, Image as ImageIcon, XCircle, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import NextImage from 'next/image';
 
 interface FileUploadConfirmationDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  onConfirm: (wasUploaded: boolean) => void;
+  onConfirm: (notes: string) => void;
 }
 
 export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }: FileUploadConfirmationDialogProps) {
+  const [step, setStep] = useState<'initial' | 'upload'>('initial');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const resetState = () => {
+    setStep('initial');
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setIsUploading(false);
+  };
+  
+  useEffect(() => {
+    if (isOpen) {
+      resetState();
+    }
+  }, [isOpen]);
+
+  const handleFileChange = (file: File | null) => {
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({ title: "File too large", description: "Please select an image smaller than 5MB.", variant: "destructive" });
+        return;
+      }
+      if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
+        toast({ title: "Invalid file type", description: "Please select a JPG, PNG, GIF, or WEBP image.", variant: "destructive" });
+        return;
+      }
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
+  };
+  
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => e.preventDefault();
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileChange(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleUploadAndConfirm = async () => {
+    if (!selectedFile) {
+        onConfirm("File uploaded: Yes (No proof provided).");
+        return;
+    }
+    
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      const response = await fetch('https://colorhutbd.xyz/model-image/index.php', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Upload failed with status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      if (result.success && result.file_url) {
+        onConfirm(`File uploaded: Yes. Proof: ${result.file_url}`);
+      } else {
+        throw new Error(result.message || "Failed to get file URL.");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast({ title: "Upload Failed", description: "Could not upload proof image. Proceeding without it.", variant: "destructive" });
+      onConfirm("File uploaded: Yes (Proof upload failed).");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
-    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2">
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!isUploading) onOpenChange(open); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
             <AlertCircle className="h-6 w-6 text-primary" />
             File Upload Confirmation
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            Has the necessary file for this project been uploaded to the server?
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <Button variant="outline" onClick={() => onConfirm(false)}>No</Button>
-          <Button onClick={() => onConfirm(true)}>Yes, File Uploaded</Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </DialogTitle>
+           <DialogDescription>
+            Confirm if the design file has been uploaded to the server for production.
+          </DialogDescription>
+        </DialogHeader>
+        
+        {step === 'initial' && (
+          <>
+            <p className="py-4 text-center text-sm">Has the necessary file for this project been uploaded?</p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => onConfirm("File uploaded: No")}>No</Button>
+              <Button onClick={() => setStep('upload')}>Yes, File Uploaded</Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {step === 'upload' && (
+          <div className="py-4 space-y-4">
+             <div 
+              className={cn(
+                "mt-1 flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-md cursor-pointer hover:border-primary transition-colors",
+                previewUrl ? "border-green-500 bg-green-500/5" : "border-border"
+              )}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {previewUrl ? (
+                 <div className="text-center">
+                    <NextImage src={previewUrl} alt="Preview" width={100} height={100} className="rounded-md object-cover max-h-24 w-auto mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground truncate max-w-[200px]">{selectedFile?.name}</p>
+                 </div>
+              ) : (
+                <>
+                  <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">Drag & drop or click to upload proof</p>
+                  <p className="text-xs text-muted-foreground">(Optional, Max 5MB)</p>
+                </>
+              )}
+            </div>
+            <input
+              id="file-upload"
+              type="file"
+              ref={fileInputRef}
+              onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+              className="hidden"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+            />
+            {previewUrl && (
+                <Button type="button" variant="ghost" size="sm" onClick={handleRemovePreview} className="text-xs text-destructive w-full">
+                    <XCircle className="h-4 w-4 mr-2" /> Remove Image
+                </Button>
+            )}
+
+             <DialogFooter className="pt-4 border-t">
+              <Button variant="outline" onClick={() => setStep('initial')} disabled={isUploading}>Back</Button>
+              <Button onClick={handleUploadAndConfirm} disabled={isUploading}>
+                {isUploading ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading...</>
+                ) : (
+                   "Submit with Proof"
+                )}
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+
+      </DialogContent>
+    </Dialog>
   );
 }
+

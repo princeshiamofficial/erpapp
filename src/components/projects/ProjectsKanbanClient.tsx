@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -483,8 +484,8 @@ export function ProjectsKanbanClient() {
           <FileUploadConfirmationDialog
             isOpen={isLogisticsConfirmDialogOpen}
             onOpenChange={setIsLogisticsConfirmDialogOpen}
-            onConfirm={(wasUploaded) => {
-              handleConfirmStatusUpdate(projectForLogistics, 'Logistics', wasUploaded ? "Yes" : "No");
+            onConfirm={(notes) => {
+              handleConfirmStatusUpdate(projectForLogistics, 'Logistics', notes);
               setIsLogisticsConfirmDialogOpen(false);
               setProjectForLogistics(null);
             }}
