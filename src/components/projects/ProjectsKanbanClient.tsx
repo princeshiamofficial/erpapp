@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import type { Project, ProjectStatusType, CustomStatus, User, GlobalSettings } from '@/types'; 
 import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { 
@@ -34,8 +35,9 @@ import { updateProjectStatusAction } from '@/app/(app)/projects/actions';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectCard } from '@/components/projects/ProjectCard'; 
 import { useAuth } from '@/contexts/auth-context';
-import dynamic from 'next/dynamic'; 
 import { CourierConfirmationDialog } from '@/components/projects/CourierConfirmationDialog';
+import { FileUploadConfirmationDialog } from '@/components/projects/FileUploadConfirmationDialog'; 
+import { HoldReasonDialog } from '@/components/projects/HoldReasonDialog'; 
 import { getProjects } from '@/lib/project-service';
 import { getStatuses } from '@/lib/status-service'; 
 import { getGlobalSettings } from '@/lib/settings-service';
@@ -71,6 +73,13 @@ export function ProjectsKanbanClient() {
   const [selectedOrderForDrAssignment, setSelectedOrderForDrAssignment] = useState<TrackingLink | null>(null); 
   const [isAssignDrDialogOpen, setIsAssignDrDialogOpen] = useState(false); 
   const [projectToCourier, setProjectToCourier] = useState<Project | null>(null);
+  
+  const [projectToHold, setProjectToHold] = useState<Project | null>(null);
+  const [isHoldReasonDialogOpen, setIsHoldReasonDialogOpen] = useState(false);
+  
+  const [projectForLogistics, setProjectForLogistics] = useState<Project | null>(null);
+  const [isLogisticsConfirmDialogOpen, setIsLogisticsConfirmDialogOpen] = useState(false);
+
 
   const sensors = useSensors(
     useSensor(MouseSensor, {
@@ -246,12 +255,24 @@ export function ProjectsKanbanClient() {
       return;
     }
     
+    if (newStatus === 'On Hold') {
+        setProjectToHold(project);
+        setIsHoldReasonDialogOpen(true);
+        return;
+    }
+
+    if (newStatus === 'Logistics') {
+        setProjectForLogistics(project);
+        setIsLogisticsConfirmDialogOpen(true);
+        return;
+    }
+    
     if (newStatus === 'Courier') {
       setProjectToCourier(project);
       return;
     }
 
-    // Optimistically update the UI
+    // Optimistically update the UI for other statuses
     setProjects(prevProjects => {
       return prevProjects.map(p =>
         p.id === project.id ? { ...p, status: newStatus } : p
@@ -278,6 +299,28 @@ export function ProjectsKanbanClient() {
   const handleDragCancel = () => {
     setActiveProject(null);
   };
+  
+  const handleConfirmStatusUpdate = async (project: Project, newStatus: ProjectStatusType, notes?: string) => {
+    if (!currentUser) return;
+    const originalStatus = project.status;
+     setProjects(prevProjects => {
+      return prevProjects.map(p =>
+        p.id === project.id ? { ...p, status: newStatus } : p
+      );
+    });
+    const result = await updateProjectStatusAction(project, newStatus, currentUser, notes);
+    if (result.success) {
+      toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
+      await fetchData();
+    } else {
+      toast({ title: "Update Failed", description: result.error || `Could not update status.`, variant: "destructive" });
+      setProjects(prevProjects => {
+        return prevProjects.map(p =>
+          p.id === project.id ? { ...p, status: originalStatus } : p
+        );
+      });
+    }
+  }
 
   const handleOpenAssignDrDialog = useCallback(async (projectToAssign: Project) => {
     console.log("[ProjectsPage] handleOpenAssignDrDialog called for project:", projectToAssign.id);
@@ -422,6 +465,30 @@ export function ProjectsKanbanClient() {
           currentUser={currentUser}
           onSuccess={fetchData}
         />
+      )}
+      
+      {projectToHold && (
+        <HoldReasonDialog
+          isOpen={isHoldReasonDialogOpen}
+          onOpenChange={setIsHoldReasonDialogOpen}
+          onConfirm={(reason) => {
+            handleConfirmStatusUpdate(projectToHold, 'On Hold', reason);
+            setIsHoldReasonDialogOpen(false);
+            setProjectToHold(null);
+          }}
+        />
+      )}
+      
+      {projectForLogistics && (
+          <FileUploadConfirmationDialog
+            isOpen={isLogisticsConfirmDialogOpen}
+            onOpenChange={setIsLogisticsConfirmDialogOpen}
+            onConfirm={(wasUploaded) => {
+              handleConfirmStatusUpdate(projectForLogistics, 'Logistics', wasUploaded ? "Yes" : "No");
+              setIsLogisticsConfirmDialogOpen(false);
+              setProjectForLogistics(null);
+            }}
+          />
       )}
     </DndContext>
   );
