@@ -49,59 +49,27 @@ export async function updateProjectStatusAction(
 
     const order = await getOrderById(project.id); 
     if (order) {
+      let targetOrderStatusId: string | null = null;
+      let statusUpdateNote: string | null = null;
+      
       // If moving from Delivered to another state, unsettle the payment.
       if (originalStatus === 'Delivered' && newStatus !== 'Delivered') {
         const unsettleReason = `Payment unsettled: Project moved from 'Delivered' to '${newStatus}' by ${actingUser.name}.`;
         await unsettleOrderPayment(project.id, unsettleReason, actingUser);
-      } else if (newStatus === 'Delivered') {
-        // If moving to Delivered, attempt auto-settle.
-        await autoSettleOrderIfDelivered(project.id, `System auto-settled: Project moved to '${newStatus}'.`, actingUser);
       }
-      
-      let targetOrderStatusId: string | null = null;
-      let statusUpdateNote: string | null = null;
 
       switch (newStatus) {
-        case 'Cancel':
-          if (order.currentStatus !== CANCELLED_STATUS_ID) {
-            targetOrderStatusId = CANCELLED_STATUS_ID;
-            statusUpdateNote = `Order cancelled from project board by ${actingUser.name}.`;
-          }
-          break;
-        case 'On Hold':
-          if (order.currentStatus !== ON_HOLD_STATUS_ID) {
-            targetOrderStatusId = ON_HOLD_STATUS_ID;
-            statusUpdateNote = `Order put on hold from project board by ${actingUser.name}.`;
-          }
-          break;
-        case 'Logistics':
-          if (order.currentStatus !== LOGISTICS_STATUS_ID) {
-            targetOrderStatusId = LOGISTICS_STATUS_ID;
-            statusUpdateNote = `Order moved to Logistics via project board by ${actingUser.name}.`;
-          }
-          break;
-        case 'Courier':
-           if (order.currentStatus !== SHIPPED_STATUS_ID) {
-            targetOrderStatusId = SHIPPED_STATUS_ID;
-            statusUpdateNote = `Order shipped (project in Courier stage) by ${actingUser.name}.`;
-          }
-          break;
-        case 'On Design':
-          if (order.currentStatus !== READY_FOR_DESIGN_STATUS_ID) {
-            targetOrderStatusId = READY_FOR_DESIGN_STATUS_ID;
-            statusUpdateNote = `Order moved to 'On Design' via project board by ${actingUser.name}.`;
-          }
-          break;
-        case 'CR Clearance':
-          if (order.currentStatus !== ORDER_SUBMITTED_ID) {
-            targetOrderStatusId = ORDER_SUBMITTED_ID;
-            statusUpdateNote = `Order moved back to CR Clearance from project board by ${actingUser.name}.`;
-          }
-          break;
+        case 'Cancel': targetOrderStatusId = CANCELLED_STATUS_ID; statusUpdateNote = `Order cancelled from project board by ${actingUser.name}.`; break;
+        case 'On Hold': targetOrderStatusId = ON_HOLD_STATUS_ID; statusUpdateNote = `Order put on hold from project board by ${actingUser.name}.`; break;
+        case 'Logistics': targetOrderStatusId = LOGISTICS_STATUS_ID; statusUpdateNote = `Order moved to Logistics via project board by ${actingUser.name}.`; break;
+        case 'Courier': targetOrderStatusId = SHIPPED_STATUS_ID; statusUpdateNote = `Order shipped (project in Courier stage) by ${actingUser.name}.`; break;
+        case 'On Design': targetOrderStatusId = READY_FOR_DESIGN_STATUS_ID; statusUpdateNote = `Order moved to 'On Design' via project board by ${actingUser.name}.`; break;
+        case 'CR Clearance': targetOrderStatusId = ORDER_SUBMITTED_ID; statusUpdateNote = `Order moved back to CR Clearance from project board by ${actingUser.name}.`; break;
+        case 'Delivered': targetOrderStatusId = DELIVERED_STATUS_ID; statusUpdateNote = `Order marked as delivered via project board by ${actingUser.name}.`; break;
       }
       
 
-      if (targetOrderStatusId && statusUpdateNote) {
+      if (targetOrderStatusId && statusUpdateNote && order.currentStatus !== targetOrderStatusId) {
         const newLogEntry: OrderLogEntry = {
           id: uuidv4(),
           timestamp: new Date().toISOString(),
@@ -122,6 +90,10 @@ export async function updateProjectStatusAction(
           console.warn(`Project ${project.id} status updated to ${newStatus}, but failed to update corresponding order ${order.id} to target status ${targetOrderStatusId}.`);
         } else {
           console.log(`Order ${order.id} status updated to ${targetOrderStatusId} due to project ${project.id} being ${newStatus}.`);
+           // *** FIX: Only call autoSettle if the new status IS Delivered ***
+          if (newStatus === 'Delivered') {
+            await autoSettleOrderIfDelivered(project.id, `System auto-settled: Project moved to '${newStatus}'.`, actingUser);
+          }
         }
       }
     }

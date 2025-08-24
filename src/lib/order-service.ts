@@ -288,6 +288,13 @@ export async function autoSettleOrderIfDelivered(
       return false;
     }
 
+    // *** FIX START: Only proceed if status is actually DELIVERED_STATUS_ID ***
+    if (order.currentStatus !== DELIVERED_STATUS_ID) {
+      console.log(`[autoSettleOrderIfDelivered] Order ${orderId} is not in 'Delivered' status. Current status: ${order.currentStatus}. Skipping settlement.`);
+      return true; // Not an error, just not applicable.
+    }
+    // *** FIX END ***
+
     const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
     const effectiveDiscount = order.specialClientDiscount || 0;
     const netPayable = orderSubtotal - effectiveDiscount;
@@ -307,20 +314,16 @@ export async function autoSettleOrderIfDelivered(
       needsUpdate = true;
     }
 
-    if (order.currentStatus !== DELIVERED_STATUS_ID) {
-      const newStatusLogEntry: OrderLogEntry = {
-        id: uuidv4(), timestamp: new Date().toISOString(), status: DELIVERED_STATUS_ID,
-        changedByUserId: actingUser.id, changedByUserName: actingUser.name, notes: settlementReason,
-      };
-      updates.currentStatus = DELIVERED_STATUS_ID;
-      updates.statusHistory = [...order.statusHistory, newStatusLogEntry];
-      needsUpdate = true;
-    }
-    
     if (needsUpdate) {
       updates.updatedAt = new Date().toISOString();
       updates.updatedByUserId = actingUser.id;
       updates.updatedByUserName = actingUser.name;
+      // Add a log entry only if we are actually adding a payment
+      const newStatusLogEntry: OrderLogEntry = {
+        id: uuidv4(), timestamp: new Date().toISOString(), status: DELIVERED_STATUS_ID,
+        changedByUserId: actingUser.id, changedByUserName: actingUser.name, notes: "Order payment settled automatically.",
+      };
+      updates.statusHistory = [...order.statusHistory, newStatusLogEntry];
       await updateOrder(orderId, updates);
     }
     
@@ -362,7 +365,7 @@ export const unsettleOrderPayment = async (
         }
 
         const autoSettlePaymentIndex = (order.advancePayments || []).findIndex(
-            p => p.notes?.startsWith("System auto-settled:") || p.paymentMethod === "COD"
+            p => p.notes?.startsWith("System auto-settled:") || p.paymentMethod === "COD" || p.notes?.startsWith("Order delivered.")
         );
 
         if (autoSettlePaymentIndex === -1) {
@@ -559,4 +562,5 @@ export const deleteShippedOrderEntry = async (orderId: string): Promise<boolean>
     return false;
   }
 };
+
 
