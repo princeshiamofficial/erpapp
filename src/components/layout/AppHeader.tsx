@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -27,22 +28,18 @@ export function AppHeader() {
   const handleSyncClick = async () => {
     setIsSyncing(true);
     toast({
-      title: "Syncing Data...",
-      description: "Checking for delivered orders with due balances to settle.",
+      title: "Syncing Courier Data...",
+      description: "Checking for delivered orders from the courier to update statuses.",
     });
 
     const result = await settleAllDeliveredOrdersAction();
 
     if (result.success) {
-      const { settledCount, statusUpdateCount } = result;
-      let description = "No updates were necessary.";
+      const { statusUpdateCount } = result;
+      let description = "No new deliveries found from courier.";
 
-      if (statusUpdateCount > 0 && settledCount > 0) {
-        description = `Updated ${statusUpdateCount} order status(es) and settled ${settledCount} due balance(s).`;
-      } else if (statusUpdateCount > 0) {
-        description = `Updated ${statusUpdateCount} order status(es) to 'Delivered' based on courier confirmation.`;
-      } else if (settledCount > 0) {
-        description = `Successfully settled ${settledCount} delivered order(s) with a due balance.`;
+      if (statusUpdateCount > 0) {
+        description = `Successfully updated ${statusUpdateCount} order(s) to 'Delivered' based on courier confirmation.`;
       }
       
       toast({
