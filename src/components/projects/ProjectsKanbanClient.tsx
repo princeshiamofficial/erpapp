@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -483,10 +482,19 @@ export function ProjectsKanbanClient() {
       {projectForLogistics && (
           <FileUploadConfirmationDialog
             isOpen={isLogisticsConfirmDialogOpen}
-            onOpenChange={setIsLogisticsConfirmDialogOpen}
+            onOpenChange={(open) => {
+              if(!open) {
+                // If user closes dialog without confirming, revert the optimistic UI update
+                const originalStatus = projects.find(p => p.id === projectForLogistics.id)?.status;
+                if (originalStatus && originalStatus !== 'Logistics') {
+                  setProjects(prev => prev.map(p => p.id === projectForLogistics.id ? {...p, status: originalStatus} : p));
+                }
+                setProjectForLogistics(null);
+              }
+              setIsLogisticsConfirmDialogOpen(open);
+            }}
             onConfirm={(notes) => {
               handleConfirmStatusUpdate(projectForLogistics, 'Logistics', notes);
-              setIsLogisticsConfirmDialogOpen(false);
               setProjectForLogistics(null);
             }}
           />

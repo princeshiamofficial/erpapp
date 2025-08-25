@@ -68,7 +68,9 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
 
   const handleUploadAndConfirm = async () => {
     if (!selectedFile) {
+        // If user clicks submit without providing proof, we still confirm the action.
         onConfirm("File uploaded: Yes (No proof provided).");
+        onOpenChange(false); // Close the dialog
         return;
     }
     
@@ -98,6 +100,7 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
       onConfirm("File uploaded: Yes (Proof upload failed).");
     } finally {
       setIsUploading(false);
+      onOpenChange(false);
     }
   };
 
@@ -108,6 +111,12 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
     if (fileInputRef.current) {
         fileInputRef.current.value = "";
     }
+  };
+  
+  const handleNoClick = () => {
+      // Don't call onConfirm, just close the dialog.
+      // The parent component will handle the state reversion.
+      onOpenChange(false);
   };
 
   return (
@@ -127,7 +136,7 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
           <>
             <p className="py-4 text-center text-sm">Has the necessary file for this project been uploaded?</p>
             <DialogFooter>
-              <Button variant="outline" onClick={() => onConfirm("File uploaded: No")}>No</Button>
+              <Button variant="outline" onClick={handleNoClick}>No</Button>
               <Button onClick={() => setStep('upload')}>Yes, File Uploaded</Button>
             </DialogFooter>
           </>
