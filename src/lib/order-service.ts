@@ -288,13 +288,8 @@ export async function autoSettleOrderIfDelivered(
       return false;
     }
 
-    // *** FIX START: Only proceed if status is actually DELIVERED_STATUS_ID ***
-    if (order.currentStatus !== DELIVERED_STATUS_ID) {
-      console.log(`[autoSettleOrderIfDelivered] Order ${orderId} is not in 'Delivered' status. Current status: ${order.currentStatus}. Skipping settlement.`);
-      return true; // Not an error, just not applicable.
-    }
-    // *** FIX END ***
-
+    const isAlreadyDelivered = order.currentStatus === DELIVERED_STATUS_ID;
+    
     const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
     const effectiveDiscount = order.specialClientDiscount || 0;
     const netPayable = orderSubtotal - effectiveDiscount;
@@ -305,6 +300,7 @@ export async function autoSettleOrderIfDelivered(
     const updates: Partial<TrackingLink> = {};
     let needsUpdate = false;
 
+    // Settle payment if there's a due amount
     if (dueAmount > 0.01) {
       const settlementRecord: AdvancePaymentRecord = {
         id: uuidv4(), amount: dueAmount, date: new Date().toISOString(), paymentMethod: "COD",
@@ -314,20 +310,26 @@ export async function autoSettleOrderIfDelivered(
       needsUpdate = true;
     }
 
+    // Update status if it's not already 'Delivered'
+    if (!isAlreadyDelivered) {
+        updates.currentStatus = DELIVERED_STATUS_ID;
+        const newStatusLogEntry: OrderLogEntry = {
+            id: uuidv4(), timestamp: new Date().toISOString(), status: DELIVERED_STATUS_ID,
+            changedByUserId: actingUser.id, changedByUserName: actingUser.name, notes: settlementReason,
+        };
+        updates.statusHistory = [...order.statusHistory, newStatusLogEntry];
+        needsUpdate = true;
+    }
+    
+    // Apply updates if any changes were queued
     if (needsUpdate) {
       updates.updatedAt = new Date().toISOString();
       updates.updatedByUserId = actingUser.id;
       updates.updatedByUserName = actingUser.name;
-      // Add a log entry only if we are actually adding a payment
-      const newStatusLogEntry: OrderLogEntry = {
-        id: uuidv4(), timestamp: new Date().toISOString(), status: DELIVERED_STATUS_ID,
-        changedByUserId: actingUser.id, changedByUserName: actingUser.name, notes: "Order payment settled automatically.",
-      };
-      updates.statusHistory = [...order.statusHistory, newStatusLogEntry];
       await updateOrder(orderId, updates);
     }
     
-    // Sync Project Status
+    // Sync Project Status to Delivered
     try {
         const project = await fetchFromApi(`collections/${PROJECTS_COLLECTION}/documents/${orderId}`);
         if (project && project.data && project.data.status !== 'Delivered') {
@@ -339,10 +341,11 @@ export async function autoSettleOrderIfDelivered(
                 method: 'PUT',
                 body: JSON.stringify(payload)
             });
+             console.log(`[autoSettleOrderIfDelivered] Synced project ${orderId} to 'Delivered'.`);
         }
     } catch(projectError) {
         if (!(projectError instanceof Error && projectError.message.includes('not found'))) {
-          console.warn(`Could not sync project status for ${orderId}:`, projectError);
+          console.warn(`[autoSettleOrderIfDelivered] Could not sync project status for ${orderId}:`, projectError);
         }
     }
     return true;
@@ -562,5 +565,6 @@ export const deleteShippedOrderEntry = async (orderId: string): Promise<boolean>
     return false;
   }
 };
+
 
 

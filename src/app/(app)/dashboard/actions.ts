@@ -3,12 +3,21 @@
 "use server";
 
 import { revalidatePath } from 'next/cache';
-import { getOrderById, updateOrdersBatch, deleteShippedOrderEntry } from '@/lib/order-service'; // Removed getOrdersByStatusAndTracking, added deleteShippedOrderEntry
+import { getOrderById, updateOrdersBatch, deleteShippedOrderEntry, autoSettleOrderIfDelivered } from '@/lib/order-service'; 
 import { DELIVERED_STATUS_ID, SHIPPED_STATUS_ID } from '@/lib/status-service'; 
 import { getUsers } from '@/lib/user-service';
 import { OrderLogEntry, TrackingLink } from '@/types'; 
 import { v4 as uuidv4 } from 'uuid';
-import { fetchFromApi } from '@/lib/api-helper'; // Import fetchFromApi
+import { fetchFromApi } from '@/lib/api-helper'; 
+
+// This function is no longer used for setting targets, it might be removed in the future.
+// The logic is kept for historical purposes or if it needs to be reinstated.
+async function updateTargetInDb(targetType: 'monthly' | 'weekly', newTarget: number): Promise<boolean> {
+  // This function would interact with a database service to update the target.
+  // For this example, we'll assume it's a placeholder.
+  console.log(`Updating ${targetType} target to ${newTarget}`);
+  return true;
+}
 
 export async function setGlobalTargetAction(targetType: 'monthly' | 'weekly', newTarget: number): Promise<{ success: boolean; error?: string }> {
   if (newTarget < 0 || isNaN(newTarget)) {
@@ -38,8 +47,8 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
     }
     const actingUser = { id: systemAdmin.id, name: systemAdmin.name };
     
-    let settledCount = 0;
     let statusUpdateCount = 0;
+    const settledOrderIds: string[] = [];
 
     // 1. Fetch from the new 'shippedOrders' collection for efficiency
     const shippedOrdersResponse = await fetchFromApi('collections/shippedOrders/documents?limit=500');
@@ -48,9 +57,6 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
       packzyTrackingCode: doc.data.packzyTrackingCode,
     })) || [];
     
-    const updatesForBatch: { id: string, data: Partial<TrackingLink> }[] = [];
-    const ordersConfirmedDelivered: string[] = []; // Track IDs of orders confirmed delivered
-
     if (ordersToCheckCourier.length > 0) {
         console.log(`[SettleAction] Checking courier status for ${ordersToCheckCourier.length} shipped orders from the dedicated collection.`);
         const apiKey = 'vfei2q49dhy1rxqxjs6xntkkvc2odeax';
@@ -71,64 +77,40 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
                 const data = await response.json();
 
                 if (data.status === 200 && data.delivery_status === 'delivered') {
-                    console.log(`[SettleAction] Courier confirmed delivery for order ${shippedOrder.orderId}. Queuing for update.`);
-                    statusUpdateCount++;
+                    console.log(`[SettleAction] Courier confirmed delivery for order ${shippedOrder.orderId}. Triggering settlement.`);
                     
-                    const fullOrder = await getOrderById(shippedOrder.orderId);
-                    if (!fullOrder) {
-                        console.warn(`[SettleAction] Could not fetch full order details for ID ${shippedOrder.orderId}. Skipping status update.`);
-                        continue;
-                    }
-                    
-                    const logEntry: OrderLogEntry = {
-                      id: uuidv4(),
-                      timestamp: new Date().toISOString(),
-                      status: DELIVERED_STATUS_ID,
-                      changedByUserId: actingUser.id,
-                      changedByUserName: actingUser.name,
-                      notes: `Auto-updated to Delivered based on courier status sync.`,
-                    };
+                    const settlementReason = `Order delivered. Status updated via Packzy webhook. Consignment ID: ${data.consignment_id || 'N/A'}.`;
+                    const settlementSuccess = await autoSettleOrderIfDelivered(shippedOrder.orderId, settlementReason, actingUser);
 
-                    updatesForBatch.push({
-                      id: fullOrder.id,
-                      data: {
-                        currentStatus: DELIVERED_STATUS_ID,
-                        statusHistory: [...fullOrder.statusHistory, logEntry]
-                      }
-                    });
-                    ordersConfirmedDelivered.push(fullOrder.id);
+                    if (settlementSuccess) {
+                        statusUpdateCount++;
+                        settledOrderIds.push(shippedOrder.orderId);
+                        console.log(`[SettleAction] Successfully settled order ${shippedOrder.orderId}.`);
+                    } else {
+                        console.error(`[SettleAction] autoSettleOrderIfDelivered failed for order ${shippedOrder.orderId}.`);
+                    }
                 }
             } catch (courierError) {
                 console.error(`[SettleAction] Error fetching courier status for order ${shippedOrder.orderId}:`, courierError);
             }
         }
 
-        // Apply batch update if any orders were confirmed delivered
-        if (updatesForBatch.length > 0) {
-          const batchSuccess = await updateOrdersBatch(updatesForBatch);
-          if (!batchSuccess) {
-            console.error("[SettleAction] Batch update for delivered statuses failed.");
-            // Continue to settle dues, but log the error.
-          } else {
-            // 2. Remove delivered orders from 'shippedOrders' collection
-            for(const orderId of ordersConfirmedDelivered) {
-                await deleteShippedOrderEntry(orderId);
-            }
+        // Clean up successfully settled orders from the shippedOrders collection
+        if (settledOrderIds.length > 0) {
+          for(const orderId of settledOrderIds) {
+              await deleteShippedOrderEntry(orderId);
           }
         }
     }
     
-    // The rest of the logic for settling due balances is no longer needed here,
-    // as it's now part of the autoSettleOrderIfDelivered flow which is called
-    // when the status is updated.
-
     if (statusUpdateCount > 0) {
         revalidatePath("/(app)/dashboard", "layout");
         revalidatePath("/(app)/orders", "layout");
         revalidatePath("/(app)/invoice", "layout");
+        revalidatePath("/(app)/projects", "layout");
     }
     
-    return { success: true, settledCount: 0, statusUpdateCount }; // settledCount is now implicitly handled
+    return { success: true, settledCount: statusUpdateCount, statusUpdateCount }; // settledCount is the same as statusUpdateCount now
   } catch (error) {
     console.error("Error in settleAllDeliveredOrdersAction:", error);
     return { success: false, settledCount: 0, statusUpdateCount: 0, error: error instanceof Error ? error.message : "An unexpected error occurred." };
