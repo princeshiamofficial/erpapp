@@ -120,11 +120,6 @@ export function DateRangePicker({
     return getDisplayLabel(selectedRange, selectedPredefined);
   }, [selectedRange, selectedPredefined]);
 
-  // useEffect(() => {
-  //   // Original useEffect removed - onDateRangeChange is now called explicitly
-  // }, [selectedRange, displayLabel, selectedPredefined, onDateRangeChange]);
-
-
   function getDateRangeForPredefined(value: PredefinedRange): DateRange {
     const now = new Date();
     switch (value) {
@@ -168,18 +163,17 @@ export function DateRangePicker({
     if (range?.from) {
       setSelectedPredefined("custom"); // Update internal state for label
     }
-    // DO NOT call onDateRangeChange here. It will be called on "Apply".
   };
   
   const handleApplyCustomRange = () => {
-    setIsCustomPopoverOpen(false); // Close the popover first
+    setIsCustomPopoverOpen(false); 
     let finalRange = selectedRange;
-    if (selectedRange?.from && !selectedRange?.to) { // If only start date selected, make it single day
+    if (selectedRange?.from && !selectedRange?.to) { 
       finalRange = { from: selectedRange.from, to: selectedRange.from };
-      setSelectedRange(finalRange); // Update local state to reflect this
+      setSelectedRange(finalRange);
     }
     const currentCustomDisplayLabel = getDisplayLabel(finalRange, "custom");
-    onDateRangeChange(finalRange, currentCustomDisplayLabel, "custom"); // Notify parent
+    onDateRangeChange(finalRange, currentCustomDisplayLabel, "custom"); 
   };
 
 
@@ -208,20 +202,13 @@ export function DateRangePicker({
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
-        <Popover open={isCustomPopoverOpen} onOpenChange={(open) => {
-            setIsCustomPopoverOpen(open);
-            // If popover is opening, ensure selectedPredefined is 'custom'
-            // This helps if user clicks "Custom Range", then a predefined, then "Custom Range" again.
-            if (open) {
-                setSelectedPredefined("custom");
-            }
-        }}>
+        <Popover open={isCustomPopoverOpen} onOpenChange={setIsCustomPopoverOpen}>
           <PopoverTrigger asChild>
             <DropdownMenuItem
               onSelect={(e) => {
-                e.preventDefault(); // Prevent DropdownMenu from closing
-                // setSelectedPredefined("custom"); // Now set by Popover's onOpenChange
-                setIsCustomPopoverOpen(true); // Open the Popover (calendar)
+                e.preventDefault(); 
+                setSelectedPredefined("custom");
+                setIsCustomPopoverOpen(true);
               }}
                className={selectedPredefined === "custom" ? "bg-accent text-accent-foreground" : ""}
             >
@@ -251,3 +238,4 @@ export function DateRangePicker({
     </DropdownMenu>
   );
 }
+
