@@ -463,6 +463,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       onOrderCreated();
       setIsOpen(false);
       resetForm();
+      // Open the new tracking page in a new tab
+      window.open(`/track/${result.id}`, '_blank');
     }
   };
 
