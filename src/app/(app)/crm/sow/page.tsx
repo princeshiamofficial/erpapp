@@ -4,86 +4,85 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import type { TrackingLink } from '@/types';
+import type { TrackingLink, OrderItem } from '@/types';
 import { getOrders } from '@/lib/order-service';
-import { Settings, TrendingUp, PackageSearch } from 'lucide-react';
+import { PackageSearch } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-interface BusinessLoyalty {
+
+interface SowData {
   id: string;
-  name: string;
+  orderDate: string;
+  businessName: string;
+  products: string;
+  amount: number;
   loyaltyScore: number;
-  trendData: { value: number }[];
-  color: {
-    gradientFrom: string;
-    gradientTo: string;
-    progress: string;
-  };
 }
 
-const generateBusinessLoyaltyData = (orders: TrackingLink[]): BusinessLoyalty[] => {
-  const businesses: Record<string, number> = {};
-  orders.forEach(order => {
-    const businessName = order.companyName.split(' • ').pop()?.trim() || order.companyName;
-    if (businessName) {
-      businesses[businessName] = (businesses[businessName] || 0) + 1;
-    }
-  });
-
-  const getColorThemeForScore = (score: number) => {
-    if (score <= 25) {
-      return { gradientFrom: '#F87171', gradientTo: 'rgba(248, 113, 113, 0.1)', progress: 'bg-red-500' };   // Red
-    } else if (score <= 50) {
-      return { gradientFrom: '#FBBF24', gradientTo: 'rgba(251, 191, 36, 0.1)', progress: 'bg-amber-500' }; // Amber
-    } else if (score <= 75) {
-      return { gradientFrom: '#60A5FA', gradientTo: 'rgba(96, 165, 250, 0.1)', progress: 'bg-blue-500' };  // Blue
-    } else {
-      return { gradientFrom: '#6EE7B7', gradientTo: 'rgba(52, 211, 153, 0.1)', progress: 'bg-green-500' }; // Teal/Green
-    }
-  };
-
-
-  return Object.entries(businesses).slice(0, 20).map(([name, orderCount]) => { // Increased to show more data in table
-    const loyaltyScore = Math.min(99, 10 + orderCount * 12 + Math.floor(Math.random() * 15));
-    return {
-      id: name,
-      name,
-      loyaltyScore,
-      trendData: Array.from({ length: 10 }, (_, i) => ({
-        value: Math.floor(loyaltyScore * (0.8 + (Math.random() * 0.4)) * ((i + 1) / 10)),
-      })),
-      color: getColorThemeForScore(loyaltyScore),
-    };
-  });
+const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-BD', {
+        style: 'currency',
+        currency: 'BDT',
+    }).format(value);
 };
 
-const LoyaltyTrendChart = ({ data, fromColor, toColor, id }: { data: any[], fromColor: string, toColor: string, id: string }) => {
-  const uniqueGradientId = `gradient-chart-${id.replace(/[^a-zA-Z0-9]/g, '')}`;
-  return (
-    <div className="h-10 w-28">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data}>
-           <defs>
-                <linearGradient id={uniqueGradientId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={fromColor} stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor={toColor} stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-          <Area type="monotone" dataKey="value" stroke={fromColor} strokeWidth={2} fillOpacity={1} fill={`url(#${uniqueGradientId})`} />
-        </AreaChart>
-      </ResponsiveContainer>
-    </div>
-  );
+const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    try {
+        return format(parseISO(dateString), 'd MMM, yyyy');
+    } catch (e) {
+        return 'Invalid Date';
+    }
+};
+
+const generateSowData = (orders: TrackingLink[]): SowData[] => {
+    const businesses: Record<string, { orderCount: number; }> = {};
+    orders.forEach(order => {
+        const businessName = order.companyName.split(' • ').pop()?.trim() || order.companyName;
+        if (businessName) {
+            if (!businesses[businessName]) {
+                businesses[businessName] = { orderCount: 0 };
+            }
+            businesses[businessName].orderCount++;
+        }
+    });
+
+    const loyaltyScores: Record<string, number> = {};
+    for (const name in businesses) {
+        const { orderCount } = businesses[name];
+        loyaltyScores[name] = Math.min(99, 10 + orderCount * 12 + Math.floor(Math.random() * 15));
+    }
+    
+    return orders.map(order => {
+        const businessName = order.companyName.split(' • ').pop()?.trim() || order.companyName;
+        const products = (order.orderItems || []).map(item => `${item.model} (x${item.quantity})`).join(', ') || 'N/A';
+        const amount = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+        
+        return {
+            id: order.id,
+            orderDate: formatDate(order.createdAt),
+            businessName,
+            products,
+            amount,
+            loyaltyScore: loyaltyScores[businessName] || 0,
+        };
+    }).sort((a,b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+};
+
+const getLoyaltyColorClass = (score: number) => {
+    if (score <= 25) return 'bg-red-500';
+    if (score <= 50) return 'bg-amber-500';
+    if (score <= 75) return 'bg-blue-500';
+    return 'bg-green-500';
 };
 
 
 export default function SOWPage() {
-  const [loyaltyData, setLoyaltyData] = useState<BusinessLoyalty[]>([]);
+  const [sowData, setSowData] = useState<SowData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
@@ -92,9 +91,8 @@ export default function SOWPage() {
       setIsLoading(true);
       try {
         const fetchedOrders = await getOrders();
-        // Generate data only on the client side to prevent hydration errors
-        const data = generateBusinessLoyaltyData(fetchedOrders);
-        setLoyaltyData(data);
+        const data = generateSowData(fetchedOrders);
+        setSowData(data);
       } catch (error) {
         toast({
           title: "Error fetching data",
@@ -117,54 +115,55 @@ export default function SOWPage() {
             An overview of business loyalty and progress.
           </p>
         </div>
-        <Button variant="outline" size="icon" className="bg-card">
-          <Settings className="h-4 w-4" />
-        </Button>
       </div>
       
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader>
-            <CardTitle>Business Loyalty Report</CardTitle>
-            <CardDescription>Loyalty scores and trends based on recent order history.</CardDescription>
+            <CardTitle>Business Report</CardTitle>
+            <CardDescription>Statement of work based on recent order history.</CardDescription>
         </CardHeader>
         <CardContent>
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead className="w-1/3">Business Name</TableHead>
-                        <TableHead className="w-1/3">Loyalty Trend</TableHead>
-                        <TableHead className="text-right">Loyalty Score</TableHead>
+                        <TableHead>Order Date</TableHead>
+                        <TableHead>Business Name</TableHead>
+                        <TableHead>Products</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead className="text-center w-[200px]">Loyalty Score</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                     {isLoading ? (
                          Array.from({ length: 5 }).map((_, index) => (
                            <TableRow key={index}>
+                                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
-                                <TableCell><Skeleton className="h-10 w-28" /></TableCell>
-                                <TableCell><Skeleton className="h-5 w-2/3 ml-auto" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                                <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-40 mx-auto" /></TableCell>
                            </TableRow>
                         ))
-                    ) : loyaltyData.length > 0 ? (
-                        loyaltyData.map((business) => (
-                            <TableRow key={business.id} className="hover:bg-muted/50">
-                                <TableCell className="font-medium text-foreground">{business.name}</TableCell>
+                    ) : sowData.length > 0 ? (
+                        sowData.map((row) => (
+                            <TableRow key={row.id} className="hover:bg-muted/50">
+                                <TableCell className="text-muted-foreground">{row.orderDate}</TableCell>
+                                <TableCell className="font-medium text-foreground">{row.businessName}</TableCell>
+                                <TableCell className="text-muted-foreground max-w-xs truncate" title={row.products}>{row.products}</TableCell>
+                                <TableCell className="text-right font-mono">{formatCurrency(row.amount)}</TableCell>
                                 <TableCell>
-                                    <LoyaltyTrendChart data={business.trendData} fromColor={business.color.gradientFrom} toColor={business.color.gradientTo} id={business.id}/>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-3">
-                                        <span className="font-semibold text-lg w-12 text-foreground">{business.loyaltyScore}%</span>
-                                        <Progress value={business.loyaltyScore} className="w-24 h-2" indicatorClassName={business.color.progress} />
+                                    <div className="flex items-center justify-center gap-3">
+                                        <Progress value={row.loyaltyScore} className="w-24 h-2" indicatorClassName={getLoyaltyColorClass(row.loyaltyScore)} />
+                                        <span className="font-semibold text-foreground">{row.loyaltyScore}%</span>
                                     </div>
                                 </TableCell>
                             </TableRow>
                         ))
                     ) : (
                         <TableRow>
-                            <TableCell colSpan={3} className="h-48 text-center text-muted-foreground">
+                            <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
                                 <PackageSearch className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                No loyalty data to display.
+                                No order data to display.
                             </TableCell>
                         </TableRow>
                     )}
