@@ -18,7 +18,7 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal } from 'lucide-react';
 import type { Employee, User } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
@@ -35,6 +35,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Progress } from '@/components/ui/progress';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
 const EditEmployeeDialog = dynamic(() => import('@/components/payroll/EditEmployeeDialog').then(mod => mod.EditEmployeeDialog));
@@ -325,6 +327,60 @@ export default function PayrollPage() {
     </Card>
   );
   
+  const attendeesReportContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+      <CardHeader className="p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <CardTitle className="text-xl font-bold text-gray-800">Attendees Report</CardTitle>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-grow sm:flex-grow-0">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input placeholder="Filter by date..." className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full" type="date"/>
+            </div>
+            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-6 pt-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Employee</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>In Time</TableHead>
+                <TableHead>Out Time</TableHead>
+                <TableHead>Hours Worked</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-20" /></div></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center h-48 text-gray-500">
+                    <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                    No attendance data recorded for the selected period.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   const placeholderContent = (title: string) => (
       <Card className="shadow-lg border-none rounded-2xl bg-white"><CardHeader><CardTitle>{title}</CardTitle></CardHeader>
           <CardContent className="flex items-center justify-center h-96 text-gray-500"><p>Content for {title} goes here.</p></CardContent>
@@ -340,7 +396,7 @@ export default function PayrollPage() {
       case 'employee_position':
         return placeholderContent('Employee Position');
       case 'attendees_report':
-        return placeholderContent('Attendees Report');
+        return attendeesReportContent;
       default:
         return employeeListContent;
     }
