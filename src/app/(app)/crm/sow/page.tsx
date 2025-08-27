@@ -41,55 +41,82 @@ const formatDate = (dateString?: string) => {
 };
 
 const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings | null): SowData[] => {
-    const businesses: Record<string, { orderCount: number; }> = {};
+    const filters = globalSettings?.reportProductFilters || [];
+    const productSalesMap = new Map<string, number>();
+    let totalSales = 0;
+
+    // Step 1: Calculate sales for each product/category and total sales
     orders.forEach(order => {
-        const businessName = order.companyName.split(' • ').pop()?.trim() || order.companyName;
-        if (businessName) {
-            if (!businesses[businessName]) {
-                businesses[businessName] = { orderCount: 0 };
+        if (!order.orderItems || order.orderItems.length === 0) return;
+
+        const orderTotal = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+        totalSales += orderTotal;
+
+        let isConsolidated = false;
+        for (const filter of filters) {
+            if (order.orderItems.some(item => item.model.toLowerCase().includes(filter.toLowerCase()))) {
+                const currentSales = productSalesMap.get(filter) || 0;
+                productSalesMap.set(filter, currentSales + orderTotal);
+                isConsolidated = true;
+                break;
             }
-            businesses[businessName].orderCount++;
+        }
+
+        if (!isConsolidated) {
+            order.orderItems.forEach(item => {
+                const currentSales = productSalesMap.get(item.model) || 0;
+                productSalesMap.set(item.model, currentSales + (item.lineItemTotalPrice || 0));
+            });
         }
     });
 
-    const loyaltyScores: Record<string, number> = {};
-    for (const name in businesses) {
-        const { orderCount } = businesses[name];
-        loyaltyScores[name] = Math.min(99, 10 + orderCount * 12 + Math.floor(Math.random() * 15));
+    // Step 2: Calculate percentage for each product
+    const productPercentageMap = new Map<string, number>();
+    if (totalSales > 0) {
+        for (const [product, sales] of productSalesMap.entries()) {
+            productPercentageMap.set(product, (sales / totalSales) * 100);
+        }
     }
 
-    const filters = globalSettings?.reportProductFilters || [];
-    
+    // Step 3: Generate SOW data with new loyalty score
     return orders.map(order => {
         const businessName = order.companyName.split(' • ').pop()?.trim() || order.companyName;
-        let products = 'N/A';
-        let isConsolidated = false;
-
+        let productsDisplay = 'N/A';
+        let productKeysForScore: string[] = [];
+        
         if (order.orderItems && order.orderItems.length > 0) {
+            let isConsolidated = false;
             for (const filter of filters) {
                 if (order.orderItems.some(item => item.model.toLowerCase().includes(filter.toLowerCase()))) {
-                    products = filter;
+                    productsDisplay = filter;
+                    productKeysForScore.push(filter);
                     isConsolidated = true;
                     break;
                 }
             }
-
             if (!isConsolidated) {
-                products = order.orderItems.map(item => `${item.model} (x${item.quantity})`).join(', ');
+                productsDisplay = order.orderItems.map(item => `${item.model} (x${item.quantity})`).join(', ');
+                productKeysForScore = order.orderItems.map(item => item.model);
             }
         }
 
         const amount = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
         
+        let loyaltyScore = 0;
+        if (productKeysForScore.length > 0) {
+            const scores = productKeysForScore.map(key => productPercentageMap.get(key) || 0);
+            loyaltyScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+        }
+
         return {
             id: order.id,
             orderDate: formatDate(order.createdAt),
             businessName,
-            products,
+            products: productsDisplay,
             amount,
-            loyaltyScore: loyaltyScores[businessName] || 0,
+            loyaltyScore: Math.min(99, Math.round(loyaltyScore)), // Round and cap at 99
         };
-    }).sort((a,b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+    }).sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
 };
 
 const getLoyaltyColorClass = (score: number) => {
