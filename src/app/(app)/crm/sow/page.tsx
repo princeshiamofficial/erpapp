@@ -179,34 +179,38 @@ export default function SOWPage() {
                            </TableRow>
                         ))
                     ) : sowData.length > 0 ? (
-                        sowData.map((row) => (
+                        sowData.map((row) => {
+                           const purchasedCount = row.purchasedCategories.length;
+                           return (
                             <TableRow key={row.id} className="hover:bg-muted/50">
                                 <TableCell className="text-muted-foreground">{row.orderDate}</TableCell>
                                 <TableCell className="font-medium text-foreground">{row.businessName}</TableCell>
                                 <TableCell>
                                   <div className="flex items-center gap-px p-0.5 bg-gray-200 dark:bg-gray-700 rounded-md shadow-inner w-full">
-                                    {row.allCategories.map(category => {
-                                      const isPurchased = row.purchasedCategories.includes(category);
+                                    {row.allCategories.map((category, index) => {
+                                      const isPurchased = index < purchasedCount;
+                                      const purchasedCategoryName = isPurchased ? row.purchasedCategories[index] : null;
+
                                       const box = (
                                         <div
-                                          key={category}
+                                          key={`${row.id}-${category}-${index}`}
                                           className={cn(
-                                            "h-5 w-full flex-1", // Use flex-1 to distribute width
+                                            "h-5 w-full flex-1",
                                             isPurchased
-                                              ? "bg-blue-500" // Use a single color for purchased
+                                              ? "bg-blue-500"
                                               : "bg-white dark:bg-gray-800"
                                           )}
                                         ></div>
                                       );
 
-                                      if (isPurchased) {
+                                      if (isPurchased && purchasedCategoryName) {
                                         return (
-                                          <Tooltip key={category}>
+                                          <Tooltip key={`${row.id}-tooltip-${category}-${index}`}>
                                             <TooltipTrigger asChild>
                                               {box}
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                              <p>{category}</p>
+                                              <p>{purchasedCategoryName}</p>
                                             </TooltipContent>
                                           </Tooltip>
                                         );
@@ -223,7 +227,8 @@ export default function SOWPage() {
                                     </div>
                                 </TableCell>
                             </TableRow>
-                        ))
+                           );
+                        })
                     ) : (
                         <TableRow>
                             <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
