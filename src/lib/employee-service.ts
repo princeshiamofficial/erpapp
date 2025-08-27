@@ -1,11 +1,12 @@
 
+
 import { fetchFromApi, ensureCollectionExists } from './api-helper';
 import type { Employee } from '@/types';
 import { subYears } from 'date-fns';
 
 const EMPLOYEES_COLLECTION = 'employees';
 
-const defaultEmployeesData: Array<Omit<Employee, 'id' | 'employeeId'>> = [
+const defaultEmployeesData: Array<Omit<Employee, 'id' | 'employeeId' | 'userId'>> = [
   { name: 'John Doe', email: 'john.doe@example.com', mobileNo: '01712345678', dob: subYears(new Date(), 30).toISOString(), designation: 'Software Engineer', joiningDate: subYears(new Date(), 2).toISOString(), status: 'Active', salary: 80000 },
   { name: 'Jane Smith', email: 'jane.smith@example.com', mobileNo: '01812345678', dob: subYears(new Date(), 25).toISOString(), designation: 'Project Manager', joiningDate: subYears(new Date(), 1).toISOString(), status: 'Active', salary: 95000 },
 ];
@@ -18,7 +19,8 @@ export const seedDefaultEmployees = async (): Promise<Employee[]> => {
     const employeeId = `EMP-${String(counter++).padStart(3, '0')}`;
     const newEmployeeData = {
       ...empData,
-      employeeId
+      employeeId,
+      userId: null,
     };
     try {
       const newEmployee = await addEmployee(newEmployeeData);

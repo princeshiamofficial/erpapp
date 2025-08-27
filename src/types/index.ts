@@ -19,8 +19,9 @@ export interface User {
 export interface Employee {
   id: string; // Firestore document ID
   employeeId: string; // e.g., EMP-001
+  userId?: string | null; // Foreign key to the User collection
   name: string;
-  email: string;
+  email?: string | null;
   mobileNo: string;
   dob: string; // ISO string date
   designation: string;

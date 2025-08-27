@@ -19,8 +19,9 @@ import {
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star } from 'lucide-react';
-import type { Employee } from '@/types';
+import type { Employee, User } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
+import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -54,6 +55,7 @@ export default function PayrollPage() {
 
   const [activeTab, setActiveTab] = useState("employee_list");
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -62,14 +64,18 @@ export default function PayrollPage() {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const fetchEmployeesData = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const fetchedEmployees = await getEmployees();
+      const [fetchedEmployees, fetchedUsers] = await Promise.all([
+        getEmployees(),
+        getUsers()
+      ]);
       setEmployees(fetchedEmployees);
+      setAllUsers(fetchedUsers);
     } catch (error) {
-      console.error("Failed to fetch employees:", error);
-      toast({ title: "Error", description: "Could not load employee data.", variant: "destructive" });
+      console.error("Failed to fetch employees or users:", error);
+      toast({ title: "Error", description: "Could not load page data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -77,18 +83,18 @@ export default function PayrollPage() {
 
   useEffect(() => {
      if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) {
-      fetchEmployeesData();
+      fetchData();
     } else if (currentUser) {
       router.replace('/dashboard');
     }
-  }, [currentUser, router, fetchEmployeesData]);
+  }, [currentUser, router, fetchData]);
 
   const filteredEmployees = useMemo(() => {
     if (!searchTerm) return employees;
     const lowercasedFilter = searchTerm.toLowerCase();
     return employees.filter(employee =>
       employee.name.toLowerCase().includes(lowercasedFilter) ||
-      employee.email.toLowerCase().includes(lowercasedFilter) ||
+      (employee.email && employee.email.toLowerCase().includes(lowercasedFilter)) ||
       employee.employeeId.toLowerCase().includes(lowercasedFilter) ||
       employee.designation.toLowerCase().includes(lowercasedFilter)
     );
@@ -111,7 +117,7 @@ export default function PayrollPage() {
     const result = await deleteEmployeeAction(employeeToDelete.id);
     if (result.success) {
       toast({ title: "Employee Deleted" });
-      fetchEmployeesData();
+      fetchData();
     } else {
       toast({ title: "Error", description: result.error, variant: "destructive" });
     }
@@ -153,6 +159,11 @@ export default function PayrollPage() {
         </PaginationItem>
     ));
   };
+  
+  const usersNotYetEmployees = useMemo(() => {
+    const employeeUserIds = new Set(employees.map(e => e.userId));
+    return allUsers.filter(u => !employeeUserIds.has(u.id));
+  }, [employees, allUsers]);
 
   const employeeListContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
@@ -165,7 +176,10 @@ export default function PayrollPage() {
               <Input placeholder="Employee Position" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
             </div>
             <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
-            <AddEmployeeDialog onEmployeeAdded={fetchEmployeesData}>
+            <AddEmployeeDialog 
+              onEmployeeAdded={fetchData}
+              allUsers={usersNotYetEmployees}
+            >
               <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"><Plus className="mr-2 h-4 w-4" /> Add Employee</Button>
             </AddEmployeeDialog>
           </div>
@@ -342,12 +356,8 @@ export default function PayrollPage() {
             {renderActiveTab()}
         </div>
       </Tabs>
-      {employeeToEdit && <EditEmployeeDialog isOpen={!!employeeToEdit} onOpenChange={(open) => !open && setEmployeeToEdit(null)} employee={employeeToEdit} onEmployeeUpdated={fetchEmployeesData} />}
+      {employeeToEdit && <EditEmployeeDialog isOpen={!!employeeToEdit} onOpenChange={(open) => !open && setEmployeeToEdit(null)} employee={employeeToEdit} onEmployeeUpdated={fetchData} />}
       {employeeToDelete && <DeleteEmployeeDialog isOpen={!!employeeToDelete} onOpenChange={(open) => !open && setEmployeeToDelete(null)} employee={employeeToDelete} onConfirmDelete={handleDelete} isDeleting={isDeleting} />}
     </div>
   );
 }
-
-    
-
-    
