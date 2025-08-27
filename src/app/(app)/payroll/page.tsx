@@ -339,6 +339,8 @@ export default function PayrollPage() {
         return employeePerformanceContent;
       case 'employee_position':
         return placeholderContent('Employee Position');
+      case 'attendees_report':
+        return placeholderContent('Attendees Report');
       default:
         return employeeListContent;
     }
@@ -351,6 +353,7 @@ export default function PayrollPage() {
           <TabsTrigger value="employee_position" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee Position</TabsTrigger>
           <TabsTrigger value="employee_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee List</TabsTrigger>
           <TabsTrigger value="employee_performance" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee Performance</TabsTrigger>
+          <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
         </TabsList>
         <div className="mt-6">
             {renderActiveTab()}
