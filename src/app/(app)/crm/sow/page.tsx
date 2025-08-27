@@ -57,16 +57,17 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
         let productKeysForScore: string[] = [];
         
         if (order.orderItems && order.orderItems.length > 0) {
-            let isConsolidated = false;
+            const matchedFilters = new Set<string>();
             for (const filter of filters) {
                 if (order.orderItems.some(item => item.model.toLowerCase().includes(filter.toLowerCase()))) {
-                    productsDisplay = filter;
-                    productKeysForScore.push(filter);
-                    isConsolidated = true;
-                    break;
+                    matchedFilters.add(filter);
                 }
             }
-            if (!isConsolidated) {
+
+            if (matchedFilters.size > 0) {
+                productsDisplay = Array.from(matchedFilters).join(', ');
+                productKeysForScore = Array.from(matchedFilters);
+            } else {
                 productsDisplay = order.orderItems.map(item => `${item.model} (x${item.quantity})`).join(', ');
                 productKeysForScore = order.orderItems.map(item => item.model);
             }
