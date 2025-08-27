@@ -43,34 +43,67 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
     }
   }, [isOpen]);
 
-  const handleFileChange = (file: File | null) => {
+  const processFile = useCallback((file: File | null) => {
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
         toast({ title: "File too large", description: "Please select an image smaller than 5MB.", variant: "destructive" });
-        return;
+        return false;
       }
       if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
         toast({ title: "Invalid file type", description: "Please select a JPG, PNG, GIF, or WEBP image.", variant: "destructive" });
-        return;
+        return false;
       }
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
+      return true;
     }
+    return false;
+  }, [toast]);
+  
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    processFile(event.target.files?.[0] || null);
   };
+  
+  useEffect(() => {
+    const handlePaste = (event: ClipboardEvent) => {
+      // Only handle paste when this specific dialog is open and on the upload step
+      if (!isOpen || step !== 'upload') return; 
+      
+      const items = event.clipboardData?.items;
+      if (items) {
+        for (let i = 0; i < items.length; i++) {
+          const file = items[i].getAsFile();
+          if (file) { // Found a file in clipboard
+             const processed = processFile(file);
+             if (processed) {
+               toast({title: "Image Pasted", description: "Image from clipboard has been attached as proof."});
+             }
+             event.preventDefault(); // Prevent default paste action
+             return;
+          }
+        }
+      }
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => {
+      document.removeEventListener('paste', handlePaste);
+    };
+  }, [isOpen, step, processFile, toast]);
+
   
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => e.preventDefault();
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileChange(e.dataTransfer.files[0]);
+      processFile(e.dataTransfer.files[0]);
     }
   };
 
   const handleUploadAndConfirm = async () => {
     if (!selectedFile) {
-        // If user clicks submit without providing proof, we still confirm the action.
         onConfirm("File uploaded: Yes (No proof provided).");
-        onOpenChange(false); // Close the dialog
+        onOpenChange(false);
         return;
     }
     
@@ -114,8 +147,6 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
   };
   
   const handleNoClick = () => {
-      // Don't call onConfirm, just close the dialog.
-      // The parent component will handle the state reversion.
       onOpenChange(false);
   };
 
@@ -164,7 +195,7 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
               ) : (
                 <>
                   <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
-                  <p className="text-sm text-muted-foreground">Drag & drop or click to upload proof</p>
+                  <p className="text-sm text-muted-foreground">Drag & drop, paste, or click to upload proof</p>
                   <p className="text-xs text-muted-foreground">(Optional, Max 5MB)</p>
                 </>
               )}
