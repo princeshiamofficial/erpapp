@@ -42,43 +42,15 @@ const formatDate = (dateString?: string) => {
 
 const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings | null): SowData[] => {
     const filters = globalSettings?.reportProductFilters || [];
-    const productSalesMap = new Map<string, number>();
-    let totalSales = 0;
-
-    // Step 1: Calculate sales for each product/category and total sales
-    orders.forEach(order => {
-        if (!order.orderItems || order.orderItems.length === 0) return;
-
-        const orderTotal = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
-        totalSales += orderTotal;
-
-        let isConsolidated = false;
-        for (const filter of filters) {
-            if (order.orderItems.some(item => item.model.toLowerCase().includes(filter.toLowerCase()))) {
-                const currentSales = productSalesMap.get(filter) || 0;
-                productSalesMap.set(filter, currentSales + orderTotal);
-                isConsolidated = true;
-                break;
-            }
-        }
-
-        if (!isConsolidated) {
-            order.orderItems.forEach(item => {
-                const currentSales = productSalesMap.get(item.model) || 0;
-                productSalesMap.set(item.model, currentSales + (item.lineItemTotalPrice || 0));
-            });
-        }
+    
+    // Step 1: Calculate the average percentage for each product filter category.
+    const averagePercentage = filters.length > 0 ? 100 / filters.length : 0;
+    const productPercentageMap = new Map<string, number>();
+    filters.forEach(filter => {
+        productPercentageMap.set(filter, averagePercentage);
     });
 
-    // Step 2: Calculate percentage for each product
-    const productPercentageMap = new Map<string, number>();
-    if (totalSales > 0) {
-        for (const [product, sales] of productSalesMap.entries()) {
-            productPercentageMap.set(product, (sales / totalSales) * 100);
-        }
-    }
-
-    // Step 3: Generate SOW data with new loyalty score
+    // Step 2: Generate SOW data with new loyalty score
     return orders.map(order => {
         const businessName = order.companyName.split(' • ').pop()?.trim() || order.companyName;
         let productsDisplay = 'N/A';
