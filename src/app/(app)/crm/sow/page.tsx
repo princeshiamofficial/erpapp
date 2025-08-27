@@ -80,9 +80,6 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
                     if (item.model.toLowerCase().includes(filter.toLowerCase())) {
                         matchedFilters.add(filter);
                         isItemMatched = true;
-                        // An item can match multiple filters, but we only add the *filter* once.
-                        // We break here to consider this item "matched" and avoid adding it to unmatched.
-                        break; 
                     }
                 }
                 if (!isItemMatched) {
@@ -198,16 +195,17 @@ export default function SOWPage() {
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <div className="flex items-center gap-px w-full h-3 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-inner">
+                                         <div className="flex items-center gap-px w-full h-3 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-inner">
                                           {row.allCategories.map((category, index) => {
-                                            const isPurchased = row.purchasedCategories.includes(category);
-                                            const segmentColor = `hsl(${ (index / (totalCategories - 1 || 1)) * 120 }, 70%, 50%)`; // red to green
+                                            const isPurchased = index < purchasedCount;
+                                            // Red (0) to green (120)
+                                            const hue = (index / Math.max(1, totalCategories - 1)) * 120;
                                             return (
                                               <div
                                                 key={index}
                                                 className="h-full flex-1"
                                                 style={{
-                                                  backgroundColor: isPurchased ? segmentColor : 'rgba(209, 213, 219, 0.3)', // gray-300 with opacity for not purchased
+                                                  backgroundColor: isPurchased ? `hsl(${hue}, 70%, 50%)` : 'rgba(209, 213, 219, 0.3)',
                                                 }}
                                               />
                                             );
