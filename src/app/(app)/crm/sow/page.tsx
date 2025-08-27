@@ -7,8 +7,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import type { TrackingLink, OrderItem } from '@/types';
+import type { TrackingLink, OrderItem, GlobalSettings } from '@/types';
 import { getOrders } from '@/lib/order-service';
+import { getGlobalSettings } from '@/lib/settings-service';
 import { PackageSearch } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -39,7 +40,7 @@ const formatDate = (dateString?: string) => {
     }
 };
 
-const generateSowData = (orders: TrackingLink[]): SowData[] => {
+const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings | null): SowData[] => {
     const businesses: Record<string, { orderCount: number; }> = {};
     orders.forEach(order => {
         const businessName = order.companyName.split(' • ').pop()?.trim() || order.companyName;
@@ -56,10 +57,28 @@ const generateSowData = (orders: TrackingLink[]): SowData[] => {
         const { orderCount } = businesses[name];
         loyaltyScores[name] = Math.min(99, 10 + orderCount * 12 + Math.floor(Math.random() * 15));
     }
+
+    const filters = globalSettings?.reportProductFilters || [];
     
     return orders.map(order => {
         const businessName = order.companyName.split(' • ').pop()?.trim() || order.companyName;
-        const products = (order.orderItems || []).map(item => `${item.model} (x${item.quantity})`).join(', ') || 'N/A';
+        let products = 'N/A';
+        let isConsolidated = false;
+
+        if (order.orderItems && order.orderItems.length > 0) {
+            for (const filter of filters) {
+                if (order.orderItems.some(item => item.model.toLowerCase().includes(filter.toLowerCase()))) {
+                    products = filter;
+                    isConsolidated = true;
+                    break;
+                }
+            }
+
+            if (!isConsolidated) {
+                products = order.orderItems.map(item => `${item.model} (x${item.quantity})`).join(', ');
+            }
+        }
+
         const amount = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
         
         return {
@@ -90,8 +109,11 @@ export default function SOWPage() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const fetchedOrders = await getOrders();
-        const data = generateSowData(fetchedOrders);
+        const [fetchedOrders, fetchedSettings] = await Promise.all([
+          getOrders(),
+          getGlobalSettings()
+        ]);
+        const data = generateSowData(fetchedOrders, fetchedSettings);
         setSowData(data);
       } catch (error) {
         toast({
