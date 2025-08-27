@@ -60,6 +60,7 @@ export default function PayrollPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
   const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
@@ -335,7 +336,13 @@ export default function PayrollPage() {
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="relative flex-grow sm:flex-grow-0">
               <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Filter by date..." className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full" type="date"/>
+              <Input
+                placeholder="Filter by date..."
+                className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
+                type="date"
+                value={attendanceDateFilter}
+                onChange={(e) => setAttendanceDateFilter(e.target.value)}
+              />
             </div>
             <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
           </div>
