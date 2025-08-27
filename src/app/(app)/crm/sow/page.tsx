@@ -180,52 +180,34 @@ export default function SOWPage() {
                     ) : sowData.length > 0 ? (
                         sowData.map((row) => {
                            const purchasedCount = row.purchasedCategories.length;
+                           const totalCategories = row.allCategories.length;
+                           const purchasedPercentage = totalCategories > 0 ? (purchasedCount / totalCategories) * 100 : 0;
                            return (
                             <TableRow key={row.id} className="hover:bg-muted/50">
                                 <TableCell className="text-muted-foreground">{row.orderDate}</TableCell>
                                 <TableCell className="font-medium text-foreground">{row.businessName}</TableCell>
                                 <TableCell>
-                                  <TooltipProvider>
-                                    <div className="flex items-center gap-px bg-gray-200 dark:bg-gray-900 rounded-md overflow-hidden shadow-inner w-full h-3">
-                                      {row.allCategories.map((category, index) => {
-                                        const isPurchased = index < purchasedCount;
-                                        const purchasedCategoryName = isPurchased ? row.purchasedCategories[index] : null;
-
-                                        let boxStyle = {};
-                                        if (isPurchased) {
-                                          const totalPurchased = purchasedCount;
-                                          // Start red (hue 0) and end green (hue 120)
-                                          const hue = totalPurchased > 1 ? (index / (totalPurchased - 1)) * 120 : 0;
-                                          boxStyle = { backgroundColor: `hsl(${hue}, 70%, 50%)` };
-                                        }
-
-                                        const box = (
-                                          <div
-                                            key={`${row.id}-${category}-${index}`}
-                                            style={boxStyle}
-                                            className={cn(
-                                              "h-full w-full flex-1 transition-all duration-300",
-                                              !isPurchased && "bg-gray-300 dark:bg-gray-800 shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]"
+                                    <TooltipProvider>
+                                        <div className="flex items-center gap-1.5 w-full h-3 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-inner">
+                                            {/* Purchased Part with Gradient */}
+                                            {purchasedCount > 0 && (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <div
+                                                            className="h-full"
+                                                            style={{
+                                                                width: `${purchasedPercentage}%`,
+                                                                backgroundImage: `linear-gradient(to right, #ef4444, #f97316, #eab308, #22c55e)`,
+                                                            }}
+                                                        ></div>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>Purchased: {row.purchasedCategories.join(', ')}</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
                                             )}
-                                          ></div>
-                                        );
-
-                                        if (isPurchased && purchasedCategoryName) {
-                                          return (
-                                            <Tooltip key={`${row.id}-tooltip-${category}-${index}`}>
-                                              <TooltipTrigger asChild>
-                                                {box}
-                                              </TooltipTrigger>
-                                              <TooltipContent>
-                                                <p>{purchasedCategoryName}</p>
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          );
-                                        }
-                                        return box;
-                                      })}
-                                    </div>
-                                  </TooltipProvider>
+                                        </div>
+                                    </TooltipProvider>
                                 </TableCell>
                                 <TableCell className="text-right font-mono">{formatCurrency(row.amount)}</TableCell>
                                 <TableCell>
@@ -252,5 +234,3 @@ export default function SOWPage() {
     </div>
   );
 }
-
-    
