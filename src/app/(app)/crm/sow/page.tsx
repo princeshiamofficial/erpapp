@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, OrderItem, GlobalSettings } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
-import { PackageSearch } from 'lucide-react';
+import { PackageSearch, ListChecks } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
@@ -25,6 +25,7 @@ interface SowData {
   orderDate: string; // Will use the date of the latest order for that job
   businessName: string;
   purchasedCategories: string[];
+  unmatchedPurchasedItems: string[];
   allCategories: string[];
   amount: number;
   loyaltyScore: number;
@@ -48,39 +49,46 @@ const formatDate = (dateString?: string) => {
 
 const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings | null): SowData[] => {
     const filters = globalSettings?.reportProductFilters || [];
-    
     const categoryPercentage = filters.length > 0 ? 100 / filters.length : 0;
 
     const ordersByJobId = new Map<string, { orders: TrackingLink[], businessName: string, latestDate: string }>();
 
-    // First, group orders by Job ID
     orders.forEach(order => {
         const companyNameParts = order.companyName.split(' • ').map(part => part.trim());
-        const jobId = companyNameParts.length > 1 ? companyNameParts[0] : order.id; // Fallback to order id if no job id
+        const jobId = companyNameParts.length > 1 ? companyNameParts[0] : order.id;
         const businessName = companyNameParts.length > 1 ? companyNameParts.slice(1).join(' • ').trim() : order.companyName;
 
         const existing = ordersByJobId.get(jobId) || { orders: [], businessName, latestDate: order.createdAt };
         existing.orders.push(order);
         if (new Date(order.createdAt) > new Date(existing.latestDate)) {
           existing.latestDate = order.createdAt;
-          existing.businessName = businessName; // Use business name from latest order
+          existing.businessName = businessName;
         }
         ordersByJobId.set(jobId, existing);
     });
 
-
-    // Now, process each group
     return Array.from(ordersByJobId.entries()).map(([jobId, group]) => {
         const allItemsFromGroup = group.orders.flatMap(o => o.orderItems || []);
         
         const matchedFilters = new Set<string>();
+        const unmatchedItems = new Set<string>();
 
         if (allItemsFromGroup.length > 0) {
-            for (const filter of filters) {
-                if (allItemsFromGroup.some(item => item.model.toLowerCase().includes(filter.toLowerCase()))) {
-                    matchedFilters.add(filter);
+            allItemsFromGroup.forEach(item => {
+                let isItemMatched = false;
+                for (const filter of filters) {
+                    if (item.model.toLowerCase().includes(filter.toLowerCase())) {
+                        matchedFilters.add(filter);
+                        isItemMatched = true;
+                        // An item can match multiple filters, but we only add the *filter* once.
+                        // We break here to consider this item "matched" and avoid adding it to unmatched.
+                        break; 
+                    }
                 }
-            }
+                if (!isItemMatched) {
+                    unmatchedItems.add(item.model);
+                }
+            });
         }
         
         const totalAmount = group.orders.reduce((sum, order) => {
@@ -95,9 +103,10 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
             orderDate: formatDate(group.latestDate),
             businessName: group.businessName,
             purchasedCategories: Array.from(matchedFilters),
+            unmatchedPurchasedItems: Array.from(unmatchedItems),
             allCategories: filters,
             amount: totalAmount,
-            loyaltyScore: Math.min(100, Math.round(loyaltyScore)), // Cap at 100
+            loyaltyScore: Math.min(100, Math.round(loyaltyScore)),
         };
     }).sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
 };
@@ -181,33 +190,53 @@ export default function SOWPage() {
                         sowData.map((row) => {
                            const purchasedCount = row.purchasedCategories.length;
                            const totalCategories = row.allCategories.length;
-                           const purchasedPercentage = totalCategories > 0 ? (purchasedCount / totalCategories) * 100 : 0;
                            return (
                             <TableRow key={row.id} className="hover:bg-muted/50">
                                 <TableCell className="text-muted-foreground">{row.orderDate}</TableCell>
                                 <TableCell className="font-medium text-foreground">{row.businessName}</TableCell>
                                 <TableCell>
-                                    <TooltipProvider>
-                                        <div className="flex items-center gap-1.5 w-full h-3 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-inner">
-                                            {/* Purchased Part with Gradient */}
-                                            {purchasedCount > 0 && (
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <div
-                                                            className="h-full"
-                                                            style={{
-                                                                width: `${purchasedPercentage}%`,
-                                                                backgroundImage: `linear-gradient(to right, #ef4444, #f97316, #eab308, #22c55e)`,
-                                                            }}
-                                                        ></div>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>Purchased: {row.purchasedCategories.join(', ')}</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            )}
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="flex items-center gap-px w-full h-3 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-inner">
+                                          {row.allCategories.map((category, index) => {
+                                            const isPurchased = row.purchasedCategories.includes(category);
+                                            const segmentColor = `hsl(${ (index / (totalCategories - 1 || 1)) * 120 }, 70%, 50%)`; // red to green
+                                            return (
+                                              <div
+                                                key={index}
+                                                className="h-full flex-1"
+                                                style={{
+                                                  backgroundColor: isPurchased ? segmentColor : 'rgba(209, 213, 219, 0.3)', // gray-300 with opacity for not purchased
+                                                }}
+                                              />
+                                            );
+                                          })}
                                         </div>
-                                    </TooltipProvider>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <div className="p-1 max-w-xs">
+                                          <p className="font-semibold text-sm mb-2 flex items-center gap-1"><ListChecks className="h-4 w-4 text-primary"/> Purchased Categories:</p>
+                                          {row.purchasedCategories.length > 0 ? (
+                                            <ul className="list-disc list-inside text-xs space-y-0.5">
+                                              {row.purchasedCategories.map(p => <li key={p}>{p}</li>)}
+                                            </ul>
+                                          ) : (
+                                            <p className="text-xs text-muted-foreground italic">None from tracked categories.</p>
+                                          )}
+
+                                          {row.unmatchedPurchasedItems.length > 0 && (
+                                            <>
+                                              <p className="font-semibold text-sm mt-3 mb-2 flex items-center gap-1"><PackageSearch className="h-4 w-4 text-primary"/> Other Purchased Items:</p>
+                                              <ul className="list-disc list-inside text-xs space-y-0.5">
+                                                {row.unmatchedPurchasedItems.map(p => <li key={p}>{p}</li>)}
+                                              </ul>
+                                            </>
+                                          )}
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 </TableCell>
                                 <TableCell className="text-right font-mono">{formatCurrency(row.amount)}</TableCell>
                                 <TableCell>
