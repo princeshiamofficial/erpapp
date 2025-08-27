@@ -16,8 +16,8 @@ import { cn } from '@/lib/utils';
 
 
 interface SowData {
-  id: string;
-  orderDate: string;
+  id: string; // Using Job ID as the unique key
+  orderDate: string; // Will use the date of the latest order for that job
   businessName: string;
   products: string;
   amount: number;
@@ -44,51 +44,67 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
     const filters = globalSettings?.reportProductFilters || [];
     
     const categoryPercentage = filters.length > 0 ? 100 / filters.length : 0;
-    const productPercentageMap = new Map<string, number>();
-    filters.forEach(filter => {
-        productPercentageMap.set(filter, categoryPercentage);
+
+    const ordersByJobId = new Map<string, { orders: TrackingLink[], businessName: string, latestDate: string }>();
+
+    // First, group orders by Job ID
+    orders.forEach(order => {
+        const companyNameParts = order.companyName.split(' • ').map(part => part.trim());
+        const jobId = companyNameParts.length > 1 ? companyNameParts[0] : order.id; // Fallback to order id if no job id
+        const businessName = companyNameParts.length > 1 ? companyNameParts.slice(1).join(' • ').trim() : order.companyName;
+
+        const existing = ordersByJobId.get(jobId) || { orders: [], businessName, latestDate: order.createdAt };
+        existing.orders.push(order);
+        if (new Date(order.createdAt) > new Date(existing.latestDate)) {
+          existing.latestDate = order.createdAt;
+          existing.businessName = businessName; // Use business name from latest order
+        }
+        ordersByJobId.set(jobId, existing);
     });
 
-    return orders.map(order => {
-        const businessName = order.companyName.split(' • ').pop()?.trim() || order.companyName;
-        let productsDisplay = 'N/A';
-        let productKeysForScore: string[] = [];
+
+    // Now, process each group
+    return Array.from(ordersByJobId.entries()).map(([jobId, group]) => {
+        const allItemsFromGroup = group.orders.flatMap(o => o.orderItems || []);
         
-        if (order.orderItems && order.orderItems.length > 0) {
-            const matchedFilters = new Set<string>();
+        let productsDisplay = 'N/A';
+        const matchedFilters = new Set<string>();
+
+        if (allItemsFromGroup.length > 0) {
             for (const filter of filters) {
-                if (order.orderItems.some(item => item.model.toLowerCase().includes(filter.toLowerCase()))) {
+                if (allItemsFromGroup.some(item => item.model.toLowerCase().includes(filter.toLowerCase()))) {
                     matchedFilters.add(filter);
                 }
             }
 
             if (matchedFilters.size > 0) {
                 productsDisplay = Array.from(matchedFilters).join(', ');
-                productKeysForScore = Array.from(matchedFilters);
             } else {
-                productsDisplay = order.orderItems.map(item => `${item.model} (x${item.quantity})`).join(', ');
-                productKeysForScore = []; // No score if no category match
+                // Fallback if no category matches - list unique models
+                const uniqueModels = new Set(allItemsFromGroup.map(item => item.model));
+                productsDisplay = Array.from(uniqueModels).join(', ');
             }
         }
-
-        const amount = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
         
-        let loyaltyScore = 0;
-        if (productKeysForScore.length > 0) {
-            const scores = productKeysForScore.map(key => productPercentageMap.get(key) || 0);
-            loyaltyScore = scores.reduce((sum, score) => sum + score, 0); // Sum the scores
-        }
+        const totalAmount = group.orders.reduce((sum, order) => {
+            const orderTotal = (order.orderItems || []).reduce((itemSum, item) => itemSum + (item.lineItemTotalPrice || 0), 0);
+            return sum + orderTotal;
+        }, 0);
+        
+        // Sum the scores from all matched filters
+        const loyaltyScore = matchedFilters.size * categoryPercentage;
 
         return {
-            id: order.id,
-            orderDate: formatDate(order.createdAt),
-            businessName,
+            id: jobId,
+            orderDate: formatDate(group.latestDate),
+            businessName: group.businessName,
             products: productsDisplay,
-            amount,
+            amount: totalAmount,
             loyaltyScore: Math.min(99, Math.round(loyaltyScore)), // Round and cap at 99
         };
     }).sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
 };
+
 
 const getLoyaltyColorClass = (score: number) => {
     if (score <= 25) return 'bg-red-500';
