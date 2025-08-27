@@ -184,28 +184,34 @@ export default function SOWPage() {
                                 <TableCell className="text-muted-foreground">{row.orderDate}</TableCell>
                                 <TableCell className="font-medium text-foreground">{row.businessName}</TableCell>
                                 <TableCell>
-                                  <div className="grid grid-cols-5 gap-1">
+                                  <div className="flex items-center gap-px p-0.5 bg-gray-200 dark:bg-gray-700 rounded-md shadow-inner w-full">
                                     {row.allCategories.map(category => {
                                       const isPurchased = row.purchasedCategories.includes(category);
-                                      return (
-                                        <Tooltip key={category}>
-                                          <TooltipTrigger asChild>
-                                            <div
-                                              className={cn(
-                                                "h-5 w-full rounded-sm border",
-                                                isPurchased
-                                                  ? "bg-green-500 border-green-600"
-                                                  : "bg-muted border-border"
-                                              )}
-                                            ></div>
-                                          </TooltipTrigger>
-                                          {isPurchased && (
+                                      const box = (
+                                        <div
+                                          key={category}
+                                          className={cn(
+                                            "h-5 w-full flex-1", // Use flex-1 to distribute width
+                                            isPurchased
+                                              ? "bg-blue-500" // Use a single color for purchased
+                                              : "bg-white dark:bg-gray-800"
+                                          )}
+                                        ></div>
+                                      );
+
+                                      if (isPurchased) {
+                                        return (
+                                          <Tooltip key={category}>
+                                            <TooltipTrigger asChild>
+                                              {box}
+                                            </TooltipTrigger>
                                             <TooltipContent>
                                               <p>{category}</p>
                                             </TooltipContent>
-                                          )}
-                                        </Tooltip>
-                                      );
+                                          </Tooltip>
+                                        );
+                                      }
+                                      return box;
                                     })}
                                   </div>
                                 </TableCell>
