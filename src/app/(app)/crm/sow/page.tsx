@@ -2,15 +2,16 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts';
-import { MoreVertical, Settings, TrendingUp } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink } from '@/types';
 import { getOrders } from '@/lib/order-service';
+import { Settings, TrendingUp, PackageSearch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface BusinessLoyalty {
@@ -47,7 +48,7 @@ const generateBusinessLoyaltyData = (orders: TrackingLink[]): BusinessLoyalty[] 
   };
 
 
-  return Object.entries(businesses).slice(0, 10).map(([name, orderCount]) => {
+  return Object.entries(businesses).slice(0, 20).map(([name, orderCount]) => { // Increased to show more data in table
     const loyaltyScore = Math.min(99, 10 + orderCount * 12 + Math.floor(Math.random() * 15));
     return {
       id: name,
@@ -61,55 +62,25 @@ const generateBusinessLoyaltyData = (orders: TrackingLink[]): BusinessLoyalty[] 
   });
 };
 
-const LoyaltyCard = ({ business }: { business: BusinessLoyalty }) => {
-  const uniqueGradientId = `gradient-${business.id.replace(/[^a-zA-Z0-9]/g, '')}`;
+const LoyaltyTrendChart = ({ data, fromColor, toColor, id }: { data: any[], fromColor: string, toColor: string, id: string }) => {
+  const uniqueGradientId = `gradient-chart-${id.replace(/[^a-zA-Z0-9]/g, '')}`;
   return (
-    <Card className="shadow-md hover:shadow-xl transition-shadow bg-card overflow-hidden">
-      <CardHeader className="pb-2">
-        <div className="flex justify-between items-center">
-          <CardTitle className="text-base font-semibold text-card-foreground">{business.name}</CardTitle>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="h-20 -mx-6 -mb-2">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={business.trendData}>
-              <defs>
+    <div className="h-10 w-28">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data}>
+           <defs>
                 <linearGradient id={uniqueGradientId} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={business.color.gradientFrom} stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor={business.color.gradientTo} stopOpacity={0}/>
+                  <stop offset="5%" stopColor={fromColor} stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor={toColor} stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: 'hsl(var(--background))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: 'var(--radius)',
-                  fontSize: '12px',
-                  padding: '4px 8px',
-                }}
-                labelStyle={{ display: 'none' }}
-                formatter={(value) => [`${value}%`, 'Loyalty']}
-              />
-              <Area type="monotone" dataKey="value" stroke={business.color.gradientFrom} strokeWidth={2} fill={`url(#${uniqueGradientId})`} />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="flex justify-between items-center mt-4">
-          <div className="flex items-center text-sm text-muted-foreground">
-            <TrendingUp className="h-4 w-4 mr-1.5" />
-            <span>Loyalty</span>
-          </div>
-          <span className="text-lg font-bold text-card-foreground">{business.loyaltyScore}%</span>
-        </div>
-        <Progress value={business.loyaltyScore} className="mt-2 h-2" indicatorClassName={business.color.progress} />
-      </CardContent>
-    </Card>
+          <Area type="monotone" dataKey="value" stroke={fromColor} strokeWidth={2} fillOpacity={1} fill={`url(#${uniqueGradientId})`} />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
   );
 };
+
 
 export default function SOWPage() {
   const [loyaltyData, setLoyaltyData] = useState<BusinessLoyalty[]>([]);
@@ -138,7 +109,7 @@ export default function SOWPage() {
   }, [toast]);
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 dark:bg-gray-900/50 min-h-screen">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Statement of Work</h1>
@@ -150,30 +121,57 @@ export default function SOWPage() {
           <Settings className="h-4 w-4" />
         </Button>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {isLoading
-          ? Array.from({ length: 8 }).map((_, index) => (
-              <Card key={index} className="shadow-md">
-                <CardHeader className="pb-2">
-                  <div className="flex justify-between items-center">
-                    <Skeleton className="h-5 w-3/5" />
-                    <Skeleton className="h-6 w-6 rounded-full" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-20 w-full" />
-                  <div className="flex justify-between items-center mt-4">
-                    <Skeleton className="h-4 w-1/4" />
-                    <Skeleton className="h-6 w-1/5" />
-                  </div>
-                  <Skeleton className="h-2 w-full mt-2" />
-                </CardContent>
-              </Card>
-            ))
-          : loyaltyData.map((business) => (
-              <LoyaltyCard key={business.id} business={business} />
-            ))}
-      </div>
+      
+      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+        <CardHeader>
+            <CardTitle>Business Loyalty Report</CardTitle>
+            <CardDescription>Loyalty scores and trends based on recent order history.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead className="w-1/3">Business Name</TableHead>
+                        <TableHead className="w-1/3">Loyalty Trend</TableHead>
+                        <TableHead className="text-right">Loyalty Score</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {isLoading ? (
+                         Array.from({ length: 5 }).map((_, index) => (
+                           <TableRow key={index}>
+                                <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
+                                <TableCell><Skeleton className="h-10 w-28" /></TableCell>
+                                <TableCell><Skeleton className="h-5 w-2/3 ml-auto" /></TableCell>
+                           </TableRow>
+                        ))
+                    ) : loyaltyData.length > 0 ? (
+                        loyaltyData.map((business) => (
+                            <TableRow key={business.id} className="hover:bg-muted/50">
+                                <TableCell className="font-medium text-foreground">{business.name}</TableCell>
+                                <TableCell>
+                                    <LoyaltyTrendChart data={business.trendData} fromColor={business.color.gradientFrom} toColor={business.color.gradientTo} id={business.id}/>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-3">
+                                        <span className="font-semibold text-lg w-12 text-foreground">{business.loyaltyScore}%</span>
+                                        <Progress value={business.loyaltyScore} className="w-24 h-2" indicatorClassName={business.color.progress} />
+                                    </div>
+                                </TableCell>
+                            </TableRow>
+                        ))
+                    ) : (
+                        <TableRow>
+                            <TableCell colSpan={3} className="h-48 text-center text-muted-foreground">
+                                <PackageSearch className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                No loyalty data to display.
+                            </TableCell>
+                        </TableRow>
+                    )}
+                </TableBody>
+            </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
