@@ -93,7 +93,8 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
             return sum + orderTotal;
         }, 0);
         
-        const loyaltyScore = matchedFilters.size * categoryPercentage;
+        const totalPurchasedCount = matchedFilters.size + unmatchedItems.size;
+        const loyaltyScore = totalPurchasedCount * categoryPercentage;
 
         return {
             id: jobId,
@@ -185,56 +186,54 @@ export default function SOWPage() {
                         ))
                     ) : sowData.length > 0 ? (
                         sowData.map((row) => {
-                           const purchasedCount = row.purchasedCategories.length;
+                           const purchasedCount = row.purchasedCategories.length + row.unmatchedPurchasedItems.length;
                            const totalCategories = row.allCategories.length;
                            return (
                             <TableRow key={row.id} className="hover:bg-muted/50">
                                 <TableCell className="text-muted-foreground">{row.orderDate}</TableCell>
                                 <TableCell className="font-medium text-foreground">{row.businessName}</TableCell>
                                 <TableCell>
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                         <div className="flex items-center gap-px w-full h-3 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-inner">
-                                          {row.allCategories.map((category, index) => {
-                                            const isPurchased = index < purchasedCount;
-                                            // Red (0) to green (120)
-                                            const hue = (index / Math.max(1, totalCategories - 1)) * 120;
-                                            return (
+                                  <div className="flex items-center gap-px w-full h-3 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-inner">
+                                    {row.allCategories.map((category, index) => {
+                                      const isPurchased = index < purchasedCount;
+                                      // Red (0) to green (120)
+                                      const hue = (index / Math.max(1, totalCategories - 1)) * 120;
+                                      return (
+                                        <TooltipProvider key={index}>
+                                          <Tooltip>
+                                            <TooltipTrigger asChild>
                                               <div
-                                                key={index}
                                                 className="h-full flex-1"
                                                 style={{
                                                   backgroundColor: isPurchased ? `hsl(${hue}, 70%, 50%)` : 'rgba(209, 213, 219, 0.3)',
                                                 }}
                                               />
-                                            );
-                                          })}
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <div className="p-1 max-w-xs">
-                                          <p className="font-semibold text-sm mb-2 flex items-center gap-1"><ListChecks className="h-4 w-4 text-primary"/> Purchased Categories:</p>
-                                          {row.purchasedCategories.length > 0 ? (
-                                            <ul className="list-disc list-inside text-xs space-y-0.5">
-                                              {row.purchasedCategories.map(p => <li key={p}>{p}</li>)}
-                                            </ul>
-                                          ) : (
-                                            <p className="text-xs text-muted-foreground italic">None from tracked categories.</p>
-                                          )}
-
-                                          {row.unmatchedPurchasedItems.length > 0 && (
-                                            <>
-                                              <p className="font-semibold text-sm mt-3 mb-2 flex items-center gap-1"><PackageSearch className="h-4 w-4 text-primary"/> Other Purchased Items:</p>
-                                              <ul className="list-disc list-inside text-xs space-y-0.5">
-                                                {row.unmatchedPurchasedItems.map(p => <li key={p}>{p}</li>)}
-                                              </ul>
-                                            </>
-                                          )}
-                                        </div>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <div className="p-1 max-w-xs">
+                                                <p className="font-semibold text-sm mb-2 flex items-center gap-1"><ListChecks className="h-4 w-4 text-primary"/> Defined Categories ({row.allCategories.length}):</p>
+                                                  <ul className="list-disc list-inside text-xs space-y-0.5">
+                                                      {row.allCategories.map(p => {
+                                                        const isBought = row.purchasedCategories.includes(p);
+                                                        return <li key={p} className={cn(isBought ? "font-semibold text-primary" : "text-muted-foreground")}>{p} {isBought ? '(Purchased)' : ''}</li>
+                                                      })}
+                                                  </ul>
+                                                
+                                                {row.unmatchedPurchasedItems.length > 0 && (
+                                                  <>
+                                                    <p className="font-semibold text-sm mt-3 mb-2 flex items-center gap-1"><PackageSearch className="h-4 w-4 text-primary"/> Other Purchased Items:</p>
+                                                    <ul className="list-disc list-inside text-xs space-y-0.5">
+                                                      {row.unmatchedPurchasedItems.map(p => <li key={p}>{p}</li>)}
+                                                    </ul>
+                                                  </>
+                                                )}
+                                              </div>
+                                            </TooltipContent>
+                                          </Tooltip>
+                                        </TooltipProvider>
+                                      );
+                                    })}
+                                  </div>
                                 </TableCell>
                                 <TableCell className="text-right font-mono">{formatCurrency(row.amount)}</TableCell>
                                 <TableCell>
