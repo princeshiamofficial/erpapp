@@ -173,7 +173,7 @@ export default function SOWPage() {
                            <TableRow key={index}>
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
-                                <TableCell><Skeleton className="h-8 w-full" /></TableCell>
+                                <TableCell><Skeleton className="h-4 w-full" /></TableCell>
                                 <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-40 mx-auto" /></TableCell>
                            </TableRow>
@@ -186,7 +186,7 @@ export default function SOWPage() {
                                 <TableCell className="text-muted-foreground">{row.orderDate}</TableCell>
                                 <TableCell className="font-medium text-foreground">{row.businessName}</TableCell>
                                 <TableCell>
-                                  <div className="flex items-center gap-px p-0.5 bg-gray-200 dark:bg-gray-700 rounded-md shadow-inner w-full">
+                                  <div className="flex items-center gap-px bg-gray-200 dark:bg-gray-900 rounded-md overflow-hidden shadow-inner w-full h-4">
                                     {row.allCategories.map((category, index) => {
                                       const isPurchased = index < purchasedCount;
                                       const purchasedCategoryName = isPurchased ? row.purchasedCategories[index] : null;
@@ -195,10 +195,10 @@ export default function SOWPage() {
                                         <div
                                           key={`${row.id}-${category}-${index}`}
                                           className={cn(
-                                            "h-5 w-full flex-1",
+                                            "h-full w-full flex-1 transition-all duration-300",
                                             isPurchased
-                                              ? "bg-blue-500"
-                                              : "bg-white dark:bg-gray-800"
+                                              ? "bg-gradient-to-r from-blue-500 to-purple-600"
+                                              : "bg-gray-300 dark:bg-gray-800 shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)]"
                                           )}
                                         ></div>
                                       );
