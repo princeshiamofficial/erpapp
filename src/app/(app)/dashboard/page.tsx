@@ -478,16 +478,17 @@ function DashboardContent() {
     return counts;
   }, [filteredLeads]);
   
-  const { totalSales, invoiceDue, totalPurchase, netValue, salesChartData, deliveredCount, ordersWithDueCount } = useMemo(() => {
+  const { totalSales, invoiceDue, totalPurchase, netValue, salesChartData, deliveredCount, ordersWithDueCount, invoicePaid } = useMemo(() => {
     const interval = getDateRangeInterval();
     if (!interval) {
-        return { totalSales: formatCurrency(0), invoiceDue: formatCurrency(0), totalPurchase: formatCurrency(0), netValue: formatCurrency(0), salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0 };
+        return { totalSales: formatCurrency(0), invoiceDue: formatCurrency(0), totalPurchase: formatCurrency(0), netValue: formatCurrency(0), salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0, invoicePaid: formatCurrency(0) };
     }
 
     let currentTotalSales = 0;
     let currentTotalAdvance = 0;
     let currentTotalPurchaseValue = 0;
     let currentOrdersWithDueCount = 0;
+    let currentInvoicePaid = 0;
 
     filteredOrders.forEach(order => {
       const orderTotal = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
@@ -504,9 +505,12 @@ function DashboardContent() {
       
       const orderAdvance = (order.advancePayments || []).reduce((sum, p) => sum + p.amount, 0);
       currentTotalAdvance += orderAdvance;
+      const orderDue = orderTotal - orderAdvance;
 
-      if (orderTotal > orderAdvance) {
+      if (orderDue > 0.01) {
         currentOrdersWithDueCount++;
+      } else {
+        currentInvoicePaid += orderTotal; // It's paid, add its total value to the paid amount
       }
     });
 
@@ -582,6 +586,7 @@ function DashboardContent() {
       salesChartData: chartData,
       deliveredCount: currentDeliveredCount.toString(),
       ordersWithDueCount: currentOrdersWithDueCount,
+      invoicePaid: formatCurrency(currentInvoicePaid),
     };
   }, [filteredOrders, allOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId]);
 
@@ -605,6 +610,7 @@ function DashboardContent() {
     return [
       { title: isCrm ? "Sales" : "Total Sales", value: isCrm ? filteredOrders.length.toString() : totalSales, icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
       { title: "Invoice due", value: isCrm ? ordersWithDueCount.toString() : invoiceDue, icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
+      { title: "Invoice Paid", value: invoicePaid, icon: Receipt, iconColorClass: "text-teal-600", circleBgClass: "bg-teal-100 dark:bg-teal-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
       { title: "Delivered", value: deliveredCount, icon: PackageCheck, iconColorClass: "text-green-600", circleBgClass: "bg-green-100 dark:bg-green-500/20", isLoading: isLoadingData, roles: ['CRM'] },
       { title: "Net", value: netValue, icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
       { title: "Total Sell Return", value: formatCurrency(0), icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
@@ -613,7 +619,7 @@ function DashboardContent() {
       { title: "Total Purchase Return", value: formatCurrency(0), icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
       { title: "Expense", value: formatCurrency(0), icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
     ];
-  }, [totalSales, netValue, invoiceDue, totalPurchase, isLoadingData, deliveredCount, currentUser, filteredOrders.length, ordersWithDueCount]);
+  }, [totalSales, netValue, invoiceDue, totalPurchase, isLoadingData, deliveredCount, currentUser, filteredOrders.length, ordersWithDueCount, invoicePaid]);
 
   const summaryCardData = useMemo(() => {
     return summaryCardDefinitions.filter(card => {
