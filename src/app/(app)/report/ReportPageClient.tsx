@@ -43,7 +43,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay } from 'date-fns';
-import { DELIVERED_STATUS_ID } from '@/lib/status-service'; // Import delivered status ID
+import { DELIVERED_STATUS_ID, READY_FOR_DESIGN_STATUS_ID } from '@/lib/status-service'; // Import status IDs
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-BD', {
@@ -61,8 +61,9 @@ interface ProductSalesData {
 interface DesignerPerformanceData {
   designerId: string;
   designerName: string;
-  ordersDelivered: number;
-  percentage: number;
+  designsAssigned: number;
+  designsDone: number;
+  completionRate: number;
 }
 
 
@@ -298,39 +299,43 @@ export function ReportPageClient() {
     const startDate = startOfDay(selectedDateRange.from);
     const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
 
-    const designerMap = new Map<string, { name: string; count: number }>();
+    const designerMap = new Map<string, { name: string; assigned: number; done: number; }>();
     allUsers
       .filter(user => user.role === 'DESIGNER_REPRESENTATIVE')
       .forEach(dr => {
-        designerMap.set(dr.id, { name: dr.name, count: 0 });
+        designerMap.set(dr.id, { name: dr.name, assigned: 0, done: 0 });
       });
 
     orders.forEach(order => {
-      // Find a delivery event within the date range
-      const deliveryLog = order.statusHistory.find(h =>
-        h.status === DELIVERED_STATUS_ID &&
-        isWithinInterval(parseISO(h.timestamp), { start: startDate, end: endDate })
-      );
-      
-      // If a delivery happened in the range and the order has a DR
-      if (deliveryLog && order.designerRepresentativeId && designerMap.has(order.designerRepresentativeId)) {
-        const designer = designerMap.get(order.designerRepresentativeId)!;
-        designer.count += 1;
-        designerMap.set(order.designerRepresentativeId, designer);
-      }
-    });
+        if (!order.designerRepresentativeId) return;
 
-    const totalDelivered = Array.from(designerMap.values()).reduce((acc, { count }) => acc + count, 0);
-    if (totalDelivered === 0) return [];
+        const designer = designerMap.get(order.designerRepresentativeId);
+        if (!designer) return;
+        
+        // Check for 'Assigned' within date range
+        const assignmentLog = order.statusHistory.find(h => h.status === READY_FOR_DESIGN_STATUS_ID);
+        if (assignmentLog && isWithinInterval(parseISO(assignmentLog.timestamp), { start: startDate, end: endDate })) {
+            designer.assigned += 1;
+        }
+
+        // Check for 'Done' (Delivered) within date range
+        const deliveryLog = order.statusHistory.find(h => h.status === DELIVERED_STATUS_ID);
+        if (deliveryLog && isWithinInterval(parseISO(deliveryLog.timestamp), { start: startDate, end: endDate })) {
+            designer.done += 1;
+        }
+        
+        designerMap.set(order.designerRepresentativeId, designer);
+    });
 
     return Array.from(designerMap.entries())
       .map(([id, data]) => ({
         designerId: id,
         designerName: data.name,
-        ordersDelivered: data.count,
-        percentage: (data.count / totalDelivered) * 100,
+        designsAssigned: data.assigned,
+        designsDone: data.done,
+        completionRate: data.assigned > 0 ? (data.done / data.assigned) * 100 : 0,
       }))
-      .sort((a, b) => b.ordersDelivered - a.ordersDelivered);
+      .sort((a, b) => b.designsDone - a.designsDone || b.designsAssigned - a.designsAssigned);
 
   }, [orders, allUsers, selectedDateRange]);
 
@@ -416,7 +421,7 @@ export function ReportPageClient() {
               <CardHeader>
                 <CardTitle>Designer&apos;s Performance</CardTitle>
                 <CardDescription>
-                  Number of delivered orders completed by each designer.
+                  Tasks assigned vs completed by each designer in the selected period.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -424,8 +429,9 @@ export function ReportPageClient() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Designer</TableHead>
-                      <TableHead className="text-right">Orders Delivered</TableHead>
-                      <TableHead className="w-[30%] text-center">Contribution</TableHead>
+                      <TableHead className="text-center">Designs Assigned</TableHead>
+                      <TableHead className="text-center">Designs Done</TableHead>
+                      <TableHead className="w-[30%] text-center">Completion Rate</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -433,7 +439,8 @@ export function ReportPageClient() {
                       [...Array(3)].map((_, i) => (
                         <TableRow key={`skel-designer-${i}`}>
                           <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                          <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
+                          <TableCell className="text-center"><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
+                          <TableCell className="text-center"><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
                           <TableCell>
                             <div className="flex items-center justify-center gap-4">
                               <Skeleton className="h-2.5 w-2/3" />
@@ -446,18 +453,19 @@ export function ReportPageClient() {
                       designerPerformanceData.map((item) => (
                         <TableRow key={item.designerId}>
                           <TableCell className="font-medium">{item.designerName}</TableCell>
-                          <TableCell className="text-right font-mono">{item.ordersDelivered}</TableCell>
+                          <TableCell className="text-center font-mono">{item.designsAssigned}</TableCell>
+                          <TableCell className="text-center font-mono">{item.designsDone}</TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center justify-center gap-4">
-                              <Progress value={item.percentage} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
-                              <Badge variant="outline" className="w-16 justify-center">{item.percentage.toFixed(1)}%</Badge>
+                              <Progress value={item.completionRate} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
+                              <Badge variant="outline" className="w-16 justify-center">{item.completionRate.toFixed(1)}%</Badge>
                             </div>
                           </TableCell>
                         </TableRow>
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={3} className="h-24 text-center">
+                        <TableCell colSpan={4} className="h-24 text-center">
                           <UsersIcon className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
                           No designer performance data available for this period.
                         </TableCell>
