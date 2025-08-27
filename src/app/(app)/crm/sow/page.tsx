@@ -43,14 +43,12 @@ const formatDate = (dateString?: string) => {
 const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings | null): SowData[] => {
     const filters = globalSettings?.reportProductFilters || [];
     
-    // Step 1: Calculate the average percentage for each product filter category.
-    const averagePercentage = filters.length > 0 ? 100 / filters.length : 0;
+    const categoryPercentage = filters.length > 0 ? 100 / filters.length : 0;
     const productPercentageMap = new Map<string, number>();
     filters.forEach(filter => {
-        productPercentageMap.set(filter, averagePercentage);
+        productPercentageMap.set(filter, categoryPercentage);
     });
 
-    // Step 2: Generate SOW data with new loyalty score
     return orders.map(order => {
         const businessName = order.companyName.split(' • ').pop()?.trim() || order.companyName;
         let productsDisplay = 'N/A';
@@ -69,7 +67,7 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
                 productKeysForScore = Array.from(matchedFilters);
             } else {
                 productsDisplay = order.orderItems.map(item => `${item.model} (x${item.quantity})`).join(', ');
-                productKeysForScore = order.orderItems.map(item => item.model);
+                productKeysForScore = []; // No score if no category match
             }
         }
 
@@ -78,7 +76,7 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
         let loyaltyScore = 0;
         if (productKeysForScore.length > 0) {
             const scores = productKeysForScore.map(key => productPercentageMap.get(key) || 0);
-            loyaltyScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+            loyaltyScore = scores.reduce((sum, score) => sum + score, 0); // Sum the scores
         }
 
         return {
