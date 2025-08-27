@@ -13,13 +13,19 @@ import { getGlobalSettings } from '@/lib/settings-service';
 import { PackageSearch } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
-
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 interface SowData {
   id: string; // Using Job ID as the unique key
   orderDate: string; // Will use the date of the latest order for that job
   businessName: string;
-  products: string;
+  purchasedCategories: string[];
+  allCategories: string[];
   amount: number;
   loyaltyScore: number;
 }
@@ -67,7 +73,6 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
     return Array.from(ordersByJobId.entries()).map(([jobId, group]) => {
         const allItemsFromGroup = group.orders.flatMap(o => o.orderItems || []);
         
-        let productsDisplay = 'N/A';
         const matchedFilters = new Set<string>();
 
         if (allItemsFromGroup.length > 0) {
@@ -76,14 +81,6 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
                     matchedFilters.add(filter);
                 }
             }
-
-            if (matchedFilters.size > 0) {
-                productsDisplay = Array.from(matchedFilters).join(', ');
-            } else {
-                // Fallback if no category matches - list unique models
-                const uniqueModels = new Set(allItemsFromGroup.map(item => item.model));
-                productsDisplay = Array.from(uniqueModels).join(', ');
-            }
         }
         
         const totalAmount = group.orders.reduce((sum, order) => {
@@ -91,16 +88,16 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
             return sum + orderTotal;
         }, 0);
         
-        // Sum the scores from all matched filters
         const loyaltyScore = matchedFilters.size * categoryPercentage;
 
         return {
             id: jobId,
             orderDate: formatDate(group.latestDate),
             businessName: group.businessName,
-            products: productsDisplay,
+            purchasedCategories: Array.from(matchedFilters),
+            allCategories: filters,
             amount: totalAmount,
-            loyaltyScore: Math.min(99, Math.round(loyaltyScore)), // Round and cap at 99
+            loyaltyScore: Math.min(100, Math.round(loyaltyScore)), // Cap at 100
         };
     }).sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
 };
@@ -159,12 +156,13 @@ export default function SOWPage() {
             <CardDescription>Statement of work based on recent order history.</CardDescription>
         </CardHeader>
         <CardContent>
+          <TooltipProvider>
             <Table>
                 <TableHeader>
                     <TableRow>
                         <TableHead>Order Date</TableHead>
                         <TableHead>Business Name</TableHead>
-                        <TableHead>Products</TableHead>
+                        <TableHead className="w-[40%]">Products</TableHead>
                         <TableHead className="text-right">Amount</TableHead>
                         <TableHead className="text-center w-[200px]">Loyalty Score</TableHead>
                     </TableRow>
@@ -175,7 +173,7 @@ export default function SOWPage() {
                            <TableRow key={index}>
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
-                                <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                                <TableCell><Skeleton className="h-8 w-full" /></TableCell>
                                 <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-40 mx-auto" /></TableCell>
                            </TableRow>
@@ -185,7 +183,32 @@ export default function SOWPage() {
                             <TableRow key={row.id} className="hover:bg-muted/50">
                                 <TableCell className="text-muted-foreground">{row.orderDate}</TableCell>
                                 <TableCell className="font-medium text-foreground">{row.businessName}</TableCell>
-                                <TableCell className="text-muted-foreground max-w-xs truncate" title={row.products}>{row.products}</TableCell>
+                                <TableCell>
+                                  <div className="grid grid-cols-5 gap-1">
+                                    {row.allCategories.map(category => {
+                                      const isPurchased = row.purchasedCategories.includes(category);
+                                      return (
+                                        <Tooltip key={category}>
+                                          <TooltipTrigger asChild>
+                                            <div
+                                              className={cn(
+                                                "h-5 w-full rounded-sm border",
+                                                isPurchased
+                                                  ? "bg-green-500 border-green-600"
+                                                  : "bg-muted border-border"
+                                              )}
+                                            ></div>
+                                          </TooltipTrigger>
+                                          {isPurchased && (
+                                            <TooltipContent>
+                                              <p>{category}</p>
+                                            </TooltipContent>
+                                          )}
+                                        </Tooltip>
+                                      );
+                                    })}
+                                  </div>
+                                </TableCell>
                                 <TableCell className="text-right font-mono">{formatCurrency(row.amount)}</TableCell>
                                 <TableCell>
                                     <div className="flex items-center justify-center gap-3">
@@ -205,6 +228,7 @@ export default function SOWPage() {
                     )}
                 </TableBody>
             </Table>
+          </TooltipProvider>
         </CardContent>
       </Card>
     </div>
