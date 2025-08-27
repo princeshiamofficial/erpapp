@@ -293,7 +293,7 @@ export function ReportPageClient() {
   
   const designerPerformanceData: DesignerPerformanceData[] = useMemo(() => {
     if (orders.length === 0 || allUsers.length === 0 || !selectedDateRange?.from) {
-        return [];
+      return [];
     }
 
     const startDate = startOfDay(selectedDateRange.from);
@@ -307,24 +307,25 @@ export function ReportPageClient() {
       });
 
     orders.forEach(order => {
-        if (!order.designerRepresentativeId) return;
+      if (!order.designerRepresentativeId) return;
 
-        const designer = designerMap.get(order.designerRepresentativeId);
-        if (!designer) return;
-        
-        // Check for 'Assigned' within date range
-        const assignmentLog = order.statusHistory.find(h => h.status === READY_FOR_DESIGN_STATUS_ID);
-        if (assignmentLog && isWithinInterval(parseISO(assignmentLog.timestamp), { start: startDate, end: endDate })) {
-            designer.assigned += 1;
-        }
+      const designer = designerMap.get(order.designerRepresentativeId);
+      if (!designer) return;
+      
+      // Check for 'Assigned' within date range
+      const assignmentLog = order.statusHistory.find(h => h.status === READY_FOR_DESIGN_STATUS_ID);
+      const isAssignedInRange = assignmentLog && isWithinInterval(parseISO(assignmentLog.timestamp), { start: startDate, end: endDate });
 
-        // Check for 'Done' (Delivered) within date range
+      if (isAssignedInRange) {
+        designer.assigned += 1;
+        // Check if this same assigned order was also delivered in the date range
         const deliveryLog = order.statusHistory.find(h => h.status === DELIVERED_STATUS_ID);
         if (deliveryLog && isWithinInterval(parseISO(deliveryLog.timestamp), { start: startDate, end: endDate })) {
-            designer.done += 1;
+          designer.done += 1;
         }
-        
-        designerMap.set(order.designerRepresentativeId, designer);
+      }
+      
+      designerMap.set(order.designerRepresentativeId, designer);
     });
 
     return Array.from(designerMap.entries())
