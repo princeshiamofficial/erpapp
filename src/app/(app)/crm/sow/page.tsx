@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, OrderItem, GlobalSettings } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
-import { PackageSearch, ListChecks, ArrowUpDown } from 'lucide-react';
+import { PackageSearch, ListChecks, ArrowUpDown, Phone, MapPin } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
@@ -30,6 +30,13 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 const ITEMS_PER_PAGE = 12;
 const SOW_DATA_CACHE_KEY = 'sowDataCache';
@@ -38,6 +45,8 @@ interface SowData {
   id: string; // Using Job ID as the unique key
   orderDate: string; // Will use the date of the latest order for that job
   businessName: string;
+  address: string;
+  phoneNumber: string;
   purchasedCategories: string[];
   unmatchedPurchasedItems: string[];
   allCategories: string[];
@@ -67,18 +76,20 @@ const formatDate = (dateString?: string) => {
 const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings | null): SowData[] => {
     const filters = globalSettings?.reportProductFilters || [];
 
-    const ordersByJobId = new Map<string, { orders: TrackingLink[], businessName: string, latestDate: string }>();
+    const ordersByJobId = new Map<string, { orders: TrackingLink[], businessName: string, latestDate: string, address: string, phoneNumber: string }>();
 
     orders.forEach(order => {
         const companyNameParts = order.companyName.split(' • ').map(part => part.trim());
         const jobId = companyNameParts.length > 1 ? companyNameParts[0] : order.id;
         const businessName = companyNameParts.length > 1 ? companyNameParts.slice(1).join(' • ').trim() : order.companyName;
 
-        const existing = ordersByJobId.get(jobId) || { orders: [], businessName, latestDate: order.createdAt };
+        const existing = ordersByJobId.get(jobId) || { orders: [], businessName, latestDate: order.createdAt, address: order.address, phoneNumber: order.phoneNumber };
         existing.orders.push(order);
         if (new Date(order.createdAt) > new Date(existing.latestDate)) {
           existing.latestDate = order.createdAt;
           existing.businessName = businessName;
+          existing.address = order.address;
+          existing.phoneNumber = order.phoneNumber;
         }
         ordersByJobId.set(jobId, existing);
     });
@@ -117,6 +128,8 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
             id: jobId,
             orderDate: group.latestDate, // Store as ISO string for sorting
             businessName: group.businessName,
+            address: group.address,
+            phoneNumber: group.phoneNumber,
             purchasedCategories: Array.from(matchedFilters),
             unmatchedPurchasedItems: Array.from(unmatchedItems),
             allCategories: filters,
@@ -142,6 +155,8 @@ export default function SOWPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedBusiness, setSelectedBusiness] = useState<SowData | null>(null);
+  const [isDialogVisible, setIsDialogVisible] = useState(false);
 
    useEffect(() => {
     const cachedData = localStorage.getItem(SOW_DATA_CACHE_KEY);
@@ -309,134 +324,172 @@ export default function SOWPage() {
   };
 
   return (
-    <div className="px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8 pt-0">
-      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <CardTitle>Business Report</CardTitle>
-              <CardDescription>Statement of work based on recent order history.</CardDescription>
-            </div>
-            <div className="w-full sm:w-auto sm:max-w-xs">
-                <Input 
-                    placeholder="Search by business name..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
-            </div>
-        </CardHeader>
-        <CardContent>
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead className="w-[50px]">SL</TableHead>
-                        <TableHead>
-                           <Button variant="ghost" onClick={() => requestSort('orderDate')}>
-                                Order Date <ArrowUpDown className="ml-2 h-4 w-4" />
-                           </Button>
-                        </TableHead>
-                        <TableHead>Business Name</TableHead>
-                        <TableHead className="w-[40%]">
-                           <Button variant="ghost" onClick={() => requestSort('products')}>
-                                Products <ArrowUpDown className="ml-2 h-4 w-4" />
-                           </Button>
-                        </TableHead>
-                        <TableHead className="text-right">Amount</TableHead>
-                        <TableHead className="text-center w-[200px]">
-                           <Button variant="ghost" onClick={() => requestSort('loyaltyScore')}>
-                                Loyalty Score <ArrowUpDown className="ml-2 h-4 w-4" />
-                           </Button>
-                        </TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {isLoading ? (
-                         Array.from({ length: 5 }).map((_, index) => (
-                           <TableRow key={index}>
-                                <TableCell><Skeleton className="h-5 w-8" /></TableCell>
-                                <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
-                                <TableCell><Skeleton className="h-4 w-full" /></TableCell>
-                                <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
-                                <TableCell><Skeleton className="h-5 w-40 mx-auto" /></TableCell>
-                           </TableRow>
-                        ))
-                    ) : paginatedData.length > 0 ? (
-                        paginatedData.map((row, index) => {
-                           const totalPurchasedCount = row.purchasedCategories.length + row.unmatchedPurchasedItems.length;
-                           const totalPossibleCategories = row.allCategories.length;
-                           return (
-                            <TableRow key={row.id} className="hover:bg-muted/50">
-                                <TableCell className="font-medium text-muted-foreground">{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
-                                <TableCell className="text-muted-foreground">{formatDate(row.orderDate)}</TableCell>
-                                <TableCell className="font-medium text-foreground">{row.businessName}</TableCell>
-                                <TableCell>
-                                  <TooltipProvider>
-                                      <Tooltip>
-                                          <TooltipTrigger asChild>
-                                              <div className="flex items-center gap-px w-full h-3 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-inner">
-                                                {Array.from({ length: totalPossibleCategories }).map((_, index) => {
-                                                  const isPurchased = index < totalPurchasedCount;
-                                                  const hue = (index / Math.max(1, totalPossibleCategories - 1)) * 120;
-                                                  return (
-                                                    <div
-                                                      key={index}
-                                                      className="h-full flex-1"
-                                                      style={{
-                                                        backgroundColor: isPurchased ? `hsl(${hue}, 70%, 50%)` : 'rgba(209, 213, 219, 0.3)',
-                                                      }}
-                                                    />
-                                                  );
-                                                })}
-                                              </div>
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                            <div className="p-1 max-w-xs">
-                                              <p className="font-semibold text-sm mb-2 flex items-center gap-1"><ListChecks className="h-4 w-4 text-primary"/> Defined Categories ({row.allCategories.length}):</p>
-                                                <ul className="list-disc list-inside text-xs space-y-0.5">
-                                                    {row.allCategories.map(p => {
-                                                      const isBought = row.purchasedCategories.includes(p);
-                                                      return <li key={p} className={cn(isBought ? "font-semibold text-primary" : "text-muted-foreground")}>{p} {isBought ? '(Purchased)' : ''}</li>
-                                                    })}
-                                                </ul>
-                                              
-                                              {row.unmatchedPurchasedItems.length > 0 && (
-                                                <>
-                                                  <p className="font-semibold text-sm mt-3 mb-2 flex items-center gap-1"><PackageSearch className="h-4 w-4 text-primary"/> Other Purchased Items:</p>
+    <>
+      <div className="px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8 pt-0">
+        <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+          <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <CardTitle>Business Report</CardTitle>
+                <CardDescription>Statement of work based on recent order history.</CardDescription>
+              </div>
+              <div className="w-full sm:w-auto sm:max-w-xs">
+                  <Input 
+                      placeholder="Search by business name..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+              </div>
+          </CardHeader>
+          <CardContent>
+              <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead className="w-[50px]">SL</TableHead>
+                          <TableHead>
+                             <Button variant="ghost" onClick={() => requestSort('orderDate')}>
+                                  Order Date <ArrowUpDown className="ml-2 h-4 w-4" />
+                             </Button>
+                          </TableHead>
+                          <TableHead>Business Name</TableHead>
+                          <TableHead className="w-[40%]">
+                             <Button variant="ghost" onClick={() => requestSort('products')}>
+                                  Products <ArrowUpDown className="ml-2 h-4 w-4" />
+                             </Button>
+                          </TableHead>
+                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead className="text-center w-[200px]">
+                             <Button variant="ghost" onClick={() => requestSort('loyaltyScore')}>
+                                  Loyalty Score <ArrowUpDown className="ml-2 h-4 w-4" />
+                             </Button>
+                          </TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {isLoading ? (
+                           Array.from({ length: 5 }).map((_, index) => (
+                             <TableRow key={index}>
+                                  <TableCell><Skeleton className="h-5 w-8" /></TableCell>
+                                  <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                  <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
+                                  <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                                  <TableCell className="text-right"><Skeleton className="h-5 w-20 ml-auto" /></TableCell>
+                                  <TableCell><Skeleton className="h-5 w-40 mx-auto" /></TableCell>
+                             </TableRow>
+                          ))
+                      ) : paginatedData.length > 0 ? (
+                          paginatedData.map((row, index) => {
+                             const totalPurchasedCount = row.purchasedCategories.length + row.unmatchedPurchasedItems.length;
+                             const totalPossibleCategories = row.allCategories.length;
+                             return (
+                              <TableRow key={row.id} className="hover:bg-muted/50">
+                                  <TableCell className="font-medium text-muted-foreground">{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
+                                  <TableCell className="text-muted-foreground">{formatDate(row.orderDate)}</TableCell>
+                                  <TableCell>
+                                    <Button
+                                      variant="link"
+                                      className="font-medium text-foreground p-0 h-auto hover:text-primary"
+                                      onClick={() => {
+                                        setSelectedBusiness(row);
+                                        setIsDialogVisible(true);
+                                      }}
+                                    >
+                                      {row.businessName}
+                                    </Button>
+                                  </TableCell>
+                                  <TableCell>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <div className="flex items-center gap-px w-full h-3 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-inner">
+                                                  {Array.from({ length: totalPossibleCategories }).map((_, index) => {
+                                                    const isPurchased = index < totalPurchasedCount;
+                                                    const hue = (index / Math.max(1, totalPossibleCategories - 1)) * 120;
+                                                    return (
+                                                      <div
+                                                        key={index}
+                                                        className="h-full flex-1"
+                                                        style={{
+                                                          backgroundColor: isPurchased ? `hsl(${hue}, 70%, 50%)` : 'rgba(209, 213, 219, 0.3)',
+                                                        }}
+                                                      />
+                                                    );
+                                                  })}
+                                                </div>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                              <div className="p-1 max-w-xs">
+                                                <p className="font-semibold text-sm mb-2 flex items-center gap-1"><ListChecks className="h-4 w-4 text-primary"/> Defined Categories ({row.allCategories.length}):</p>
                                                   <ul className="list-disc list-inside text-xs space-y-0.5">
-                                                    {row.unmatchedPurchasedItems.map(p => <li key={p}>{p}</li>)}
+                                                      {row.allCategories.map(p => {
+                                                        const isBought = row.purchasedCategories.includes(p);
+                                                        return <li key={p} className={cn(isBought ? "font-semibold text-primary" : "text-muted-foreground")}>{p} {isBought ? '(Purchased)' : ''}</li>
+                                                      })}
                                                   </ul>
-                                                </>
-                                              )}
-                                            </div>
-                                          </TooltipContent>
-                                      </Tooltip>
-                                  </TooltipProvider>
-                                </TableCell>
-                                <TableCell className="text-right font-mono">{formatCurrency(row.amount)}</TableCell>
-                                <TableCell>
-                                    <div className="flex items-center justify-center gap-3">
-                                        <Progress value={row.loyaltyScore} className="w-24 h-2" indicatorClassName={getLoyaltyColorClass(row.loyaltyScore)} />
-                                        <span className="font-semibold text-foreground">{row.loyaltyScore}%</span>
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                           );
-                        })
-                    ) : (
-                        <TableRow>
-                            <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
-                                <PackageSearch className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                No order data to display.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                </TableBody>
-            </Table>
-        </CardContent>
-        <CardFooter className="py-4 border-t">
-          {renderPagination()}
-        </CardFooter>
-      </Card>
-    </div>
+                                                
+                                                {row.unmatchedPurchasedItems.length > 0 && (
+                                                  <>
+                                                    <p className="font-semibold text-sm mt-3 mb-2 flex items-center gap-1"><PackageSearch className="h-4 w-4 text-primary"/> Other Purchased Items:</p>
+                                                    <ul className="list-disc list-inside text-xs space-y-0.5">
+                                                      {row.unmatchedPurchasedItems.map(p => <li key={p}>{p}</li>)}
+                                                    </ul>
+                                                  </>
+                                                )}
+                                              </div>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                  </TableCell>
+                                  <TableCell className="text-right font-mono">{formatCurrency(row.amount)}</TableCell>
+                                  <TableCell>
+                                      <div className="flex items-center justify-center gap-3">
+                                          <Progress value={row.loyaltyScore} className="w-24 h-2" indicatorClassName={getLoyaltyColorClass(row.loyaltyScore)} />
+                                          <span className="font-semibold text-foreground">{row.loyaltyScore}%</span>
+                                      </div>
+                                  </TableCell>
+                              </TableRow>
+                             );
+                          })
+                      ) : (
+                          <TableRow>
+                              <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
+                                  <PackageSearch className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                  No order data to display.
+                              </TableCell>
+                          </TableRow>
+                      )}
+                  </TableBody>
+              </Table>
+          </CardContent>
+          <CardFooter className="py-4 border-t">
+            {renderPagination()}
+          </CardFooter>
+        </Card>
+      </div>
+
+      <Dialog open={isDialogVisible} onOpenChange={setIsDialogVisible}>
+        <DialogContent className="sm:max-w-md">
+          {selectedBusiness && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{selectedBusiness.businessName}</DialogTitle>
+                <DialogDescription>
+                  Contact information for this business.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4 space-y-4">
+                <div className="flex items-center gap-3">
+                  <Phone className="h-5 w-5 text-primary" />
+                  <span className="font-mono text-lg">{selectedBusiness.phoneNumber}</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 text-primary mt-1" />
+                  <p className="text-muted-foreground">{selectedBusiness.address}</p>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
