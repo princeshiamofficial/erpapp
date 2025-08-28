@@ -339,7 +339,7 @@ export default function PayrollPage() {
     </Card>
   );
 
-  const employeeReportContent = (
+  const salarySheetContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
       <CardHeader className="p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -366,6 +366,7 @@ export default function PayrollPage() {
                 <TableHead>Fine</TableHead>
                 <TableHead>Incentive</TableHead>
                 <TableHead>Payable Amount</TableHead>
+                <TableHead className="text-center">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -380,6 +381,7 @@ export default function PayrollPage() {
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : paginatedEmployees.length > 0 ? (
@@ -393,19 +395,22 @@ export default function PayrollPage() {
                         <TableCell>{formatCurrency(100)}</TableCell> {/* Placeholder */}
                         <TableCell>{formatCurrency(1500)}</TableCell> {/* Placeholder */}
                         <TableCell className="font-semibold">{formatCurrency((employee.salary || 0) + 1500 - 100 - 500)}</TableCell> {/* Placeholder */}
+                        <TableCell className="text-center">
+                          <Button variant="outline" size="sm" className="h-8">View Payslip</Button>
+                        </TableCell>
                     </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-48 text-center text-gray-500">
-                    No employee report data available.
+                  <TableCell colSpan={9} className="h-48 text-center text-gray-500">
+                    No salary sheet data available.
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
             <TableFooter>
                 <TableRow>
-                    <TableCell colSpan={7} className="text-right font-bold">Total Payable</TableCell>
+                    <TableCell colSpan={8} className="text-right font-bold">Total Payable</TableCell>
                     <TableCell className="font-bold">{formatCurrency(totalPayableAmount)}</TableCell>
                 </TableRow>
             </TableFooter>
@@ -487,7 +492,7 @@ export default function PayrollPage() {
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'employee_report':
-        return employeeReportContent;
+        return salarySheetContent;
       case 'employee_list':
         return employeeListContent;
       case 'employee_performance':
