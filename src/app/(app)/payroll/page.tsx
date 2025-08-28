@@ -35,7 +35,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Progress } from '@/components/ui/progress';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
@@ -167,6 +167,17 @@ export default function PayrollPage() {
     const employeeUserIds = new Set(employees.map(e => e.userId));
     return allUsers.filter(u => !employeeUserIds.has(u.id));
   }, [employees, allUsers]);
+  
+  const totalPayableAmount = useMemo(() => {
+    return paginatedEmployees.reduce((total, employee) => {
+      // Assuming placeholder logic for now. Replace with actual calculation.
+      const incentive = 1500; // Placeholder
+      const fine = 100; // Placeholder
+      const fund = 500; // Placeholder
+      const payable = (employee.salary || 0) + incentive - fine - fund;
+      return total + payable;
+    }, 0);
+  }, [paginatedEmployees]);
 
   const employeeListContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
@@ -371,7 +382,7 @@ export default function PayrollPage() {
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                   </TableRow>
                 ))
-              ) : !isLoading && paginatedEmployees.length > 0 ? (
+              ) : paginatedEmployees.length > 0 ? (
                 paginatedEmployees.map((employee) => (
                     <TableRow key={employee.id}>
                         <TableCell className="font-medium">{employee.name}</TableCell>
@@ -381,7 +392,7 @@ export default function PayrollPage() {
                         <TableCell>{formatCurrency(500)}</TableCell> {/* Placeholder */}
                         <TableCell>{formatCurrency(100)}</TableCell> {/* Placeholder */}
                         <TableCell>{formatCurrency(1500)}</TableCell> {/* Placeholder */}
-                        <TableCell className="font-semibold">{formatCurrency(employee.salary ? employee.salary + 1500 - 600 : 0)}</TableCell> {/* Placeholder */}
+                        <TableCell className="font-semibold">{formatCurrency((employee.salary || 0) + 1500 - 100 - 500)}</TableCell> {/* Placeholder */}
                     </TableRow>
                 ))
               ) : (
@@ -392,6 +403,12 @@ export default function PayrollPage() {
                 </TableRow>
               )}
             </TableBody>
+            <TableFooter>
+                <TableRow>
+                    <TableCell colSpan={7} className="text-right font-bold">Total Payable</TableCell>
+                    <TableCell className="font-bold">{formatCurrency(totalPayableAmount)}</TableCell>
+                </TableRow>
+            </TableFooter>
           </Table>
         </div>
          {totalPages > 1 && (
