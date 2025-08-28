@@ -359,7 +359,7 @@ export default function PayrollPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                Array.from({ length: 5 }).map((_, index) => (
+                [...Array(5)].map((_, index) => (
                   <TableRow key={index}>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
@@ -442,7 +442,7 @@ export default function PayrollPage() {
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                Array.from({ length: 5 }).map((_, index) => (
+                [...Array(5)].map((_, index) => (
                   <TableRow key={index}>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-20" /></div></TableCell>
