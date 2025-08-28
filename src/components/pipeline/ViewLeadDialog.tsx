@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, FormEvent, useMemo, useEffect } from 'react';
@@ -259,11 +258,11 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" />Delete Activity?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to delete this activity?
-                <blockquote className="mt-2 text-sm italic border-l-4 pl-2 text-foreground/80">"{activityToDelete.activity}"</blockquote>
-                This action cannot be undone.
-              </AlertDialogDescription>
+              <div className="pt-2 text-sm text-muted-foreground">
+                <p>Are you sure you want to delete this activity?</p>
+                <blockquote className="mt-2 p-2 border-l-4 border-muted-foreground bg-muted text-foreground italic rounded-r-md">"{activityToDelete.activity}"</blockquote>
+                <p className="mt-2">This action cannot be undone.</p>
+              </div>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setActivityToDelete(null)} disabled={isDeletingActivity}>Cancel</AlertDialogCancel>
