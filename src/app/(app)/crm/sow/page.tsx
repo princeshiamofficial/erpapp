@@ -328,6 +328,7 @@ export default function SOWPage() {
             <Table>
                 <TableHeader>
                     <TableRow>
+                        <TableHead className="w-[50px]">SL</TableHead>
                         <TableHead>
                            <Button variant="ghost" onClick={() => requestSort('orderDate')}>
                                 Order Date <ArrowUpDown className="ml-2 h-4 w-4" />
@@ -351,6 +352,7 @@ export default function SOWPage() {
                     {isLoading ? (
                          Array.from({ length: 5 }).map((_, index) => (
                            <TableRow key={index}>
+                                <TableCell><Skeleton className="h-5 w-8" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-3/4" /></TableCell>
                                 <TableCell><Skeleton className="h-4 w-full" /></TableCell>
@@ -359,11 +361,12 @@ export default function SOWPage() {
                            </TableRow>
                         ))
                     ) : paginatedData.length > 0 ? (
-                        paginatedData.map((row) => {
+                        paginatedData.map((row, index) => {
                            const totalPurchasedCount = row.purchasedCategories.length + row.unmatchedPurchasedItems.length;
                            const totalPossibleCategories = row.allCategories.length;
                            return (
                             <TableRow key={row.id} className="hover:bg-muted/50">
+                                <TableCell className="font-medium text-muted-foreground">{(currentPage - 1) * ITEMS_PER_PAGE + index + 1}</TableCell>
                                 <TableCell className="text-muted-foreground">{formatDate(row.orderDate)}</TableCell>
                                 <TableCell className="font-medium text-foreground">{row.businessName}</TableCell>
                                 <TableCell>
@@ -421,7 +424,7 @@ export default function SOWPage() {
                         })
                     ) : (
                         <TableRow>
-                            <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
+                            <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
                                 <PackageSearch className="h-12 w-12 mx-auto mb-2 opacity-50" />
                                 No order data to display.
                             </TableCell>
