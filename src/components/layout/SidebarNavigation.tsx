@@ -44,6 +44,7 @@ interface NavItem {
   disabled?: boolean;
   isHeader?: boolean;
   subItems?: NavItem[];
+  external?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -58,7 +59,7 @@ const navItems: NavItem[] = [
       { href: "/pipeline", label: "Pipe Line", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
       { href: "/crm/all-districts-data", label: "ADD", icon: Map, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
       { href: "/crm/sow", label: "SOW", icon: FolderHeart, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
-      { href: "https://colorhutbd.xyz/info", label: "AdEx", icon: MapPin, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
+      { href: "https://colorhutbd.xyz/info", label: "AdEx", icon: MapPin, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"], external: true },
     ]
   },
   { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
@@ -195,6 +196,11 @@ export function SidebarNavigation() {
                         return null;
                       }
                       const isSubActive = subItem.href && (pathname === subItem.href || pathname.startsWith(subItem.href));
+                      
+                      const linkProps = subItem.external 
+                        ? { target: "_blank", rel: "noopener noreferrer" } 
+                        : {};
+
                       return (
                         <SidebarMenuSubItem key={subItem.href}>
                            <Link href={subItem.href} passHref legacyBehavior>
@@ -203,7 +209,7 @@ export function SidebarNavigation() {
                               isActive={isSubActive}
                               disabled={subItem.disabled}
                             >
-                                <a className="flex items-center w-full">
+                                <a className="flex items-center w-full" {...linkProps}>
                                   <subItem.icon className="mr-3 h-4 w-4 shrink-0" />
                                   <span className="truncate text-sm">{subItem.label}</span>
                                 </a>
