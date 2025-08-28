@@ -23,11 +23,11 @@ import {
   Landmark,
   Shield, 
   ChevronDown,
-  Map, // Added Map icon
-  ShoppingCart, // Added ShoppingCart icon for Purchase Request
-  Printer,
+  Map,
+  ShoppingCart,
   FolderHeart,
-  DatabaseZap, // Added DatabaseZap icon for backup
+  DatabaseZap,
+  MapPin, 
 } from "lucide-react";
 import type { UserRole, GlobalSettings } from "@/types";
 import { cn } from "@/lib/utils";
@@ -58,7 +58,7 @@ const navItems: NavItem[] = [
       { href: "/pipeline", label: "Pipe Line", icon: Briefcase, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
       { href: "/crm/all-districts-data", label: "ADD", icon: Map, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
       { href: "/crm/sow", label: "SOW", icon: FolderHeart, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
-      { href: "https://colorhutbd.xyz/info", label: "AdEx", icon: Printer, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
+      { href: "https://colorhutbd.xyz/info", label: "AdEx", icon: MapPin, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
     ]
   },
   { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
