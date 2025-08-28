@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, FormEvent, useMemo, useEffect } from 'react';
@@ -92,20 +91,6 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
   useEffect(() => {
     setLead(initialLead); // Sync with prop when it changes
   }, [initialLead]);
-
-  useEffect(() => {
-    if (isOpen && lead) {
-      const intervalId = setInterval(async () => {
-        const freshLead = await getLeadByIdAction(lead.id);
-        if (freshLead && JSON.stringify(freshLead) !== JSON.stringify(lead)) {
-            setLead(freshLead);
-        }
-      }, 30000); // Poll every 30 seconds
-
-      return () => clearInterval(intervalId); // Cleanup on close
-    }
-  }, [isOpen, lead]);
-
 
   const handleSubmitActivity = async (e: FormEvent) => {
     e.preventDefault();
