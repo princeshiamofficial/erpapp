@@ -47,7 +47,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR"] },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR"] },
   { 
     isHeader: true,
     label: "CRM", 
@@ -92,7 +92,7 @@ export function SidebarNavigation() {
   const { currentUser } = useAuth();
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [openMenus, setOpenMenus] = useState<Record<string, boolean>>({});
-  const { state: sidebarState } = useSidebar();
+  const { state: sidebarState, isMobile, openMobile } = useSidebar();
 
   useEffect(() => {
     async function fetchSettings() {
@@ -134,6 +134,8 @@ export function SidebarNavigation() {
   if (!currentUser) return null;
 
   const userRole = currentUser.role;
+  
+  const isSidebarExpanded = isMobile ? openMobile : sidebarState === 'expanded';
 
   const renderNavItems = (items: NavItem[]) => {
     return items.map((item) => {
@@ -178,7 +180,7 @@ export function SidebarNavigation() {
               </SidebarMenuButton>
             </SidebarMenuItem>
             <AnimatePresence>
-              {isMenuOpen && sidebarState === 'expanded' && (
+              {isMenuOpen && isSidebarExpanded && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
