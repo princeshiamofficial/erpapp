@@ -105,6 +105,44 @@ export async function addLeadActivityAction(
   }
 }
 
+export async function deleteLeadActivityAction(
+    leadId: string,
+    activityId: string,
+    actingUser: User
+): Promise<{ success: boolean; lead?: Lead; error?: string }> {
+    if (actingUser.role !== 'SYSTEM_ADMIN') {
+        return { success: false, error: "Permission denied." };
+    }
+    try {
+        const lead = await getLeadById(leadId);
+        if (!lead) {
+            return { success: false, error: "Lead not found." };
+        }
+
+        const updatedHistory = lead.activityHistory?.filter(act => act.id !== activityId) || [];
+        
+        if (lead.activityHistory && updatedHistory.length === lead.activityHistory.length) {
+            return { success: false, error: "Activity to delete was not found." };
+        }
+        
+        const success = await updateLead(leadId, { activityHistory: updatedHistory });
+
+        if (success) {
+            revalidatePath("/(app)/pipeline");
+            const updatedLead = await getLeadById(leadId);
+            if (!updatedLead) {
+                return { success: false, error: "Failed to retrieve updated lead after deleting activity." };
+            }
+            return { success: true, lead: updatedLead };
+        }
+        return { success: false, error: "Failed to delete activity from lead." };
+    } catch (error) {
+        console.error("Error in deleteLeadActivityAction:", error);
+        return { success: false, error: error instanceof Error ? error.message : "An unexpected server error occurred." };
+    }
+}
+
+
 export async function addLeadsBatchAction(
   leadsData: Omit<Lead, 'id' | 'crmId' | 'crmName'>[],
   currentUser: User

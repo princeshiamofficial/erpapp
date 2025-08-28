@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, FormEvent, useMemo, useEffect } from 'react';
@@ -17,13 +18,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { addLeadActivityAction, getLeadByIdAction } from '@/app/(app)/pipeline/actions';
+import { addLeadActivityAction, getLeadByIdAction, deleteLeadActivityAction } from '@/app/(app)/pipeline/actions';
 import type { Lead, User, LeadActivity } from '@/types';
-import { Loader2, Edit, Phone, Building, MapPin, StickyNote, Bot, CalendarDays, User as UserIcon, Activity, Briefcase, PhoneCall, FileText, Users, MessageSquare, PlusCircle } from 'lucide-react';
+import { Loader2, Edit, Phone, Building, MapPin, StickyNote, Bot, CalendarDays, User as UserIcon, Activity, Briefcase, PhoneCall, FileText, Users, MessageSquare, PlusCircle, Trash2, AlertTriangle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 
 interface ViewLeadDialogProps {
@@ -82,6 +84,8 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
   const [newActivity, setNewActivity] = useState('');
   const [newActivityNotes, setNewActivityNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activityToDelete, setActivityToDelete] = useState<LeadActivity | null>(null);
+  const [isDeletingActivity, setIsDeletingActivity] = useState(false);
   const { toast } = useToast();
 
   const activityHistory = useMemo(() => {
@@ -102,7 +106,6 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
 
     const originalLeadState = lead;
 
-    // Call the server action with the original lead state
     const result = await addLeadActivityAction(lead.id, {
       activity: newActivity,
       notes: newActivityNotes,
@@ -112,117 +115,165 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
 
     if (result.success && result.lead) {
       toast({ title: "Activity Added", description: "New activity has been logged for this lead." });
-      setLead(result.lead); // Set the state to the definitive version from the server
+      setLead(result.lead);
       onLeadUpdated(result.lead);
       setNewActivity('');
       setNewActivityNotes('');
     } else {
       toast({ title: "Error", description: result.error || "Failed to add activity. Please try again.", variant: "destructive" });
-      setLead(originalLeadState); // Revert UI on failure
+      setLead(originalLeadState);
     }
   };
+  
+  const handleDeleteActivity = async () => {
+    if (!lead || !activityToDelete || !currentUser) return;
+    
+    setIsDeletingActivity(true);
+    const result = await deleteLeadActivityAction(lead.id, activityToDelete.id, currentUser);
+    setIsDeletingActivity(false);
+
+    if (result.success && result.lead) {
+        toast({ title: "Activity Deleted", description: "The activity has been removed from the log." });
+        setLead(result.lead);
+        onLeadUpdated(result.lead);
+    } else {
+        toast({ title: "Error", description: result.error || "Could not delete activity.", variant: "destructive" });
+    }
+    setActivityToDelete(null);
+  };
+
 
   if (!lead) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg md:max-w-2xl lg:max-w-4xl max-h-[90vh]">
-        <DialogHeader className="pr-12">
-          <DialogTitle className="flex items-center gap-2 text-2xl">
-            <Briefcase className="h-6 w-6 text-primary"/>
-            Lead Details
-          </DialogTitle>
-          <DialogDescription>
-            Viewing lead for <span className="font-semibold text-foreground">{lead.contactName}</span>
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 py-4">
-          {/* Lead Info Column */}
-          <div className="lg:col-span-1 space-y-4">
-            <div className="p-4 border rounded-lg bg-card space-y-3 shadow-sm">
-                <div className="flex justify-between items-start">
-                    <h3 className="font-semibold text-lg text-foreground">{lead.contactName}</h3>
-                    <Badge variant="secondary" className={cn("capitalize", getCategoryClass(lead.category))}>{lead.category}</Badge>
-                </div>
-                <div className="space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2"><Building className="h-4 w-4 text-primary/80"/><span>{lead.businessName}</span></div>
-                    <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary/80"/><span>{lead.phone}</span></div>
-                    <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary/80"/><span>{lead.address}</span></div>
-                    <div className="flex items-center gap-2"><Bot className="h-4 w-4 text-primary/80"/><span>Source: {lead.source}</span></div>
-                    <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-primary/80"/><span>Added: {formatDateSafe(lead.date)}</span></div>
-                    {lead.schedule && <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium"><CalendarDays className="h-4 w-4"/><span>Schedule: {formatDateSafe(lead.schedule)}</span></div>}
-                    <div className="flex items-center gap-2"><UserIcon className="h-4 w-4 text-primary/80"/><span>CRM: {lead.crmName}</span></div>
-                </div>
-                 {lead.notes && <div className="pt-2 border-t border-dashed">
-                    <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                        <StickyNote className="h-4 w-4 mt-0.5 text-primary/80 shrink-0"/>
-                        <p className="whitespace-pre-wrap">{lead.notes}</p>
-                    </div>
-                 </div>}
-                 <div className="flex justify-end pt-2">
-                    <Button variant="outline" size="sm" onClick={() => onEditRequest(lead)}>
-                        <Edit className="h-4 w-4 mr-2" /> Edit Lead
-                    </Button>
-                 </div>
+    <>
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-lg md:max-w-2xl lg:max-w-4xl max-h-[90vh]">
+          <DialogHeader className="pr-12">
+            <DialogTitle className="flex items-center gap-2 text-2xl">
+              <Briefcase className="h-6 w-6 text-primary"/>
+              Lead Details
+            </DialogTitle>
+            <DialogDescription>
+              Viewing lead for <span className="font-semibold text-foreground">{lead.contactName}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 py-4">
+            {/* Lead Info Column */}
+            <div className="lg:col-span-1 space-y-4">
+              <div className="p-4 border rounded-lg bg-card space-y-3 shadow-sm">
+                  <div className="flex justify-between items-start">
+                      <h3 className="font-semibold text-lg text-foreground">{lead.contactName}</h3>
+                      <Badge variant="secondary" className={cn("capitalize", getCategoryClass(lead.category))}>{lead.category}</Badge>
+                  </div>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2"><Building className="h-4 w-4 text-primary/80"/><span>{lead.businessName}</span></div>
+                      <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-primary/80"/><span>{lead.phone}</span></div>
+                      <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary/80"/><span>{lead.address}</span></div>
+                      <div className="flex items-center gap-2"><Bot className="h-4 w-4 text-primary/80"/><span>Source: {lead.source}</span></div>
+                      <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-primary/80"/><span>Added: {formatDateSafe(lead.date)}</span></div>
+                      {lead.schedule && <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium"><CalendarDays className="h-4 w-4"/><span>Schedule: {formatDateSafe(lead.schedule)}</span></div>}
+                      <div className="flex items-center gap-2"><UserIcon className="h-4 w-4 text-primary/80"/><span>CRM: {lead.crmName}</span></div>
+                  </div>
+                   {lead.notes && <div className="pt-2 border-t border-dashed">
+                      <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <StickyNote className="h-4 w-4 mt-0.5 text-primary/80 shrink-0"/>
+                          <p className="whitespace-pre-wrap">{lead.notes}</p>
+                      </div>
+                   </div>}
+                   <div className="flex justify-end pt-2">
+                      <Button variant="outline" size="sm" onClick={() => onEditRequest(lead)}>
+                          <Edit className="h-4 w-4 mr-2" /> Edit Lead
+                      </Button>
+                   </div>
+              </div>
+            </div>
+            {/* Activity Column */}
+            <div className="lg:col-span-2 space-y-4">
+              <div className="p-4 border rounded-lg bg-card shadow-sm">
+                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2"><Activity className="h-5 w-5 text-primary"/>Activity Log</h3>
+                  <ScrollArea className="h-64 pr-4 -mr-4">
+                      <Timeline>
+                          {activityHistory.map((item, index) => (
+                          <TimelineItem key={item.id}>
+                              <TimelineConnector />
+                              <TimelineHeader>
+                              <TimelineIcon>{getActivityIcon(item.activity)}</TimelineIcon>
+                              <TimelineTitle>{item.activity}</TimelineTitle>
+                              <span className="text-xs text-muted-foreground ml-auto">{formatDateSafe(item.timestamp, true)}</span>
+                              </TimelineHeader>
+                              <TimelineDescription className="flex justify-between items-start">
+                                  <div>
+                                    <p>{item.notes}</p>
+                                    <p className="text-xs text-muted-foreground italic mt-1">- {item.changedByUserName}</p>
+                                  </div>
+                                  {currentUser.role === 'SYSTEM_ADMIN' && (
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0" onClick={() => setActivityToDelete(item)} title="Delete Activity">
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                              </TimelineDescription>
+                          </TimelineItem>
+                          ))}
+                      </Timeline>
+                      {activityHistory.length === 0 && (
+                          <div className="text-center text-muted-foreground py-10">No activities logged yet.</div>
+                      )}
+                  </ScrollArea>
+                  <Separator className="my-4"/>
+                  <form onSubmit={handleSubmitActivity} className="space-y-3">
+                      <h4 className="font-semibold text-md">Add New Activity</h4>
+                      <div className="space-y-1">
+                          <Label htmlFor="activity-type">Activity Type *</Label>
+                          <Select value={newActivity} onValueChange={setNewActivity} required>
+                              <SelectTrigger id="activity-type"><SelectValue placeholder="Select an activity..." /></SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="Follow-up Call">Follow-up Call</SelectItem>
+                                  <SelectItem value="Sent Proposal">Sent Proposal</SelectItem>
+                                  <SelectItem value="Meeting">Meeting</SelectItem>
+                                  <SelectItem value="Site Visit">Site Visit</SelectItem>
+                                  <SelectItem value="Negotiation">Negotiation</SelectItem>
+                                  <SelectItem value="No Response">No Response</SelectItem>
+                                  <SelectItem value="Other">Other</SelectItem>
+                              </SelectContent>
+                          </Select>
+                      </div>
+                       <div className="space-y-1">
+                          <Label htmlFor="activity-notes">Notes (Optional)</Label>
+                          <Textarea id="activity-notes" value={newActivityNotes} onChange={(e) => setNewActivityNotes(e.target.value)} placeholder="Add details about the activity..."/>
+                      </div>
+                      <div className="flex justify-end">
+                          <Button type="submit" disabled={isSubmitting || !newActivity}>
+                              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Adding...</> : "Add Activity"}
+                          </Button>
+                      </div>
+                  </form>
+              </div>
             </div>
           </div>
-          {/* Activity Column */}
-          <div className="lg:col-span-2 space-y-4">
-            <div className="p-4 border rounded-lg bg-card shadow-sm">
-                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2"><Activity className="h-5 w-5 text-primary"/>Activity Log</h3>
-                <ScrollArea className="h-64 pr-4 -mr-4">
-                    <Timeline>
-                        {activityHistory.map((item, index) => (
-                        <TimelineItem key={item.id}>
-                            <TimelineConnector />
-                            <TimelineHeader>
-                            <TimelineIcon>{getActivityIcon(item.activity)}</TimelineIcon>
-                            <TimelineTitle>{item.activity}</TimelineTitle>
-                            <span className="text-xs text-muted-foreground ml-auto">{formatDateSafe(item.timestamp, true)}</span>
-                            </TimelineHeader>
-                            <TimelineDescription>
-                                <p>{item.notes}</p>
-                                <p className="text-xs text-muted-foreground italic mt-1">- {item.changedByUserName}</p>
-                            </TimelineDescription>
-                        </TimelineItem>
-                        ))}
-                    </Timeline>
-                    {activityHistory.length === 0 && (
-                        <div className="text-center text-muted-foreground py-10">No activities logged yet.</div>
-                    )}
-                </ScrollArea>
-                <Separator className="my-4"/>
-                <form onSubmit={handleSubmitActivity} className="space-y-3">
-                    <h4 className="font-semibold text-md">Add New Activity</h4>
-                    <div className="space-y-1">
-                        <Label htmlFor="activity-type">Activity Type *</Label>
-                        <Select value={newActivity} onValueChange={setNewActivity} required>
-                            <SelectTrigger id="activity-type"><SelectValue placeholder="Select an activity..." /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Follow-up Call">Follow-up Call</SelectItem>
-                                <SelectItem value="Sent Proposal">Sent Proposal</SelectItem>
-                                <SelectItem value="Meeting">Meeting</SelectItem>
-                                <SelectItem value="Site Visit">Site Visit</SelectItem>
-                                <SelectItem value="Negotiation">Negotiation</SelectItem>
-                                <SelectItem value="No Response">No Response</SelectItem>
-                                <SelectItem value="Other">Other</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div className="space-y-1">
-                        <Label htmlFor="activity-notes">Notes (Optional)</Label>
-                        <Textarea id="activity-notes" value={newActivityNotes} onChange={(e) => setNewActivityNotes(e.target.value)} placeholder="Add details about the activity..."/>
-                    </div>
-                    <div className="flex justify-end">
-                        <Button type="submit" disabled={isSubmitting || !newActivity}>
-                            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Adding...</> : "Add Activity"}
-                        </Button>
-                    </div>
-                </form>
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+      
+      {activityToDelete && (
+        <AlertDialog open={!!activityToDelete} onOpenChange={() => setActivityToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive" />Delete Activity?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this activity?
+                <blockquote className="mt-2 text-sm italic border-l-4 pl-2 text-foreground/80">"{activityToDelete.activity}"</blockquote>
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setActivityToDelete(null)} disabled={isDeletingActivity}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteActivity} disabled={isDeletingActivity} className="bg-destructive hover:bg-destructive/90">
+                {isDeletingActivity ? <><Loader2 className="h-4 w-4 animate-spin mr-2"/>Deleting...</> : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </>
   );
 }
