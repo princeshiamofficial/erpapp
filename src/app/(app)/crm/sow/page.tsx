@@ -1,8 +1,7 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,7 +17,17 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+
 
 interface SowData {
   id: string; // Using Job ID as the unique key
@@ -30,6 +39,8 @@ interface SowData {
   amount: number;
   loyaltyScore: number;
 }
+
+const ITEMS_PER_PAGE = 12;
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-BD', {
@@ -49,7 +60,6 @@ const formatDate = (dateString?: string) => {
 
 const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings | null): SowData[] => {
     const filters = globalSettings?.reportProductFilters || [];
-    const categoryPercentage = filters.length > 0 ? 100 / filters.length : 0;
 
     const ordersByJobId = new Map<string, { orders: TrackingLink[], businessName: string, latestDate: string }>();
 
@@ -76,10 +86,12 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
         if (allItemsFromGroup.length > 0) {
             allItemsFromGroup.forEach(item => {
                 let isItemMatched = false;
-                for (const filter of filters) {
-                    if (item.model.toLowerCase().includes(filter.toLowerCase())) {
-                        matchedFilters.add(filter);
-                        isItemMatched = true;
+                if (filters.length > 0) {
+                    for (const filter of filters) {
+                        if (item.model.toLowerCase().includes(filter.toLowerCase())) {
+                            matchedFilters.add(filter);
+                            isItemMatched = true;
+                        }
                     }
                 }
                 if (!isItemMatched) {
@@ -93,18 +105,18 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
             return sum + orderTotal;
         }, 0);
         
-        const totalPurchasedCount = matchedFilters.size + unmatchedItems.size;
-        const loyaltyScore = totalPurchasedCount * categoryPercentage;
+        // New loyalty score calculation: 1% for every 1000 in amount, capped at 100%
+        const loyaltyScore = Math.min(100, Math.floor(totalAmount / 1000));
 
         return {
             id: jobId,
-            orderDate: formatDate(group.latestDate),
+            orderDate: group.latestDate, // Store as ISO string for sorting
             businessName: group.businessName,
             purchasedCategories: Array.from(matchedFilters),
             unmatchedPurchasedItems: Array.from(unmatchedItems),
             allCategories: filters,
             amount: totalAmount,
-            loyaltyScore: Math.min(100, Math.round(loyaltyScore)),
+            loyaltyScore: loyaltyScore,
         };
     }).sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
 };
@@ -122,6 +134,7 @@ export default function SOWPage() {
   const [sowData, setSowData] = useState<SowData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -145,6 +158,91 @@ export default function SOWPage() {
     };
     fetchData();
   }, [toast]);
+  
+  const totalPages = Math.ceil(sowData.length / ITEMS_PER_PAGE);
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return sowData.slice(startIndex, endIndex);
+  }, [sowData, currentPage]);
+  
+  const renderPagination = () => {
+    if (totalPages <= 1) return null;
+    const pageNumbers = [];
+    const maxPagesToShow = 5;
+
+    if (totalPages <= maxPagesToShow) {
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      let startPage = Math.max(1, currentPage - 2);
+      let endPage = Math.min(totalPages, currentPage + 2);
+
+      if (currentPage < 3) {
+        endPage = maxPagesToShow;
+      } else if (currentPage > totalPages - 2) {
+        startPage = totalPages - maxPagesToShow + 1;
+      }
+
+      if (startPage > 1) {
+        pageNumbers.push(1);
+        if (startPage > 2) {
+          pageNumbers.push('...');
+        }
+      }
+
+      for (let i = startPage; i <= endPage; i++) {
+        pageNumbers.push(i);
+      }
+
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+          pageNumbers.push('...');
+        }
+        pageNumbers.push(totalPages);
+      }
+    }
+
+    return (
+      <Pagination>
+        <PaginationContent>
+          <PaginationItem>
+            <PaginationPrevious
+              href="#"
+              onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }}
+              aria-disabled={currentPage === 1}
+              className={currentPage === 1 ? "pointer-events-none opacity-50" : ""}
+            />
+          </PaginationItem>
+          {pageNumbers.map((page, index) => (
+            <PaginationItem key={index}>
+              {page === '...' ? (
+                <PaginationEllipsis />
+              ) : (
+                <PaginationLink
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); setCurrentPage(page as number); }}
+                  isActive={currentPage === page}
+                >
+                  {page}
+                </PaginationLink>
+              )}
+            </PaginationItem>
+          ))}
+          <PaginationItem>
+            <PaginationNext
+              href="#"
+              onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }}
+              aria-disabled={currentPage === totalPages}
+              className={currentPage === totalPages ? "pointer-events-none opacity-50" : ""}
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    );
+  };
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -184,55 +282,56 @@ export default function SOWPage() {
                                 <TableCell><Skeleton className="h-5 w-40 mx-auto" /></TableCell>
                            </TableRow>
                         ))
-                    ) : sowData.length > 0 ? (
-                        sowData.map((row) => {
+                    ) : paginatedData.length > 0 ? (
+                        paginatedData.map((row) => {
+                           const totalCategories = row.allCategories.length > 0 ? row.allCategories.length : (row.purchasedCategories.length + row.unmatchedPurchasedItems.length);
                            const purchasedCount = row.purchasedCategories.length + row.unmatchedPurchasedItems.length;
-                           const totalCategories = row.allCategories.length;
+
                            return (
                             <TableRow key={row.id} className="hover:bg-muted/50">
-                                <TableCell className="text-muted-foreground">{row.orderDate}</TableCell>
+                                <TableCell className="text-muted-foreground">{formatDate(row.orderDate)}</TableCell>
                                 <TableCell className="font-medium text-foreground">{row.businessName}</TableCell>
                                 <TableCell>
-                                  <TooltipProvider delayDuration={100}>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="flex items-center gap-px w-full h-3 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-inner">
-                                          {row.allCategories.map((category, index) => {
-                                            const isPurchased = index < purchasedCount;
-                                            const hue = (index / Math.max(1, totalCategories - 1)) * 120; // Red (0) to green (120)
-                                            return (
-                                                <div
-                                                  key={index}
-                                                  className="h-full flex-1"
-                                                  style={{
-                                                    backgroundColor: isPurchased ? `hsl(${hue}, 70%, 50%)` : 'rgba(209, 213, 219, 0.3)',
-                                                  }}
-                                                />
-                                            );
-                                          })}
-                                        </div>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <div className="p-1 max-w-xs">
-                                          <p className="font-semibold text-sm mb-2 flex items-center gap-1"><ListChecks className="h-4 w-4 text-primary"/> Defined Categories ({row.allCategories.length}):</p>
-                                            <ul className="list-disc list-inside text-xs space-y-0.5">
-                                                {row.allCategories.map(p => {
-                                                  const isBought = row.purchasedCategories.includes(p);
-                                                  return <li key={p} className={cn(isBought ? "font-semibold text-primary" : "text-muted-foreground")}>{p} {isBought ? '(Purchased)' : ''}</li>
+                                  <TooltipProvider>
+                                      <Tooltip>
+                                          <TooltipTrigger asChild>
+                                              <div className="flex items-center gap-px w-full h-3 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-inner">
+                                                {Array.from({ length: totalCategories }).map((_, index) => {
+                                                  const isPurchased = index < purchasedCount;
+                                                  const hue = (index / Math.max(1, totalCategories - 1)) * 120;
+                                                  return (
+                                                    <div
+                                                      key={index}
+                                                      className="h-full flex-1"
+                                                      style={{
+                                                        backgroundColor: isPurchased ? `hsl(${hue}, 70%, 50%)` : 'rgba(209, 213, 219, 0.3)',
+                                                      }}
+                                                    />
+                                                  );
                                                 })}
-                                            </ul>
-                                          
-                                          {row.unmatchedPurchasedItems.length > 0 && (
-                                            <>
-                                              <p className="font-semibold text-sm mt-3 mb-2 flex items-center gap-1"><PackageSearch className="h-4 w-4 text-primary"/> Other Purchased Items:</p>
-                                              <ul className="list-disc list-inside text-xs space-y-0.5">
-                                                {row.unmatchedPurchasedItems.map(p => <li key={p}>{p}</li>)}
-                                              </ul>
-                                            </>
-                                          )}
-                                        </div>
-                                      </TooltipContent>
-                                    </Tooltip>
+                                              </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <div className="p-1 max-w-xs">
+                                              <p className="font-semibold text-sm mb-2 flex items-center gap-1"><ListChecks className="h-4 w-4 text-primary"/> Defined Categories ({row.allCategories.length}):</p>
+                                                <ul className="list-disc list-inside text-xs space-y-0.5">
+                                                    {row.allCategories.map(p => {
+                                                      const isBought = row.purchasedCategories.includes(p);
+                                                      return <li key={p} className={cn(isBought ? "font-semibold text-primary" : "text-muted-foreground")}>{p} {isBought ? '(Purchased)' : ''}</li>
+                                                    })}
+                                                </ul>
+                                              
+                                              {row.unmatchedPurchasedItems.length > 0 && (
+                                                <>
+                                                  <p className="font-semibold text-sm mt-3 mb-2 flex items-center gap-1"><PackageSearch className="h-4 w-4 text-primary"/> Other Purchased Items:</p>
+                                                  <ul className="list-disc list-inside text-xs space-y-0.5">
+                                                    {row.unmatchedPurchasedItems.map(p => <li key={p}>{p}</li>)}
+                                                  </ul>
+                                                </>
+                                              )}
+                                            </div>
+                                          </TooltipContent>
+                                      </Tooltip>
                                   </TooltipProvider>
                                 </TableCell>
                                 <TableCell className="text-right font-mono">{formatCurrency(row.amount)}</TableCell>
@@ -256,6 +355,9 @@ export default function SOWPage() {
                 </TableBody>
             </Table>
         </CardContent>
+        <CardFooter className="py-4 border-t">
+          {renderPagination()}
+        </CardFooter>
       </Card>
     </div>
   );
