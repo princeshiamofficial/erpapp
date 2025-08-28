@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -310,15 +309,6 @@ export default function SOWPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Statement of Work</h1>
-          <p className="text-muted-foreground">
-            An overview of business loyalty and progress.
-          </p>
-        </div>
-      </div>
-      
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
