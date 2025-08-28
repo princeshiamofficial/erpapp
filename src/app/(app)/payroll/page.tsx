@@ -24,7 +24,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter } from 'date-fns';
+import { format, isAfter, getDaysInMonth } from 'date-fns';
 import { deleteEmployeeAction } from './actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -187,14 +187,17 @@ export default function PayrollPage() {
   }, [employees, allUsers]);
   
   const totalPayableAmount = useMemo(() => {
+    const daysInMonth = getDaysInMonth(selectedDate);
     return paginatedEmployees.reduce((total, employee) => {
+      const perDaySalary = (employee.salary || 0) / daysInMonth;
+      const presentDays = 22; // Placeholder
       const incentive = 1500;
       const fine = 100;
       const fund = 500;
-      const payable = (employee.salary || 0) + incentive - fine - fund;
+      const payable = (perDaySalary * presentDays) + incentive - fine - fund;
       return total + payable;
     }, 0);
-  }, [paginatedEmployees]);
+  }, [paginatedEmployees, selectedDate]);
 
   const handleMonthChange = (monthIndex: string) => {
     const newDate = new Date(selectedDate);
@@ -448,14 +451,17 @@ export default function PayrollPage() {
                 ))
               ) : paginatedEmployees.length > 0 ? (
                 paginatedEmployees.map((employee) => {
+                  const daysInMonth = getDaysInMonth(selectedDate);
+                  const perDaySalary = (employee.salary || 0) / daysInMonth;
+                  const presentDays = 22; // Placeholder, to be replaced with actual data
                   const incentive = 1500;
                   const fine = 100;
                   const fund = 500;
-                  const payable = (employee.salary || 0) + incentive - fine - fund;
+                  const payable = (perDaySalary * presentDays) + incentive - fine - fund;
                   return (
                     <TableRow key={employee.id}>
                         <TableCell className="font-medium">{employee.name}</TableCell>
-                        <TableCell>22</TableCell>
+                        <TableCell>{presentDays}</TableCell>
                         <TableCell>2</TableCell>
                         <TableCell>1</TableCell>
                         <TableCell>{formatCurrency(fund)}</TableCell>
@@ -598,6 +604,7 @@ export default function PayrollPage() {
             toast({ title: "Payslip Updated (Simulated)", description: "Payslip details have been updated visually." });
             setPayslipToEdit(null);
           }}
+          selectedDate={selectedDate}
         />
       )}
     </div>

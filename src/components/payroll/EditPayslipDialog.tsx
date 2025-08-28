@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import type { Employee } from '@/types';
+import { getDaysInMonth } from 'date-fns';
 
 // Moved formatCurrency here to avoid import issues
 const formatCurrency = (value?: number | null): string => {
@@ -28,9 +29,10 @@ interface EditPayslipDialogProps {
   onSave: () => void;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  selectedDate: Date; // Added prop
 }
 
-export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange }: EditPayslipDialogProps) {
+export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, selectedDate }: EditPayslipDialogProps) {
   const [present, setPresent] = useState('22');
   const [absent, setAbsent] = useState('2');
   const [late, setLate] = useState('1');
@@ -45,8 +47,14 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange }: Ed
     const incentiveNum = parseFloat(incentive) || 0;
     const fineNum = parseFloat(fine) || 0;
     const fundNum = parseFloat(providentFund) || 0;
-    return baseSalary + incentiveNum - fineNum - fundNum;
-  }, [employee.salary, incentive, fine, providentFund]);
+    
+    // New calculation logic based on days
+    const daysInMonth = getDaysInMonth(selectedDate);
+    const perDaySalary = baseSalary / daysInMonth;
+    const presentDays = parseInt(present, 10) || 0;
+
+    return (perDaySalary * presentDays) + incentiveNum - fineNum - fundNum;
+  }, [employee.salary, incentive, fine, providentFund, present, selectedDate]);
 
   useEffect(() => {
     if (!isOpen) {
