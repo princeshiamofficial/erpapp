@@ -24,7 +24,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, isAfter } from 'date-fns';
 import { deleteEmployeeAction } from './actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -100,15 +100,26 @@ export default function PayrollPage() {
   }, [currentUser, router, fetchData]);
 
   const filteredEmployees = useMemo(() => {
-    if (!searchTerm) return employees;
-    const lowercasedFilter = searchTerm.toLowerCase();
-    return employees.filter(employee =>
-      employee.name.toLowerCase().includes(lowercasedFilter) ||
-      (employee.email && employee.email.toLowerCase().includes(lowercasedFilter)) ||
-      employee.employeeId.toLowerCase().includes(lowercasedFilter) ||
-      employee.designation.toLowerCase().includes(lowercasedFilter)
-    );
-  }, [employees, searchTerm]);
+    let results = employees;
+
+    if (activeTab === 'salary_sheet') {
+      results = results.filter(employee => {
+        const joiningDate = new Date(employee.joiningDate);
+        return !isAfter(joiningDate, selectedDate);
+      });
+    }
+
+    if (searchTerm) {
+      const lowercasedFilter = searchTerm.toLowerCase();
+      results = results.filter(employee =>
+        employee.name.toLowerCase().includes(lowercasedFilter) ||
+        (employee.email && employee.email.toLowerCase().includes(lowercasedFilter)) ||
+        employee.employeeId.toLowerCase().includes(lowercasedFilter) ||
+        employee.designation.toLowerCase().includes(lowercasedFilter)
+      );
+    }
+    return results;
+  }, [employees, searchTerm, activeTab, selectedDate]);
 
   const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
   const paginatedEmployees = useMemo(() => {
@@ -119,7 +130,7 @@ export default function PayrollPage() {
   
   useEffect(() => {
       setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, selectedDate, activeTab]);
 
   const handleDelete = async () => {
     if (!employeeToDelete) return;
@@ -219,7 +230,7 @@ export default function PayrollPage() {
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="relative flex-grow sm:flex-grow-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Employee Position" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+              <Input placeholder="Employee List" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
             </div>
             <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
             <AddEmployeeDialog 
