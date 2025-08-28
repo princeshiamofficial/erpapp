@@ -327,6 +327,85 @@ export default function PayrollPage() {
       </CardContent>
     </Card>
   );
+
+  const employeeReportContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+      <CardHeader className="p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <CardTitle className="text-xl font-bold text-gray-800">Employee Report</CardTitle>
+           <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-grow sm:flex-grow-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+            </div>
+            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-6 pt-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name of Employee</TableHead>
+                <TableHead>Present</TableHead>
+                <TableHead>Absent</TableHead>
+                <TableHead>Late</TableHead>
+                <TableHead>Frund</TableHead>
+                <TableHead>Fine</TableHead>
+                <TableHead>Incentive</TableHead>
+                <TableHead>Payable Amount</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  </TableRow>
+                ))
+              ) : paginatedEmployees.length > 0 ? (
+                 paginatedEmployees.map((employee) => (
+                    <TableRow key={employee.id}>
+                        <TableCell className="font-medium">{employee.name}</TableCell>
+                        <TableCell>22</TableCell> {/* Placeholder */}
+                        <TableCell>2</TableCell> {/* Placeholder */}
+                        <TableCell>1</TableCell> {/* Placeholder */}
+                        <TableCell>{formatCurrency(500)}</TableCell> {/* Placeholder */}
+                        <TableCell>{formatCurrency(100)}</TableCell> {/* Placeholder */}
+                        <TableCell>{formatCurrency(1500)}</TableCell> {/* Placeholder */}
+                        <TableCell className="font-semibold">{formatCurrency(employee.salary ? employee.salary + 1500 - 600 : 0)}</TableCell> {/* Placeholder */}
+                    </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={8} className="h-48 text-center text-gray-500">
+                    No employee report data available.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+         {totalPages > 1 && (
+            <div className="mt-6 flex justify-center">
+                 <Pagination><PaginationContent>
+                    <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
+                    {renderPagination()}
+                    <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
+                </PaginationContent></Pagination>
+            </div>
+        )}
+      </CardContent>
+    </Card>
+  );
   
   const attendeesReportContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
@@ -388,20 +467,14 @@ export default function PayrollPage() {
     </Card>
   );
 
-  const placeholderContent = (title: string) => (
-      <Card className="shadow-lg border-none rounded-2xl bg-white"><CardHeader><CardTitle>{title}</CardTitle></CardHeader>
-          <CardContent className="flex items-center justify-center h-96 text-gray-500"><p>Content for {title} goes here.</p></CardContent>
-      </Card>
-  );
-
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'employee_list':
         return employeeListContent;
       case 'employee_performance':
         return employeePerformanceContent;
-      case 'employee_position':
-        return placeholderContent('Employee Position');
+      case 'employee_report':
+        return employeeReportContent;
       case 'attendees_report':
         return attendeesReportContent;
       default:
@@ -413,7 +486,7 @@ export default function PayrollPage() {
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
-          <TabsTrigger value="employee_position" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee Position</TabsTrigger>
+          <TabsTrigger value="employee_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee Report</TabsTrigger>
           <TabsTrigger value="employee_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee List</TabsTrigger>
           <TabsTrigger value="employee_performance" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee Performance</TabsTrigger>
           <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
