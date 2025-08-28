@@ -197,8 +197,10 @@ export default function PayrollPage() {
       const presentDays = 22; // Placeholder
       const incentive = 1500;
       const fine = 100;
+      const lateDays = 1; // Placeholder
       const providentFund = (employee.salary || 0) * 0.07;
-      const payable = (perDaySalary * presentDays) + incentive - fine - providentFund;
+      const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
+      const payable = (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
       return total + payable;
     }, 0);
   }, [paginatedEmployees, selectedDate]);
@@ -460,14 +462,16 @@ export default function PayrollPage() {
                   const presentDays = 22; // Placeholder, to be replaced with actual data
                   const incentive = 1500;
                   const fine = 100;
+                  const lateDays = 1; // Placeholder
                   const providentFund = (employee.salary || 0) * 0.07;
-                  const payable = (perDaySalary * presentDays) + incentive - fine - providentFund;
+                  const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
+                  const payable = (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
                   return (
                     <TableRow key={employee.id}>
                         <TableCell className="font-medium">{employee.name}</TableCell>
                         <TableCell>{presentDays}</TableCell>
                         <TableCell>2</TableCell>
-                        <TableCell>1</TableCell>
+                        <TableCell>{lateDays}</TableCell>
                         <TableCell>{formatCurrency(providentFund)}</TableCell>
                         <TableCell>{formatCurrency(fine)}</TableCell>
                         <TableCell>{formatCurrency(incentive)}</TableCell>

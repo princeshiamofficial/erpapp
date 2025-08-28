@@ -54,9 +54,12 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     const daysInMonth = getDaysInMonth(selectedDate);
     const perDaySalary = baseSalary / daysInMonth;
     const presentDays = parseInt(present, 10) || 0;
+    const lateDays = parseInt(late, 10) || 0;
 
-    return (perDaySalary * presentDays) + incentiveNum - fineNum - providentFund;
-  }, [employee.salary, incentive, fine, providentFund, present, selectedDate]);
+    const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
+
+    return (perDaySalary * presentDays) + incentiveNum - fineNum - providentFund - lateDeduction;
+  }, [employee.salary, incentive, fine, providentFund, present, late, selectedDate]);
 
   useEffect(() => {
     if (!isOpen) {
