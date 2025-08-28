@@ -41,6 +41,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFoo
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
 const EditEmployeeDialog = dynamic(() => import('@/components/payroll/EditEmployeeDialog').then(mod => mod.EditEmployeeDialog));
 const DeleteEmployeeDialog = dynamic(() => import('@/components/payroll/DeleteEmployeeDialog').then(mod => mod.DeleteEmployeeDialog));
+const EditPayslipDialog = dynamic(() => import('@/components/payroll/EditPayslipDialog').then(mod => mod.EditPayslipDialog));
+
 
 const ITEMS_PER_PAGE = 8;
 
@@ -66,6 +68,8 @@ export default function PayrollPage() {
   const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  const [payslipToEdit, setPayslipToEdit] = useState<Employee | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -401,7 +405,9 @@ export default function PayrollPage() {
                         <TableCell>{formatCurrency(incentive)}</TableCell> {/* Placeholder */}
                         <TableCell className="font-semibold">{formatCurrency(payable)}</TableCell>
                         <TableCell className="text-center">
-                          <Button variant="outline" size="sm" className="h-8">Edit payslip</Button>
+                          <Button variant="outline" size="sm" className="h-8" onClick={() => setPayslipToEdit(employee)}>
+                            Edit payslip
+                          </Button>
                         </TableCell>
                     </TableRow>
                   );
@@ -525,6 +531,19 @@ export default function PayrollPage() {
       </Tabs>
       {employeeToEdit && <EditEmployeeDialog isOpen={!!employeeToEdit} onOpenChange={(open) => !open && setEmployeeToEdit(null)} employee={employeeToEdit} onEmployeeUpdated={fetchData} />}
       {employeeToDelete && <DeleteEmployeeDialog isOpen={!!employeeToDelete} onOpenChange={(open) => !open && setEmployeeToDelete(null)} employee={employeeToDelete} onConfirmDelete={handleDelete} isDeleting={isDeleting} />}
+      {payslipToEdit && (
+        <EditPayslipDialog
+          isOpen={!!payslipToEdit}
+          onOpenChange={(open) => !open && setPayslipToEdit(null)}
+          employee={payslipToEdit}
+          onSave={() => {
+            // For now, this just shows a success toast and closes.
+            toast({ title: "Payslip Updated (Simulated)", description: "Payslip details have been updated visually." });
+            setPayslipToEdit(null);
+            // In a real scenario, you might call an update action and refetch data.
+          }}
+        />
+      )}
     </div>
   );
 }

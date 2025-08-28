@@ -1,0 +1,132 @@
+
+"use client";
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+import type { Employee } from '@/types';
+
+// Moved formatCurrency here to avoid import issues
+const formatCurrency = (value?: number | null): string => {
+  if (value === undefined || value === null) return 'N/A';
+  return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
+};
+
+interface EditPayslipDialogProps {
+  employee: Employee;
+  onSave: () => void;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange }: EditPayslipDialogProps) {
+  const [present, setPresent] = useState('22');
+  const [absent, setAbsent] = useState('2');
+  const [late, setLate] = useState('1');
+  const [providentFund, setProvidentFund] = useState('500');
+  const [fine, setFine] = useState('100');
+  const [incentive, setIncentive] = useState('1500');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+
+  const payableAmount = useMemo(() => {
+    const baseSalary = employee.salary || 0;
+    const incentiveNum = parseFloat(incentive) || 0;
+    const fineNum = parseFloat(fine) || 0;
+    const fundNum = parseFloat(providentFund) || 0;
+    return baseSalary + incentiveNum - fineNum - fundNum;
+  }, [employee.salary, incentive, fine, providentFund]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      // Reset state when dialog is closed
+      setPresent('22');
+      setAbsent('2');
+      setLate('1');
+      setProvidentFund('500');
+      setFine('100');
+      setIncentive('1500');
+      setIsSubmitting(false);
+    }
+  }, [isOpen]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    // In a real app, you would call a server action here to save the data.
+    // For now, we simulate a save and call the onSave callback.
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+    setIsSubmitting(false);
+    onSave();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Payslip for {employee.name}</DialogTitle>
+          <DialogDescription>
+            Adjust the payroll details for this employee for the current period.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="py-4 space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1">
+                    <Label htmlFor="present-days">Present</Label>
+                    <Input id="present-days" type="number" value={present} onChange={e => setPresent(e.target.value)} required />
+                </div>
+                 <div className="space-y-1">
+                    <Label htmlFor="absent-days">Absent</Label>
+                    <Input id="absent-days" type="number" value={absent} onChange={e => setAbsent(e.target.value)} required />
+                </div>
+                 <div className="space-y-1">
+                    <Label htmlFor="late-days">Late</Label>
+                    <Input id="late-days" type="number" value={late} onChange={e => setLate(e.target.value)} required />
+                </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+                 <div className="space-y-1">
+                    <Label htmlFor="provident-fund">Provident Fund</Label>
+                    <Input id="provident-fund" type="number" value={providentFund} onChange={e => setProvidentFund(e.target.value)} required />
+                </div>
+                <div className="space-y-1">
+                    <Label htmlFor="fine">Fine</Label>
+                    <Input id="fine" type="number" value={fine} onChange={e => setFine(e.target.value)} required />
+                </div>
+                <div className="space-y-1">
+                    <Label htmlFor="incentive">Incentive</Label>
+                    <Input id="incentive" type="number" value={incentive} onChange={e => setIncentive(e.target.value)} required />
+                </div>
+            </div>
+            <div className="mt-4 pt-4 border-t">
+                <div className="flex justify-between items-center text-lg font-semibold">
+                    <span>Payable Amount:</span>
+                    <span>{formatCurrency(payableAmount)}</span>
+                </div>
+            </div>
+
+            <DialogFooter className="pt-4">
+                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+                    Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Changes
+                </Button>
+            </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
