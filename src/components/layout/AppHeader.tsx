@@ -64,7 +64,7 @@ export function AppHeader() {
       <div className="container flex h-[4.5rem] items-center justify-between max-w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center">
           {!isLRMobile && (
-            <div className="md:hidden"> 
+            <div className="md:hidden">
               <SidebarTrigger onClick={() => setOpenMobile(true)} className="text-foreground hover:bg-accent hover:text-accent-foreground -ml-2 p-1.5 rounded-md" />
             </div>
           )}

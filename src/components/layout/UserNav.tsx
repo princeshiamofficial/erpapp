@@ -53,7 +53,7 @@ export function UserNav() {
               {currentUser.email}
             </p>
             <p className="text-xs leading-none text-muted-foreground font-semibold pt-1">
-              Role: {currentUser.role}
+              Role: {currentUser.role.replace(/_/g, " ")}
             </p>
           </div>
         </DropdownMenuLabel>
