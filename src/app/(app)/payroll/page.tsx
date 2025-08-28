@@ -55,7 +55,7 @@ export default function PayrollPage() {
   const { currentUser } = useAuth();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState("employee_list");
+  const [activeTab, setActiveTab] = useState("employee_report");
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -343,7 +343,7 @@ export default function PayrollPage() {
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
       <CardHeader className="p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl font-bold text-gray-800">Employee Report</CardTitle>
+          <CardTitle className="text-xl font-bold text-gray-800">Salary Sheet</CardTitle>
            <div className="flex items-center gap-2 w-full sm:w-auto">
             <div className="relative flex-grow sm:flex-grow-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -486,12 +486,12 @@ export default function PayrollPage() {
 
   const renderActiveTab = () => {
     switch (activeTab) {
+      case 'employee_report':
+        return employeeReportContent;
       case 'employee_list':
         return employeeListContent;
       case 'employee_performance':
         return employeePerformanceContent;
-      case 'employee_report':
-        return employeeReportContent;
       case 'attendees_report':
         return attendeesReportContent;
       default:
@@ -503,7 +503,7 @@ export default function PayrollPage() {
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
-          <TabsTrigger value="employee_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee Report</TabsTrigger>
+          <TabsTrigger value="employee_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
           <TabsTrigger value="employee_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee List</TabsTrigger>
           <TabsTrigger value="employee_performance" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee Performance</TabsTrigger>
           <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
