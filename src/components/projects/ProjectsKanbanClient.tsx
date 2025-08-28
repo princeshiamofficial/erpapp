@@ -4,7 +4,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import type { Project, ProjectStatusType, CustomStatus, User, GlobalSettings } from '@/types'; 
-import { KanbanColumn } from '@/components/projects/KanbanColumn';
 import { 
   ClipboardCheck,
   ClipboardX,
@@ -16,7 +15,7 @@ import {
 } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parseISO, isSameWeek, isSameMonth, isSameYear } from 'date-fns';
 import {
   DndContext,
@@ -33,7 +32,6 @@ import {
 } from '@dnd-kit/core';
 import { updateProjectStatusAction } from '@/app/(app)/projects/actions';
 import { useToast } from '@/hooks/use-toast';
-import { ProjectCard } from '@/components/projects/ProjectCard'; 
 import { useAuth } from '@/contexts/auth-context';
 import { CourierConfirmationDialog } from '@/components/projects/CourierConfirmationDialog';
 import { FileUploadConfirmationDialog } from '@/components/projects/FileUploadConfirmationDialog'; 
@@ -43,8 +41,14 @@ import { getStatuses } from '@/lib/status-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import type { TrackingLink } from '@/types';
 import { Briefcase } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { KanbanColumn } from './KanbanColumn';
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
+const ProjectCard = dynamic(() => import('@/components/projects/ProjectCard').then(mod => mod.ProjectCard), {
+  ssr: false,
+});
+
 
 const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: React.ElementType; headerBgClass: string; headerIconClass?: string; headerTextClass?: string }> = [
   { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, headerBgClass: 'bg-sky-600', headerTextClass: 'text-sky-50' },
@@ -55,6 +59,35 @@ const KANBAN_COLUMNS_CONFIG: Array<{ title: string; status: ProjectStatusType; i
   { title: 'Courier', status: 'Courier', icon: CheckCircle, headerBgClass: 'bg-green-600', headerTextClass: 'text-green-50' },
   { title: 'Delivered', status: 'Delivered', icon: PackageCheck, headerBgClass: 'bg-emerald-600', headerTextClass: 'text-emerald-50' },
 ];
+
+function KanbanSkeleton() {
+   return (
+      <div className="flex flex-col h-full space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 px-4 sm:px-0">
+            <Skeleton className="h-10 w-full rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md" />
+            <Skeleton className="h-10 w-full rounded-md" />
+        </div>
+        <div className="flex-1 overflow-x-auto pb-4">
+          <div className="flex space-x-4 min-w-max px-4 sm:px-0">
+            {KANBAN_COLUMNS_CONFIG.map((col) => (
+              <div key={col.status} className="flex-1 min-w-[280px] max-w-[320px] flex flex-col bg-muted/30 rounded-lg shadow-sm">
+                <div className={`px-3 py-2.5 flex items-center justify-between ${col.headerBgClass} text-white rounded-t-lg`}>
+                  <Skeleton className="h-5 w-32 bg-white/30" />
+                  <Skeleton className="h-5 w-6 rounded-full bg-white/30" />
+                </div>
+                <div className="flex-1 p-3 space-y-3">
+                  <Skeleton className="h-20 w-full rounded-md" />
+                  <Skeleton className="h-20 w-full rounded-md" />
+                  <Skeleton className="h-20 w-full rounded-md" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+  );
+}
 
 // No initial props are needed now, as the component fetches its own data.
 export function ProjectsKanbanClient() {
@@ -359,6 +392,11 @@ export function ProjectsKanbanClient() {
     await fetchData(); 
     toast({ title: "DR Assigned", description: `${updatedOrderFromDialog.designerRepresentativeName} assigned to order ${updatedOrderFromDialog.id}.` });
   }, [fetchData, toast]);
+  
+  if (isLoading) {
+    return <KanbanSkeleton />;
+  }
+
 
   return (
     <DndContext 
