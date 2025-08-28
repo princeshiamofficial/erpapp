@@ -71,6 +71,8 @@ const getActivityIcon = (activityType: string) => {
             return <MessageSquare className="h-4 w-4" />;
         case 'Lead Created':
              return <PlusCircle className="h-4 w-4" />;
+        case 'No Response':
+            return <PhoneCall className="h-4 w-4" />;
         default:
             return <Activity className="h-4 w-4" />;
     }
@@ -98,7 +100,7 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
         if (freshLead && JSON.stringify(freshLead) !== JSON.stringify(lead)) {
             setLead(freshLead);
         }
-      }, 200); // Poll every 0.2 seconds
+      }, 30000); // Poll every 30 seconds
 
       return () => clearInterval(intervalId); // Cleanup on close
     }
@@ -129,7 +131,6 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
     };
 
     setLead(newLeadState);
-    // Don't call onLeadUpdated here for optimistic UI to avoid re-rendering parent
     setNewActivity('');
     setNewActivityNotes('');
     
@@ -233,6 +234,7 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
                                 <SelectItem value="Meeting">Meeting</SelectItem>
                                 <SelectItem value="Site Visit">Site Visit</SelectItem>
                                 <SelectItem value="Negotiation">Negotiation</SelectItem>
+                                <SelectItem value="No Response">No Response</SelectItem>
                                 <SelectItem value="Other">Other</SelectItem>
                             </SelectContent>
                         </Select>
