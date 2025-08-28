@@ -401,7 +401,7 @@ export default function PayrollPage() {
                         <TableCell>{formatCurrency(incentive)}</TableCell> {/* Placeholder */}
                         <TableCell className="font-semibold">{formatCurrency(payable)}</TableCell>
                         <TableCell className="text-center">
-                          <Button variant="outline" size="sm" className="h-8">View Payslip</Button>
+                          <Button variant="outline" size="sm" className="h-8">Edit payslip</Button>
                         </TableCell>
                     </TableRow>
                   );
@@ -417,7 +417,7 @@ export default function PayrollPage() {
             <TableFooter>
                 <TableRow>
                     <TableCell colSpan={8} className="text-right font-bold">Total Payable</TableCell>
-                    <TableCell className="font-bold">{formatCurrency(totalPayableAmount)}</TableCell>
+                    <TableCell colSpan={1} className="font-bold text-right">{formatCurrency(totalPayableAmount)}</TableCell>
                 </TableRow>
             </TableFooter>
           </Table>
