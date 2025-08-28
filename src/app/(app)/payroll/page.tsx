@@ -358,7 +358,7 @@ export default function PayrollPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isLoading ? (
+              {isLoading &&
                 [...Array(5)].map((_, index) => (
                   <TableRow key={index}>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
@@ -370,8 +370,8 @@ export default function PayrollPage() {
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                   </TableRow>
-                ))
-              ) : paginatedEmployees.length > 0 ? (
+                ))}
+              {!isLoading && paginatedEmployees.length > 0 &&
                  paginatedEmployees.map((employee) => (
                     <TableRow key={employee.id}>
                         <TableCell className="font-medium">{employee.name}</TableCell>
@@ -383,8 +383,8 @@ export default function PayrollPage() {
                         <TableCell>{formatCurrency(1500)}</TableCell> {/* Placeholder */}
                         <TableCell className="font-semibold">{formatCurrency(employee.salary ? employee.salary + 1500 - 600 : 0)}</TableCell> {/* Placeholder */}
                     </TableRow>
-                ))
-              ) : (
+                ))}
+              {!isLoading && paginatedEmployees.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={8} className="h-48 text-center text-gray-500">
                     No employee report data available.
