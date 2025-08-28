@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
@@ -9,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, OrderItem, GlobalSettings } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
-import { PackageSearch, ListChecks } from 'lucide-react';
+import { PackageSearch, ListChecks, ArrowUpDown } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
@@ -17,7 +18,9 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@/components/ui/tooltip"
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
   Pagination,
   PaginationContent,
@@ -28,6 +31,8 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 
+const ITEMS_PER_PAGE = 12;
+const SOW_DATA_CACHE_KEY = 'sowDataCache';
 
 interface SowData {
   id: string; // Using Job ID as the unique key
@@ -40,7 +45,8 @@ interface SowData {
   loyaltyScore: number;
 }
 
-const ITEMS_PER_PAGE = 12;
+type SortKey = 'orderDate' | 'loyaltyScore' | 'products';
+type SortDirection = 'asc' | 'desc';
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-BD', {
@@ -105,7 +111,6 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
             return sum + orderTotal;
         }, 0);
         
-        // New loyalty score calculation: 1% for every 1000 in amount, capped at 100%
         const loyaltyScore = Math.min(100, Math.floor(totalAmount / 1000));
 
         return {
@@ -118,7 +123,7 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
             amount: totalAmount,
             loyaltyScore: loyaltyScore,
         };
-    }).sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+    });
 };
 
 
@@ -134,11 +139,25 @@ export default function SOWPage() {
   const [sowData, setSowData] = useState<SowData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
-  useEffect(() => {
+   useEffect(() => {
+    const cachedData = localStorage.getItem(SOW_DATA_CACHE_KEY);
+    if (cachedData) {
+      try {
+        setSowData(JSON.parse(cachedData));
+      } catch (e) {
+        console.error("Failed to parse cached SOW data", e);
+        localStorage.removeItem(SOW_DATA_CACHE_KEY);
+      }
+    }
+
     const fetchData = async () => {
-      setIsLoading(true);
+      if (!cachedData) {
+        setIsLoading(true);
+      }
       try {
         const [fetchedOrders, fetchedSettings] = await Promise.all([
           getOrders(),
@@ -146,6 +165,7 @@ export default function SOWPage() {
         ]);
         const data = generateSowData(fetchedOrders, fetchedSettings);
         setSowData(data);
+        localStorage.setItem(SOW_DATA_CACHE_KEY, JSON.stringify(data));
       } catch (error) {
         toast({
           title: "Error fetching data",
@@ -158,14 +178,58 @@ export default function SOWPage() {
     };
     fetchData();
   }, [toast]);
+
+  const requestSort = (key: SortKey) => {
+    let direction: SortDirection = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+    setCurrentPage(1);
+  };
   
-  const totalPages = Math.ceil(sowData.length / ITEMS_PER_PAGE);
+  const sortedAndFilteredData = useMemo(() => {
+    let sortableItems = [...sowData];
+
+    if (searchTerm) {
+        sortableItems = sortableItems.filter(item => 
+            item.businessName.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }
+    
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        if (sortConfig.key === 'products') {
+          const aCount = a.purchasedCategories.length + a.unmatchedPurchasedItems.length;
+          const bCount = b.purchasedCategories.length + b.unmatchedPurchasedItems.length;
+          if (aCount < bCount) return sortConfig.direction === 'asc' ? -1 : 1;
+          if (aCount > bCount) return sortConfig.direction === 'asc' ? 1 : -1;
+          return 0;
+        } else if (sortConfig.key === 'orderDate') {
+          const dateA = new Date(a.orderDate).getTime();
+          const dateB = new Date(b.orderDate).getTime();
+          if (dateA < dateB) return sortConfig.direction === 'asc' ? -1 : 1;
+          if (dateA > dateB) return sortConfig.direction === 'asc' ? 1 : -1;
+          return 0;
+        } else {
+           if (a[sortConfig.key] < b[sortConfig.key]) return sortConfig.direction === 'asc' ? -1 : 1;
+           if (a[sortConfig.key] > b[sortConfig.key]) return sortConfig.direction === 'asc' ? 1 : -1;
+           return 0;
+        }
+      });
+    } else {
+        sortableItems.sort((a,b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+    }
+    return sortableItems;
+  }, [sowData, searchTerm, sortConfig]);
+
+  const totalPages = Math.ceil(sortedAndFilteredData.length / ITEMS_PER_PAGE);
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
-    return sowData.slice(startIndex, endIndex);
-  }, [sowData, currentPage]);
+    return sortedAndFilteredData.slice(startIndex, endIndex);
+  }, [sortedAndFilteredData, currentPage]);
   
   const renderPagination = () => {
     if (totalPages <= 1) return null;
@@ -256,19 +320,40 @@ export default function SOWPage() {
       </div>
       
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-        <CardHeader>
-            <CardTitle>Business Report</CardTitle>
-            <CardDescription>Statement of work based on recent order history.</CardDescription>
+        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle>Business Report</CardTitle>
+              <CardDescription>Statement of work based on recent order history.</CardDescription>
+            </div>
+            <div className="w-full sm:w-auto sm:max-w-xs">
+                <Input 
+                    placeholder="Search by business name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
         </CardHeader>
         <CardContent>
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Order Date</TableHead>
+                        <TableHead>
+                           <Button variant="ghost" onClick={() => requestSort('orderDate')}>
+                                Order Date <ArrowUpDown className="ml-2 h-4 w-4" />
+                           </Button>
+                        </TableHead>
                         <TableHead>Business Name</TableHead>
-                        <TableHead className="w-[40%]">Products</TableHead>
+                        <TableHead className="w-[40%]">
+                           <Button variant="ghost" onClick={() => requestSort('products')}>
+                                Products <ArrowUpDown className="ml-2 h-4 w-4" />
+                           </Button>
+                        </TableHead>
                         <TableHead className="text-right">Amount</TableHead>
-                        <TableHead className="text-center w-[200px]">Loyalty Score</TableHead>
+                        <TableHead className="text-center w-[200px]">
+                           <Button variant="ghost" onClick={() => requestSort('loyaltyScore')}>
+                                Loyalty Score <ArrowUpDown className="ml-2 h-4 w-4" />
+                           </Button>
+                        </TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -284,9 +369,8 @@ export default function SOWPage() {
                         ))
                     ) : paginatedData.length > 0 ? (
                         paginatedData.map((row) => {
-                           const totalCategories = row.allCategories.length > 0 ? row.allCategories.length : (row.purchasedCategories.length + row.unmatchedPurchasedItems.length);
-                           const purchasedCount = row.purchasedCategories.length + row.unmatchedPurchasedItems.length;
-
+                           const totalPurchasedCount = row.purchasedCategories.length + row.unmatchedPurchasedItems.length;
+                           const totalPossibleCategories = row.allCategories.length;
                            return (
                             <TableRow key={row.id} className="hover:bg-muted/50">
                                 <TableCell className="text-muted-foreground">{formatDate(row.orderDate)}</TableCell>
@@ -296,9 +380,9 @@ export default function SOWPage() {
                                       <Tooltip>
                                           <TooltipTrigger asChild>
                                               <div className="flex items-center gap-px w-full h-3 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-inner">
-                                                {Array.from({ length: totalCategories }).map((_, index) => {
-                                                  const isPurchased = index < purchasedCount;
-                                                  const hue = (index / Math.max(1, totalCategories - 1)) * 120;
+                                                {Array.from({ length: totalPossibleCategories }).map((_, index) => {
+                                                  const isPurchased = index < totalPurchasedCount;
+                                                  const hue = (index / Math.max(1, totalPossibleCategories - 1)) * 120;
                                                   return (
                                                     <div
                                                       key={index}
