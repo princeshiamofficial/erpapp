@@ -125,26 +125,25 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
     };
     
     const originalLeadState = lead;
-    const newLeadState: Lead = {
+    const optimisticLeadState: Lead = {
         ...lead,
         activityHistory: [...(lead.activityHistory || []), newActivityEntry],
     };
 
-    setLead(newLeadState);
+    setLead(optimisticLeadState);
     setNewActivity('');
     setNewActivityNotes('');
     
-    // Pass the current state of the lead to the server action
     const result = await addLeadActivityAction(lead.id, {
       activity: newActivity,
       notes: newActivityNotes,
-    }, currentUser, newLeadState); // Passing newLeadState
+    }, currentUser, optimisticLeadState);
     
     setIsSubmitting(false);
 
     if (result.success && result.lead) {
       toast({ title: "Activity Added", description: "New activity has been logged for this lead." });
-      setLead(result.lead); // Update with the definitive state from the server
+      // The state is already updated optimistically, so we only need to call the parent callback.
       onLeadUpdated(result.lead);
     } else {
       toast({ title: "Error", description: result.error || "Failed to add activity. Reverting change.", variant: "destructive" });
