@@ -55,7 +55,7 @@ export default function PayrollPage() {
   const { currentUser } = useAuth();
   const router = useRouter();
 
-  const [activeTab, setActiveTab] = useState("employee_report");
+  const [activeTab, setActiveTab] = useState("salary_sheet");
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -362,7 +362,7 @@ export default function PayrollPage() {
                 <TableHead>Present</TableHead>
                 <TableHead>Absent</TableHead>
                 <TableHead>Late</TableHead>
-                <TableHead>Frund</TableHead>
+                <TableHead>Provident Fund</TableHead>
                 <TableHead>Fine</TableHead>
                 <TableHead>Incentive</TableHead>
                 <TableHead>Payable Amount</TableHead>
@@ -385,21 +385,27 @@ export default function PayrollPage() {
                   </TableRow>
                 ))
               ) : paginatedEmployees.length > 0 ? (
-                paginatedEmployees.map((employee) => (
+                paginatedEmployees.map((employee) => {
+                  const incentive = 1500; // Placeholder
+                  const fine = 100; // Placeholder
+                  const fund = 500; // Placeholder
+                  const payable = (employee.salary || 0) + incentive - fine - fund;
+                  return (
                     <TableRow key={employee.id}>
                         <TableCell className="font-medium">{employee.name}</TableCell>
                         <TableCell>22</TableCell> {/* Placeholder */}
                         <TableCell>2</TableCell> {/* Placeholder */}
                         <TableCell>1</TableCell> {/* Placeholder */}
-                        <TableCell>{formatCurrency(500)}</TableCell> {/* Placeholder */}
-                        <TableCell>{formatCurrency(100)}</TableCell> {/* Placeholder */}
-                        <TableCell>{formatCurrency(1500)}</TableCell> {/* Placeholder */}
-                        <TableCell className="font-semibold">{formatCurrency((employee.salary || 0) + 1500 - 100 - 500)}</TableCell> {/* Placeholder */}
+                        <TableCell>{formatCurrency(fund)}</TableCell> {/* Placeholder */}
+                        <TableCell>{formatCurrency(fine)}</TableCell> {/* Placeholder */}
+                        <TableCell>{formatCurrency(incentive)}</TableCell> {/* Placeholder */}
+                        <TableCell className="font-semibold">{formatCurrency(payable)}</TableCell>
                         <TableCell className="text-center">
                           <Button variant="outline" size="sm" className="h-8">View Payslip</Button>
                         </TableCell>
                     </TableRow>
-                ))
+                  );
+                })
               ) : (
                 <TableRow>
                   <TableCell colSpan={9} className="h-48 text-center text-gray-500">
@@ -491,7 +497,7 @@ export default function PayrollPage() {
 
   const renderActiveTab = () => {
     switch (activeTab) {
-      case 'employee_report':
+      case 'salary_sheet':
         return salarySheetContent;
       case 'employee_list':
         return employeeListContent;
@@ -508,7 +514,7 @@ export default function PayrollPage() {
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
-          <TabsTrigger value="employee_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
+          <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
           <TabsTrigger value="employee_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee List</TabsTrigger>
           <TabsTrigger value="employee_performance" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee Performance</TabsTrigger>
           <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
