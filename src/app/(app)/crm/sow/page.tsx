@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,6 +21,19 @@ import {
 } from "@/components/ui/tooltip"
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+
+const SOW_DATA_CACHE_KEY = 'colorHutSowDataCache';
+const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes
+const ITEMS_PER_PAGE = 12;
 
 interface SowData {
   id: string; // Using Job ID as the unique key
@@ -128,30 +141,55 @@ export default function SOWPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: keyof SowData | 'productCount'; direction: 'ascending' | 'descending' } | null>({ key: 'orderDate', direction: 'descending' });
+  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const [fetchedOrders, fetchedSettings] = await Promise.all([
-          getOrders(),
-          getGlobalSettings()
-        ]);
-        const data = generateSowData(fetchedOrders, fetchedSettings);
-        setSowData(data);
-      } catch (error) {
-        toast({
-          title: "Error fetching data",
-          description: "Could not load the necessary data for the SOW page.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
+  const fetchData = useCallback(async (isBackgroundRefresh = false) => {
+    if (!isBackgroundRefresh) setIsLoading(true);
+    try {
+      const [fetchedOrders, fetchedSettings] = await Promise.all([
+        getOrders(),
+        getGlobalSettings()
+      ]);
+      const data = generateSowData(fetchedOrders, fetchedSettings);
+      setSowData(data);
+      // Cache the new data
+      localStorage.setItem(SOW_DATA_CACHE_KEY, JSON.stringify({
+        data,
+        timestamp: new Date().getTime(),
+      }));
+    } catch (error) {
+      toast({
+        title: "Error fetching data",
+        description: "Could not load the necessary data for the SOW page.",
+        variant: "destructive",
+      });
+    } finally {
+      if (!isBackgroundRefresh) setIsLoading(false);
+    }
   }, [toast]);
+  
+  useEffect(() => {
+    // Attempt to load from cache first
+    const cachedItem = localStorage.getItem(SOW_DATA_CACHE_KEY);
+    if (cachedItem) {
+      try {
+        const { data, timestamp } = JSON.parse(cachedItem);
+        const isCacheValid = (new Date().getTime() - timestamp) < CACHE_DURATION;
+        if (isCacheValid) {
+          setSowData(data);
+          setIsLoading(false);
+          // Fetch fresh data in the background
+          fetchData(true);
+          return;
+        }
+      } catch (e) {
+        console.error("Failed to parse SOW cache", e);
+      }
+    }
+    // If no valid cache, fetch normally
+    fetchData();
+  }, [fetchData]);
   
   const requestSort = (key: keyof SowData | 'productCount') => {
     let direction: 'ascending' | 'descending' = 'ascending';
@@ -194,12 +232,58 @@ export default function SOWPage() {
     return sortableItems;
   }, [sowData, sortConfig, searchTerm]);
 
+  const totalPages = Math.ceil(sortedAndFilteredData.length / ITEMS_PER_PAGE);
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return sortedAndFilteredData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [sortedAndFilteredData, currentPage]);
+  
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortConfig]);
+
+  const renderPagination = () => {
+    const pageNumbers = [];
+    const maxPagesToShow = 5; 
+    
+    if (totalPages <= maxPagesToShow) {
+      for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+    } else {
+      let startPage = Math.max(1, currentPage - 2);
+      let endPage = Math.min(totalPages, currentPage + 2);
+
+      if (currentPage < 3) endPage = maxPagesToShow;
+      else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
+      
+      if (startPage > 1) {
+        pageNumbers.push(1);
+        if (startPage > 2) pageNumbers.push('...');
+      }
+      for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      }
+    }
+    return pageNumbers.map((page, index) => (
+        <PaginationItem key={index}>
+        {page === '...' ? <PaginationEllipsis />
+        : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number);}} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
+            {page}
+          </PaginationLink>
+        }
+        </PaginationItem>
+    ));
+  };
+
+
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Statement of Work</h1>
-          <p className="text-muted-foreground">
+          <h1 className="page-title">Statement of Work</h1>
+          <p className="page-description">
             An overview of business loyalty and progress.
           </p>
         </div>
@@ -217,7 +301,7 @@ export default function SOWPage() {
                     placeholder="Filter by business name..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 bg-background/50 h-10"
                 />
             </div>
         </CardHeader>
@@ -255,8 +339,8 @@ export default function SOWPage() {
                                 <TableCell><Skeleton className="h-5 w-40 mx-auto" /></TableCell>
                            </TableRow>
                         ))
-                    ) : sortedAndFilteredData.length > 0 ? (
-                        sortedAndFilteredData.map((row) => {
+                    ) : paginatedData.length > 0 ? (
+                        paginatedData.map((row) => {
                            const purchasedCount = row.purchasedCategories.length + row.unmatchedPurchasedItems.length;
                            const totalCategories = row.allCategories.length;
                            return (
@@ -269,7 +353,7 @@ export default function SOWPage() {
                                       const isPurchased = index < purchasedCount;
                                       const hue = (index / Math.max(1, totalCategories - 1)) * 120;
                                       return (
-                                        <TooltipProvider key={index}>
+                                        <TooltipProvider key={index} delayDuration={100}>
                                           <Tooltip>
                                             <TooltipTrigger asChild>
                                               <div
@@ -280,24 +364,7 @@ export default function SOWPage() {
                                               />
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                              <div className="p-1 max-w-xs">
-                                                <p className="font-semibold text-sm mb-2 flex items-center gap-1"><ListChecks className="h-4 w-4 text-primary"/> Defined Categories ({row.allCategories.length}):</p>
-                                                  <ul className="list-disc list-inside text-xs space-y-0.5">
-                                                      {row.allCategories.map(p => {
-                                                        const isBought = row.purchasedCategories.includes(p);
-                                                        return <li key={p} className={cn(isBought ? "font-semibold text-primary" : "text-muted-foreground")}>{p} {isBought ? '(Purchased)' : ''}</li>
-                                                      })}
-                                                  </ul>
-                                                
-                                                {row.unmatchedPurchasedItems.length > 0 && (
-                                                  <>
-                                                    <p className="font-semibold text-sm mt-3 mb-2 flex items-center gap-1"><PackageSearch className="h-4 w-4 text-primary"/> Other Purchased Items:</p>
-                                                    <ul className="list-disc list-inside text-xs space-y-0.5">
-                                                      {row.unmatchedPurchasedItems.map(p => <li key={p}>{p}</li>)}
-                                                    </ul>
-                                                  </>
-                                                )}
-                                              </div>
+                                              <p className="font-semibold text-sm">{category}</p>
                                             </TooltipContent>
                                           </Tooltip>
                                         </TooltipProvider>
@@ -326,6 +393,31 @@ export default function SOWPage() {
                 </TableBody>
             </Table>
         </CardContent>
+         <CardFooter className="py-4 border-t">
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#" 
+                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} 
+                    aria-disabled={currentPage === 1} 
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                  />
+                </PaginationItem>
+                {renderPagination()}
+                <PaginationItem>
+                  <PaginationNext 
+                    href="#" 
+                    onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} 
+                    aria-disabled={currentPage === totalPages} 
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </CardFooter>
       </Card>
     </div>
   );
