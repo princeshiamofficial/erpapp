@@ -104,8 +104,12 @@ export default function PayrollPage() {
 
     if (activeTab === 'salary_sheet') {
       results = results.filter(employee => {
-        const joiningDate = new Date(employee.joiningDate);
-        return !isAfter(joiningDate, selectedDate);
+        try {
+          const joiningDate = new Date(employee.joiningDate);
+          return !isAfter(joiningDate, selectedDate);
+        } catch (e) {
+          return false;
+        }
       });
     }
 
@@ -193,8 +197,8 @@ export default function PayrollPage() {
       const presentDays = 22; // Placeholder
       const incentive = 1500;
       const fine = 100;
-      const fund = 500;
-      const payable = (perDaySalary * presentDays) + incentive - fine - fund;
+      const providentFund = (employee.salary || 0) * 0.07;
+      const payable = (perDaySalary * presentDays) + incentive - fine - providentFund;
       return total + payable;
     }, 0);
   }, [paginatedEmployees, selectedDate]);
@@ -442,7 +446,7 @@ export default function PayrollPage() {
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
@@ -456,15 +460,15 @@ export default function PayrollPage() {
                   const presentDays = 22; // Placeholder, to be replaced with actual data
                   const incentive = 1500;
                   const fine = 100;
-                  const fund = 500;
-                  const payable = (perDaySalary * presentDays) + incentive - fine - fund;
+                  const providentFund = (employee.salary || 0) * 0.07;
+                  const payable = (perDaySalary * presentDays) + incentive - fine - providentFund;
                   return (
                     <TableRow key={employee.id}>
                         <TableCell className="font-medium">{employee.name}</TableCell>
                         <TableCell>{presentDays}</TableCell>
                         <TableCell>2</TableCell>
                         <TableCell>1</TableCell>
-                        <TableCell>{formatCurrency(fund)}</TableCell>
+                        <TableCell>{formatCurrency(providentFund)}</TableCell>
                         <TableCell>{formatCurrency(fine)}</TableCell>
                         <TableCell>{formatCurrency(incentive)}</TableCell>
                         <TableCell className="font-semibold">{formatCurrency(payable)}</TableCell>
@@ -479,7 +483,7 @@ export default function PayrollPage() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={9} className="h-48 text-center text-gray-500">
-                    No salary sheet data available.
+                    No salary sheet data available for the selected period.
                   </TableCell>
                 </TableRow>
               )}
@@ -579,6 +583,14 @@ export default function PayrollPage() {
         return employeeListContent;
     }
   };
+
+  if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <p>Access Denied. You must be an Administrator to view this page.</p>
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">

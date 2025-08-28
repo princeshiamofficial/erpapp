@@ -36,24 +36,26 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
   const [present, setPresent] = useState('22');
   const [absent, setAbsent] = useState('2');
   const [late, setLate] = useState('1');
-  const [providentFund, setProvidentFund] = useState('500');
   const [fine, setFine] = useState('100');
   const [incentive, setIncentive] = useState('1500');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
+  const providentFund = useMemo(() => {
+    return (employee.salary || 0) * 0.07;
+  }, [employee.salary]);
+
   const payableAmount = useMemo(() => {
     const baseSalary = employee.salary || 0;
     const incentiveNum = parseFloat(incentive) || 0;
     const fineNum = parseFloat(fine) || 0;
-    const fundNum = parseFloat(providentFund) || 0;
     
     // New calculation logic based on days
     const daysInMonth = getDaysInMonth(selectedDate);
     const perDaySalary = baseSalary / daysInMonth;
     const presentDays = parseInt(present, 10) || 0;
 
-    return (perDaySalary * presentDays) + incentiveNum - fineNum - fundNum;
+    return (perDaySalary * presentDays) + incentiveNum - fineNum - providentFund;
   }, [employee.salary, incentive, fine, providentFund, present, selectedDate]);
 
   useEffect(() => {
@@ -62,7 +64,6 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       setPresent('22');
       setAbsent('2');
       setLate('1');
-      setProvidentFund('500');
       setFine('100');
       setIncentive('1500');
       setIsSubmitting(false);
@@ -105,8 +106,8 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
             </div>
             <div className="grid grid-cols-3 gap-4">
                  <div className="space-y-1">
-                    <Label htmlFor="provident-fund">Provident Fund</Label>
-                    <Input id="provident-fund" type="number" value={providentFund} onChange={e => setProvidentFund(e.target.value)} required />
+                    <Label htmlFor="provident-fund">Provident Fund (7%)</Label>
+                    <Input id="provident-fund" type="text" value={formatCurrency(providentFund)} readOnly disabled className="bg-muted/50" />
                 </div>
                 <div className="space-y-1">
                     <Label htmlFor="fine">Fine</Label>
