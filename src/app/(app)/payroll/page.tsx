@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
@@ -70,6 +71,8 @@ export default function PayrollPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   
   const [payslipToEdit, setPayslipToEdit] = useState<Employee | null>(null);
+
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -174,14 +177,39 @@ export default function PayrollPage() {
   
   const totalPayableAmount = useMemo(() => {
     return paginatedEmployees.reduce((total, employee) => {
-      // Assuming placeholder logic for now. Replace with actual calculation.
-      const incentive = 1500; // Placeholder
-      const fine = 100; // Placeholder
-      const fund = 500; // Placeholder
+      const incentive = 1500;
+      const fine = 100;
+      const fund = 500;
       const payable = (employee.salary || 0) + incentive - fine - fund;
       return total + payable;
     }, 0);
   }, [paginatedEmployees]);
+
+  const handleMonthChange = (monthIndex: string) => {
+    const newDate = new Date(selectedDate);
+    newDate.setMonth(parseInt(monthIndex, 10));
+    setSelectedDate(newDate);
+  };
+
+  const handleYearChange = (year: string) => {
+    const newDate = new Date(selectedDate);
+    newDate.setFullYear(parseInt(year, 10));
+    setSelectedDate(newDate);
+  };
+
+  const availableYears = useMemo(() => {
+      const currentYear = new Date().getFullYear();
+      const years = [];
+      for (let i = currentYear - 5; i <= currentYear + 1; i++) {
+          years.push(i);
+      }
+      return years.reverse();
+  }, []);
+
+  const months = useMemo(() => Array.from({ length: 12 }, (_, i) => ({
+      value: i.toString(),
+      label: format(new Date(0, i), 'MMMM'),
+  })), []);
 
   const employeeListContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
@@ -347,13 +375,32 @@ export default function PayrollPage() {
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
       <CardHeader className="p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl font-bold text-gray-800">Salary Sheet</CardTitle>
-           <div className="flex items-center gap-2 w-full sm:w-auto">
+          <CardTitle className="text-xl font-bold text-gray-800">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
+           <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
             <div className="relative flex-grow sm:flex-grow-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
             </div>
-            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
+            <Select value={selectedDate.getMonth().toString()} onValueChange={handleMonthChange}>
+              <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-full border-gray-200 bg-white">
+                  <SelectValue placeholder="Select Month" />
+              </SelectTrigger>
+              <SelectContent>
+                  {months.map(month => (
+                      <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+             <Select value={selectedDate.getFullYear().toString()} onValueChange={handleYearChange}>
+              <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-full border-gray-200 bg-white">
+                  <SelectValue placeholder="Select Year" />
+              </SelectTrigger>
+              <SelectContent>
+                  {availableYears.map(year => (
+                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </CardHeader>
@@ -390,19 +437,19 @@ export default function PayrollPage() {
                 ))
               ) : paginatedEmployees.length > 0 ? (
                 paginatedEmployees.map((employee) => {
-                  const incentive = 1500; // Placeholder
-                  const fine = 100; // Placeholder
-                  const fund = 500; // Placeholder
+                  const incentive = 1500;
+                  const fine = 100;
+                  const fund = 500;
                   const payable = (employee.salary || 0) + incentive - fine - fund;
                   return (
                     <TableRow key={employee.id}>
                         <TableCell className="font-medium">{employee.name}</TableCell>
-                        <TableCell>22</TableCell> {/* Placeholder */}
-                        <TableCell>2</TableCell> {/* Placeholder */}
-                        <TableCell>1</TableCell> {/* Placeholder */}
-                        <TableCell>{formatCurrency(fund)}</TableCell> {/* Placeholder */}
-                        <TableCell>{formatCurrency(fine)}</TableCell> {/* Placeholder */}
-                        <TableCell>{formatCurrency(incentive)}</TableCell> {/* Placeholder */}
+                        <TableCell>22</TableCell>
+                        <TableCell>2</TableCell>
+                        <TableCell>1</TableCell>
+                        <TableCell>{formatCurrency(fund)}</TableCell>
+                        <TableCell>{formatCurrency(fine)}</TableCell>
+                        <TableCell>{formatCurrency(incentive)}</TableCell>
                         <TableCell className="font-semibold">{formatCurrency(payable)}</TableCell>
                         <TableCell className="text-center">
                           <Button variant="outline" size="sm" className="h-8" onClick={() => setPayslipToEdit(employee)}>
@@ -423,7 +470,7 @@ export default function PayrollPage() {
             <TableFooter>
                 <TableRow>
                     <TableCell colSpan={8} className="text-right font-bold">Total Payable</TableCell>
-                    <TableCell colSpan={1} className="font-bold text-right">{formatCurrency(totalPayableAmount)}</TableCell>
+                    <TableCell className="font-bold text-right">{formatCurrency(totalPayableAmount)}</TableCell>
                 </TableRow>
             </TableFooter>
           </Table>
@@ -537,10 +584,8 @@ export default function PayrollPage() {
           onOpenChange={(open) => !open && setPayslipToEdit(null)}
           employee={payslipToEdit}
           onSave={() => {
-            // For now, this just shows a success toast and closes.
             toast({ title: "Payslip Updated (Simulated)", description: "Payslip details have been updated visually." });
             setPayslipToEdit(null);
-            // In a real scenario, you might call an update action and refetch data.
           }}
         />
       )}
