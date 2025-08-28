@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, OrderItem, GlobalSettings } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
-import { PackageSearch, ListChecks } from 'lucide-react';
+import { PackageSearch, ListChecks, ArrowUpDown, Search } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
@@ -19,6 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Input } from '@/components/ui/input';
 
 interface SowData {
   id: string; // Using Job ID as the unique key
@@ -29,6 +30,7 @@ interface SowData {
   allCategories: string[];
   amount: number;
   loyaltyScore: number;
+  productCount: number;
 }
 
 const formatCurrency = (value: number) => {
@@ -49,8 +51,7 @@ const formatDate = (dateString?: string) => {
 
 const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings | null): SowData[] => {
     const filters = globalSettings?.reportProductFilters || [];
-    const categoryPercentage = filters.length > 0 ? 100 / filters.length : 0;
-
+    
     const ordersByJobId = new Map<string, { orders: TrackingLink[], businessName: string, latestDate: string }>();
 
     orders.forEach(order => {
@@ -76,10 +77,12 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
         if (allItemsFromGroup.length > 0) {
             allItemsFromGroup.forEach(item => {
                 let isItemMatched = false;
-                for (const filter of filters) {
-                    if (item.model.toLowerCase().includes(filter.toLowerCase())) {
-                        matchedFilters.add(filter);
-                        isItemMatched = true;
+                if (filters.length > 0) {
+                    for (const filter of filters) {
+                        if (item.model.toLowerCase().includes(filter.toLowerCase())) {
+                            matchedFilters.add(filter);
+                            isItemMatched = true;
+                        }
                     }
                 }
                 if (!isItemMatched) {
@@ -93,8 +96,8 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
             return sum + orderTotal;
         }, 0);
         
-        const totalPurchasedCount = matchedFilters.size + unmatchedItems.size;
-        const loyaltyScore = totalPurchasedCount * categoryPercentage;
+        const loyaltyScore = Math.min(100, Math.floor(totalAmount / 1000));
+        const productCount = matchedFilters.size + unmatchedItems.size;
 
         return {
             id: jobId,
@@ -104,9 +107,10 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
             unmatchedPurchasedItems: Array.from(unmatchedItems),
             allCategories: filters,
             amount: totalAmount,
-            loyaltyScore: Math.min(100, Math.round(loyaltyScore)),
+            loyaltyScore: loyaltyScore,
+            productCount: productCount
         };
-    }).sort((a, b) => new Date(b.orderDate).getTime() - new Date(a.orderDate).getTime());
+    });
 };
 
 
@@ -121,6 +125,8 @@ const getLoyaltyColorClass = (score: number) => {
 export default function SOWPage() {
   const [sowData, setSowData] = useState<SowData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof SowData | 'productCount'; direction: 'ascending' | 'descending' } | null>({ key: 'orderDate', direction: 'descending' });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -145,6 +151,47 @@ export default function SOWPage() {
     };
     fetchData();
   }, [toast]);
+  
+  const requestSort = (key: keyof SowData | 'productCount') => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  const sortedAndFilteredData = useMemo(() => {
+    let sortableItems = [...sowData];
+
+    if (searchTerm) {
+        sortableItems = sortableItems.filter(item =>
+            item.businessName.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }
+    
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue, bValue;
+        
+        if (sortConfig.key === 'orderDate') {
+            aValue = new Date(a.orderDate).getTime();
+            bValue = new Date(b.orderDate).getTime();
+        } else {
+            aValue = a[sortConfig.key as keyof SowData] as number;
+            bValue = b[sortConfig.key as keyof SowData] as number;
+        }
+        
+        if (aValue < bValue) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [sowData, sortConfig, searchTerm]);
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
@@ -158,19 +205,42 @@ export default function SOWPage() {
       </div>
       
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-        <CardHeader>
-            <CardTitle>Business Report</CardTitle>
-            <CardDescription>Statement of work based on recent order history.</CardDescription>
+        <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <CardTitle>Business Report</CardTitle>
+                <CardDescription>Statement of work based on recent order history.</CardDescription>
+            </div>
+            <div className="relative w-full sm:max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                    placeholder="Filter by business name..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                />
+            </div>
         </CardHeader>
         <CardContent>
             <Table>
                 <TableHeader>
                     <TableRow>
-                        <TableHead>Order Date</TableHead>
+                        <TableHead>
+                           <Button variant="ghost" onClick={() => requestSort('orderDate')}>
+                                Order Date <ArrowUpDown className="ml-2 h-4 w-4" />
+                           </Button>
+                        </TableHead>
                         <TableHead>Business Name</TableHead>
-                        <TableHead className="w-[40%]">Products</TableHead>
+                        <TableHead>
+                           <Button variant="ghost" onClick={() => requestSort('productCount')}>
+                                Products <ArrowUpDown className="ml-2 h-4 w-4" />
+                           </Button>
+                        </TableHead>
                         <TableHead className="text-right">Amount</TableHead>
-                        <TableHead className="text-center w-[200px]">Loyalty Score</TableHead>
+                        <TableHead className="text-center w-[200px]">
+                           <Button variant="ghost" onClick={() => requestSort('loyaltyScore')}>
+                                Loyalty Score <ArrowUpDown className="ml-2 h-4 w-4" />
+                           </Button>
+                        </TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -184,8 +254,8 @@ export default function SOWPage() {
                                 <TableCell><Skeleton className="h-5 w-40 mx-auto" /></TableCell>
                            </TableRow>
                         ))
-                    ) : sowData.length > 0 ? (
-                        sowData.map((row) => {
+                    ) : sortedAndFilteredData.length > 0 ? (
+                        sortedAndFilteredData.map((row) => {
                            const purchasedCount = row.purchasedCategories.length + row.unmatchedPurchasedItems.length;
                            const totalCategories = row.allCategories.length;
                            return (
@@ -196,7 +266,6 @@ export default function SOWPage() {
                                   <div className="flex items-center gap-px w-full h-3 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 shadow-inner">
                                     {row.allCategories.map((category, index) => {
                                       const isPurchased = index < purchasedCount;
-                                      // Red (0) to green (120)
                                       const hue = (index / Math.max(1, totalCategories - 1)) * 120;
                                       return (
                                         <TooltipProvider key={index}>
@@ -249,7 +318,7 @@ export default function SOWPage() {
                         <TableRow>
                             <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
                                 <PackageSearch className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                No order data to display.
+                                No order data available{searchTerm ? ` for "${searchTerm}"` : ''}.
                             </TableCell>
                         </TableRow>
                     )}
