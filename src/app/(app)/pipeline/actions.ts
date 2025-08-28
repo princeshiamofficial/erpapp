@@ -89,10 +89,13 @@ export async function addLeadActivityAction(
     const success = await updateLead(leadId, { activityHistory: updatedHistory });
 
     if (success) {
-      // Revalidation is still useful for other clients, but we return the full object for an instant update for the current user.
+      // Revalidation is still useful for other clients.
       revalidatePath("/(app)/pipeline");
-      // Return the updated lead state directly instead of re-fetching
-      const updatedLead = { ...existingLead, activityHistory: updatedHistory };
+      // For instant update, now fetch the definitive state from the DB.
+      const updatedLead = await getLeadById(leadId);
+      if (!updatedLead) {
+        return { success: false, error: "Failed to retrieve updated lead after adding activity." };
+      }
       return { success: true, lead: updatedLead };
     }
     return { success: false, error: "Failed to add activity to lead." };

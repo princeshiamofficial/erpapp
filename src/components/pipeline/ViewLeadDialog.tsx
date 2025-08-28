@@ -115,39 +115,25 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
     }
     setIsSubmitting(true);
 
-    const newActivityEntry: LeadActivity = {
-        id: uuidv4(),
-        timestamp: new Date().toISOString(),
-        activity: newActivity,
-        notes: newActivityNotes,
-        changedByUserId: currentUser.id,
-        changedByUserName: currentUser.name,
-    };
-    
     const originalLeadState = lead;
-    const optimisticLeadState: Lead = {
-        ...lead,
-        activityHistory: [...(lead.activityHistory || []), newActivityEntry],
-    };
 
-    setLead(optimisticLeadState);
-    setNewActivity('');
-    setNewActivityNotes('');
-    
+    // Call the server action with the original lead state
     const result = await addLeadActivityAction(lead.id, {
       activity: newActivity,
       notes: newActivityNotes,
-    }, currentUser, optimisticLeadState);
-    
+    }, currentUser, originalLeadState);
+
     setIsSubmitting(false);
 
     if (result.success && result.lead) {
       toast({ title: "Activity Added", description: "New activity has been logged for this lead." });
-      // The state is already updated optimistically, so we only need to call the parent callback.
+      setLead(result.lead); // Set the state to the definitive version from the server
       onLeadUpdated(result.lead);
+      setNewActivity('');
+      setNewActivityNotes('');
     } else {
-      toast({ title: "Error", description: result.error || "Failed to add activity. Reverting change.", variant: "destructive" });
-      setLead(originalLeadState); // Revert on failure
+      toast({ title: "Error", description: result.error || "Failed to add activity. Please try again.", variant: "destructive" });
+      setLead(originalLeadState); // Revert UI on failure
     }
   };
 
