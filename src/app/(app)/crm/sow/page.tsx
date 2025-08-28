@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -308,7 +309,7 @@ export default function SOWPage() {
   };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8 pt-0">
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
