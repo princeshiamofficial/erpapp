@@ -35,7 +35,7 @@ function TrackingPageSkeleton() {
   }
 
 const OrderDetailsClient = dynamic(() => import('./OrderDetailsClient').then(mod => mod.OrderDetailsClient), {
-  ssr: false,
+  ssr: false, // Ensure this component is only rendered on the client side
   loading: () => <TrackingPageSkeleton />,
 });
 
