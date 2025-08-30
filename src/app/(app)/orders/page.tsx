@@ -394,7 +394,7 @@ export default function OrdersPage() {
         </div>
       </div>
 
-      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden flex flex-col h-[calc(100vh-22rem)]">
+      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex-grow flex items-center gap-2">
@@ -426,9 +426,10 @@ export default function OrdersPage() {
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-0 flex-1 overflow-y-auto custom-scrollbar">
-            <Table className="relative">
-              <TableHeader className="sticky top-0 z-10 bg-card shadow-sm">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
                   <TableHead className="pl-6">Order ID</TableHead>
                   <TableHead>Company</TableHead>
@@ -567,6 +568,7 @@ export default function OrdersPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
         </CardContent>
          <CardFooter className="py-4 border-t">
           {totalPages > 1 && (
