@@ -258,10 +258,7 @@ export function ProjectsKanbanClient() {
       );
     });
     const result = await updateProjectStatusAction(project, newStatus, currentUser, notes);
-    if (result.success) {
-      toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
-      await fetchData();
-    } else {
+    if (!result.success) {
       toast({ title: "Update Failed", description: result.error || `Could not update status.`, variant: "destructive" });
       setProjects(prevProjects => {
         return prevProjects.map(p =>
@@ -269,7 +266,8 @@ export function ProjectsKanbanClient() {
         );
       });
     }
-  }, [currentUser, toast, fetchData]);
+    // No success toast or re-fetch to keep it instant
+  }, [currentUser, toast]);
 
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     setActiveProject(null);
@@ -369,9 +367,15 @@ export function ProjectsKanbanClient() {
 
 
   const handleDrAssignmentSuccess = useCallback(async (updatedOrderFromDialog: TrackingLink) => {
-    await fetchData(); 
+    setProjects(prev => prev.map(p => p.id === updatedOrderFromDialog.id ? {
+      ...p,
+      status: 'On Design',
+      designerRepresentativeId: updatedOrderFromDialog.designerRepresentativeId,
+      designerRepresentativeName: updatedOrderFromDialog.designerRepresentativeName,
+      designerRepresentativeAvatarUrl: updatedOrderFromDialog.designerRepresentativeAvatarUrl,
+    } : p));
     toast({ title: "DR Assigned", description: `${updatedOrderFromDialog.designerRepresentativeName} assigned to order ${updatedOrderFromDialog.id}.` });
-  }, [fetchData, toast]);
+  }, [toast]);
   
   if (isLoading) {
     return <KanbanSkeleton />;
