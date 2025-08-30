@@ -122,11 +122,11 @@ export default function OrdersPage() {
     setIsClient(true);
     fetchOrderData(); // Initial fetch
 
-    // Set up polling to refresh data every 30 seconds
+    // Set up polling to refresh data every 10 seconds
     const interval = setInterval(() => {
       console.log("Auto-refreshing order data...");
       fetchOrderData();
-    }, 30000); // 30 seconds
+    }, 10000); // 10 seconds
 
     // Cleanup interval on component unmount
     return () => clearInterval(interval);
