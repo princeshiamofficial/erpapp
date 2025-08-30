@@ -261,7 +261,29 @@ export function ProjectsKanbanClient() {
     }
   };
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleConfirmStatusUpdate = useCallback(async (project: Project, newStatus: ProjectStatusType, notes?: string) => {
+    if (!currentUser) return;
+    const originalStatus = project.status;
+     setProjects(prevProjects => {
+      return prevProjects.map(p =>
+        p.id === project.id ? { ...p, status: newStatus } : p
+      );
+    });
+    const result = await updateProjectStatusAction(project, newStatus, currentUser, notes);
+    if (result.success) {
+      toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
+      await fetchData();
+    } else {
+      toast({ title: "Update Failed", description: result.error || `Could not update status.`, variant: "destructive" });
+      setProjects(prevProjects => {
+        return prevProjects.map(p =>
+          p.id === project.id ? { ...p, status: originalStatus } : p
+        );
+      });
+    }
+  }, [currentUser, toast, fetchData]);
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     setActiveProject(null);
     const { active, over } = event;
 
@@ -317,56 +339,14 @@ export function ProjectsKanbanClient() {
       return;
     }
 
-    // Optimistically update the UI for other statuses
-    setProjects(prevProjects => {
-      return prevProjects.map(p =>
-        p.id === project.id ? { ...p, status: newStatus } : p
-      );
-    });
-
-    // Call the server action
-    const result = await updateProjectStatusAction(project, newStatus, currentUser);
-
-    if (result.success) {
-      toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
-      await fetchData(); // Re-fetch to confirm state
-    } else {
-      toast({ title: "Update Failed", description: result.error || `Could not update status for project '${project.name}'.`, variant: "destructive" });
-      // Revert optimistic update on failure
-      setProjects(prevProjects => {
-        return prevProjects.map(p =>
-          p.id === project.id ? { ...p, status: originalStatus } : p
-        );
-      });
-    }
-  };
+    // Optimistically update UI for other statuses
+    handleConfirmStatusUpdate(project, newStatus);
+  }, [currentUser, globalSettings, toast, handleConfirmStatusUpdate]);
   
   const handleDragCancel = () => {
     setActiveProject(null);
   };
   
-  const handleConfirmStatusUpdate = async (project: Project, newStatus: ProjectStatusType, notes?: string) => {
-    if (!currentUser) return;
-    const originalStatus = project.status;
-     setProjects(prevProjects => {
-      return prevProjects.map(p =>
-        p.id === project.id ? { ...p, status: newStatus } : p
-      );
-    });
-    const result = await updateProjectStatusAction(project, newStatus, currentUser, notes);
-    if (result.success) {
-      toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
-      await fetchData();
-    } else {
-      toast({ title: "Update Failed", description: result.error || `Could not update status.`, variant: "destructive" });
-      setProjects(prevProjects => {
-        return prevProjects.map(p =>
-          p.id === project.id ? { ...p, status: originalStatus } : p
-        );
-      });
-    }
-  }
-
   const handleOpenAssignDrDialog = useCallback(async (projectToAssign: Project) => {
     console.log("[ProjectsPage] handleOpenAssignDrDialog called for project:", projectToAssign.id);
     if (!currentUser) {
@@ -535,13 +515,10 @@ export function ProjectsKanbanClient() {
             onOpenChange={(open) => {
               if(!open) {
                 // If user closes dialog without confirming, revert the optimistic UI update
-                const originalStatus = projects.find(p => p.id === projectForLogistics.id)?.status;
-                if (originalStatus && originalStatus !== 'Logistics') {
-                  setProjects(prev => prev.map(p => p.id === projectForLogistics.id ? {...p, status: originalStatus} : p));
-                }
                 setProjectForLogistics(null);
+              } else {
+                 setIsLogisticsConfirmDialogOpen(open);
               }
-              setIsLogisticsConfirmDialogOpen(open);
             }}
             onConfirm={(notes) => {
               handleConfirmStatusUpdate(projectForLogistics, 'Logistics', notes);
