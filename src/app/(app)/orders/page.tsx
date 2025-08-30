@@ -91,10 +91,13 @@ export default function OrdersPage() {
 
   const fetchOrderData = useCallback(async () => {
     if (!currentUser) {
-      setIsLoading(false);
+      // No need to set loading to false here, as it's handled in the initial check
       return;
     }
-    setIsLoading(true);
+    // Only set loading to true if it's the initial fetch, not for background refreshes
+    if (orders.length === 0) {
+      setIsLoading(true);
+    }
     try {
       const [fetchedOrders, fetchedStatuses, fetchedSettings] = await Promise.all([
         getOrders(),
@@ -113,12 +116,21 @@ export default function OrdersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser, toast]);
+  }, [currentUser, toast, orders.length]); // orders.length dependency prevents setIsLoading(true) on subsequent fetches
 
   useEffect(() => {
     setIsClient(true);
-    fetchOrderData();
-  }, [fetchOrderData]);
+    fetchOrderData(); // Initial fetch
+
+    // Set up polling to refresh data every 30 seconds
+    const interval = setInterval(() => {
+      console.log("Auto-refreshing order data...");
+      fetchOrderData();
+    }, 30000); // 30 seconds
+
+    // Cleanup interval on component unmount
+    return () => clearInterval(interval);
+  }, [fetchOrderData]); // The dependency array should just contain fetchOrderData
 
 
   const memoizedAvailableStatusesForDialog = useMemo(() => {
@@ -354,6 +366,9 @@ export default function OrdersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button variant="outline" size="icon" onClick={fetchOrderData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
+            <RefreshCw className={cn("h-5 w-5", isLoading && orders.length > 0 && "animate-spin")} />
+          </Button>
           {(currentUser.role === 'SYSTEM_ADMIN') && (
             <Link href="/admin/service-management" passHref>
               <Button variant="outline" size="lg" className="w-full sm:w-auto h-10 rounded-md shadow-md hover:shadow-lg transition-shadow">
