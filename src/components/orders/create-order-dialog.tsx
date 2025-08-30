@@ -800,20 +800,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                 </div>
             </div>
 
-            <div className="space-y-1 mt-4 border-t border-border pt-4">
-              <Label htmlFor="initialStatus">Initial Status *</Label>
-              <Select value={initialStatusId} onValueChange={setInitialStatusId} required disabled={availableStatuses.length === 0}>
-                <SelectTrigger id="initialStatus">
-                  <SelectValue placeholder={availableStatuses.length === 0 ? "No statuses available" : "Select initial status"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableStatuses.map(status => (
-                    <SelectItem key={status.id} value={status.id}>{status.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {availableStatuses.length === 0 && !isSubmitting && !isLoadingOptions && <p className="text-xs text-muted-foreground mt-1">Statuses are loading or unavailable. Please wait or check admin settings.</p>}
-            </div>
           </div>
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => { setIsOpen(false); }} disabled={isSubmitting}>Cancel</Button>
