@@ -139,8 +139,10 @@ export function ProjectsKanbanClient() {
     };
   }, [searchTerm]);
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
+  const fetchData = useCallback(async (isInitialLoad = false) => {
+    if (isInitialLoad) {
+        setIsLoading(true);
+    }
     try {
       const [fetchedProjects, fetchedStatuses, fetchedSettings] = await Promise.all([ 
         getProjects(),
@@ -154,14 +156,24 @@ export function ProjectsKanbanClient() {
       console.error("Failed to fetch projects or statuses:", error);
       toast({ title: "Error", description: "Could not load projects or status configurations.", variant: "destructive" });
     } finally {
-      setIsLoading(false);
+      if (isInitialLoad) {
+        setIsLoading(false);
+      }
     }
   }, [toast]);
   
-  // Fetch data on component mount
   useEffect(() => {
     if (currentUser) {
-        fetchData();
+        fetchData(true); // Initial fetch
+        const intervalId = setInterval(() => {
+          console.log("Auto-refreshing project data...");
+          fetchData(false); // Subsequent fetches are background updates
+        }, 10000); // 10 seconds
+
+        return () => {
+            console.log("Clearing project data refresh interval.");
+            clearInterval(intervalId);
+        };
     }
   }, [currentUser, fetchData]);
 
