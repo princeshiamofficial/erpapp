@@ -37,7 +37,7 @@ interface EditOrderDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   order: TrackingLink;
   currentUser: User;
-  onOrderUpdated: () => void;
+  onOrderUpdated: (updatedOrder: TrackingLink) => void;
 }
 
 interface DialogOrderItem {
@@ -335,7 +335,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     const result = await updateOrderAction(order.id, finalUpdates, currentUser);
     setIsSubmitting(false);
     if (result.success && result.order) {
-      onOrderUpdated(); onOpenChange(false);
+      onOrderUpdated(result.order); 
     } else {
       toast({ title: "Update Failed", description: result.error || "Could not update order.", variant: "destructive" });
     }

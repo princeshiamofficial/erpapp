@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -275,23 +276,14 @@ export default function OrdersPage() {
     setIsEditOrderDialogOpen(true);
   };
 
-  const handleOrderUpdated = useCallback(async () => {
-    console.log("OrdersPage/handleOrderUpdated: Current user before calling action:", JSON.stringify(currentUser));
-    if (!currentUser || !currentUser.role) {
-      console.error("OrdersPage/handleOrderUpdated: currentUser is invalid. Aborting update.");
-      toast({ title: "Authentication Error", description: "Your session seems invalid. Please log in again to update orders.", variant: "destructive" });
-      setIsEditOrderDialogOpen(false); // Ensure dialog closes
-      setOrderToEdit(null); // Clear the order being edited
-      return;
-    }
-    
-    // The EditOrderDialog now calls the server action itself.
-    // This function is now primarily for post-update actions on the OrdersPage.
+  const handleOrderUpdated = useCallback(async (updatedOrder: TrackingLink) => {
+    setOrders(prevOrders => 
+      prevOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o)
+    );
     toast({ title: "Order Updated", description: "Order details have been successfully updated."});
-    await fetchOrderData(); // Re-fetch data to reflect changes
     setIsEditOrderDialogOpen(false);
     setOrderToEdit(null);
-  }, [currentUser, toast, fetchOrderData]);
+  }, [toast]);
 
   const renderPagination = () => {
     const pageNumbers = [];
