@@ -63,19 +63,17 @@ export const addEmployee = async (employeeData: Omit<Employee, 'id' | 'employeeI
         await ensureCollectionExists(EMPLOYEES_COLLECTION);
 
         const allEmployees = await getEmployees();
-        let newIdNumber = 1;
-        if (allEmployees.length > 0) {
-            const lastEmployeeId = allEmployees.sort((a,b) => {
-                const numA = parseInt(a.employeeId.split('-')[1] || '0');
-                const numB = parseInt(b.employeeId.split('-')[1] || '0');
-                return numB - numA;
-            })[0].employeeId;
-            const lastNumber = parseInt(lastEmployeeId.split('-')[1], 10);
-            if (!isNaN(lastNumber)) {
-                newIdNumber = lastNumber + 1;
+        let maxIdNumber = 0;
+        allEmployees.forEach(emp => {
+            if (emp.employeeId && emp.employeeId.startsWith('EMP-')) {
+                const numPart = parseInt(emp.employeeId.split('-')[1], 10);
+                if (!isNaN(numPart) && numPart > maxIdNumber) {
+                    maxIdNumber = numPart;
+                }
             }
-        }
+        });
         
+        const newIdNumber = maxIdNumber + 1;
         const employeeId = `EMP-${String(newIdNumber).padStart(3, '0')}`;
         const newEmployeeData = { ...employeeData, employeeId };
 
