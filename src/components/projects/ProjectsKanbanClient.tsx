@@ -139,10 +139,8 @@ export function ProjectsKanbanClient() {
     };
   }, [searchTerm]);
 
-  const fetchData = useCallback(async (isInitialLoad = false) => {
-    if (isInitialLoad) {
-        setIsLoading(true);
-    }
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
     try {
       const [fetchedProjects, fetchedStatuses, fetchedSettings] = await Promise.all([ 
         getProjects(),
@@ -156,22 +154,14 @@ export function ProjectsKanbanClient() {
       console.error("Failed to fetch projects or statuses:", error);
       toast({ title: "Error", description: "Could not load projects or status configurations.", variant: "destructive" });
     } finally {
-      if (isInitialLoad) {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
     }
   }, [toast]);
   
+  // Fetch data on component mount
   useEffect(() => {
     if (currentUser) {
-        fetchData(true); // Initial fetch
-        const intervalId = setInterval(() => {
-          fetchData(false); // Subsequent fetches are background updates
-        }, 10000); // 10 seconds
-
-        return () => {
-            clearInterval(intervalId);
-        };
+        fetchData();
     }
   }, [currentUser, fetchData]);
 
@@ -337,7 +327,7 @@ export function ProjectsKanbanClient() {
       return;
     }
 
-    // Optimistically update UI for other statuses
+    // Optimistically update the UI for other statuses
     handleConfirmStatusUpdate(project, newStatus);
   }, [currentUser, globalSettings, toast, handleConfirmStatusUpdate]);
   
@@ -513,12 +503,10 @@ export function ProjectsKanbanClient() {
             onOpenChange={(open) => {
               if(!open) {
                 // If user closes dialog without confirming, revert the optimistic UI update
-                setProjects(prev => prev.map(p => {
-                    if (p.id === projectForLogistics.id) {
-                        return { ...p, status: 'On Design' }; // Example of reverting to a previous logical state
-                    }
-                    return p;
-                }));
+                const originalStatus = projects.find(p => p.id === projectForLogistics.id)?.status;
+                if (originalStatus && originalStatus !== 'Logistics') {
+                  setProjects(prev => prev.map(p => p.id === projectForLogistics.id ? {...p, status: originalStatus} : p));
+                }
                 setProjectForLogistics(null);
               }
               setIsLogisticsConfirmDialogOpen(open);
