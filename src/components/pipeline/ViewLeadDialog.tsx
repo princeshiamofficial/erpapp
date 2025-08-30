@@ -94,6 +94,23 @@ export function ViewLeadDialog({ isOpen, onOpenChange, onLeadUpdated, onEditRequ
   useEffect(() => {
     setLead(initialLead); // Sync with prop when it changes
   }, [initialLead]);
+  
+  useEffect(() => {
+    if (!isOpen || !lead?.id) return;
+
+    const intervalId = setInterval(async () => {
+      console.log(`[ViewLeadDialog] Auto-refreshing lead data for ID: ${lead.id}`);
+      const updatedLead = await getLeadByIdAction(lead.id);
+      if (updatedLead) {
+        setLead(updatedLead);
+      }
+    }, 10000); // 10 seconds
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isOpen, lead?.id]);
+
 
   const handleSubmitActivity = async (e: FormEvent) => {
     e.preventDefault();
