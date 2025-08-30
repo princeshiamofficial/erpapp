@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -512,10 +513,15 @@ export function ProjectsKanbanClient() {
             onOpenChange={(open) => {
               if(!open) {
                 // If user closes dialog without confirming, revert the optimistic UI update
+                setProjects(prev => prev.map(p => {
+                    if (p.id === projectForLogistics.id) {
+                        return { ...p, status: 'On Design' }; // Example of reverting to a previous logical state
+                    }
+                    return p;
+                }));
                 setProjectForLogistics(null);
-              } else {
-                 setIsLogisticsConfirmDialogOpen(open);
               }
+              setIsLogisticsConfirmDialogOpen(open);
             }}
             onConfirm={(notes) => {
               handleConfirmStatusUpdate(projectForLogistics, 'Logistics', notes);
