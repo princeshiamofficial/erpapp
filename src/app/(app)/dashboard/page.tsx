@@ -68,7 +68,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { divisions } from '@/lib/district-data'; // Import divisions data
-import type { DateRange, PredefinedRange } from "react-day-picker";
+import type { DateRange, PredefinedRange } from "@/components/dashboard/date-range-picker";
 
 // Lazy loading components
 const DateRangePicker = dynamic(() => import('@/components/dashboard/date-range-picker').then(mod => mod.DateRangePicker), {
@@ -1100,3 +1100,5 @@ function DashboardContent() {
 }
 
 // Moved StatusTimeline to its own file in components/dashboard to be dynamically imported
+
+    
