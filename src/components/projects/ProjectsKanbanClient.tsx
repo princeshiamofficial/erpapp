@@ -265,8 +265,9 @@ export function ProjectsKanbanClient() {
           p.id === project.id ? { ...p, status: originalStatus } : p
         );
       });
+    } else {
+      toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
     }
-    // No success toast or re-fetch to keep it instant
   }, [currentUser, toast]);
 
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
