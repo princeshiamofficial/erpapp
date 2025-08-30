@@ -1,7 +1,7 @@
 
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore, enableIndexedDbPersistence, CACHE_SIZE_UNLIMITED } from "firebase/firestore";
+import { initializeFirestore, CACHE_SIZE_UNLIMITED } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getMessaging, isSupported as isMessagingSupported } from "firebase/messaging"; // Added for FCM
 
@@ -24,23 +24,14 @@ if (!getApps().length) {
   app = getApp();
 }
 
-const db = getFirestore(app);
-// Enable offline persistence
-try {
-    enableIndexedDbPersistence(db, {
-      cacheSizeBytes: CACHE_SIZE_UNLIMITED
-    })
-    .then(() => console.log("[Firestore] Offline persistence enabled."))
-    .catch((err) => {
-        if (err.code == 'failed-precondition') {
-            console.warn("[Firestore] Persistence failed: multiple tabs open or other issue.");
-        } else if (err.code == 'unimplemented') {
-            console.warn("[Firestore] Persistence not available in this browser.");
-        }
-    });
-} catch(e) {
-    console.error("[Firestore] Error enabling persistence:", e);
-}
+// Use initializeFirestore with persistence settings
+const db = initializeFirestore(app, {
+  cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+  // The 'ignoreUndefinedProperties' is a good practice to include, though not strictly required by the warning fix
+  ignoreUndefinedProperties: true 
+});
+
+console.log("[Firestore] Offline persistence enabled via initializeFirestore.");
 
 
 const auth = getAuth(app);
@@ -64,3 +55,4 @@ if (typeof window !== 'undefined') {
 
 
 export { app, db, auth, /* analytics, */ messagingInstance as messaging }; // Removed analytics from export
+
