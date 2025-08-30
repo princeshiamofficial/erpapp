@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import type { Project, ProjectStatusType, CustomStatus, User, GlobalSettings } from '@/types'; 
 import { 
@@ -165,12 +165,10 @@ export function ProjectsKanbanClient() {
     if (currentUser) {
         fetchData(true); // Initial fetch
         const intervalId = setInterval(() => {
-          console.log("Auto-refreshing project data...");
           fetchData(false); // Subsequent fetches are background updates
         }, 10000); // 10 seconds
 
         return () => {
-            console.log("Clearing project data refresh interval.");
             clearInterval(intervalId);
         };
     }
