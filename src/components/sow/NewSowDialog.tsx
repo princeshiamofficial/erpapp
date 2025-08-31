@@ -10,8 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { User, TrackingLink } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addSowEntryAction } from '@/app/(app)/crm/sow/actions';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronsUpDown, Check } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
+
 
 interface NewSowDialogProps {
   currentUser: User;
@@ -32,6 +36,8 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
   const [showCustomCategoryInput, setShowCustomCategoryInput] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAutoFilled, setIsAutoFilled] = useState(false);
+  const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
+
 
   const { toast } = useToast();
 
@@ -45,6 +51,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
     setShowCustomCategoryInput(false);
     setIsSubmitting(false);
     setIsAutoFilled(false);
+    setIsCategoryPopoverOpen(false);
   }, []);
 
   useEffect(() => {
@@ -148,6 +155,8 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
     }
   };
 
+  const allCategoryOptions = [...reportProductFilters, 'Other'];
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -192,19 +201,48 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
             </div>
             <div className="space-y-1">
               <Label htmlFor="sow-category">Category *</Label>
-              <Select value={category} onValueChange={handleCategoryChange} required>
-                <SelectTrigger id="sow-category">
-                  <SelectValue placeholder="Select a product category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {reportProductFilters.map((filter) => (
-                    <SelectItem key={filter} value={filter}>
-                      {filter}
-                    </SelectItem>
-                  ))}
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+              <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={isCategoryPopoverOpen}
+                    className="w-full justify-between"
+                  >
+                    {category || "Select a product category..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Search category..." />
+                    <CommandList>
+                      <CommandEmpty>No category found.</CommandEmpty>
+                      <CommandGroup>
+                        {allCategoryOptions.map((filter) => (
+                          <CommandItem
+                            key={filter}
+                            value={filter}
+                            onSelect={(currentValue) => {
+                              const selectedValue = allCategoryOptions.find(f => f.toLowerCase() === currentValue) || '';
+                              handleCategoryChange(selectedValue);
+                              setIsCategoryPopoverOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                category === filter ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            {filter}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             {showCustomCategoryInput && (
               <div className="space-y-1">
