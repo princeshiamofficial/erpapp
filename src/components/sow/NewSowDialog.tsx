@@ -33,6 +33,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
   const [businessName, setBusinessName] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [customCategory, setCustomCategory] = useState('');
@@ -43,12 +44,40 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
 
 
   const { toast } = useToast();
+  
+  const validatePhone = (number: string) => {
+    if (!number) {
+        setPhoneError(null);
+        return;
+    }
+    const phoneRegex = /^0\d{10}$/;
+    if (!phoneRegex.test(number)) {
+        if (!number.startsWith('0')) {
+            setPhoneError("Phone number must start with 0.");
+        } else if (number.length !== 11) {
+            setPhoneError("Phone number must be exactly 11 digits.");
+        } else {
+            setPhoneError("Invalid phone number format.");
+        }
+    } else {
+        setPhoneError(null);
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const numericValue = e.target.value.replace(/[^0-9]/g, '');
+    if (numericValue.length <= 11) {
+      setPhoneNumber(numericValue);
+      validatePhone(numericValue);
+    }
+  };
 
   const resetForm = useCallback(() => {
     setJobId('');
     setBusinessName('');
     setAddress('');
     setPhoneNumber('');
+    setPhoneError(null);
     setAmount('');
     setSelectedCategories([]);
     setCustomCategory('');
@@ -80,6 +109,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
           setBusinessName('');
           setAddress('');
           setPhoneNumber('');
+          setPhoneError(null);
           setIsAutoFilled(false);
         }
         return;
@@ -98,6 +128,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
             setBusinessName(actualBusinessName);
             setAddress(existingOrder.address);
             setPhoneNumber(existingOrder.phoneNumber);
+            validatePhone(existingOrder.phoneNumber);
             setIsAutoFilled(true);
 
             toast({
@@ -109,6 +140,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
         setBusinessName('');
         setAddress('');
         setPhoneNumber('');
+        setPhoneError(null);
         setIsAutoFilled(false);
       }
     }, 500);
@@ -134,6 +166,13 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    validatePhone(phoneNumber);
+    if (phoneError) {
+        toast({ title: "Validation Error", description: phoneError, variant: "destructive" });
+        return;
+    }
+    
     setIsSubmitting(true);
     
     const finalCategory = selectedCategories.join(', ');
@@ -201,19 +240,14 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
                   id="sow-phoneNumber"
                   type="tel"
                   value={phoneNumber}
-                  onChange={(e) => {
-                    const numericValue = e.target.value.replace(/[^0-9]/g, '');
-                    if (numericValue.length <= 11) {
-                      setPhoneNumber(numericValue);
-                    }
-                  }}
+                  onChange={handlePhoneChange}
                   required
-                  pattern="0\d{10}"
                   maxLength={11}
-                  title="Phone number must be an 11-digit number starting with 0."
                   placeholder="01xxxxxxxxx"
                   disabled={isAutoFilled}
+                  className={cn(phoneError && "border-destructive focus-visible:ring-destructive")}
                 />
+                {phoneError && <p className="text-xs text-destructive">{phoneError}</p>}
               </div>
               <div className="space-y-1">
                 <Label htmlFor="sow-orderDate">Order Date *</Label>
@@ -312,7 +346,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
 
             <DialogFooter className="pt-4 sticky bottom-0 bg-background py-4">
               <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>Cancel</Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting || !!phoneError}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isSubmitting ? 'Creating...' : 'Create Entry'}
               </Button>
