@@ -7,10 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import type { TrackingLink, OrderItem, GlobalSettings, CustomStatus } from '@/types';
+import type { TrackingLink, OrderItem, GlobalSettings, CustomStatus, SowDataEntry } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { getStatuses } from '@/lib/status-service';
+import { getSowEntries } from '@/lib/sow-service'; // Import new SOW service
 import { PackageSearch, ListChecks, ArrowUpDown, Phone, MapPin, PlusCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -78,7 +79,7 @@ const formatDate = (dateString?: string) => {
     }
 };
 
-const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings | null): SowData[] => {
+const generateSowData = (orders: TrackingLink[], sowEntries: SowDataEntry[], globalSettings: GlobalSettings | null): SowData[] => {
     const filters = globalSettings?.reportProductFilters || [];
 
     const ordersByJobId = new Map<string, { orders: TrackingLink[], businessName: string, latestDate: string, address: string, phoneNumber: string }>();
@@ -95,6 +96,47 @@ const generateSowData = (orders: TrackingLink[], globalSettings: GlobalSettings 
           existing.businessName = businessName;
           existing.address = order.address;
           existing.phoneNumber = order.phoneNumber;
+        }
+        ordersByJobId.set(jobId, existing);
+    });
+
+    sowEntries.forEach(entry => {
+        const jobId = entry.jobId;
+        const businessName = entry.businessName;
+        const existing = ordersByJobId.get(jobId) || { orders: [], businessName: entry.businessName, latestDate: entry.createdAt, address: entry.address, phoneNumber: entry.phoneNumber };
+        
+        // Create a pseudo-order item for the SOW category
+        const sowAsOrderItem: OrderItem = {
+          id: entry.id,
+          model: entry.category,
+          quantity: 1,
+          lamination: 'N/A',
+          unitPrice: 0,
+          lineItemTotalPrice: 0,
+        };
+
+        const pseudoOrder: TrackingLink = {
+          id: entry.id,
+          companyName: `${entry.jobId} • ${entry.businessName}`,
+          address: entry.address,
+          phoneNumber: entry.phoneNumber,
+          orderItems: [sowAsOrderItem],
+          createdAt: entry.createdAt,
+          crmUserId: entry.crmUserId,
+          crmUserName: entry.crmUserName,
+          currentStatus: 'sow-entry',
+          isPublic: false,
+          statusHistory: [],
+          comments: []
+        };
+        
+        existing.orders.push(pseudoOrder);
+
+        if (new Date(entry.createdAt) > new Date(existing.latestDate)) {
+          existing.latestDate = entry.createdAt;
+          existing.businessName = entry.businessName;
+          existing.address = entry.address;
+          existing.phoneNumber = entry.phoneNumber;
         }
         ordersByJobId.set(jobId, existing);
     });
@@ -156,8 +198,6 @@ const getLoyaltyColorClass = (score: number) => {
 export default function SOWPage() {
   const { currentUser } = useAuth();
   const [sowData, setSowData] = useState<SowData[]>([]);
-  const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
-  const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
@@ -170,15 +210,13 @@ export default function SOWPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedOrders, fetchedSettings, fetchedStatuses] = await Promise.all([
+      const [fetchedOrders, fetchedSettings, fetchedSowEntries] = await Promise.all([
         getOrders(),
         getGlobalSettings(),
-        getStatuses()
+        getSowEntries(),
       ]);
-      const data = generateSowData(fetchedOrders, fetchedSettings);
+      const data = generateSowData(fetchedOrders, fetchedSowEntries, fetchedSettings);
       setSowData(data);
-      setAllOrders(fetchedOrders);
-      setAllStatuses(fetchedStatuses);
       setGlobalSettings(fetchedSettings);
       localStorage.setItem(SOW_DATA_CACHE_KEY, JSON.stringify(data));
     } catch (error) {
@@ -257,10 +295,6 @@ export default function SOWPage() {
     const endIndex = startIndex + ITEMS_PER_PAGE;
     return sortedAndFilteredData.slice(startIndex, endIndex);
   }, [sortedAndFilteredData, currentPage]);
-  
-  const memoizedAvailableStatusesForDialog = useMemo(() => {
-    return allStatuses.filter(s => s.isVisible !== false);
-  }, [allStatuses]);
   
   const renderPagination = () => {
     if (totalPages <= 1) return null;
@@ -365,15 +399,14 @@ export default function SOWPage() {
                 {canCreateOrder && (
                   <NewSowDialog
                     currentUser={currentUser}
-                    availableStatuses={memoizedAvailableStatusesForDialog}
                     onSowCreated={fetchData}
-                    allOrders={allOrders}
+                    allOrders={sowData.map(d => ({...d, companyName: `${d.id} • ${d.businessName}`, id:d.id, createdAt: d.orderDate, phoneNumber: d.phoneNumber, address: d.address, orderItems: [], currentStatus: '', isPublic: false, statusHistory: [], comments:[], crmUserId: currentUser.id, crmUserName: currentUser.name }))}
                     reportProductFilters={globalSettings?.reportProductFilters || []}
                   >
                     <Button
                       size="default"
                       className="w-full sm:w-auto"
-                      disabled={isLoading || (allStatuses.length === 0)}
+                      disabled={isLoading}
                     >
                       <PlusCircle className="mr-2 h-4 w-4" />
                       New SOW

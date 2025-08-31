@@ -334,3 +334,15 @@ export interface PurchaseRequest {
   approvedByUserId?: string | null;
   approvedByUserName?: string | null;
 }
+
+export interface SowDataEntry {
+    id: string;
+    jobId: string;
+    businessName: string;
+    address: string;
+    phoneNumber: string;
+    category: string;
+    createdAt: string; // ISO String for when SOW was created
+    crmUserId: string;
+    crmUserName: string;
+}

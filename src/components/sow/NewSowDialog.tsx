@@ -7,22 +7,20 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { User, CustomStatus, TrackingLink, OrderItem } from "@/types";
+import type { User, TrackingLink } from "@/types";
 import { useToast } from '@/hooks/use-toast';
-import { createOrderAction } from '@/app/(app)/orders/actions';
+import { addSowEntryAction } from '@/app/(app)/crm/sow/actions';
 import { Loader2 } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
 
 interface NewSowDialogProps {
   currentUser: User;
-  availableStatuses: CustomStatus[];
   onSowCreated: () => void;
   children: React.ReactNode;
   allOrders: TrackingLink[];
   reportProductFilters: string[];
 }
 
-export function NewSowDialog({ currentUser, availableStatuses, onSowCreated, children, allOrders, reportProductFilters }: NewSowDialogProps) {
+export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, reportProductFilters }: NewSowDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [jobId, setJobId] = useState('');
   const [businessName, setBusinessName] = useState('');
@@ -79,7 +77,7 @@ export function NewSowDialog({ currentUser, availableStatuses, onSowCreated, chi
       if (existingOrder) {
         if (!isAutoFilled) {
             const nameParts = (existingOrder.companyName || '').split(' • ');
-            const actualBusinessName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : '';
+            const actualBusinessName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : existingOrder.companyName;
 
             setBusinessName(actualBusinessName);
             setAddress(existingOrder.address);
@@ -112,54 +110,25 @@ export function NewSowDialog({ currentUser, availableStatuses, onSowCreated, chi
       setIsSubmitting(false);
       return;
     }
-    
-    const phoneRegex = /^0\d{10}$/;
-    if (!phoneRegex.test(phoneNumber)) {
-      toast({
-        title: "Validation Error",
-        description: "Invalid phone number. It must be an 11-digit number starting with 0.",
-        variant: "destructive"
-      });
-      setIsSubmitting(false);
-      return;
-    }
-    
-    const orderSubmittedStatus = availableStatuses.find(s => s.id === 'order-submitted');
-    if (!orderSubmittedStatus) {
-        toast({ title: "Configuration Error", description: "Initial order status 'order-submitted' not found.", variant: "destructive" });
-        setIsSubmitting(false);
-        return;
-    }
 
-    // Create a minimal order item to represent the category
-    const sowOrderItem: OrderItem = {
-      id: uuidv4(),
-      model: category,
-      quantity: 1, // Quantity doesn't matter for SOW logic, but needs to be > 0
-      lamination: 'N/A', // Default value
-      unitPrice: 0,
-      lineItemTotalPrice: 0,
-    };
-
-    const orderDataForAction = {
+    const sowData = {
       jobId,
-      companyName: businessName,
+      businessName,
       address,
       phoneNumber,
+      category,
       createdAt: new Date().toISOString(),
-      orderItems: [sowOrderItem],
-      initialStatusId: orderSubmittedStatus.id,
     };
 
-    const result = await createOrderAction(orderDataForAction, currentUser);
+    const result = await addSowEntryAction(sowData, currentUser);
     setIsSubmitting(false);
 
-    if ('error' in result) {
-      toast({ title: "SOW Creation Failed", description: result.error, variant: "destructive" });
-    } else {
+    if (result.success) {
       toast({ title: "SOW Entry Created", description: `A new entry for ${businessName} has been added.` });
       onSowCreated();
       setIsOpen(false);
+    } else {
+      toast({ title: "SOW Creation Failed", description: result.error, variant: "destructive" });
     }
   };
 
