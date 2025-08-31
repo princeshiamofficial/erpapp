@@ -17,35 +17,28 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
   try {
     await ensureCollectionExists(ORDERS_COLLECTION);
     
-    const allOrders: TrackingLink[] = [];
-    let offset = 0;
-    const limit = 500; // Fetch in batches
-    let hasMore = true;
-
-    while (hasMore) {
-      const response = await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents?limit=${limit}&offset=${offset}&orderBy=createdAt&direction=desc`);
-      
-      if (response && Array.isArray(response.documents)) {
-        const ordersFromPage = response.documents.map((doc: { id: string, data: any }) => ({
+    // Fetch the most recent 200 orders to prevent server overload issues (like 500 errors).
+    // This is a more stable approach than trying to fetch all documents.
+    const limit = 200;
+    const response = await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents?limit=${limit}&orderBy=createdAt&direction=desc`);
+    
+    if (response && Array.isArray(response.documents)) {
+        return response.documents.map((doc: { id: string, data: any }) => ({
             id: doc.id,
             ...doc.data
         } as TrackingLink));
-        allOrders.push(...ordersFromPage);
-        
-        hasMore = response.pagination?.has_more ?? false;
-        offset += limit;
-      } else {
-        hasMore = false;
-      }
     }
     
-    // Background settlement logic can be added here later if needed,
-    // but it's safer to have it triggered by a dedicated user action (like the sync button).
-
-    return allOrders;
-  } catch (error) {
-    console.error("Error fetching orders from API:", error);
     return [];
+  } catch (error) {
+    // Added more specific logging to help debug future issues.
+    if (error instanceof Error) {
+        console.error("Error fetching orders from API:", error.message);
+        throw new Error(`Failed to fetch orders: ${error.message}`);
+    } else {
+        console.error("An unknown error occurred while fetching orders from API:", error);
+        throw new Error("An unknown error occurred while fetching orders.");
+    }
   }
 };
 
@@ -565,6 +558,7 @@ export const deleteShippedOrderEntry = async (orderId: string): Promise<boolean>
     return false;
   }
 };
+
 
 
 
