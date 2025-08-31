@@ -70,20 +70,24 @@ export async function createOrderAction(
     for (const item of data.orderItems) {
       if (!item.model?.trim()) return { error: `Model is required for all order items.` };
       const quantity = parseInt(item.quantity, 10);
-      if (isNaN(quantity) || quantity < 1) return { error: `Invalid quantity for model "${item.model}". Quantity must be a positive number.` };
-      if (!item.lamination?.trim()) return { error: `Lamination is required for model "${item.model}".` };
-      if (item.unitPrice === undefined || item.unitPrice === null || isNaN(Number(item.unitPrice)) || Number(item.unitPrice) < 0) return { error: `Unit price is missing or invalid for model "${item.model}".` };
-      if (item.lineItemTotalPrice === undefined || item.lineItemTotalPrice === null || isNaN(Number(item.lineItemTotalPrice)) || Number(item.lineItemTotalPrice) < 0) return { error: `Line item total price is missing or invalid for model "${item.model}".` };
+      // For SOW entries, quantity might be 0, so we allow it. For regular orders it should be > 0.
+      if (isNaN(quantity) || quantity < 0) return { error: `Invalid quantity for model "${item.model}". Quantity must be a non-negative number.` };
+      
+      const lamination = item.lamination?.trim() || 'N/A'; // Default lamination if empty
+      
+      const unitPrice = item.unitPrice === undefined || item.unitPrice === null || isNaN(Number(item.unitPrice)) ? 0 : Number(item.unitPrice);
+      const lineItemTotalPrice = item.lineItemTotalPrice === undefined || item.lineItemTotalPrice === null || isNaN(Number(item.lineItemTotalPrice)) ? 0 : Number(item.lineItemTotalPrice);
+      
 
       processedOrderItems.push({
         id: item.id || uuidv4(),
         model: item.model.trim(),
         quantity: quantity,
-        lamination: item.lamination.trim(),
-        unitPrice: Number(item.unitPrice),
-        lineItemTotalPrice: Number(item.lineItemTotalPrice),
+        lamination: lamination,
+        unitPrice: unitPrice,
+        lineItemTotalPrice: lineItemTotalPrice,
       });
-      orderItemsTotal += Number(item.lineItemTotalPrice);
+      orderItemsTotal += lineItemTotalPrice;
     }
 
     if (data.specialClientDiscount !== null && data.specialClientDiscount < 0) {
@@ -156,6 +160,7 @@ export async function createOrderAction(
     revalidatePath("/(app)/active-orders");
     revalidatePath("/(app)/orders/monthly");
     revalidatePath("/(app)/admin/model-management");
+    revalidatePath("/(app)/crm/sow"); // Revalidate SOW page
     return createdOrder;
 
   } catch (error: any) {
@@ -371,6 +376,7 @@ export async function updateOrderAction(
     revalidatePath("/(app)/deliveries/weekly");
     revalidatePath("/(app)/projects");
     revalidatePath("/(app)/admin/model-management");
+    revalidatePath("/(app)/crm/sow"); // Revalidate SOW page
 
     return { success: true, order: updatedOrder };
   } catch (error: any) {
@@ -504,6 +510,7 @@ export async function deleteOrderAction(
       revalidatePath("/(app)/deliveries/monthly");
       revalidatePath("/(app)/deliveries/weekly");
       revalidatePath("/(app)/projects");
+      revalidatePath("/(app)/crm/sow"); // Revalidate SOW page
       return { success: true };
     }
     return { success: false, error: "Failed to delete order from database. Service returned failure." };

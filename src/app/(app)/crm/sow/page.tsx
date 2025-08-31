@@ -40,8 +40,7 @@ import {
 } from "@/components/ui/dialog";
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/auth-context';
-
-const CreateOrderDialog = dynamic(() => import('@/components/orders/create-order-dialog').then(mod => mod.CreateOrderDialog));
+import { NewSowDialog } from '@/components/sow/NewSowDialog';
 
 
 const ITEMS_PER_PAGE = 12;
@@ -159,6 +158,7 @@ export default function SOWPage() {
   const [sowData, setSowData] = useState<SowData[]>([]);
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
+  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -179,6 +179,7 @@ export default function SOWPage() {
       setSowData(data);
       setAllOrders(fetchedOrders);
       setAllStatuses(fetchedStatuses);
+      setGlobalSettings(fetchedSettings);
       localStorage.setItem(SOW_DATA_CACHE_KEY, JSON.stringify(data));
     } catch (error) {
       toast({
@@ -362,11 +363,12 @@ export default function SOWPage() {
                   className="w-full sm:w-auto sm:max-w-xs"
                 />
                 {canCreateOrder && (
-                  <CreateOrderDialog
+                  <NewSowDialog
                     currentUser={currentUser}
                     availableStatuses={memoizedAvailableStatusesForDialog}
-                    onOrderCreated={fetchData}
+                    onSowCreated={fetchData}
                     allOrders={allOrders}
+                    reportProductFilters={globalSettings?.reportProductFilters || []}
                   >
                     <Button
                       size="default"
@@ -376,7 +378,7 @@ export default function SOWPage() {
                       <PlusCircle className="mr-2 h-4 w-4" />
                       New SOW
                     </Button>
-                  </CreateOrderDialog>
+                  </NewSowDialog>
                 )}
               </div>
           </CardHeader>
