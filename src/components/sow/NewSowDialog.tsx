@@ -47,7 +47,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
   
   const validatePhone = (number: string) => {
     if (!number) {
-        setPhoneError(null); // No error if empty, required check will handle it
+        setPhoneError("Phone number is required.");
         return;
     }
     const phoneRegex = /^0\d{10}$/;
@@ -351,22 +351,25 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
                     </Command>
                   </PopoverContent>
                 </Popover>
-
-                <div className="flex items-center gap-2 pt-2">
-                  <Input
-                    id="sow-custom-category"
-                    value={customCategory}
-                    onChange={(e) => setCustomCategory(e.target.value)}
-                    placeholder="Or add a custom category"
-                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomCategory(); }}}
-                  />
-                  <Button type="button" onClick={handleAddCustomCategory}>Add</Button>
-                </div>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="sow-amount">Total Amount *</Label>
                 <Input id="sow-amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required placeholder="e.g., 5000.00" />
               </div>
+            </div>
+
+             <div className="space-y-1">
+                <Label htmlFor="sow-custom-category">Add Custom Category</Label>
+                <div className="flex items-center gap-2">
+                    <Input
+                        id="sow-custom-category"
+                        value={customCategory}
+                        onChange={(e) => setCustomCategory(e.target.value)}
+                        placeholder="Type a new category and click Add"
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomCategory(); }}}
+                    />
+                    <Button type="button" onClick={handleAddCustomCategory}>Add</Button>
+                </div>
             </div>
 
             <DialogFooter className="pt-4 sticky bottom-0 bg-background py-4">
