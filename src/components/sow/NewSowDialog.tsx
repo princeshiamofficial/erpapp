@@ -27,6 +27,8 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [category, setCategory] = useState('');
+  const [customCategory, setCustomCategory] = useState('');
+  const [showCustomCategoryInput, setShowCustomCategoryInput] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAutoFilled, setIsAutoFilled] = useState(false);
 
@@ -38,6 +40,8 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
     setAddress('');
     setPhoneNumber('');
     setCategory('');
+    setCustomCategory('');
+    setShowCustomCategoryInput(false);
     setIsSubmitting(false);
     setIsAutoFilled(false);
   }, []);
@@ -100,12 +104,23 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
     return () => clearTimeout(handler);
   }, [jobId, allOrders, toast, isAutoFilled]);
 
+  const handleCategoryChange = (value: string) => {
+    setCategory(value);
+    if (value.toLowerCase() === 'other') {
+      setShowCustomCategoryInput(true);
+    } else {
+      setShowCustomCategoryInput(false);
+      setCustomCategory('');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    
+    const finalCategory = category.toLowerCase() === 'other' ? customCategory.trim() : category;
 
-    if (!jobId || !businessName || !address || !phoneNumber || !category) {
+    if (!jobId || !businessName || !address || !phoneNumber || !finalCategory) {
       toast({ title: "Validation Error", description: "All fields are required.", variant: "destructive" });
       setIsSubmitting(false);
       return;
@@ -116,7 +131,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
       businessName,
       address,
       phoneNumber,
-      category,
+      category: finalCategory,
       createdAt: new Date().toISOString(),
     };
 
@@ -175,7 +190,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
           </div>
           <div className="space-y-1">
             <Label htmlFor="sow-category">Category *</Label>
-            <Select value={category} onValueChange={setCategory} required>
+            <Select value={category} onValueChange={handleCategoryChange} required>
               <SelectTrigger id="sow-category">
                 <SelectValue placeholder="Select a product category" />
               </SelectTrigger>
@@ -185,9 +200,22 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
                     {filter}
                   </SelectItem>
                 ))}
+                 <SelectItem value="Other">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
+          {showCustomCategoryInput && (
+            <div className="space-y-1">
+              <Label htmlFor="sow-custom-category">Specify Category *</Label>
+              <Input
+                id="sow-custom-category"
+                value={customCategory}
+                onChange={(e) => setCustomCategory(e.target.value)}
+                required
+                placeholder="Enter custom category"
+              />
+            </div>
+          )}
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>
