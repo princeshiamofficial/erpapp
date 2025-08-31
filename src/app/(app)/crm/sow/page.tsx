@@ -7,10 +7,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import type { TrackingLink, OrderItem, GlobalSettings } from '@/types';
+import type { TrackingLink, OrderItem, GlobalSettings, CustomStatus } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
-import { PackageSearch, ListChecks, ArrowUpDown, Phone, MapPin } from 'lucide-react';
+import { getStatuses } from '@/lib/status-service';
+import { PackageSearch, ListChecks, ArrowUpDown, Phone, MapPin, PlusCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
@@ -37,6 +38,11 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import dynamic from 'next/dynamic';
+import { useAuth } from '@/contexts/auth-context';
+
+const CreateOrderDialog = dynamic(() => import('@/components/orders/create-order-dialog').then(mod => mod.CreateOrderDialog));
+
 
 const ITEMS_PER_PAGE = 12;
 const SOW_DATA_CACHE_KEY = 'sowDataCache';
@@ -149,7 +155,10 @@ const getLoyaltyColorClass = (score: number) => {
 
 
 export default function SOWPage() {
+  const { currentUser } = useAuth();
   const [sowData, setSowData] = useState<SowData[]>([]);
+  const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
+  const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -157,6 +166,31 @@ export default function SOWPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedBusiness, setSelectedBusiness] = useState<SowData | null>(null);
   const [isDialogVisible, setIsDialogVisible] = useState(false);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [fetchedOrders, fetchedSettings, fetchedStatuses] = await Promise.all([
+        getOrders(),
+        getGlobalSettings(),
+        getStatuses()
+      ]);
+      const data = generateSowData(fetchedOrders, fetchedSettings);
+      setSowData(data);
+      setAllOrders(fetchedOrders);
+      setAllStatuses(fetchedStatuses);
+      localStorage.setItem(SOW_DATA_CACHE_KEY, JSON.stringify(data));
+    } catch (error) {
+      toast({
+        title: "Error fetching data",
+        description: "Could not load the necessary data for the SOW page.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
 
    useEffect(() => {
     const cachedData = localStorage.getItem(SOW_DATA_CACHE_KEY);
@@ -168,31 +202,8 @@ export default function SOWPage() {
         localStorage.removeItem(SOW_DATA_CACHE_KEY);
       }
     }
-
-    const fetchData = async () => {
-      if (!cachedData) {
-        setIsLoading(true);
-      }
-      try {
-        const [fetchedOrders, fetchedSettings] = await Promise.all([
-          getOrders(),
-          getGlobalSettings()
-        ]);
-        const data = generateSowData(fetchedOrders, fetchedSettings);
-        setSowData(data);
-        localStorage.setItem(SOW_DATA_CACHE_KEY, JSON.stringify(data));
-      } catch (error) {
-        toast({
-          title: "Error fetching data",
-          description: "Could not load the necessary data for the SOW page.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
     fetchData();
-  }, [toast]);
+  }, [fetchData]);
 
   const requestSort = (key: SortKey) => {
     let direction: SortDirection = 'asc';
@@ -245,6 +256,10 @@ export default function SOWPage() {
     const endIndex = startIndex + ITEMS_PER_PAGE;
     return sortedAndFilteredData.slice(startIndex, endIndex);
   }, [sortedAndFilteredData, currentPage]);
+  
+  const memoizedAvailableStatusesForDialog = useMemo(() => {
+    return allStatuses.filter(s => s.isVisible !== false);
+  }, [allStatuses]);
   
   const renderPagination = () => {
     if (totalPages <= 1) return null;
@@ -323,6 +338,13 @@ export default function SOWPage() {
     );
   };
 
+  if (!currentUser) {
+    return <p>You need to be logged in to view this page.</p>;
+  }
+
+  const canCreateOrder = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
+
+
   return (
     <>
       <div className="px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8 pt-0">
@@ -332,12 +354,30 @@ export default function SOWPage() {
                 <CardTitle>Business Report</CardTitle>
                 <CardDescription>Statement of work based on recent order history.</CardDescription>
               </div>
-              <div className="w-full sm:w-auto sm:max-w-xs">
-                  <Input 
-                      placeholder="Search by business name..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <Input 
+                  placeholder="Search by business name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full sm:w-auto sm:max-w-xs"
+                />
+                {canCreateOrder && (
+                  <CreateOrderDialog
+                    currentUser={currentUser}
+                    availableStatuses={memoizedAvailableStatusesForDialog}
+                    onOrderCreated={fetchData}
+                    allOrders={allOrders}
+                  >
+                    <Button
+                      size="default"
+                      className="w-full sm:w-auto"
+                      disabled={isLoading || (allStatuses.length === 0)}
+                    >
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      New SOW
+                    </Button>
+                  </CreateOrderDialog>
+                )}
               </div>
           </CardHeader>
           <CardContent>
