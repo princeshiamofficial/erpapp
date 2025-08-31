@@ -10,7 +10,6 @@ import { useToast } from '@/hooks/use-toast';
 import type { TrackingLink, OrderItem, GlobalSettings, CustomStatus, SowDataEntry } from '@/types';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
-import { getStatuses } from '@/lib/status-service';
 import { getSowEntries } from '@/lib/sow-service'; // Import new SOW service
 import { PackageSearch, ListChecks, ArrowUpDown, Phone, MapPin, PlusCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -39,7 +38,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/auth-context';
 import { NewSowDialog } from '@/components/sow/NewSowDialog';
 
@@ -82,14 +80,14 @@ const formatDate = (dateString?: string) => {
 const generateSowData = (orders: TrackingLink[], sowEntries: SowDataEntry[], globalSettings: GlobalSettings | null): SowData[] => {
     const filters = globalSettings?.reportProductFilters || [];
 
-    const ordersByJobId = new Map<string, { orders: TrackingLink[], businessName: string, latestDate: string, address: string, phoneNumber: string }>();
+    const ordersByJobId = new Map<string, { orders: TrackingLink[], businessName: string, latestDate: string, address: string, phoneNumber: string, manualAmount: number }>();
 
     orders.forEach(order => {
         const companyNameParts = order.companyName.split(' • ').map(part => part.trim());
         const jobId = companyNameParts.length > 1 ? companyNameParts[0] : order.id;
         const businessName = companyNameParts.length > 1 ? companyNameParts.slice(1).join(' • ').trim() : order.companyName;
 
-        const existing = ordersByJobId.get(jobId) || { orders: [], businessName, latestDate: order.createdAt, address: order.address, phoneNumber: order.phoneNumber };
+        const existing = ordersByJobId.get(jobId) || { orders: [], businessName, latestDate: order.createdAt, address: order.address, phoneNumber: order.phoneNumber, manualAmount: 0 };
         existing.orders.push(order);
         if (new Date(order.createdAt) > new Date(existing.latestDate)) {
           existing.latestDate = order.createdAt;
@@ -103,16 +101,15 @@ const generateSowData = (orders: TrackingLink[], sowEntries: SowDataEntry[], glo
     sowEntries.forEach(entry => {
         const jobId = entry.jobId;
         const businessName = entry.businessName;
-        const existing = ordersByJobId.get(jobId) || { orders: [], businessName: entry.businessName, latestDate: entry.createdAt, address: entry.address, phoneNumber: entry.phoneNumber };
+        const existing = ordersByJobId.get(jobId) || { orders: [], businessName: entry.businessName, latestDate: entry.createdAt, address: entry.address, phoneNumber: entry.phoneNumber, manualAmount: 0 };
         
-        // Create a pseudo-order item for the SOW category
         const sowAsOrderItem: OrderItem = {
           id: entry.id,
           model: entry.category,
           quantity: 1,
           lamination: 'N/A',
-          unitPrice: 0,
-          lineItemTotalPrice: 0,
+          unitPrice: entry.amount || 0,
+          lineItemTotalPrice: entry.amount || 0,
         };
 
         const pseudoOrder: TrackingLink = {
@@ -131,6 +128,7 @@ const generateSowData = (orders: TrackingLink[], sowEntries: SowDataEntry[], glo
         };
         
         existing.orders.push(pseudoOrder);
+        existing.manualAmount += entry.amount || 0;
 
         if (new Date(entry.createdAt) > new Date(existing.latestDate)) {
           existing.latestDate = entry.createdAt;

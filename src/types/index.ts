@@ -342,6 +342,7 @@ export interface SowDataEntry {
     address: string;
     phoneNumber: string;
     category: string;
+    amount?: number;
     createdAt: string; // ISO String for when SOW was created
     crmUserId: string;
     crmUserName: string;

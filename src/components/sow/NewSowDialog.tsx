@@ -31,6 +31,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
   const [businessName, setBusinessName] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [amount, setAmount] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [customCategory, setCustomCategory] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,6 +46,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
     setBusinessName('');
     setAddress('');
     setPhoneNumber('');
+    setAmount('');
     setSelectedCategories([]);
     setCustomCategory('');
     setIsSubmitting(false);
@@ -131,8 +133,9 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
     setIsSubmitting(true);
     
     const finalCategory = selectedCategories.join(', ');
+    const numericAmount = parseFloat(amount);
 
-    if (!jobId || !businessName || !address || !phoneNumber || !finalCategory) {
+    if (!jobId || !businessName || !address || !phoneNumber || !finalCategory || isNaN(numericAmount)) {
       toast({ title: "Validation Error", description: "All fields are required, and at least one category must be selected.", variant: "destructive" });
       setIsSubmitting(false);
       return;
@@ -143,6 +146,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
       businessName,
       address,
       phoneNumber,
+      amount: numericAmount,
       category: finalCategory,
       createdAt: new Date().toISOString(),
     };
@@ -201,6 +205,10 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
                 placeholder="01xxxxxxxxx"
                 disabled={isAutoFilled}
               />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="sow-amount">Total Amount *</Label>
+              <Input id="sow-amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required placeholder="e.g., 5000.00" />
             </div>
             
             <div className="space-y-2">
