@@ -180,13 +180,6 @@ export default function LeaderboardPage() {
 
   }, [isLoadingData, allUsers, allOrders, globalSettings, selectedDateRange, currentUser, calculatePerformance]);
   
-  const salesPerformanceOrders = useMemo(() => {
-    if (currentUser?.role === 'CRM') {
-      return allOrders.filter(order => order.crmUserId === currentUser.id);
-    }
-    return allOrders;
-  }, [allOrders, currentUser]);
-
 
   const handleDateRangeChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
@@ -194,11 +187,6 @@ export default function LeaderboardPage() {
   };
 
   const isLoadingContent = isAuthLoading || isLoadingData || !selectedDateRange;
-
-  const canSeeSalesPerformance = useMemo(() => {
-    if (!currentUser) return false;
-    return ['SYSTEM_ADMIN', 'ADMIN', 'CRM'].includes(currentUser.role);
-  }, [currentUser]);
 
   if (isLoadingContent) {
     return (
@@ -273,14 +261,6 @@ export default function LeaderboardPage() {
         timePeriodLabel={currentDateRangeLabel}
       />
 
-      {canSeeSalesPerformance && (
-        <div className="relative z-10 mt-8 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pb-12">
-          <SalesPerformanceClient 
-            allOrders={salesPerformanceOrders} 
-            allCrmUsers={allUsers.filter(u => u.role === 'CRM')} 
-          />
-        </div>
-      )}
     </div>
   );
 }
