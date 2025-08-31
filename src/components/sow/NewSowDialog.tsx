@@ -171,17 +171,49 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add New SOW Entry</DialogTitle>
           <DialogDescription>Manually create a new entry for the Statement of Work report.</DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[70vh] pr-4">
           <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="sow-jobId">Job ID *</Label>
                 <Input id="sow-jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., CUST101" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="sow-businessName">Business Name *</Label>
+                <Input id="sow-businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required placeholder="e.g., Acme Restaurant" disabled={isAutoFilled}/>
+              </div>
+            </div>
+            
+            <div className="space-y-1">
+              <Label htmlFor="sow-address">Address *</Label>
+              <Input id="sow-address" value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="e.g., 123 Main St, Anytown" disabled={isAutoFilled}/>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               <div className="space-y-1">
+                <Label htmlFor="sow-phoneNumber">Phone Number *</Label>
+                <Input
+                  id="sow-phoneNumber"
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => {
+                    const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                    if (numericValue.length <= 11) {
+                      setPhoneNumber(numericValue);
+                    }
+                  }}
+                  required
+                  pattern="0\d{10}"
+                  maxLength={11}
+                  title="Phone number must be an 11-digit number starting with 0."
+                  placeholder="01xxxxxxxxx"
+                  disabled={isAutoFilled}
+                />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="sow-orderDate">Order Date *</Label>
@@ -206,101 +238,75 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
                   </Popover>
               </div>
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="sow-businessName">Business Name *</Label>
-              <Input id="sow-businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required placeholder="e.g., Acme Restaurant" disabled={isAutoFilled}/>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="sow-address">Address *</Label>
-              <Input id="sow-address" value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="e.g., 123 Main St, Anytown" disabled={isAutoFilled}/>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="sow-phoneNumber">Phone Number *</Label>
-              <Input
-                id="sow-phoneNumber"
-                type="tel"
-                value={phoneNumber}
-                onChange={(e) => {
-                  const numericValue = e.target.value.replace(/[^0-9]/g, '');
-                  if (numericValue.length <= 11) {
-                    setPhoneNumber(numericValue);
-                  }
-                }}
-                required
-                pattern="0\d{10}"
-                maxLength={11}
-                title="Phone number must be an 11-digit number starting with 0."
-                placeholder="01xxxxxxxxx"
-                disabled={isAutoFilled}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="sow-amount">Total Amount *</Label>
-              <Input id="sow-amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required placeholder="e.g., 5000.00" />
-            </div>
             
-            <div className="space-y-2">
-                <Label htmlFor="sow-category">Categories *</Label>
-                {selectedCategories.length > 0 && (
-                    <div className="flex flex-wrap gap-2 p-2 border rounded-md bg-muted/50">
-                        {selectedCategories.map(cat => (
-                            <Badge key={cat} variant="secondary" className="gap-1.5 py-1 text-sm">
-                                {cat}
-                                <button type="button" onClick={() => handleCategoryToggle(cat)} className="rounded-full hover:bg-destructive/20 p-0.5 transition-colors">
-                                    <X className="h-3 w-3 text-destructive" />
-                                </button>
-                            </Badge>
-                        ))}
-                    </div>
-                )}
-                <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={isCategoryPopoverOpen}
-                    className="w-full justify-between"
-                  >
-                    {selectedCategories.length > 0 ? "Select more categories..." : "Select product categories..."}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                  <Command>
-                    <CommandInput placeholder="Search category..." />
-                    <CommandList>
-                      <CommandEmpty>No category found.</CommandEmpty>
-                      <CommandGroup>
-                        {reportProductFilters.map((filter) => (
-                          <CommandItem
-                            key={filter}
-                            value={filter}
-                            onSelect={() => handleCategoryToggle(filter)}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedCategories.includes(filter) ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {filter}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+               <div className="space-y-2">
+                  <Label htmlFor="sow-category">Categories *</Label>
+                  {selectedCategories.length > 0 && (
+                      <div className="flex flex-wrap gap-2 p-2 border rounded-md bg-muted/50 min-h-[40px]">
+                          {selectedCategories.map(cat => (
+                              <Badge key={cat} variant="secondary" className="gap-1.5 py-1 text-sm">
+                                  {cat}
+                                  <button type="button" onClick={() => handleCategoryToggle(cat)} className="rounded-full hover:bg-destructive/20 p-0.5 transition-colors">
+                                      <X className="h-3 w-3 text-destructive" />
+                                  </button>
+                              </Badge>
+                          ))}
+                      </div>
+                  )}
+                  <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={isCategoryPopoverOpen}
+                      className="w-full justify-between"
+                    >
+                      {selectedCategories.length > 0 ? "Select more..." : "Select categories..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search category..." />
+                      <CommandList>
+                        <CommandEmpty>No category found.</CommandEmpty>
+                        <CommandGroup>
+                          {reportProductFilters.map((filter) => (
+                            <CommandItem
+                              key={filter}
+                              value={filter}
+                              onSelect={() => handleCategoryToggle(filter)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedCategories.includes(filter) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {filter}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
 
-              <div className="flex items-center gap-2 pt-2">
-                <Input
-                  id="sow-custom-category"
-                  value={customCategory}
-                  onChange={(e) => setCustomCategory(e.target.value)}
-                  placeholder="Or add a custom category"
-                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomCategory(); }}}
-                />
-                <Button type="button" onClick={handleAddCustomCategory}>Add</Button>
+                <div className="flex items-center gap-2 pt-2">
+                  <Input
+                    id="sow-custom-category"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    placeholder="Or add a custom category"
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomCategory(); }}}
+                  />
+                  <Button type="button" onClick={handleAddCustomCategory}>Add</Button>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="sow-amount">Total Amount *</Label>
+                <Input id="sow-amount" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} required placeholder="e.g., 5000.00" />
               </div>
             </div>
 
