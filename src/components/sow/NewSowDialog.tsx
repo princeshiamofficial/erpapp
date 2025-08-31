@@ -6,15 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { User, TrackingLink } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addSowEntryAction } from '@/app/(app)/crm/sow/actions';
-import { Loader2, ChevronsUpDown, Check } from 'lucide-react';
+import { Loader2, ChevronsUpDown, Check, X } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 
 interface NewSowDialogProps {
@@ -31,9 +31,8 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
   const [businessName, setBusinessName] = useState('');
   const [address, setAddress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [category, setCategory] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [customCategory, setCustomCategory] = useState('');
-  const [showCustomCategoryInput, setShowCustomCategoryInput] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAutoFilled, setIsAutoFilled] = useState(false);
   const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
@@ -46,9 +45,8 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
     setBusinessName('');
     setAddress('');
     setPhoneNumber('');
-    setCategory('');
+    setSelectedCategories([]);
     setCustomCategory('');
-    setShowCustomCategoryInput(false);
     setIsSubmitting(false);
     setIsAutoFilled(false);
     setIsCategoryPopoverOpen(false);
@@ -112,13 +110,19 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
     return () => clearTimeout(handler);
   }, [jobId, allOrders, toast, isAutoFilled]);
 
-  const handleCategoryChange = (value: string) => {
-    setCategory(value);
-    if (value.toLowerCase() === 'other') {
-      setShowCustomCategoryInput(true);
-    } else {
-      setShowCustomCategoryInput(false);
-      setCustomCategory('');
+  const handleCategoryToggle = (categoryToToggle: string) => {
+    setSelectedCategories(prev =>
+      prev.includes(categoryToToggle)
+        ? prev.filter(c => c !== categoryToToggle)
+        : [...prev, categoryToToggle]
+    );
+  };
+  
+  const handleAddCustomCategory = () => {
+    const trimmedCategory = customCategory.trim();
+    if (trimmedCategory && !selectedCategories.some(c => c.toLowerCase() === trimmedCategory.toLowerCase())) {
+        setSelectedCategories(prev => [...prev, trimmedCategory]);
+        setCustomCategory('');
     }
   };
 
@@ -126,10 +130,10 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
     e.preventDefault();
     setIsSubmitting(true);
     
-    const finalCategory = category.toLowerCase() === 'other' ? customCategory.trim() : category;
+    const finalCategory = selectedCategories.join(', ');
 
     if (!jobId || !businessName || !address || !phoneNumber || !finalCategory) {
-      toast({ title: "Validation Error", description: "All fields are required.", variant: "destructive" });
+      toast({ title: "Validation Error", description: "All fields are required, and at least one category must be selected.", variant: "destructive" });
       setIsSubmitting(false);
       return;
     }
@@ -155,7 +159,6 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
     }
   };
 
-  const allCategoryOptions = [...reportProductFilters, 'Other'];
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -199,9 +202,22 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
                 disabled={isAutoFilled}
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="sow-category">Category *</Label>
-              <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
+            
+            <div className="space-y-2">
+                <Label htmlFor="sow-category">Categories *</Label>
+                {selectedCategories.length > 0 && (
+                    <div className="flex flex-wrap gap-2 p-2 border rounded-md bg-muted/50">
+                        {selectedCategories.map(cat => (
+                            <Badge key={cat} variant="secondary" className="gap-1.5 py-1 text-sm">
+                                {cat}
+                                <button type="button" onClick={() => handleCategoryToggle(cat)} className="rounded-full hover:bg-destructive/20 p-0.5 transition-colors">
+                                    <X className="h-3 w-3 text-destructive" />
+                                </button>
+                            </Badge>
+                        ))}
+                    </div>
+                )}
+                <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -209,7 +225,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
                     aria-expanded={isCategoryPopoverOpen}
                     className="w-full justify-between"
                   >
-                    {category || "Select a product category..."}
+                    {selectedCategories.length > 0 ? "Select more categories..." : "Select product categories..."}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -219,20 +235,16 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
                     <CommandList>
                       <CommandEmpty>No category found.</CommandEmpty>
                       <CommandGroup>
-                        {allCategoryOptions.map((filter) => (
+                        {reportProductFilters.map((filter) => (
                           <CommandItem
                             key={filter}
                             value={filter}
-                            onSelect={(currentValue) => {
-                              const selectedValue = allCategoryOptions.find(f => f.toLowerCase() === currentValue) || '';
-                              handleCategoryChange(selectedValue);
-                              setIsCategoryPopoverOpen(false);
-                            }}
+                            onSelect={() => handleCategoryToggle(filter)}
                           >
                             <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                category === filter ? "opacity-100" : "opacity-0"
+                                selectedCategories.includes(filter) ? "opacity-100" : "opacity-0"
                               )}
                             />
                             {filter}
@@ -243,19 +255,19 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
                   </Command>
                 </PopoverContent>
               </Popover>
-            </div>
-            {showCustomCategoryInput && (
-              <div className="space-y-1">
-                <Label htmlFor="sow-custom-category">Specify Category *</Label>
+
+              <div className="flex items-center gap-2 pt-2">
                 <Input
                   id="sow-custom-category"
                   value={customCategory}
                   onChange={(e) => setCustomCategory(e.target.value)}
-                  required
-                  placeholder="Enter custom category"
+                  placeholder="Or add a custom category"
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomCategory(); }}}
                 />
+                <Button type="button" onClick={handleAddCustomCategory}>Add</Button>
               </div>
-            )}
+            </div>
+
             <DialogFooter className="pt-4 sticky bottom-0 bg-background py-4">
               <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>
