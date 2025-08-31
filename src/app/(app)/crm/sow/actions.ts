@@ -19,6 +19,7 @@ export async function addSowEntryAction(
       ...data,
       crmUserId: currentUser.id,
       crmUserName: currentUser.name,
+      // createdAt is now passed from the dialog
     };
 
     const newEntry = await addSowEntry(dataWithUser);

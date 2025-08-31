@@ -9,12 +9,14 @@ import { Label } from "@/components/ui/label";
 import type { User, TrackingLink } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addSowEntryAction } from '@/app/(app)/crm/sow/actions';
-import { Loader2, ChevronsUpDown, Check, X } from 'lucide-react';
+import { Loader2, ChevronsUpDown, Check, X, Calendar as CalendarIcon } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 
 
 interface NewSowDialogProps {
@@ -34,6 +36,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
   const [amount, setAmount] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [customCategory, setCustomCategory] = useState('');
+  const [orderDate, setOrderDate] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAutoFilled, setIsAutoFilled] = useState(false);
   const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
@@ -49,6 +52,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
     setAmount('');
     setSelectedCategories([]);
     setCustomCategory('');
+    setOrderDate(new Date());
     setIsSubmitting(false);
     setIsAutoFilled(false);
     setIsCategoryPopoverOpen(false);
@@ -135,7 +139,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
     const finalCategory = selectedCategories.join(', ');
     const numericAmount = parseFloat(amount);
 
-    if (!jobId || !businessName || !address || !phoneNumber || !finalCategory || isNaN(numericAmount)) {
+    if (!jobId || !businessName || !address || !phoneNumber || !finalCategory || isNaN(numericAmount) || !orderDate) {
       toast({ title: "Validation Error", description: "All fields are required, and at least one category must be selected.", variant: "destructive" });
       setIsSubmitting(false);
       return;
@@ -148,7 +152,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
       phoneNumber,
       amount: numericAmount,
       category: finalCategory,
-      createdAt: new Date().toISOString(),
+      createdAt: orderDate.toISOString(),
     };
 
     const result = await addSowEntryAction(sowData, currentUser);
@@ -174,9 +178,33 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
         </DialogHeader>
         <ScrollArea className="max-h-[70vh] pr-4">
           <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-            <div className="space-y-1">
-              <Label htmlFor="sow-jobId">Job ID *</Label>
-              <Input id="sow-jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., CUST101" />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="sow-jobId">Job ID *</Label>
+                <Input id="sow-jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., CUST101" />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="sow-orderDate">Order Date *</Label>
+                 <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={"outline"}
+                        className={cn("w-full justify-start text-left font-normal", !orderDate && "text-muted-foreground")}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {orderDate ? format(orderDate, "PPP") : <span>Pick a date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={orderDate}
+                        onSelect={setOrderDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+              </div>
             </div>
             <div className="space-y-1">
               <Label htmlFor="sow-businessName">Business Name *</Label>
