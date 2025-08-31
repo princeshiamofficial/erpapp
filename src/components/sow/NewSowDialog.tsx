@@ -47,7 +47,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
   
   const validatePhone = (number: string) => {
     if (!number) {
-        setPhoneError(null);
+        setPhoneError(null); // No error if empty, required check will handle it
         return;
     }
     const phoneRegex = /^0\d{10}$/;
@@ -206,6 +206,31 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
     }
   };
 
+  const canSubmit = useMemo(() => {
+    const isAmountValid = !isNaN(parseFloat(amount)) && parseFloat(amount) > 0;
+    
+    return !isSubmitting &&
+      jobId.trim() !== '' &&
+      businessName.trim() !== '' &&
+      address.trim() !== '' &&
+      phoneNumber.trim() !== '' &&
+      !phoneError &&
+      amount.trim() !== '' &&
+      isAmountValid &&
+      selectedCategories.length > 0 &&
+      !!orderDate;
+  }, [
+    isSubmitting,
+    jobId,
+    businessName,
+    address,
+    phoneNumber,
+    phoneError,
+    amount,
+    selectedCategories,
+    orderDate
+  ]);
+
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -346,7 +371,7 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
 
             <DialogFooter className="pt-4 sticky bottom-0 bg-background py-4">
               <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>Cancel</Button>
-              <Button type="submit" disabled={isSubmitting || !!phoneError}>
+              <Button type="submit" disabled={!canSubmit}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {isSubmitting ? 'Creating...' : 'Create Entry'}
               </Button>
