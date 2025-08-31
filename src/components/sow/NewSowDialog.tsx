@@ -11,6 +11,7 @@ import type { User, TrackingLink } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addSowEntryAction } from '@/app/(app)/crm/sow/actions';
 import { Loader2 } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface NewSowDialogProps {
   currentUser: User;
@@ -155,75 +156,77 @@ export function NewSowDialog({ currentUser, onSowCreated, children, allOrders, r
           <DialogTitle>Add New SOW Entry</DialogTitle>
           <DialogDescription>Manually create a new entry for the Statement of Work report.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-4 py-4">
-          <div className="space-y-1">
-            <Label htmlFor="sow-jobId">Job ID *</Label>
-            <Input id="sow-jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., CUST101" />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="sow-businessName">Business Name *</Label>
-            <Input id="sow-businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required placeholder="e.g., Acme Restaurant" disabled={isAutoFilled}/>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="sow-address">Address *</Label>
-            <Input id="sow-address" value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="e.g., 123 Main St, Anytown" disabled={isAutoFilled}/>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="sow-phoneNumber">Phone Number *</Label>
-            <Input
-              id="sow-phoneNumber"
-              type="tel"
-              value={phoneNumber}
-              onChange={(e) => {
-                const numericValue = e.target.value.replace(/[^0-9]/g, '');
-                if (numericValue.length <= 11) {
-                  setPhoneNumber(numericValue);
-                }
-              }}
-              required
-              pattern="0\d{10}"
-              maxLength={11}
-              title="Phone number must be an 11-digit number starting with 0."
-              placeholder="01xxxxxxxxx"
-              disabled={isAutoFilled}
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="sow-category">Category *</Label>
-            <Select value={category} onValueChange={handleCategoryChange} required>
-              <SelectTrigger id="sow-category">
-                <SelectValue placeholder="Select a product category" />
-              </SelectTrigger>
-              <SelectContent>
-                {reportProductFilters.map((filter) => (
-                  <SelectItem key={filter} value={filter}>
-                    {filter}
-                  </SelectItem>
-                ))}
-                 <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {showCustomCategoryInput && (
+        <ScrollArea className="max-h-[70vh] pr-4">
+          <form onSubmit={handleSubmit} className="grid gap-4 py-4">
             <div className="space-y-1">
-              <Label htmlFor="sow-custom-category">Specify Category *</Label>
+              <Label htmlFor="sow-jobId">Job ID *</Label>
+              <Input id="sow-jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., CUST101" />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="sow-businessName">Business Name *</Label>
+              <Input id="sow-businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required placeholder="e.g., Acme Restaurant" disabled={isAutoFilled}/>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="sow-address">Address *</Label>
+              <Input id="sow-address" value={address} onChange={(e) => setAddress(e.target.value)} required placeholder="e.g., 123 Main St, Anytown" disabled={isAutoFilled}/>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="sow-phoneNumber">Phone Number *</Label>
               <Input
-                id="sow-custom-category"
-                value={customCategory}
-                onChange={(e) => setCustomCategory(e.target.value)}
+                id="sow-phoneNumber"
+                type="tel"
+                value={phoneNumber}
+                onChange={(e) => {
+                  const numericValue = e.target.value.replace(/[^0-9]/g, '');
+                  if (numericValue.length <= 11) {
+                    setPhoneNumber(numericValue);
+                  }
+                }}
                 required
-                placeholder="Enter custom category"
+                pattern="0\d{10}"
+                maxLength={11}
+                title="Phone number must be an 11-digit number starting with 0."
+                placeholder="01xxxxxxxxx"
+                disabled={isAutoFilled}
               />
             </div>
-          )}
-          <DialogFooter className="pt-4">
-            <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isSubmitting ? 'Creating...' : 'Create Entry'}
-            </Button>
-          </DialogFooter>
-        </form>
+            <div className="space-y-1">
+              <Label htmlFor="sow-category">Category *</Label>
+              <Select value={category} onValueChange={handleCategoryChange} required>
+                <SelectTrigger id="sow-category">
+                  <SelectValue placeholder="Select a product category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {reportProductFilters.map((filter) => (
+                    <SelectItem key={filter} value={filter}>
+                      {filter}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {showCustomCategoryInput && (
+              <div className="space-y-1">
+                <Label htmlFor="sow-custom-category">Specify Category *</Label>
+                <Input
+                  id="sow-custom-category"
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  required
+                  placeholder="Enter custom category"
+                />
+              </div>
+            )}
+            <DialogFooter className="pt-4 sticky bottom-0 bg-background py-4">
+              <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isSubmitting}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isSubmitting ? 'Creating...' : 'Create Entry'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
