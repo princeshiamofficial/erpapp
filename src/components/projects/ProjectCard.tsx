@@ -66,8 +66,6 @@ function formatDurationPrecise(totalSeconds: number): string {
     parts.push(`${minutes}m`);
     if (seconds > 0) parts.push(`${seconds}s`);
   } else if (seconds > 0) {
-    parts.push(`${seconds}s`);
-  } else {
      return "<1s";
   }
   
@@ -289,53 +287,6 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
             <CalendarDays className="mr-1.5 h-3 w-3" />
             Target: {project.endDate ? parseISO(project.endDate).toLocaleDateString() : 'N/A'}
           </div>
-
-          <div 
-            className={cn(
-              "flex items-center space-x-1.5 text-xs text-muted-foreground hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors",
-              crmInfoClickable && "cursor-pointer"
-            )}
-            title={crmInfoClickable ? `CRM: ${project.assigneeName} (Click to assign DR)` : `CRM: ${project.assigneeName}`}
-            onClick={
-              crmInfoClickable
-                ? (e) => { 
-                    e.stopPropagation();
-                    console.log('[ProjectCard] CRM area clicked. Calling onOpenAssignDrDialog for project:', project.id);
-                    onOpenAssignDrDialog(project);
-                  }
-                : undefined
-            }
-          >
-            <UserIconLucide className="h-3.5 w-3.5" />
-            <span className="truncate">CRM: {project.assigneeName}</span>
-          </div>
-
-          {project.designerRepresentativeName && relevantDrStages.includes(project.status) && (
-            <div 
-              className={cn(
-                "flex items-center space-x-1.5 text-xs text-muted-foreground hover:bg-muted/50 p-1 -m-1 rounded-md transition-colors",
-                drInfoClickable && "cursor-pointer"
-              )}
-              title={drInfoClickable ? `DR: ${project.designerRepresentativeName} (Click to re-assign DR)` : `DR: ${project.designerRepresentativeName}`}
-              onClick={
-                drInfoClickable
-                  ? (e) => { 
-                      e.stopPropagation();
-                      console.log('[ProjectCard] DR Name area clicked. Calling onOpenAssignDrDialog for project:', project.id);
-                      onOpenAssignDrDialog(project);
-                    }
-                  : undefined
-              }
-            >
-              <UserCheck className="h-3.5 w-3.5 text-blue-500" />
-              <span className="truncate text-blue-600 dark:text-blue-400">DR: {project.designerRepresentativeName}</span>
-            </div>
-          )}
-          
-          <div className="flex items-center space-x-1.5 text-xs text-muted-foreground">
-            <Folder className="h-3.5 w-3.5" />
-            <span className="truncate" title={project.categoryTag}>{project.categoryTag}</span>
-          </div>
           
           {progressInfo.showProgressBar && (
               <div className="pt-1">
@@ -383,7 +334,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
               </Tooltip>
             </TooltipProvider>
 
-            {project.designerRepresentativeName && relevantDrStages.includes(project.status) && (
+            {project.designerRepresentativeName && (
               <>
                 <div className="w-px h-5 bg-border mx-1.5"></div> 
                 <TooltipProvider>
