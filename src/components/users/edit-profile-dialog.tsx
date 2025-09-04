@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { UserCircle, UploadCloud, XCircle } from 'lucide-react';
+import { UserCircle, UploadCloud, XCircle, Trash2, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 
 interface EditProfileDialogProps {
@@ -47,7 +47,6 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
       objectUrl = URL.createObjectURL(selectedFile);
       setPreviewUrl(objectUrl);
     }
-
     return () => {
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
@@ -80,16 +79,16 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
 
   const handleRemovePreview = () => {
     setSelectedFile(null);
-    setPreviewUrl(currentUser?.avatarUrl || null); // Revert to current or no avatar
+    setPreviewUrl(currentUser?.avatarUrl || null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = ""; // Clear the file input
+      fileInputRef.current.value = "";
     }
   };
   
   const handleRemoveAvatar = async () => {
     if (!currentUser) return;
     setIsLoading(true);
-    const success = await updateUserAvatar(""); // Pass empty string to signify removal
+    const success = await updateUserAvatar("");
     setIsLoading(false);
 
     if (success) {
@@ -102,7 +101,6 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
-      // Optionally close dialog: setIsOpen(false);
     } else {
       toast({
         title: "Update Failed",
@@ -112,69 +110,66 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
     }
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) return;
 
     if (!selectedFile && previewUrl === currentUser?.avatarUrl) {
-      // No changes made
       setIsOpen(false);
       return;
     }
-    
-    if (!selectedFile && previewUrl === null && currentUser?.avatarUrl) {
-      // This case could be "remove avatar" if we add a button for it
-      // For now, it means no new file selected, but existing avatar was cleared by some other means (not possible with current UI)
-      // Or handled by handleRemoveAvatar if it sets previewUrl to null.
-    }
-
 
     setIsLoading(true);
 
     if (selectedFile) {
-      const reader = new FileReader();
-      reader.readAsDataURL(selectedFile);
-      reader.onloadend = async () => {
-        const base64DataUrl = reader.result as string;
-        const success = await updateUserAvatar(base64DataUrl);
-        setIsLoading(false);
-        if (success) {
-          toast({
-            title: "Profile Updated",
-            description: "Your profile picture has been updated.",
-          });
-          setIsOpen(false);
-        } else {
-          toast({
-            title: "Update Failed",
-            description: "Could not update your profile picture. Please try again.",
-            variant: "destructive",
-          });
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      try {
+        const response = await fetch('https://colorhutbd.xyz/model-image/index.php', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Upload failed with status: ${response.status}. Response: ${errorText}`);
         }
-      };
-      reader.onerror = () => {
-        setIsLoading(false);
+        
+        const result = await response.json();
+
+        if (result.success && result.file_url) {
+          const success = await updateUserAvatar(result.file_url);
+          if (success) {
+             toast({
+                title: "Profile Updated",
+                description: "Your profile picture has been updated.",
+             });
+             setIsOpen(false);
+          } else {
+             throw new Error("Failed to save the new avatar URL to your profile.");
+          }
+        } else {
+          throw new Error(result.message || "Failed to get file URL from server.");
+        }
+      } catch (uploadError) {
+        const message = uploadError instanceof Error ? uploadError.message : "An unknown error occurred during upload.";
         toast({
-          title: "File Read Error",
-          description: "Could not read the selected file. Please try again.",
+          title: "Update Failed",
+          description: `Could not update your profile picture. ${message}`,
           variant: "destructive",
         });
-      };
+      }
     } else if (previewUrl === null && currentUser?.avatarUrl) { 
-        // This path is taken if handleRemoveAvatar was called successfully and it cleared previewUrl
-        // and user then clicks save changes. In this case, avatar is already removed.
-        setIsLoading(false);
-        setIsOpen(false);
+        await updateUserAvatar(null);
     } else {
-         // No file selected, but potentially an avatar was removed if previewUrl is null
-        // This case is explicitly handled by handleRemoveAvatar if user clicks that button.
-        // If user simply opens dialog, makes no change, and hits save, nothing happens.
-        setIsLoading(false);
         setIsOpen(false);
     }
+
+    setIsLoading(false);
   };
   
+  const noChangeMade = !selectedFile && previewUrl === (currentUser?.avatarUrl || null);
 
   if (!currentUser) return null;
 
@@ -205,6 +200,7 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
                     alt="Avatar preview"
                     width={80}
                     height={80}
+                    unoptimized
                     className="rounded-full object-cover border border-muted"
                     data-ai-hint="user avatar"
                   />
@@ -237,9 +233,9 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
                   )}
                 </div>
               </div>
-               {currentUser.avatarUrl && !selectedFile && (
-                <Button type="button" variant="link" size="sm" onClick={handleRemoveAvatar} className="text-destructive hover:text-destructive/80 px-0 mt-2" disabled={isLoading}>
-                  Remove Current Avatar
+               {currentUser.avatarUrl && previewUrl && !selectedFile && (
+                <Button type="button" variant="link" size="sm" onClick={() => setPreviewUrl(null)} className="text-destructive hover:text-destructive/80 px-0 mt-2 flex items-center" disabled={isLoading}>
+                  <Trash2 className="mr-1 h-4 w-4" /> Remove Current Avatar
                 </Button>
               )}
               <p className="text-xs text-muted-foreground pt-1">
@@ -252,8 +248,8 @@ export function EditProfileDialog({ children }: EditProfileDialogProps) {
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)} disabled={isLoading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || (!selectedFile && previewUrl === currentUser?.avatarUrl && !(previewUrl === null && currentUser?.avatarUrl)) }>
-              {isLoading ? "Saving..." : "Save Changes"}
+            <Button type="submit" disabled={isLoading || noChangeMade}>
+              {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : "Save Changes"}
             </Button>
           </DialogFooter>
         </form>

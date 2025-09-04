@@ -197,7 +197,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     if (success) {
       console.log("AuthContext: Avatar updated successfully in Firestore. Updating local state.");
-      const updatedUser = { ...currentUser, avatarUrl: avatarUrl ?? undefined };
+      const updatedUser = { ...currentUser, avatarUrl: avatarUrl || undefined };
       setCurrentUser(updatedUser);
       localStorage.setItem('colorhut-user', JSON.stringify(updatedUser));
     } else {
