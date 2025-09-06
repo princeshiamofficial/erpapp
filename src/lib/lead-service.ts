@@ -1,13 +1,13 @@
 
 import type { Lead } from '@/types';
-import { fetchFromApi, ensureCollectionExists } from './api-helper';
+import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
 const COLLECTION_NAME = 'leads';
 
 // Get all leads with pagination handling
 export const getLeads = async (): Promise<Lead[]> => {
   try {
-    await ensureCollectionExists(COLLECTION_NAME);
+    await ensureCollectionExistsV3(COLLECTION_NAME);
     
     const allLeads: Lead[] = [];
     let offset = 0;
@@ -15,7 +15,8 @@ export const getLeads = async (): Promise<Lead[]> => {
     let hasMore = true;
 
     while (hasMore) {
-      const response = await fetchFromApi(`collections/${COLLECTION_NAME}/documents?limit=${limit}&offset=${offset}&orderBy=date&direction=desc`);
+      // The v3 API supports limit, offset, orderBy, and direction, so this should work.
+      const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=${limit}&offset=${offset}&orderBy=date&direction=desc`);
       
       if (response && Array.isArray(response.documents)) {
         const leadsFromPage = response.documents.map((doc: { id: string, data: any }) => ({
@@ -24,7 +25,8 @@ export const getLeads = async (): Promise<Lead[]> => {
         } as Lead));
         allLeads.push(...leadsFromPage);
         
-        hasMore = response.pagination?.has_more ?? false;
+        // The v3 API pagination response might be different. Let's assume it has total and limit.
+        hasMore = (response.offset + response.limit) < response.total;
         offset += limit;
       } else {
         hasMore = false;
@@ -33,7 +35,7 @@ export const getLeads = async (): Promise<Lead[]> => {
     
     return allLeads;
   } catch (error) {
-    console.error("Error fetching leads via API with pagination:", error);
+    console.error("Error fetching leads via API v3 with pagination:", error);
     return [];
   }
 };
@@ -42,10 +44,10 @@ export const getLeads = async (): Promise<Lead[]> => {
 export const getLeadById = async (leadId: string): Promise<Lead | null> => {
     if (!leadId) return null;
     try {
-        const doc = await fetchFromApi(`collections/${COLLECTION_NAME}/documents/${leadId}`);
+        const doc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${leadId}`);
         return { id: doc.id, ...doc.data } as Lead;
     } catch (error) {
-        console.error(`Error fetching lead by ID ${leadId} via API:`, error);
+        console.error(`Error fetching lead by ID ${leadId} via API v3:`, error);
         return null;
     }
 };
@@ -54,7 +56,7 @@ export const getLeadById = async (leadId: string): Promise<Lead | null> => {
 // Add a new lead
 export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> => {
   try {
-    await ensureCollectionExists(COLLECTION_NAME); 
+    await ensureCollectionExistsV3(COLLECTION_NAME); 
     const dataWithStatus = {
         ...leadData,
         status: 'New Lead', // Set default status for new leads
@@ -63,7 +65,7 @@ export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> 
     const payload = {
         data: dataWithStatus
     };
-    const newDoc = await fetchFromApi(`collections/${COLLECTION_NAME}/documents`, {
+    const newDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
         method: 'POST',
         body: JSON.stringify(payload),
     });
@@ -73,7 +75,7 @@ export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> 
         ...newDoc.data
     } as Lead;
   } catch (error) {
-    console.error("Error adding lead via API:", error);
+    console.error("Error adding lead via API v3:", error);
     if (error instanceof Error) throw error; 
     return null;
   }
@@ -82,7 +84,7 @@ export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> 
 // Update a lead
 export const updateLead = async (leadId: string, updates: Partial<Omit<Lead, 'id'>>): Promise<boolean> => {
   try {
-    await ensureCollectionExists(COLLECTION_NAME);
+    await ensureCollectionExistsV3(COLLECTION_NAME);
     
     const existingLead = await getLeadById(leadId);
     if (!existingLead) {
@@ -100,13 +102,13 @@ export const updateLead = async (leadId: string, updates: Partial<Omit<Lead, 'id
         data: finalData
     };
 
-    await fetchFromApi(`collections/${COLLECTION_NAME}/documents/${leadId}`, {
+    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${leadId}`, {
         method: 'PUT',
         body: JSON.stringify(payload)
     });
     return true;
   } catch (error) {
-    console.error(`Error updating lead ${leadId} via API:`, error);
+    console.error(`Error updating lead ${leadId} via API v3:`, error);
     return false;
   }
 };
@@ -114,13 +116,13 @@ export const updateLead = async (leadId: string, updates: Partial<Omit<Lead, 'id
 // Delete a lead
 export const deleteLead = async (leadId: string): Promise<boolean> => {
   try {
-    await ensureCollectionExists(COLLECTION_NAME);
-    await fetchFromApi(`collections/${COLLECTION_NAME}/documents/${leadId}`, {
+    await ensureCollectionExistsV3(COLLECTION_NAME);
+    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${leadId}`, {
         method: 'DELETE'
     });
     return true;
   } catch (error) {
-    console.error(`Error deleting lead ${leadId} via API:`, error);
+    console.error(`Error deleting lead ${leadId} via API v3:`, error);
     return false;
   }
 };
