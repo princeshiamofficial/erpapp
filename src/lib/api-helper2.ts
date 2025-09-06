@@ -1,21 +1,16 @@
 
-
 // NOTE: This is a new helper file for the v3 API. It is not yet used by the application.
 // To use this, you would import functions from this file instead of 'api-helper.ts'.
 
 const API_V3_URL = "https://api.colorhutbd.xyz/dbv3/index.php";
 
-// Assuming the API key is the same. If not, this should be updated.
-const API_KEY = "44dc62ef42385a594d319d2c4261914655453b46640d23d9f13ac9a21f7357de";
-
 export async function fetchFromApiV3(endpoint: string, options: RequestInit = {}) {
-    if (!API_V3_URL || !API_KEY) {
-        throw new Error("API v3 URL or API Key is not configured.");
+    if (!API_V3_URL) {
+        throw new Error("API v3 URL is not configured.");
     }
 
     const headers = {
         'Content-Type': 'application/json',
-        'X-API-KEY': API_KEY, // Assuming the same auth method
         ...options.headers,
     };
 
