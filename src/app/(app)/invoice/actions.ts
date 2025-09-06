@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { getOrderById } from '@/lib/order-service';
@@ -13,7 +14,7 @@ export async function getFullOrdersByIds(orderIds: string[]): Promise<TrackingLi
         const orders = await Promise.all(orderPromises);
         return orders.filter((order): order is TrackingLink => order !== undefined);
     } catch (error) {
-        console.error("Error fetching multiple orders by ID via API:", error);
+        console.error("Error fetching multiple orders by ID:", error);
         return [];
     }
 }

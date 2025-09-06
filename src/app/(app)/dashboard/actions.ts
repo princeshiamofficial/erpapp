@@ -8,7 +8,7 @@ import { DELIVERED_STATUS_ID, SHIPPED_STATUS_ID } from '@/lib/status-service';
 import { getUsers } from '@/lib/user-service';
 import { OrderLogEntry, TrackingLink } from '@/types'; 
 import { v4 as uuidv4 } from 'uuid';
-import { fetchFromApi } from '@/lib/api-helper'; 
+import { fetchFromApiV3 } from '@/lib/api-helper2'; 
 
 // This function is no longer used for setting targets, it might be removed in the future.
 // The logic is kept for historical purposes or if it needs to be reinstated.
@@ -51,7 +51,7 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
     const settledOrderIds: string[] = [];
 
     // 1. Fetch from the new 'shippedOrders' collection for efficiency
-    const shippedOrdersResponse = await fetchFromApi('collections/shippedOrders/documents?limit=500');
+    const shippedOrdersResponse = await fetchFromApiV3('collections/shippedOrders/documents?limit=500');
     const ordersToCheckCourier = shippedOrdersResponse.documents?.map((doc: any) => ({
       orderId: doc.id,
       packzyTrackingCode: doc.data.packzyTrackingCode,

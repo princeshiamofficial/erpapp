@@ -3,14 +3,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { TrackingLink, User, OrderItem, GlobalSettings, UserRole, OrderLogEntry, AdvancePaymentRecord, ServiceModelItem } from "@/types";
+import type { TrackingLink, User, OrderItem, AdvancePaymentRecord, ServiceModelItem } from "@/types";
 import { addOrder as addOrderService, getOrderById, deleteOrder as deleteOrderFromDb, updateOrder as updateOrderService } from "@/lib/order-service"; 
 import { getGlobalSettings } from "@/lib/settings-service";
 import { v4 as uuidv4 } from 'uuid';
 import { parseISO } from 'date-fns';
 import { getUserById as getUserFromDb } from "@/lib/user-service";
-import { fetchFromApi } from '@/lib/api-helper';
 import { getModels, updateModelStock } from '@/lib/service-options-service';
+import { fetchFromApiV3 } from '@/lib/api-helper2';
 
 interface CreateOrderDialogFormData {
   jobId: string;
@@ -343,7 +343,7 @@ export async function updateOrderAction(
     if (!updatedOrder) return { success: false, error: "Failed to retrieve updated order after update." };
     
     try {
-        const project = await fetchFromApi(`collections/projects/documents/${orderId}`);
+        const project = await fetchFromApiV3(`collections/projects/documents/${orderId}`);
         if (project && project.data) {
             console.log(`[updateOrderAction] Found persistent project for order ${orderId}. Syncing info.`);
             const projectUpdates: { [key: string]: any } = {};
@@ -354,7 +354,7 @@ export async function updateOrderAction(
             
             if(Object.keys(projectUpdates).length > 1) {
                  const payload = { data: { ...project.data, ...projectUpdates }};
-                 await fetchFromApi(`collections/projects/documents/${orderId}`, {
+                 await fetchFromApiV3(`collections/projects/documents/${orderId}`, {
                     method: 'PUT',
                     body: JSON.stringify(payload)
                  });
@@ -441,7 +441,7 @@ export async function assignDrToOrderAction(
     }
     
     try {
-      const project = await fetchFromApi(`collections/projects/documents/${orderId}`);
+      const project = await fetchFromApiV3(`collections/projects/documents/${orderId}`);
       if (project && project.data) {
         const projectUpdates = {
           designerRepresentativeId: designerRepresentativeId,
@@ -452,7 +452,7 @@ export async function assignDrToOrderAction(
           updatedAt: new Date().toISOString(),
         };
         const payload = { data: { ...project.data, ...projectUpdates }};
-        await fetchFromApi(`collections/projects/documents/${orderId}`, {
+        await fetchFromApiV3(`collections/projects/documents/${orderId}`, {
           method: 'PUT',
           body: JSON.stringify(payload)
         });

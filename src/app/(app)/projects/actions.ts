@@ -9,7 +9,7 @@ import { getOrderById, updateOrder, autoSettleOrderIfDelivered, unsettleOrderPay
 import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_STATUS_ID, DELIVERED_STATUS_ID, ORDER_SUBMITTED_ID, READY_FOR_DESIGN_STATUS_ID } from '@/lib/status-service'; 
 import { v4 as uuidv4 } from 'uuid'; 
 import { getGlobalSettings } from '@/lib/settings-service';
-import { fetchFromApi } from '@/lib/api-helper';
+import { fetchFromApiV3 } from '@/lib/api-helper2';
 
 const sanitizeForPackzy = (input: string | null | undefined): string => {
   if (!input) return '';
@@ -41,9 +41,6 @@ export async function updateProjectStatusAction(
       return { success: false, error: "Failed to update project status in database." };
     }
 
-    // If the project status changed, attempt to remove it from the shippedOrders collection
-    // This handles cases where an item is moved from 'Courier' back to 'Logistics', for example.
-    // The deleteShippedOrderEntry function is safe and will not error if the entry doesn't exist.
     if (newStatus !== 'Courier') {
       await deleteShippedOrderEntry(project.id);
     }
@@ -53,7 +50,6 @@ export async function updateProjectStatusAction(
       let targetOrderStatusId: string | null = null;
       let statusUpdateNote: string | null = null;
       
-      // If moving from Delivered to another state, unsettle the payment.
       if (originalStatus === 'Delivered' && newStatus !== 'Delivered') {
         const unsettleReason = `Payment unsettled: Project moved from 'Delivered' to '${newStatus}' by ${actingUser.name}.`;
         await unsettleOrderPayment(project.id, unsettleReason, actingUser);
@@ -91,8 +87,7 @@ export async function updateProjectStatusAction(
           console.warn(`Project ${project.id} status updated to ${newStatus}, but failed to update corresponding order ${order.id} to target status ${targetOrderStatusId}.`);
         } else {
           console.log(`Order ${order.id} status updated to ${targetOrderStatusId} due to project ${project.id} being ${newStatus}.`);
-           // *** FIX: Only call autoSettle if the new status IS Delivered ***
-          if (newStatus === 'Delivered') {
+           if (newStatus === 'Delivered') {
             await autoSettleOrderIfDelivered(project.id, `System auto-settled: Project moved to '${newStatus}'.`, actingUser);
           }
         }

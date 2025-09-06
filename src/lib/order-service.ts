@@ -1,13 +1,10 @@
 
 
-import { db } from './firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, getDoc, query, orderBy, writeBatch, limit, where, deleteDoc as deleteFirestoreDoc, runTransaction } from 'firebase/firestore';
-import type { TrackingLink, Comment, OrderLogEntry, CustomStatus, UserRole, OrderItem, AdvancePaymentRecord, User } from '@/types';
+import type { TrackingLink, Comment, OrderLogEntry, OrderItem, AdvancePaymentRecord, User } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { getStatuses, READY_FOR_DESIGN_STATUS_ID, DELIVERED_STATUS_ID } from './status-service';
-import { format, parseISO, startOfDay, endOfDay } from 'date-fns';
-import { fetchFromApi, ensureCollectionExists } from './api-helper';
-import { getModels } from './service-options-service';
+import { getStatusById, READY_FOR_DESIGN_STATUS_ID, DELIVERED_STATUS_ID } from './status-service';
+import { format, parseISO } from 'date-fns';
+import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
 const ORDERS_COLLECTION = 'orders';
 const PROJECTS_COLLECTION = 'projects';
@@ -15,28 +12,30 @@ const SHIPPED_ORDERS_COLLECTION = 'shippedOrders'; // New collection name
 
 export const getOrders = async (): Promise<TrackingLink[]> => {
   try {
-    await ensureCollectionExists(ORDERS_COLLECTION);
+    await ensureCollectionExistsV3(ORDERS_COLLECTION);
     
     // Fetch the most recent 200 orders to prevent server overload issues (like 500 errors).
-    // This is a more stable approach than trying to fetch all documents.
     const limit = 200;
-    const response = await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents?limit=${limit}&orderBy=createdAt&direction=desc`);
+    // The V3 API seems to handle ordering differently. Let's adapt to fetch and sort client-side for now.
+    // The API might not support `orderBy` and `direction` in the same way.
+    const response = await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents?limit=${limit}`);
     
     if (response && Array.isArray(response.documents)) {
-        return response.documents.map((doc: { id: string, data: any }) => ({
+        const orders = response.documents.map((doc: { id: string, data: any }) => ({
             id: doc.id,
             ...doc.data
         } as TrackingLink));
+        // Sort client-side
+        return orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     }
     
     return [];
   } catch (error) {
-    // Added more specific logging to help debug future issues.
     if (error instanceof Error) {
-        console.error("Error fetching orders from API:", error.message);
+        console.error("Error fetching orders from API v3:", error.message);
         throw new Error(`Failed to fetch orders: ${error.message}`);
     } else {
-        console.error("An unknown error occurred while fetching orders from API:", error);
+        console.error("An unknown error occurred while fetching orders from API v3:", error);
         throw new Error("An unknown error occurred while fetching orders.");
     }
   }
@@ -46,16 +45,16 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
 export const getOrderById = async (id: string): Promise<TrackingLink | undefined> => {
   if (!id) return undefined;
   try {
-    const response = await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents/${id}`);
+    const response = await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents/${id}`);
     if (response && response.data) {
         return { id: response.id, ...response.data } as TrackingLink;
     }
     return undefined;
   } catch (error) {
-    if (error instanceof Error && error.message.includes('not found')) {
+    if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
       return undefined;
     }
-    console.error("Error fetching order by ID from API:", error);
+    console.error("Error fetching order by ID from API v3:", error);
     return undefined;
   }
 };
@@ -63,32 +62,35 @@ export const getOrderById = async (id: string): Promise<TrackingLink | undefined
 export const getOrderByTrackingCode = async (trackingCode: string): Promise<TrackingLink | null> => {
   if (!trackingCode) return null;
   try {
-    await ensureCollectionExists(ORDERS_COLLECTION);
-    const response = await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents?filters[packzyTrackingCode][is]=${trackingCode}&limit=1`);
-    if (response && Array.isArray(response.documents) && response.documents.length > 0) {
-      const doc = response.documents[0];
-      return { id: doc.id, ...doc.data } as TrackingLink;
+    // V3 API uses a 'search' param instead of structured filters.
+    await ensureCollectionExistsV3(ORDERS_COLLECTION);
+    const response = await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents?search=${trackingCode}&limit=999`);
+    if (response && Array.isArray(response.documents)) {
+      // We must filter client-side as 'search' is broad.
+      const foundOrder = response.documents.find((doc: { id: string, data: any }) => doc.data.packzyTrackingCode === trackingCode);
+      if (foundOrder) {
+          return { id: foundOrder.id, ...foundOrder.data } as TrackingLink;
+      }
     }
     return null;
   } catch (error) {
-    console.error(`Error fetching order by tracking code "${trackingCode}" from API:`, error);
+    console.error(`Error fetching order by tracking code "${trackingCode}" from API v3:`, error);
     return null;
   }
 };
 
 export const getOrdersByStatusAndTracking = async (statusId: string, onlyWithDue: boolean = false): Promise<TrackingLink[]> => {
   try {
-    await ensureCollectionExists(ORDERS_COLLECTION);
+    await ensureCollectionExistsV3(ORDERS_COLLECTION);
     
-    // Construct base filters
-    let apiFilters = `filters[currentStatus][is]=${statusId}`;
+    // Fetch all potentially relevant orders and filter client-side, as V3 search is not ideal for this.
+    const response = await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents?limit=9999`);
+    if (response && Array.isArray(response.documents)) {
+      let orders = response.documents
+        .map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as TrackingLink))
+        .filter(order => order.currentStatus === statusId);
 
-    if (onlyWithDue) {
-      // Due balance logic requires fetching and calculating on the client/server-action side
-      // as the API doesn't support complex calculated field filters.
-      const response = await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents?${apiFilters}&limit=999`);
-      if (response && Array.isArray(response.documents)) {
-        const orders = response.documents.map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as TrackingLink));
+      if (onlyWithDue) {
         return orders.filter(order => {
           const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
           const effectiveDiscount = order.specialClientDiscount || 0;
@@ -97,20 +99,14 @@ export const getOrdersByStatusAndTracking = async (statusId: string, onlyWithDue
           const dueAmount = netPayable - totalAdvancePaid;
           return dueAmount > 0.01;
         });
+      } else {
+        // Filter for orders that have a tracking code
+        return orders.filter(order => !!order.packzyTrackingCode);
       }
-      return [];
-
-    } else {
-      // Logic for orders that just need to be checked (have tracking code)
-      apiFilters += '&filters[packzyTrackingCode][is_not]=null';
-      const response = await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents?${apiFilters}&limit=999`);
-      if (response && Array.isArray(response.documents)) {
-        return response.documents.map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as TrackingLink));
-      }
-      return [];
     }
+    return [];
   } catch (error) {
-    console.error(`Error fetching orders with status ${statusId} from API:`, error);
+    console.error(`Error fetching orders with status ${statusId} from API v3:`, error);
     return [];
   }
 };
@@ -134,7 +130,7 @@ export const addOrder = async (orderData: {
   const transactionTime = new Date().toISOString();
 
   try {
-    await ensureCollectionExists(ORDERS_COLLECTION);
+    await ensureCollectionExistsV3(ORDERS_COLLECTION);
     let finalCreatedAt = orderData.createdAt;
     try {
       finalCreatedAt = parseISO(orderData.createdAt).toISOString();
@@ -145,18 +141,18 @@ export const addOrder = async (orderData: {
     const currentDate = parseISO(finalCreatedAt);
     const datePrefix = `ORD-${format(currentDate, 'yyyyMMdd')}`;
     
-    // Fetch orders with the same date prefix to find the latest sequence number
-    const response = await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents?filters[id][like]=${datePrefix}-&orderBy=id&direction=desc&limit=1`);
-    
+    // Fetch all orders to find the latest sequence number for the day
+    const allOrdersResponse = await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents?limit=9999`);
     let newSequence = 1;
-    if (response && Array.isArray(response.documents) && response.documents.length > 0) {
-      const lastOrder = response.documents[0];
-      const lastId = lastOrder.id;
-      const lastSequenceStr = lastId.split('-').pop();
-      const lastSequence = parseInt(lastSequenceStr || '0', 10);
-      if (!isNaN(lastSequence)) {
-        newSequence = lastSequence + 1;
-      }
+    if (allOrdersResponse && Array.isArray(allOrdersResponse.documents)) {
+        const sameDayOrders = allOrdersResponse.documents.filter((doc: any) => doc.id.startsWith(datePrefix));
+        if (sameDayOrders.length > 0) {
+            const lastSequence = Math.max(...sameDayOrders.map((doc: any) => {
+                const numPart = parseInt(doc.id.split('-').pop() || '0', 10);
+                return isNaN(numPart) ? 0 : numPart;
+            }));
+            newSequence = lastSequence + 1;
+        }
     }
     
     const orderId = `${datePrefix}-${String(newSequence).padStart(3, '0')}`;
@@ -191,14 +187,14 @@ export const addOrder = async (orderData: {
     
     const payload = { id: orderId, data: newOrderData };
     
-    await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents`, {
+    await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents`, {
         method: 'POST', body: JSON.stringify(payload)
     });
     
     return { id: orderId, ...newOrderData };
 
   } catch (error: any) {
-    console.error("Error adding order via API:", error.message ? error.message : error);
+    console.error("Error adding order via API v3:", error.message ? error.message : error);
     return null;
   }
 };
@@ -212,16 +208,16 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
     }
 
     const finalData = { ...existingOrder, ...updates };
-    delete (finalData as any).id; // Don't send the ID inside the data payload
+    delete (finalData as any).id; 
 
     const payload = { data: finalData };
-    await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents/${id}`, {
+    await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents/${id}`, {
         method: 'PUT',
         body: JSON.stringify(payload)
     });
     return true;
   } catch (error) {
-    console.error(`Error updating order ${id} via API:`, error);
+    console.error(`Error updating order ${id} via API v3:`, error);
     return false;
   }
 };
@@ -229,14 +225,14 @@ export const updateOrder = async (id: string, updates: Partial<TrackingLink>): P
 export const updateOrdersBatch = async (updates: { id: string, data: Partial<TrackingLink> }[]): Promise<boolean> => {
     if (updates.length === 0) return true;
     try {
-        const payload = updates.map(u => ({ id: u.id, data: u.data }));
-        await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents`, {
-            method: 'PATCH',
-            body: JSON.stringify({ documents: payload })
-        });
+        // V3 API might not support batch updates in the same way, so we loop for now.
+        // This can be slow but ensures compatibility.
+        for (const update of updates) {
+            await updateOrder(update.id, update.data);
+        }
         return true;
     } catch (error) {
-        console.error("Error performing batch update on orders via API:", error);
+        console.error("Error performing batch update on orders via API v3:", error);
         return false;
     }
 };
@@ -244,27 +240,25 @@ export const updateOrdersBatch = async (updates: { id: string, data: Partial<Tra
 
 export const deleteOrder = async (orderId: string): Promise<boolean> => {
   try {
-    await fetchFromApi(`collections/${ORDERS_COLLECTION}/documents/${orderId}`, { method: 'DELETE' });
+    await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents/${orderId}`, { method: 'DELETE' });
     
-    // Also attempt to delete the corresponding project, ignoring if it doesn't exist
     try {
-        await fetchFromApi(`collections/${PROJECTS_COLLECTION}/documents/${orderId}`, { method: 'DELETE' });
+        await fetchFromApiV3(`collections/${PROJECTS_COLLECTION}/documents/${orderId}`, { method: 'DELETE' });
     } catch (projectError) {
-        if (!(projectError instanceof Error && projectError.message.includes('not found'))) {
+        if (!(projectError instanceof Error && projectError.message.toLowerCase().includes('not found'))) {
              console.warn(`Could not delete corresponding project for order ${orderId}, it might not exist.`, projectError);
         }
     }
-     // Also attempt to delete from shippedOrders collection
     try {
         await deleteShippedOrderEntry(orderId);
     } catch (shippedError) {
-        if (!(shippedError instanceof Error && shippedError.message.includes('not found'))) {
+        if (!(shippedError instanceof Error && shippedError.message.toLowerCase().includes('not found'))) {
             console.warn(`Could not delete from shippedOrders for order ${orderId}, it might not exist.`, shippedError);
         }
     }
     return true;
   } catch (error) {
-    console.error(`Error deleting order ${orderId} via API:`, error);
+    console.error(`Error deleting order ${orderId} via API v3:`, error);
     return false;
   }
 };
@@ -293,7 +287,6 @@ export async function autoSettleOrderIfDelivered(
     const updates: Partial<TrackingLink> = {};
     let needsUpdate = false;
 
-    // Settle payment if there's a due amount
     if (dueAmount > 0.01) {
       const settlementRecord: AdvancePaymentRecord = {
         id: uuidv4(), amount: dueAmount, date: new Date().toISOString(), paymentMethod: "COD",
@@ -303,7 +296,6 @@ export async function autoSettleOrderIfDelivered(
       needsUpdate = true;
     }
 
-    // Update status if it's not already 'Delivered'
     if (!isAlreadyDelivered) {
         updates.currentStatus = DELIVERED_STATUS_ID;
         const newStatusLogEntry: OrderLogEntry = {
@@ -314,7 +306,6 @@ export async function autoSettleOrderIfDelivered(
         needsUpdate = true;
     }
     
-    // Apply updates if any changes were queued
     if (needsUpdate) {
       updates.updatedAt = new Date().toISOString();
       updates.updatedByUserId = actingUser.id;
@@ -322,22 +313,21 @@ export async function autoSettleOrderIfDelivered(
       await updateOrder(orderId, updates);
     }
     
-    // Sync Project Status to Delivered
     try {
-        const project = await fetchFromApi(`collections/${PROJECTS_COLLECTION}/documents/${orderId}`);
+        const project = await fetchFromApiV3(`collections/${PROJECTS_COLLECTION}/documents/${orderId}`);
         if (project && project.data && project.data.status !== 'Delivered') {
             const projectUpdates = {
                 status: 'Delivered', deliveredAt: new Date().toISOString(), updatedAt: new Date().toISOString()
             };
             const payload = { data: { ...project.data, ...projectUpdates }};
-            await fetchFromApi(`collections/${PROJECTS_COLLECTION}/documents/${orderId}`, {
+            await fetchFromApiV3(`collections/${PROJECTS_COLLECTION}/documents/${orderId}`, {
                 method: 'PUT',
                 body: JSON.stringify(payload)
             });
              console.log(`[autoSettleOrderIfDelivered] Synced project ${orderId} to 'Delivered'.`);
         }
     } catch(projectError) {
-        if (!(projectError instanceof Error && projectError.message.includes('not found'))) {
+        if (!(projectError instanceof Error && projectError.message.toLowerCase().includes('not found'))) {
           console.warn(`[autoSettleOrderIfDelivered] Could not sync project status for ${orderId}:`, projectError);
         }
     }
@@ -366,7 +356,7 @@ export const unsettleOrderPayment = async (
 
         if (autoSettlePaymentIndex === -1) {
             console.log(`[unsettleOrderPayment] No auto-settled payment found for order ${orderId}. No action needed.`);
-            return true; // No payment to remove, but not an error.
+            return true;
         }
 
         const updatedPayments = [...(order.advancePayments || [])];
@@ -414,7 +404,7 @@ export const addCommentToOrder = async (orderId: string, commentData: Omit<Comme
     await updateOrder(orderId, { comments: updatedComments });
     return { ...order, comments: updatedComments };
   } catch (error) {
-    console.error(`Error adding comment to order ${orderId} via API:`, error);
+    console.error(`Error adding comment to order ${orderId} via API v3:`, error);
     return undefined;
   }
 };
@@ -443,7 +433,7 @@ export const addReplyToComment = async (
     await updateOrder(orderId, { comments });
     return { ...order, comments };
   } catch (error) {
-    console.error(`Error adding reply to comment ${parentCommentId} in order ${orderId} via API:`, error);
+    console.error(`Error adding reply to comment ${parentCommentId} in order ${orderId} via API v3:`, error);
     return undefined;
   }
 };
@@ -481,7 +471,7 @@ export const toggleReaction = async (
     await updateOrder(orderId, { comments });
     return { ...order, comments };
   } catch (error) {
-    console.error(`Error toggling reaction on comment ${targetCommentId} in order ${orderId} via API:`, error);
+    console.error(`Error toggling reaction on comment ${targetCommentId} in order ${orderId} via API v3:`, error);
     return undefined;
   }
 };
@@ -510,24 +500,22 @@ export const deleteComment = async (
     await updateOrder(orderId, { comments });
     return { ...order, comments };
   } catch (error) {
-    console.error(`Error deleting comment ${targetCommentId} in order ${orderId} via API:`, error);
+    console.error(`Error deleting comment ${targetCommentId} in order ${orderId} via API v3:`, error);
     return undefined;
   }
 };
 
-// Updated function to handle upsert logic for shippedOrders
 export const addShippedOrderEntry = async (orderId: string, trackingCode: string): Promise<boolean> => {
   try {
-    await ensureCollectionExists(SHIPPED_ORDERS_COLLECTION);
+    await ensureCollectionExistsV3(SHIPPED_ORDERS_COLLECTION);
     const data = { packzyTrackingCode: trackingCode, addedAt: new Date().toISOString() };
     
-    // The API's POST to a collection with a provided ID will either create or overwrite, effectively an upsert.
     const payload = {
       id: orderId,
       data: data
     };
     
-    await fetchFromApi(`collections/${SHIPPED_ORDERS_COLLECTION}/documents`, {
+    await fetchFromApiV3(`collections/${SHIPPED_ORDERS_COLLECTION}/documents`, {
       method: 'POST',
       body: JSON.stringify(payload)
     });
@@ -535,30 +523,25 @@ export const addShippedOrderEntry = async (orderId: string, trackingCode: string
     console.log(`[ShippedOrders] Upserted entry for order ${orderId}`);
     return true;
   } catch (error) {
-    console.error(`Error upserting to shippedOrders collection for order ${orderId}:`, error);
+    console.error(`Error upserting to shippedOrders collection for order ${orderId} via API v3:`, error);
     return false;
   }
 };
 
 export const deleteShippedOrderEntry = async (orderId: string): Promise<boolean> => {
   try {
-    await ensureCollectionExists(SHIPPED_ORDERS_COLLECTION);
-    await fetchFromApi(`collections/${SHIPPED_ORDERS_COLLECTION}/documents/${orderId}`, {
+    await ensureCollectionExistsV3(SHIPPED_ORDERS_COLLECTION);
+    await fetchFromApiV3(`collections/${SHIPPED_ORDERS_COLLECTION}/documents/${orderId}`, {
       method: 'DELETE'
     });
     console.log(`[ShippedOrders] Removed entry for order ${orderId}`);
     return true;
   } catch (error) {
-    if (error instanceof Error && error.message.includes('not found')) {
-      // It's okay if it's already gone, no need to throw an error.
+    if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
       console.warn(`[ShippedOrders] Tried to delete entry for order ${orderId}, but it was not found.`);
       return true;
     }
-    console.error(`Error deleting from shippedOrders collection for order ${orderId}:`, error);
+    console.error(`Error deleting from shippedOrders collection for order ${orderId} via API v3:`, error);
     return false;
   }
 };
-
-
-
-
