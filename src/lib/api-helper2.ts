@@ -2,7 +2,7 @@
 // NOTE: This is a new helper file for the v3 API. It is not yet used by the application.
 // To use this, you would import functions from this file instead of 'api-helper.ts'.
 
-const API_V3_URL = "https://api.colorhutbd.xyz/dbv3/index.php";
+const API_V3_URL = "https://api.colorhut.xyz/index.php";
 
 export async function fetchFromApiV3(endpoint: string, options: RequestInit = {}) {
     if (!API_V3_URL) {
