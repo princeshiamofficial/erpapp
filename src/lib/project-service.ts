@@ -8,7 +8,7 @@ import { formatISO, addDays } from 'date-fns';
 import { getOrders } from './order-service'; 
 import { ORDER_SUBMITTED_ID, READY_FOR_DESIGN_STATUS_ID } from './status-service'; 
 import { getUsers as getAllUsersService } from './user-service'; 
-import { fetchFromApi, ensureCollectionExists } from './api-helper';
+import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
 
 const PROJECTS_COLLECTION = 'projects';
@@ -104,7 +104,7 @@ export const updateProjectStatus = async (
   const now = formatISO(new Date());
 
   try {
-    const existingProject = await fetchFromApi(`collections/${PROJECTS_COLLECTION}/documents/${projectId}`).catch(() => null);
+    const existingProject = await fetchFromApiV3(`collections/${PROJECTS_COLLECTION}/documents/${projectId}`).catch(() => null);
 
     if (existingProject && existingProject.data) {
       const updates: { [key: string]: any } = { status: newStatus, updatedAt: now };
@@ -114,7 +114,7 @@ export const updateProjectStatus = async (
       if (newStatusTimestampField) updates[newStatusTimestampField] = now;
       
       const payload = { data: { ...existingProject.data, ...updates }};
-      await fetchFromApi(`collections/${PROJECTS_COLLECTION}/documents/${projectId}`, {
+      await fetchFromApiV3(`collections/${PROJECTS_COLLECTION}/documents/${projectId}`, {
         method: 'PUT', body: JSON.stringify(payload)
       });
       
@@ -133,7 +133,7 @@ export const updateProjectStatus = async (
       if (newStatusTimestampField) (newProjectToSet as any)[newStatusTimestampField] = now;
       
       const payload = { id: projectId, data: newProjectToSet };
-      await fetchFromApi(`collections/${PROJECTS_COLLECTION}/documents`, {
+      await fetchFromApiV3(`collections/${PROJECTS_COLLECTION}/documents`, {
         method: 'POST', body: JSON.stringify(payload)
       });
     } else {
