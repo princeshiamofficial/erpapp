@@ -1,65 +1,51 @@
+Base URL https://api.colorhutbd.xyz/dbv3/index.php Collections
 
-const API_URL = "https://colorhutbd.xyz/firestore/api/index.php";
-const API_KEY = "44dc62ef42385a594d319d2c4261914655453b46640d23d9f13ac9a21f7357de";
+List All Collections GET /collections
+curl -X GET "https://api.colorhutbd.xyz/dbv3/index.php/collections"
 
-export async function fetchFromApi(endpoint: string, options: RequestInit = {}) {
-    if (!API_URL || !API_KEY) {
-        throw new Error("API URL or API Key is not configured.");
-    }
+{ "collections": [ { "name": "users", "document_count": 25, "created_at": "2025-09-04T12:32:00+06:00" }, { "name": "products", "document_count": 50, "created_at": "2025-09-01T09:10:00+06:00" } ] }
 
-    const headers = {
-        'Content-Type': 'application/json',
-        'X-API-KEY': API_KEY,
-        ...options.headers,
-    };
+Create Collection POST /collections
+curl -X POST "https://api.colorhutbd.xyz/dbv3/index.php/collections"
+-H "Content-Type: application/json"
+-d '{"name":"users"}'
 
-    const response = await fetch(`${API_URL}/${endpoint}`, { ...options, headers });
+{ "message": "Collection created successfully", "collection": { "name": "users", "created_at": "2025-09-04T12:32:00+06:00" } }
 
-    if (!response.ok) {
-        const errorText = await response.text();
-        let errorData = { message: `API request failed with status ${response.status}. Response: ${errorText}` };
-        try {
-            const parsedJson = JSON.parse(errorText);
-            errorData.message = parsedJson.message || errorData.message;
-        } catch (e) {
-            // Not a JSON response, the raw text is the best we have.
-        }
-        console.error("API Error Response:", errorData.message);
-        throw new Error(errorData.message);
-    }
-    
-    // Handle cases where the response might be empty (e.g., DELETE requests)
-    const responseText = await response.text();
-    if (!responseText) {
-        return { success: true };
-    }
-    
-    try {
-        return JSON.parse(responseText);
-    } catch (e) {
-        console.error("API Error: Response is not valid JSON.", responseText);
-        throw new Error("API returned an unexpected response format.");
-    }
-}
+Delete Collection DELETE /collections/{collection_name}
+curl -X DELETE "https://api.colorhutbd.xyz/dbv3/index.php/collections/users"
 
-export const ensureCollectionExists = async (collectionName: string) => {
-    try {
-        await fetchFromApi(`collections/${collectionName}`);
-    } catch (error) {
-        if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-            console.log(`Collection '${collectionName}' not found. Attempting to create it...`);
-            try {
-                await fetchFromApi('collections', {
-                    method: 'POST',
-                    body: JSON.stringify({ name: collectionName }),
-                });
-                console.log(`Collection '${collectionName}' created successfully.`);
-            } catch (creationError) {
-                console.error(`Failed to create collection '${collectionName}':`, creationError);
-                throw new Error(`Could not create required collection '${collectionName}'.`);
-            }
-        } else {
-            throw error;
-        }
-    }
-};
+{ "message": "Collection deleted successfully" }
+
+Documents
+
+List/Search Documents GET /collections/{collection_name}/documents?limit=10&offset=0&search=keyword
+curl -X GET "https://api.colorhutbd.xyz/dbv3/index.php/collections/users/documents?limit=5&offset=0&search=john"
+
+{ "documents": [ { "id": "doc_64f3a1a2e4", "data": { "title": "John Doe", "status": "active" }, "created_at": "2025-09-04T12:32:00+06:00", "updated_at": "2025-09-04T12:32:00+06:00" } ], "total": 1, "limit": 5, "offset": 0, "search": "john" }
+
+Get Document by ID GET /collections/{collection_name}/documents/{document_id}
+curl -X GET "https://api.colorhutbd.xyz/dbv3/index.php/collections/users/documents/doc_64f3a1a2e4"
+
+{ "id": "doc_64f3a1a2e4", "data": { "title": "John Doe", "status": "active" }, "created_at": "2025-09-04T12:32:00+06:00", "updated_at": "2025-09-04T12:32:00+06:00" }
+
+Create Document POST /collections/{collection_name}/documents
+curl -X POST "https://api.colorhutbd.xyz/dbv3/index.php/collections/users/documents"
+-H "Content-Type: application/json"
+-d '{"id":"doc_001","data":{"title":"Jane Doe","status":"active"}}'
+
+{ "id": "doc_001", "data": { "title": "Jane Doe", "status": "active" }, "created_at": "2025-09-04T12:40:00+06:00", "updated_at": "2025-09-04T12:40:00+06:00" }
+
+Update Document PUT /collections/{collection_name}/documents/{document_id}
+curl -X PUT "https://api.colorhutbd.xyz/dbv3/index.php/collections/users/documents/doc_001"
+-H "Content-Type: application/json"
+-d '{"data":{"status":"inactive"}}'
+
+{ "id": "doc_001", "data": { "title": "Jane Doe", "status": "inactive" }, "created_at": "2025-09-04T12:40:00+06:00", "updated_at": "2025-09-04T12:45:00+06:00" }
+
+Delete Document DELETE /collections/{collection_name}/documents/{document_id}
+curl -X DELETE "https://api.colorhutbd.xyz/dbv3/index.php/collections/users/documents/doc_001"
+
+{ "message": "Document deleted successfully" }
+
+Notes & Tips Data is stored in JSON files under /collections directory. Timestamps created_at and updated_at are auto-managed. Search is case-insensitive and scans all fields in data. Pagination uses limit and offset. Document IDs are unique within a collection. Can be auto-generated or custom. Collection names allow only letters, numbers, underscores, hyphens. Use Content-Type: application/json header for POST/PUT requests.
