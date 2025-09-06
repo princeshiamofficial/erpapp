@@ -48,7 +48,7 @@ export async function getTransactionsForUser(userId: string): Promise<Transactio
   if (!userId) return [];
   try {
     await ensureCollectionExistsV3(TRANSACTIONS_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${TRANSACTIONS_COLLECTION}/documents?filters[userId][is]=${userId}&orderBy=date&direction=desc&limit=500`);
+    const response = await fetchFromApiV3(`collections/${TRANSACTIONS_COLLECTION}/documents?filters[userId][is]=${userId}&orderBy=date&direction=desc&limit=9999`);
     if (response && Array.isArray(response.documents)) {
         return response.documents.map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as Transaction));
     }
@@ -62,7 +62,7 @@ export async function getTransactionsForUser(userId: string): Promise<Transactio
 export async function getAllTransactions(): Promise<Transaction[]> {
   try {
     await ensureCollectionExistsV3(TRANSACTIONS_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${TRANSACTIONS_COLLECTION}/documents?orderBy=date&direction=desc&limit=1000`);
+    const response = await fetchFromApiV3(`collections/${TRANSACTIONS_COLLECTION}/documents?orderBy=date&direction=desc&limit=9999`);
     if (response && Array.isArray(response.documents)) {
         return response.documents.map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as Transaction));
     }
@@ -146,7 +146,7 @@ export async function getPersonalNotesForUser(userId: string): Promise<PersonalN
   if (!userId) return [];
   try {
     await ensureCollectionExistsV3(NOTES_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${NOTES_COLLECTION}/documents?filters[userId][is]=${userId}&orderBy=updatedAt&direction=desc&limit=500`);
+    const response = await fetchFromApiV3(`collections/${NOTES_COLLECTION}/documents?filters[userId][is]=${userId}&orderBy=updatedAt&direction=desc&limit=9999`);
     if (response && Array.isArray(response.documents)) {
       return response.documents.map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as PersonalNote));
     }

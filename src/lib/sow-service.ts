@@ -9,7 +9,7 @@ const COLLECTION_NAME = 'sowData';
 export const getSowEntries = async (): Promise<SowDataEntry[]> => {
   try {
     await ensureCollectionExistsV3(COLLECTION_NAME);
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=500&orderBy=createdAt&direction=desc`);
+    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999&orderBy=createdAt&direction=desc`);
     if (response && Array.isArray(response.documents)) {
         return response.documents.map((doc: { id: string, data: any }) => ({
             id: doc.id,

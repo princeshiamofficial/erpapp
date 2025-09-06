@@ -10,7 +10,7 @@ const COLLECTION_NAME = 'purchaseRequests';
 export const getPurchaseRequests = async (): Promise<PurchaseRequest[]> => {
   try {
     await ensureCollectionExistsV3(COLLECTION_NAME);
-    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=200`);
+    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999`);
     if (response && Array.isArray(response.documents)) {
         const requests = response.documents.map((doc: { id: string, data: any }) => ({
             id: doc.id,

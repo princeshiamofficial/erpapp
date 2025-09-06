@@ -15,7 +15,7 @@ export const getOrders = async (): Promise<TrackingLink[]> => {
     await ensureCollectionExistsV3(ORDERS_COLLECTION);
     
     // Fetch the most recent 200 orders to prevent server overload issues (like 500 errors).
-    const limit = 200;
+    const limit = 9999;
     // The V3 API seems to handle ordering differently. Let's adapt to fetch and sort client-side for now.
     // The API might not support `orderBy` and `direction` in the same way.
     const response = await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents?limit=${limit}`);
@@ -64,7 +64,7 @@ export const getOrderByTrackingCode = async (trackingCode: string): Promise<Trac
   try {
     // V3 API uses a 'search' param instead of structured filters.
     await ensureCollectionExistsV3(ORDERS_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents?search=${trackingCode}&limit=999`);
+    const response = await fetchFromApiV3(`collections/${ORDERS_COLLECTION}/documents?search=${trackingCode}&limit=9999`);
     if (response && Array.isArray(response.documents)) {
       // We must filter client-side as 'search' is broad.
       const foundOrder = response.documents.find((doc: { id: string, data: any }) => doc.data.packzyTrackingCode === trackingCode);

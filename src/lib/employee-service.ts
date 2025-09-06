@@ -38,7 +38,7 @@ export const seedDefaultEmployees = async (): Promise<Employee[]> => {
 export const getEmployees = async (): Promise<Employee[]> => {
   try {
     await ensureCollectionExistsV3(EMPLOYEES_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents?limit=500&orderBy=employeeId&direction=asc`);
+    const response = await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents?limit=9999&orderBy=employeeId&direction=asc`);
     if (response && Array.isArray(response.documents)) {
         if (response.documents.length === 0) {
             return [];
