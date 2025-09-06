@@ -1,5 +1,6 @@
 
-import type { Lead } from '@/types';
+
+import type { Lead, LeadCategory, LeadStatusType } from '@/types';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
 const COLLECTION_NAME = 'leads';
@@ -11,7 +12,7 @@ export const getLeads = async (): Promise<Lead[]> => {
     
     const allLeads: Lead[] = [];
     let offset = 0;
-    const limit = 500; // Fetch in batches of 500
+    const limit = 9999; // Fetch in batches of 9999
     let hasMore = true;
 
     while (hasMore) {
@@ -59,7 +60,7 @@ export const addLead = async (leadData: Omit<Lead, 'id'>): Promise<Lead | null> 
     await ensureCollectionExistsV3(COLLECTION_NAME); 
     const dataWithStatus = {
         ...leadData,
-        status: 'New Lead', // Set default status for new leads
+        status: 'New Lead' as LeadStatusType, // Set default status for new leads
         customerType: leadData.customerType || null,
     };
     const payload = {
