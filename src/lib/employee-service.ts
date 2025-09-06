@@ -1,8 +1,8 @@
 
 
-import { fetchFromApi, ensureCollectionExists } from './api-helper';
 import type { Employee } from '@/types';
 import { subYears } from 'date-fns';
+import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
 const EMPLOYEES_COLLECTION = 'employees';
 
@@ -37,13 +37,10 @@ export const seedDefaultEmployees = async (): Promise<Employee[]> => {
 
 export const getEmployees = async (): Promise<Employee[]> => {
   try {
-    await ensureCollectionExists(EMPLOYEES_COLLECTION);
-    const response = await fetchFromApi(`collections/${EMPLOYEES_COLLECTION}/documents?limit=500&orderBy=employeeId&direction=asc`);
+    await ensureCollectionExistsV3(EMPLOYEES_COLLECTION);
+    const response = await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents?limit=500&orderBy=employeeId&direction=asc`);
     if (response && Array.isArray(response.documents)) {
         if (response.documents.length === 0) {
-            // Seeding logic can be complex with API, might be better to handle on server or one-time script
-            // For now, we return empty if nothing is there.
-            // return await seedDefaultEmployees();
             return [];
         }
         return response.documents.map((doc: { id: string, data: any }) => ({
@@ -53,14 +50,14 @@ export const getEmployees = async (): Promise<Employee[]> => {
     }
     return [];
   } catch (error) {
-    console.error("Error fetching employees via API:", error);
+    console.error("Error fetching employees via API v3:", error);
     return [];
   }
 };
 
 export const addEmployee = async (employeeData: Omit<Employee, 'id' | 'employeeId'>): Promise<Employee | null> => {
     try {
-        await ensureCollectionExists(EMPLOYEES_COLLECTION);
+        await ensureCollectionExistsV3(EMPLOYEES_COLLECTION);
 
         const allEmployees = await getEmployees();
         let maxIdNumber = 0;
@@ -77,7 +74,7 @@ export const addEmployee = async (employeeData: Omit<Employee, 'id' | 'employeeI
         const employeeId = `EMP-${String(newIdNumber).padStart(3, '0')}`;
         const newEmployeeData = { ...employeeData, employeeId };
 
-        const newDoc = await fetchFromApi(`collections/${EMPLOYEES_COLLECTION}/documents`, {
+        const newDoc = await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents`, {
             method: 'POST',
             body: JSON.stringify({ data: newEmployeeData }),
         });
@@ -88,37 +85,37 @@ export const addEmployee = async (employeeData: Omit<Employee, 'id' | 'employeeI
             ...newDoc.data
         } as Employee;
     } catch (error) {
-        console.error("Error adding employee via API:", error);
+        console.error("Error adding employee via API v3:", error);
         return null;
     }
 };
 
 export const updateEmployee = async (employeeId: string, updates: Partial<Omit<Employee, 'id' | 'employeeId'>>): Promise<boolean> => {
     try {
-        await ensureCollectionExists(EMPLOYEES_COLLECTION);
-        const existingEmployee = await fetchFromApi(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`);
+        await ensureCollectionExistsV3(EMPLOYEES_COLLECTION);
+        const existingEmployee = await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`);
         const finalData = { ...existingEmployee.data, ...updates };
 
-        await fetchFromApi(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`, {
+        await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`, {
             method: 'PUT',
             body: JSON.stringify({ data: finalData })
         });
         return true;
     } catch (error) {
-        console.error(`Error updating employee ${employeeId} via API:`, error);
+        console.error(`Error updating employee ${employeeId} via API v3:`, error);
         return false;
     }
 };
 
 export const deleteEmployee = async (employeeId: string): Promise<boolean> => {
     try {
-        await ensureCollectionExists(EMPLOYEES_COLLECTION);
-        await fetchFromApi(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`, {
+        await ensureCollectionExistsV3(EMPLOYEES_COLLECTION);
+        await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`, {
             method: 'DELETE'
         });
         return true;
     } catch (error) {
-        console.error(`Error deleting employee ${employeeId} via API:`, error);
+        console.error(`Error deleting employee ${employeeId} via API v3:`, error);
         return false;
     }
 };

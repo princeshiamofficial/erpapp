@@ -1,10 +1,8 @@
 
 
-import { db } from './firebase';
-import { collection, getDocs, doc, updateDoc, getDoc, query, where, writeBatch, setDoc, deleteDoc as deleteFirestoreDoc } from 'firebase/firestore';
 import type { CustomStatus, UserRole } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { fetchFromApi, ensureCollectionExists } from './api-helper';
+import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
 const STATUSES_COLLECTION = 'customOrderStatuses';
 export const READY_FOR_DESIGN_STATUS_ID = 'ready-for-design';
@@ -35,7 +33,7 @@ const defaultStatusesData: Array<Omit<CustomStatus, 'id' | 'isSystemStatus' | 'i
 
 export const seedDefaultStatuses = async (): Promise<CustomStatus[]> => {
   const createdStatuses: CustomStatus[] = [];
-  await ensureCollectionExists(STATUSES_COLLECTION);
+  await ensureCollectionExistsV3(STATUSES_COLLECTION);
   
   for (const statusData of defaultStatusesData) {
     const statusPayload = {
@@ -53,7 +51,7 @@ export const seedDefaultStatuses = async (): Promise<CustomStatus[]> => {
             data: statusPayload
         };
         
-        await fetchFromApi(`collections/${STATUSES_COLLECTION}/documents`, {
+        await fetchFromApiV3(`collections/${STATUSES_COLLECTION}/documents`, {
             method: 'POST',
             body: JSON.stringify(requestBody)
         });
@@ -67,19 +65,19 @@ export const seedDefaultStatuses = async (): Promise<CustomStatus[]> => {
         console.error(`Failed to seed status with custom ID: ${statusData.id}`, error);
     }
   }
-  console.log('Default statuses seeded via API using custom IDs.');
+  console.log('Default statuses seeded via API v3 using custom IDs.');
   return createdStatuses;
 };
 
 
 export const getStatuses = async (): Promise<CustomStatus[]> => {
   try {
-    await ensureCollectionExists(STATUSES_COLLECTION);
-    const response = await fetchFromApi(`collections/${STATUSES_COLLECTION}/documents?limit=100`);
+    await ensureCollectionExistsV3(STATUSES_COLLECTION);
+    const response = await fetchFromApiV3(`collections/${STATUSES_COLLECTION}/documents?limit=100`);
     
     if (response && Array.isArray(response.documents)) {
       if (response.documents.length === 0) {
-        console.log("No statuses found, seeding defaults via API.");
+        console.log("No statuses found, seeding defaults via API v3.");
         return await seedDefaultStatuses();
       }
       return response.documents.map((doc: { id: string, data: any }) => ({
@@ -96,7 +94,7 @@ export const getStatuses = async (): Promise<CustomStatus[]> => {
     }
     return [];
   } catch (error) {
-    console.error("Error fetching statuses from API:", error);
+    console.error("Error fetching statuses from API v3:", error);
     return [];
   }
 };
@@ -104,7 +102,7 @@ export const getStatuses = async (): Promise<CustomStatus[]> => {
 export const getStatusById = async (id: string): Promise<CustomStatus | undefined> => {
   if (!id) return undefined;
   try {
-    const response = await fetchFromApi(`collections/${STATUSES_COLLECTION}/documents/${id}`);
+    const response = await fetchFromApiV3(`collections/${STATUSES_COLLECTION}/documents/${id}`);
     if (response && response.data) {
       return { 
         id: response.id, 
@@ -121,7 +119,7 @@ export const getStatusById = async (id: string): Promise<CustomStatus | undefine
       console.warn(`Status with ID "${id}" not found in API database.`);
       return undefined;
     }
-    console.error(`Error fetching status by ID "${id}" from API:`, error);
+    console.error(`Error fetching status by ID "${id}" from API v3:`, error);
     return undefined;
   }
 };
@@ -147,7 +145,7 @@ export const addStatus = async (name: string, color: string, isVisible: boolean,
         data: newStatusData
     };
     
-    await fetchFromApi(`collections/${STATUSES_COLLECTION}/documents`, {
+    await fetchFromApiV3(`collections/${STATUSES_COLLECTION}/documents`, {
         method: 'POST',
         body: JSON.stringify(payload)
     });
@@ -159,7 +157,7 @@ export const addStatus = async (name: string, color: string, isVisible: boolean,
 
     return createdStatus;
   } catch (error) {
-    console.error("Error adding status via API:", error);
+    console.error("Error adding status via API v3:", error);
     if (error instanceof Error) throw error;
     return null;
   }
@@ -208,13 +206,13 @@ export async function updateStatus(
     const dataToSend = { ...existingStatus, ...updates };
     delete (dataToSend as any).id;
     
-    await fetchFromApi(`collections/${STATUSES_COLLECTION}/documents/${id}`, {
+    await fetchFromApiV3(`collections/${STATUSES_COLLECTION}/documents/${id}`, {
         method: 'PUT',
         body: JSON.stringify({ data: dataToSend })
     });
     return true;
   } catch (error) {
-    console.error(`Error updating status ID '${id}' via API:`, error);
+    console.error(`Error updating status ID '${id}' via API v3:`, error);
     if (error instanceof Error) throw error;
     return false;
   }
@@ -229,10 +227,10 @@ export const deleteStatus = async (id: string): Promise<boolean> => {
     if (statusToDelete.isSystemStatus) {
       throw new Error("System statuses cannot be deleted.");
     }
-    await fetchFromApi(`collections/${STATUSES_COLLECTION}/documents/${id}`, { method: 'DELETE' });
+    await fetchFromApiV3(`collections/${STATUSES_COLLECTION}/documents/${id}`, { method: 'DELETE' });
     return true;
   } catch (error) {
-    console.error("Error deleting status from API:", error);
+    console.error("Error deleting status from API v3:", error);
     if (error instanceof Error) throw error;
     return false;
   }

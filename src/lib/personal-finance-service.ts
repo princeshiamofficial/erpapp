@@ -1,6 +1,6 @@
 
 
-import { fetchFromApi, ensureCollectionExists } from './api-helper';
+import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 import type { Transaction, TransactionType, PersonalNote } from '@/types';
 
 const TRANSACTIONS_COLLECTION = 'personalTransactions';
@@ -26,20 +26,20 @@ export async function addTransaction(
     return null;
   }
   try {
-    await ensureCollectionExists(TRANSACTIONS_COLLECTION);
+    await ensureCollectionExistsV3(TRANSACTIONS_COLLECTION);
     const dataWithUser = {
       ...transactionData,
       userId,
       createdAt: new Date().toISOString()
     };
-    const newDoc = await fetchFromApi(`collections/${TRANSACTIONS_COLLECTION}/documents`, {
+    const newDoc = await fetchFromApiV3(`collections/${TRANSACTIONS_COLLECTION}/documents`, {
         method: 'POST',
         body: JSON.stringify({ data: dataWithUser }),
     });
 
     return { id: newDoc.id, ...newDoc.data } as Transaction;
   } catch (error) {
-    console.error("Error adding transaction via API:", error);
+    console.error("Error adding transaction via API v3:", error);
     return null;
   }
 }
@@ -47,28 +47,28 @@ export async function addTransaction(
 export async function getTransactionsForUser(userId: string): Promise<Transaction[]> {
   if (!userId) return [];
   try {
-    await ensureCollectionExists(TRANSACTIONS_COLLECTION);
-    const response = await fetchFromApi(`collections/${TRANSACTIONS_COLLECTION}/documents?filters[userId][is]=${userId}&orderBy=date&direction=desc&limit=500`);
+    await ensureCollectionExistsV3(TRANSACTIONS_COLLECTION);
+    const response = await fetchFromApiV3(`collections/${TRANSACTIONS_COLLECTION}/documents?filters[userId][is]=${userId}&orderBy=date&direction=desc&limit=500`);
     if (response && Array.isArray(response.documents)) {
         return response.documents.map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as Transaction));
     }
     return [];
   } catch (error) {
-    console.error("Error fetching user transactions via API:", error);
+    console.error("Error fetching user transactions via API v3:", error);
     return [];
   }
 }
 
 export async function getAllTransactions(): Promise<Transaction[]> {
   try {
-    await ensureCollectionExists(TRANSACTIONS_COLLECTION);
-    const response = await fetchFromApi(`collections/${TRANSACTIONS_COLLECTION}/documents?orderBy=date&direction=desc&limit=1000`);
+    await ensureCollectionExistsV3(TRANSACTIONS_COLLECTION);
+    const response = await fetchFromApiV3(`collections/${TRANSACTIONS_COLLECTION}/documents?orderBy=date&direction=desc&limit=1000`);
     if (response && Array.isArray(response.documents)) {
         return response.documents.map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as Transaction));
     }
     return [];
   } catch (error) {
-    console.error("Error fetching all transactions via API:", error);
+    console.error("Error fetching all transactions via API v3:", error);
     return [];
   }
 }
@@ -76,10 +76,10 @@ export async function getAllTransactions(): Promise<Transaction[]> {
 export async function getTransactionById(transactionId: string): Promise<Transaction | null> {
   if (!transactionId) return null;
   try {
-    const doc = await fetchFromApi(`collections/${TRANSACTIONS_COLLECTION}/documents/${transactionId}`);
+    const doc = await fetchFromApiV3(`collections/${TRANSACTIONS_COLLECTION}/documents/${transactionId}`);
     return { id: doc.id, ...doc.data } as Transaction;
   } catch (error) {
-    console.error(`Error fetching transaction ${transactionId} via API:`, error);
+    console.error(`Error fetching transaction ${transactionId} via API v3:`, error);
     return null;
   }
 }
@@ -89,29 +89,29 @@ export async function updateTransaction(
   updates: Partial<Omit<Transaction, 'id' | 'userId' | 'createdAt'>>
 ): Promise<boolean> {
   try {
-    const existingDoc = await fetchFromApi(`collections/${TRANSACTIONS_COLLECTION}/documents/${transactionId}`);
+    const existingDoc = await fetchFromApiV3(`collections/${TRANSACTIONS_COLLECTION}/documents/${transactionId}`);
     const updatedData = { ...existingDoc.data, ...updates };
 
     const payload = { data: updatedData };
-    await fetchFromApi(`collections/${TRANSACTIONS_COLLECTION}/documents/${transactionId}`, {
+    await fetchFromApiV3(`collections/${TRANSACTIONS_COLLECTION}/documents/${transactionId}`, {
         method: 'PUT',
         body: JSON.stringify(payload)
     });
     return true;
   } catch (error) {
-    console.error("Error updating transaction via API:", error);
+    console.error("Error updating transaction via API v3:", error);
     return false;
   }
 }
 
 export async function deleteTransaction(transactionId: string): Promise<boolean> {
   try {
-    await fetchFromApi(`collections/${TRANSACTIONS_COLLECTION}/documents/${transactionId}`, {
+    await fetchFromApiV3(`collections/${TRANSACTIONS_COLLECTION}/documents/${transactionId}`, {
         method: 'DELETE'
     });
     return true;
   } catch (error) {
-    console.error("Error deleting transaction via API:", error);
+    console.error("Error deleting transaction via API v3:", error);
     return false;
   }
 }
@@ -124,20 +124,20 @@ export async function addPersonalNote(
     return null;
   }
   try {
-    await ensureCollectionExists(NOTES_COLLECTION);
+    await ensureCollectionExistsV3(NOTES_COLLECTION);
     const now = new Date().toISOString();
     const dataToSave = {
       ...noteData,
       createdAt: now,
       updatedAt: now,
     };
-    const newDoc = await fetchFromApi(`collections/${NOTES_COLLECTION}/documents`, {
+    const newDoc = await fetchFromApiV3(`collections/${NOTES_COLLECTION}/documents`, {
         method: 'POST',
         body: JSON.stringify({ data: dataToSave }),
     });
     return { id: newDoc.id, ...newDoc.data } as PersonalNote;
   } catch (error) {
-    console.error("Error adding personal note via API:", error);
+    console.error("Error adding personal note via API v3:", error);
     return null;
   }
 }
@@ -145,14 +145,14 @@ export async function addPersonalNote(
 export async function getPersonalNotesForUser(userId: string): Promise<PersonalNote[]> {
   if (!userId) return [];
   try {
-    await ensureCollectionExists(NOTES_COLLECTION);
-    const response = await fetchFromApi(`collections/${NOTES_COLLECTION}/documents?filters[userId][is]=${userId}&orderBy=updatedAt&direction=desc&limit=500`);
+    await ensureCollectionExistsV3(NOTES_COLLECTION);
+    const response = await fetchFromApiV3(`collections/${NOTES_COLLECTION}/documents?filters[userId][is]=${userId}&orderBy=updatedAt&direction=desc&limit=500`);
     if (response && Array.isArray(response.documents)) {
       return response.documents.map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as PersonalNote));
     }
     return [];
   } catch (error) {
-    console.error("Error fetching personal notes via API:", error);
+    console.error("Error fetching personal notes via API v3:", error);
     return [];
   }
 }
@@ -166,7 +166,7 @@ export async function updatePersonalNote(
     return false;
   }
   try {
-    const existingDoc = await fetchFromApi(`collections/${NOTES_COLLECTION}/documents/${noteId}`);
+    const existingDoc = await fetchFromApiV3(`collections/${NOTES_COLLECTION}/documents/${noteId}`);
     const updatedData = {
       ...existingDoc.data,
       ...updates,
@@ -174,13 +174,13 @@ export async function updatePersonalNote(
       content: updates.content?.trim() || "",
       updatedAt: new Date().toISOString(),
     };
-    await fetchFromApi(`collections/${NOTES_COLLECTION}/documents/${noteId}`, {
+    await fetchFromApiV3(`collections/${NOTES_COLLECTION}/documents/${noteId}`, {
         method: 'PUT',
         body: JSON.stringify({ data: updatedData })
     });
     return true;
   } catch (error) {
-    console.error("Error updating personal note via API:", error);
+    console.error("Error updating personal note via API v3:", error);
     return false;
   }
 }
@@ -188,14 +188,13 @@ export async function updatePersonalNote(
 export async function deletePersonalNote(noteId: string, userIdVerifying: string): Promise<boolean> {
   try {
     // Ownership check can be done here if needed
-    // const note = await getPersonalNoteById(noteId);
-    // if (note?.userId !== userIdVerifying) return false;
-    await fetchFromApi(`collections/${NOTES_COLLECTION}/documents/${noteId}`, {
+    // For now, assuming deletion is allowed if the action is called.
+    await fetchFromApiV3(`collections/${NOTES_COLLECTION}/documents/${noteId}`, {
         method: 'DELETE'
     });
     return true;
   } catch (error) {
-    console.error("Error deleting personal note via API:", error);
+    console.error("Error deleting personal note via API v3:", error);
     return false;
   }
 }

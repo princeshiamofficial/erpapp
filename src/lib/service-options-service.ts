@@ -1,10 +1,8 @@
 
 
-import { db } from './firebase';
-import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy, writeBatch, where, runTransaction, getDoc, setDoc } from 'firebase/firestore';
 import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
-import { fetchFromApi, ensureCollectionExists } from './api-helper';
+import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
 
 const MODELS_COLLECTION = 'serviceModels';
@@ -16,8 +14,8 @@ const PAYMENT_METHODS_COLLECTION = 'servicePaymentMethods';
 
 export const getModels = async (): Promise<ServiceModelItem[]> => {
   try {
-    await ensureCollectionExists(MODELS_COLLECTION);
-    const response = await fetchFromApi(`collections/${MODELS_COLLECTION}/documents?limit=500&orderBy=name&direction=asc`);
+    await ensureCollectionExistsV3(MODELS_COLLECTION);
+    const response = await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents?limit=500&orderBy=name&direction=asc`);
     if (response && Array.isArray(response.documents)) {
         return response.documents.map((doc: { id: string, data: any }) => ({
             id: doc.id,
@@ -26,7 +24,7 @@ export const getModels = async (): Promise<ServiceModelItem[]> => {
     }
     return [];
   } catch (error) {
-    console.error("Error fetching service models via API:", error);
+    console.error("Error fetching service models via API v3:", error);
     return [];
   }
 };
@@ -40,7 +38,7 @@ export const addModel = async (name: string, buyingPrice?: number, sellingPrice?
   const finalStockCount = (isReadyMade && stockCount !== undefined) ? stockCount : 0;
 
   try {
-    await ensureCollectionExists(MODELS_COLLECTION);
+    await ensureCollectionExistsV3(MODELS_COLLECTION);
     const newModelData: Omit<ServiceModelItem, 'id'> = { 
       name: name.trim(), 
       buyingPrice: numBuyingPrice, 
@@ -50,7 +48,7 @@ export const addModel = async (name: string, buyingPrice?: number, sellingPrice?
       stockCount: finalStockCount,
     };
 
-    const newDoc = await fetchFromApi(`collections/${MODELS_COLLECTION}/documents`, {
+    const newDoc = await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents`, {
         method: 'POST',
         body: JSON.stringify({ data: newModelData }),
     });
@@ -60,7 +58,7 @@ export const addModel = async (name: string, buyingPrice?: number, sellingPrice?
         ...newDoc.data
     } as ServiceModelItem;
   } catch (error) {
-    console.error("Error adding service model via API:", error);
+    console.error("Error adding service model via API v3:", error);
     if (error instanceof Error) throw error;
     return null;
   }
@@ -72,7 +70,7 @@ export const updateModel = async (id: string, name: string, buyingPrice?: number
   }
   
   try {
-    const existingDoc = await fetchFromApi(`collections/${MODELS_COLLECTION}/documents/${id}`);
+    const existingDoc = await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents/${id}`);
     if (!existingDoc || !existingDoc.data) {
         throw new Error("Document does not exist!");
     }
@@ -95,13 +93,13 @@ export const updateModel = async (id: string, name: string, buyingPrice?: number
     
     const finalData = { ...existingDoc.data, ...updates };
 
-    await fetchFromApi(`collections/${MODELS_COLLECTION}/documents/${id}`, {
+    await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents/${id}`, {
         method: 'PUT',
         body: JSON.stringify({ data: finalData })
     });
     return true;
   } catch (error) {
-    console.error("Error updating service model via API:", error);
+    console.error("Error updating service model via API v3:", error);
     if (error instanceof Error) throw error;
     return false;
   }
@@ -109,7 +107,7 @@ export const updateModel = async (id: string, name: string, buyingPrice?: number
 
 export const updateModelStock = async (modelId: string, quantityChange: number): Promise<boolean> => {
     try {
-        const doc = await fetchFromApi(`collections/${MODELS_COLLECTION}/documents/${modelId}`);
+        const doc = await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents/${modelId}`);
         if (!doc || !doc.data) {
             throw new Error("Model not found for stock update.");
         }
@@ -118,25 +116,25 @@ export const updateModelStock = async (modelId: string, quantityChange: number):
         
         const finalData = { ...doc.data, stockCount: newStock };
         
-        await fetchFromApi(`collections/${MODELS_COLLECTION}/documents/${modelId}`, {
+        await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents/${modelId}`, {
             method: 'PUT',
             body: JSON.stringify({ data: finalData })
         });
         return true;
     } catch (error) {
-        console.error(`Error updating stock for model ${modelId} via API:`, error);
+        console.error(`Error updating stock for model ${modelId} via API v3:`, error);
         return false;
     }
 };
 
 export const deleteModel = async (id: string): Promise<boolean> => {
   try {
-    await fetchFromApi(`collections/${MODELS_COLLECTION}/documents/${id}`, {
+    await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents/${id}`, {
         method: 'DELETE'
     });
     return true;
   } catch (error) {
-    console.error("Error deleting service model via API:", error);
+    console.error("Error deleting service model via API v3:", error);
     if (error instanceof Error) throw error; 
     return false;
   }
@@ -146,7 +144,7 @@ export const deleteModel = async (id: string): Promise<boolean> => {
 // --- Lamination Functions ---
 
 const seedDefaultLaminations = async (): Promise<ServiceLaminationItem[]> => {
-  await ensureCollectionExists(LAMINATIONS_COLLECTION);
+  await ensureCollectionExistsV3(LAMINATIONS_COLLECTION);
   const createdLaminations: ServiceLaminationItem[] = [];
   const defaultLaminationsData: string[] = ["None", "Glossy", "Matte", "Soft Touch", "Anti-Scuff Matte"];
 
@@ -154,26 +152,26 @@ const seedDefaultLaminations = async (): Promise<ServiceLaminationItem[]> => {
     const id = uuidv4();
     const newLamination: Omit<ServiceLaminationItem, 'id'> = { name };
     try {
-        const newDoc = await fetchFromApi(`collections/${LAMINATIONS_COLLECTION}/documents`, {
+        const newDoc = await fetchFromApiV3(`collections/${LAMINATIONS_COLLECTION}/documents`, {
             method: 'POST',
             body: JSON.stringify({ id, data: newLamination }),
         });
         createdLaminations.push({ id, ...newDoc.data });
     } catch (error) {
-        console.error(`Error seeding lamination "${name}" via API:`, error);
+        console.error(`Error seeding lamination "${name}" via API v3:`, error);
     }
   }
-  console.log('Default service laminations seeded via API.');
+  console.log('Default service laminations seeded via API v3.');
   return createdLaminations;
 };
 
 export const getLaminations = async (): Promise<ServiceLaminationItem[]> => {
   try {
-    await ensureCollectionExists(LAMINATIONS_COLLECTION);
-    const response = await fetchFromApi(`collections/${LAMINATIONS_COLLECTION}/documents?limit=100&orderBy=name&direction=asc`);
+    await ensureCollectionExistsV3(LAMINATIONS_COLLECTION);
+    const response = await fetchFromApiV3(`collections/${LAMINATIONS_COLLECTION}/documents?limit=100&orderBy=name&direction=asc`);
     if (response && Array.isArray(response.documents)) {
       if (response.documents.length === 0) {
-        console.log("No service laminations found, seeding defaults via API.");
+        console.log("No service laminations found, seeding defaults via API v3.");
         return await seedDefaultLaminations();
       }
       return response.documents.map((doc: { id: string; data: any }) => ({
@@ -183,7 +181,7 @@ export const getLaminations = async (): Promise<ServiceLaminationItem[]> => {
     }
     return [];
   } catch (error) {
-    console.error("Error fetching service laminations via API:", error);
+    console.error("Error fetching service laminations via API v3:", error);
     return [];
   }
 };
@@ -194,13 +192,13 @@ export const addLamination = async (name: string): Promise<ServiceLaminationItem
   }
   try {
     const newLaminationData: Omit<ServiceLaminationItem, 'id'> = { name: name.trim() };
-    const newDoc = await fetchFromApi(`collections/${LAMINATIONS_COLLECTION}/documents`, {
+    const newDoc = await fetchFromApiV3(`collections/${LAMINATIONS_COLLECTION}/documents`, {
       method: 'POST',
       body: JSON.stringify({ data: newLaminationData }),
     });
     return { id: newDoc.id, ...newDoc.data };
   } catch (error) {
-    console.error("Error adding service lamination via API:", error);
+    console.error("Error adding service lamination via API v3:", error);
     if (error instanceof Error) throw error;
     return null;
   }
@@ -211,14 +209,14 @@ export const updateLamination = async (id: string, name: string): Promise<boolea
     throw new Error("Lamination name cannot be empty.");
   }
   try {
-    const existingDoc = await fetchFromApi(`collections/${LAMINATIONS_COLLECTION}/documents/${id}`);
-    await fetchFromApi(`collections/${LAMINATIONS_COLLECTION}/documents/${id}`, {
+    const existingDoc = await fetchFromApiV3(`collections/${LAMINATIONS_COLLECTION}/documents/${id}`);
+    await fetchFromApiV3(`collections/${LAMINATIONS_COLLECTION}/documents/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ data: { ...existingDoc.data, name: name.trim() } }),
     });
     return true;
   } catch (error) {
-    console.error("Error updating service lamination via API:", error);
+    console.error("Error updating service lamination via API v3:", error);
     if (error instanceof Error) throw error;
     return false;
   }
@@ -226,12 +224,12 @@ export const updateLamination = async (id: string, name: string): Promise<boolea
 
 export const deleteLamination = async (id: string): Promise<boolean> => {
   try {
-    await fetchFromApi(`collections/${LAMINATIONS_COLLECTION}/documents/${id}`, {
+    await fetchFromApiV3(`collections/${LAMINATIONS_COLLECTION}/documents/${id}`, {
       method: 'DELETE',
     });
     return true;
   } catch (error) {
-    console.error("Error deleting service lamination via API:", error);
+    console.error("Error deleting service lamination via API v3:", error);
     if (error instanceof Error) throw error;
     return false;
   }
@@ -241,7 +239,7 @@ export const deleteLamination = async (id: string): Promise<boolean> => {
 // --- Payment Method Functions ---
 
 const seedDefaultPaymentMethods = async (): Promise<ServicePaymentMethodItem[]> => {
-  await ensureCollectionExists(PAYMENT_METHODS_COLLECTION);
+  await ensureCollectionExistsV3(PAYMENT_METHODS_COLLECTION);
   const createdItems: ServicePaymentMethodItem[] = [];
   const defaultPaymentMethodsData: string[] = ["Cash", "Card", "Bank Transfer", "Mobile Banking", "Cheque", "Other"];
 
@@ -249,27 +247,27 @@ const seedDefaultPaymentMethods = async (): Promise<ServicePaymentMethodItem[]> 
     const id = uuidv4();
     const newItem: Omit<ServicePaymentMethodItem, 'id'> = { name };
     try {
-      const newDoc = await fetchFromApi(`collections/${PAYMENT_METHODS_COLLECTION}/documents`, {
+      const newDoc = await fetchFromApiV3(`collections/${PAYMENT_METHODS_COLLECTION}/documents`, {
         method: 'POST',
         body: JSON.stringify({ id, data: newItem }),
       });
       createdItems.push({ id, ...newDoc.data });
     } catch (error) {
-      console.error(`Error seeding payment method "${name}" via API:`, error);
+      console.error(`Error seeding payment method "${name}" via API v3:`, error);
     }
   }
-  console.log('Default payment methods seeded via API.');
+  console.log('Default payment methods seeded via API v3.');
   return createdItems;
 };
 
 
 export const getPaymentMethods = async (): Promise<ServicePaymentMethodItem[]> => {
   try {
-    await ensureCollectionExists(PAYMENT_METHODS_COLLECTION);
-    const response = await fetchFromApi(`collections/${PAYMENT_METHODS_COLLECTION}/documents?limit=100&orderBy=name&direction=asc`);
+    await ensureCollectionExistsV3(PAYMENT_METHODS_COLLECTION);
+    const response = await fetchFromApiV3(`collections/${PAYMENT_METHODS_COLLECTION}/documents?limit=100&orderBy=name&direction=asc`);
     if (response && Array.isArray(response.documents)) {
         if (response.documents.length === 0) {
-            console.log("No payment methods found, seeding defaults via API.");
+            console.log("No payment methods found, seeding defaults via API v3.");
             return await seedDefaultPaymentMethods();
         }
         return response.documents.map((doc: { id: string; data: any }) => ({
@@ -279,7 +277,7 @@ export const getPaymentMethods = async (): Promise<ServicePaymentMethodItem[]> =
     }
     return [];
   } catch (error) {
-      console.error("Error fetching payment methods via API:", error);
+      console.error("Error fetching payment methods via API v3:", error);
       return [];
   }
 };
@@ -291,13 +289,13 @@ export const addPaymentMethod = async (name: string): Promise<ServicePaymentMeth
   }
   try {
     const newItemData: Omit<ServicePaymentMethodItem, 'id'> = { name: name.trim() };
-    const newDoc = await fetchFromApi(`collections/${PAYMENT_METHODS_COLLECTION}/documents`, {
+    const newDoc = await fetchFromApiV3(`collections/${PAYMENT_METHODS_COLLECTION}/documents`, {
       method: 'POST',
       body: JSON.stringify({ data: newItemData }),
     });
     return { id: newDoc.id, ...newDoc.data };
   } catch (error) {
-    console.error("Error adding payment method via API:", error);
+    console.error("Error adding payment method via API v3:", error);
     if (error instanceof Error) throw error;
     return null;
   }
@@ -308,14 +306,14 @@ export const updatePaymentMethod = async (id: string, name: string): Promise<boo
     throw new Error("Payment method name cannot be empty.");
   }
   try {
-    const existingDoc = await fetchFromApi(`collections/${PAYMENT_METHODS_COLLECTION}/documents/${id}`);
-    await fetchFromApi(`collections/${PAYMENT_METHODS_COLLECTION}/documents/${id}`, {
+    const existingDoc = await fetchFromApiV3(`collections/${PAYMENT_METHODS_COLLECTION}/documents/${id}`);
+    await fetchFromApiV3(`collections/${PAYMENT_METHODS_COLLECTION}/documents/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ data: { ...existingDoc.data, name: name.trim() } }),
     });
     return true;
   } catch (error) {
-    console.error("Error updating payment method via API:", error);
+    console.error("Error updating payment method via API v3:", error);
     if (error instanceof Error) throw error;
     return false;
   }
@@ -323,12 +321,12 @@ export const updatePaymentMethod = async (id: string, name: string): Promise<boo
 
 export const deletePaymentMethod = async (id: string): Promise<boolean> => {
   try {
-    await fetchFromApi(`collections/${PAYMENT_METHODS_COLLECTION}/documents/${id}`, {
+    await fetchFromApiV3(`collections/${PAYMENT_METHODS_COLLECTION}/documents/${id}`, {
       method: 'DELETE',
     });
     return true;
   } catch (error) {
-    console.error("Error deleting payment method via API:", error);
+    console.error("Error deleting payment method via API v3:", error);
     if (error instanceof Error) throw error;
     return false;
   }
