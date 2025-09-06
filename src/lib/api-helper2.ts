@@ -1,51 +1,76 @@
-Base URL https://api.colorhutbd.xyz/dbv3/index.php Collections
 
-List All Collections GET /collections
-curl -X GET "https://api.colorhutbd.xyz/dbv3/index.php/collections"
 
-{ "collections": [ { "name": "users", "document_count": 25, "created_at": "2025-09-04T12:32:00+06:00" }, { "name": "products", "document_count": 50, "created_at": "2025-09-01T09:10:00+06:00" } ] }
+// NOTE: This is a new helper file for the v3 API. It is not yet used by the application.
+// To use this, you would import functions from this file instead of 'api-helper.ts'.
 
-Create Collection POST /collections
-curl -X POST "https://api.colorhutbd.xyz/dbv3/index.php/collections"
--H "Content-Type: application/json"
--d '{"name":"users"}'
+const API_V3_URL = "https://api.colorhutbd.xyz/dbv3/index.php";
 
-{ "message": "Collection created successfully", "collection": { "name": "users", "created_at": "2025-09-04T12:32:00+06:00" } }
+// Assuming the API key is the same. If not, this should be updated.
+const API_KEY = "44dc62ef42385a594d319d2c4261914655453b46640d23d9f13ac9a21f7357de";
 
-Delete Collection DELETE /collections/{collection_name}
-curl -X DELETE "https://api.colorhutbd.xyz/dbv3/index.php/collections/users"
+export async function fetchFromApiV3(endpoint: string, options: RequestInit = {}) {
+    if (!API_V3_URL || !API_KEY) {
+        throw new Error("API v3 URL or API Key is not configured.");
+    }
 
-{ "message": "Collection deleted successfully" }
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-API-KEY': API_KEY, // Assuming the same auth method
+        ...options.headers,
+    };
 
-Documents
+    const response = await fetch(`${API_V3_URL}/${endpoint}`, { ...options, headers });
 
-List/Search Documents GET /collections/{collection_name}/documents?limit=10&offset=0&search=keyword
-curl -X GET "https://api.colorhutbd.xyz/dbv3/index.php/collections/users/documents?limit=5&offset=0&search=john"
+    if (!response.ok) {
+        const errorText = await response.text();
+        let errorData = { message: `API v3 request failed with status ${response.status}. Response: ${errorText}` };
+        try {
+            const parsedJson = JSON.parse(errorText);
+            errorData.message = parsedJson.message || errorData.message;
+        } catch (e) {
+            // Not a JSON response, the raw text is the best we have.
+        }
+        console.error("API v3 Error Response:", errorData.message);
+        throw new Error(errorData.message);
+    }
+    
+    // Handle cases where the response might be empty (e.g., DELETE requests)
+    const responseText = await response.text();
+    if (!responseText) {
+        return { success: true };
+    }
+    
+    try {
+        return JSON.parse(responseText);
+    } catch (e) {
+        console.error("API v3 Error: Response is not valid JSON.", responseText);
+        throw new Error("API v3 returned an unexpected response format.");
+    }
+}
 
-{ "documents": [ { "id": "doc_64f3a1a2e4", "data": { "title": "John Doe", "status": "active" }, "created_at": "2025-09-04T12:32:00+06:00", "updated_at": "2025-09-04T12:32:00+06:00" } ], "total": 1, "limit": 5, "offset": 0, "search": "john" }
-
-Get Document by ID GET /collections/{collection_name}/documents/{document_id}
-curl -X GET "https://api.colorhutbd.xyz/dbv3/index.php/collections/users/documents/doc_64f3a1a2e4"
-
-{ "id": "doc_64f3a1a2e4", "data": { "title": "John Doe", "status": "active" }, "created_at": "2025-09-04T12:32:00+06:00", "updated_at": "2025-09-04T12:32:00+06:00" }
-
-Create Document POST /collections/{collection_name}/documents
-curl -X POST "https://api.colorhutbd.xyz/dbv3/index.php/collections/users/documents"
--H "Content-Type: application/json"
--d '{"id":"doc_001","data":{"title":"Jane Doe","status":"active"}}'
-
-{ "id": "doc_001", "data": { "title": "Jane Doe", "status": "active" }, "created_at": "2025-09-04T12:40:00+06:00", "updated_at": "2025-09-04T12:40:00+06:00" }
-
-Update Document PUT /collections/{collection_name}/documents/{document_id}
-curl -X PUT "https://api.colorhutbd.xyz/dbv3/index.php/collections/users/documents/doc_001"
--H "Content-Type: application/json"
--d '{"data":{"status":"inactive"}}'
-
-{ "id": "doc_001", "data": { "title": "Jane Doe", "status": "inactive" }, "created_at": "2025-09-04T12:40:00+06:00", "updated_at": "2025-09-04T12:45:00+06:00" }
-
-Delete Document DELETE /collections/{collection_name}/documents/{document_id}
-curl -X DELETE "https://api.colorhutbd.xyz/dbv3/index.php/collections/users/documents/doc_001"
-
-{ "message": "Document deleted successfully" }
-
-Notes & Tips Data is stored in JSON files under /collections directory. Timestamps created_at and updated_at are auto-managed. Search is case-insensitive and scans all fields in data. Pagination uses limit and offset. Document IDs are unique within a collection. Can be auto-generated or custom. Collection names allow only letters, numbers, underscores, hyphens. Use Content-Type: application/json header for POST/PUT requests.
+/**
+ * Ensures a collection exists in the v3 API. If not, it creates it.
+ * @param collectionName The name of the collection to ensure exists.
+ */
+export const ensureCollectionExistsV3 = async (collectionName: string) => {
+    try {
+        await fetchFromApiV3(`collections/${collectionName}`);
+    } catch (error) {
+        if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
+            console.log(`V3 Collection '${collectionName}' not found. Attempting to create it...`);
+            try {
+                await fetchFromApiV3('collections', {
+                    method: 'POST',
+                    body: JSON.stringify({ name: collectionName }),
+                });
+                console.log(`V3 Collection '${collectionName}' created successfully.`);
+            } catch (creationError) {
+                console.error(`Failed to create v3 collection '${collectionName}':`, creationError);
+                throw new Error(`Could not create required v3 collection '${collectionName}'.`);
+            }
+        } else {
+            // Re-throw other errors (e.g., network issues)
+            throw error;
+        }
+    }
+};
