@@ -177,6 +177,8 @@ export const addOrder = async (orderData: {
       shippingCharge: orderData.shippingCharge ?? null, orderNotes: orderData.orderNotes || null,
       crmUserId: orderData.crmUserId, crmUserName: orderData.crmUserName,
       designerRepresentativeId: null, designerRepresentativeName: null,
+      assigneeAvatarUrl: null, 
+      designerRepresentativeAvatarUrl: null,
       createdAt: finalCreatedAt, updatedAt: transactionTime,
       updatedByUserId: orderData.crmUserId, updatedByUserName: orderData.crmUserName,
       isPublic: false, currentStatus: orderData.initialStatusId,

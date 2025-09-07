@@ -411,7 +411,7 @@ export async function assignDrToOrderAction(
         return { error: `Designer Representative with ID ${designerRepresentativeId} not found.` };
     }
     const freshDrName = designerRepUser.name;
-    const freshDrAvatarUrl = designerRepUser.avatarUrl || null;
+    const freshDrAvatarUrl = null;
 
     const logEntry: OrderLogEntry = {
       id: uuidv4(),
@@ -458,7 +458,7 @@ export async function assignDrToOrderAction(
         });
       }
     } catch (projectError) {
-        if (!(projectError instanceof Error && projectError.message.includes('not found'))) {
+        if (!(projectError instanceof Error && projectError.message.toLowerCase().includes('not found'))) {
           console.warn(`[assignDrToOrderAction] Failed to sync DR assignment to project board for order ${orderId}. This is not a critical error if project was not yet persistent. Error:`, projectError);
         }
     }
