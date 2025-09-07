@@ -126,7 +126,7 @@ export function AssignDrDialog({ isOpen, onOpenChange, order, currentUser, allSt
                 <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
                 <div>
                     <p className="font-semibold">Configuration Alert!</p>
-                    <p>The system status identified by ID <code className="font-mono bg-destructive/20 px-1 py-0.5 rounded text-xs">{TARGET_READY_FOR_DESIGN_STATUS_ID}</code> (typically 'Ready for Design') is missing or not configured correctly. DR assignment is not possible until this is resolved by an administrator.</p>
+                    <p>The system status identified by ID <code className="font-mono bg-destructive/20 px-1 py-0.5 rounded text-xs">{TARGET_READY_FOR_DESIGN_STATUS_ID}</code> (typically 'Ready for Design') is missing or not configured correctly. DR assignment is not possible.</p>
                 </div>
             </div>
         )}

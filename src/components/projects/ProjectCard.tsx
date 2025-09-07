@@ -42,6 +42,7 @@ interface ProjectCardProps {
   isOverlay?: boolean; 
   currentUser: User | null; 
   allStatuses: CustomStatus[]; 
+  allUsers: User[]; // Added
   onOpenAssignDrDialog: (project: Project) => void; 
 }
 
@@ -197,12 +198,15 @@ const calculateProgressInfo = (
   };
 };
 
-export function ProjectCard({ project, isOverlay = false, currentUser, allStatuses, onOpenAssignDrDialog }: ProjectCardProps) {
+export function ProjectCard({ project, isOverlay = false, currentUser, allStatuses, allUsers, onOpenAssignDrDialog }: ProjectCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: project.id,
     data: { project },
     disabled: isOverlay, 
   });
+  
+  const crmUser = allUsers.find(u => u.id === project.assigneeId);
+  const drUser = project.designerRepresentativeId ? allUsers.find(u => u.id === project.designerRepresentativeId) : null;
 
   const style = !isOverlay && transform ? {
     transform: CSS.Translate.toString(transform),
@@ -322,7 +326,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
                     }
                   >
                     <Avatar className="h-7 w-7 text-xs border bg-muted">
-                      <AvatarImage src={project.assigneeAvatarUrl || undefined} alt={project.assigneeName} data-ai-hint="assignee avatar" />
+                      <AvatarImage src={crmUser?.avatarUrl || undefined} alt={project.assigneeName} data-ai-hint="assignee avatar" />
                       <AvatarFallback className="text-muted-foreground font-semibold">{getInitials(project.assigneeInitials || project.assigneeName)}</AvatarFallback>
                     </Avatar>
                   </div>
@@ -356,7 +360,7 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
                           }
                        >
                         <Avatar className="h-7 w-7 text-xs border border-blue-400 bg-muted">
-                          <AvatarImage src={project.designerRepresentativeAvatarUrl || undefined} alt={project.designerRepresentativeName} data-ai-hint="designer avatar" />
+                          <AvatarImage src={drUser?.avatarUrl || undefined} alt={project.designerRepresentativeName} data-ai-hint="designer avatar" />
                           <AvatarFallback className="text-blue-500 font-semibold">
                             {getInitials(project.designerRepresentativeName)}
                           </AvatarFallback>

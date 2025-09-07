@@ -39,6 +39,7 @@ import { HoldReasonDialog } from '@/components/projects/HoldReasonDialog';
 import { getProjects } from '@/lib/project-service';
 import { getStatuses } from '@/lib/status-service'; 
 import { getGlobalSettings } from '@/lib/settings-service';
+import { getUsers } from '@/lib/user-service';
 import type { TrackingLink } from '@/types';
 import { Briefcase } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -95,6 +96,7 @@ export function ProjectsKanbanClient() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [allStatuses, setAllStatuses] = useState<CustomStatus[]>([]); 
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true); // Start as true
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
@@ -142,14 +144,16 @@ export function ProjectsKanbanClient() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedProjects, fetchedStatuses, fetchedSettings] = await Promise.all([ 
+      const [fetchedProjects, fetchedStatuses, fetchedSettings, fetchedUsers] = await Promise.all([ 
         getProjects(),
         getStatuses(),
-        getGlobalSettings()
+        getGlobalSettings(),
+        getUsers()
       ]);
       setProjects(fetchedProjects);
       setAllStatuses(fetchedStatuses); 
       setGlobalSettings(fetchedSettings);
+      setAllUsers(fetchedUsers);
     } catch (error) {
       console.error("Failed to fetch projects or statuses:", error);
       toast({ title: "Error", description: "Could not load projects or status configurations.", variant: "destructive" });
@@ -373,7 +377,7 @@ export function ProjectsKanbanClient() {
       status: 'On Design',
       designerRepresentativeId: updatedOrderFromDialog.designerRepresentativeId,
       designerRepresentativeName: updatedOrderFromDialog.designerRepresentativeName,
-      designerRepresentativeAvatarUrl: updatedOrderFromDialog.designerRepresentativeAvatarUrl,
+      assigneeAvatarUrl: updatedOrderFromDialog.assigneeAvatarUrl,
     } : p));
     toast({ title: "DR Assigned", description: `${updatedOrderFromDialog.designerRepresentativeName} assigned to order ${updatedOrderFromDialog.id}.` });
   }, [toast]);
@@ -435,6 +439,7 @@ export function ProjectsKanbanClient() {
                 isLoading={isLoading}
                 currentUser={currentUser}
                 allStatuses={allStatuses}
+                allUsers={allUsers}
                 onOpenAssignDrDialog={handleOpenAssignDrDialog}
               />
             ))}
@@ -459,6 +464,7 @@ export function ProjectsKanbanClient() {
             isOverlay 
             currentUser={currentUser}
             allStatuses={allStatuses}
+            allUsers={allUsers}
             onOpenAssignDrDialog={handleOpenAssignDrDialog} 
           />
         ) : null}

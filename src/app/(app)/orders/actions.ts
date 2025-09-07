@@ -349,7 +349,10 @@ export async function updateOrderAction(
             const projectUpdates: { [key: string]: any } = {};
             if (finalUpdates.companyName) projectUpdates.name = finalUpdates.companyName;
             if (finalUpdates.crmUserName) projectUpdates.assigneeName = finalUpdates.crmUserName;
-            if (finalUpdates.designerRepresentativeName !== undefined) projectUpdates.designerRepresentativeName = finalUpdates.designerRepresentativeName;
+            if (finalUpdates.designerRepresentativeName !== undefined) {
+                projectUpdates.designerRepresentativeName = finalUpdates.designerRepresentativeName;
+                projectUpdates.designerRepresentativeAvatarUrl = null;
+            }
             projectUpdates.updatedAt = new Date().toISOString();
             
             if(Object.keys(projectUpdates).length > 1) {
@@ -411,7 +414,6 @@ export async function assignDrToOrderAction(
         return { error: `Designer Representative with ID ${designerRepresentativeId} not found.` };
     }
     const freshDrName = designerRepUser.name;
-    const freshDrAvatarUrl = null;
 
     const logEntry: OrderLogEntry = {
       id: uuidv4(),
@@ -425,7 +427,6 @@ export async function assignDrToOrderAction(
     const updatedOrderData: Partial<TrackingLink> = {
       designerRepresentativeId,
       designerRepresentativeName: freshDrName,
-      designerRepresentativeAvatarUrl: freshDrAvatarUrl,
       currentStatus: readyForDesignStatusId,
       statusHistory: Array.isArray(currentOrder.statusHistory)
         ? [...currentOrder.statusHistory, logEntry]
@@ -446,7 +447,7 @@ export async function assignDrToOrderAction(
         const projectUpdates = {
           designerRepresentativeId: designerRepresentativeId,
           designerRepresentativeName: freshDrName,
-          designerRepresentativeAvatarUrl: freshDrAvatarUrl,
+          designerRepresentativeAvatarUrl: null,
           status: 'On Design',
           onDesignAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),

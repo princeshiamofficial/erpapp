@@ -20,6 +20,7 @@ interface KanbanColumnProps {
   isLoading?: boolean;
   currentUser: User | null; // Added
   allStatuses: CustomStatus[]; // Added
+  allUsers: User[]; // Added
   onOpenAssignDrDialog: (project: Project) => void; // Added
 }
 
@@ -34,6 +35,7 @@ export function KanbanColumn({
   isLoading = false,
   currentUser, // Added
   allStatuses, // Added
+  allUsers, // Added
   onOpenAssignDrDialog // Added
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
@@ -59,6 +61,7 @@ export function KanbanColumn({
           <div className="space-y-3">
             <Skeleton className="h-20 w-full rounded-md" />
             <Skeleton className="h-20 w-full rounded-md" />
+            <Skeleton className="h-20 w-full rounded-md" />
           </div>
         ) : projects.length === 0 ? (
           <div className="flex items-center justify-center h-32">
@@ -71,6 +74,7 @@ export function KanbanColumn({
               project={project} 
               currentUser={currentUser} // Pass down
               allStatuses={allStatuses} // Pass down
+              allUsers={allUsers} // Pass down
               onOpenAssignDrDialog={onOpenAssignDrDialog} // Pass down
             />
           ))

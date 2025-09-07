@@ -86,8 +86,6 @@ export interface TrackingLink {
   crmUserName: string;
   designerRepresentativeId?: string | null;
   designerRepresentativeName?: string | null;
-  assigneeAvatarUrl?: string | null; // Added
-  designerRepresentativeAvatarUrl?: string | null; // Added
   createdAt: string; // ISO string
   updatedAt?: string; // ISO string for last edit of order details
   updatedByUserId?: string;
