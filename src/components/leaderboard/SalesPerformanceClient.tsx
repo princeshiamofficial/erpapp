@@ -8,7 +8,7 @@ import { BarChart, LineChart, AreaChart, Layers, Download, TrendingUp, Target } 
 import { Bar, BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Cell } from 'recharts';
 import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { parseISO, format, getYear, getMonth } from 'date-fns';
-import type { TrackingLink, User } from '@/types';
+import type { TrackingLink, User, UserRole } from '@/types';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -55,6 +55,7 @@ const getInitials = (name: string | undefined): string => {
 export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerformanceClientProps) {
   const [chartType, setChartType] = useState<'bar' | 'line' | 'area'>('bar');
   const [selectedYear, setSelectedYear] = useState<number>(getYear(new Date()));
+  const [selectedTeam, setSelectedTeam] = useState<UserRole | 'all'>('all');
 
   const userMap = useMemo(() => new Map(allCrmUsers.map(u => [u.id, u])), [allCrmUsers]);
 
@@ -80,6 +81,20 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
     return Array.from(years).sort((a, b) => b - a);
   }, [allOrders]);
 
+  const handleYearChange = (year: number) => {
+    setSelectedYear(year);
+  };
+
+  const handleTeamChange = (team: UserRole | 'all') => {
+    setSelectedTeam(team);
+  };
+
+  const usersInSelectedTeam = useMemo(() => {
+    if (selectedTeam === 'all') {
+      return allCrmUsers;
+    }
+    return allCrmUsers.filter(u => u.role === selectedTeam);
+  }, [allCrmUsers, selectedTeam]);
 
   const monthlySalesData: MonthlySalesData[] = useMemo(() => {
     const months: MonthlySalesData[] = Array.from({ length: 12 }, (_, i) => ({
@@ -114,23 +129,23 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
     }));
 
     const dailyTargets: Record<string, number> = {};
-    allCrmUsers.forEach(user => {
+    usersInSelectedTeam.forEach(user => {
         const monthlyTarget = user.monthlyOrderTarget || 0;
         dailyTargets[user.id] = monthlyTarget / 30; // Simplified daily target
     });
 
-    // Initialize crmData for all months and users
+    // Initialize crmData for all months and users in team
     months.forEach(month => {
-        allCrmUsers.forEach(user => {
+        usersInSelectedTeam.forEach(user => {
             month.crmData[user.id] = { done: 0, target: 0 };
         });
     });
     
-    // Calculate done orders
+    // Calculate done orders for users in team
     allOrders.forEach(order => {
         try {
             const orderDate = parseISO(order.createdAt);
-            if (getYear(orderDate) === selectedYear && order.crmUserId) {
+            if (getYear(orderDate) === selectedYear && order.crmUserId && usersInSelectedTeam.some(u => u.id === order.crmUserId)) {
                 const monthIndex = getMonth(orderDate);
                 if (months[monthIndex] && months[monthIndex].crmData[order.crmUserId]) {
                     months[monthIndex].crmData[order.crmUserId].done += 1;
@@ -139,12 +154,12 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
         } catch(e) { /* ignore */ }
     });
 
-    // Calculate targets and totals
+    // Calculate targets and totals for users in team
     const daysInMonths = [31, (selectedYear % 4 === 0 && selectedYear % 100 !== 0) || selectedYear % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
     months.forEach((month, monthIndex) => {
         let monthTotalDone = 0;
         let monthTotalTarget = 0;
-        allCrmUsers.forEach(user => {
+        usersInSelectedTeam.forEach(user => {
             const crmData = month.crmData[user.id];
             crmData.target = Math.round(dailyTargets[user.id] * daysInMonths[monthIndex]);
             monthTotalDone += crmData.done;
@@ -155,7 +170,7 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
     });
 
     return months;
-  }, [allOrders, allCrmUsers, selectedYear]);
+  }, [allOrders, usersInSelectedTeam, selectedYear]);
 
 
   const renderChart = () => {
@@ -244,10 +259,14 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
       </Card>
 
       <div className="mt-6">
-        <DoneTargetGraph 
-            monthlyTargetData={monthlyTargetData} 
-            selectedYear={selectedYear} 
-            userMap={userMap}
+        <DoneTargetGraph
+          monthlyTargetData={monthlyTargetData}
+          selectedYear={selectedYear}
+          userMap={userMap}
+          onYearChange={handleYearChange}
+          availableYears={availableYears}
+          onTeamChange={handleTeamChange}
+          selectedTeam={selectedTeam}
         />
       </div>
 
