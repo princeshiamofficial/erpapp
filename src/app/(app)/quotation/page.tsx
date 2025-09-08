@@ -117,14 +117,7 @@ export default function QuotationsPage() {
 
   useEffect(() => {
     setIsClient(true);
-    fetchQuotationData(); 
-
-    const interval = setInterval(() => {
-      console.log("Auto-refreshing quotation data...");
-      fetchQuotationData();
-    }, 10000); 
-
-    return () => clearInterval(interval);
+    fetchQuotationData();
   }, [fetchQuotationData]);
 
 
