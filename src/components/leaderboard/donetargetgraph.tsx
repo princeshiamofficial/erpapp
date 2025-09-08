@@ -4,13 +4,15 @@
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart, LineChart, AreaChart, Target } from 'lucide-react';
+import { BarChart, LineChart, AreaChart, Target, User, Calendar } from 'lucide-react';
 import { Bar, BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Cell } from 'recharts';
 import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import type { User } from '@/types';
+import type { User as UserType, UserRole } from '@/types';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getYear } from 'date-fns';
 
 interface MonthlyTargetData {
     name: string;
@@ -27,7 +29,11 @@ interface MonthlyTargetData {
 interface DoneTargetGraphProps {
   monthlyTargetData: MonthlyTargetData[];
   selectedYear: number;
-  userMap: Map<string, User>;
+  userMap: Map<string, UserType>;
+  onYearChange: (year: number) => void;
+  availableYears: number[];
+  onTeamChange: (team: UserRole | 'all') => void;
+  selectedTeam: UserRole | 'all';
 }
 
 const getInitials = (name: string | undefined): string => {
@@ -38,8 +44,10 @@ const getInitials = (name: string | undefined): string => {
 };
 
 
-export function DoneTargetGraph({ monthlyTargetData, selectedYear, userMap }: DoneTargetGraphProps) {
+export function DoneTargetGraph({ monthlyTargetData, selectedYear, userMap, onYearChange, availableYears, onTeamChange, selectedTeam }: DoneTargetGraphProps) {
   const [chartType, setChartType] = useState<'bar' | 'line' | 'area'>('bar');
+
+  const TEAM_ROLES: UserRole[] = ['CRM', 'DESIGNER_REPRESENTATIVE', 'LR'];
 
   const renderChart = () => {
     switch (chartType) {
@@ -102,16 +110,39 @@ export function DoneTargetGraph({ monthlyTargetData, selectedYear, userMap }: Do
   return (
     <Card className="bg-white/95 dark:bg-card/80 backdrop-blur-sm border-border/30 shadow-xl">
       <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
                 <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>Done / Target</CardTitle>
-                <CardDescription>Monthly project creation totals against combined targets for {selectedYear}</CardDescription>
+                <CardDescription>Monthly project creation totals against combined targets.</CardDescription>
             </div>
-            <div className="flex items-center gap-2 mt-2 sm:mt-0">
+            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+                <Select value={selectedTeam} onValueChange={(value) => onTeamChange(value as UserRole | 'all')}>
+                    <SelectTrigger className="w-full sm:w-[150px] h-9">
+                        <User className="h-4 w-4 mr-2" />
+                        <SelectValue placeholder="Select Team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Teams</SelectItem>
+                        {TEAM_ROLES.map(role => (
+                            <SelectItem key={role} value={role}>{role.replace(/_/g, ' ')}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                 <Select value={selectedYear.toString()} onValueChange={(value) => onYearChange(parseInt(value, 10))}>
+                    <SelectTrigger className="w-full sm:w-[120px] h-9">
+                        <Calendar className="h-4 w-4 mr-2"/>
+                        <SelectValue placeholder="Select Year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableYears.map(year => (
+                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 <div className="flex items-center bg-muted p-1 rounded-lg">
-                    <Button variant="ghost" size="sm" className={cn(chartType === 'bar' && "bg-background shadow-sm")} onClick={() => setChartType('bar')}><BarChart className="h-4 w-4"/></Button>
-                    <Button variant="ghost" size="sm" className={cn(chartType === 'line' && "bg-background shadow-sm")} onClick={() => setChartType('line')}><LineChart className="h-4 w-4"/></Button>
-                    <Button variant="ghost" size="sm" className={cn(chartType === 'area' && "bg-background shadow-sm")} onClick={() => setChartType('area')}><AreaChart className="h-4 w-4"/></Button>
+                    <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", chartType === 'bar' && "bg-background shadow-sm")} onClick={() => setChartType('bar')}><BarChart className="h-4 w-4"/></Button>
+                    <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", chartType === 'line' && "bg-background shadow-sm")} onClick={() => setChartType('line')}><LineChart className="h-4 w-4"/></Button>
+                    <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", chartType === 'area' && "bg-background shadow-sm")} onClick={() => setChartType('area')}><AreaChart className="h-4 w-4"/></Button>
                 </div>
             </div>
         </div>
