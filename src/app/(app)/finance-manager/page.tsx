@@ -430,11 +430,25 @@ export default function FinanceManagerPage() {
             </AddTransactionDialog>
           )}
           {canUserAddExpense && (
-            <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addExpenseOrPurchase">
-              <Button size="default" className="bg-red-600 hover:bg-red-600 text-white h-10">
-                <Minus className="mr-2 h-5 w-5" /> Add Expense/Purchase
-              </Button>
-            </AddTransactionDialog>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                 <Button size="default" className="bg-red-600 hover:bg-red-700 text-white h-10">
+                    <Minus className="mr-2 h-5 w-5" /> Add Expense/Purchase <ChevronDown className="ml-2 h-4 w-4"/>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addExpenseOrPurchase">
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        Add General Expense
+                    </DropdownMenuItem>
+                </AddTransactionDialog>
+                <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addExpenseOrPurchase">
+                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        Add Purchase
+                    </DropdownMenuItem>
+                </AddTransactionDialog>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           {currentUser.role === 'SYSTEM_ADMIN' && (
             <AddTransactionDialog
@@ -443,7 +457,7 @@ export default function FinanceManagerPage() {
                 dialogMode="sendMoney"
                 allUsersForDropdown={allUsers}
             >
-            <Button size="default" className="bg-blue-600 hover:bg-blue-600 text-white h-10">
+            <Button size="default" className="bg-blue-600 hover:bg-blue-700 text-white h-10">
               <Send className="mr-2 h-5 w-5" /> Send Money
             </Button>
           </AddTransactionDialog>
