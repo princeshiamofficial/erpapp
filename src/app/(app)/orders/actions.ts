@@ -1,9 +1,8 @@
 
-
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { TrackingLink, User, OrderItem, AdvancePaymentRecord, ServiceModelItem } from "@/types";
+import type { TrackingLink, User, OrderItem, AdvancePaymentRecord, ServiceModelItem, OrderLogEntry } from "@/types";
 import { addOrder as addOrderService, getOrderById, deleteOrder as deleteOrderFromDb, updateOrder as updateOrderService } from "@/lib/order-service"; 
 import { getGlobalSettings } from "@/lib/settings-service";
 import { v4 as uuidv4 } from 'uuid';
@@ -11,6 +10,8 @@ import { parseISO } from 'date-fns';
 import { getUserById as getUserFromDb } from "@/lib/user-service";
 import { getModels, updateModelStock } from '@/lib/service-options-service';
 import { fetchFromApiV3 } from '@/lib/api-helper2';
+import { adminApp } from '@/lib/firebase-admin'; // Import adminApp
+import type { messaging } from 'firebase-admin'; // Import messaging type
 
 interface CreateOrderDialogFormData {
   jobId: string;
@@ -464,6 +465,62 @@ export async function assignDrToOrderAction(
         }
     }
 
+    // Send push notification
+    if (designerRepUser && designerRepUser.fcmToken) {
+      console.log(`[assignDrToOrderAction] DR ${designerRepUser.name} has FCM token. Attempting to send push notification.`);
+      try {
+        const globalSettings = await getGlobalSettings();
+        const rawTitle = globalSettings.drAssignmentNotificationTitle || 'New Task Assigned: %company%';
+        const rawBody = globalSettings.drAssignmentNotificationBody || 'You have been assigned to order %orderId% (Job ID: %jobid%).';
+        
+        const companyNameParts = currentOrder.companyName.split(' • ');
+        const jobId = companyNameParts.length > 1 ? companyNameParts[0].trim() : currentOrder.id;
+        const companyName = companyNameParts.length > 1 ? companyNameParts.slice(1).join(' • ').trim() : currentOrder.companyName;
+        
+        const personalizedTitle = rawTitle.replace(/%assignerName%/g, actingUser.name)
+                                        .replace(/%orderId%/g, currentOrder.id)
+                                        .replace(/%company%/g, companyName)
+                                        .replace(/%jobid%/g, jobId);
+
+        const personalizedBody = rawBody.replace(/%assignerName%/g, actingUser.name)
+                                      .replace(/%orderId%/g, currentOrder.id)
+                                      .replace(/%company%/g, companyName)
+                                      .replace(/%jobid%/g, jobId);
+
+        const customSoundUrl = globalSettings.toastSoundUrl;
+        const targetUrl = `/track/${orderId}`; 
+        
+        const fcmMessage: messaging.Message = {
+          token: designerRepUser.fcmToken,
+          notification: { title: personalizedTitle, body: personalizedBody, imageUrl: designerRepUser.avatarUrl || '/icons/icon-192x192.png' },
+          data: { 
+            title: personalizedTitle, body: personalizedBody, iconUrl: designerRepUser.avatarUrl || '/icons/icon-192x192.png',
+            targetUrl: targetUrl, click_action: targetUrl,
+            ...(customSoundUrl && { customSoundUrl: customSoundUrl }) 
+          },
+          webpush: { 
+            notification: { 
+                icon: designerRepUser.avatarUrl || '/icons/icon-192x192.png', 
+                badge: '/icons/icon-72x72.png',
+                ...(customSoundUrl ? { sound: customSoundUrl } : { sound: "default" }) 
+            }, 
+            fcmOptions: { link: targetUrl }
+          },
+        };
+        
+        if (adminApp && typeof adminApp.messaging === 'function') {
+            await adminApp.messaging().send(fcmMessage);
+            console.log(`[assignDrToOrderAction] Push notification sent to DR ${designerRepUser.name}.`);
+        } else {
+            console.warn("[assignDrToOrderAction] Firebase Admin SDK not properly initialized. Cannot send push notification.");
+        }
+      } catch (notifError) {
+        console.error(`[assignDrToOrderAction] Failed to send push notification to DR ${designerRepUser.name}:`, notifError);
+        // Do not fail the whole action, just log the error.
+      }
+    }
+
+
     revalidatePath("/(app)/orders");
     revalidatePath("/(app)/dashboard");
     revalidatePath("/(app)/active-orders");
@@ -521,3 +578,5 @@ export async function deleteOrderAction(
     return { success: false, error: errorMessage };
   }
 }
+
+    
