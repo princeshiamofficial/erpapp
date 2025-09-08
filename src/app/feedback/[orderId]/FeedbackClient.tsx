@@ -38,7 +38,6 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                 font-family: 'Hind Siliguri', sans-serif;
                 background: linear-gradient(to top right, #fff7ed, #fef2f2); /* Light orange/red gradient */
                 display: flex;
-                align-items: center;
                 justify-content: center;
                 min-height: 100vh;
                 padding: 2rem 1rem; /* More vertical padding */
