@@ -51,6 +51,7 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                 width: 100%;
                 max-width: 42rem; /* equivalent to max-w-2xl */
                 padding: 1.5rem; /* p-6 */
+                align-self: flex-start;
             }
 
             @media (min-width: 640px) {
@@ -88,18 +89,15 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                 cursor: pointer;
                 transition: transform 0.2s, opacity 0.2s;
                 opacity: 0.6;
-                filter: grayscale(1);
-                font-size: 2.5rem; /* Larger emojis */
+                font-size: 2.25rem; /* Smaller emojis */
             }
             .emoji-group .emoji:hover {
                 transform: scale(1.15);
                 opacity: 1;
-                filter: grayscale(0);
             }
             .emoji-group .emoji.selected {
                 transform: scale(1.2);
                 opacity: 1;
-                filter: grayscale(0);
             }
             .submit-btn {
                 background: linear-gradient(to right, #f97316, #ef4444); /* Orange to Red gradient */
@@ -127,7 +125,7 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
 
             <!-- 1. Product Quality -->
             <div class="feedback-section pb-6" data-question="প্রোডাক্ট কোয়ালিটি">
-                <label class="block text-lg font-semibold text-gray-700 mb-3">১. প্রোডাক্ট কোয়ালিটি (Product Quality)</label>
+                <label class="block text-base font-semibold text-gray-700 mb-3">১. প্রোডাক্ট কোয়ালিটি (Product Quality)</label>
                 <div class="star-rating flex items-center justify-center space-x-2" data-value="0">
                     <span class="star" data-rating="1"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg></span>
                     <span class="star" data-rating="2"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg></span>
@@ -139,7 +137,7 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
 
             <!-- 2. Design Satisfaction -->
             <div class="feedback-section pb-6" data-question="ডিজাইন স্যাটিসফ্যাকশন">
-                <label class="block text-lg font-semibold text-gray-700 mb-3">২. ডিজাইন স্যাটিসফ্যাকশন (Design Satisfaction)</label>
+                <label class="block text-base font-semibold text-gray-700 mb-3">২. ডিজাইন স্যাটিসফ্যাকশন (Design Satisfaction)</label>
                 <div class="option-group grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-4 text-center">
                     <div class="option p-3 rounded-lg" data-value="একেবারেই না">একেবারেই না</div>
                     <div class="option p-3 rounded-lg" data-value="মাঝারি">মাঝারি</div>
@@ -151,7 +149,7 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
             
             <!-- 3. Printing Quality -->
             <div class="feedback-section pb-6" data-question="প্রিন্টিং কোয়ালিটি">
-                <label class="block text-lg font-semibold text-gray-700 mb-3">৩. প্রিন্টিং কোয়ালিটি (Printing Quality)</label>
+                <label class="block text-base font-semibold text-gray-700 mb-3">৩. প্রিন্টিং কোয়ালিটি (Printing Quality)</label>
                 <div class="star-rating flex items-center justify-center space-x-2" data-value="0">
                      <span class="star" data-rating="1"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg></span>
                     <span class="star" data-rating="2"><svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg></span>
@@ -163,7 +161,7 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
 
             <!-- 4. Delivery Time -->
             <div class="feedback-section pb-6" data-question="ডেলিভারি টাইম">
-                <label class="block text-lg font-semibold text-gray-700 mb-3">৪. ডেলিভারি টাইম (Delivery Time)</label>
+                <label class="block text-base font-semibold text-gray-700 mb-3">৪. ডেলিভারি টাইম (Delivery Time)</label>
                 <div class="option-group grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-center">
                     <div class="option p-3 rounded-lg" data-value="সময়ের অনেক দেরি">অনেক দেরি</div>
                     <div class="option p-3 rounded-lg" data-value="সামান্য দেরি">সামান্য দেরি</div>
@@ -174,7 +172,7 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
 
             <!-- 5. Customer Service -->
             <div class="feedback-section pb-6" data-question="কাস্টমার সার্ভিস">
-                <label class="block text-lg font-semibold text-gray-700 mb-3">৫. কাস্টমার সার্ভিস (Customer Service)</label>
+                <label class="block text-base font-semibold text-gray-700 mb-3">৫. কাস্টমার সার্ভিস (Customer Service)</label>
                 <div class="emoji-group flex items-center justify-around">
                     <span class="emoji" data-value="খারাপ" title="খারাপ">👎</span>
                     <span class="emoji" data-value="মাঝারি" title="মাঝারি">😐</span>
@@ -185,13 +183,13 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
             
             <!-- Open Feedback -->
             <div class="feedback-section pt-4" data-question="ওপেন ফিডব্যাক">
-                <label for="open-feedback" class="block text-lg font-semibold text-gray-700 mb-3">৬. ওপেন ফিডব্যাক (ঐচ্ছিক)</label>
+                <label for="open-feedback" class="block text-base font-semibold text-gray-700 mb-3">৬. ওপেন ফিডব্যাক (ঐচ্ছিক)</label>
                 <textarea id="open-feedback" rows="4" class="w-full p-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" placeholder="আপনার বিস্তারিত মতামত এখানে লিখুন..."></textarea>
             </div>
 
             <!-- Submit Button -->
             <div class="pt-4">
-                <button id="submit-btn" class="submit-btn w-full text-white font-bold py-3 px-4 rounded-lg text-lg">
+                <button id="submit-btn" class="submit-btn w-full text-white font-bold py-3 px-4 rounded-lg text-base">
                     মতামত জমা দিন
                 </button>
             </div>
@@ -203,8 +201,8 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
             </div>
-            <h2 class="text-3xl font-bold text-gray-800 mt-4">ধন্যবাদ!</h2>
-            <p class="text-gray-600 mt-2 text-lg">আপনার মূল্যবান মতামত সফলভাবে জমা হয়েছে।</p>
+            <h2 class="text-2xl font-bold text-gray-800 mt-4">ধন্যবাদ!</h2>
+            <p class="text-gray-600 mt-2">আপনার মূল্যবান মতামত সফলভাবে জমা হয়েছে।</p>
         </div>
 
         <script>
