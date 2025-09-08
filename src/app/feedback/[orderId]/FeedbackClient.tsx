@@ -250,7 +250,7 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                     starContainers.forEach(container => {
                         const question = container.closest('.feedback-section').dataset.question;
                         const value = container.dataset.value;
-                        feedbackData[question] = value > 0 ? \`\${value} out of 5\` : 'Not rated';
+                        feedbackData[question] = value > 0 ? `${value} out of 5` : 'Not rated';
                     });
                     
                     // Get option selections
@@ -283,9 +283,3 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
 
     </body>
     </html>
-  `;
-  
-  return (
-    <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
-  );
-}
