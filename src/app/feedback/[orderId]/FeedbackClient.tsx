@@ -41,7 +41,7 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                 align-items: center;
                 justify-content: center;
                 min-height: 100vh;
-                padding: 1rem;
+                padding: 2rem 1rem; /* More vertical padding */
             }
             .feedback-card {
                 background-color: white;
@@ -255,7 +255,7 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
 
                 // Emoji group functionality
                 const emojiGroups = document.querySelectorAll('.emoji-group');
-                emojiGroups.forEach(group => {
+                emojis.forEach(group => {
                     const emojis = group.querySelectorAll('.emoji');
                     emojis.forEach(emoji => {
                         emoji.addEventListener('click', () => {
@@ -274,7 +274,7 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                     starContainers.forEach(container => {
                         const question = container.closest('.feedback-section').dataset.question;
                         const value = parseInt(container.dataset.value, 10);
-                        feedbackData[question] = value > 0 ? \`\${value} out of 5\` : 'Not rated';
+                        feedbackData[question] = value > 0 ? `${value} out of 5` : 'Not rated';
                     });
                     
                     // Get option selections
