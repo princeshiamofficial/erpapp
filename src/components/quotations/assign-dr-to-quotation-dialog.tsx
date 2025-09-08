@@ -1,0 +1,170 @@
+
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { TrackingLink, User, CustomStatus } from "@/types";
+import { useToast } from '@/hooks/use-toast';
+import { assignDrToQuotationAction } from '@/app/(app)/quotation/actions'; 
+import { getUsers } from '@/lib/user-service';
+import { Loader2, AlertTriangle } from 'lucide-react';
+
+interface AssignDrToQuotationDialogProps {
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  quotation: TrackingLink;
+  currentUser: User;
+  allStatuses: CustomStatus[]; 
+  onDrAssigned: (updatedQuotation: TrackingLink) => void;
+}
+
+const TARGET_READY_FOR_DESIGN_STATUS_ID = 'ready-for-design';
+
+export function AssignDrToQuotationDialog({ isOpen, onOpenChange, quotation, currentUser, allStatuses, onDrAssigned }: AssignDrToQuotationDialogProps) {
+  const [selectedDrId, setSelectedDrId] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [designerReps, setDesignerReps] = useState<User[]>([]);
+  const [isLoadingDrs, setIsLoadingDrs] = useState(true);
+  const [readyForDesignStatus, setReadyForDesignStatus] = useState<CustomStatus | undefined>(undefined);
+  const { toast } = useToast();
+  
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedDrId(quotation.designerRepresentativeId || ''); 
+      
+      if (allStatuses && allStatuses.length > 0) {
+          console.log("AssignDrDialog: Received allStatuses prop. Count:", allStatuses.length, "IDs:", allStatuses.map(s => s.id).join(', '));
+      } else {
+          console.warn("AssignDrDialog: Received empty or no allStatuses prop for quotation:", quotation.id);
+      }
+
+      const foundStatus = allStatuses.find(s => s.id === TARGET_READY_FOR_DESIGN_STATUS_ID);
+      if (!foundStatus) {
+          console.error(`AssignDrDialog: CRITICAL - Status with ID '${TARGET_READY_FOR_DESIGN_STATUS_ID}' NOT FOUND in allStatuses prop. AllStatuses:`, JSON.stringify(allStatuses.map(s=>({id: s.id, name: s.name}))));
+          toast({
+              title: "Configuration Alert!",
+              description: `The required system status '${TARGET_READY_FOR_DESIGN_STATUS_ID}' (typically 'Ready for Design') is missing or not configured correctly. Please contact an administrator. Assignment is not possible.`,
+              variant: "destructive",
+              duration: 15000, 
+          });
+      } else {
+        console.log("AssignDrDialog: Found target status object (ID: 'ready-for-design'):", JSON.stringify(foundStatus));
+      }
+      setReadyForDesignStatus(foundStatus);
+
+      const fetchDrs = async () => {
+        setIsLoadingDrs(true);
+        try {
+          const allUsers = await getUsers();
+          const drs = allUsers.filter(user => user.role === 'DESIGNER_REPRESENTATIVE');
+          setDesignerReps(drs);
+        } catch (error) {
+          console.error("Failed to fetch designer representatives:", error);
+          toast({ title: "Error", description: "Could not load designer representatives.", variant: "destructive" });
+          setDesignerReps([]);
+        } finally {
+          setIsLoadingDrs(false);
+        }
+      };
+      fetchDrs();
+    }
+  }, [isOpen, quotation, allStatuses, toast]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDrId) {
+      toast({ title: "Validation Error", description: "Please select a Designer Representative.", variant: "destructive" });
+      return;
+    }
+    if (!readyForDesignStatus) {
+      toast({ title: "Configuration Error", description: `The required system status (ID: ${TARGET_READY_FOR_DESIGN_STATUS_ID}) was not found. Assignment cannot proceed.`, variant: "destructive", duration: 10000 });
+      return;
+    }
+
+    const selectedDr = designerReps.find(dr => dr.id === selectedDrId);
+    if (!selectedDr) {
+      toast({ title: "Error", description: "Selected Designer Representative not found.", variant: "destructive" });
+      return;
+    }
+
+    setIsSubmitting(true);
+    const result = await assignDrToQuotationAction(
+      quotation.id,
+      selectedDr.id,
+      selectedDr.name,
+      currentUser,
+      readyForDesignStatus.id 
+    );
+    setIsSubmitting(false);
+
+    if ('error' in result) {
+      toast({ title: "Assignment Failed", description: result.error, variant: "destructive" });
+    } else {
+      onDrAssigned(result); 
+      onOpenChange(false); 
+    }
+  };
+
+  const currentReadyForDesignStatusName = readyForDesignStatus ? readyForDesignStatus.name : `Status ID '${TARGET_READY_FOR_DESIGN_STATUS_ID}' Not Found`;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Assign Designer Representative to Quotation</DialogTitle>
+          <DialogDescription>
+            Assign quotation <span className="font-semibold">{quotation.id}</span> for <span className="font-semibold">{quotation.companyName}</span> to a Designer Representative.
+            The quotation status will be set to: <span className="font-semibold">{currentReadyForDesignStatusName}</span>.
+          </DialogDescription>
+        </DialogHeader>
+        
+        {!readyForDesignStatus && isOpen && (
+            <div className="my-4 p-3 bg-destructive/10 border border-destructive/30 rounded-md text-destructive text-sm flex items-start gap-2">
+                <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                <div>
+                    <p className="font-semibold">Configuration Alert!</p>
+                    <p>The system status identified by ID <code className="font-mono bg-destructive/20 px-1 py-0.5 rounded text-xs">{TARGET_READY_FOR_DESIGN_STATUS_ID}</code> (typically 'Ready for Design') is missing or not configured correctly. Please contact an administrator. Assignment is not possible.</p>
+                </div>
+            </div>
+        )}
+
+        <form onSubmit={handleSubmit}>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-1">
+              <Label htmlFor="drSelect">Designer Representative</Label>
+              {isLoadingDrs ? (
+                <div className="flex items-center justify-center h-10 border rounded-md bg-muted/50">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Select value={selectedDrId} onValueChange={setSelectedDrId} required>
+                  <SelectTrigger id="drSelect" disabled={designerReps.length === 0 || !readyForDesignStatus}>
+                    <SelectValue placeholder={designerReps.length === 0 ? "No DRs available" : "Select a DR"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {designerReps.map(dr => (
+                      <SelectItem key={dr.id} value={dr.id}>{dr.name} ({dr.email})</SelectItem>
+                    ))}
+                    {designerReps.length === 0 && <div className="p-2 text-sm text-muted-foreground text-center">No Designer Reps found. Please add users with the 'DESIGNER_REPRESENTATIVE' role.</div>}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="pt-4 border-t">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting || isLoadingDrs || !selectedDrId || designerReps.length === 0 || !readyForDesignStatus}
+            >
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Assigning...</> : "Assign DR"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
