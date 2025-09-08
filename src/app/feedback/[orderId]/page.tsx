@@ -1,4 +1,3 @@
-
 import { Suspense } from 'react';
 import { getOrderById } from '@/lib/order-service';
 import { notFound } from 'next/navigation';
@@ -39,6 +38,7 @@ export default async function FeedbackPage({ params }: FeedbackPageProps) {
     notFound();
   }
 
+  // The feedback page is now public, so we don't need to check for isPublic status
   const orderData = await getOrderById(orderId);
 
   if (!orderData) {
@@ -48,22 +48,7 @@ export default async function FeedbackPage({ params }: FeedbackPageProps) {
   const plainOrderData = JSON.parse(JSON.stringify(orderData));
 
   return (
-    <div className="min-h-screen bg-background py-6 sm:py-10 px-4 sm:px-6 lg:px-8">
-      <header className="text-center mb-8 sm:mb-12 print:hidden">
-        <div className="inline-block mb-2">
-            <Image
-              src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
-              alt="Color Hut Logo"
-              width={253}
-              height={64}
-              priority
-              className="object-contain mx-auto"
-            />
-        </div>
-      </header>
-      <Suspense fallback={<FeedbackPageSkeleton />}>
-        <FeedbackClient order={plainOrderData} />
-      </Suspense>
-    </div>
+    // This component now uses a standalone HTML structure to match the reference
+    <FeedbackClient order={plainOrderData} />
   );
 }
