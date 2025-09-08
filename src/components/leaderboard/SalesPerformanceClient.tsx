@@ -4,8 +4,8 @@
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart, LineChart, AreaChart, Layers, Download, TrendingUp } from 'lucide-react';
-import { Bar, BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { BarChart, LineChart, AreaChart, Layers, Download, TrendingUp, Target } from 'lucide-react';
+import { Bar, BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Cell } from 'recharts';
 import { ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { parseISO, format, getYear, getMonth } from 'date-fns';
 import type { TrackingLink, User } from '@/types';
@@ -13,17 +13,31 @@ import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DoneTargetGraph } from './donetargetgraph';
 
 interface SalesPerformanceClientProps {
   allOrders: TrackingLink[];
   allCrmUsers: User[];
 }
 
-interface MonthlyData {
-  name: string;
+interface MonthlySalesData {
+  name: string; // month name
   sales: number;
   crmSales: { [crmId: string]: number };
 }
+
+interface MonthlyTargetData {
+    name: string; // month name
+    totalDone: number;
+    totalTarget: number;
+    crmData: {
+        [crmId: string]: {
+            done: number;
+            target: number;
+        };
+    };
+}
+
 
 const formatCurrencyBdt = (value: number | null | undefined): string => {
   if (value === null || value === undefined) return 'N/A';
@@ -67,8 +81,8 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
   }, [allOrders]);
 
 
-  const monthlySalesData: MonthlyData[] = useMemo(() => {
-    const months: MonthlyData[] = Array.from({ length: 12 }, (_, i) => ({
+  const monthlySalesData: MonthlySalesData[] = useMemo(() => {
+    const months: MonthlySalesData[] = Array.from({ length: 12 }, (_, i) => ({
       name: format(new Date(selectedYear, i), 'MMM'),
       sales: 0,
       crmSales: {},
@@ -90,6 +104,59 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
 
     return months;
   }, [allOrders, selectedYear]);
+
+  const monthlyTargetData: MonthlyTargetData[] = useMemo(() => {
+    const months: MonthlyTargetData[] = Array.from({ length: 12 }, (_, i) => ({
+        name: format(new Date(selectedYear, i), 'MMM'),
+        totalDone: 0,
+        totalTarget: 0,
+        crmData: {},
+    }));
+
+    const dailyTargets: Record<string, number> = {};
+    allCrmUsers.forEach(user => {
+        const monthlyTarget = user.monthlyOrderTarget || 0;
+        dailyTargets[user.id] = monthlyTarget / 30; // Simplified daily target
+    });
+
+    // Initialize crmData for all months and users
+    months.forEach(month => {
+        allCrmUsers.forEach(user => {
+            month.crmData[user.id] = { done: 0, target: 0 };
+        });
+    });
+    
+    // Calculate done orders
+    allOrders.forEach(order => {
+        try {
+            const orderDate = parseISO(order.createdAt);
+            if (getYear(orderDate) === selectedYear && order.crmUserId) {
+                const monthIndex = getMonth(orderDate);
+                if (months[monthIndex] && months[monthIndex].crmData[order.crmUserId]) {
+                    months[monthIndex].crmData[order.crmUserId].done += 1;
+                }
+            }
+        } catch(e) { /* ignore */ }
+    });
+
+    // Calculate targets and totals
+    const daysInMonths = [31, (selectedYear % 4 === 0 && selectedYear % 100 !== 0) || selectedYear % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    months.forEach((month, monthIndex) => {
+        let monthTotalDone = 0;
+        let monthTotalTarget = 0;
+        allCrmUsers.forEach(user => {
+            const crmData = month.crmData[user.id];
+            crmData.target = Math.round(dailyTargets[user.id] * daysInMonths[monthIndex]);
+            monthTotalDone += crmData.done;
+            monthTotalTarget += crmData.target;
+        });
+        month.totalDone = monthTotalDone;
+        month.totalTarget = monthTotalTarget;
+    });
+
+    return months;
+  }, [allOrders, allCrmUsers, selectedYear]);
+
 
   const renderChart = () => {
     switch (chartType) {
@@ -140,40 +207,51 @@ export function SalesPerformanceClient({ allOrders, allCrmUsers }: SalesPerforma
   };
 
   return (
-    <Card className="bg-white/95 dark:bg-card/80 backdrop-blur-sm border-border/30 shadow-xl">
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-            <div>
-                <CardTitle>Sales Performance Analysis</CardTitle>
-                <CardDescription>Monthly revenue trends and forecasting for {selectedYear}</CardDescription>
-            </div>
-            <div className="flex items-center gap-2 mt-2 sm:mt-0">
-                <div className="flex items-center bg-muted p-1 rounded-lg">
-                    <Button variant="ghost" size="sm" className={cn(chartType === 'bar' && "bg-background shadow-sm")} onClick={() => setChartType('bar')}><BarChart className="h-4 w-4"/></Button>
-                    <Button variant="ghost" size="sm" className={cn(chartType === 'line' && "bg-background shadow-sm")} onClick={() => setChartType('line')}><LineChart className="h-4 w-4"/></Button>
-                    <Button variant="ghost" size="sm" className={cn(chartType === 'area' && "bg-background shadow-sm")} onClick={() => setChartType('area')}><AreaChart className="h-4 w-4"/></Button>
-                </div>
-                 <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value, 10))}>
-                    <SelectTrigger className="w-[120px]">
-                      <SelectValue placeholder="Select Year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableYears.map(year => (
-                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-            </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[350px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              {renderChart()}
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+    <>
+      <Card className="bg-white/95 dark:bg-card/80 backdrop-blur-sm border-border/30 shadow-xl">
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+              <div>
+                  <CardTitle>Sales Performance Analysis</CardTitle>
+                  <CardDescription>Monthly revenue trends and forecasting for {selectedYear}</CardDescription>
+              </div>
+              <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                  <div className="flex items-center bg-muted p-1 rounded-lg">
+                      <Button variant="ghost" size="sm" className={cn(chartType === 'bar' && "bg-background shadow-sm")} onClick={() => setChartType('bar')}><BarChart className="h-4 w-4"/></Button>
+                      <Button variant="ghost" size="sm" className={cn(chartType === 'line' && "bg-background shadow-sm")} onClick={() => setChartType('line')}><LineChart className="h-4 w-4"/></Button>
+                      <Button variant="ghost" size="sm" className={cn(chartType === 'area' && "bg-background shadow-sm")} onClick={() => setChartType('area')}><AreaChart className="h-4 w-4"/></Button>
+                  </div>
+                   <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value, 10))}>
+                      <SelectTrigger className="w-[120px]">
+                        <SelectValue placeholder="Select Year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableYears.map(year => (
+                          <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+              </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[350px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                {renderChart()}
+            </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="mt-6">
+        <DoneTargetGraph 
+            monthlyTargetData={monthlyTargetData} 
+            selectedYear={selectedYear} 
+            userMap={userMap}
+        />
+      </div>
+
+    </>
   );
 }
 
