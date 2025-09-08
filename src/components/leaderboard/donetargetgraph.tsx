@@ -53,7 +53,7 @@ export function DoneTargetGraph({ monthlyTargetData, selectedYear, userMap }: Do
             <Legend />
             <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-            <Line type="monotone" dataKey="totalDone" name="Orders Done" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
+            <Line type="monotone" dataKey="totalDone" name="Projects Done" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
             <Line type="monotone" dataKey="totalTarget" name="Target" stroke="hsl(var(--chart-4))" strokeWidth={2} strokeDasharray="5 5" dot={{r:4}} activeDot={{r:6}}/>
           </RechartsLineChart>
         );
@@ -77,7 +77,7 @@ export function DoneTargetGraph({ monthlyTargetData, selectedYear, userMap }: Do
             <Legend />
             <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-            <Area type="monotone" dataKey="totalDone" name="Orders Done" stroke="hsl(var(--chart-2))" fill="url(#colorDone)" />
+            <Area type="monotone" dataKey="totalDone" name="Projects Done" stroke="hsl(var(--chart-2))" fill="url(#colorDone)" />
             <Area type="monotone" dataKey="totalTarget" name="Target" stroke="hsl(var(--chart-4))" fill="url(#colorTarget)" />
           </RechartsAreaChart>
         );
@@ -92,7 +92,7 @@ export function DoneTargetGraph({ monthlyTargetData, selectedYear, userMap }: Do
             <Legend />
             <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-            <Bar dataKey="totalDone" name="Orders Done" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="totalDone" name="Projects Done" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
             <Bar dataKey="totalTarget" name="Target" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
           </RechartsBarChart>
         );
@@ -105,7 +105,7 @@ export function DoneTargetGraph({ monthlyTargetData, selectedYear, userMap }: Do
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
             <div>
                 <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>Done / Target</CardTitle>
-                <CardDescription>Monthly order creation totals against combined targets for {selectedYear}</CardDescription>
+                <CardDescription>Monthly project creation totals against combined targets for {selectedYear}</CardDescription>
             </div>
             <div className="flex items-center gap-2 mt-2 sm:mt-0">
                 <div className="flex items-center bg-muted p-1 rounded-lg">
@@ -144,7 +144,7 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap }: any) => {
                     <p className="font-semibold text-foreground">{label}</p>
                      {donePayload && <div className="flex items-center gap-2">
                         <div className="h-2.5 w-2.5 rounded-full" style={{backgroundColor: donePayload.color}}></div>
-                        <span className="text-sm text-muted-foreground">Orders Done:</span>
+                        <span className="text-sm text-muted-foreground">Projects Done:</span>
                         <span className="text-sm font-medium ml-auto">{donePayload.value}</span>
                     </div>}
                      {targetPayload && <div className="flex items-center gap-2">
