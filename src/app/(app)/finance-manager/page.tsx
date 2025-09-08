@@ -430,25 +430,11 @@ export default function FinanceManagerPage() {
             </AddTransactionDialog>
           )}
           {canUserAddExpense && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                 <Button size="default" className="bg-red-600 hover:bg-red-700 text-white h-10">
-                    <Minus className="mr-2 h-5 w-5" /> Add Expense/Purchase <ChevronDown className="ml-2 h-4 w-4"/>
+             <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addExpenseOrPurchase">
+                <Button size="default" className="bg-red-600 hover:bg-red-700 text-white h-10">
+                    <Minus className="mr-2 h-5 w-5" /> Add Expense/Purchase
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addExpenseOrPurchase">
-                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                        Add General Expense
-                    </DropdownMenuItem>
-                </AddTransactionDialog>
-                <AddTransactionDialog currentUser={currentUser} onTransactionAdded={fetchFinancialData} dialogMode="addExpenseOrPurchase">
-                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                        Add Purchase
-                    </DropdownMenuItem>
-                </AddTransactionDialog>
-              </DropdownMenuContent>
-            </DropdownMenu>
+             </AddTransactionDialog>
           )}
           {currentUser.role === 'SYSTEM_ADMIN' && (
             <AddTransactionDialog
