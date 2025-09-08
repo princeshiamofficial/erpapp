@@ -104,7 +104,7 @@ export function DoneTargetGraph({ monthlyTargetData, selectedYear, userMap }: Do
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
             <div>
-                <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>Done vs. Target Orders</CardTitle>
+                <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>Done / Target</CardTitle>
                 <CardDescription>Monthly order creation totals against combined targets for {selectedYear}</CardDescription>
             </div>
             <div className="flex items-center gap-2 mt-2 sm:mt-0">
