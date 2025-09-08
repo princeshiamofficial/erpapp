@@ -89,15 +89,18 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                 cursor: pointer;
                 transition: transform 0.2s, opacity 0.2s;
                 opacity: 0.6;
+                filter: grayscale(80%);
                 font-size: 2.25rem; /* Smaller emojis */
             }
             .emoji-group .emoji:hover {
                 transform: scale(1.15);
                 opacity: 1;
+                filter: grayscale(0%);
             }
             .emoji-group .emoji.selected {
                 transform: scale(1.2);
                 opacity: 1;
+                filter: grayscale(0%);
             }
             .submit-btn {
                 background: linear-gradient(to right, #f97316, #ef4444); /* Orange to Red gradient */
@@ -138,12 +141,12 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
             <!-- 2. Design Satisfaction -->
             <div class="feedback-section pb-6" data-question="ডিজাইন স্যাটিসফ্যাকশন">
                 <label class="block text-base font-semibold text-gray-700 mb-3">২. ডিজাইন স্যাটিসফ্যাকশন (Design Satisfaction)</label>
-                <div class="option-group grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-4 text-center">
-                    <div class="option p-3 rounded-lg" data-value="একেবারেই না">একেবারেই না</div>
-                    <div class="option p-3 rounded-lg" data-value="মাঝারি">মাঝারি</div>
-                    <div class="option p-3 rounded-lg" data-value="ভালো">ভালো</div>
-                    <div class="option p-3 rounded-lg" data-value="খুব ভালো">খুব ভালো</div>
-                    <div class="option p-3 rounded-lg" data-value="অসাধারণ">অসাধারণ</div>
+                <div class="option-group grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-4 text-center text-sm">
+                    <div class="option p-3 rounded-lg whitespace-nowrap" data-value="একেবারেই না">একেবারেই না</div>
+                    <div class="option p-3 rounded-lg whitespace-nowrap" data-value="মাঝারি">মাঝারি</div>
+                    <div class="option p-3 rounded-lg whitespace-nowrap" data-value="ভালো">ভালো</div>
+                    <div class="option p-3 rounded-lg whitespace-nowrap" data-value="খুব ভালো">খুব ভালো</div>
+                    <div class="option p-3 rounded-lg whitespace-nowrap" data-value="অসাধারণ">অসাধারণ</div>
                 </div>
             </div>
             
@@ -162,11 +165,11 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
             <!-- 4. Delivery Time -->
             <div class="feedback-section pb-6" data-question="ডেলিভারি টাইম">
                 <label class="block text-base font-semibold text-gray-700 mb-3">৪. ডেলিভারি টাইম (Delivery Time)</label>
-                <div class="option-group grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-center">
-                    <div class="option p-3 rounded-lg" data-value="সময়ের অনেক দেরি">অনেক দেরি</div>
-                    <div class="option p-3 rounded-lg" data-value="সামান্য দেরি">সামান্য দেরি</div>
-                    <div class="option p-3 rounded-lg" data-value="সময়মতো">সময়মতো</div>
-                    <div class="option p-3 rounded-lg" data-value="সময়ের আগেই">সময়ের আগেই</div>
+                <div class="option-group grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-center text-sm">
+                    <div class="option p-3 rounded-lg whitespace-nowrap" data-value="সময়ের অনেক দেরি">অনেক দেরি</div>
+                    <div class="option p-3 rounded-lg whitespace-nowrap" data-value="সামান্য দেরি">সামান্য দেরি</div>
+                    <div class="option p-3 rounded-lg whitespace-nowrap" data-value="সময়মতো">সময়মতো</div>
+                    <div class="option p-3 rounded-lg whitespace-nowrap" data-value="সময়ের আগেই">সময়ের আগেই</div>
                 </div>
             </div>
 
@@ -271,7 +274,7 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                     starContainers.forEach(container => {
                         const question = container.closest('.feedback-section').dataset.question;
                         const value = parseInt(container.dataset.value, 10);
-                        feedbackData[question] = value > 0 ? \`\${value} out of 5\` : 'Not rated';
+                        feedbackData[question] = value > 0 ? `${'${value}'} out of 5` : 'Not rated';
                     });
                     
                     // Get option selections
