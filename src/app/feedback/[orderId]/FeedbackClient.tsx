@@ -28,9 +28,20 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                 to { opacity: 1; transform: translateY(0); }
             }
 
+            html, body {
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+
             body {
                 font-family: 'Hind Siliguri', sans-serif;
                 background: linear-gradient(to top right, #fff7ed, #fef2f2); /* Light orange/red gradient */
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                padding: 1rem;
             }
             .feedback-card {
                 background-color: white;
@@ -38,7 +49,17 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                 box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
                 transition: all 0.3s ease-in-out;
                 animation: fadeIn 0.7s ease-in-out;
+                width: 100%;
+                max-width: 42rem; /* equivalent to max-w-2xl */
+                padding: 1.5rem; /* p-6 */
             }
+
+            @media (min-width: 640px) {
+                .feedback-card {
+                    padding: 2rem; /* sm:p-8 */
+                }
+            }
+
             .star-rating .star {
                 color: #d1d5db; /* Gray color for inactive stars */
                 cursor: pointer;
@@ -68,15 +89,18 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                 cursor: pointer;
                 transition: transform 0.2s, opacity 0.2s;
                 opacity: 0.6;
+                filter: grayscale(1);
                 font-size: 2.5rem; /* Larger emojis */
             }
             .emoji-group .emoji:hover {
                 transform: scale(1.15);
                 opacity: 1;
+                filter: grayscale(0);
             }
             .emoji-group .emoji.selected {
                 transform: scale(1.2);
                 opacity: 1;
+                filter: grayscale(0);
             }
             .submit-btn {
                 background: linear-gradient(to right, #f97316, #ef4444); /* Orange to Red gradient */
@@ -94,12 +118,12 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
             }
         </style>
     </head>
-    <body class="flex items-center justify-center min-h-screen p-4">
+    <body>
 
-        <div id="feedback-form" class="feedback-card w-full max-w-2xl p-6 sm:p-8 space-y-6">
+        <div id="feedback-form" class="feedback-card space-y-4">
             <div class="text-center">
-                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">আপনার মতামত দিন</h1>
-                <p class="text-gray-500 mt-1">আপনার অভিজ্ঞতা আমাদের কাছে মূল্যবান।</p>
+                <h1 class="text-xl sm:text-2xl font-bold text-gray-800">আপনার মতামত দিন</h1>
+                <p class="text-gray-500 mt-1 text-sm">আপনার অভিজ্ঞতা আমাদের কাছে মূল্যবান।</p>
             </div>
 
             <!-- 1. Product Quality -->
@@ -192,15 +216,15 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                     const stars = container.querySelectorAll('.star');
                     stars.forEach(star => {
                         star.addEventListener('mouseover', () => {
-                            const rating = parseInt(star.dataset.rating);
+                            const rating = parseInt(star.dataset.rating, 10);
                             highlightStars(stars, rating);
                         });
                         star.addEventListener('mouseout', () => {
-                            const currentRating = parseInt(container.dataset.value);
+                            const currentRating = parseInt(container.dataset.value, 10);
                             highlightStars(stars, currentRating);
                         });
                         star.addEventListener('click', () => {
-                            const rating = parseInt(star.dataset.rating);
+                            const rating = parseInt(star.dataset.rating, 10);
                             container.dataset.value = rating;
                             highlightStars(stars, rating);
                         });
@@ -209,7 +233,7 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
 
                 function highlightStars(stars, rating) {
                     stars.forEach(s => {
-                        if (parseInt(s.dataset.rating) <= rating) {
+                        if (parseInt(s.dataset.rating, 10) <= rating) {
                             s.classList.add('selected');
                         } else {
                             s.classList.remove('selected');
@@ -249,8 +273,8 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                     // Get star ratings
                     starContainers.forEach(container => {
                         const question = container.closest('.feedback-section').dataset.question;
-                        const value = container.dataset.value;
-                        feedbackData[question] = parseInt(value, 10) > 0 ? \`\${value} out of 5\` : 'Not rated';
+                        const value = parseInt(container.dataset.value, 10);
+                        feedbackData[question] = value > 0 ? \`\${value} out of 5\` : 'Not rated';
                     });
                     
                     // Get option selections
