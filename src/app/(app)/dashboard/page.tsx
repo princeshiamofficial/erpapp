@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -37,6 +38,8 @@ import {
   BaggageClaim,
   MapPin, // For Top Sales Area
   Landmark, // For Payment Methods
+  MessageSquare, // For Feedback
+  Star, // For Feedback stars
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -69,6 +72,8 @@ import { cn } from '@/lib/utils';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { divisions } from '@/lib/district-data'; // Import divisions data
 import type { DateRange, PredefinedRange } from "@/components/dashboard/date-range-picker";
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Lazy loading components
 const DateRangePicker = dynamic(() => import('@/components/dashboard/date-range-picker').then(mod => mod.DateRangePicker), {
@@ -226,6 +231,13 @@ export default function DashboardPage() {
     </QueryClientProvider>
   );
 }
+
+const getInitials = (name: string | undefined): string => {
+  if (!name) return '??';
+  const names = name.split(' ');
+  if (names.length === 1) return names[0].charAt(0).toUpperCase();
+  return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
+};
 
 
 function DashboardContent() {
@@ -725,6 +737,14 @@ function DashboardContent() {
     if (!currentUser) return false;
     return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
   }, [currentUser]);
+  
+  const recentFeedback = useMemo(() => {
+    if (!allOrders) return [];
+    return allOrders
+      .filter(order => order.feedback && order.feedback.text.trim())
+      .sort((a, b) => new Date(b.feedback!.submittedAt).getTime() - new Date(a.feedback!.submittedAt).getTime())
+      .slice(0, 5); // Get latest 5
+  }, [allOrders]);
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 custom-scrollbar-hidden">
@@ -973,86 +993,59 @@ function DashboardContent() {
           </div>
         </>
       )}
-
-      <div className={cn("grid grid-cols-1 gap-6 mt-6", canSeeAdminCharts ? "xl:grid-cols-2" : "xl:grid-cols-1")}>
-        {canSeeAdminCharts && (
-          <>
-            <Card className="shadow-xl bg-card">
-              <CardHeader>
-                  <CardTitle className="flex items-center text-xl text-foreground">
-                  <MapPin className="mr-2 h-6 w-6 text-primary" />
-                  Top Sales Area
-                  </CardTitle>
-                  <CardDescription>Total sales revenue by division for the selected period.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                  {isLoadingContent ? (
-                  <Skeleton className="h-[400px] w-full" />
-                  ) : topSalesAreaData.length > 0 ? (
-                  <ChartContainer config={topSalesAreaChartConfig} className="w-full h-[400px]">
-                      <RechartsBarChart data={topSalesAreaData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
-                      <defs>
-                          <linearGradient id="salesBarGradient" x1="0" y1="0" x2="1" y2="0">
-                          <stop offset="0%" stopColor="hsl(var(--primary)/0.6)" />
-                          <stop offset="100%" stopColor="hsl(var(--primary))" />
-                          </linearGradient>
-                      </defs>
-                      <XAxis type="number" hide />
-                      <YAxis
-                          dataKey="name"
-                          type="category"
-                          width={100}
-                          tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }}
-                          stroke="hsl(var(--border))"
-                          axisLine={false}
-                          tickLine={false}
-                      />
-                      <ChartTooltip
-                          cursor={{ fill: 'hsl(var(--muted))' }}
-                          content={({ active, payload }) => {
-                              if (active && payload && payload.length) {
-                                  return (
-                                      <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                          <div className="grid grid-cols-1 gap-1.5">
-                                              <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
-                                              <span className="text-xs text-muted-foreground">Sales: {formatCurrency(payload[0].payload.sales as number)}</span>
-                                          </div>
-                                      </div>
-                                  )
-                              }
-                              return null;
-                          }}
-                      />
-                      <Bar dataKey="sales" fill="url(#salesBarGradient)" radius={[0, 4, 4, 0]} barSize={20}>
-                          <LabelList
-                          dataKey="percentage"
-                          position="right"
-                          offset={8}
-                          className="fill-foreground text-xs sm:text-sm font-medium"
-                          formatter={(value: number) => `${value.toFixed(1)}%`}
-                          />
-                      </Bar>
-                      </RechartsBarChart>
-                  </ChartContainer>
-                  ) : (
-                  <div className="flex items-center justify-center h-full text-muted-foreground p-8">
-                      No sales data available for the selected period.
-                  </div>
-                  )}
-              </CardContent>
-            </Card>
-            <OrderAnalysisClient allOrders={allOrders} />
-          </>
-        )}
-
-        {canSeeSalesPerformance && (
-          <SalesPerformanceClient
-            allOrders={salesPerformanceOrders}
-            allCrmUsers={allCrmUsers}
-          />
-        )}
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <SalesPerformanceClient
+          allOrders={salesPerformanceOrders}
+          allCrmUsers={allCrmUsers}
+        />
+         <Card className="shadow-xl bg-card">
+          <CardHeader>
+            <CardTitle className="flex items-center text-xl text-foreground">
+              <MessageSquare className="mr-2 h-6 w-6 text-primary" />
+              Recent Feedback
+            </CardTitle>
+            <CardDescription>Latest client feedback from tracking pages.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingContent ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+              </div>
+            ) : recentFeedback.length > 0 ? (
+              <ScrollArea className="h-[400px] pr-3">
+                <div className="space-y-4">
+                  {recentFeedback.map(order => (
+                    <div key={order.id} className="p-4 border rounded-lg bg-secondary/30">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-semibold text-foreground">{order.companyName}</p>
+                          <p className="text-xs text-muted-foreground">Order ID: {order.id}</p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="font-bold text-amber-500">{order.feedback?.rating}</span>
+                          <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                        </div>
+                      </div>
+                      <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
+                        "{order.feedback?.text}"
+                      </p>
+                       <p className="text-xs text-right text-muted-foreground mt-2">
+                        - Submitted {format(parseISO(order.feedback!.submittedAt), "d MMM, yyyy")}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
+                <MessageSquare className="h-16 w-16 opacity-30 mb-4" />
+                <p className="font-medium">No feedback has been submitted yet.</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
-
 
       <div className={cn("grid grid-cols-1 gap-6 mt-6", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
         
@@ -1100,5 +1093,7 @@ function DashboardContent() {
 }
 
 // Moved StatusTimeline to its own file in components/dashboard to be dynamically imported
+
+    
 
     
