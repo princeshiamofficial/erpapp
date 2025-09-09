@@ -1056,69 +1056,128 @@ function DashboardContent() {
         </>
       )}
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <SalesPerformanceClient
-          allOrders={salesPerformanceOrders}
-          allCrmUsers={allCrmUsers}
-        />
-         <Card className="shadow-xl bg-card">
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl text-foreground">
-              <MessageSquare className="mr-2 h-6 w-6 text-primary" />
-              Recent Feedback
-            </CardTitle>
-            <CardDescription>Latest client feedback from tracking pages.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoadingContent ? (
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
-              </div>
-            ) : recentFeedback.length > 0 ? (
-              <ScrollArea className="h-[400px] pr-3">
+      {isDesignerRepOrLr ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          <Card className="shadow-xl bg-card">
+            <CardHeader>
+              <CardTitle className="flex items-center text-xl text-foreground">
+                <MessageSquare className="mr-2 h-6 w-6 text-primary" />
+                Recent Feedback
+              </CardTitle>
+              <CardDescription>Latest client feedback from tracking pages.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingContent ? (
                 <div className="space-y-4">
-                  {recentFeedback.map(order => (
-                    <div key={order.id} className="p-4 border rounded-lg bg-secondary/30">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-semibold text-foreground">{order.companyName}</p>
-                          <p className="text-xs text-muted-foreground">Order ID: {order.id}</p>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <span className="font-bold text-amber-500">{order.feedback?.rating}</span>
-                          <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                        </div>
-                      </div>
-                      <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
-                        "{order.feedback?.text}"
-                      </p>
-                       <p className="text-xs text-right text-muted-foreground mt-2">
-                        - Submitted {format(parseISO(order.feedback!.submittedAt), "d MMM, yyyy")}
-                      </p>
-                    </div>
-                  ))}
+                  {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
                 </div>
-              </ScrollArea>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
-                <MessageSquare className="h-16 w-16 opacity-30 mb-4" />
-                <p className="font-medium">No feedback has been submitted yet.</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+              ) : recentFeedback.length > 0 ? (
+                <ScrollArea className="h-[400px] pr-3">
+                  <div className="space-y-4">
+                    {recentFeedback.map(order => (
+                      <div key={order.id} className="p-4 border rounded-lg bg-secondary/30">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-semibold text-foreground">{order.companyName}</p>
+                            <p className="text-xs text-muted-foreground">Order ID: {order.id}</p>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="font-bold text-amber-500">{order.feedback?.rating}</span>
+                            <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                          </div>
+                        </div>
+                        <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
+                          "{order.feedback?.text}"
+                        </p>
+                        <p className="text-xs text-right text-muted-foreground mt-2">
+                          - Submitted {format(parseISO(order.feedback!.submittedAt), "d MMM, yyyy")}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
+                  <MessageSquare className="h-16 w-16 opacity-30 mb-4" />
+                  <p className="font-medium">No feedback has been submitted yet.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          <TeamPerformanceGraph
+            monthlyTargetData={teamPerformanceData}
+            selectedYear={teamPerformanceYear}
+            userMap={userMap}
+            onYearChange={setTeamPerformanceYear}
+            availableYears={teamPerformanceAvailableYears}
+          />
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <SalesPerformanceClient
+              allOrders={salesPerformanceOrders}
+              allCrmUsers={allCrmUsers}
+            />
+            <Card className="shadow-xl bg-card">
+              <CardHeader>
+                <CardTitle className="flex items-center text-xl text-foreground">
+                  <MessageSquare className="mr-2 h-6 w-6 text-primary" />
+                  Recent Feedback
+                </CardTitle>
+                <CardDescription>Latest client feedback from tracking pages.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingContent ? (
+                  <div className="space-y-4">
+                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+                  </div>
+                ) : recentFeedback.length > 0 ? (
+                  <ScrollArea className="h-[400px] pr-3">
+                    <div className="space-y-4">
+                      {recentFeedback.map(order => (
+                        <div key={order.id} className="p-4 border rounded-lg bg-secondary/30">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-semibold text-foreground">{order.companyName}</p>
+                              <p className="text-xs text-muted-foreground">Order ID: {order.id}</p>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <span className="font-bold text-amber-500">{order.feedback?.rating}</span>
+                              <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                            </div>
+                          </div>
+                          <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
+                            "{order.feedback?.text}"
+                          </p>
+                          <p className="text-xs text-right text-muted-foreground mt-2">
+                            - Submitted {format(parseISO(order.feedback!.submittedAt), "d MMM, yyyy")}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
+                    <MessageSquare className="h-16 w-16 opacity-30 mb-4" />
+                    <p className="font-medium">No feedback has been submitted yet.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          <div className="mt-6">
+            <TeamPerformanceGraph
+              monthlyTargetData={teamPerformanceData}
+              selectedYear={teamPerformanceYear}
+              userMap={userMap}
+              onYearChange={setTeamPerformanceYear}
+              availableYears={teamPerformanceAvailableYears}
+            />
+          </div>
+        </>
+      )}
       
-      <div className="mt-6">
-        <TeamPerformanceGraph
-          monthlyTargetData={teamPerformanceData}
-          selectedYear={teamPerformanceYear}
-          userMap={userMap}
-          onYearChange={setTeamPerformanceYear}
-          availableYears={teamPerformanceAvailableYears}
-        />
-      </div>
-
       <div className={cn("grid grid-cols-1 gap-6 mt-6", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
         
         <Card className="shadow-xl bg-card">
@@ -1169,3 +1228,4 @@ function DashboardContent() {
     
 
     
+
