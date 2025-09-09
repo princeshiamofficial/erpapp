@@ -1,10 +1,11 @@
 
+
 "use client";
 
 import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart, LineChart, AreaChart, Target, Users } from 'lucide-react';
+import { BarChart, LineChart, AreaChart, Target, Users, CalendarDays } from 'lucide-react';
 import { Bar, BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import type { User as UserType } from '@/types';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,8 @@ import {
     ChartTooltipContent,
   } from "@/components/ui/chart"
 import { getYear } from 'date-fns';
+import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
+import type { DateRange } from "react-day-picker";
 
 interface MonthlyTargetData {
     name: string;
@@ -35,10 +38,9 @@ interface MonthlyTargetData {
 
 interface TeamPerformanceGraphProps {
   monthlyTargetData: MonthlyTargetData[];
-  selectedYear: number;
+  selectedDateRange: DateRange | undefined;
   userMap: Map<string, UserType>;
-  onYearChange: (year: number) => void;
-  availableYears: number[];
+  onDateRangeChange: (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => void;
 }
 
 const getInitials = (name: string | undefined): string => {
@@ -49,7 +51,7 @@ const getInitials = (name: string | undefined): string => {
 };
 
 
-export function TeamPerformanceGraph({ monthlyTargetData, selectedYear, userMap, onYearChange, availableYears }: TeamPerformanceGraphProps) {
+export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, userMap, onDateRangeChange }: TeamPerformanceGraphProps) {
   const [chartType, setChartType] = useState<'bar' | 'line' | 'area'>('bar');
 
   const renderChart = () => {
@@ -119,16 +121,11 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedYear, userMap,
                 <CardDescription>Aggregated monthly task completion against targets for all users.</CardDescription>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
-                 <Select value={selectedYear.toString()} onValueChange={(value) => onYearChange(parseInt(value, 10))}>
-                    <SelectTrigger className="w-full sm:w-[120px] h-9">
-                        <SelectValue placeholder="Select Year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableYears.map(year => (
-                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <DateRangePicker 
+                  initialRange={selectedDateRange} 
+                  onDateRangeChange={onDateRangeChange}
+                  className="w-full sm:w-auto"
+                />
                 <div className="flex items-center bg-muted p-1 rounded-lg">
                     <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", chartType === 'bar' && "bg-background shadow-sm")} onClick={() => setChartType('bar')}><BarChart className="h-4 w-4"/></Button>
                     <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", chartType === 'line' && "bg-background shadow-sm")} onClick={() => setChartType('line')}><LineChart className="h-4 w-4"/></Button>

@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { format, isWithinInterval, parseISO, subDays, addDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays } from "date-fns"; 
+import { format, isWithinInterval, parseISO, subDays, addDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays, startOfYear } from "date-fns"; 
 import { 
   Hand, 
   ShoppingCart, 
@@ -602,33 +602,24 @@ function DashboardContent() {
     };
   }, [filteredOrders, allOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId]);
   
-  const [teamPerformanceYear, setTeamPerformanceYear] = useState<number>(getYear(new Date()));
-  
-  const teamPerformanceAvailableYears = useMemo(() => {
-    if (!allOrders || allOrders.length === 0) {
-      return [getYear(new Date())];
-    }
-    const years = new Set(
-      allOrders
-        .map(order => {
-          try { return getYear(parseISO(order.createdAt)); } 
-          catch { return null; }
-        })
-        .filter((year): year is number => year !== null)
-    );
-    const currentYear = getYear(new Date());
-    if (!years.has(currentYear)) years.add(currentYear);
-    return Array.from(years).sort((a, b) => b - a);
-  }, [allOrders]);
+  const [teamPerformanceDateRange, setTeamPerformanceDateRange] = useState<DateRange | undefined>({
+      from: startOfYear(new Date()),
+      to: new Date(),
+  });
   
   const teamPerformanceData = useMemo(() => {
     const months = Array.from({ length: 12 }, (_, i) => ({
-        name: format(new Date(teamPerformanceYear, i), 'MMM'),
+        name: format(new Date(2024, i), 'MMM'), // Use a fixed year for month names
         totalDone: 0,
         totalTarget: 0,
         userData: {},
     }));
     
+    if (!teamPerformanceDateRange?.from) return months;
+
+    const startDate = startOfDay(teamPerformanceDateRange.from);
+    const endDate = endOfDay(teamPerformanceDateRange.to || teamPerformanceDateRange.from);
+
     const dailyTargets: Record<string, number> = {};
     allUsers.forEach(user => {
       const monthlyTarget = user.monthlyOrderTarget || globalSettings?.globalMonthlyOrderTarget || 0;
@@ -638,7 +629,7 @@ function DashboardContent() {
     allOrders.forEach(order => {
       try {
         const orderDate = parseISO(order.createdAt);
-        if (getYear(orderDate) === teamPerformanceYear && order.crmUserId) {
+        if (isWithinInterval(orderDate, {start: startDate, end: endDate}) && order.crmUserId) {
           const monthIndex = getMonth(orderDate);
           if (months[monthIndex]) {
             months[monthIndex].totalDone += 1;
@@ -647,20 +638,21 @@ function DashboardContent() {
       } catch(e) { /* ignore */ }
     });
     
-    const daysInMonths = [31, (teamPerformanceYear % 4 === 0 && teamPerformanceYear % 100 !== 0) || teamPerformanceYear % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    
     months.forEach((month, monthIndex) => {
         let monthTotalTarget = 0;
+        const currentMonthDate = new Date(startDate.getFullYear(), monthIndex, 1);
+        const daysInMonth = getDaysInMonth(currentMonthDate);
+
         allUsers.forEach(user => {
             const userDailyTarget = dailyTargets[user.id] || 0;
-            monthTotalTarget += Math.round(userDailyTarget * daysInMonths[monthIndex]);
+            monthTotalTarget += Math.round(userDailyTarget * daysInMonth);
         });
         month.totalTarget = monthTotalTarget;
     });
     
     return months;
 
-  }, [allOrders, allUsers, teamPerformanceYear, globalSettings]);
+  }, [allOrders, allUsers, teamPerformanceDateRange, globalSettings]);
 
 
   useEffect(() => {
@@ -675,6 +667,10 @@ function DashboardContent() {
     setSelectedDateRange(range);
     setCurrentDateRangeLabel(label);
     setSelectedPredefinedValue(predefined);
+  };
+  
+  const handleTeamPerformanceDateRangeChange = (range: DateRange | undefined) => {
+    setTeamPerformanceDateRange(range);
   };
 
   const summaryCardDefinitions = useMemo(() => {
@@ -1060,10 +1056,9 @@ function DashboardContent() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           <TeamPerformanceGraph
             monthlyTargetData={teamPerformanceData}
-            selectedYear={teamPerformanceYear}
+            onDateRangeChange={handleTeamPerformanceDateRangeChange}
+            selectedDateRange={teamPerformanceDateRange}
             userMap={userMap}
-            onYearChange={setTeamPerformanceYear}
-            availableYears={teamPerformanceAvailableYears}
           />
           <Card className="shadow-xl bg-card">
             <CardHeader>
@@ -1169,10 +1164,9 @@ function DashboardContent() {
           <div className="mt-6">
             <TeamPerformanceGraph
               monthlyTargetData={teamPerformanceData}
-              selectedYear={teamPerformanceYear}
               userMap={userMap}
-              onYearChange={setTeamPerformanceYear}
-              availableYears={teamPerformanceAvailableYears}
+              onDateRangeChange={handleTeamPerformanceDateRangeChange}
+              selectedDateRange={teamPerformanceDateRange}
             />
           </div>
         </>
@@ -1228,5 +1222,6 @@ function DashboardContent() {
     
 
     
+
 
 
