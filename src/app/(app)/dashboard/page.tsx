@@ -718,7 +718,7 @@ function DashboardContent() {
   
   const canSeeSalesPerformance = useMemo(() => {
     if (!currentUser) return false;
-    return ['SYSTEM_ADMIN', 'ADMIN', 'CRM'].includes(currentUser.role);
+    return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
   }, [currentUser]);
 
   const canSeeAdminCharts = useMemo(() => {
