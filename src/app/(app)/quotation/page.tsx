@@ -421,7 +421,7 @@ export default function QuotationsPage() {
                     return (
                       <TableRow key={quotation.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="pl-6">
-                          <Link href={`/track/${quotation.id}`} className="font-medium text-primary hover:underline">
+                          <Link href={`/quotation/${quotation.id}`} className="font-medium text-primary hover:underline">
                             {quotation.id}
                           </Link>
                         </TableCell>
@@ -451,14 +451,14 @@ export default function QuotationsPage() {
                                 </DropdownMenuSubTrigger>
                                 <DropdownMenuPortal>
                                   <DropdownMenuSubContent>
-                                    <DropdownMenuItem onSelect={() => handleChangeStatus(quotation, 'Pending')} className="cursor-pointer text-purple-600 focus:bg-purple-100 focus:text-purple-700">Pending</DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => handleChangeStatus(quotation, 'Approved')} className="cursor-pointer text-green-600 focus:bg-green-100 focus:text-green-700">Approved</DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => handleChangeStatus(quotation, 'Canceled')} className="cursor-pointer text-red-600 focus:bg-red-100 focus:text-red-700">Canceled</DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => handleChangeStatus(quotation, 'Pending')} className="cursor-pointer text-white bg-purple-600 focus:bg-purple-700 focus:text-white">Pending</DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => handleChangeStatus(quotation, 'Approved')} className="cursor-pointer text-white bg-green-600 focus:bg-green-700 focus:text-white">Approved</DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => handleChangeStatus(quotation, 'Canceled')} className="cursor-pointer text-white bg-red-600 focus:bg-red-700 focus:text-white">Canceled</DropdownMenuItem>
                                   </DropdownMenuSubContent>
                                 </DropdownMenuPortal>
                               </DropdownMenuSub>
                               <DropdownMenuItem asChild className="cursor-pointer">
-                                <Link href={`/track/${quotation.id}`}>
+                                <Link href={`/quotation/${quotation.id}`}>
                                   <Eye className="mr-2 h-4 w-4" /> View Details
                                 </Link>
                               </DropdownMenuItem>
