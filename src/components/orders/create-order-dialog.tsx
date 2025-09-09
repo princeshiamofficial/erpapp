@@ -135,25 +135,28 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       fetchOptions();
       setCurrentOrderDate(new Date());
 
-      // Suggest next available Job ID
-      if (allOrders && allOrders.length > 0) {
-        let maxJobId = 0;
-        allOrders.forEach(order => {
-          const orderJobIdStr = (order.companyName || '').split(' • ')[0].trim();
-          const orderJobIdNum = parseInt(orderJobIdStr, 10);
-          if (!isNaN(orderJobIdNum) && orderJobIdNum > maxJobId) {
-            maxJobId = orderJobIdNum;
-          }
-        });
-        const newSuggestedId = (maxJobId + 1).toString();
-        setJobId(newSuggestedId);
-      } else {
-        setJobId('1'); // Start with 1 if no orders exist
+      // Suggest next available Job ID only if the field is currently empty
+      if (jobId.trim() === '') {
+        if (allOrders && allOrders.length > 0) {
+          let maxJobId = 0;
+          allOrders.forEach(order => {
+            const orderJobIdStr = (order.companyName || '').split(' • ')[0].trim();
+            const orderJobIdNum = parseInt(orderJobIdStr, 10);
+            if (!isNaN(orderJobIdNum) && orderJobIdNum > maxJobId) {
+              maxJobId = orderJobIdNum;
+            }
+          });
+          const newSuggestedId = (maxJobId + 1).toString();
+          setJobId(newSuggestedId);
+        } else {
+          setJobId('1'); // Start with 1 if no orders exist
+        }
       }
     } else {
         resetForm();
     }
-  }, [isOpen, fetchOptions, allOrders, resetForm]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, fetchOptions, allOrders]); // Removed resetForm and jobId from dependency array to prevent reset on type
 
   useEffect(() => {
     if (isOpen && availableStatuses.length > 0) {
