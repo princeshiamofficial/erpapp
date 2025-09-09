@@ -368,6 +368,7 @@ export default function QuotationsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-6">Quotation ID</TableHead>
+                  <TableHead>Contact Person</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>CRM Contact</TableHead>
                   <TableHead>Date Created</TableHead>
@@ -380,6 +381,7 @@ export default function QuotationsPage() {
                     <TableRow key={`skel-${i}`}>
                       <TableCell className="pl-6"><Skeleton className="h-5 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                       <TableCell className="pr-6 text-right space-x-2">
@@ -389,6 +391,9 @@ export default function QuotationsPage() {
                   ))
                 ) : paginatedQuotations.length > 0 ? (
                   paginatedQuotations.map((quotation) => {
+                    const nameParts = (quotation.companyName || '').split(' • ');
+                    const contactPerson = nameParts[0].trim();
+                    const companyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : 'N/A';
                     return (
                       <TableRow key={quotation.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="pl-6">
@@ -396,9 +401,8 @@ export default function QuotationsPage() {
                             {quotation.id}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-card-foreground">
-                          <div>{quotation.companyName}</div>
-                        </TableCell>
+                        <TableCell className="text-card-foreground font-medium">{contactPerson}</TableCell>
+                        <TableCell className="text-card-foreground">{companyName}</TableCell>
                         <TableCell className="text-card-foreground">{quotation.crmUserName}</TableCell>
                         <TableCell className="text-muted-foreground">{isClient ? formatDate(quotation.createdAt) : <Skeleton className="h-4 w-20" />}</TableCell>
                         <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
@@ -446,7 +450,7 @@ export default function QuotationsPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-12 h-[300px]">
-                      <PackageIcon className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
+                      <FileText className="mx-auto h-12 w-12 opacity-50 mb-3 text-muted-foreground" />
                       <p className="text-lg text-muted-foreground font-medium">
                         {searchTerm ? "No quotations match your search." :
                           (currentUser?.role === 'CRM' ? "You have no quotations." :
