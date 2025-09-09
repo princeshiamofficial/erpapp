@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -350,13 +351,13 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
         {isLoadingOptions ? (<div className="flex justify-center items-center h-60"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>)
         : (<form onSubmit={handleSubmit}><div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1"><Label htmlFor="edit-jobId">Contact Person *</Label><Input id="edit-jobId" value={jobIdInput} onChange={(e) => setJobIdInput(e.target.value)} required disabled={isSubmitting} /></div>
-                <div className="space-y-1"><Label htmlFor="edit-companyNamePart">Company Name *</Label><Input id="edit-companyNamePart" value={companyNameInput} onChange={(e) => setCompanyNameInput(e.target.value)} required disabled={isSubmitting} /></div>
+                <div className="space-y-1"><Label htmlFor="edit-jobId">Contact Person</Label><Input id="edit-jobId" value={jobIdInput} onChange={(e) => setJobIdInput(e.target.value)} required disabled={isSubmitting} /></div>
+                <div className="space-y-1"><Label htmlFor="edit-companyNamePart">Company Name</Label><Input id="edit-companyNamePart" value={companyNameInput} onChange={(e) => setCompanyNameInput(e.target.value)} required disabled={isSubmitting} /></div>
               </div>
-              <div className="space-y-1"><Label htmlFor="edit-address">Address *</Label><Textarea id="edit-address" value={address} onChange={(e) => setAddress(e.target.value)} required disabled={isSubmitting} /></div>
+              <div className="space-y-1"><Label htmlFor="edit-address">Address</Label><Textarea id="edit-address" value={address} onChange={(e) => setAddress(e.target.value)} required disabled={isSubmitting} /></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <Label htmlFor="edit-phoneNumber">Phone Number *</Label>
+                  <Label htmlFor="edit-phoneNumber">Phone Number</Label>
                   <Input
                     id="edit-phoneNumber"
                     type="tel"
@@ -375,13 +376,13 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
                     placeholder="01xxxxxxxxx"
                   />
                 </div>
-                <div className="space-y-1"><Label htmlFor="edit-orderDate">Date Created *</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal",!createdAt && "text-muted-foreground")} disabled={isSubmitting}><CalendarDays className="mr-2 h-4 w-4" />{createdAt ? formatDateForDialogInput(createdAt) : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={createdAt} onSelect={setCreatedAt} initialFocus disabled={isSubmitting} /></PopoverContent></Popover></div>
+                <div className="space-y-1"><Label htmlFor="edit-orderDate">Date Created</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal",!createdAt && "text-muted-foreground")} disabled={isSubmitting}><CalendarDays className="mr-2 h-4 w-4" />{createdAt ? formatDateForDialogInput(createdAt) : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={createdAt} onSelect={setCreatedAt} initialFocus disabled={isSubmitting} /></PopoverContent></Popover></div>
               </div>
               <div className="space-y-1"><Label htmlFor="edit-orderNotes">Notes (Optional)</Label><Textarea id="edit-orderNotes" value={orderNotes} onChange={e => setOrderNotes(e.target.value)} rows={3} disabled={isSubmitting}/></div>
-              <div className="space-y-3 mt-4 border-t border-border pt-4"><Label className="text-lg font-semibold">Quotation Items *</Label>
+              <div className="space-y-3 mt-4 border-t border-border pt-4"><Label className="text-lg font-semibold">Quotation Items</Label>
                 {orderItems.map((item) => (<div key={item.id} className="p-3 border rounded-md bg-secondary/30 space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr_1fr_auto] gap-x-3 gap-y-2 items-end">
-                    <div className="space-y-1"><Label htmlFor={`model-${item.id}`}>Model *</Label>
+                    <div className="space-y-1"><Label htmlFor={`model-${item.id}`}>Model</Label>
                       <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
                         <PopoverTrigger asChild>
                           <Button variant="outline" role="combobox" aria-expanded={popoverOpenStates[item.id] || false} className="w-full justify-between bg-background" disabled={isLoadingOptions || modelOptions.length === 0 || isSubmitting}>
@@ -422,8 +423,8 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
                         </PopoverContent>
                       </Popover>
                     </div>
-                    <div className="space-y-1"><Label htmlFor={`quantity-${item.id}`}>Quantity *</Label><Input id={`quantity-${item.id}`} type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} min="1" required className="bg-background" disabled={isSubmitting} /></div>
-                    <div className="space-y-1"><Label htmlFor={`lamination-${item.id}`}>Lamination *</Label>
+                    <div className="space-y-1"><Label htmlFor={`quantity-${item.id}`}>Quantity</Label><Input id={`quantity-${item.id}`} type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} min="1" required className="bg-background" disabled={isSubmitting} /></div>
+                    <div className="space-y-1"><Label htmlFor={`lamination-${item.id}`}>Lamination</Label>
                       <Select value={item.lamination} onValueChange={(value) => handleItemChange(item.id, 'lamination', value)} required disabled={isLoadingOptions || laminationOptions.length === 0 || isSubmitting}>
                         <SelectTrigger id={`lamination-${item.id}`} className="bg-background"><SelectValue placeholder={isLoadingOptions ? "Loading..." : (laminationOptions.length === 0 ? "No laminations" : "Select lamination")} /></SelectTrigger>
                         <SelectContent>{laminationOptions.map(option => (<SelectItem key={option.id} value={option.name}>{option.name}</SelectItem>))}{laminationOptions.length === 0 && !isLoadingOptions && <div className="p-2 text-sm text-muted-foreground text-center">No laminations configured.</div>}</SelectContent>

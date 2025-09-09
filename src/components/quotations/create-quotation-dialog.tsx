@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -471,27 +472,27 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
       <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-4xl">
         <DialogHeader>
           <DialogTitle>Create New Quotation</DialogTitle>
-          <DialogDescription>Enter company details and add quotation items. Required fields are marked with *.</DialogDescription>
+          <DialogDescription>Enter company details and add quotation items. Required fields are marked with a visual hint.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label htmlFor="jobId">Contact Person *</Label>
+                <Label htmlFor="jobId">Contact Person</Label>
                 <Input id="jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., John Doe, Mr. Rakib" />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="companyName">Company Name *</Label>
+                <Label htmlFor="companyName">Company Name</Label>
                 <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="e.g., Acme Corp" readOnly={isAutoFilled} className={cn(isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
               </div>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="address">Address *</Label>
+              <Label htmlFor="address">Address</Label>
               <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required readOnly={isAutoFilled} className={cn(isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label htmlFor="phoneNumber">Phone Number *</Label>
+                <Label htmlFor="phoneNumber">Phone Number</Label>
                 <Input
                   id="phoneNumber"
                   type="tel"
@@ -512,7 +513,7 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="orderDate">Quotation Date *</Label>
+                <Label htmlFor="orderDate">Quotation Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
@@ -552,12 +553,12 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
             </div>
 
             <div className="space-y-3 mt-4 border-t border-border pt-4">
-              <Label className="text-lg font-semibold">Quotation Items *</Label>
+              <Label className="text-lg font-semibold">Quotation Items</Label>
               {orderItems.map((item) => (
                 <div key={item.id} className="p-3 border rounded-md bg-secondary/30 space-y-3">
                    <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr_1fr_auto] gap-x-3 gap-y-2 items-end">
                     <div className="space-y-1">
-                      <Label htmlFor={`model-${item.id}`}>Model *</Label>
+                      <Label htmlFor={`model-${item.id}`}>Model</Label>
                       <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
                         <PopoverTrigger asChild>
                           <Button
@@ -621,11 +622,11 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
                       </Popover>
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor={`quantity-${item.id}`}>Quantity *</Label>
+                      <Label htmlFor={`quantity-${item.id}`}>Quantity</Label>
                       <Input id={`quantity-${item.id}`} type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} placeholder="e.g., 100" min="1" required className="bg-background" />
                     </div>
                     <div className="space-y-1">
-                      <Label htmlFor={`lamination-${item.id}`}>Lamination *</Label>
+                      <Label htmlFor={`lamination-${item.id}`}>Lamination</Label>
                       <Select value={item.lamination} onValueChange={(value) => handleItemChange(item.id, 'lamination', value)} required disabled={isLoadingOptions || laminationOptions.length === 0}>
                         <SelectTrigger id={`lamination-${item.id}`} className="bg-background">
                           <SelectValue placeholder={isLoadingOptions ? "Loading..." : (laminationOptions.length === 0 ? "No laminations" : "Select lamination")} />
@@ -700,7 +701,6 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
                 <div className="space-y-1">
                   <Label htmlFor="advancePaymentMethod">
                     Payment Method
-                    <span className="text-destructive"> *</span>
                   </Label>
                    <Popover open={isPaymentMethodPopoverOpen} onOpenChange={setIsPaymentMethodPopoverOpen}>
                     <PopoverTrigger asChild>
@@ -752,7 +752,6 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
                     <div className="mt-2 space-y-1">
                       <Label htmlFor="customPaymentMethodText">
                         Specify Other Payment Method
-                        <span className="text-destructive"> *</span>
                       </Label>
                       <Input
                         id="customPaymentMethodText"
