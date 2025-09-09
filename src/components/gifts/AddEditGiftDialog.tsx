@@ -1,8 +1,7 @@
 
-
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -79,9 +78,19 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
     }
   }, [orderId, allOrders]);
 
+  const canSubmit = useMemo(() => {
+    if (isSubmitting) return false;
+    if (!giftItemName) return false;
+    if (!recipientName.trim()) return false;
+    if (!recipientPhone.trim()) return false;
+    if (!recipientAddress.trim()) return false;
+    if (!dateGiven) return false;
+    return true;
+  }, [isSubmitting, giftItemName, recipientName, recipientPhone, recipientAddress, dateGiven]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!giftItemName || !recipientName || !recipientPhone || !recipientAddress || !dateGiven) {
+    if (!canSubmit) {
       toast({ title: "Validation Error", description: "Please fill all required fields.", variant: "destructive" });
       return;
     }
@@ -180,7 +189,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={!canSubmit}>
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : (isEditMode ? 'Save Changes' : 'Create Gift')}
             </Button>
           </DialogFooter>
