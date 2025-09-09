@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -284,70 +285,60 @@ export async function updateQuotationAction(
   }
 }
 
-export async function assignDrToQuotationAction(
+export async function updateQuotationStatusAction(
   quotationId: string,
-  designerRepresentativeId: string,
-  designerRepresentativeName: string,
-  actingUser: User,
-  readyForDesignStatusId: string
-): Promise<TrackingLink | { error: string }> {
-  try {
-    if (!actingUser || !actingUser.id || !actingUser.name) {
-      return { error: "Acting user information is missing." };
-    }
-     if (readyForDesignStatusId !== 'ready-for-design') {
-      return { error: "Invalid target status ID for DR assignment. Configuration error." };
-    }
+  newStatus: string,
+  currentUser: User
+): Promise<{ success: boolean; error?: string; quotation?: TrackingLink }> {
+  if (!currentUser || !currentUser.id || !currentUser.name) {
+    return { success: false, error: "Current user information is missing." };
+  }
 
+  try {
     const currentQuotation = await getQuotationById(quotationId);
     if (!currentQuotation) {
-      return { error: `Quotation ${quotationId} not found.` };
+      return { success: false, error: `Quotation ${quotationId} not found.` };
     }
     
-    const designerRepUser = await getUserFromDb(designerRepresentativeId);
-    if (!designerRepUser) {
-        return { error: `Designer Representative with ID ${designerRepresentativeId} not found.` };
+    if (currentQuotation.currentStatus === newStatus) {
+      return { success: true, quotation: currentQuotation }; // No change needed
     }
-    const freshDrName = designerRepUser.name;
 
     const logEntry: OrderLogEntry = {
       id: uuidv4(),
       timestamp: new Date().toISOString(),
-      status: readyForDesignStatusId,
-      changedByUserId: actingUser.id,
-      changedByUserName: actingUser.name,
-      notes: `Assigned to Designer: ${freshDrName} by ${actingUser.name}.`,
+      status: newStatus,
+      changedByUserId: currentUser.id,
+      changedByUserName: currentUser.name,
+      notes: `Status changed to ${newStatus} by ${currentUser.name}.`,
     };
 
     const updatedQuotationData: Partial<TrackingLink> = {
-      designerRepresentativeId,
-      designerRepresentativeName: freshDrName,
-      currentStatus: readyForDesignStatusId,
-      statusHistory: Array.isArray(currentQuotation.statusHistory)
-        ? [...currentQuotation.statusHistory, logEntry]
-        : [logEntry],
+      currentStatus: newStatus,
+      statusHistory: [...(currentQuotation.statusHistory || []), logEntry],
       updatedAt: new Date().toISOString(),
-      updatedByUserId: actingUser.id,
-      updatedByUserName: actingUser.name,
+      updatedByUserId: currentUser.id,
+      updatedByUserName: currentUser.name,
     };
 
     const success = await updateQuotationService(quotationId, updatedQuotationData);
     if (!success) {
-      return { error: "Failed to update quotation with DR assignment." };
+      return { success: false, error: "Failed to update quotation with new status." };
     }
-    
+
     revalidatePath("/(app)/quotation");
+    revalidatePath(`/track/${quotationId}`);
 
     const updatedQuotation = await getQuotationById(quotationId);
     if (!updatedQuotation) {
-      return { error: "Failed to retrieve updated quotation after DR assignment." };
+      return { success: false, error: "Failed to retrieve updated quotation after status change." };
     }
-    return updatedQuotation;
+    return { success: true, quotation: updatedQuotation };
 
   } catch (error: any) {
-    console.error("Unexpected error in assignDrToQuotationAction:", error);
-    const errorMessage = error instanceof Error ? error.message : "An unexpected server error occurred during DR assignment.";
-    return { error: errorMessage };
+    console.error("Unexpected error in updateQuotationStatusAction:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unexpected server error occurred.";
+    return { success: false, error: errorMessage };
   }
 }
 

@@ -7,17 +7,17 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, Package as PackageIcon, Settings2, Layers, RefreshCw, Repeat, FileText } from "lucide-react";
+import { PlusCircle, Search, Eye, Users2, Loader2, Trash2, Edit3, MoreVertical, Package as PackageIcon, Settings2, Layers, RefreshCw, Repeat, FileText, CheckCircle, Ban, Hourglass } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import Link from "next/link";
 import type { TrackingLink, User, CustomStatus, GlobalSettings } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { getContrastTextColor, getStatuses } from '@/lib/status-service';
+import { getContrastTextColor } from '@/lib/status-service';
 import { getQuotations } from '@/lib/quotation-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { Skeleton } from '@/components/ui/skeleton';
-import { deleteQuotationAction } from './actions';
+import { deleteQuotationAction, updateQuotationStatusAction } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -35,6 +35,10 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSubContent,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from 'date-fns';
@@ -98,7 +102,12 @@ export default function QuotationsPage() {
     try {
       const [fetchedQuotations, fetchedStatuses, fetchedSettings] = await Promise.all([
         getQuotations(),
-        getStatuses(),
+        // Mocking statuses for quotation page
+        Promise.resolve([
+          { id: 'Pending', name: 'Pending', color: '#8B5CF6', xid: 'pending' },
+          { id: 'Approved', name: 'Approved', color: '#10B981', xid: 'approved' },
+          { id: 'Canceled', name: 'Canceled', color: '#EF4444', xid: 'canceled' },
+        ]),
         getGlobalSettings()
       ]);
       setQuotations(fetchedQuotations);
@@ -253,6 +262,17 @@ export default function QuotationsPage() {
     setIsEditQuotationDialogOpen(false);
     setQuotationToEdit(null);
   }, [toast]);
+  
+  const handleChangeStatus = async (quotation: TrackingLink, newStatus: string) => {
+    if (!currentUser) return;
+    const result = await updateQuotationStatusAction(quotation.id, newStatus, currentUser);
+    if (result.success && result.quotation) {
+        toast({ title: "Status Updated", description: `Quotation status changed to ${newStatus}.` });
+        setQuotations(prev => prev.map(q => q.id === result.quotation?.id ? result.quotation : q));
+    } else {
+        toast({ title: "Update Failed", description: result.error, variant: "destructive" });
+    }
+  };
 
   const renderPagination = () => {
     const pageNumbers = [];
@@ -422,15 +442,21 @@ export default function QuotationsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              {canEditQuotation && (
-                                <DropdownMenuItem
-                                  onSelect={() => handleOpenEditQuotationDialog(quotation)}
-                                  disabled={!currentUser || !currentUser.role} 
-                                  className="cursor-pointer"
-                                >
+                                <DropdownMenuItem onSelect={() => handleOpenEditQuotationDialog(quotation)} className="cursor-pointer">
                                   <Edit3 className="mr-2 h-4 w-4" /> Edit Quotation
                                 </DropdownMenuItem>
-                              )}
+                               <DropdownMenuSub>
+                                <DropdownMenuSubTrigger className="cursor-pointer">
+                                  <Hourglass className="mr-2 h-4 w-4" /> Change Status
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuPortal>
+                                  <DropdownMenuSubContent>
+                                    <DropdownMenuItem onSelect={() => handleChangeStatus(quotation, 'Pending')} className="cursor-pointer text-purple-600 focus:bg-purple-100 focus:text-purple-700">Pending</DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => handleChangeStatus(quotation, 'Approved')} className="cursor-pointer text-green-600 focus:bg-green-100 focus:text-green-700">Approved</DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => handleChangeStatus(quotation, 'Canceled')} className="cursor-pointer text-red-600 focus:bg-red-100 focus:text-red-700">Canceled</DropdownMenuItem>
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuPortal>
+                              </DropdownMenuSub>
                               <DropdownMenuItem asChild className="cursor-pointer">
                                 <Link href={`/track/${quotation.id}`}>
                                   <Eye className="mr-2 h-4 w-4" /> View Details
