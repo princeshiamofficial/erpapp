@@ -40,10 +40,18 @@ export const addGift = async (giftData: Omit<Gift, 'id' | 'giftIdDisplay' | 'cre
     await ensureCollectionExistsV3(GIFTS_COLLECTION);
     
     const allGifts = await getGifts();
-    const datePrefix = `GIFT-${format(new Date(), 'yyyyMMdd')}`;
-    const sameDayGifts = allGifts.filter(g => g.giftIdDisplay.startsWith(datePrefix));
-    const newSequence = sameDayGifts.length + 1;
-    const giftIdDisplay = `${datePrefix}-${String(newSequence).padStart(3, '0')}`;
+    const giftPrefix = `GFT-`;
+    let maxId = 0;
+    allGifts.forEach(gift => {
+        if (gift.giftIdDisplay && gift.giftIdDisplay.startsWith(giftPrefix)) {
+            const numPart = parseInt(gift.giftIdDisplay.substring(giftPrefix.length), 10);
+            if (!isNaN(numPart) && numPart > maxId) {
+                maxId = numPart;
+            }
+        }
+    });
+    const newSequence = maxId + 1;
+    const giftIdDisplay = `${giftPrefix}${String(newSequence).padStart(4, '0')}`;
 
     const now = new Date().toISOString();
     const newGiftData: Omit<Gift, 'id'> = {
