@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -105,7 +104,7 @@ export default function GiftsPage() {
     setCurrentPage(1);
   }, [searchTerm]);
 
-  const handleGiftSaved = () => {
+  const handleGiftSaved = (savedGift: Gift) => {
     fetchData();
     setIsAddEditDialogOpen(false);
     setGiftToEdit(null);
