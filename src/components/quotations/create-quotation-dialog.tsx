@@ -445,7 +445,7 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
       onQuotationCreated();
       setIsOpen(false);
       resetForm();
-      window.open(`/track/${result.id}`, '_blank');
+      window.open(`/quotation/${result.id}`, '_blank');
     }
   };
 
