@@ -239,7 +239,7 @@ export const deleteStatus = async (id: string): Promise<boolean> => {
 
 export const getContrastTextColor = (hexColor: string): string => {
   try {
-    if (!hexColor || typeof hexColor !== 'string' || hexColor.length < 4) return '#000000';
+    if (!hexColor || typeof hexColor !== 'string' || hexColor.length < 4) return '#FFFFFF'; // Default to white for safety
     
     let rStr = '0', gStr = '0', bStr = '0';
     if (hexColor.length === 4) { 
@@ -251,19 +251,20 @@ export const getContrastTextColor = (hexColor: string): string => {
       gStr = hexColor.slice(3, 5);
       bStr = hexColor.slice(5, 7);
     } else {
-        return '#000000'; 
+        return '#FFFFFF'; // Default for invalid format
     }
     
     const r = parseInt(rStr, 16);
     const g = parseInt(gStr, 16);
     const b = parseInt(bStr, 16);
 
-    if (isNaN(r) || isNaN(g) || isNaN(b)) return '#000000';
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return '#FFFFFF'; // Default for parsing error
     
     const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-    return yiq >= 128 ? '#000000' : '#FFFFFF';
+    // Lowered threshold to favor white text on more colors
+    return yiq >= 150 ? '#000000' : '#FFFFFF'; 
   } catch (e) {
     console.error("Error parsing hexColor for contrast:", hexColor, e);
-    return '#000000';
+    return '#FFFFFF'; // Default to white on any error
   }
 };
