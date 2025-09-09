@@ -40,7 +40,7 @@ interface TeamPerformanceGraphProps {
   monthlyTargetData: DailyTargetData[];
   selectedDateRange: DateRange | undefined;
   userMap: Map<string, UserType>;
-  onDateRangeChange: (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => void;
+  onDateRangeChange: (range: DateRange | undefined) => void;
 }
 
 const getInitials = (name: string | undefined): string => {
@@ -52,7 +52,7 @@ const getInitials = (name: string | undefined): string => {
 
 
 export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, userMap, onDateRangeChange }: TeamPerformanceGraphProps) {
-  const [chartType, setChartType] = useState<'bar' | 'line' | 'area'>('line');
+  const [chartType, setChartType] = useState<'line'>('line');
 
   const handleDateChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
     onDateRangeChange(range);
@@ -74,31 +74,6 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
             <Line type="monotone" dataKey="totalTarget" name="Target" stroke="hsl(var(--chart-4))" strokeWidth={2} strokeDasharray="5 5" dot={{r:4}} activeDot={{r:6}}/>
           </RechartsLineChart>
         );
-      case 'area':
-        return (
-          <RechartsAreaChart data={monthlyTargetData}>
-             <defs>
-                <linearGradient id="colorDoneTeam" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0}/>
-                </linearGradient>
-                <linearGradient id="colorTargetTeam" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--chart-4))" stopOpacity={0.5}/>
-                    <stop offset="95%" stopColor="hsl(var(--chart-4))" stopOpacity={0}/>
-                </linearGradient>
-            </defs>
-            <Tooltip
-              cursor={{ fill: 'hsl(var(--muted))' }}
-              content={({ active, payload, label }) => <DoneTargetTooltipContent active={active} payload={payload} label={label} userMap={userMap} />}
-            />
-            <Legend />
-            <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
-            <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-            <Area type="monotone" dataKey="totalDone" name="Tasks Done" stroke="hsl(var(--chart-2))" fill="url(#colorDoneTeam)" />
-            <Area type="monotone" dataKey="totalTarget" name="Target" stroke="hsl(var(--chart-4))" fill="url(#colorTargetTeam)" />
-          </RechartsAreaChart>
-        );
-      case 'bar':
       default:
         return (
           <RechartsBarChart data={monthlyTargetData}>

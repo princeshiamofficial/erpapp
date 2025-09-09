@@ -247,15 +247,16 @@ function DashboardContent() {
   
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(() => {
     if (typeof window === 'undefined') {
-        return undefined;
+      return undefined;
     }
+    const now = new Date();
     return {
-        from: subDays(new Date(), 29),
-        to: new Date(),
+        from: startOfMonth(now),
+        to: endOfMonth(now),
     };
   });
-  const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Last 30 Days");
-  const [selectedPredefinedValue, setSelectedPredefinedValue] = useState<PredefinedRange | "custom" | null>("last30Days");
+  const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("This Month");
+  const [selectedPredefinedValue, setSelectedPredefinedValue] = useState<PredefinedRange | "custom" | null>("thisMonth");
   const [chartGranularity, setChartGranularity] = useState<'daily' | 'hourly'>('daily');
   const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
   
@@ -602,9 +603,12 @@ function DashboardContent() {
     };
   }, [filteredOrders, allOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId]);
   
-  const [teamPerformanceDateRange, setTeamPerformanceDateRange] = useState<DateRange | undefined>({
-      from: startOfYear(new Date()),
-      to: new Date(),
+  const [teamPerformanceDateRange, setTeamPerformanceDateRange] = useState<DateRange | undefined>(() => {
+    const now = new Date();
+    return {
+      from: startOfMonth(now),
+      to: endOfMonth(now),
+    };
   });
   
   const teamPerformanceData = useMemo(() => {
@@ -617,7 +621,7 @@ function DashboardContent() {
     
     let currentDate = startDate;
     while (currentDate <= endDate) {
-      dateMap.set(format(currentDate, 'yyyy-MM-dd'), {
+      dateMap.set(format(currentDate, 'd MMM'), {
         totalDone: 0,
         totalTarget: 0,
         userData: {},
@@ -628,14 +632,15 @@ function DashboardContent() {
     const dailyTargets: Record<string, number> = {};
     allUsers.forEach(user => {
       const monthlyTarget = user.monthlyOrderTarget || globalSettings?.globalMonthlyOrderTarget || 0;
-      dailyTargets[user.id] = monthlyTarget / 30; // Simplified daily target
+      const daysInMonth = getDaysInMonth(new Date(selectedYear, getMonth(startDate)));
+      dailyTargets[user.id] = monthlyTarget / (daysInMonth > 0 ? daysInMonth : 30);
     });
 
     allOrders.forEach(order => {
       try {
         const orderDate = parseISO(order.createdAt);
         if (isWithinInterval(orderDate, { start: startDate, end: endDate }) && order.crmUserId) {
-          const dateKey = format(orderDate, 'yyyy-MM-dd');
+          const dateKey = format(orderDate, 'd MMM');
           const dayData = dateMap.get(dateKey);
           if (dayData) {
             dayData.totalDone += 1;
@@ -653,7 +658,7 @@ function DashboardContent() {
     });
 
     return Array.from(dateMap.entries()).map(([date, data]) => ({
-      name: format(parseISO(date), 'd MMM'),
+      name: date,
       ...data,
     }));
   }, [allOrders, allUsers, teamPerformanceDateRange, globalSettings]);
@@ -674,7 +679,6 @@ function DashboardContent() {
   };
   
   const handleTeamPerformanceDateRangeChange = (range: DateRange | undefined) => {
-    // This function is now a placeholder as the main date range picker controls this graph too
     setTeamPerformanceDateRange(range);
   };
 
@@ -1057,7 +1061,7 @@ function DashboardContent() {
         </>
       )}
       
-      <div className={cn("mt-6", isDesignerRepOrLr && "grid grid-cols-1 lg:grid-cols-2 gap-6")}>
+      <div className={cn("grid grid-cols-1 gap-6", isDesignerRepOrLr ? "lg:grid-cols-2" : "")}>
         <TeamPerformanceGraph
           monthlyTargetData={teamPerformanceData}
           onDateRangeChange={handleTeamPerformanceDateRangeChange}
@@ -1221,6 +1225,7 @@ function DashboardContent() {
     
 
     
+
 
 
 
