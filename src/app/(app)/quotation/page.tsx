@@ -48,7 +48,6 @@ import {
 } from "@/components/ui/pagination";
 
 const CreateQuotationDialog = dynamic(() => import('@/components/quotations/create-quotation-dialog').then(mod => mod.CreateQuotationDialog));
-const AssignDrToQuotationDialog = dynamic(() => import('@/components/quotations/assign-dr-to-quotation-dialog').then(mod => mod.AssignDrToQuotationDialog));
 const EditQuotationDialog = dynamic(() => import('@/components/quotations/edit-quotation-dialog').then(mod => mod.EditQuotationDialog));
 
 
@@ -73,10 +72,6 @@ export default function QuotationsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
   const [globalAppSettings, setGlobalAppSettings] = useState<GlobalSettings | null>(null);
-
-  const [selectedQuotationForDrAssignment, setSelectedQuotationForDrAssignment] = useState<TrackingLink | null>(null);
-  const [isAssignDrDialogOpen, setIsAssignDrDialogOpen] = useState(false);
-  const [statusesForDialog, setStatusesForDialog] = useState<CustomStatus[] | null>(null);
 
   const [quotationToDelete, setQuotationToDelete] = useState<TrackingLink | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -210,8 +205,7 @@ export default function QuotationsPage() {
 
 
   const canCreateQuotation = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
-  const canAssignDr = currentUser?.role === 'CRM' || currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
-
+  
   const canEditQuotation = useMemo(() => {
     if (!currentUser || !globalAppSettings) return false;
     if (currentUser.role === 'SYSTEM_ADMIN') return true;
@@ -223,52 +217,6 @@ export default function QuotationsPage() {
     if (currentUser.role === 'SYSTEM_ADMIN') return true;
     return (globalAppSettings.rolesAllowedToDeleteOrders?.includes(currentUser.role) ?? false);
   }, [currentUser, globalAppSettings]);
-
-
-  const handleOpenAssignDrDialog = useCallback(async (quotationToAssign: TrackingLink) => {
-    setIsLoading(true); 
-    try {
-      console.log("QuotationsPage/handleOpenAssignDrDialog: Opening for quotation:", quotationToAssign.id);
-      const freshStatuses = await getStatuses();
-      if (!Array.isArray(freshStatuses)) {
-        console.error("QuotationsPage/handleOpenAssignDrDialog: getStatuses() did not return an array. Received:", freshStatuses);
-        toast({ title: "Error", description: "Failed to load status configuration for DR assignment. Please try again.", variant: "destructive" });
-        setIsLoading(false);
-        return;
-      }
-
-      const rfdCheck = freshStatuses.find(s => s.id === 'ready-for-design');
-      if (rfdCheck) {
-      } else {
-        console.error("QuotationsPage/handleOpenAssignDrDialog: CRITICAL - 'ready-for-design' status (ID: 'ready-for-design') NOT FOUND in freshStatuses from getStatuses().");
-        toast({
-          title: "Configuration Error",
-          description: "The required system status 'Ready for Design' (ID: ready-for-design) is missing. Please ensure it is configured in Admin > Status Management. DR assignment is not possible.",
-          variant: "destructive",
-          duration: 10000,
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      setAllStatuses(freshStatuses); 
-      setStatusesForDialog(freshStatuses);
-      setSelectedQuotationForDrAssignment(quotationToAssign);
-      setIsAssignDrDialogOpen(true);
-    } catch (error) {
-      console.error("QuotationsPage/handleOpenAssignDrDialog: Error preparing assign DR dialog:", error);
-      toast({ title: "Error", description: "Could not prepare DR assignment dialog. Check console.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
-
-  const handleDrAssignmentSuccess = useCallback(async (updatedQuotationFromAction: TrackingLink) => {
-    setQuotations(prevQuotations =>
-      prevQuotations.map(o => (o.id === updatedQuotationFromAction.id ? updatedQuotationFromAction : o))
-    );
-    toast({ title: "DR Assigned", description: `${updatedQuotationFromAction.designerRepresentativeName} assigned to quotation ${updatedQuotationFromAction.id}.` });
-  }, [toast]);
 
   const handleDeleteQuotation = async () => {
     if (!quotationToDelete || !canDeleteQuotation || !currentUser) return;
@@ -421,9 +369,7 @@ export default function QuotationsPage() {
                 <TableRow>
                   <TableHead className="pl-6">Quotation ID</TableHead>
                   <TableHead>Company</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead>CRM Contact</TableHead>
-                  <TableHead>Assigned DR</TableHead>
                   <TableHead>Date Created</TableHead>
                   <TableHead className="pr-6 text-right">Actions</TableHead>
                 </TableRow>
@@ -434,8 +380,6 @@ export default function QuotationsPage() {
                     <TableRow key={`skel-${i}`}>
                       <TableCell className="pl-6"><Skeleton className="h-5 w-20" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                      <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                       <TableCell className="pr-6 text-right space-x-2">
@@ -445,7 +389,6 @@ export default function QuotationsPage() {
                   ))
                 ) : paginatedQuotations.length > 0 ? (
                   paginatedQuotations.map((quotation) => {
-                    const statusInfo = quotationStatusDisplay[quotation.currentStatus] || { name: quotation.currentStatus, color: '#A1A1AA', textColor: '#FFFFFF' };
                     return (
                       <TableRow key={quotation.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="pl-6">
@@ -456,13 +399,7 @@ export default function QuotationsPage() {
                         <TableCell className="text-card-foreground">
                           <div>{quotation.companyName}</div>
                         </TableCell>
-                        <TableCell>
-                          <Badge style={{ backgroundColor: statusInfo.color, color: statusInfo.textColor }} className="border-transparent">
-                            {statusInfo.name}
-                          </Badge>
-                        </TableCell>
                         <TableCell className="text-card-foreground">{quotation.crmUserName}</TableCell>
-                        <TableCell className="text-card-foreground">{quotation.designerRepresentativeName || 'N/A'}</TableCell>
                         <TableCell className="text-muted-foreground">{isClient ? formatDate(quotation.createdAt) : <Skeleton className="h-4 w-20" />}</TableCell>
                         <TableCell className="pr-6 text-right space-x-2 whitespace-nowrap">
                           <DropdownMenu>
@@ -479,15 +416,6 @@ export default function QuotationsPage() {
                                   className="cursor-pointer"
                                 >
                                   <Edit3 className="mr-2 h-4 w-4" /> Edit Quotation
-                                </DropdownMenuItem>
-                              )}
-                              {canAssignDr && (
-                                <DropdownMenuItem
-                                  onSelect={() => handleOpenAssignDrDialog(quotation)}
-                                  className="cursor-pointer"
-                                >
-                                  <Users2 className="mr-2 h-4 w-4" />
-                                  {quotation.designerRepresentativeId ? "Re-assign DR" : "Assign DR"}
                                 </DropdownMenuItem>
                               )}
                               <DropdownMenuItem asChild className="cursor-pointer">
@@ -522,15 +450,13 @@ export default function QuotationsPage() {
                       <p className="text-lg text-muted-foreground font-medium">
                         {searchTerm ? "No quotations match your search." :
                           (currentUser?.role === 'CRM' ? "You have no quotations." :
-                            currentUser?.role === 'DESIGNER_REPRESENTATIVE' ? "No quotations assigned to you." :
-                              "No quotations found.")
+                            "No quotations found.")
                         }
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {searchTerm ? "Try a different search term." :
                           (canCreateQuotation ? "Start by creating a new one!" :
-                            currentUser?.role === 'DESIGNER_REPRESENTATIVE' ? "Check back later for assigned quotations." :
-                              "Check back later for updates.")}
+                            "Check back later for updates.")}
                       </p>
                       {canCreateQuotation && !searchTerm && (
                         <CreateQuotationDialog
@@ -584,23 +510,6 @@ export default function QuotationsPage() {
           )}
         </CardFooter>
       </Card>
-
-      {statusesForDialog && selectedQuotationForDrAssignment && currentUser && isAssignDrDialogOpen && (
-        <AssignDrToQuotationDialog
-          isOpen={isAssignDrDialogOpen}
-          onOpenChange={(open) => {
-            setIsAssignDrDialogOpen(open);
-            if (!open) {
-              setSelectedQuotationForDrAssignment(null);
-              setStatusesForDialog(null);
-            }
-          }}
-          quotation={selectedQuotationForDrAssignment}
-          currentUser={currentUser}
-          allStatuses={statusesForDialog}
-          onDrAssigned={handleDrAssignmentSuccess}
-        />
-      )}
 
       {isEditQuotationDialogOpen && quotationToEdit && currentUser && globalAppSettings && (
         <EditQuotationDialog
