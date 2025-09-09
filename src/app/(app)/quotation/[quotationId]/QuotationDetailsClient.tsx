@@ -4,9 +4,9 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Building, MapPin, Phone, UserCheck, FileText, StickyNote, Percent, ReceiptText, CheckCircle, Truck } from "lucide-react";
+import { Building, MapPin, Phone, UserCheck, FileText, StickyNote, Percent, ReceiptText, CheckCircle, Truck, User } from "lucide-react";
 import JsBarcode from 'jsbarcode';
-import type { CustomStatus, TrackingLink, User, AdvancePaymentRecord } from "@/types";
+import type { CustomStatus, TrackingLink, User as UserType, AdvancePaymentRecord } from "@/types";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -29,7 +29,7 @@ const formatDate = (dateString: string | undefined) => {
 interface QuotationDetailsClientProps {
   quotation: TrackingLink;
   allStatuses: CustomStatus[];
-  allUsers: User[];
+  allUsers: UserType[];
 }
 
 export function QuotationDetailsClient({ quotation: initialQuotation, allStatuses, allUsers }: QuotationDetailsClientProps) {
@@ -88,6 +88,14 @@ export function QuotationDetailsClient({ quotation: initialQuotation, allStatuse
   const amountDue = grandTotal - totalAdvancePaid;
 
   const showPaidBadge = grandTotal > 0 && amountDue <= 0.01;
+  
+  const { contactPerson, businessName } = useMemo(() => {
+    const parts = (quotation.companyName || '').split(' • ');
+    if (parts.length > 1) {
+      return { contactPerson: parts[0].trim(), businessName: parts.slice(1).join(' • ').trim() };
+    }
+    return { contactPerson: quotation.companyName, businessName: '' };
+  }, [quotation.companyName]);
 
 
   return (
@@ -110,7 +118,8 @@ export function QuotationDetailsClient({ quotation: initialQuotation, allStatuse
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 print:mb-4">
         <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
           <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4"/>Bill To:</h4>
-          <p className="text-lg font-semibold text-foreground">{quotation.companyName}</p>
+          <p className="text-lg font-semibold text-foreground flex items-center gap-2"><User className="h-5 w-5 text-muted-foreground" />{contactPerson}</p>
+          {businessName && <p className="text-md font-medium text-foreground/90 flex items-center gap-2"><Building className="h-4 w-4 text-muted-foreground"/>{businessName}</p>}
           <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground"/>{quotation.address}</p>
           <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground"/>{quotation.phoneNumber}</p>
         </div>
