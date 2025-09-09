@@ -40,7 +40,7 @@ interface TeamPerformanceGraphProps {
   monthlyTargetData: DailyTargetData[];
   selectedDateRange: DateRange | undefined;
   userMap: Map<string, UserType>;
-  onDateRangeChange: (range: DateRange | undefined) => void;
+  onDateRangeChange: (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => void;
 }
 
 const getInitials = (name: string | undefined): string => {
@@ -52,7 +52,7 @@ const getInitials = (name: string | undefined): string => {
 
 
 export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, userMap, onDateRangeChange }: TeamPerformanceGraphProps) {
-  const [chartType, setChartType] = useState<'bar' | 'line' | 'area'>('bar');
+  const [chartType, setChartType] = useState<'bar' | 'line' | 'area'>('line');
 
   const handleDateChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
     onDateRangeChange(range);
