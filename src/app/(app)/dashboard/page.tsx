@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { format, isWithinInterval, parseISO, subDays, addDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays, startOfYear } from "date-fns"; 
+import { format, isWithinInterval, parseISO, subDays, addDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays, startOfYear, endOfYear, startOfDay, endOfDay, getDaysInMonth } from "date-fns"; 
 import { 
   Hand, 
   ShoppingCart, 
@@ -916,8 +916,8 @@ function DashboardContent() {
                             if (isNaN(hour)) return value; 
                             if (hour === 0) return '12 AM';
                             if (hour === 12) return '12 PM';
-                            if (hour < 12) return `${hour} AM`;
-                            return `${hour - 12} PM`;
+                            if (hour < 12) return `${h} AM`;
+                            return `${h - 12} PM`;
                           }
                           try {
                             return format(parseISO(value), 'd MMM');
@@ -1222,6 +1222,7 @@ function DashboardContent() {
     
 
     
+
 
 
 
