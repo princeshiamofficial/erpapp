@@ -20,7 +20,7 @@ import {
     ChartTooltip,
     ChartTooltipContent,
   } from "@/components/ui/chart"
-import { getYear } from 'date-fns';
+import { getYear, format, parseISO } from 'date-fns';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 
@@ -130,11 +130,6 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
                   onDateRangeChange={handleDateChange}
                   className="w-full sm:w-auto"
                 />
-                <div className="flex items-center bg-muted p-1 rounded-lg">
-                    <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", chartType === 'bar' && "bg-background shadow-sm")} onClick={() => setChartType('bar')}><BarChart className="h-4 w-4"/></Button>
-                    <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", chartType === 'line' && "bg-background shadow-sm")} onClick={() => setChartType('line')}><LineChart className="h-4 w-4"/></Button>
-                    <Button variant="ghost" size="sm" className={cn("h-7 w-7 p-0", chartType === 'area' && "bg-background shadow-sm")} onClick={() => setChartType('area')}><AreaChart className="h-4 w-4"/></Button>
-                </div>
             </div>
         </div>
       </CardHeader>
@@ -175,4 +170,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap }: any) => {
     }
     return null;
 }
-
