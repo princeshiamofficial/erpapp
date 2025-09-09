@@ -354,3 +354,19 @@ export interface SowDataEntry {
     crmUserId: string;
     crmUserName: string;
 }
+
+export interface Gift {
+  id: string;
+  giftIdDisplay: string;
+  giftItemName: string;
+  recipientName: string;
+  recipientPhone: string;
+  recipientAddress: string;
+  dateGiven: string; // ISO String
+  givenByUserId: string;
+  givenByUserName: string;
+  notes?: string | null;
+  orderId?: string | null; // Optional link to an order
+  createdAt: string; // ISO string
+  updatedAt: string; // ISO string
+}
