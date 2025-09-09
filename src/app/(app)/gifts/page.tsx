@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { PlusCircle, Search, Edit3, Trash2, MoreVertical, Gift as GiftIcon, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { Gift, User, ServiceGiftItem } from '@/types';
+import type { Gift, User, ServiceGiftItem, TrackingLink } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getContrastTextColor } from '@/lib/status-service';
 import { getGifts as fetchGifts, deleteGift as deleteGiftAction } from './actions';
@@ -89,7 +89,7 @@ export default function GiftsPage() {
       gift.giftIdDisplay.toLowerCase().includes(lowerSearchTerm) ||
       gift.recipientName.toLowerCase().includes(lowerSearchTerm) ||
       gift.recipientPhone.toLowerCase().includes(lowerSearchTerm) ||
-      gift.giftItemName.toLowerCase().includes(lowerSearchTerm)
+      (Array.isArray(gift.giftItemNames) && gift.giftItemNames.some(name => name.toLowerCase().includes(lowerSearchTerm)))
     );
   }, [gifts, searchTerm, currentUser]);
   
@@ -175,7 +175,7 @@ export default function GiftsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="pl-6">Gift ID</TableHead>
-                    <TableHead>Gift Item</TableHead>
+                    <TableHead>Gift Item(s)</TableHead>
                     <TableHead>Recipient</TableHead>
                     <TableHead>Date Given</TableHead>
                     <TableHead>Given By</TableHead>
@@ -189,7 +189,9 @@ export default function GiftsPage() {
                     paginatedGifts.map((gift) => (
                       <TableRow key={gift.id} className="hover:bg-muted/50">
                         <TableCell className="pl-6 font-mono text-primary">{gift.giftIdDisplay}</TableCell>
-                        <TableCell className="font-medium">{gift.giftItemName}</TableCell>
+                        <TableCell className="font-medium">
+                          {(Array.isArray(gift.giftItemNames) ? gift.giftItemNames : [gift.giftItemName]).join(', ')}
+                        </TableCell>
                         <TableCell>
                           <div>{gift.recipientName}</div>
                           <div className="text-xs text-muted-foreground">{gift.recipientPhone}</div>

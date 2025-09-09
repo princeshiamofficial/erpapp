@@ -358,7 +358,8 @@ export interface SowDataEntry {
 export interface Gift {
   id: string;
   giftIdDisplay: string;
-  giftItemName: string;
+  giftItemName: string; // Kept for backwards compatibility if needed, but new data will use giftItemNames
+  giftItemNames: string[]; // New field for multiple items
   recipientName: string;
   recipientPhone: string;
   recipientAddress: string;

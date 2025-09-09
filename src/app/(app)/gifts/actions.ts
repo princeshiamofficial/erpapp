@@ -21,7 +21,7 @@ export async function getGifts(): Promise<Gift[]> {
 }
 
 export async function addGiftAction(
-  giftData: Omit<Gift, 'id' | 'giftIdDisplay' | 'givenByUserId' | 'givenByUserName' | 'createdAt' | 'updatedAt'>,
+  giftData: Omit<Gift, 'id' | 'giftIdDisplay' | 'givenByUserId' | 'givenByUserName' | 'createdAt' | 'updatedAt' | 'giftItemName'> & { giftItemNames: string[] },
   currentUser: User
 ): Promise<{ success: boolean; gift?: Gift; error?: string }> {
   try {
@@ -39,7 +39,7 @@ export async function addGiftAction(
 
 export async function updateGiftAction(
   giftId: string,
-  updates: Partial<Omit<Gift, 'id' | 'createdAt'>>,
+  updates: Partial<Omit<Gift, 'id' | 'createdAt' | 'giftItemName'>> & { giftItemNames: string[] },
   currentUser: User
 ): Promise<{ success: boolean; error?: string }> {
   try {

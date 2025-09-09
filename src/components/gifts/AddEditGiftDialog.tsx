@@ -10,12 +10,14 @@ import { Textarea } from "@/components/ui/textarea";
 import type { Gift, User, ServiceGiftItem, TrackingLink } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addGiftAction, updateGiftAction } from '@/app/(app)/gifts/actions';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, ChevronsUpDown, Check, Calendar as CalendarIcon } from 'lucide-react';
+import { Loader2, ChevronsUpDown, Check, Calendar as CalendarIcon, X } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Badge } from '@/components/ui/badge';
+
 
 interface AddEditGiftDialogProps {
   isOpen: boolean;
@@ -28,7 +30,7 @@ interface AddEditGiftDialogProps {
 }
 
 export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, currentUser, giftOptions, allOrders }: AddEditGiftDialogProps) {
-  const [giftItemName, setGiftItemName] = useState('');
+  const [selectedGiftItems, setSelectedGiftItems] = useState<string[]>([]);
   const [recipientName, setRecipientName] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
   const [recipientAddress, setRecipientAddress] = useState('');
@@ -36,13 +38,14 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
   const [dateGiven, setDateGiven] = useState<Date | undefined>(new Date());
   const [notes, setNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGiftPopoverOpen, setIsGiftPopoverOpen] = useState(false);
   const { toast } = useToast();
 
   const isEditMode = !!gift;
 
   const resetForm = useCallback(() => {
     if (gift && isEditMode) {
-      setGiftItemName(gift.giftItemName);
+      setSelectedGiftItems(Array.isArray(gift.giftItemNames) ? gift.giftItemNames : (gift.giftItemName ? [gift.giftItemName] : []));
       setRecipientName(gift.recipientName);
       setRecipientPhone(gift.recipientPhone);
       setRecipientAddress(gift.recipientAddress);
@@ -50,7 +53,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
       setDateGiven(gift.dateGiven ? new Date(gift.dateGiven) : new Date());
       setNotes(gift.notes || '');
     } else {
-      setGiftItemName('');
+      setSelectedGiftItems([]);
       setRecipientName('');
       setRecipientPhone('');
       setRecipientAddress('');
@@ -80,13 +83,25 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
   const canSubmit = useMemo(() => {
     if (isSubmitting) return false;
-    if (!giftItemName) return false;
+    if (selectedGiftItems.length === 0) return false;
     if (!recipientName.trim()) return false;
     if (!recipientPhone.trim()) return false;
     if (!recipientAddress.trim()) return false;
     if (!dateGiven) return false;
     return true;
-  }, [isSubmitting, giftItemName, recipientName, recipientPhone, recipientAddress, dateGiven]);
+  }, [isSubmitting, selectedGiftItems, recipientName, recipientPhone, recipientAddress, dateGiven]);
+
+  const handleGiftSelect = (itemName: string) => {
+    setSelectedGiftItems(prev => {
+        const newSelection = new Set(prev);
+        if (newSelection.has(itemName)) {
+            newSelection.delete(itemName);
+        } else {
+            newSelection.add(itemName);
+        }
+        return Array.from(newSelection);
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,8 +112,9 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
     
     setIsSubmitting(true);
 
-    const giftData: Omit<Gift, 'id' | 'giftIdDisplay' | 'givenByUserId' | 'givenByUserName' | 'createdAt' | 'updatedAt'> = {
-      giftItemName, recipientName, recipientPhone, recipientAddress, orderId,
+    const giftData: Omit<Gift, 'id' | 'giftIdDisplay' | 'givenByUserId' | 'givenByUserName' | 'createdAt' | 'updatedAt' | 'giftItemName'> & { giftItemNames: string[] } = {
+      giftItemNames: selectedGiftItems,
+      recipientName, recipientPhone, recipientAddress, orderId,
       dateGiven: dateGiven.toISOString(),
       notes: notes.trim() || null,
     };
@@ -149,13 +165,43 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label htmlFor="giftItemName">Gift Item</Label>
-              <Select value={giftItemName} onValueChange={setGiftItemName} required>
-                <SelectTrigger id="giftItemName"><SelectValue placeholder="Select a gift..." /></SelectTrigger>
-                <SelectContent>
-                  {giftOptions.map(g => <SelectItem key={g.id} value={g.name}>{g.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+                <Label>Gift Items</Label>
+                <Popover open={isGiftPopoverOpen} onOpenChange={setIsGiftPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={isGiftPopoverOpen} className="w-full justify-between">
+                      <span className="truncate">{selectedGiftItems.length > 0 ? `${selectedGiftItems.length} item(s) selected` : "Select gifts..."}</span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search gift..." />
+                      <CommandList>
+                        <CommandEmpty>No gift option found.</CommandEmpty>
+                        <CommandGroup>
+                          {giftOptions.map((option) => (
+                            <CommandItem key={option.id} value={option.name} onSelect={() => handleGiftSelect(option.name)} className="cursor-pointer">
+                              <Check className={cn("mr-2 h-4 w-4", selectedGiftItems.includes(option.name) ? "opacity-100" : "opacity-0")}/>
+                              {option.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                 {selectedGiftItems.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-2">
+                        {selectedGiftItems.map(item => (
+                            <Badge key={item} variant="secondary" className="gap-1.5 py-1">
+                                {item}
+                                <button type="button" onClick={() => handleGiftSelect(item)} className="rounded-full hover:bg-destructive/20 p-0.5 transition-colors">
+                                    <X className="h-3 w-3 text-destructive" />
+                                </button>
+                            </Badge>
+                        ))}
+                    </div>
+                )}
             </div>
             <div className="space-y-1">
               <Label htmlFor="dateGiven">Date Given</Label>

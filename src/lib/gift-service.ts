@@ -35,7 +35,7 @@ export const getGiftById = async (id: string): Promise<Gift | null> => {
     }
 };
 
-export const addGift = async (giftData: Omit<Gift, 'id' | 'giftIdDisplay' | 'createdAt' | 'updatedAt'>, currentUser: User): Promise<Gift | null> => {
+export const addGift = async (giftData: Omit<Gift, 'id' | 'giftIdDisplay' | 'createdAt' | 'updatedAt' | 'giftItemName'>, currentUser: User): Promise<Gift | null> => {
   try {
     await ensureCollectionExistsV3(GIFTS_COLLECTION);
     
@@ -55,12 +55,13 @@ export const addGift = async (giftData: Omit<Gift, 'id' | 'giftIdDisplay' | 'cre
 
     const now = new Date().toISOString();
     const newGiftData: Omit<Gift, 'id'> = {
-        ...giftData,
+        ...(giftData as Omit<Gift, 'id' | 'giftIdDisplay' | 'createdAt' | 'updatedAt'>), // Type assertion to satisfy compiler
         giftIdDisplay,
         givenByUserId: currentUser.id,
         givenByUserName: currentUser.name,
         createdAt: now,
         updatedAt: now,
+        giftItemName: giftData.giftItemNames.join(', '), // Keep a string version for compatibility
     };
     
     const newDoc = await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents`, {
@@ -86,9 +87,15 @@ export const updateGift = async (id: string, updates: Partial<Omit<Gift, 'id' | 
         throw new Error(`Gift with ID ${id} not found.`);
     }
 
+    const finalUpdates = { ...updates };
+    // If giftItemNames is updated, also update the compatibility field giftItemName
+    if (updates.giftItemNames) {
+        finalUpdates.giftItemName = updates.giftItemNames.join(', ');
+    }
+
     const finalData = {
         ...existingGift,
-        ...updates,
+        ...finalUpdates,
         updatedAt: new Date().toISOString(),
         id: undefined, // Don't try to write the id field back into the data object
     };
