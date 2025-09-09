@@ -1,6 +1,6 @@
 
 
-import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem } from '@/types';
+import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
@@ -8,6 +8,7 @@ import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 const MODELS_COLLECTION = 'serviceModels';
 const LAMINATIONS_COLLECTION = 'serviceLaminations';
 const PAYMENT_METHODS_COLLECTION = 'servicePaymentMethods';
+const GIFTS_COLLECTION = 'serviceGifts';
 
 
 // --- Model Functions ---
@@ -327,6 +328,100 @@ export const deletePaymentMethod = async (id: string): Promise<boolean> => {
     return true;
   } catch (error) {
     console.error("Error deleting payment method via API v3:", error);
+    if (error instanceof Error) throw error;
+    return false;
+  }
+};
+
+// --- Gift Functions ---
+
+const seedDefaultGifts = async (): Promise<ServiceGiftItem[]> => {
+  await ensureCollectionExistsV3(GIFTS_COLLECTION);
+  const createdItems: ServiceGiftItem[] = [];
+  const defaultGiftsData: string[] = ["Pen", "Mug", "Keychain"];
+
+  for (const name of defaultGiftsData) {
+    const id = uuidv4();
+    const newItem: Omit<ServiceGiftItem, 'id'> = { name };
+    try {
+      const newDoc = await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents`, {
+        method: 'POST',
+        body: JSON.stringify({ id, data: newItem }),
+      });
+      createdItems.push({ id, ...newDoc.data });
+    } catch (error) {
+      console.error(`Error seeding gift "${name}" via API v3:`, error);
+    }
+  }
+  console.log('Default gifts seeded via API v3.');
+  return createdItems;
+};
+
+export const getGifts = async (): Promise<ServiceGiftItem[]> => {
+  try {
+    await ensureCollectionExistsV3(GIFTS_COLLECTION);
+    const response = await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents?limit=9999&orderBy=name&direction=asc`);
+    if (response && Array.isArray(response.documents)) {
+      if (response.documents.length === 0) {
+        console.log("No gifts found, seeding defaults via API v3.");
+        return await seedDefaultGifts();
+      }
+      return response.documents.map((doc: { id: string; data: any }) => ({
+        id: doc.id,
+        ...doc.data,
+      }));
+    }
+    return [];
+  } catch (error) {
+    console.error("Error fetching gifts via API v3:", error);
+    return [];
+  }
+};
+
+export const addGift = async (name: string): Promise<ServiceGiftItem | null> => {
+  if (!name.trim()) {
+    throw new Error("Gift name cannot be empty.");
+  }
+  try {
+    const newItemData: Omit<ServiceGiftItem, 'id'> = { name: name.trim() };
+    const newDoc = await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents`, {
+      method: 'POST',
+      body: JSON.stringify({ data: newItemData }),
+    });
+    return { id: newDoc.id, ...newDoc.data };
+  } catch (error) {
+    console.error("Error adding gift via API v3:", error);
+    if (error instanceof Error) throw error;
+    return null;
+  }
+};
+
+export const updateGift = async (id: string, name: string): Promise<boolean> => {
+  if (!name.trim()) {
+    throw new Error("Gift name cannot be empty.");
+  }
+  try {
+    const existingDoc = await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents/${id}`);
+    await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ data: { ...existingDoc.data, name: name.trim() } }),
+    });
+    return true;
+  } catch (error) {
+    console.error("Error updating gift via API v3:", error);
+    if (error instanceof Error) throw error;
+    return false;
+  }
+};
+
+export const deleteGift = async (id: string): Promise<boolean> => {
+  try {
+    await fetchFromApiV3(`collections/${GIFTS_COLLECTION}/documents/${id}`, {
+      method: 'DELETE',
+    });
+    return true;
+  } catch (error) {
+    console.error("Error deleting gift via API v3:", error);
     if (error instanceof Error) throw error;
     return false;
   }

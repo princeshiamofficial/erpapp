@@ -12,8 +12,11 @@ import {
   addPaymentMethod,
   updatePaymentMethod,
   deletePaymentMethod,
+  addGift,
+  updateGift,
+  deleteGift,
 } from "@/lib/service-options-service";
-import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem } from "@/types";
+import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem } from "@/types";
 
 const SERVICE_MANAGEMENT_PATH = "/(app)/admin/service-management";
 const MODEL_MANAGEMENT_PATH = "/(app)/admin/model-management";
@@ -156,6 +159,52 @@ export async function deletePaymentMethodAction(id: string): Promise<{ success: 
     return { success: false, error: "Failed to delete payment method from database. It might be in use by existing orders." };
   } catch (error) {
     console.error("Error in deletePaymentMethodAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+// Gift Actions
+export async function addGiftAction(name: string): Promise<{ success: boolean; gift?: ServiceGiftItem; error?: string }> {
+  try {
+    const newGift = await addGift(name);
+    if (newGift) {
+      revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
+      return { success: true, gift: newGift };
+    }
+    return { success: false, error: "Failed to add gift to database." };
+  } catch (error) {
+    console.error("Error in addGiftAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updateGiftAction(id: string, name: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await updateGift(id, name);
+    if (success) {
+      revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update gift in database." };
+  } catch (error) {
+    console.error("Error in updateGiftAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function deleteGiftAction(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await deleteGift(id);
+    if (success) {
+      revalidatePath(SERVICE_MANAGEMENT_PATH);
+      revalidatePath(CREATE_ORDER_DIALOG_REVALIDATION_TARGET);
+      return { success: true };
+    }
+    return { success: false, error: "Failed to delete gift from database. It might be in use by existing orders." };
+  } catch (error) {
+    console.error("Error in deleteGiftAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

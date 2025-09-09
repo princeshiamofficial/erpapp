@@ -86,6 +86,8 @@ export interface TrackingLink {
   crmUserName: string;
   designerRepresentativeId?: string | null;
   designerRepresentativeName?: string | null;
+  assigneeAvatarUrl?: string | null; 
+  designerRepresentativeAvatarUrl?: string | null;
   createdAt: string; // ISO string
   updatedAt?: string; // ISO string for last edit of order details
   updatedByUserId?: string;
@@ -136,6 +138,12 @@ export interface ServicePaymentMethodItem {
   id: string;
   name: string;
 }
+
+export interface ServiceGiftItem {
+    id: string;
+    name: string;
+}
+
 
 export type ExpenseLoggingMode = "all" | "none" | "specificRoles" | "specificUsers";
 
