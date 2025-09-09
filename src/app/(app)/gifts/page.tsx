@@ -177,8 +177,8 @@ export default function GiftsPage() {
                     <TableHead className="pl-6">Gift ID</TableHead>
                     <TableHead>Gift Item(s)</TableHead>
                     <TableHead>Recipient</TableHead>
+                    <TableHead>Phone Number</TableHead>
                     <TableHead>Date Given</TableHead>
-                    <TableHead>Given By</TableHead>
                     <TableHead className="pr-6 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -194,10 +194,9 @@ export default function GiftsPage() {
                         </TableCell>
                         <TableCell>
                           <div>{gift.recipientName}</div>
-                          <div className="text-xs text-muted-foreground">{gift.recipientPhone}</div>
                         </TableCell>
+                        <TableCell>{gift.recipientPhone}</TableCell>
                         <TableCell>{formatDate(gift.dateGiven)}</TableCell>
-                        <TableCell>{gift.givenByUserName}</TableCell>
                         <TableCell className="pr-6 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
