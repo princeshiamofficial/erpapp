@@ -162,58 +162,59 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
             <Label htmlFor="recipientAddress">Recipient Address</Label>
             <Textarea id="recipientAddress" value={recipientAddress} onChange={e => setRecipientAddress(e.target.value)} required disabled={!!orderId} />
           </div>
-
-          <div className="space-y-1">
-            <Label>Gift Items</Label>
-             {selectedGiftItems.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 p-2 border rounded-md bg-muted/50 min-h-[40px]">
-                    {selectedGiftItems.map(item => (
-                        <Badge key={item} variant="secondary" className="gap-1.5 py-1">
-                            {item}
-                            <button type="button" onClick={() => handleGiftSelect(item)} className="rounded-full hover:bg-destructive/20 p-0.5 transition-colors">
-                                <X className="h-3 w-3 text-destructive" />
-                            </button>
-                        </Badge>
-                    ))}
-                </div>
-            )}
-            <Popover open={isGiftPopoverOpen} onOpenChange={setIsGiftPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={isGiftPopoverOpen} className="w-full justify-between">
-                  <span className="truncate">{selectedGiftItems.length > 0 ? "Add/Remove items..." : "Select gifts..."}</span>
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                <Command>
-                  <CommandInput placeholder="Search gift..." />
-                  <CommandList>
-                    <CommandEmpty>No gift option found.</CommandEmpty>
-                    <CommandGroup>
-                      {giftOptions.map((option) => (
-                        <CommandItem key={option.id} value={option.name} onSelect={() => handleGiftSelect(option.name)} className="cursor-pointer">
-                          <Check className={cn("mr-2 h-4 w-4", selectedGiftItems.includes(option.name) ? "opacity-100" : "opacity-0")}/>
-                          {option.name}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
           
-          <div className="space-y-1">
-            <Label htmlFor="dateGiven">Date Given</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateGiven && "text-muted-foreground")}>
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateGiven ? format(dateGiven, "PPP") : <span>Pick a date</span>}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={dateGiven} onSelect={setDateGiven} initialFocus /></PopoverContent>
-            </Popover>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+            <div className="space-y-1">
+                <Label>Gift Items</Label>
+                {selectedGiftItems.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 p-2 border rounded-md bg-muted/50 min-h-[40px]">
+                        {selectedGiftItems.map(item => (
+                            <Badge key={item} variant="secondary" className="gap-1.5 py-1">
+                                {item}
+                                <button type="button" onClick={() => handleGiftSelect(item)} className="rounded-full hover:bg-destructive/20 p-0.5 transition-colors">
+                                    <X className="h-3 w-3 text-destructive" />
+                                </button>
+                            </Badge>
+                        ))}
+                    </div>
+                )}
+                <Popover open={isGiftPopoverOpen} onOpenChange={setIsGiftPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={isGiftPopoverOpen} className="w-full justify-between">
+                      <span className="truncate">{selectedGiftItems.length > 0 ? "Add/Remove items..." : "Select gifts..."}</span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search gift..." />
+                      <CommandList>
+                        <CommandEmpty>No gift option found.</CommandEmpty>
+                        <CommandGroup>
+                          {giftOptions.map((option) => (
+                            <CommandItem key={option.id} value={option.name} onSelect={() => handleGiftSelect(option.name)} className="cursor-pointer">
+                              <Check className={cn("mr-2 h-4 w-4", selectedGiftItems.includes(option.name) ? "opacity-100" : "opacity-0")}/>
+                              {option.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+            </div>
+            <div className="space-y-1">
+                <Label htmlFor="dateGiven">Date Given</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateGiven && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateGiven ? format(dateGiven, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={dateGiven} onSelect={setDateGiven} initialFocus /></PopoverContent>
+                </Popover>
+            </div>
           </div>
           
           <div className="space-y-1">
