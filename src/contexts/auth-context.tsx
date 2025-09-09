@@ -77,8 +77,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (storedUserJson) {
           console.log("AuthContext: Found user in localStorage.");
           try {
-            const storedUser = JSON.parse(storedUserJson) as User;
-            if (storedUser && storedUser.id) {
+             // Robust parsing and validation
+            const storedUser = JSON.parse(storedUserJson);
+            if (storedUser && typeof storedUser === 'object' && storedUser.id && typeof storedUser.id === 'string') {
               console.log(`AuthContext: Validating stored user ID: ${storedUser.id} against Firestore.`);
               const firestoreUser = await getUserById(storedUser.id);
               if (firestoreUser) {
@@ -92,7 +93,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 localStorage.removeItem('colorhut-user');
               }
             } else {
-              console.log("AuthContext: Invalid user object in localStorage. Clearing.");
+              console.log("AuthContext: Invalid or corrupted user object in localStorage. Clearing.");
               localStorage.removeItem('colorhut-user');
             }
           } catch (error) {
