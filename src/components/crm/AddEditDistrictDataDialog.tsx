@@ -209,7 +209,7 @@ export function AddEditDistrictDataDialog({ isOpen, onOpenChange, onDataSaved, e
           </div>
           <div className="space-y-1">
             <Label htmlFor="business-name">Business Name *</Label>
-            <Input id="business-name" value={businessName} onChange={e => setBusinessName(e.target.value)} required placeholder="e.g., Acme Corp"/>
+            <Input id="business-name" value={businessName} onChange={e => setBusinessName(e.target.value)} required placeholder="e.g., Color Hut"/>
           </div>
            <div className="space-y-1">
             <Label htmlFor="phone">Phone *</Label>

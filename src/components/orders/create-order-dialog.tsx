@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -155,8 +154,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     } else {
         resetForm();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, fetchOptions, allOrders]); // Removed resetForm and jobId from dependency array to prevent reset on type
+  }, [isOpen, fetchOptions, allOrders, resetForm]);
 
   useEffect(() => {
     if (isOpen && availableStatuses.length > 0) {
@@ -490,7 +488,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
               </div>
               <div className="space-y-1">
                 <Label htmlFor="companyName">Company Name *</Label>
-                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="e.g., Acme Corp" readOnly={isAutoFilled} className={cn(isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
+                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="e.g., Color Hut" readOnly={isAutoFilled} className={cn(isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
               </div>
             </div>
             <div className="space-y-1">

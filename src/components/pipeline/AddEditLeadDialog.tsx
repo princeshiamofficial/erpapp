@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -206,7 +205,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
               </div>
             <div className="space-y-1">
               <Label htmlFor="businessName">Business Name *</Label>
-              <Input id="businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />
+              <Input id="businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required placeholder="e.g., Color Hut"/>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
