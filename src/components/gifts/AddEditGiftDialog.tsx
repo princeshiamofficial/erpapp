@@ -131,36 +131,25 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
         </DialogHeader>
         <form onSubmit={handleSubmit} className="py-4 space-y-4 max-h-[70vh] overflow-y-auto pr-2">
           
-          <div className="space-y-1">
-            <Label htmlFor="orderId">Link to Order (Optional)</Label>
-            <Select value={orderId || ''} onValueChange={(value) => setOrderId(value === 'none' ? null : value)}>
-              <SelectTrigger id="orderId"><SelectValue placeholder="Select an order..." /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No associated order</SelectItem>
-                {allOrders.map(o => <SelectItem key={o.id} value={o.id}>{o.id} - {o.companyName}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label htmlFor="recipientName">Recipient Name *</Label>
+              <Label htmlFor="recipientName">Recipient Name</Label>
               <Input id="recipientName" value={recipientName} onChange={e => setRecipientName(e.target.value)} required disabled={!!orderId} />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="recipientPhone">Recipient Phone *</Label>
+              <Label htmlFor="recipientPhone">Recipient Phone</Label>
               <Input id="recipientPhone" value={recipientPhone} onChange={e => setRecipientPhone(e.target.value)} required disabled={!!orderId} />
             </div>
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="recipientAddress">Recipient Address *</Label>
+            <Label htmlFor="recipientAddress">Recipient Address</Label>
             <Textarea id="recipientAddress" value={recipientAddress} onChange={e => setRecipientAddress(e.target.value)} required disabled={!!orderId} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <Label htmlFor="giftItemName">Gift Item *</Label>
+              <Label htmlFor="giftItemName">Gift Item</Label>
               <Select value={giftItemName} onValueChange={setGiftItemName} required>
                 <SelectTrigger id="giftItemName"><SelectValue placeholder="Select a gift..." /></SelectTrigger>
                 <SelectContent>
@@ -169,7 +158,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
               </Select>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="dateGiven">Date Given *</Label>
+              <Label htmlFor="dateGiven">Date Given</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !dateGiven && "text-muted-foreground")}>
