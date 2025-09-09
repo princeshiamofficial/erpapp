@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -134,25 +133,11 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
     if (isOpen) {
       fetchOptions();
       setCurrentOrderDate(new Date());
-
-      if (allQuotations && allQuotations.length > 0) {
-        let maxJobId = 0;
-        allQuotations.forEach(quotation => {
-          const quotationJobIdStr = (quotation.companyName || '').split(' • ')[0].trim();
-          const quotationJobIdNum = parseInt(quotationJobIdStr, 10);
-          if (!isNaN(quotationJobIdNum) && quotationJobIdNum > maxJobId) {
-            maxJobId = quotationJobIdNum;
-          }
-        });
-        const newSuggestedId = (maxJobId + 1).toString();
-        setJobId(newSuggestedId);
-      } else {
-        setJobId('1');
-      }
+      setJobId(''); // Ensure Job ID is cleared on open
     } else {
         resetForm();
     }
-  }, [isOpen, fetchOptions, allQuotations, resetForm]);
+  }, [isOpen, fetchOptions, resetForm]);
 
   useEffect(() => {
     if (isOpen && availableStatuses.length > 0) {
