@@ -29,7 +29,7 @@ export interface CrmPerformanceData {
   userId: string;
   userName: string;
   userAvatar?: string;
-  ordersCompleted: number;
+  ordersCompleted: number; // This is the "points"
   target: number;
   rank?: number;
   role?: UserRole;
@@ -242,16 +242,15 @@ export default function LeaderboardPage() {
         data-ai-hint={currentLeaderboardBackground ? "" : "abstract orange fire particles"}
       ></div>
       <header className="relative z-10 flex items-center justify-between py-4 px-4 sm:px-6 mb-4 sm:mb-6">
-        <Link href="/dashboard" className="p-2 -ml-2 text-[hsl(var(--leaderboard-text-light))] hover:opacity-80 transition-opacity">
-          <ChevronLeft className="h-6 w-6" />
-        </Link>
-        <h1 className="text-lg sm:text-xl font-semibold tracking-wider text-[hsl(var(--leaderboard-text-light))]">LEADERBOARD</h1>
+        <h1 className="text-lg sm:text-xl font-semibold tracking-wider text-[hsl(var(--leaderboard-text-light))] flex-grow text-center">LEADERBOARD</h1>
         {selectedDateRange && (
-          <DateRangePicker 
-            initialRange={selectedDateRange} 
-            onDateRangeChange={handleDateRangeChange}
-            className="w-auto bg-black/40 border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))] hover:bg-black/60 focus:ring-[hsl(var(--leaderboard-gold))] h-9 text-xs sm:text-sm"
-          />
+          <div className="absolute right-4 sm:right-6">
+            <DateRangePicker 
+              initialRange={selectedDateRange} 
+              onDateRangeChange={handleDateRangeChange}
+              className="w-auto bg-black/40 border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))] hover:bg-black/60 focus:ring-[hsl(var(--leaderboard-gold))] h-9 text-xs sm:text-sm"
+            />
+          </div>
         )}
       </header>
 
