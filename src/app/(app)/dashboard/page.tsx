@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { format, isWithinInterval, parseISO, subDays, addDays, getHours } from "date-fns"; 
+import { format, isWithinInterval, parseISO, subDays, addDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays } from "date-fns"; 
 import { 
   Hand, 
   ShoppingCart, 
@@ -58,7 +58,7 @@ import {
   LabelList,
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart';
-import type { TrackingLink, OrderItem, ServiceModelItem, User, Project, ProjectStatusType, GlobalSettings, Lead, LeadCategory } from '@/types'; 
+import type { TrackingLink, OrderItem, ServiceModelItem, User, Project, ProjectStatusType, GlobalSettings, Lead, LeadCategory, UserRole } from '@/types'; 
 import { getOrders } from '@/lib/order-service';
 import { getModels } from '@/lib/service-options-service'; 
 import { useToast } from '@/hooks/use-toast';
@@ -74,6 +74,7 @@ import { divisions } from '@/lib/district-data'; // Import divisions data
 import type { DateRange, PredefinedRange } from "@/components/dashboard/date-range-picker";
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { TeamPerformanceGraph } from '@/components/dashboard/TeamPerformanceGraph';
 
 // Lazy loading components
 const DateRangePicker = dynamic(() => import('@/components/dashboard/date-range-picker').then(mod => mod.DateRangePicker), {
@@ -246,7 +247,6 @@ function DashboardContent() {
   
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(() => {
     if (typeof window === 'undefined') {
-        // Return a static, non-date value for SSR
         return undefined;
     }
     return {
@@ -601,6 +601,66 @@ function DashboardContent() {
       invoicePaid: formatCurrency(currentInvoicePaid),
     };
   }, [filteredOrders, allOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId]);
+  
+  const [teamPerformanceYear, setTeamPerformanceYear] = useState<number>(getYear(new Date()));
+  
+  const teamPerformanceAvailableYears = useMemo(() => {
+    if (!allOrders || allOrders.length === 0) {
+      return [getYear(new Date())];
+    }
+    const years = new Set(
+      allOrders
+        .map(order => {
+          try { return getYear(parseISO(order.createdAt)); } 
+          catch { return null; }
+        })
+        .filter((year): year is number => year !== null)
+    );
+    const currentYear = getYear(new Date());
+    if (!years.has(currentYear)) years.add(currentYear);
+    return Array.from(years).sort((a, b) => b - a);
+  }, [allOrders]);
+  
+  const teamPerformanceData = useMemo(() => {
+    const months = Array.from({ length: 12 }, (_, i) => ({
+        name: format(new Date(teamPerformanceYear, i), 'MMM'),
+        totalDone: 0,
+        totalTarget: 0,
+        userData: {},
+    }));
+    
+    const dailyTargets: Record<string, number> = {};
+    allUsers.forEach(user => {
+      const monthlyTarget = user.monthlyOrderTarget || globalSettings?.globalMonthlyOrderTarget || 0;
+      dailyTargets[user.id] = monthlyTarget / 30;
+    });
+
+    allOrders.forEach(order => {
+      try {
+        const orderDate = parseISO(order.createdAt);
+        if (getYear(orderDate) === teamPerformanceYear && order.crmUserId) {
+          const monthIndex = getMonth(orderDate);
+          if (months[monthIndex]) {
+            months[monthIndex].totalDone += 1;
+          }
+        }
+      } catch(e) { /* ignore */ }
+    });
+    
+    const daysInMonths = [31, (teamPerformanceYear % 4 === 0 && teamPerformanceYear % 100 !== 0) || teamPerformanceYear % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    
+    months.forEach((month, monthIndex) => {
+        let monthTotalTarget = 0;
+        allUsers.forEach(user => {
+            const userDailyTarget = dailyTargets[user.id] || 0;
+            monthTotalTarget += Math.round(userDailyTarget * daysInMonths[monthIndex]);
+        });
+        month.totalTarget = monthTotalTarget;
+    });
+    
+    return months;
+
+  }, [allOrders, allUsers, teamPerformanceYear, globalSettings]);
 
 
   useEffect(() => {
@@ -745,6 +805,8 @@ function DashboardContent() {
       .sort((a, b) => new Date(b.feedback!.submittedAt).getTime() - new Date(a.feedback!.submittedAt).getTime())
       .slice(0, 5); // Get latest 5
   }, [allOrders]);
+  
+  const userMap = useMemo(() => new Map(allUsers.map(u => [u.id, u])), [allUsers]);
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 custom-scrollbar-hidden">
@@ -1045,6 +1107,16 @@ function DashboardContent() {
             )}
           </CardContent>
         </Card>
+      </div>
+      
+      <div className="mt-6">
+        <TeamPerformanceGraph
+          monthlyTargetData={teamPerformanceData}
+          selectedYear={teamPerformanceYear}
+          userMap={userMap}
+          onYearChange={setTeamPerformanceYear}
+          availableYears={teamPerformanceAvailableYears}
+        />
       </div>
 
       <div className={cn("grid grid-cols-1 gap-6 mt-6", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
