@@ -156,7 +156,7 @@ export default function GiftsPage() {
           <div><h1 className="page-title">Client Gifts</h1><p className="page-description">Manage and track gifts given to clients.</p></div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Button size="lg" onClick={handleOpenAddDialog} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10 shadow-md">
-              <PlusCircle className="mr-2 h-5 w-5" />New Gift Entry
+              <PlusCircle className="mr-2 h-5 w-5" />Create Gift
             </Button>
           </div>
         </div>

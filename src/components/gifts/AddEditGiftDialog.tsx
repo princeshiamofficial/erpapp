@@ -103,7 +103,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
 
     setIsSubmitting(false);
     if (result.success) {
-      toast({ title: `Gift Entry ${isEditMode ? 'Updated' : 'Created'}`, description: "The gift record has been saved." });
+      toast({ title: `Gift ${isEditMode ? 'Updated' : 'Created'}`, description: "The gift record has been saved." });
       if(result.gift) onGiftSaved(result.gift);
       onOpenChange(false);
     } else {
@@ -115,7 +115,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit' : 'Create'} Gift Entry</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit' : 'Create'} Gift</DialogTitle>
           <DialogDescription>
             {isEditMode ? `Update details for gift ID: ${gift.giftIdDisplay}` : 'Record a new gift given to a client.'}
           </DialogDescription>
@@ -181,7 +181,7 @@ export function AddEditGiftDialog({ isOpen, onOpenChange, onGiftSaved, gift, cur
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : (isEditMode ? 'Save Changes' : 'Create Entry')}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : (isEditMode ? 'Save Changes' : 'Create Gift')}
             </Button>
           </DialogFooter>
         </form>
