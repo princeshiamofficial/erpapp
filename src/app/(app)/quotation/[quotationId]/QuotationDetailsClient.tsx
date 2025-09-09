@@ -118,8 +118,8 @@ export function QuotationDetailsClient({ quotation: initialQuotation, allStatuse
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 print:mb-4">
         <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
           <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Building className="h-4 w-4"/>Bill To:</h4>
-          <p className="text-md font-semibold text-foreground flex items-center gap-2"><User className="h-5 w-5 text-muted-foreground" />{contactPerson}</p>
-          {businessName && <p className="text-sm font-medium text-foreground/90 flex items-center gap-2"><Building className="h-4 w-4 text-muted-foreground"/>{businessName}</p>}
+          <p className="text-sm font-semibold text-foreground flex items-center gap-2"><User className="h-5 w-5 text-muted-foreground" />{contactPerson}</p>
+          {businessName && <p className="text-xs font-medium text-foreground/90 flex items-center gap-2"><Building className="h-4 w-4 text-muted-foreground"/>{businessName}</p>}
           <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground"/>{quotation.address}</p>
           <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground"/>{quotation.phoneNumber}</p>
         </div>
