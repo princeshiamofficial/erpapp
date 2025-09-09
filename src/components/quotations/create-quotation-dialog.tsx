@@ -464,7 +464,7 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="jobId">Contact Person</Label>
-                <Input id="jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., Mehan Ahmed, Mr. Awal Khan" />
+                <Input id="jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., Mr. Awal Khan" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="companyName">Company Name</Label>
