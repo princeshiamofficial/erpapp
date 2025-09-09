@@ -1058,6 +1058,13 @@ function DashboardContent() {
       
       {isDesignerRepOrLr ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          <TeamPerformanceGraph
+            monthlyTargetData={teamPerformanceData}
+            selectedYear={teamPerformanceYear}
+            userMap={userMap}
+            onYearChange={setTeamPerformanceYear}
+            availableYears={teamPerformanceAvailableYears}
+          />
           <Card className="shadow-xl bg-card">
             <CardHeader>
               <CardTitle className="flex items-center text-xl text-foreground">
@@ -1104,13 +1111,6 @@ function DashboardContent() {
               )}
             </CardContent>
           </Card>
-          <TeamPerformanceGraph
-            monthlyTargetData={teamPerformanceData}
-            selectedYear={teamPerformanceYear}
-            userMap={userMap}
-            onYearChange={setTeamPerformanceYear}
-            availableYears={teamPerformanceAvailableYears}
-          />
         </div>
       ) : (
         <>
@@ -1228,4 +1228,5 @@ function DashboardContent() {
     
 
     
+
 
