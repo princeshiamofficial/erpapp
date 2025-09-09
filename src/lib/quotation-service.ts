@@ -75,23 +75,21 @@ export const addQuotation = async (quotationData: {
       finalCreatedAt = new Date().toISOString();
     }
 
-    const currentDate = parseISO(finalCreatedAt);
-    const datePrefix = `QUO-${format(currentDate, 'yyyyMMdd')}`;
+    const quotationPrefix = 'QTN-';
     
     const allQuotationsResponse = await fetchFromApiV3(`collections/${QUOTATIONS_COLLECTION}/documents?limit=9999`);
     let newSequence = 1;
     if (allQuotationsResponse && Array.isArray(allQuotationsResponse.documents)) {
-        const sameDayQuotations = allQuotationsResponse.documents.filter((doc: any) => doc.id.startsWith(datePrefix));
-        if (sameDayQuotations.length > 0) {
-            const lastSequence = Math.max(...sameDayQuotations.map((doc: any) => {
-                const numPart = parseInt(doc.id.split('-').pop() || '0', 10);
-                return isNaN(numPart) ? 0 : numPart;
-            }));
-            newSequence = lastSequence + 1;
-        }
+        const quotationIds = allQuotationsResponse.documents.map((doc: any) => doc.id);
+        const maxId = quotationIds
+            .filter((id: string) => id.startsWith(quotationPrefix))
+            .map((id: string) => parseInt(id.substring(quotationPrefix.length), 10))
+            .filter((num: number) => !isNaN(num))
+            .reduce((max: number, current: number) => (current > max ? current : max), 0);
+        newSequence = maxId + 1;
     }
     
-    const quotationId = `${datePrefix}-${String(newSequence).padStart(3, '0')}`;
+    const quotationId = `${quotationPrefix}${String(newSequence).padStart(4, '0')}`;
     
     const initialLogEntry: OrderLogEntry = {
       id: uuidv4(), timestamp: finalCreatedAt, status: quotationData.initialStatusId,
