@@ -199,7 +199,7 @@ export default function LeaderboardPage() {
         ></div>
         <header className="relative z-10 flex items-center justify-between py-3 px-2 mb-6">
             <Link href="/dashboard" className="p-2 -ml-2">
-                <ChevronLeft className="h-6 w-6" />
+                
             </Link>
             <h1 className="text-xl font-semibold tracking-wider">LEADERBOARD</h1>
             <Skeleton className="h-9 w-36 rounded-md bg-white/10" />
@@ -243,7 +243,7 @@ export default function LeaderboardPage() {
       ></div>
       <header className="relative z-10 flex items-center justify-between py-4 px-4 sm:px-6 mb-4 sm:mb-6">
         <Link href="/dashboard" className="p-2 -ml-2 text-[hsl(var(--leaderboard-text-light))] hover:opacity-80 transition-opacity">
-          <ChevronLeft className="h-6 w-6" />
+          
         </Link>
         <h1 className="text-lg sm:text-xl font-semibold tracking-wider text-[hsl(var(--leaderboard-text-light))]">LEADERBOARD</h1>
         {selectedDateRange && (
