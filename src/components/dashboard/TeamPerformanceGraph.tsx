@@ -24,7 +24,7 @@ import { getYear } from 'date-fns';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 
-interface MonthlyTargetData {
+interface DailyTargetData {
     name: string;
     totalDone: number;
     totalTarget: number;
@@ -37,10 +37,10 @@ interface MonthlyTargetData {
 }
 
 interface TeamPerformanceGraphProps {
-  monthlyTargetData: MonthlyTargetData[];
+  monthlyTargetData: DailyTargetData[];
   selectedDateRange: DateRange | undefined;
   userMap: Map<string, UserType>;
-  onDateRangeChange: (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => void;
+  onDateRangeChange: (range: DateRange | undefined) => void;
 }
 
 const getInitials = (name: string | undefined): string => {
@@ -53,6 +53,10 @@ const getInitials = (name: string | undefined): string => {
 
 export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, userMap, onDateRangeChange }: TeamPerformanceGraphProps) {
   const [chartType, setChartType] = useState<'bar' | 'line' | 'area'>('bar');
+
+  const handleDateChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
+    onDateRangeChange(range);
+  };
 
   const renderChart = () => {
     switch (chartType) {
@@ -118,12 +122,12 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
                 <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>Team Performance</CardTitle>
-                <CardDescription>Aggregated monthly task completion against targets for all users.</CardDescription>
+                <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
                 <DateRangePicker 
                   initialRange={selectedDateRange} 
-                  onDateRangeChange={onDateRangeChange}
+                  onDateRangeChange={handleDateChange}
                   className="w-full sm:w-auto"
                 />
                 <div className="flex items-center bg-muted p-1 rounded-lg">
@@ -171,3 +175,4 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap }: any) => {
     }
     return null;
 }
+

@@ -608,50 +608,54 @@ function DashboardContent() {
   });
   
   const teamPerformanceData = useMemo(() => {
-    const months = Array.from({ length: 12 }, (_, i) => ({
-        name: format(new Date(2024, i), 'MMM'), // Use a fixed year for month names
-        totalDone: 0,
-        totalTarget: 0,
-        userData: {},
-    }));
-    
-    if (!teamPerformanceDateRange?.from) return months;
+    if (!teamPerformanceDateRange?.from) return [];
 
     const startDate = startOfDay(teamPerformanceDateRange.from);
     const endDate = endOfDay(teamPerformanceDateRange.to || teamPerformanceDateRange.from);
-
+    
+    const dateMap = new Map<string, { totalDone: number; totalTarget: number; userData: {} }>();
+    
+    let currentDate = startDate;
+    while (currentDate <= endDate) {
+      dateMap.set(format(currentDate, 'yyyy-MM-dd'), {
+        totalDone: 0,
+        totalTarget: 0,
+        userData: {},
+      });
+      currentDate = addDays(currentDate, 1);
+    }
+    
     const dailyTargets: Record<string, number> = {};
     allUsers.forEach(user => {
       const monthlyTarget = user.monthlyOrderTarget || globalSettings?.globalMonthlyOrderTarget || 0;
-      dailyTargets[user.id] = monthlyTarget / 30;
+      dailyTargets[user.id] = monthlyTarget / 30; // Simplified daily target
     });
 
     allOrders.forEach(order => {
       try {
         const orderDate = parseISO(order.createdAt);
-        if (isWithinInterval(orderDate, {start: startDate, end: endDate}) && order.crmUserId) {
-          const monthIndex = getMonth(orderDate);
-          if (months[monthIndex]) {
-            months[monthIndex].totalDone += 1;
+        if (isWithinInterval(orderDate, { start: startDate, end: endDate }) && order.crmUserId) {
+          const dateKey = format(orderDate, 'yyyy-MM-dd');
+          const dayData = dateMap.get(dateKey);
+          if (dayData) {
+            dayData.totalDone += 1;
           }
         }
-      } catch(e) { /* ignore */ }
+      } catch (e) { /* ignore */ }
     });
-    
-    months.forEach((month, monthIndex) => {
-        let monthTotalTarget = 0;
-        const currentMonthDate = new Date(startDate.getFullYear(), monthIndex, 1);
-        const daysInMonth = getDaysInMonth(currentMonthDate);
 
-        allUsers.forEach(user => {
-            const userDailyTarget = dailyTargets[user.id] || 0;
-            monthTotalTarget += Math.round(userDailyTarget * daysInMonth);
-        });
-        month.totalTarget = monthTotalTarget;
+    dateMap.forEach((dayData, dateKey) => {
+      let dayTotalTarget = 0;
+      allUsers.forEach(user => {
+        dayTotalTarget += dailyTargets[user.id] || 0;
+      });
+      dayData.totalTarget = Math.round(dayTotalTarget);
     });
-    
-    return months;
 
+    return Array.from(dateMap.entries()).map(([date, data]) => ({
+      name: format(parseISO(date), 'd MMM'),
+      ...data,
+    }));
   }, [allOrders, allUsers, teamPerformanceDateRange, globalSettings]);
 
 
@@ -670,6 +674,7 @@ function DashboardContent() {
   };
   
   const handleTeamPerformanceDateRangeChange = (range: DateRange | undefined) => {
+    // This function is now a placeholder as the main date range picker controls this graph too
     setTeamPerformanceDateRange(range);
   };
 
@@ -916,8 +921,8 @@ function DashboardContent() {
                             if (isNaN(hour)) return value; 
                             if (hour === 0) return '12 AM';
                             if (hour === 12) return '12 PM';
-                            if (hour < 12) return `${h} AM`;
-                            return `${h - 12} PM`;
+                            if (hour < 12) return `${hour} AM`;
+                            return `${hour - 12} PM`;
                           }
                           try {
                             return format(parseISO(value), 'd MMM');
@@ -1052,68 +1057,14 @@ function DashboardContent() {
         </>
       )}
       
-      {isDesignerRepOrLr ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          <TeamPerformanceGraph
-            monthlyTargetData={teamPerformanceData}
-            onDateRangeChange={handleTeamPerformanceDateRangeChange}
-            selectedDateRange={teamPerformanceDateRange}
-            userMap={userMap}
-          />
-          <Card className="shadow-xl bg-card">
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl text-foreground">
-                <MessageSquare className="mr-2 h-6 w-6 text-primary" />
-                Recent Feedback
-              </CardTitle>
-              <CardDescription>Latest client feedback from tracking pages.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingContent ? (
-                <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
-                </div>
-              ) : recentFeedback.length > 0 ? (
-                <ScrollArea className="h-[400px] pr-3">
-                  <div className="space-y-4">
-                    {recentFeedback.map(order => (
-                      <div key={order.id} className="p-4 border rounded-lg bg-secondary/30">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-semibold text-foreground">{order.companyName}</p>
-                            <p className="text-xs text-muted-foreground">Order ID: {order.id}</p>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="font-bold text-amber-500">{order.feedback?.rating}</span>
-                            <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                          </div>
-                        </div>
-                        <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
-                          "{order.feedback?.text}"
-                        </p>
-                        <p className="text-xs text-right text-muted-foreground mt-2">
-                          - Submitted {format(parseISO(order.feedback!.submittedAt), "d MMM, yyyy")}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
-                  <MessageSquare className="h-16 w-16 opacity-30 mb-4" />
-                  <p className="font-medium">No feedback has been submitted yet.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-            <SalesPerformanceClient
-              allOrders={salesPerformanceOrders}
-              allCrmUsers={allCrmUsers}
-            />
+      <div className={cn("mt-6", isDesignerRepOrLr && "grid grid-cols-1 lg:grid-cols-2 gap-6")}>
+        <TeamPerformanceGraph
+          monthlyTargetData={teamPerformanceData}
+          onDateRangeChange={handleTeamPerformanceDateRangeChange}
+          selectedDateRange={teamPerformanceDateRange}
+          userMap={userMap}
+        />
+        {isDesignerRepOrLr && (
             <Card className="shadow-xl bg-card">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl text-foreground">
@@ -1160,16 +1111,64 @@ function DashboardContent() {
                 )}
               </CardContent>
             </Card>
-          </div>
-          <div className="mt-6">
-            <TeamPerformanceGraph
-              monthlyTargetData={teamPerformanceData}
-              userMap={userMap}
-              onDateRangeChange={handleTeamPerformanceDateRangeChange}
-              selectedDateRange={teamPerformanceDateRange}
-            />
-          </div>
-        </>
+        )}
+      </div>
+      
+      {!isDesignerRepOrLr && (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                <SalesPerformanceClient
+                allOrders={salesPerformanceOrders}
+                allCrmUsers={allCrmUsers}
+                />
+                <Card className="shadow-xl bg-card">
+                <CardHeader>
+                    <CardTitle className="flex items-center text-xl text-foreground">
+                    <MessageSquare className="mr-2 h-6 w-6 text-primary" />
+                    Recent Feedback
+                    </CardTitle>
+                    <CardDescription>Latest client feedback from tracking pages.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {isLoadingContent ? (
+                    <div className="space-y-4">
+                        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+                    </div>
+                    ) : recentFeedback.length > 0 ? (
+                    <ScrollArea className="h-[400px] pr-3">
+                        <div className="space-y-4">
+                        {recentFeedback.map(order => (
+                            <div key={order.id} className="p-4 border rounded-lg bg-secondary/30">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                <p className="font-semibold text-foreground">{order.companyName}</p>
+                                <p className="text-xs text-muted-foreground">Order ID: {order.id}</p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                <span className="font-bold text-amber-500">{order.feedback?.rating}</span>
+                                <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                                </div>
+                            </div>
+                            <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
+                                "{order.feedback?.text}"
+                            </p>
+                            <p className="text-xs text-right text-muted-foreground mt-2">
+                                - Submitted {format(parseISO(order.feedback!.submittedAt), "d MMM, yyyy")}
+                            </p>
+                            </div>
+                        ))}
+                        </div>
+                    </ScrollArea>
+                    ) : (
+                    <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
+                        <MessageSquare className="h-16 w-16 opacity-30 mb-4" />
+                        <p className="font-medium">No feedback has been submitted yet.</p>
+                    </div>
+                    )}
+                </CardContent>
+                </Card>
+            </div>
+          </>
       )}
       
       <div className={cn("grid grid-cols-1 gap-6 mt-6", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
@@ -1222,6 +1221,7 @@ function DashboardContent() {
     
 
     
+
 
 
 
