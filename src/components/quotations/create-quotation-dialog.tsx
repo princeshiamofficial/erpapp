@@ -464,11 +464,11 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="jobId">Contact Person</Label>
-                <Input id="jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., John Doe, Mr. Rakib" />
+                <Input id="jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., Mehan Ahmed, Mr. Awal Khan" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="companyName">Company Name</Label>
-                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="e.g., Acme Corp" readOnly={isAutoFilled} className={cn(isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
+                <Input id="companyName" value={companyName} onChange={(e) => setCompanyName(e.target.value)} required placeholder="e.g., Color Hut" readOnly={isAutoFilled} className={cn(isAutoFilled && "bg-muted/50 cursor-not-allowed")} />
               </div>
             </div>
             <div className="space-y-1">
