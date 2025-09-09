@@ -186,7 +186,7 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
     setTotalExistingAdvancePaid(currentTotalExistingAdvance);
 
     const newAdvanceNum = parseFloat(newAdvanceAmount) || 0;
-    const grandTotal = currentNetPayable; 
+    const grandTotal = currentNetPayable; // No shipping charge
 
     setAmountDue(Math.max(0, grandTotal - currentTotalExistingAdvance - newAdvanceNum));
   }, [orderItems, specialClientDiscount, newAdvanceAmount, existingAdvancePayments]);
@@ -284,7 +284,7 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
         toast({ title: "Authentication Error", variant: "destructive" }); return;
     }
     if (!jobIdInput.trim() || !companyNameInput.trim() || !address.trim() || !phoneNumber.trim() || !createdAt) {
-      toast({ title: "Validation Error", description: "Job ID, Company, Address, Phone, Date Created are required.", variant: "destructive" }); return;
+      toast({ title: "Validation Error", description: "Contact Person, Company, Address, Phone, Date Created are required.", variant: "destructive" }); return;
     }
     if (orderItems.length === 0 || orderItems.some(item => !item.model || !item.lamination || parseInt(item.quantity) < 1 || item.unitPrice === null || item.lineItemTotalPrice === null)) {
        toast({ title: "Validation Error", description: "All quotation items must be complete.", variant: "destructive" }); return;
@@ -350,7 +350,7 @@ export function EditQuotationDialog({ isOpen, onOpenChange, quotation, currentUs
         {isLoadingOptions ? (<div className="flex justify-center items-center h-60"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>)
         : (<form onSubmit={handleSubmit}><div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1"><Label htmlFor="edit-jobId">Job ID *</Label><Input id="edit-jobId" value={jobIdInput} onChange={(e) => setJobIdInput(e.target.value)} required disabled={isSubmitting} /></div>
+                <div className="space-y-1"><Label htmlFor="edit-jobId">Contact Person *</Label><Input id="edit-jobId" value={jobIdInput} onChange={(e) => setJobIdInput(e.target.value)} required disabled={isSubmitting} /></div>
                 <div className="space-y-1"><Label htmlFor="edit-companyNamePart">Company Name *</Label><Input id="edit-companyNamePart" value={companyNameInput} onChange={(e) => setCompanyNameInput(e.target.value)} required disabled={isSubmitting} /></div>
               </div>
               <div className="space-y-1"><Label htmlFor="edit-address">Address *</Label><Textarea id="edit-address" value={address} onChange={(e) => setAddress(e.target.value)} required disabled={isSubmitting} /></div>

@@ -268,7 +268,7 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
       if (existingQuotation) {
         if (!isAutoFilled) {
             const nameParts = (existingQuotation.companyName || '').split(' • ');
-            const actualCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : '';
+            const actualCompanyName = nameParts.length > 1 ? nameParts.slice(1).join(' • ').trim() : existingQuotation.companyName;
 
             setCompanyName(actualCompanyName);
             setAddress(existingQuotation.address);
@@ -276,7 +276,7 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
             setIsAutoFilled(true);
 
             toast({
-              title: "Existing Job ID Found",
+              title: "Existing Contact Person Found",
               description: `Details for "${trimmedJobId}" have been auto-filled.`,
             });
         }
@@ -386,7 +386,7 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
     setIsSubmitting(true);
 
     if (!jobId.trim() || !companyName.trim() || !address.trim() || !phoneNumber.trim() || !initialStatusId || !currentOrderDate) {
-      toast({ title: "Validation Error", description: "Job ID, Company Name, Address, Phone Number, Order Date and Initial Status are required.", variant: "destructive" });
+      toast({ title: "Validation Error", description: "Contact Person, Company Name, Address, Phone Number, Quotation Date and Initial Status are required.", variant: "destructive" });
       setIsSubmitting(false); return;
     }
     if (orderItems.length === 0 || orderItems.some(item => !item.model || !item.lamination || parseInt(item.quantity) < 1 || item.unitPrice === null || item.lineItemTotalPrice === null)) {
@@ -477,8 +477,8 @@ export function CreateQuotationDialog({ currentUser, availableStatuses, onQuotat
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label htmlFor="jobId">Job ID *</Label>
-                <Input id="jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., CUST101, J123" />
+                <Label htmlFor="jobId">Contact Person *</Label>
+                <Input id="jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., John Doe, Mr. Rakib" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="companyName">Company Name *</Label>

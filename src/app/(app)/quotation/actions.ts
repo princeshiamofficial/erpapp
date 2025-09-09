@@ -43,7 +43,7 @@ export async function createQuotationAction(
     if (!currentUser || !currentUser.id || !currentUser.name) {
       return { error: "User information is missing. Please re-authenticate." };
     }
-    if (!data.jobId?.trim()) return { error: "Job ID is required." };
+    if (!data.jobId?.trim()) return { error: "Contact Person is required." };
     if (!data.companyName?.trim()) return { error: "Company Name is required." };
     if (!data.address?.trim()) return { error: "Address is required." };
     
@@ -220,7 +220,7 @@ export async function updateQuotationAction(
         }
     }
 
-    if (updates.companyName !== undefined && !updates.companyName.trim()) return { success: false, error: "Company Name (Job ID • Name) cannot be empty."};
+    if (updates.companyName !== undefined && !updates.companyName.trim()) return { success: false, error: "Company Name (Contact Person • Name) cannot be empty."};
     if (updates.address !== undefined && !updates.address.trim()) return { success: false, error: "Address cannot be empty."};
     
     if (updates.phoneNumber !== undefined) {
