@@ -111,7 +111,7 @@ export function QuotationDetailsClient({ quotation: initialQuotation, allStatuse
                 width={160}
                 height={40}
                 priority
-                className="object-contain"
+                className="object-contain rounded-md"
               />
           </div>
           <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
