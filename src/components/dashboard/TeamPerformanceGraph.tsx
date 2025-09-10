@@ -25,6 +25,7 @@ import type { DateRange } from "react-day-picker";
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
+import { Label } from "@/components/ui/label";
 
 interface DailyTargetData {
     name: string;
