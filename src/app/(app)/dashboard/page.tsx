@@ -628,66 +628,82 @@ function DashboardContent() {
   });
   const [selectedTeam, setSelectedTeam] = useState<UserRole | 'all'>('all');
   
-  const teamPerformanceData = useMemo(() => {
-    if (!teamPerformanceDateRange?.from) return [];
-
+  const { teamPerformanceData, totalPerformanceTarget } = useMemo(() => {
+    if (!teamPerformanceDateRange?.from || !globalSettings?.roleBasedTargets) {
+      return { teamPerformanceData: [], totalPerformanceTarget: 0 };
+    }
+  
     const startDate = startOfDay(teamPerformanceDateRange.from);
     const endDate = endOfDay(teamPerformanceDateRange.to || teamPerformanceDateRange.from);
-    const roleBasedTargets = globalSettings?.roleBasedTargets || { CRM: 0, DESIGNER_REPRESENTATIVE: 0, LR: 0 };
-
+    const roleBasedTargets = globalSettings.roleBasedTargets;
+  
     let usersToInclude = allUsers;
-    if (selectedTeam !== 'all') {
-      usersToInclude = allUsers.filter(u => u.role === selectedTeam);
+    if (isAdminView) {
+      if (selectedTeam !== 'all') {
+        usersToInclude = allUsers.filter(u => u.role === selectedTeam);
+      }
+    } else if (currentUser) {
+      usersToInclude = allUsers.filter(u => u.role === currentUser.role);
     }
-    
-    const dateMap = new Map<string, { totalDone: number; totalTarget: number; userData: {} }>();
-    
+  
+    const numDaysInRange = differenceInDays(endDate, startDate) + 1;
+    let totalTarget = 0;
+  
+    if (isAdminView) {
+      if (selectedTeam === 'all') {
+        totalTarget = (allUsers.filter(u => u.role === 'CRM').length * roleBasedTargets.CRM) + 
+                      (allUsers.filter(u => u.role === 'DESIGNER_REPRESENTATIVE').length * roleBasedTargets.DESIGNER_REPRESENTATIVE) +
+                      roleBasedTargets.LR;
+      } else if (selectedTeam === 'LR') {
+        totalTarget = roleBasedTargets.LR;
+      } else {
+        totalTarget = usersToInclude.length * (roleBasedTargets[selectedTeam as keyof typeof roleBasedTargets] || 0);
+      }
+    } else if (currentUser) {
+      if (currentUser.role === 'LR') {
+        totalTarget = roleBasedTargets.LR;
+      } else {
+        totalTarget = roleBasedTargets[currentUser.role as keyof typeof roleBasedTargets] || 0;
+      }
+    }
+  
+    const monthlyTotalTarget = totalTarget;
+    totalTarget = Math.round((monthlyTotalTarget / getDaysInMonth(startDate)) * numDaysInRange);
+  
+    const dateMap = new Map<string, { totalDone: number; userData: { [userId: string]: { done: number; role: UserRole } } }>();
+  
     let currentDate = startDate;
     while (currentDate <= endDate) {
-      dateMap.set(format(currentDate, 'd MMM'), {
-        totalDone: 0, totalTarget: 0, userData: {},
-      });
+      dateMap.set(format(currentDate, 'd MMM'), { totalDone: 0, userData: {} });
       currentDate = addDays(currentDate, 1);
     }
-
+  
     allTasks.forEach(entry => {
-        try {
-            const entryDate = parseISO(entry.date);
-            if (isWithinInterval(entryDate, { start: startDate, end: endDate }) && usersToInclude.some(u => u.id === entry.userId)) {
-                const dateKey = format(entryDate, 'd MMM');
-                const dayData = dateMap.get(dateKey);
-                if (dayData) {
-                    dayData.totalDone += entry.taskCount;
-                }
+      try {
+        const entryDate = parseISO(entry.date);
+        if (isWithinInterval(entryDate, { start: startDate, end: endDate }) && usersToInclude.some(u => u.id === entry.userId)) {
+          const dateKey = format(entryDate, 'd MMM');
+          const dayData = dateMap.get(dateKey);
+          if (dayData) {
+            dayData.totalDone += entry.taskCount;
+            if (!dayData.userData[entry.userId]) {
+              dayData.userData[entry.userId] = { done: 0, role: entry.role };
             }
-        } catch (e) { /* ignore */ }
-    });
-
-    dateMap.forEach((dayData, dateKey) => {
-        let dayTotalTarget = 0;
-        const daysInMonth = getDaysInMonth(new Date(getYear(startDate), getMonth(startDate)));
-        const dailyTargetDenominator = daysInMonth > 0 ? daysInMonth : 30;
-
-        usersToInclude.forEach(user => {
-            if (user.role === 'CRM') {
-                dayTotalTarget += (roleBasedTargets.CRM || 0) / dailyTargetDenominator;
-            } else if (user.role === 'DESIGNER_REPRESENTATIVE') {
-                dayTotalTarget += (roleBasedTargets.DESIGNER_REPRESENTATIVE || 0) / dailyTargetDenominator;
-            }
-        });
-        
-        if (selectedTeam === 'all' || selectedTeam === 'LR') {
-             dayTotalTarget += (roleBasedTargets.LR || 0) / dailyTargetDenominator;
+            dayData.userData[entry.userId].done += entry.taskCount;
+          }
         }
-
-        dayData.totalTarget = Math.round(dayTotalTarget);
+      } catch (e) { /* ignore invalid dates */ }
     });
-
-    return Array.from(dateMap.entries()).map(([date, data]) => ({
+  
+    const finalData = Array.from(dateMap.entries()).map(([date, data]) => ({
       name: date,
       ...data,
+      totalTarget: Math.round(totalTarget / numDaysInRange), // Distribute target evenly for graph
     }));
-  }, [allTasks, allUsers, teamPerformanceDateRange, globalSettings, selectedTeam]);
+  
+    return { teamPerformanceData: finalData, totalPerformanceTarget: totalTarget };
+  
+  }, [allTasks, allUsers, teamPerformanceDateRange, globalSettings, selectedTeam, currentUser, isAdminView]);
 
 
   useEffect(() => {
@@ -704,7 +720,7 @@ function DashboardContent() {
     setSelectedPredefinedValue(predefined);
   };
   
-  const handleTeamPerformanceDateRangeChange = (range: DateRange | undefined) => {
+  const handleTeamPerformanceDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
     setTeamPerformanceDateRange(range);
   };
   
@@ -824,7 +840,7 @@ function DashboardContent() {
     return allOrders;
   }, [allOrders, currentUser, selectedCrmId]);
   
-  const canSeeSalesPerformance = useMemo(() => {
+  const isAdminView = useMemo(() => {
     if (!currentUser) return false;
     return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
   }, [currentUser]);
@@ -1096,12 +1112,13 @@ function DashboardContent() {
         <div className="lg:col-span-1">
           <TeamPerformanceGraph
             monthlyTargetData={teamPerformanceData}
+            totalPerformanceTarget={totalPerformanceTarget}
             onDateRangeChange={handleTeamPerformanceDateRangeChange}
             selectedDateRange={teamPerformanceDateRange}
             userMap={userMap}
             onTeamChange={handleTeamChange}
             selectedTeam={selectedTeam}
-            isAdminView={canSeeAdminCharts}
+            isAdminView={isAdminView}
           />
         </div>
         {isDesignerRepOrLr && (
@@ -1189,7 +1206,7 @@ function DashboardContent() {
                                 <div className="flex items-center gap-1">
                                 <span className="font-bold text-amber-500">{order.feedback?.rating}</span>
                                 <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                                </div>
+                              </div>
                             </div>
                             <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
                                 "{order.feedback?.text}"
@@ -1257,20 +1274,3 @@ function DashboardContent() {
     </div>
   );
 }
-
-// Moved StatusTimeline to its own file in components/dashboard to be dynamically imported
-
-    
-
-    
-
-
-
-
-
-
-
-
-
-
-

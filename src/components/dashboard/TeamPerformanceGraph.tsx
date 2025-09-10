@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { BarChart, LineChart, AreaChart, Target, Users, CalendarDays, TrendingUp } from 'lucide-react';
 import { Bar, BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
-import type { User as UserType, UserRole, GlobalSettings } from '@/types';
+import type { User as UserType, UserRole } from '@/types';
 import { cn } from '@/lib/utils';
 import {
   Select,
@@ -19,7 +19,7 @@ import {
     ChartTooltip,
     ChartTooltipContent,
   } from "@/components/ui/chart"
-import { getYear, format, parseISO, startOfDay, isSameDay, getDaysInMonth } from 'date-fns';
+import { parseISO, startOfDay, isSameDay } from 'date-fns';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { Input } from '@/components/ui/input';
@@ -40,7 +40,6 @@ interface DailyTargetData {
     userData: {
         [userId: string]: {
             done: number;
-            target: number;
             role: UserRole;
         };
     };
@@ -48,13 +47,13 @@ interface DailyTargetData {
 
 interface TeamPerformanceGraphProps {
   monthlyTargetData: DailyTargetData[];
+  totalPerformanceTarget: number;
   selectedDateRange: DateRange | undefined;
   userMap: Map<string, UserType>;
   onDateRangeChange: (range: DateRange | undefined, label: string, predefinedValue: PredefinedRange | "custom" | null) => void;
   onTeamChange?: (team: UserRole | 'all') => void; // Optional for admin
   selectedTeam?: UserRole | 'all'; // Optional for admin
   isAdminView?: boolean; // To show the dropdown
-  globalSettings: GlobalSettings | null; // Pass global settings
 }
 
 const getInitials = (name: string | undefined): string => {
@@ -65,7 +64,7 @@ const getInitials = (name: string | undefined): string => {
 };
 
 
-export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, userMap, onDateRangeChange, onTeamChange, selectedTeam, isAdminView, globalSettings }: TeamPerformanceGraphProps) {
+export function TeamPerformanceGraph({ monthlyTargetData, totalPerformanceTarget, selectedDateRange, userMap, onDateRangeChange, onTeamChange, selectedTeam, isAdminView }: TeamPerformanceGraphProps) {
   const [chartType, setChartType] = useState<'line'>('line');
   const [tasksDone, setTasksDone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,7 +84,7 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
 
   useEffect(() => {
     if (!currentUser) return;
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const todayStr = new Date().toISOString().split('T')[0];
     
     const todaysSubmission = taskEntries.find(entry => 
         isSameDay(parseISO(entry.date), new Date()) && 
@@ -140,13 +139,12 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
   
   const totals = useMemo(() => {
     if (!monthlyTargetData || monthlyTargetData.length === 0) {
-      return { totalDone: 0, totalTarget: 0 };
+      return { totalDone: 0 };
     }
     return monthlyTargetData.reduce((acc, day) => {
       acc.totalDone += day.totalDone;
-      acc.totalTarget += day.totalTarget;
       return acc;
-    }, { totalDone: 0, totalTarget: 0 });
+    }, { totalDone: 0 });
   }, [monthlyTargetData]);
 
 
@@ -200,7 +198,7 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
                     /
                 </div>
                 <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">
-                    {totals.totalTarget.toLocaleString()}
+                    {totalPerformanceTarget.toLocaleString()}
                 </div>
                 <span className="text-sm text-muted-foreground">Target</span>
             </div>
