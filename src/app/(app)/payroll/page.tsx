@@ -444,6 +444,7 @@ export default function PayrollPage() {
                 <TableHead>Fine</TableHead>
                 <TableHead>Incentive</TableHead>
                 <TableHead>Payable Amount</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-center">Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -459,6 +460,7 @@ export default function PayrollPage() {
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
                     <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
                   </TableRow>
                 ))
@@ -476,6 +478,7 @@ export default function PayrollPage() {
                   const incentive = payslip?.incentive ?? 1500;
                   const fine = payslip?.fine ?? 100;
                   const absentDays = payslip?.absentDays ?? 2;
+                  const paymentStatus = payslip?.paymentStatus ?? 'Unpaid';
 
                   const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
                   const payable = payslip?.payableAmount ?? (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
@@ -490,6 +493,9 @@ export default function PayrollPage() {
                         <TableCell>{formatCurrency(fine)}</TableCell>
                         <TableCell>{formatCurrency(incentive)}</TableCell>
                         <TableCell className="font-semibold">{formatCurrency(payable)}</TableCell>
+                        <TableCell>
+                          <Badge className={cn(paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{paymentStatus}</Badge>
+                        </TableCell>
                         <TableCell className="text-center">
                           <Button variant="outline" size="sm" className="h-8" onClick={() => setPayslipToEdit(employee)}>
                             Edit payslip
@@ -500,7 +506,7 @@ export default function PayrollPage() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-48 text-center text-gray-500">
+                  <TableCell colSpan={10} className="h-48 text-center text-gray-500">
                     No salary sheet data available for the selected period.
                   </TableCell>
                 </TableRow>
@@ -508,7 +514,7 @@ export default function PayrollPage() {
             </TableBody>
             <TableFooter>
                 <TableRow>
-                    <TableCell colSpan={8} className="text-right font-bold">Total Payable</TableCell>
+                    <TableCell colSpan={9} className="text-right font-bold">Total Payable</TableCell>
                     <TableCell className="font-bold text-right">{formatCurrency(totalPayableAmount)}</TableCell>
                 </TableRow>
             </TableFooter>

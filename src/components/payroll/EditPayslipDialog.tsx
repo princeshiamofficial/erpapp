@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -18,6 +19,7 @@ import { Loader2 } from 'lucide-react';
 import type { Employee, Payslip } from '@/types';
 import { getDaysInMonth } from 'date-fns';
 import { updatePayslipAction } from '@/app/(app)/payroll/actions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 
 // Moved formatCurrency here to avoid import issues
@@ -40,6 +42,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
   const [late, setLate] = useState('1');
   const [fine, setFine] = useState('100');
   const [incentive, setIncentive] = useState('1500');
+  const [paymentStatus, setPaymentStatus] = useState<'Paid' | 'Unpaid'>('Unpaid');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -55,6 +58,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       setLate(payslipData?.lateDays.toString() || '1');
       setFine(payslipData?.fine.toString() || '100');
       setIncentive(payslipData?.incentive.toString() || '1500');
+      setPaymentStatus(payslipData?.paymentStatus || 'Unpaid');
       setIsSubmitting(false);
     }
   }, [isOpen, employee, monthYearId]);
@@ -91,6 +95,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
         fine: parseFloat(fine),
         incentive: parseFloat(incentive),
         payableAmount: payableAmount,
+        paymentStatus: paymentStatus,
     };
 
     const result = await updatePayslipAction(employee.id, monthYearId, payslipData);
@@ -141,6 +146,18 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
                     <Label htmlFor="incentive">Incentive</Label>
                     <Input id="incentive" type="number" value={incentive} onChange={e => setIncentive(e.target.value)} required />
                 </div>
+            </div>
+             <div className="space-y-1">
+              <Label htmlFor="payment-status">Payment Status</Label>
+              <Select value={paymentStatus} onValueChange={(v) => setPaymentStatus(v as 'Paid' | 'Unpaid')}>
+                <SelectTrigger id="payment-status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Unpaid">Unpaid</SelectItem>
+                  <SelectItem value="Paid">Paid</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="mt-4 pt-4 border-t">
                 <div className="flex justify-between items-center text-lg font-semibold">

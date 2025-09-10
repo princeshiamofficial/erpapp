@@ -24,6 +24,7 @@ export interface Payslip {
     fine: number;
     incentive: number;
     payableAmount: number; // Storing the calculated amount for record-keeping
+    paymentStatus: 'Paid' | 'Unpaid'; // New field
     updatedAt: string; // ISO string
 }
 
