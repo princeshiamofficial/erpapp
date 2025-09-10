@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -30,6 +29,8 @@ import { Label } from "@/components/ui/label";
 import { addTaskEntryAction } from '@/app/(app)/dashboard/actions';
 import { useToast } from '@/hooks/use-toast';
 import { getTaskEntries, TaskEntry } from '@/lib/team-performance-service';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Added Avatar
+import { ScrollArea } from '@/components/ui/scroll-area'; // Added ScrollArea
 
 
 interface DailyTargetData {
@@ -40,6 +41,7 @@ interface DailyTargetData {
         [userId: string]: {
             done: number;
             target: number;
+            role: UserRole;
         };
     };
 }
@@ -155,7 +157,7 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
           <RechartsLineChart data={monthlyTargetData}>
             <Tooltip
               cursor={{ strokeDasharray: '3 3', fill: 'hsl(var(--muted))' }}
-              content={({ active, payload, label }) => <DoneTargetTooltipContent active={active} payload={payload} label={label} userMap={userMap} />}
+              content={({ active, payload, label }) => <DoneTargetTooltipContent active={active} payload={payload} label={label} userMap={userMap} currentUser={currentUser} />}
             />
             <Legend />
             <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
@@ -169,7 +171,7 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
           <RechartsBarChart data={monthlyTargetData}>
             <Tooltip
               cursor={{ fill: 'hsl(var(--muted))' }}
-              content={({ active, payload, label }) => <DoneTargetTooltipContent active={active} payload={payload} label={label} userMap={userMap} />}
+              content={({ active, payload, label }) => <DoneTargetTooltipContent active={active} payload={payload} label={label} userMap={userMap} currentUser={currentUser} />}
             />
             <Legend />
             <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false}/>
@@ -254,10 +256,28 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
 }
 
 
-const DoneTargetTooltipContent = ({ active, payload, label, userMap }: any) => {
+const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser }: any) => {
     if (active && payload && payload.length) {
-        const donePayload = payload.find(p => p.dataKey === 'totalDone');
-        const targetPayload = payload.find(p => p.dataKey === 'totalTarget');
+        const donePayload = payload.find((p: any) => p.dataKey === 'totalDone');
+        const targetPayload = payload.find((p: any) => p.dataKey === 'totalTarget');
+        const userData = donePayload?.payload?.userData || {};
+        
+        let userBreakdown: { user: UserType, done: number }[] = [];
+        
+        if (currentUser) {
+            if (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') {
+                userBreakdown = Object.entries(userData)
+                    .map(([userId, data]: [string, any]) => ({ user: userMap.get(userId), done: data.done }))
+                    .filter(item => item.user && item.done > 0)
+                    .sort((a,b) => b.done - a.done) as { user: UserType, done: number }[];
+            } else {
+                 userBreakdown = Object.entries(userData)
+                    .filter(([userId, data]: [string, any]) => data.role === currentUser.role && data.done > 0)
+                    .map(([userId, data]: [string, any]) => ({ user: userMap.get(userId), done: data.done }))
+                    .filter(item => item.user)
+                    .sort((a,b) => b.done - a.done) as { user: UserType, done: number }[];
+            }
+        }
         
         return (
             <div className="rounded-lg border bg-background p-2.5 shadow-sm min-w-[220px]">
@@ -274,9 +294,28 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap }: any) => {
                         <span className="text-sm font-medium ml-auto">{targetPayload.value}</span>
                     </div>}
                 </div>
+                 {userBreakdown.length > 0 && (
+                    <>
+                        <div className="border-t border-dashed my-1.5"></div>
+                        <p className="font-semibold text-xs text-muted-foreground mt-1">Contributors:</p>
+                        <ScrollArea className="max-h-32 pr-2 -mr-2">
+                            <div className="space-y-1.5 mt-1">
+                                {userBreakdown.map(({ user, done }) => (
+                                    <div key={user.id} className="flex items-center gap-2 text-xs">
+                                        <Avatar className="h-5 w-5 border">
+                                            <AvatarImage src={user.avatarUrl || undefined} alt={user.name} />
+                                            <AvatarFallback className="text-[9px] bg-muted">{getInitials(user.name)}</AvatarFallback>
+                                        </Avatar>
+                                        <span className="text-muted-foreground truncate flex-1">{user.name}</span>
+                                        <span className="font-medium text-foreground">{done}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </>
+                )}
             </div>
         )
     }
     return null;
 }
-
