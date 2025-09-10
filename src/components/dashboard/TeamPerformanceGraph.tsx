@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -188,13 +187,18 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
                 <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>Team Performance</CardTitle>
                 <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
             </div>
-             <div className="flex items-center gap-2 text-right">
+             <div className="flex items-baseline gap-2 text-right">
+                <span className="text-sm text-muted-foreground">Done</span>
                 <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">
                     {totals.totalDone.toLocaleString()}
                 </div>
-                <div className="text-muted-foreground mt-1">
-                    / <span className="font-semibold">{totals.totalTarget.toLocaleString()}</span>
+                <div className="text-muted-foreground">
+                    /
                 </div>
+                <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">
+                    {totals.totalTarget.toLocaleString()}
+                </div>
+                <span className="text-sm text-muted-foreground">Target</span>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
                  {isInputVisible && (
