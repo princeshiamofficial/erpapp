@@ -25,7 +25,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths } from 'date-fns';
 import { deleteEmployeeAction } from './actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -73,7 +73,7 @@ export default function PayrollPage() {
   
   const [payslipToEdit, setPayslipToEdit] = useState<Employee | null>(null);
 
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(subMonths(new Date(), 1));
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -201,10 +201,10 @@ export default function PayrollPage() {
           // Default calculation if no payslip data
           const daysInMonth = getDaysInMonth(selectedDate);
           const perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
-          const presentDays = 22; // Default
-          const incentive = 1500; // Default
-          const fine = 100; // Default
-          const lateDays = 1; // Default
+          const presentDays = 30; // Default
+          const incentive = 0; // Default
+          const fine = 0; // Default
+          const lateDays = 0; // Default
           const providentFund = (employee.salary || 0) * 0.07;
           const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
           const payable = (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
@@ -473,12 +473,12 @@ export default function PayrollPage() {
                   const perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
                   const providentFund = (employee.salary || 0) * 0.07;
                   
-                  const presentDays = payslip?.presentDays ?? 22;
-                  const lateDays = payslip?.lateDays ?? 1;
-                  const incentive = payslip?.incentive ?? 1500;
-                  const fine = payslip?.fine ?? 100;
-                  const absentDays = payslip?.absentDays ?? 2;
-                  const paymentStatus = payslip?.paymentStatus ?? 'Unpaid';
+                  const presentDays = payslip?.presentDays ?? 30;
+                  const lateDays = payslip?.lateDays ?? 0;
+                  const incentive = payslip?.incentive ?? 0;
+                  const fine = payslip?.fine ?? 0;
+                  const absentDays = payslip?.absentDays ?? 0;
+                  const paymentStatus = payslip?.paymentStatus || 'Unpaid';
 
                   const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
                   const payable = payslip?.payableAmount ?? (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
