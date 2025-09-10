@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -23,6 +22,8 @@ import {
 import { getYear, format, parseISO } from 'date-fns';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
+import { Input } from '@/components/ui/input';
+import { Loader2 } from 'lucide-react';
 
 interface DailyTargetData {
     name: string;
@@ -53,9 +54,21 @@ const getInitials = (name: string | undefined): string => {
 
 export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, userMap, onDateRangeChange }: TeamPerformanceGraphProps) {
   const [chartType, setChartType] = useState<'line'>('line');
+  const [tasksDone, setTasksDone] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleDateChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
     onDateRangeChange(range);
+  };
+  
+  const handleDoneClick = () => {
+    setIsSubmitting(true);
+    // Here you would typically call an action to save the tasksDone value
+    console.log(`Submitting ${tasksDone} tasks.`);
+    setTimeout(() => {
+        setIsSubmitting(false);
+        // Logic to handle post-submission state, e.g., disable input for the day
+    }, 1000);
   };
 
   const renderChart = () => {
@@ -100,6 +113,19 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
                 <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+                 <div className="flex items-center gap-1 w-full sm:w-auto">
+                    <Input 
+                        type="number" 
+                        placeholder="Tasks done today" 
+                        value={tasksDone} 
+                        onChange={(e) => setTasksDone(e.target.value)} 
+                        className="h-10 w-full sm:w-32"
+                        min="0"
+                    />
+                    <Button onClick={handleDoneClick} disabled={isSubmitting || !tasksDone} className="h-10">
+                         {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Done"}
+                    </Button>
+                </div>
                 <DateRangePicker 
                   initialRange={selectedDateRange} 
                   onDateRangeChange={handleDateChange}
