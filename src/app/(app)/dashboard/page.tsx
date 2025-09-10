@@ -616,6 +616,7 @@ function DashboardContent() {
 
     const startDate = startOfDay(teamPerformanceDateRange.from);
     const endDate = endOfDay(teamPerformanceDateRange.to || teamPerformanceDateRange.from);
+    const selectedYear = getYear(startDate);
     
     const dateMap = new Map<string, { totalDone: number; totalTarget: number; userData: {} }>();
     
@@ -1225,6 +1226,7 @@ function DashboardContent() {
     
 
     
+
 
 
 
