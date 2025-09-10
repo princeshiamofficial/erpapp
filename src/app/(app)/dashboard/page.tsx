@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { format, isWithinInterval, parseISO, subDays, addDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays, startOfYear, endOfYear, startOfDay, endOfDay, getDaysInMonth } from "date-fns"; 
+import { format, isWithinInterval, parseISO, subDays, addDays, getHours, getYear, getMonth, startOfMonth, endOfMonth, differenceInDays, startOfYear, endOfYear, startOfDay, endOfDay, getDaysInMonth, isSameDay } from "date-fns"; 
 import { 
   Hand, 
   ShoppingCart, 
@@ -75,6 +75,7 @@ import type { DateRange, PredefinedRange } from "@/components/dashboard/date-ran
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TeamPerformanceGraph } from '@/components/dashboard/TeamPerformanceGraph';
+import { getTaskEntries, type TaskEntry } from '@/lib/team-performance-service'; // Import new service
 
 // Lazy loading components
 const DateRangePicker = dynamic(() => import('@/components/dashboard/date-range-picker').then(mod => mod.DateRangePicker), {
@@ -267,12 +268,12 @@ function DashboardContent() {
       return null;
     }
     try {
-      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads] = await Promise.all([ 
-        getOrders(), getModels(), getUsers(), getProjects(), getGlobalSettings(), getLeads(),
+      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks] = await Promise.all([ 
+        getOrders(), getModels(), getUsers(), getProjects(), getGlobalSettings(), getLeads(), getTaskEntries(),
       ]);
       return { 
         allOrders: fetchedOrders, allModels: fetchedModels, allUsers: fetchedUsers, 
-        allProjects: fetchedProjects, globalSettings: fetchedSettings, allLeads: fetchedLeads
+        allProjects: fetchedProjects, globalSettings: fetchedSettings, allLeads: fetchedLeads, allTasks: fetchedTasks
       };
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
@@ -291,7 +292,7 @@ function DashboardContent() {
     retry: 1, 
   });
 
-  const { allOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [] } = queryData || {};
+  const { allOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [] } = queryData || {};
   const allCrmUsers = useMemo(() => allUsers.filter(u => u.role === 'CRM'), [allUsers]);
 
   const getDateRangeInterval = () => {
@@ -632,8 +633,8 @@ function DashboardContent() {
 
     const startDate = startOfDay(teamPerformanceDateRange.from);
     const endDate = endOfDay(teamPerformanceDateRange.to || teamPerformanceDateRange.from);
-    const selectedYear = getYear(startDate);
-    
+    const roleBasedTargets = globalSettings?.roleBasedTargets || { CRM: 0, DESIGNER_REPRESENTATIVE: 0, LR: 0 };
+
     let usersToInclude = allUsers;
     if (selectedTeam !== 'all') {
       usersToInclude = allUsers.filter(u => u.role === selectedTeam);
@@ -644,46 +645,49 @@ function DashboardContent() {
     let currentDate = startDate;
     while (currentDate <= endDate) {
       dateMap.set(format(currentDate, 'd MMM'), {
-        totalDone: 0,
-        totalTarget: 0,
-        userData: {},
+        totalDone: 0, totalTarget: 0, userData: {},
       });
       currentDate = addDays(currentDate, 1);
     }
-    
-    const dailyTargets: Record<string, number> = {};
-    usersToInclude.forEach(user => {
-      const monthlyTarget = user.monthlyOrderTarget || globalSettings?.globalMonthlyOrderTarget || 0;
-      const daysInMonth = getDaysInMonth(new Date(selectedYear, getMonth(startDate)));
-      dailyTargets[user.id] = monthlyTarget / (daysInMonth > 0 ? daysInMonth : 30);
-    });
 
-    allOrders.forEach(order => {
-      try {
-        const orderDate = parseISO(order.createdAt);
-        if (isWithinInterval(orderDate, { start: startDate, end: endDate }) && order.crmUserId && usersToInclude.some(u => u.id === order.crmUserId)) {
-          const dateKey = format(orderDate, 'd MMM');
-          const dayData = dateMap.get(dateKey);
-          if (dayData) {
-            dayData.totalDone += 1;
-          }
-        }
-      } catch (e) { /* ignore */ }
+    allTasks.forEach(entry => {
+        try {
+            const entryDate = parseISO(entry.date);
+            if (isWithinInterval(entryDate, { start: startDate, end: endDate }) && usersToInclude.some(u => u.id === entry.userId)) {
+                const dateKey = format(entryDate, 'd MMM');
+                const dayData = dateMap.get(dateKey);
+                if (dayData) {
+                    dayData.totalDone += entry.taskCount;
+                }
+            }
+        } catch (e) { /* ignore */ }
     });
 
     dateMap.forEach((dayData, dateKey) => {
-      let dayTotalTarget = 0;
-      usersToInclude.forEach(user => {
-        dayTotalTarget += dailyTargets[user.id] || 0;
-      });
-      dayData.totalTarget = Math.round(dayTotalTarget);
+        let dayTotalTarget = 0;
+        const daysInMonth = getDaysInMonth(new Date(getYear(startDate), getMonth(startDate)));
+        const dailyTargetDenominator = daysInMonth > 0 ? daysInMonth : 30;
+
+        usersToInclude.forEach(user => {
+            if (user.role === 'CRM') {
+                dayTotalTarget += (roleBasedTargets.CRM || 0) / dailyTargetDenominator;
+            } else if (user.role === 'DESIGNER_REPRESENTATIVE') {
+                dayTotalTarget += (roleBasedTargets.DESIGNER_REPRESENTATIVE || 0) / dailyTargetDenominator;
+            }
+        });
+        
+        if (selectedTeam === 'all' || selectedTeam === 'LR') {
+             dayTotalTarget += (roleBasedTargets.LR || 0) / dailyTargetDenominator;
+        }
+
+        dayData.totalTarget = Math.round(dayTotalTarget);
     });
 
     return Array.from(dateMap.entries()).map(([date, data]) => ({
       name: date,
       ...data,
     }));
-  }, [allOrders, allUsers, teamPerformanceDateRange, globalSettings, selectedTeam]);
+  }, [allTasks, allUsers, teamPerformanceDateRange, globalSettings, selectedTeam]);
 
 
   useEffect(() => {
@@ -1259,6 +1263,8 @@ function DashboardContent() {
     
 
     
+
+
 
 
 

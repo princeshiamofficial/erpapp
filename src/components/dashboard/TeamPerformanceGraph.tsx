@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -6,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { BarChart, LineChart, AreaChart, Target, Users, CalendarDays, TrendingUp } from 'lucide-react';
 import { Bar, BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
-import type { User as UserType, UserRole } from '@/types';
+import type { User as UserType, UserRole, GlobalSettings } from '@/types';
 import { cn } from '@/lib/utils';
 import {
   Select,
@@ -47,10 +48,11 @@ interface TeamPerformanceGraphProps {
   monthlyTargetData: DailyTargetData[];
   selectedDateRange: DateRange | undefined;
   userMap: Map<string, UserType>;
-  onDateRangeChange: (range: DateRange | undefined) => void;
+  onDateRangeChange: (range: DateRange | undefined, label: string, predefinedValue: PredefinedRange | "custom" | null) => void;
   onTeamChange?: (team: UserRole | 'all') => void; // Optional for admin
   selectedTeam?: UserRole | 'all'; // Optional for admin
   isAdminView?: boolean; // To show the dropdown
+  globalSettings: GlobalSettings | null; // Pass global settings
 }
 
 const getInitials = (name: string | undefined): string => {
@@ -61,7 +63,7 @@ const getInitials = (name: string | undefined): string => {
 };
 
 
-export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, userMap, onDateRangeChange, onTeamChange, selectedTeam, isAdminView }: TeamPerformanceGraphProps) {
+export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, userMap, onDateRangeChange, onTeamChange, selectedTeam, isAdminView, globalSettings }: TeamPerformanceGraphProps) {
   const [chartType, setChartType] = useState<'line'>('line');
   const [tasksDone, setTasksDone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,7 +95,7 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
 
 
   const handleDateChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
-    onDateRangeChange(range);
+    onDateRangeChange(range, displayLabel, predefinedValue);
   };
   
   const handleDoneClick = async () => {
@@ -232,11 +234,11 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
                     </SelectContent>
                   </Select>
                 )}
-                <DateRangePicker 
+                {selectedDateRange && <DateRangePicker 
                   initialRange={selectedDateRange} 
                   onDateRangeChange={handleDateChange}
                   className="w-full sm:w-auto"
-                />
+                />}
             </div>
         </div>
       </CardHeader>
@@ -277,3 +279,4 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap }: any) => {
     }
     return null;
 }
+
