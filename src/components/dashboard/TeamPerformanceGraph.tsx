@@ -5,7 +5,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart, LineChart, AreaChart, Target, Users, CalendarDays } from 'lucide-react';
+import { BarChart, LineChart, AreaChart, Target, Users, CalendarDays, TrendingUp } from 'lucide-react';
 import { Bar, BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import type { User as UserType, UserRole } from '@/types';
 import { cn } from '@/lib/utils';
@@ -134,6 +134,17 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
       if(currentUser?.role === 'LR') return "Team Tasks Done";
       return "My Tasks Done";
   }, [currentUser?.role]);
+  
+  const totals = useMemo(() => {
+    if (!monthlyTargetData || monthlyTargetData.length === 0) {
+      return { totalDone: 0, totalTarget: 0 };
+    }
+    return monthlyTargetData.reduce((acc, day) => {
+      acc.totalDone += day.totalDone;
+      acc.totalTarget += day.totalTarget;
+      return acc;
+    }, { totalDone: 0, totalTarget: 0 });
+  }, [monthlyTargetData]);
 
 
   const renderChart = () => {
@@ -177,7 +188,15 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
                 <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>Team Performance</CardTitle>
                 <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
             </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+             <div className="flex items-center gap-2 text-right">
+                <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">
+                    {totals.totalDone.toLocaleString()}
+                </div>
+                <div className="text-muted-foreground mt-1">
+                    / <span className="font-semibold">{totals.totalTarget.toLocaleString()}</span>
+                </div>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
                  {isInputVisible && (
                     <div className="flex items-center gap-1 w-full sm:w-auto">
                         <Label htmlFor="tasks-done-input" className="text-xs text-muted-foreground mr-1 whitespace-nowrap sr-only">{inputLabel}</Label>
