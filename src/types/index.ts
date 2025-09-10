@@ -173,6 +173,12 @@ export interface ExpenseLoggingPermissions {
 
 export type ProjectStatusType = 'CR Clearance' | 'Cancel' | 'On Design' | 'On Hold' | 'Logistics' | 'Courier' | 'Delivered';
 
+export interface RoleBasedTarget {
+    CRM: number;
+    DESIGNER_REPRESENTATIVE: number;
+    LR: number;
+}
+
 export interface GlobalSettings {
   globalMonthlyOrderTarget: number;
   globalWeeklyOrderTarget: number;
@@ -191,6 +197,7 @@ export interface GlobalSettings {
   drAssignmentNotificationTitle?: string;
   drAssignmentNotificationBody?: string;
   reportProductFilters?: string[];
+  roleBasedTargets?: RoleBasedTarget;
 }
 
 export interface LeaderboardThemeSettings {

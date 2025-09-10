@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -13,7 +14,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { CustomStatus, UserRole, User, GlobalSettings, ExpenseLoggingPermissions, ExpenseLoggingMode, ProjectStatusType } from "@/types";
+import type { CustomStatus, UserRole, User, GlobalSettings, ExpenseLoggingPermissions, ExpenseLoggingMode, ProjectStatusType, RoleBasedTarget } from "@/types";
 import { getStatuses } from '@/lib/status-service';
 import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings as fetchGlobalSettings } from '@/lib/settings-service';
@@ -30,10 +31,11 @@ import {
   updateProjectStageAccessAction,
   updateMaintenanceModeAction,
   updateDrAssignmentNotificationTemplatesAction,
+  updateRoleBasedTargetsAction,
 } from './actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon, Settings2, Briefcase, Trash2, PowerOff, DollarSign, DraftingCompass } from 'lucide-react';
+import { RefreshCw, ListChecks, MessageSquare, UserCheck, Send, Users, Filter, X, CheckIcon, ChevronsUpDown, BellRing, Copy, ExternalLink, AlertTriangle, Music, Image as ImageIcon, Settings2, Briefcase, Trash2, PowerOff, DollarSign, DraftingCompass, Target } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
@@ -76,6 +78,8 @@ export default function CrmTargetSettingsPage() {
   const [maintenanceMessage, setMaintenanceMessage] = useState('');
   const [drNotifTitle, setDrNotifTitle] = useState('');
   const [drNotifBody, setDrNotifBody] = useState('');
+  const [roleBasedTargets, setRoleBasedTargets] = useState<RoleBasedTarget>({ CRM: 50, DESIGNER_REPRESENTATIVE: 20, LR: 100 });
+
 
   // Notification states
   const [allUsers, setAllUsers] = useState<User[]>([]); // Users excluding System_Admin for targeting
@@ -106,6 +110,7 @@ export default function CrmTargetSettingsPage() {
   const [isSubmittingMaintenanceMode, setIsSubmittingMaintenanceMode] = useState(false);
   const [isLoadingUsersForNotifAndTokens, setIsLoadingUsersForNotifAndTokens] = useState(false);
   const [isSubmittingDrNotif, setIsSubmittingDrNotif] = useState(false);
+  const [isSubmittingRoleTargets, setIsSubmittingRoleTargets] = useState(false);
 
   // FCM Token Display State
   const [fcmUserSearchTerm, setFcmUserSearchTerm] = useState('');
@@ -135,6 +140,8 @@ export default function CrmTargetSettingsPage() {
       setMaintenanceMessage(globalSettings.maintenanceMessage ?? '');
       setDrNotifTitle(globalSettings.drAssignmentNotificationTitle || '');
       setDrNotifBody(globalSettings.drAssignmentNotificationBody || '');
+      setRoleBasedTargets(globalSettings.roleBasedTargets || { CRM: 50, DESIGNER_REPRESENTATIVE: 20, LR: 100 });
+
 
       setAllUsers(fetchedUsersDb.filter(u => u.role !== 'SYSTEM_ADMIN')); // For notification targeting and FCM token list
       setAllTargetableUsersForExpensePerms(fetchedUsersDb.filter(u => u.role !== 'SYSTEM_ADMIN')); // For expense perm specific user picker
@@ -426,6 +433,25 @@ export default function CrmTargetSettingsPage() {
       console.error("Failed to copy FCM token:", err);
     }
   };
+  
+  const handleRoleTargetChange = (role: keyof RoleBasedTarget, value: string) => {
+    const numericValue = parseInt(value, 10);
+    setRoleBasedTargets(prev => ({
+      ...prev,
+      [role]: isNaN(numericValue) ? 0 : numericValue,
+    }));
+  };
+
+  const handleSaveRoleTargets = async () => {
+    setIsSubmittingRoleTargets(true);
+    const result = await updateRoleBasedTargetsAction(roleBasedTargets);
+    if (result.success) {
+      toast({ title: "Settings Updated", description: "Role-based performance targets have been saved." });
+    } else {
+      toast({ title: "Update Failed", description: result.error || "Could not save role-based targets.", variant: "destructive" });
+    }
+    setIsSubmittingRoleTargets(false);
+  };
 
 
   if (!currentUser || currentUser.role !== 'SYSTEM_ADMIN') {
@@ -471,6 +497,62 @@ export default function CrmTargetSettingsPage() {
           <Button onClick={handleSaveCrmTargets} disabled={isLoading || isSubmittingCrmTargets || allStatuses.length === 0}>{isSubmittingCrmTargets ? "Saving..." : "Save CRM Target Settings"}</Button>
         </CardFooter>
       </Card>
+      
+      <Separator className="my-8" />
+      
+      <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+        <CardHeader className="border-b p-5">
+          <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Target className="h-6 w-6 text-primary" />Team Performance Targets</CardTitle>
+          <CardDescription className="text-muted-foreground text-sm mt-0.5">Set the monthly task completion targets for different team roles.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+           <div className="space-y-1.5">
+             <Label htmlFor="crm-target">CRM Target</Label>
+             <Input
+               id="crm-target"
+               type="number"
+               value={roleBasedTargets.CRM}
+               onChange={(e) => handleRoleTargetChange('CRM', e.target.value)}
+               placeholder="e.g., 50"
+               min="0"
+               disabled={isLoading || isSubmittingRoleTargets}
+             />
+             <p className="text-xs text-muted-foreground">Monthly target per CRM user.</p>
+           </div>
+           <div className="space-y-1.5">
+             <Label htmlFor="dr-target">Designer Rep. Target</Label>
+             <Input
+               id="dr-target"
+               type="number"
+               value={roleBasedTargets.DESIGNER_REPRESENTATIVE}
+               onChange={(e) => handleRoleTargetChange('DESIGNER_REPRESENTATIVE', e.target.value)}
+               placeholder="e.g., 20"
+               min="0"
+               disabled={isLoading || isSubmittingRoleTargets}
+             />
+             <p className="text-xs text-muted-foreground">Monthly target per DR user.</p>
+           </div>
+           <div className="space-y-1.5">
+             <Label htmlFor="lr-target">Logistics (LR) Target</Label>
+             <Input
+               id="lr-target"
+               type="number"
+               value={roleBasedTargets.LR}
+               onChange={(e) => handleRoleTargetChange('LR', e.target.value)}
+               placeholder="e.g., 100"
+               min="0"
+               disabled={isLoading || isSubmittingRoleTargets}
+             />
+             <p className="text-xs text-muted-foreground">Total monthly target for the entire LR team.</p>
+           </div>
+        </CardContent>
+        <CardFooter className="border-t p-5 flex justify-end">
+          <Button onClick={handleSaveRoleTargets} disabled={isLoading || isSubmittingRoleTargets}>
+            {isSubmittingRoleTargets ? "Saving Targets..." : "Save Role Targets"}
+          </Button>
+        </CardFooter>
+      </Card>
+
 
       <Separator className="my-8" />
       

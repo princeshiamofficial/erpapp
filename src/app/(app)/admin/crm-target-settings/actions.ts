@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -14,8 +15,9 @@ import {
   setProjectStageAccess, 
   setMaintenanceMode,
   setDrAssignmentNotificationTemplates, // New
+  setRoleBasedTargets,
 } from "@/lib/settings-service";
-import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType } from "@/types"; 
+import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget } from "@/types"; 
 import { adminApp } from '@/lib/firebase-admin';
 import { getUsers as getAllUsersFromDb, getUserById } from '@/lib/user-service';
 import type { FirebaseError } from 'firebase-admin';
@@ -363,5 +365,21 @@ export async function sendPushNotificationAction(
       message: `Failed to send notifications: ${errorMessage}`,
       error: errorMessage
     };
+  }
+}
+
+
+export async function updateRoleBasedTargetsAction(targets: RoleBasedTarget): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setRoleBasedTargets(targets);
+    if (success) {
+      revalidatePath("/(app)/admin/crm-target-settings");
+      revalidatePath("/(app)/dashboard");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update role-based targets in database." };
+  } catch (error) {
+    console.error("Error in updateRoleBasedTargetsAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

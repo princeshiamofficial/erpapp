@@ -1,9 +1,10 @@
 
+
 "use server";
 
 import { db } from './firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import type { GlobalSettings, UserRole, ExpenseLoggingPermissions, ProjectStatusType } from '@/types';
+import type { GlobalSettings, UserRole, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget } from '@/types';
 
 const GLOBAL_SETTINGS_COLLECTION = 'globalSettings';
 const MAIN_SETTINGS_DOC_ID = 'main';
@@ -27,6 +28,12 @@ const DEFAULT_PROJECT_STAGE_ACCESS: Record<ProjectStatusType, UserRole[]> = {
   'Delivered': ['SYSTEM_ADMIN', 'ADMIN', 'LR'],
 };
 
+const DEFAULT_ROLE_BASED_TARGETS: RoleBasedTarget = {
+    CRM: 50,
+    DESIGNER_REPRESENTATIVE: 20,
+    LR: 100,
+};
+
 const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   globalMonthlyOrderTarget: 0,
   globalWeeklyOrderTarget: 0,
@@ -44,6 +51,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   drAssignmentNotificationTitle: 'New Design Assigned By %assignerName%',
   drAssignmentNotificationBody: 'You have been assigned to a new design order: %orderId%.',
   reportProductFilters: ['Design Charge', 'Menu Book', 'Menu Card', 'Pizza Box', 'X-Banner', 'Business Card', 'Visiting Card'],
+  roleBasedTargets: DEFAULT_ROLE_BASED_TARGETS,
 };
 
 // Gets global settings from Firestore
@@ -81,6 +89,7 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         drAssignmentNotificationTitle: data.drAssignmentNotificationTitle ?? DEFAULT_GLOBAL_SETTINGS.drAssignmentNotificationTitle,
         drAssignmentNotificationBody: data.drAssignmentNotificationBody ?? DEFAULT_GLOBAL_SETTINGS.drAssignmentNotificationBody,
         reportProductFilters: data.reportProductFilters ?? DEFAULT_GLOBAL_SETTINGS.reportProductFilters,
+        roleBasedTargets: data.roleBasedTargets ?? DEFAULT_GLOBAL_SETTINGS.roleBasedTargets,
       };
     } else {
       console.log("Global settings document not found, returning defaults. Creating document with defaults.");
@@ -397,3 +406,16 @@ export async function setReportProductFilters(filters: string[]): Promise<boolea
     return false;
   }
 }
+
+
+export async function setRoleBasedTargets(targets: RoleBasedTarget): Promise<boolean> {
+  try {
+    const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+    await updateDoc(settingsDocRef, { roleBasedTargets: targets });
+    return true;
+  } catch (error) {
+    console.error("Error setting role-based targets:", error);
+    return false;
+  }
+}
+
