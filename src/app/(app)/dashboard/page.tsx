@@ -625,6 +625,7 @@ function DashboardContent() {
       to: endOfMonth(now),
     };
   });
+  const [selectedTeam, setSelectedTeam] = useState<UserRole | 'all'>('all');
   
   const teamPerformanceData = useMemo(() => {
     if (!teamPerformanceDateRange?.from) return [];
@@ -632,6 +633,11 @@ function DashboardContent() {
     const startDate = startOfDay(teamPerformanceDateRange.from);
     const endDate = endOfDay(teamPerformanceDateRange.to || teamPerformanceDateRange.from);
     const selectedYear = getYear(startDate);
+    
+    let usersToInclude = allUsers;
+    if (selectedTeam !== 'all') {
+      usersToInclude = allUsers.filter(u => u.role === selectedTeam);
+    }
     
     const dateMap = new Map<string, { totalDone: number; totalTarget: number; userData: {} }>();
     
@@ -646,7 +652,7 @@ function DashboardContent() {
     }
     
     const dailyTargets: Record<string, number> = {};
-    allUsers.forEach(user => {
+    usersToInclude.forEach(user => {
       const monthlyTarget = user.monthlyOrderTarget || globalSettings?.globalMonthlyOrderTarget || 0;
       const daysInMonth = getDaysInMonth(new Date(selectedYear, getMonth(startDate)));
       dailyTargets[user.id] = monthlyTarget / (daysInMonth > 0 ? daysInMonth : 30);
@@ -655,7 +661,7 @@ function DashboardContent() {
     allOrders.forEach(order => {
       try {
         const orderDate = parseISO(order.createdAt);
-        if (isWithinInterval(orderDate, { start: startDate, end: endDate }) && order.crmUserId) {
+        if (isWithinInterval(orderDate, { start: startDate, end: endDate }) && order.crmUserId && usersToInclude.some(u => u.id === order.crmUserId)) {
           const dateKey = format(orderDate, 'd MMM');
           const dayData = dateMap.get(dateKey);
           if (dayData) {
@@ -667,7 +673,7 @@ function DashboardContent() {
 
     dateMap.forEach((dayData, dateKey) => {
       let dayTotalTarget = 0;
-      allUsers.forEach(user => {
+      usersToInclude.forEach(user => {
         dayTotalTarget += dailyTargets[user.id] || 0;
       });
       dayData.totalTarget = Math.round(dayTotalTarget);
@@ -677,7 +683,7 @@ function DashboardContent() {
       name: date,
       ...data,
     }));
-  }, [allOrders, allUsers, teamPerformanceDateRange, globalSettings]);
+  }, [allOrders, allUsers, teamPerformanceDateRange, globalSettings, selectedTeam]);
 
 
   useEffect(() => {
@@ -697,6 +703,11 @@ function DashboardContent() {
   const handleTeamPerformanceDateRangeChange = (range: DateRange | undefined) => {
     setTeamPerformanceDateRange(range);
   };
+  
+  const handleTeamChange = (team: UserRole | 'all') => {
+    setSelectedTeam(team);
+  };
+
 
   const summaryCardDefinitions = useMemo(() => {
     const isCrm = currentUser?.role === 'CRM';
@@ -1084,6 +1095,9 @@ function DashboardContent() {
             onDateRangeChange={handleTeamPerformanceDateRangeChange}
             selectedDateRange={teamPerformanceDateRange}
             userMap={userMap}
+            onTeamChange={handleTeamChange}
+            selectedTeam={selectedTeam}
+            isAdminView={canSeeAdminCharts}
           />
         </div>
         {isDesignerRepOrLr && (
@@ -1245,6 +1259,7 @@ function DashboardContent() {
     
 
     
+
 
 
 

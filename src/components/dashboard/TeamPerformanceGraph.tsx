@@ -44,6 +44,9 @@ interface TeamPerformanceGraphProps {
   selectedDateRange: DateRange | undefined;
   userMap: Map<string, UserType>;
   onDateRangeChange: (range: DateRange | undefined) => void;
+  onTeamChange?: (team: UserRole | 'all') => void; // Optional for admin
+  selectedTeam?: UserRole | 'all'; // Optional for admin
+  isAdminView?: boolean; // To show the dropdown
 }
 
 const getInitials = (name: string | undefined): string => {
@@ -54,7 +57,7 @@ const getInitials = (name: string | undefined): string => {
 };
 
 
-export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, userMap, onDateRangeChange }: TeamPerformanceGraphProps) {
+export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, userMap, onDateRangeChange, onTeamChange, selectedTeam, isAdminView }: TeamPerformanceGraphProps) {
   const [chartType, setChartType] = useState<'line'>('line');
   const [tasksDone, setTasksDone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -151,6 +154,19 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
                         </Button>
                     </div>
                  )}
+                {isAdminView && onTeamChange && (
+                  <Select value={selectedTeam} onValueChange={(value) => onTeamChange(value as UserRole | 'all')}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                      <SelectValue placeholder="Select Team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Teams</SelectItem>
+                      <SelectItem value="CRM">CRM</SelectItem>
+                      <SelectItem value="DESIGNER_REPRESENTATIVE">Designer Reps</SelectItem>
+                      <SelectItem value="LR">Logistics (LR)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
                 <DateRangePicker 
                   initialRange={selectedDateRange} 
                   onDateRangeChange={handleDateChange}
