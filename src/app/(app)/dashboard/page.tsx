@@ -335,19 +335,34 @@ function DashboardContent() {
   }, [allLeads, selectedDateRange, currentUser, selectedCrmId]);
 
   const filteredProjects = useMemo(() => {
-      const interval = getDateRangeInterval();
-      if (!interval) return [];
-      
-      let projectsToFilter = allProjects.filter(project => project.createdAt && isWithinInterval(parseISO(project.createdAt), interval));
-      
-      if(currentUser?.role === 'CRM'){
-          projectsToFilter = projectsToFilter.filter(p => p.assigneeId === currentUser.id);
-      } else if(currentUser?.role === 'DESIGNER_REPRESENTATIVE'){
-          projectsToFilter = projectsToFilter.filter(p => p.designerRepresentativeId === currentUser.id);
-      } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
-          projectsToFilter = projectsToFilter.filter(p => p.assigneeId === selectedCrmId);
-      }
-      return projectsToFilter;
+    const isDrOrLr = currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR';
+    
+    // For DR/LR, ignore the date filter
+    if (isDrOrLr) {
+        let projectsToFilter = allProjects;
+        if (currentUser.role === 'DESIGNER_REPRESENTATIVE') {
+            projectsToFilter = projectsToFilter.filter(p => p.designerRepresentativeId === currentUser.id);
+        } else if (currentUser.role === 'LR') {
+             projectsToFilter = projectsToFilter.filter(p => p.assigneeId === currentUser.id || p.status === 'Logistics' || p.status === 'Courier' || p.status === 'Delivered');
+        }
+        return projectsToFilter;
+    }
+
+    // For other roles, apply the date filter
+    const interval = getDateRangeInterval();
+    if (!interval) return [];
+
+    let projectsToFilter = allProjects.filter(project => 
+        project.createdAt && isWithinInterval(parseISO(project.createdAt), interval)
+    );
+    
+    if (currentUser?.role === 'CRM') {
+        projectsToFilter = projectsToFilter.filter(p => p.assigneeId === currentUser.id);
+    } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
+        projectsToFilter = projectsToFilter.filter(p => p.assigneeId === selectedCrmId);
+    }
+    
+    return projectsToFilter;
   }, [allProjects, selectedDateRange, currentUser, selectedCrmId]);
 
 
@@ -1063,59 +1078,63 @@ function DashboardContent() {
       )}
       
       <div className={cn("grid grid-cols-1 gap-6", isDesignerRepOrLr ? "lg:grid-cols-2" : "")}>
-        <TeamPerformanceGraph
-          monthlyTargetData={teamPerformanceData}
-          onDateRangeChange={handleTeamPerformanceDateRangeChange}
-          selectedDateRange={teamPerformanceDateRange}
-          userMap={userMap}
-        />
+        <div className="lg:col-span-1">
+          <TeamPerformanceGraph
+            monthlyTargetData={teamPerformanceData}
+            onDateRangeChange={handleTeamPerformanceDateRangeChange}
+            selectedDateRange={teamPerformanceDateRange}
+            userMap={userMap}
+          />
+        </div>
         {isDesignerRepOrLr && (
-            <Card className="shadow-xl bg-card">
-              <CardHeader>
-                <CardTitle className="flex items-center text-xl text-foreground">
-                  <MessageSquare className="mr-2 h-6 w-6 text-primary" />
-                  Recent Feedback
-                </CardTitle>
-                <CardDescription>Latest client feedback from tracking pages.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoadingContent ? (
-                  <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
-                  </div>
-                ) : recentFeedback.length > 0 ? (
-                  <ScrollArea className="h-[400px] pr-3">
+            <div className="lg:col-span-1">
+              <Card className="shadow-xl bg-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-xl text-foreground">
+                    <MessageSquare className="mr-2 h-6 w-6 text-primary" />
+                    Recent Feedback
+                  </CardTitle>
+                  <CardDescription>Latest client feedback from tracking pages.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingContent ? (
                     <div className="space-y-4">
-                      {recentFeedback.map(order => (
-                        <div key={order.id} className="p-4 border rounded-lg bg-secondary/30">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <p className="font-semibold text-foreground">{order.companyName}</p>
-                              <p className="text-xs text-muted-foreground">Order ID: {order.id}</p>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="font-bold text-amber-500">{order.feedback?.rating}</span>
-                              <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                            </div>
-                          </div>
-                          <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
-                            "{order.feedback?.text}"
-                          </p>
-                          <p className="text-xs text-right text-muted-foreground mt-2">
-                            - Submitted {format(parseISO(order.feedback!.submittedAt), "d MMM, yyyy")}
-                          </p>
-                        </div>
-                      ))}
+                      {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
                     </div>
-                  </ScrollArea>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
-                    <MessageSquare className="h-16 w-16 opacity-30 mb-4" />
-                    <p className="font-medium">No feedback has been submitted yet.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  ) : recentFeedback.length > 0 ? (
+                    <ScrollArea className="h-[400px] pr-3">
+                      <div className="space-y-4">
+                        {recentFeedback.map(order => (
+                          <div key={order.id} className="p-4 border rounded-lg bg-secondary/30">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-semibold text-foreground">{order.companyName}</p>
+                                <p className="text-xs text-muted-foreground">Order ID: {order.id}</p>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <span className="font-bold text-amber-500">{order.feedback?.rating}</span>
+                                <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+                              </div>
+                            </div>
+                            <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
+                              "{order.feedback?.text}"
+                            </p>
+                            <p className="text-xs text-right text-muted-foreground mt-2">
+                              - Submitted {format(parseISO(order.feedback!.submittedAt), "d MMM, yyyy")}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
+                      <MessageSquare className="h-16 w-16 opacity-30 mb-4" />
+                      <p className="font-medium">No feedback has been submitted yet.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
         )}
       </div>
       
@@ -1226,6 +1245,7 @@ function DashboardContent() {
     
 
     
+
 
 
 
