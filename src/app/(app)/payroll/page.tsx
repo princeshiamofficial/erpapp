@@ -199,8 +199,7 @@ export default function PayrollPage() {
               return total + payslip.payableAmount;
           }
           // Default calculation if no payslip data
-          const daysInMonth = getDaysInMonth(selectedDate);
-          const perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
+          const perDaySalary = (employee.salary || 0) / 30;
           const presentDays = 30; // Default
           const incentive = 0; // Default
           const fine = 0; // Default
@@ -469,8 +468,7 @@ export default function PayrollPage() {
                   const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
                   const payslip = employee.payslips?.[monthYearId];
                   
-                  const daysInMonth = getDaysInMonth(selectedDate);
-                  const perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
+                  const perDaySalary = (employee.salary || 0) / 30;
                   const providentFund = (employee.salary || 0) * 0.07;
                   
                   const presentDays = payslip?.presentDays ?? 30;

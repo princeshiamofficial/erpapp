@@ -72,8 +72,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     const fineNum = parseFloat(fine) || 0;
     
     // New calculation logic based on days
-    const daysInMonth = getDaysInMonth(selectedDate);
-    const perDaySalary = baseSalary / (daysInMonth > 0 ? daysInMonth : 30);
+    const perDaySalary = baseSalary / 30;
     const presentDays = parseInt(present, 10) || 0;
     const lateDays = parseInt(late, 10) || 0;
 
