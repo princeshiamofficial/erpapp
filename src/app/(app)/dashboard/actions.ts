@@ -6,9 +6,11 @@ import { revalidatePath } from 'next/cache';
 import { getOrderById, updateOrdersBatch, deleteShippedOrderEntry, autoSettleOrderIfDelivered } from '@/lib/order-service'; 
 import { DELIVERED_STATUS_ID, SHIPPED_STATUS_ID } from '@/lib/status-service'; 
 import { getUsers } from '@/lib/user-service';
-import { OrderLogEntry, TrackingLink } from '@/types'; 
+import { OrderLogEntry, TrackingLink, User } from '@/types'; 
 import { v4 as uuidv4 } from 'uuid';
 import { fetchFromApiV3 } from '@/lib/api-helper2'; 
+import { addTaskEntry } from '@/lib/team-performance-service'; // Import new service
+import { format } from 'date-fns';
 
 // This function is no longer used for setting targets, it might be removed in the future.
 // The logic is kept for historical purposes or if it needs to be reinstated.
@@ -114,5 +116,40 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
   } catch (error) {
     console.error("Error in settleAllDeliveredOrdersAction:", error);
     return { success: false, settledCount: 0, statusUpdateCount: 0, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+// New action to add a task entry for team performance
+export async function addTaskEntryAction(
+  user: User,
+  taskCount: number
+): Promise<{ success: boolean; error?: string }> {
+  if (!user || !user.id || !user.role) {
+    return { success: false, error: "Invalid user data provided." };
+  }
+  if (isNaN(taskCount) || taskCount < 0) {
+    return { success: false, error: "Task count must be a non-negative number." };
+  }
+
+  try {
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    const entryData = {
+      date: todayStr,
+      userId: user.id,
+      userName: user.name,
+      role: user.role,
+      taskCount: taskCount,
+    };
+    
+    const result = await addTaskEntry(entryData);
+    if (result) {
+      revalidatePath('/(app)/dashboard');
+      return { success: true };
+    } else {
+      return { success: false, error: "Failed to save the task entry in the database." };
+    }
+  } catch (error) {
+    console.error("Error in addTaskEntryAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

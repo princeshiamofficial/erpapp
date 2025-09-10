@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BarChart, LineChart, AreaChart, Target, Users, CalendarDays } from 'lucide-react';
@@ -19,13 +19,17 @@ import {
     ChartTooltip,
     ChartTooltipContent,
   } from "@/components/ui/chart"
-import { getYear, format, parseISO } from 'date-fns';
+import { getYear, format, parseISO, startOfDay, isSameDay } from 'date-fns';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { Label } from "@/components/ui/label";
+import { addTaskEntryAction } from '@/app/(app)/dashboard/actions';
+import { useToast } from '@/hooks/use-toast';
+import { getTaskEntries, TaskEntry } from '@/lib/team-performance-service';
+
 
 interface DailyTargetData {
     name: string;
@@ -61,26 +65,62 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
   const [chartType, setChartType] = useState<'line'>('line');
   const [tasksDone, setTasksDone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { currentUser } = useAuth(); // Get the current user
+  const [hasSubmittedToday, setHasSubmittedToday] = useState(false);
+  const [taskEntries, setTaskEntries] = useState<TaskEntry[]>([]);
+  const { currentUser } = useAuth();
+  const { toast } = useToast();
+
+  const fetchTaskData = async () => {
+    const entries = await getTaskEntries();
+    setTaskEntries(entries);
+  };
+  
+  useEffect(() => {
+    fetchTaskData();
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    
+    const todaysSubmission = taskEntries.find(entry => 
+        isSameDay(parseISO(entry.date), new Date()) && 
+        entry.userId === currentUser.id
+    );
+
+    setHasSubmittedToday(!!todaysSubmission);
+  }, [taskEntries, currentUser]);
+
 
   const handleDateChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
     onDateRangeChange(range);
   };
   
-  const handleDoneClick = () => {
+  const handleDoneClick = async () => {
+    if (!currentUser) {
+        toast({ title: "Error", description: "You must be logged in to submit tasks.", variant: "destructive" });
+        return;
+    }
+    const taskCount = parseInt(tasksDone, 10);
+    if (isNaN(taskCount) || taskCount < 0) {
+        toast({ title: "Invalid Input", description: "Please enter a valid number of tasks.", variant: "destructive" });
+        return;
+    }
+    
     setIsSubmitting(true);
-    // Here you would typically call an action to save the tasksDone value
-    // Differentiating logic based on role can be done here.
-    if (currentUser?.role === 'LR') {
-        console.log(`Submitting ${tasksDone} tasks for the LR team.`);
+    
+    const result = await addTaskEntryAction(currentUser, taskCount);
+    
+    if (result.success) {
+        toast({ title: "Tasks Submitted", description: `Your ${taskCount} completed tasks have been recorded.` });
+        setTasksDone('');
+        setHasSubmittedToday(true); // Prevent further submissions
+        await fetchTaskData(); // Refresh the entries to reflect the new submission
     } else {
-        console.log(`Submitting ${tasksDone} tasks for user ${currentUser?.name}.`);
+        toast({ title: "Submission Failed", description: result.error, variant: "destructive" });
     }
 
-    setTimeout(() => {
-        setIsSubmitting(false);
-        // Logic to handle post-submission state, e.g., disable input for the day
-    }, 1000);
+    setIsSubmitting(false);
   };
   
   const isInputVisible = useMemo(() => {
@@ -148,9 +188,10 @@ export function TeamPerformanceGraph({ monthlyTargetData, selectedDateRange, use
                             onChange={(e) => setTasksDone(e.target.value)} 
                             className="h-10 w-full sm:w-32"
                             min="0"
+                            disabled={hasSubmittedToday}
                         />
-                        <Button onClick={handleDoneClick} disabled={isSubmitting || !tasksDone} className="h-10">
-                            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Done"}
+                        <Button onClick={handleDoneClick} disabled={isSubmitting || !tasksDone || hasSubmittedToday} className="h-10">
+                            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : hasSubmittedToday ? "Submitted" : "Done"}
                         </Button>
                     </div>
                  )}
