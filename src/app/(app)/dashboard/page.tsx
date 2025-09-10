@@ -628,6 +628,12 @@ function DashboardContent() {
   });
   const [selectedTeam, setSelectedTeam] = useState<UserRole | 'all'>('all');
   
+  // This must be declared before it is used in the next useMemo.
+  const isAdminView = useMemo(() => {
+    if (!currentUser) return false;
+    return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
+  }, [currentUser]);
+
   const { teamPerformanceData, totalPerformanceTarget } = useMemo(() => {
     if (!teamPerformanceDateRange?.from || !globalSettings?.roleBasedTargets) {
       return { teamPerformanceData: [], totalPerformanceTarget: 0 };
@@ -840,11 +846,6 @@ function DashboardContent() {
     return allOrders;
   }, [allOrders, currentUser, selectedCrmId]);
   
-  const isAdminView = useMemo(() => {
-    if (!currentUser) return false;
-    return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
-  }, [currentUser]);
-
   const canSeeAdminCharts = useMemo(() => {
     if (!currentUser) return false;
     return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
