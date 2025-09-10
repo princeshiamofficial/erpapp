@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -37,11 +36,11 @@ interface EditPayslipDialogProps {
 }
 
 export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, selectedDate }: EditPayslipDialogProps) {
-  const [present, setPresent] = useState('22');
-  const [absent, setAbsent] = useState('2');
-  const [late, setLate] = useState('1');
-  const [fine, setFine] = useState('100');
-  const [incentive, setIncentive] = useState('1500');
+  const [present, setPresent] = useState('30');
+  const [absent, setAbsent] = useState('0');
+  const [late, setLate] = useState('0');
+  const [fine, setFine] = useState('0');
+  const [incentive, setIncentive] = useState('0');
   const [paymentStatus, setPaymentStatus] = useState<'Paid' | 'Unpaid'>('Unpaid');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -53,11 +52,11 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
   useEffect(() => {
     if (isOpen) {
       const payslipData = employee.payslips?.[monthYearId];
-      setPresent(payslipData?.presentDays.toString() || '22');
-      setAbsent(payslipData?.absentDays.toString() || '2');
-      setLate(payslipData?.lateDays.toString() || '1');
-      setFine(payslipData?.fine.toString() || '100');
-      setIncentive(payslipData?.incentive.toString() || '1500');
+      setPresent(payslipData?.presentDays.toString() || '30');
+      setAbsent(payslipData?.absentDays.toString() || '0');
+      setLate(payslipData?.lateDays.toString() || '0');
+      setFine(payslipData?.fine.toString() || '0');
+      setIncentive(payslipData?.incentive.toString() || '0');
       setPaymentStatus(payslipData?.paymentStatus || 'Unpaid');
       setIsSubmitting(false);
     }
