@@ -16,6 +16,17 @@ export interface User {
   fcmToken?: string | null;
 }
 
+export interface Payslip {
+    id: string; // e.g., '2024-07' for July 2024
+    presentDays: number;
+    absentDays: number;
+    lateDays: number;
+    fine: number;
+    incentive: number;
+    payableAmount: number; // Storing the calculated amount for record-keeping
+    updatedAt: string; // ISO string
+}
+
 export interface Employee {
   id: string; // Firestore document ID
   employeeId: string; // e.g., EMP-001
@@ -29,6 +40,7 @@ export interface Employee {
   status: 'Active' | 'Inactive';
   avatarUrl?: string | null;
   salary?: number | null;
+  payslips?: { [key: string]: Payslip }; // Optional map of payslips
 }
 
 export interface CustomStatus {
@@ -102,6 +114,11 @@ export interface TrackingLink {
   packzyTrackingCode?: string | null;
   shippingArea?: string | null;
   shippingCharge?: number | null;
+  feedback?: {
+    rating: number;
+    text: string;
+    submittedAt: string;
+  };
 }
 
 export interface Comment {

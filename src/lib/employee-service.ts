@@ -1,6 +1,6 @@
 
 
-import type { Employee } from '@/types';
+import type { Employee, Payslip } from '@/types';
 import { subYears } from 'date-fns';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
@@ -72,7 +72,7 @@ export const addEmployee = async (employeeData: Omit<Employee, 'id' | 'employeeI
         
         const newIdNumber = maxIdNumber + 1;
         const employeeId = `EMP-${String(newIdNumber).padStart(3, '0')}`;
-        const newEmployeeData = { ...employeeData, employeeId };
+        const newEmployeeData = { ...employeeData, employeeId, payslips: {} };
 
         const newDoc = await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents`, {
             method: 'POST',
@@ -118,4 +118,36 @@ export const deleteEmployee = async (employeeId: string): Promise<boolean> => {
         console.error(`Error deleting employee ${employeeId} via API v3:`, error);
         return false;
     }
+};
+
+// New function to update a payslip record within an employee's document
+export const updatePayslip = async (employeeId: string, payslipId: string, payslipData: Omit<Payslip, 'id' | 'updatedAt'>): Promise<boolean> => {
+  try {
+    const existingEmployee = await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`);
+    if (!existingEmployee || !existingEmployee.data) {
+        throw new Error("Employee not found");
+    }
+
+    const updatedPayslip: Payslip = {
+      ...payslipData,
+      id: payslipId,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const updatedPayslips = {
+      ...(existingEmployee.data.payslips || {}),
+      [payslipId]: updatedPayslip,
+    };
+    
+    const finalData = { ...existingEmployee.data, payslips: updatedPayslips };
+
+    await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ data: finalData })
+    });
+    return true;
+  } catch (error) {
+    console.error(`Error updating payslip for employee ${employeeId} via API v3:`, error);
+    return false;
+  }
 };

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -191,18 +192,24 @@ export default function PayrollPage() {
   }, [employees, allUsers]);
   
   const totalPayableAmount = useMemo(() => {
-    const daysInMonth = getDaysInMonth(selectedDate);
-    return paginatedEmployees.reduce((total, employee) => {
-      const perDaySalary = (employee.salary || 0) / daysInMonth;
-      const presentDays = 22; // Placeholder
-      const incentive = 1500;
-      const fine = 100;
-      const lateDays = 1; // Placeholder
-      const providentFund = (employee.salary || 0) * 0.07;
-      const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
-      const payable = (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
-      return total + payable;
-    }, 0);
+      const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
+      return paginatedEmployees.reduce((total, employee) => {
+          const payslip = employee.payslips?.[monthYearId];
+          if (payslip) {
+              return total + payslip.payableAmount;
+          }
+          // Default calculation if no payslip data
+          const daysInMonth = getDaysInMonth(selectedDate);
+          const perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
+          const presentDays = 22; // Default
+          const incentive = 1500; // Default
+          const fine = 100; // Default
+          const lateDays = 1; // Default
+          const providentFund = (employee.salary || 0) * 0.07;
+          const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
+          const payable = (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
+          return total + payable;
+      }, 0);
   }, [paginatedEmployees, selectedDate]);
 
   const handleMonthChange = (monthIndex: string) => {
@@ -457,20 +464,27 @@ export default function PayrollPage() {
                 ))
               ) : paginatedEmployees.length > 0 ? (
                 paginatedEmployees.map((employee) => {
+                  const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
+                  const payslip = employee.payslips?.[monthYearId];
+                  
                   const daysInMonth = getDaysInMonth(selectedDate);
-                  const perDaySalary = (employee.salary || 0) / daysInMonth;
-                  const presentDays = 22; // Placeholder, to be replaced with actual data
-                  const incentive = 1500;
-                  const fine = 100;
-                  const lateDays = 1; // Placeholder
+                  const perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
                   const providentFund = (employee.salary || 0) * 0.07;
+                  
+                  const presentDays = payslip?.presentDays ?? 22;
+                  const lateDays = payslip?.lateDays ?? 1;
+                  const incentive = payslip?.incentive ?? 1500;
+                  const fine = payslip?.fine ?? 100;
+                  const absentDays = payslip?.absentDays ?? 2;
+
                   const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
-                  const payable = (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
+                  const payable = payslip?.payableAmount ?? (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
+
                   return (
                     <TableRow key={employee.id}>
                         <TableCell className="font-medium">{employee.name}</TableCell>
                         <TableCell>{presentDays}</TableCell>
-                        <TableCell>2</TableCell>
+                        <TableCell>{absentDays}</TableCell>
                         <TableCell>{lateDays}</TableCell>
                         <TableCell>{formatCurrency(providentFund)}</TableCell>
                         <TableCell>{formatCurrency(fine)}</TableCell>
@@ -617,7 +631,7 @@ export default function PayrollPage() {
           onOpenChange={(open) => !open && setPayslipToEdit(null)}
           employee={payslipToEdit}
           onSave={() => {
-            toast({ title: "Payslip Updated (Simulated)", description: "Payslip details have been updated visually." });
+            fetchData(); // Refetch data after saving
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}

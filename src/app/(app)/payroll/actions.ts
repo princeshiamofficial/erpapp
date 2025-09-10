@@ -3,11 +3,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Employee } from "@/types";
+import type { Employee, Payslip } from "@/types";
 import {
   addEmployee as addEmployeeService,
   updateEmployee as updateEmployeeService,
   deleteEmployee as deleteEmployeeService,
+  updatePayslip as updatePayslipService, // Import new service
 } from "@/lib/employee-service";
 
 export async function addEmployeeAction(
@@ -63,6 +64,25 @@ export async function deleteEmployeeAction(employeeId: string): Promise<{ succes
     return { success: false, error: "Failed to delete employee from database." };
   } catch (error) {
     console.error("Error in deleteEmployeeAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+// New action for updating payslip data
+export async function updatePayslipAction(
+  employeeId: string,
+  payslipId: string, // e.g., '2024-07'
+  payslipData: Omit<Payslip, 'id' | 'updatedAt'>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await updatePayslipService(employeeId, payslipId, payslipData);
+    if (success) {
+      revalidatePath("/(app)/payroll");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update payslip in database." };
+  } catch (error) {
+    console.error("Error in updatePayslipAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

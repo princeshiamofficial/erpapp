@@ -15,8 +15,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import type { Employee } from '@/types';
+import type { Employee, Payslip } from '@/types';
 import { getDaysInMonth } from 'date-fns';
+import { updatePayslipAction } from '@/app/(app)/payroll/actions';
+
 
 // Moved formatCurrency here to avoid import issues
 const formatCurrency = (value?: number | null): string => {
@@ -41,6 +43,22 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
+  const monthYearId = useMemo(() => {
+    return `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
+  }, [selectedDate]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const payslipData = employee.payslips?.[monthYearId];
+      setPresent(payslipData?.presentDays.toString() || '22');
+      setAbsent(payslipData?.absentDays.toString() || '2');
+      setLate(payslipData?.lateDays.toString() || '1');
+      setFine(payslipData?.fine.toString() || '100');
+      setIncentive(payslipData?.incentive.toString() || '1500');
+      setIsSubmitting(false);
+    }
+  }, [isOpen, employee, monthYearId]);
+
   const providentFund = useMemo(() => {
     return (employee.salary || 0) * 0.07;
   }, [employee.salary]);
@@ -52,7 +70,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     
     // New calculation logic based on days
     const daysInMonth = getDaysInMonth(selectedDate);
-    const perDaySalary = baseSalary / daysInMonth;
+    const perDaySalary = baseSalary / (daysInMonth > 0 ? daysInMonth : 30);
     const presentDays = parseInt(present, 10) || 0;
     const lateDays = parseInt(late, 10) || 0;
 
@@ -61,26 +79,29 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     return (perDaySalary * presentDays) + incentiveNum - fineNum - providentFund - lateDeduction;
   }, [employee.salary, incentive, fine, providentFund, present, late, selectedDate]);
 
-  useEffect(() => {
-    if (!isOpen) {
-      // Reset state when dialog is closed
-      setPresent('22');
-      setAbsent('2');
-      setLate('1');
-      setFine('100');
-      setIncentive('1500');
-      setIsSubmitting(false);
-    }
-  }, [isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    // In a real app, you would call a server action here to save the data.
-    // For now, we simulate a save and call the onSave callback.
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
+    
+    const payslipData: Omit<Payslip, 'id' | 'updatedAt'> = {
+        presentDays: parseInt(present, 10),
+        absentDays: parseInt(absent, 10),
+        lateDays: parseInt(late, 10),
+        fine: parseFloat(fine),
+        incentive: parseFloat(incentive),
+        payableAmount: payableAmount,
+    };
+
+    const result = await updatePayslipAction(employee.id, monthYearId, payslipData);
     setIsSubmitting(false);
-    onSave();
+
+    if (result.success) {
+        toast({ title: "Payslip Updated", description: "Payslip details have been saved successfully." });
+        onSave(); // This will trigger a re-fetch in the parent
+    } else {
+        toast({ title: "Error", description: result.error, variant: "destructive" });
+    }
   };
 
   return (
