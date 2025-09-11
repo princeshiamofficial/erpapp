@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -1183,26 +1182,39 @@ function DashboardContent() {
                   ) : recentFeedback.length > 0 ? (
                     <ScrollArea className="h-[400px] pr-3">
                       <div className="space-y-4">
-                        {recentFeedback.map(feedback => (
-                          <div key={feedback.id} className="p-4 border rounded-lg bg-secondary/30">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <p className="font-semibold text-foreground">{feedback.companyName}</p>
-                                <p className="text-xs text-muted-foreground">Order ID: {feedback.orderId}</p>
+                        {recentFeedback.map(feedback => {
+                          const user = userMap.get(feedback.crmUserId || feedback.designerRepresentativeId || '');
+                          return (
+                            <div key={feedback.id} className="p-4 border rounded-lg bg-secondary/30">
+                              <div className="flex justify-between items-start">
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="h-10 w-10 border-2 border-primary/20">
+                                    <AvatarImage src={user?.avatarUrl || undefined} alt={user?.name} />
+                                    <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <p className="font-semibold text-foreground">{feedback.companyName}</p>
+                                    <p className="text-xs text-muted-foreground">Order ID: {feedback.orderId}</p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-amber-500">
+                                  {[...Array(5)].map((_, i) => (
+                                    <Star
+                                      key={i}
+                                      className={cn("h-4 w-4", i < feedback.rating ? "fill-amber-400 text-amber-400" : "fill-muted stroke-muted-foreground")}
+                                    />
+                                  ))}
+                                </div>
                               </div>
-                              <div className="flex items-center gap-1">
-                                <span className="font-bold text-amber-500">{feedback.rating}</span>
-                                <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                              </div>
+                              <p className="text-sm text-foreground/90 mt-3 italic border-l-2 border-primary pl-3">
+                                {renderFeedbackText(feedback.text)}
+                              </p>
+                              <p className="text-xs text-right text-muted-foreground mt-2">
+                                - Submitted {format(parseISO(feedback.submittedAt), "d MMM, yyyy")}
+                              </p>
                             </div>
-                             <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
-                              {renderFeedbackText(feedback.text)}
-                            </p>
-                            <p className="text-xs text-right text-muted-foreground mt-2">
-                              - Submitted {format(parseISO(feedback.submittedAt), "d MMM, yyyy")}
-                            </p>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </ScrollArea>
                   ) : (
@@ -1240,26 +1252,39 @@ function DashboardContent() {
                     ) : recentFeedback.length > 0 ? (
                     <ScrollArea className="h-[400px] pr-3">
                         <div className="space-y-4">
-                        {recentFeedback.map(feedback => (
-                            <div key={feedback.id} className="p-4 border rounded-lg bg-secondary/30">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                <p className="font-semibold text-foreground">{feedback.companyName}</p>
-                                <p className="text-xs text-muted-foreground">Order ID: {feedback.orderId}</p>
+                        {recentFeedback.map(feedback => {
+                            const user = userMap.get(feedback.crmUserId || feedback.designerRepresentativeId || '');
+                            return (
+                                <div key={feedback.id} className="p-4 border rounded-lg bg-secondary/30">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-3">
+                                    <Avatar className="h-10 w-10 border-2 border-primary/20">
+                                        <AvatarImage src={user?.avatarUrl || undefined} alt={user?.name} />
+                                        <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <p className="font-semibold text-foreground">{feedback.companyName}</p>
+                                        <p className="text-xs text-muted-foreground">Order ID: {feedback.orderId}</p>
+                                    </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-amber-500">
+                                        {[...Array(5)].map((_, i) => (
+                                            <Star
+                                            key={i}
+                                            className={cn("h-4 w-4", i < feedback.rating ? "fill-amber-400 text-amber-400" : "fill-muted stroke-muted-foreground")}
+                                            />
+                                        ))}
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                <span className="font-bold text-amber-500">{feedback.rating}</span>
-                                <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                              </div>
-                            </div>
-                             <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
-                              {renderFeedbackText(feedback.text)}
-                            </p>
-                            <p className="text-xs text-right text-muted-foreground mt-2">
-                                - Submitted {format(parseISO(feedback.submittedAt), "d MMM, yyyy")}
-                            </p>
-                            </div>
-                        ))}
+                                <p className="text-sm text-foreground/90 mt-3 italic border-l-2 border-primary pl-3">
+                                    {renderFeedbackText(feedback.text)}
+                                </p>
+                                <p className="text-xs text-right text-muted-foreground mt-2">
+                                    - Submitted {format(parseISO(feedback.submittedAt), "d MMM, yyyy")}
+                                </p>
+                                </div>
+                            );
+                        })}
                         </div>
                     </ScrollArea>
                     ) : (
@@ -1318,3 +1343,4 @@ function DashboardContent() {
     </div>
   );
 }
+
