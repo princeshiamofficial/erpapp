@@ -89,6 +89,10 @@ export interface Feedback {
   rating: number;
   text: string;
   submittedAt: string; // ISO string
+  crmUserId?: string;
+  crmUserName?: string;
+  designerRepresentativeId?: string | null;
+  designerRepresentativeName?: string | null;
 }
 
 export interface TrackingLink {

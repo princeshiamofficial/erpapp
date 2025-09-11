@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -20,6 +21,10 @@ export async function submitFeedbackAction(orderId: string, rating: number, feed
       rating: rating,
       text: feedbackText,
       submittedAt: new Date().toISOString(),
+      crmUserId: order.crmUserId,
+      crmUserName: order.crmUserName,
+      designerRepresentativeId: order.designerRepresentativeId,
+      designerRepresentativeName: order.designerRepresentativeName,
     };
 
     // Use the new service to add the feedback to its own collection
