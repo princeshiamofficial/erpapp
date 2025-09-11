@@ -338,29 +338,29 @@ function DashboardContent() {
   const filteredProjects = useMemo(() => {
     const isDrOrLr = currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR';
     
-    // For DR/LR, ignore the date filter
-    if (isDrOrLr) {
-        let projectsToFilter = allProjects;
-        if (currentUser.role === 'DESIGNER_REPRESENTATIVE') {
-            projectsToFilter = projectsToFilter.filter(p => p.designerRepresentativeId === currentUser.id);
-        } else if (currentUser.role === 'LR') {
-             projectsToFilter = projectsToFilter.filter(p => p.assigneeId === currentUser.id || p.status === 'Logistics' || p.status === 'Courier' || p.status === 'Delivered');
-        }
-        return projectsToFilter;
-    }
+    let projectsToFilter = allProjects;
 
-    // For other roles, apply the date filter
-    const interval = getDateRangeInterval();
-    if (!interval) return [];
-
-    let projectsToFilter = allProjects.filter(project => 
-        project.createdAt && isWithinInterval(parseISO(project.createdAt), interval)
-    );
-    
+    // First, filter by role
     if (currentUser?.role === 'CRM') {
         projectsToFilter = projectsToFilter.filter(p => p.assigneeId === currentUser.id);
+    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
+        projectsToFilter = projectsToFilter.filter(p => p.designerRepresentativeId === currentUser.id);
+    } else if (currentUser?.role === 'LR') {
+         projectsToFilter = projectsToFilter.filter(p => p.assigneeId === currentUser.id || p.status === 'Logistics' || p.status === 'Courier' || p.status === 'Delivered');
     } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
         projectsToFilter = projectsToFilter.filter(p => p.assigneeId === selectedCrmId);
+    }
+    
+    // Then, apply date filter unless user is DR/LR
+    if (!isDrOrLr) {
+      const interval = getDateRangeInterval();
+      if (interval) {
+        projectsToFilter = projectsToFilter.filter(project => 
+            project.createdAt && isWithinInterval(parseISO(project.createdAt), interval)
+        );
+      } else {
+        return []; // If no interval, return empty
+      }
     }
     
     return projectsToFilter;
@@ -628,12 +628,11 @@ function DashboardContent() {
   });
   const [selectedTeam, setSelectedTeam] = useState<UserRole | 'all'>('all');
   
-  // This must be declared before it is used in the next useMemo.
   const isAdminView = useMemo(() => {
     if (!currentUser) return false;
     return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
   }, [currentUser]);
-
+  
   const { teamPerformanceData, totalPerformanceTarget } = useMemo(() => {
     if (!teamPerformanceDateRange?.from || !globalSettings?.roleBasedTargets) {
       return { teamPerformanceData: [], totalPerformanceTarget: 0 };
@@ -852,12 +851,20 @@ function DashboardContent() {
   }, [currentUser]);
 
   const recentFeedback = useMemo(() => {
-    if (!allOrders) return [];
-    return allOrders
+    if (!allOrders || !currentUser) return [];
+
+    let filteredByRole = allOrders;
+    if (currentUser.role === 'CRM') {
+      filteredByRole = allOrders.filter(order => order.crmUserId === currentUser.id);
+    } else if (currentUser.role === 'DESIGNER_REPRESENTATIVE') {
+      filteredByRole = allOrders.filter(order => order.designerRepresentativeId === currentUser.id);
+    }
+
+    return filteredByRole
       .filter(order => order.feedback && order.feedback.text.trim())
       .sort((a, b) => new Date(b.feedback!.submittedAt).getTime() - new Date(a.feedback!.submittedAt).getTime())
       .slice(0, 5); // Get latest 5
-  }, [allOrders]);
+  }, [allOrders, currentUser]);
   
   const userMap = useMemo(() => new Map(allUsers.map(u => [u.id, u])), [allUsers]);
   
