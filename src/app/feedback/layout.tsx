@@ -1,9 +1,6 @@
 
 import type { Metadata } from 'next';
-import { GeistSans } from 'geist/font/sans';
-import '../globals.css'; // Adjust path to globals.css if needed
-
-const geistSans = GeistSans;
+import '../globals.css';
 
 export const metadata: Metadata = {
   title: 'Feedback - Color Hut',
@@ -16,7 +13,7 @@ export default function FeedbackLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="bn">
+    <>
       <head>
         <meta charSet="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -78,131 +75,134 @@ export default function FeedbackLayout({
           `}
         </style>
       </head>
-      <body>
-        <main>{children}</main>
-        <script
-            dangerouslySetInnerHTML={{
-              __html: `
-                document.addEventListener('DOMContentLoaded', () => {
-                    // Star rating functionality
-                    const starContainers = document.querySelectorAll('.star-rating');
-                    starContainers.forEach(container => {
-                        const stars = container.querySelectorAll('.star');
-                        stars.forEach(star => {
-                            star.addEventListener('mouseover', () => {
-                                const rating = parseInt(star.dataset.rating, 10);
-                                highlightStars(stars, rating);
-                            });
-                            star.addEventListener('mouseout', () => {
-                                const currentRating = parseInt(container.dataset.value, 10);
-                                highlightStars(stars, currentRating);
-                            });
-                            star.addEventListener('click', () => {
-                                const rating = parseInt(star.dataset.rating, 10);
-                                container.dataset.value = rating;
-                                highlightStars(stars, rating);
-                            });
-                        });
-                    });
+      <main>{children}</main>
+      <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              document.addEventListener('DOMContentLoaded', () => {
+                  // Star rating functionality
+                  const starContainers = document.querySelectorAll('.star-rating');
+                  starContainers.forEach(container => {
+                      const stars = container.querySelectorAll('.star');
+                      stars.forEach(star => {
+                          star.addEventListener('mouseover', () => {
+                              const rating = parseInt(star.dataset.rating, 10);
+                              highlightStars(stars, rating);
+                          });
+                          star.addEventListener('mouseout', () => {
+                              const currentRating = parseInt(container.dataset.value, 10);
+                              highlightStars(stars, currentRating);
+                          });
+                          star.addEventListener('click', () => {
+                              const rating = parseInt(star.dataset.rating, 10);
+                              container.dataset.value = rating;
+                              highlightStars(stars, rating);
+                          });
+                      });
+                  });
 
-                    function highlightStars(stars, rating) {
-                        stars.forEach(s => {
-                            if (parseInt(s.dataset.rating, 10) <= rating) {
-                                s.classList.add('selected');
-                            } else {
-                                s.classList.remove('selected');
-                            }
-                        });
-                    }
+                  function highlightStars(stars, rating) {
+                      stars.forEach(s => {
+                          if (parseInt(s.dataset.rating, 10) <= rating) {
+                              s.classList.add('selected');
+                          } else {
+                              s.classList.remove('selected');
+                          }
+                      });
+                  }
 
-                    // Option group functionality
-                    const optionGroups = document.querySelectorAll('.option-group');
-                    optionGroups.forEach(group => {
-                        const options = group.querySelectorAll('.option');
-                        options.forEach(option => {
-                            option.addEventListener('click', () => {
-                                options.forEach(o => o.classList.remove('selected'));
-                                option.classList.add('selected');
-                            });
-                        });
-                    });
+                  // Option group functionality
+                  const optionGroups = document.querySelectorAll('.option-group');
+                  optionGroups.forEach(group => {
+                      const options = group.querySelectorAll('.option');
+                      options.forEach(option => {
+                          option.addEventListener('click', () => {
+                              options.forEach(o => o.classList.remove('selected'));
+                              option.classList.add('selected');
+                          });
+                      });
+                  });
 
-                    // Emoji group functionality
-                    const emojiGroups = document.querySelectorAll('.emoji-group');
-                    emojiGroups.forEach(group => {
-                        const emojis = group.querySelectorAll('.emoji');
-                        emojis.forEach(emoji => {
-                            emoji.addEventListener('click', () => {
-                                emojis.forEach(e => e.classList.remove('selected'));
-                                emoji.classList.add('selected');
-                            });
-                        });
-                    });
+                  // Emoji group functionality
+                  const emojiGroups = document.querySelectorAll('.emoji-group');
+                  emojiGroups.forEach(group => {
+                      const emojis = group.querySelectorAll('.emoji');
+                      emojis.forEach(emoji => {
+                          emoji.addEventListener('click', () => {
+                              emojis.forEach(e => e.classList.remove('selected'));
+                              emoji.classList.add('selected');
+                          });
+                      });
+                  });
 
-                    // Form submission
-                    const submitBtn = document.getElementById('submit-btn');
-                    submitBtn.addEventListener('click', () => {
-                        const feedbackData = {};
-                        
-                        // Get star ratings
-                        starContainers.forEach(container => {
-                            const question = container.closest('.feedback-section').dataset.question;
-                            const value = parseInt(container.dataset.value, 10);
-                            feedbackData[question] = value > 0 ? ('★'.repeat(value) + '☆'.repeat(5 - value) + ' (' + value + '/5)') : 'Not rated';
-                        });
-                        
-                        // Get option selections
-                        optionGroups.forEach(group => {
-                            const question = group.closest('.feedback-section').dataset.question;
-                            const selectedOption = group.querySelector('.option.selected');
-                            feedbackData[question] = selectedOption ? selectedOption.dataset.value : 'Not selected';
-                        });
+                  // Form submission
+                  const submitBtn = document.getElementById('submit-btn');
+                  submitBtn.addEventListener('click', () => {
+                      const feedbackData = {};
+                      
+                      // Get star ratings
+                      starContainers.forEach(container => {
+                          const question = container.closest('.feedback-section').dataset.question;
+                          const value = parseInt(container.dataset.value, 10);
+                          feedbackData[question] = value > 0 ? ('★'.repeat(value) + '☆'.repeat(5 - value) + ' (' + value + '/5)') : 'Not rated';
+                      });
+                      
+                      // Get option selections
+                      optionGroups.forEach(group => {
+                          const question = group.closest('.feedback-section').dataset.question;
+                          const selectedOption = group.querySelector('.option.selected');
+                          feedbackData[question] = selectedOption ? selectedOption.dataset.value : 'Not selected';
+                      });
 
-                        // Get emoji selections
-                        emojiGroups.forEach(group => {
-                            const question = group.closest('.feedback-section').dataset.question;
-                            const selectedEmoji = group.querySelector('.emoji.selected');
-                            feedbackData[question] = selectedEmoji ? selectedEmoji.dataset.value : 'Not selected';
-                        });
-                        
-                        // Get open feedback
-                        const openFeedback = document.getElementById('open-feedback').value;
-                        feedbackData['ওপেন ফিডব্যাক'] = openFeedback || 'No feedback provided';
+                      // Get emoji selections
+                      emojiGroups.forEach(group => {
+                          const question = group.closest('.feedback-section').dataset.question;
+                          const selectedEmoji = group.querySelector('.emoji.selected');
+                          feedbackData[question] = selectedEmoji ? selectedEmoji.dataset.value : 'Not selected';
+                      });
+                      
+                      // Get open feedback
+                      const openFeedback = document.getElementById('open-feedback').value;
+                      feedbackData['ওপেন ফিডব্যাক'] = openFeedback || 'No feedback provided';
 
-                        const overallRating = parseInt(document.querySelector('[data-question="প্রোডাক্ট কোয়ালিটি"] .star-rating').dataset.value, 10) || 0;
-                        
-                        const orderId = window.location.pathname.split('/').pop();
+                      const overallRating = parseInt(document.querySelector('[data-question="প্রোডাক্ট কোয়ালিটি"] .star-rating').dataset.value, 10) || 0;
+                      
+                      const orderId = window.location.pathname.split('/').pop();
 
-                        fetch('/api/feedback', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({
-                                orderId: orderId,
-                                rating: overallRating,
-                                feedbackText: JSON.stringify(feedbackData),
-                            }),
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success) {
-                                document.getElementById('feedback-form').classList.add('hidden');
-                                document.getElementById('thank-you-message').classList.remove('hidden');
-                            } else {
-                                alert('An error occurred: ' + data.error);
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error submitting feedback:', error);
-                            alert('An error occurred while submitting your feedback.');
-                        });
-                    });
-                });
-              `,
-            }}
-          />
-      </body>
-    </html>
+                      fetch('/api/feedback', {
+                          method: 'POST',
+                          headers: {
+                              'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                              orderId: orderId,
+                              rating: overallRating,
+                              feedbackText: JSON.stringify(feedbackData),
+                          }),
+                      })
+                      .then(response => {
+                          if (!response.ok) {
+                              throw new Error('Network response was not ok');
+                          }
+                          return response.json();
+                      })
+                      .then(data => {
+                          if (data.success) {
+                              document.getElementById('feedback-form').classList.add('hidden');
+                              document.getElementById('thank-you-message').classList.remove('hidden');
+                          } else {
+                              alert('An error occurred: ' + data.error);
+                          }
+                      })
+                      .catch(error => {
+                          console.error('Error submitting feedback:', error);
+                          alert('An error occurred while submitting your feedback. Please check the console for details.');
+                      });
+                  });
+              });
+            `,
+          }}
+        />
+    </>
   );
 }
