@@ -1,9 +1,9 @@
+
 import { Suspense } from 'react';
 import { getOrderById } from '@/lib/order-service';
 import { notFound } from 'next/navigation';
 import { FeedbackClient } from './FeedbackClient';
 import { Skeleton } from '@/components/ui/skeleton';
-import Image from 'next/image';
 
 interface FeedbackPageProps {
   params: { orderId: string };
@@ -38,7 +38,6 @@ export default async function FeedbackPage({ params }: FeedbackPageProps) {
     notFound();
   }
 
-  // The feedback page is now public, so we don't need to check for isPublic status
   const orderData = await getOrderById(orderId);
 
   if (!orderData) {
@@ -48,7 +47,8 @@ export default async function FeedbackPage({ params }: FeedbackPageProps) {
   const plainOrderData = JSON.parse(JSON.stringify(orderData));
 
   return (
-    // This component now uses a standalone HTML structure to match the reference
-    <FeedbackClient order={plainOrderData} />
+    <Suspense fallback={<FeedbackPageSkeleton />}>
+      <FeedbackClient order={plainOrderData} />
+    </Suspense>
   );
 }
