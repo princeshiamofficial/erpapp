@@ -1,6 +1,7 @@
 
 import type { Metadata } from 'next';
 import '../globals.css';
+import Script from 'next/script'; // Import the Script component
 
 export const metadata: Metadata = {
   title: 'Feedback - Color Hut',
@@ -14,26 +15,19 @@ export default function FeedbackLayout({
 }>) {
   return (
     <>
-      <head>
-        <meta charSet="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <script src="https://cdn.tailwindcss.com"></script>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet" />
-        <style>
-          {`
+      {/* Meta tags and links are now handled by Next.js metadata and the RootLayout */}
+      {/* We can inject necessary scripts and styles directly here */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet" />
+      <style>
+        {`
             @keyframes fadeIn {
                 from { opacity: 0; transform: translateY(-20px); }
                 to { opacity: 1; transform: translateY(0); }
             }
 
-            html, body {
-                height: 100%;
-                margin: 0;
-                padding: 0;
-            }
-
+            /* These will apply to the body tag rendered by the root layout */
             body {
                 font-family: 'Hind Siliguri', sans-serif;
                 background: linear-gradient(to top right, #fff7ed, #fef2f2);
@@ -73,70 +67,68 @@ export default function FeedbackLayout({
             .feedback-section { border-bottom: 1px solid #f3f4f6; }
             .feedback-section:last-child { border-bottom: none; }
           `}
-        </style>
-      </head>
+      </style>
       <main>{children}</main>
-      <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              document.addEventListener('DOMContentLoaded', () => {
-                  // Star rating functionality
-                  const starContainers = document.querySelectorAll('.star-rating');
-                  starContainers.forEach(container => {
-                      const stars = container.querySelectorAll('.star');
-                      stars.forEach(star => {
-                          star.addEventListener('mouseover', () => {
-                              const rating = parseInt(star.dataset.rating, 10);
-                              highlightStars(stars, rating);
-                          });
-                          star.addEventListener('mouseout', () => {
-                              const currentRating = parseInt(container.dataset.value, 10);
-                              highlightStars(stars, currentRating);
-                          });
-                          star.addEventListener('click', () => {
-                              const rating = parseInt(star.dataset.rating, 10);
-                              container.dataset.value = rating;
-                              highlightStars(stars, rating);
-                          });
+      <Script id="feedback-form-script" strategy="afterInteractive">
+          {`
+              // Star rating functionality
+              const starContainers = document.querySelectorAll('.star-rating');
+              starContainers.forEach(container => {
+                  const stars = container.querySelectorAll('.star');
+                  stars.forEach(star => {
+                      star.addEventListener('mouseover', () => {
+                          const rating = parseInt(star.dataset.rating, 10);
+                          highlightStars(stars, rating);
+                      });
+                      star.addEventListener('mouseout', () => {
+                          const currentRating = parseInt(container.dataset.value, 10);
+                          highlightStars(stars, currentRating);
+                      });
+                      star.addEventListener('click', () => {
+                          const rating = parseInt(star.dataset.rating, 10);
+                          container.dataset.value = rating;
+                          highlightStars(stars, rating);
                       });
                   });
+              });
 
-                  function highlightStars(stars, rating) {
-                      stars.forEach(s => {
-                          if (parseInt(s.dataset.rating, 10) <= rating) {
-                              s.classList.add('selected');
-                          } else {
-                              s.classList.remove('selected');
-                          }
-                      });
-                  }
+              function highlightStars(stars, rating) {
+                  stars.forEach(s => {
+                      if (parseInt(s.dataset.rating, 10) <= rating) {
+                          s.classList.add('selected');
+                      } else {
+                          s.classList.remove('selected');
+                      }
+                  });
+              }
 
-                  // Option group functionality
-                  const optionGroups = document.querySelectorAll('.option-group');
-                  optionGroups.forEach(group => {
-                      const options = group.querySelectorAll('.option');
-                      options.forEach(option => {
-                          option.addEventListener('click', () => {
-                              options.forEach(o => o.classList.remove('selected'));
-                              option.classList.add('selected');
-                          });
+              // Option group functionality
+              const optionGroups = document.querySelectorAll('.option-group');
+              optionGroups.forEach(group => {
+                  const options = group.querySelectorAll('.option');
+                  options.forEach(option => {
+                      option.addEventListener('click', () => {
+                          options.forEach(o => o.classList.remove('selected'));
+                          option.classList.add('selected');
                       });
                   });
+              });
 
-                  // Emoji group functionality
-                  const emojiGroups = document.querySelectorAll('.emoji-group');
-                  emojiGroups.forEach(group => {
-                      const emojis = group.querySelectorAll('.emoji');
-                      emojis.forEach(emoji => {
-                          emoji.addEventListener('click', () => {
-                              emojis.forEach(e => e.classList.remove('selected'));
-                              emoji.classList.add('selected');
-                          });
+              // Emoji group functionality
+              const emojiGroups = document.querySelectorAll('.emoji-group');
+              emojiGroups.forEach(group => {
+                  const emojis = group.querySelectorAll('.emoji');
+                  emojis.forEach(emoji => {
+                      emoji.addEventListener('click', () => {
+                          emojis.forEach(e => e.classList.remove('selected'));
+                          emoji.classList.add('selected');
                       });
                   });
+              });
 
-                  // Form submission
-                  const submitBtn = document.getElementById('submit-btn');
+              // Form submission
+              const submitBtn = document.getElementById('submit-btn');
+              if (submitBtn) {
                   submitBtn.addEventListener('click', () => {
                       const feedbackData = {};
                       
@@ -188,8 +180,8 @@ export default function FeedbackLayout({
                       })
                       .then(data => {
                           if (data.success) {
-                              document.getElementById('feedback-form').classList.add('hidden');
-                              document.getElementById('thank-you-message').classList.remove('hidden');
+                              document.getElementById('feedback-form').style.display = 'none';
+                              document.getElementById('thank-you-message').style.display = 'block';
                           } else {
                               alert('An error occurred: ' + data.error);
                           }
@@ -199,10 +191,10 @@ export default function FeedbackLayout({
                           alert('An error occurred while submitting your feedback. Please check the console for details.');
                       });
                   });
-              });
-            `,
-          }}
-        />
+              }
+            `}
+        </Script>
+        {/* We no longer need the Tailwind CDN script as it's part of the app's build process */}
     </>
   );
 }
