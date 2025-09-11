@@ -58,13 +58,14 @@ import {
   LabelList,
 } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart';
-import type { TrackingLink, OrderItem, ServiceModelItem, User, Project, ProjectStatusType, GlobalSettings, Lead, LeadCategory, UserRole } from '@/types'; 
+import type { TrackingLink, OrderItem, ServiceModelItem, User, Project, ProjectStatusType, GlobalSettings, Lead, LeadCategory, UserRole, Feedback } from '@/types'; 
 import { getOrders } from '@/lib/order-service';
 import { getModels } from '@/lib/service-options-service'; 
 import { useToast } from '@/hooks/use-toast';
 import { getUsers } from '@/lib/user-service';
 import { getProjects } from '@/lib/project-service';
 import { getLeads } from '@/lib/lead-service';
+import { getFeedback } from '@/lib/feedback-service'; // Import getFeedback
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -268,12 +269,12 @@ function DashboardContent() {
       return null;
     }
     try {
-      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks] = await Promise.all([ 
-        getOrders(), getModels(), getUsers(), getProjects(), getGlobalSettings(), getLeads(), getTaskEntries(),
+      const [fetchedOrders, fetchedModels, fetchedUsers, fetchedProjects, fetchedSettings, fetchedLeads, fetchedTasks, fetchedFeedback] = await Promise.all([ 
+        getOrders(), getModels(), getUsers(), getProjects(), getGlobalSettings(), getLeads(), getTaskEntries(), getFeedback(),
       ]);
       return { 
         allOrders: fetchedOrders, allModels: fetchedModels, allUsers: fetchedUsers, 
-        allProjects: fetchedProjects, globalSettings: fetchedSettings, allLeads: fetchedLeads, allTasks: fetchedTasks
+        allProjects: fetchedProjects, globalSettings: fetchedSettings, allLeads: fetchedLeads, allTasks: fetchedTasks, allFeedback: fetchedFeedback
       };
     } catch (error) {
       console.error("Failed to fetch dashboard data:", error);
@@ -292,7 +293,7 @@ function DashboardContent() {
     retry: 1, 
   });
 
-  const { allOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [] } = queryData || {};
+  const { allOrders = [], allModels = [], allUsers = [], allProjects = [], globalSettings = null, allLeads = [], allTasks = [], allFeedback = [] } = queryData || {};
   const allCrmUsers = useMemo(() => allUsers.filter(u => u.role === 'CRM'), [allUsers]);
 
   const getDateRangeInterval = () => {
@@ -314,6 +315,8 @@ function DashboardContent() {
     
     if (currentUser?.role === 'CRM') {
       ordersToFilter = ordersToFilter.filter(order => order.crmUserId === currentUser.id);
+    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
+      ordersToFilter = ordersToFilter.filter(order => order.designerRepresentativeId === currentUser.id);
     } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
       ordersToFilter = ordersToFilter.filter(order => order.crmUserId === selectedCrmId);
     }
@@ -547,6 +550,8 @@ function DashboardContent() {
     let ordersForDeliveryCount = allOrders; // Start with all orders
     if (currentUser?.role === 'CRM') {
         ordersForDeliveryCount = allOrders.filter(order => order.crmUserId === currentUser.id);
+    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
+      ordersForDeliveryCount = allOrders.filter(order => order.designerRepresentativeId === currentUser.id);
     } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
         ordersForDeliveryCount = allOrders.filter(order => order.crmUserId === selectedCrmId);
     }
@@ -740,7 +745,7 @@ function DashboardContent() {
       { title: isCrm ? "Sales" : "Total Sales", value: isCrm ? filteredOrders.length.toString() : totalSales, icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
       { title: "Invoice due", value: isCrm ? ordersWithDueCount.toString() : invoiceDue, icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
       { title: "Invoice Paid", value: invoicePaid, icon: Receipt, iconColorClass: "text-teal-600", circleBgClass: "bg-teal-100 dark:bg-teal-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
-      { title: "Delivered", value: deliveredCount, icon: PackageCheck, iconColorClass: "text-green-600", circleBgClass: "bg-green-100 dark:bg-green-500/20", isLoading: isLoadingData, roles: ['CRM'] },
+      { title: "Delivered", value: deliveredCount, icon: PackageCheck, iconColorClass: "text-green-600", circleBgClass: "bg-green-100 dark:bg-green-500/20", isLoading: isLoadingData, roles: ['CRM', 'DESIGNER_REPRESENTATIVE'] },
       { title: "Net", value: netValue, icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
       { title: "Total Sell Return", value: formatCurrency(0), icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
       { title: "Total purchase", value: totalPurchase, icon: Download, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
@@ -851,20 +856,19 @@ function DashboardContent() {
   }, [currentUser]);
 
   const recentFeedback = useMemo(() => {
-    if (!allOrders || !currentUser) return [];
+    if (!allFeedback || !currentUser) return [];
 
-    let filteredByRole = allOrders;
+    let filteredByRole = allFeedback;
     if (currentUser.role === 'CRM') {
-      filteredByRole = allOrders.filter(order => order.crmUserId === currentUser.id);
+      filteredByRole = allFeedback.filter(feedback => feedback.crmUserId === currentUser.id);
     } else if (currentUser.role === 'DESIGNER_REPRESENTATIVE') {
-      filteredByRole = allOrders.filter(order => order.designerRepresentativeId === currentUser.id);
+      filteredByRole = allFeedback.filter(feedback => feedback.designerRepresentativeId === currentUser.id);
     }
 
     return filteredByRole
-      .filter(order => order.feedback && order.feedback.text.trim())
-      .sort((a, b) => new Date(b.feedback!.submittedAt).getTime() - new Date(a.feedback!.submittedAt).getTime())
-      .slice(0, 5); // Get latest 5
-  }, [allOrders, currentUser]);
+      .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+      .slice(0, 5);
+  }, [allFeedback, currentUser]);
   
   const userMap = useMemo(() => new Map(allUsers.map(u => [u.id, u])), [allUsers]);
   
@@ -1179,23 +1183,23 @@ function DashboardContent() {
                   ) : recentFeedback.length > 0 ? (
                     <ScrollArea className="h-[400px] pr-3">
                       <div className="space-y-4">
-                        {recentFeedback.map(order => (
-                          <div key={order.id} className="p-4 border rounded-lg bg-secondary/30">
+                        {recentFeedback.map(feedback => (
+                          <div key={feedback.id} className="p-4 border rounded-lg bg-secondary/30">
                             <div className="flex justify-between items-start">
                               <div>
-                                <p className="font-semibold text-foreground">{order.companyName}</p>
-                                <p className="text-xs text-muted-foreground">Order ID: {order.id}</p>
+                                <p className="font-semibold text-foreground">{feedback.companyName}</p>
+                                <p className="text-xs text-muted-foreground">Order ID: {feedback.orderId}</p>
                               </div>
                               <div className="flex items-center gap-1">
-                                <span className="font-bold text-amber-500">{order.feedback?.rating}</span>
+                                <span className="font-bold text-amber-500">{feedback.rating}</span>
                                 <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
                               </div>
                             </div>
                              <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
-                              {renderFeedbackText(order.feedback!.text)}
+                              {renderFeedbackText(feedback.text)}
                             </p>
                             <p className="text-xs text-right text-muted-foreground mt-2">
-                              - Submitted {format(parseISO(order.feedback!.submittedAt), "d MMM, yyyy")}
+                              - Submitted {format(parseISO(feedback.submittedAt), "d MMM, yyyy")}
                             </p>
                           </div>
                         ))}
@@ -1236,23 +1240,23 @@ function DashboardContent() {
                     ) : recentFeedback.length > 0 ? (
                     <ScrollArea className="h-[400px] pr-3">
                         <div className="space-y-4">
-                        {recentFeedback.map(order => (
-                            <div key={order.id} className="p-4 border rounded-lg bg-secondary/30">
+                        {recentFeedback.map(feedback => (
+                            <div key={feedback.id} className="p-4 border rounded-lg bg-secondary/30">
                             <div className="flex justify-between items-start">
                                 <div>
-                                <p className="font-semibold text-foreground">{order.companyName}</p>
-                                <p className="text-xs text-muted-foreground">Order ID: {order.id}</p>
+                                <p className="font-semibold text-foreground">{feedback.companyName}</p>
+                                <p className="text-xs text-muted-foreground">Order ID: {feedback.orderId}</p>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                <span className="font-bold text-amber-500">{order.feedback?.rating}</span>
+                                <span className="font-bold text-amber-500">{feedback.rating}</span>
                                 <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
                               </div>
                             </div>
                              <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
-                              {renderFeedbackText(order.feedback!.text)}
+                              {renderFeedbackText(feedback.text)}
                             </p>
                             <p className="text-xs text-right text-muted-foreground mt-2">
-                                - Submitted {format(parseISO(order.feedback!.submittedAt), "d MMM, yyyy")}
+                                - Submitted {format(parseISO(feedback.submittedAt), "d MMM, yyyy")}
                             </p>
                             </div>
                         ))}

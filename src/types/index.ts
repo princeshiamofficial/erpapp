@@ -14,6 +14,7 @@ export interface User {
   weeklyOrderTarget?: number | null;
   isBanned?: boolean;
   fcmToken?: string | null;
+  feedback?: Feedback[];
 }
 
 export interface Payslip {
