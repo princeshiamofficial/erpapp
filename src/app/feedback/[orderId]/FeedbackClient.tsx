@@ -296,12 +296,13 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                     const overallRating = parseInt(document.querySelector('[data-question="প্রোডাক্ট কোয়ালিটি"] .star-rating').dataset.value, 10) || 0;
                     
                     // This is where you would send the data to your server
-                    fetch('/feedback/${order.id}/actions', {
+                    fetch('/api/feedback', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
+                            orderId: '${order.id}',
                             rating: overallRating,
                             feedbackText: JSON.stringify(feedbackData),
                         }),
@@ -328,3 +329,5 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
   `;
   return <div dangerouslySetInnerHTML={{ __html: htmlContent }} />;
 }
+
+    
