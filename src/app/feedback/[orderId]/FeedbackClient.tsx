@@ -274,7 +274,7 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                     starContainers.forEach(container => {
                         const question = container.closest('.feedback-section').dataset.question;
                         const value = parseInt(container.dataset.value, 10);
-                        feedbackData[question] = value > 0 ? \`\${value} out of 5\` : 'Not rated';
+                        feedbackData[question] = value > 0 ? \`${'★'.repeat(value)}${'☆'.repeat(5-value)} (\${value}/5)\` : 'Not rated';
                     });
                     
                     // Get option selections
@@ -294,20 +294,40 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                     // Get open feedback
                     const openFeedback = document.getElementById('open-feedback').value;
                     feedbackData['ওপেন ফিডব্যাক'] = openFeedback || 'No feedback provided';
-                    
-                    console.log('--- আপনার ফিডব্যাক ---');
-                    console.log(feedbackData);
 
-                    // Hide form and show thank you message
-                    document.getElementById('feedback-form').classList.add('hidden');
-                    document.getElementById('thank-you-message').classList.remove('hidden');
+                    const overallRating = parseInt(document.querySelector('[data-question="প্রোডাক্ট কোয়ালিটি"] .star-rating').dataset.value, 10) || 0;
+                    
+                    // This is where you would send the data to your server
+                    fetch('/feedback/${order.id}/actions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            rating: overallRating,
+                            feedbackText: JSON.stringify(feedbackData),
+                        }),
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById('feedback-form').classList.add('hidden');
+                            document.getElementById('thank-you-message').classList.remove('hidden');
+                        } else {
+                            alert('An error occurred: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error submitting feedback:', error);
+                        alert('An error occurred while submitting your feedback.');
+                    });
                 });
             });
         </script>
 
     </body>
     </html>
-  `;
+  `.trim();
   // Using dangerouslySetInnerHTML to render the complete HTML page structure.
   return <div dangerouslySetInnerHTML={{ __html: htmlContent }} />;
 }
