@@ -9,8 +9,6 @@ interface FeedbackClientProps {
 }
 
 export function FeedbackClient({ order }: FeedbackClientProps) {
-  // This component now renders a self-contained HTML page
-  // with embedded styles and scripts to match the provided reference design.
   const htmlContent = `
     <!DOCTYPE html>
     <html lang="bn">
@@ -274,7 +272,7 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
                     starContainers.forEach(container => {
                         const question = container.closest('.feedback-section').dataset.question;
                         const value = parseInt(container.dataset.value, 10);
-                        feedbackData[question] = value > 0 ? `${'★'.repeat(value)}${'☆'.repeat(5 - value)} (${value}/5)` : 'Not rated';
+                        feedbackData[question] = value > 0 ? ('★'.repeat(value) + '☆'.repeat(5 - value) + ' (' + value + '/5)') : 'Not rated';
                     });
                     
                     // Get option selections
@@ -328,6 +326,5 @@ export function FeedbackClient({ order }: FeedbackClientProps) {
     </body>
     </html>
   `;
-  // Using dangerouslySetInnerHTML to render the complete HTML page structure.
   return <div dangerouslySetInnerHTML={{ __html: htmlContent }} />;
 }
