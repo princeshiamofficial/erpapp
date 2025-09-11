@@ -25,7 +25,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth } from 'date-fns';
 import { deleteEmployeeAction } from './actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -104,10 +104,12 @@ export default function PayrollPage() {
     let results = employees;
 
     if (activeTab === 'salary_sheet') {
+      const endOfSelectedMonth = endOfMonth(selectedDate);
       results = results.filter(employee => {
         try {
           const joiningDate = new Date(employee.joiningDate);
-          return !isAfter(joiningDate, selectedDate);
+          // Employee is eligible if their joining date is on or before the last day of the selected month.
+          return !isAfter(joiningDate, endOfSelectedMonth);
         } catch (e) {
           return false;
         }
@@ -483,7 +485,7 @@ export default function PayrollPage() {
                   let perDaySalary = 0;
                   let presentDays = 0;
 
-                  if (isSameMonth(joiningDate, selectedDate)) {
+                  if (isSameMonth(joiningDate, selectedDate) && joiningDate.getFullYear() === selectedDate.getFullYear()) {
                     // Prorated salary for the first month
                     const joiningDay = getDate(joiningDate);
                     const workableDays = daysInMonth - joiningDay + 1;
