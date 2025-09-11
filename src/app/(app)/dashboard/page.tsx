@@ -850,7 +850,7 @@ function DashboardContent() {
     if (!currentUser) return false;
     return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
   }, [currentUser]);
-  
+
   const recentFeedback = useMemo(() => {
     if (!allOrders) return [];
     return allOrders
@@ -860,6 +860,38 @@ function DashboardContent() {
   }, [allOrders]);
   
   const userMap = useMemo(() => new Map(allUsers.map(u => [u.id, u])), [allUsers]);
+  
+  const renderFeedbackText = (text: string) => {
+    try {
+        const feedbackJson = JSON.parse(text);
+        const role = currentUser?.role;
+
+        const fieldsToShow: string[] = [];
+
+        if (role === 'CRM') {
+            fieldsToShow.push('Customer Service', 'ওপেন ফিডব্যাক');
+        } else if (role === 'LR') {
+            fieldsToShow.push('Printing Quality', 'Product Quality', 'ওপেন ফিডব্যাক');
+        } else if (role === 'DESIGNER_REPRESENTATIVE') {
+            fieldsToShow.push('Design Satisfaction', 'ওপেন ফিডব্যাক');
+        } else {
+            // Admins/System Admins see the raw text
+            return `"${text}"`;
+        }
+        
+        const filteredFeedback = Object.entries(feedbackJson)
+            .filter(([key]) => fieldsToShow.some(field => key.includes(field)))
+            .map(([key, value]) => `${key}: ${value}`)
+            .join(' | ');
+
+        return filteredFeedback ? `"${filteredFeedback}"` : <span className="italic text-muted-foreground">No relevant feedback for your role.</span>;
+
+    } catch (e) {
+        // Fallback for non-JSON or malformed JSON text
+        return `"${text}"`;
+    }
+  };
+
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8 custom-scrollbar-hidden">
@@ -1152,8 +1184,8 @@ function DashboardContent() {
                                 <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
                               </div>
                             </div>
-                            <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
-                              "{order.feedback?.text}"
+                             <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
+                              {renderFeedbackText(order.feedback!.text)}
                             </p>
                             <p className="text-xs text-right text-muted-foreground mt-2">
                               - Submitted {format(parseISO(order.feedback!.submittedAt), "d MMM, yyyy")}
@@ -1209,8 +1241,8 @@ function DashboardContent() {
                                 <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
                               </div>
                             </div>
-                            <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
-                                "{order.feedback?.text}"
+                             <p className="text-sm text-foreground/90 mt-2 italic border-l-2 border-primary pl-3">
+                              {renderFeedbackText(order.feedback!.text)}
                             </p>
                             <p className="text-xs text-right text-muted-foreground mt-2">
                                 - Submitted {format(parseISO(order.feedback!.submittedAt), "d MMM, yyyy")}
