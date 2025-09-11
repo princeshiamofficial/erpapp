@@ -46,7 +46,7 @@ const DeleteEmployeeDialog = dynamic(() => import('@/components/payroll/DeleteEm
 const EditPayslipDialog = dynamic(() => import('@/components/payroll/EditPayslipDialog').then(mod => mod.EditPayslipDialog));
 
 
-const ITEMS_PER_PAGE = 25;
+const ITEMS_PER_PAGE = 8;
 
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
@@ -191,24 +191,33 @@ export default function PayrollPage() {
     return allUsers.filter(u => !employeeUserIds.has(u.id));
   }, [employees, allUsers]);
   
-  const totalPayableAmount = useMemo(() => {
-      const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
-      return paginatedEmployees.reduce((total, employee) => {
-          const payslip = employee.payslips?.[monthYearId];
-          if (payslip) {
-              return total + payslip.payableAmount;
-          }
-          // Default calculation if no payslip data
-          const perDaySalary = (employee.salary || 0) / 30;
-          const presentDays = 30; // Default
-          const incentive = 0; // Default
-          const fine = 0; // Default
-          const lateDays = 0; // Default
+  const { totalPaid, totalUnpaid } = useMemo(() => {
+    const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
+    return paginatedEmployees.reduce((acc, employee) => {
+      const payslip = employee.payslips?.[monthYearId];
+      let payable = 0;
+      if (payslip) {
+          payable = payslip.payableAmount;
+      } else {
+          const daysInMonth = getDaysInMonth(selectedDate);
+          const perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
+          const presentDays = 30;
+          const incentive = 0;
+          const fine = 0;
+          const lateDays = 0;
           const providentFund = (employee.salary || 0) * 0.07;
           const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
-          const payable = (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
-          return total + payable;
-      }, 0);
+          payable = (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
+      }
+
+      if (payslip?.paymentStatus === 'Paid') {
+          acc.totalPaid += payable;
+      } else {
+          acc.totalUnpaid += payable;
+      }
+
+      return acc;
+    }, { totalPaid: 0, totalUnpaid: 0 });
   }, [paginatedEmployees, selectedDate]);
 
   const handleMonthChange = (monthIndex: string) => {
@@ -468,7 +477,8 @@ export default function PayrollPage() {
                   const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
                   const payslip = employee.payslips?.[monthYearId];
                   
-                  const perDaySalary = (employee.salary || 0) / 30;
+                  const daysInMonth = getDaysInMonth(selectedDate);
+                  const perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
                   const providentFund = (employee.salary || 0) * 0.07;
                   
                   const presentDays = payslip?.presentDays ?? 30;
@@ -476,7 +486,7 @@ export default function PayrollPage() {
                   const incentive = payslip?.incentive ?? 0;
                   const fine = payslip?.fine ?? 0;
                   const absentDays = payslip?.absentDays ?? 0;
-                  const paymentStatus = payslip?.paymentStatus || 'Unpaid';
+                  const paymentStatus = payslip?.paymentStatus ?? 'Unpaid';
 
                   const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
                   const payable = payslip?.payableAmount ?? (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
@@ -512,8 +522,12 @@ export default function PayrollPage() {
             </TableBody>
             <TableFooter>
                 <TableRow>
-                    <TableCell colSpan={9} className="text-right font-bold">Total Payable</TableCell>
-                    <TableCell className="font-bold text-right">{formatCurrency(totalPayableAmount)}</TableCell>
+                    <TableCell colSpan={10} className="text-right font-bold">
+                        <div className="flex justify-end items-center gap-4">
+                            <span>Total Paid: <span className="text-green-600">{formatCurrency(totalPaid)}</span></span>
+                            <span>Total Unpaid: <span className="text-red-600">{formatCurrency(totalUnpaid)}</span></span>
+                        </div>
+                    </TableCell>
                 </TableRow>
             </TableFooter>
           </Table>
@@ -644,3 +658,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
