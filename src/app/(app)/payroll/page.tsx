@@ -46,7 +46,7 @@ const DeleteEmployeeDialog = dynamic(() => import('@/components/payroll/DeleteEm
 const EditPayslipDialog = dynamic(() => import('@/components/payroll/EditPayslipDialog').then(mod => mod.EditPayslipDialog));
 
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 25;
 
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
