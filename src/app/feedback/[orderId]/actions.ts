@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getOrderById } from '@/lib/order-service';
-import { addFeedback } from '@/lib/feedback-service'; // Import the new service
+import { addFeedback, getFeedbackForOrder } from '@/lib/feedback-service'; // Import the new service functions
 import type { Feedback } from '@/types'; // Import the new type
 
 export async function submitFeedbackAction(orderId: string, rating: number, feedbackText: string): Promise<{ success: boolean; error?: string }> {
@@ -11,6 +11,12 @@ export async function submitFeedbackAction(orderId: string, rating: number, feed
     const order = await getOrderById(orderId);
     if (!order) {
       return { success: false, error: "Order not found." };
+    }
+
+    // Check if feedback for this order already exists
+    const existingFeedback = await getFeedbackForOrder(orderId);
+    if (existingFeedback && existingFeedback.length > 0) {
+        return { success: false, error: "Feedback has already been submitted for this order." };
     }
     
     // The data structure for the new feedback entry

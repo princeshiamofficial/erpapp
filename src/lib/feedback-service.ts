@@ -23,6 +23,25 @@ export const getFeedback = async (): Promise<Feedback[]> => {
   }
 };
 
+export const getFeedbackForOrder = async (orderId: string): Promise<Feedback[]> => {
+  if (!orderId) return [];
+  try {
+    await ensureCollectionExistsV3(COLLECTION_NAME);
+    // V3 API search is broad, so we fetch and filter. A more specific API endpoint would be better.
+    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999`);
+    if (response && Array.isArray(response.documents)) {
+      return response.documents
+        .map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as Feedback))
+        .filter((feedback: Feedback) => feedback.orderId === orderId);
+    }
+    return [];
+  } catch (error) {
+    console.error(`Error fetching feedback for order ${orderId} via API v3:`, error);
+    return [];
+  }
+};
+
+
 export const addFeedback = async (feedbackData: Omit<Feedback, 'id'>): Promise<boolean> => {
   try {
     await ensureCollectionExistsV3(COLLECTION_NAME);
