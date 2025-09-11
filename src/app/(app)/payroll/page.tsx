@@ -25,7 +25,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate } from 'date-fns';
 import { deleteEmployeeAction } from './actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -478,10 +478,24 @@ export default function PayrollPage() {
                   const payslip = employee.payslips?.[monthYearId];
                   
                   const daysInMonth = getDaysInMonth(selectedDate);
-                  const perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
-                  const providentFund = (employee.salary || 0) * 0.07;
+                  const joiningDate = new Date(employee.joiningDate);
                   
-                  const presentDays = payslip?.presentDays ?? 30;
+                  let perDaySalary = 0;
+                  let presentDays = 0;
+
+                  if (isSameMonth(joiningDate, selectedDate)) {
+                    // Prorated salary for the first month
+                    const joiningDay = getDate(joiningDate);
+                    const workableDays = daysInMonth - joiningDay + 1;
+                    perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
+                    presentDays = payslip?.presentDays ?? workableDays;
+                  } else {
+                    // Full month salary
+                    perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
+                    presentDays = payslip?.presentDays ?? 30;
+                  }
+
+                  const providentFund = (employee.salary || 0) * 0.07;
                   const lateDays = payslip?.lateDays ?? 0;
                   const incentive = payslip?.incentive ?? 0;
                   const fine = payslip?.fine ?? 0;
@@ -658,5 +672,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
-    
