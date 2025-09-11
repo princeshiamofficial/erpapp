@@ -1164,8 +1164,7 @@ function DashboardContent() {
             isAdminView={isAdminView}
           />
         </div>
-        {isDesignerRepOrLr && (
-            <div className="lg:col-span-1">
+        <div className={cn("lg:col-span-1", isDesignerRepOrLr ? "" : "hidden")}>
               <Card className="shadow-xl bg-card">
                 <CardHeader>
                   <CardTitle className="flex items-center text-xl text-foreground">
@@ -1183,7 +1182,7 @@ function DashboardContent() {
                     <ScrollArea className="h-[400px] pr-3">
                       <div className="space-y-4">
                         {recentFeedback.map(feedback => {
-                          const user = userMap.get(feedback.crmUserId || feedback.designerRepresentativeId || '');
+                          const user = userMap.get(feedback.crmUserId || '');
                           return (
                             <div key={feedback.id} className="p-4 border rounded-lg bg-secondary/30">
                               <div className="flex justify-between items-start">
@@ -1226,7 +1225,6 @@ function DashboardContent() {
                 </CardContent>
               </Card>
             </div>
-        )}
       </div>
       
       {!isDesignerRepOrLr && (
@@ -1253,7 +1251,7 @@ function DashboardContent() {
                     <ScrollArea className="h-[400px] pr-3">
                         <div className="space-y-4">
                         {recentFeedback.map(feedback => {
-                            const user = userMap.get(feedback.crmUserId || feedback.designerRepresentativeId || '');
+                            const user = userMap.get(feedback.crmUserId || '');
                             return (
                                 <div key={feedback.id} className="p-4 border rounded-lg bg-secondary/30">
                                 <div className="flex justify-between items-start">
@@ -1343,4 +1341,3 @@ function DashboardContent() {
     </div>
   );
 }
-
