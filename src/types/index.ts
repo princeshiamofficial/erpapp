@@ -82,6 +82,15 @@ export interface AdvancePaymentRecord {
   recordedByUserName: string;
 }
 
+export interface Feedback {
+  id: string;
+  orderId: string;
+  companyName: string;
+  rating: number;
+  text: string;
+  submittedAt: string; // ISO string
+}
+
 export interface TrackingLink {
   id: string;
   projectIdDisplay?: string; // New field for TD-XXX or ORD-XXX
@@ -115,7 +124,7 @@ export interface TrackingLink {
   packzyTrackingCode?: string | null;
   shippingArea?: string | null;
   shippingCharge?: number | null;
-  feedback?: {
+  feedback?: { // This field is now deprecated but kept for backwards compatibility
     rating: number;
     text: string;
     submittedAt: string;
