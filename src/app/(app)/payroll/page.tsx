@@ -38,15 +38,15 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
 
 
@@ -709,12 +709,56 @@ export default function PayrollPage() {
       <CardHeader className="p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardTitle className="text-xl font-bold text-gray-800">Leave Management</CardTitle>
+           <div className="flex items-center gap-2 w-full sm:w-auto">
+             <div className="relative flex-grow sm:flex-grow-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+            </div>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-6 pt-0">
-        <div className="text-center py-16 text-gray-500">
-          <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-          Leave Management feature coming soon.
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name of Employee</TableHead>
+                <TableHead>Yearly Leave</TableHead>
+                <TableHead>Available</TableHead>
+                <TableHead className="text-center">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                [...Array(5)].map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : paginatedEmployees.length > 0 ? (
+                 paginatedEmployees.map((employee) => (
+                    <TableRow key={employee.id}>
+                        <TableCell className="font-medium">{employee.name}</TableCell>
+                        <TableCell>12</TableCell>
+                        <TableCell>12</TableCell>
+                        <TableCell className="text-center">
+                          <Button variant="outline" size="sm" className="h-8">Manage</Button>
+                        </TableCell>
+                    </TableRow>
+                 ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center h-48 text-gray-500">
+                    <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                     No employees to manage leave for.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
       </CardContent>
     </Card>
