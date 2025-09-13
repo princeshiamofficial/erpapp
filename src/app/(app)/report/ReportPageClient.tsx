@@ -32,6 +32,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -318,7 +319,7 @@ export function ReportPageClient() {
         designer.assigned += 1;
       }
 
-      // A design is "done" when it is moved to the courier/shipped stage.
+      // A design is "done" when it is moved to the shipped stage.
       const shippedLog = order.statusHistory.find(h => h.status === SHIPPED_STATUS_ID);
       const isShippedInRange = shippedLog && isWithinInterval(parseISO(shippedLog.timestamp), { start: startDate, end: endDate });
 
