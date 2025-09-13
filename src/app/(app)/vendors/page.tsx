@@ -123,7 +123,7 @@ export default function VendorsPage() {
                     <TableHead className="pl-6">Name</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Phone</TableHead>
-                    <TableHead>Company</TableHead>
+                    <TableHead>Business Name</TableHead>
                     <TableHead>Category</TableHead>
                     <TableHead className="pr-6 text-right">Actions</TableHead>
                   </TableRow>
