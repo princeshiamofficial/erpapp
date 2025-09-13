@@ -312,18 +312,21 @@ export function ReportPageClient() {
       const designer = designerMap.get(order.designerRepresentativeId);
       if (!designer) return;
       
-      const assignmentLog = order.statusHistory.find(h => h.status === READY_FOR_DESIGN_STATUS_ID);
-      const isAssignedInRange = assignmentLog && isWithinInterval(parseISO(assignmentLog.timestamp), { start: startDate, end: endDate });
+      // Find the LATEST assignment log entry
+      const lastAssignmentLog = order.statusHistory
+        .filter(h => h.status === READY_FOR_DESIGN_STATUS_ID)
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
 
-      if (isAssignedInRange) {
+      if (lastAssignmentLog && isWithinInterval(parseISO(lastAssignmentLog.timestamp), { start: startDate, end: endDate })) {
         designer.assigned += 1;
       }
+      
+      // Find the LATEST shipped log entry
+      const lastShippedLog = order.statusHistory
+        .filter(h => h.status === SHIPPED_STATUS_ID)
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
 
-      // A design is "done" when it is moved to the shipped stage.
-      const shippedLog = order.statusHistory.find(h => h.status === SHIPPED_STATUS_ID);
-      const isShippedInRange = shippedLog && isWithinInterval(parseISO(shippedLog.timestamp), { start: startDate, end: endDate });
-
-      if (isShippedInRange) {
+      if (lastShippedLog && isWithinInterval(parseISO(lastShippedLog.timestamp), { start: startDate, end: endDate })) {
         designer.done += 1;
       }
       
