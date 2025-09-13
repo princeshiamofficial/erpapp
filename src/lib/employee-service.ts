@@ -120,15 +120,21 @@ export const updateEmployee = async (employeeId: string, updates: Partial<Omit<E
         const currentSalary = existingEmployee.salary || 0;
         const newSalary = updates.salary;
 
+        // Check if salary is being updated and it's a genuine increment, not a revert.
         if (newSalary !== undefined && newSalary !== null && newSalary !== currentSalary) {
-            const newIncrement: SalaryIncrement = {
-                date: new Date().toISOString(),
-                previousSalary: currentSalary,
-                newSalary: newSalary,
-                incrementAmount: newSalary - currentSalary,
-            };
-            const updatedHistory = [...(existingEmployee.salaryHistory || []), newIncrement];
-            finalUpdates.salaryHistory = updatedHistory;
+            const isReverting = (finalUpdates.salaryHistory || []).length < (existingEmployee.salaryHistory || []).length;
+            
+            if (!isReverting) {
+                const newIncrement: SalaryIncrement = {
+                    date: new Date().toISOString(),
+                    previousSalary: currentSalary,
+                    newSalary: newSalary,
+                    incrementAmount: newSalary - currentSalary,
+                };
+                // Prepend to the existing history array from the updates if it exists, otherwise from the original employee object.
+                const updatedHistory = [newIncrement, ...(finalUpdates.salaryHistory || existingEmployee.salaryHistory || [])];
+                finalUpdates.salaryHistory = updatedHistory;
+            }
         }
 
         const finalData = { ...existingEmployee, ...finalUpdates };
