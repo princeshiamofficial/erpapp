@@ -25,7 +25,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth } from 'date-fns';
 import { deleteEmployeeAction, deleteSalaryIncrementAction } from './actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -35,7 +35,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -177,7 +176,7 @@ export default function PayrollPage() {
     setIsDeletingIncrement(true);
     const result = await deleteSalaryIncrementAction(incrementToDelete.employeeId, incrementToDelete.increment.date);
     if (result.success) {
-      toast({ title: "Increment Reverted", description: "The salary increment has been deleted and salary reverted." });
+      toast({ title: "Increment Reverted", description: "The salary increment has been deleted." });
       fetchData();
     } else {
       toast({ title: "Error", description: result.error, variant: "destructive" });
@@ -235,12 +234,18 @@ export default function PayrollPage() {
           payable = payslip.payableAmount;
       } else {
           const daysInMonth = getDaysInMonth(selectedDate);
-          const perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
+          
+          const relevantHistory = (employee.salaryHistory || [])
+              .filter(h => !isAfter(new Date(h.date), endOfMonth(selectedDate)))
+              .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
+
+          const perDaySalary = effectiveSalary / (daysInMonth > 0 ? daysInMonth : 30);
           const presentDays = 30;
           const incentive = 0;
           const fine = 0;
           const lateDays = 0;
-          const providentFund = (employee.salary || 0) * 0.07;
+          const providentFund = effectiveSalary * 0.07;
           const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
           payable = (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
       }
@@ -519,22 +524,27 @@ export default function PayrollPage() {
                   const daysInMonth = getDaysInMonth(selectedDate);
                   const joiningDate = new Date(employee.joiningDate);
                   
+                  // Find the correct salary for the selected month
+                  const relevantHistory = (employee.salaryHistory || [])
+                      .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
+                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                  const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
+
+
                   let perDaySalary = 0;
                   let presentDays = 0;
 
                   if (isSameMonth(joiningDate, selectedDate) && joiningDate.getFullYear() === selectedDate.getFullYear()) {
-                    // Prorated salary for the first month
                     const joiningDay = getDate(joiningDate);
                     const workableDays = daysInMonth - joiningDay + 1;
-                    perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
+                    perDaySalary = effectiveSalary / (daysInMonth > 0 ? daysInMonth : 30);
                     presentDays = payslip?.presentDays ?? workableDays;
                   } else {
-                    // Full month salary
-                    perDaySalary = (employee.salary || 0) / (daysInMonth > 0 ? daysInMonth : 30);
+                    perDaySalary = effectiveSalary / (daysInMonth > 0 ? daysInMonth : 30);
                     presentDays = payslip?.presentDays ?? 30;
                   }
 
-                  const providentFund = (employee.salary || 0) * 0.07;
+                  const providentFund = effectiveSalary * 0.07;
                   const lateDays = payslip?.lateDays ?? 0;
                   const incentive = payslip?.incentive ?? 0;
                   const fine = payslip?.fine ?? 0;
@@ -821,14 +831,13 @@ export default function PayrollPage() {
                 Are you absolutely sure?
               </AlertDialogTitle>
               <AlertDialogDescription>
-                This will delete the salary increment from <span className="font-semibold">{format(new Date(incrementToDelete.increment.date), 'd MMM, yyyy')}</span> for <span className="font-semibold">{incrementToDelete.employeeName}</span>.
-                The employee's salary will be reverted from <span className="font-semibold">{formatCurrency(incrementToDelete.increment.newSalary)}</span> to <span className="font-semibold">{formatCurrency(incrementToDelete.increment.previousSalary)}</span>. This action cannot be undone.
+                This will delete the salary increment from <span className="font-semibold">{format(new Date(incrementToDelete.increment.date), 'd MMM, yyyy')}</span> for <span className="font-semibold">{incrementToDelete.employeeName}</span>. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setIncrementToDelete(null)} disabled={isDeletingIncrement}>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleConfirmDeleteIncrement} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isDeletingIncrement}>
-                {isDeletingIncrement ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Yes, delete and revert salary"}
+                {isDeletingIncrement ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Yes, delete"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
