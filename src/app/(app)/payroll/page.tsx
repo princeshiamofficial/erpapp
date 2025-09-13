@@ -25,7 +25,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse } from 'date-fns';
 import { deleteEmployeeAction, deleteSalaryIncrementAction } from './actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -121,13 +121,40 @@ export default function PayrollPage() {
     let results = employees;
 
     if (activeTab === 'salary_sheet') {
-      const endOfSelectedMonth = endOfMonth(selectedDate);
+      const selectedMonthStart = startOfMonth(selectedDate);
+      
       results = results.filter(employee => {
         try {
+          // Rule 1: Always show active employees whose joining date is on or before the selected month.
           const joiningDate = new Date(employee.joiningDate);
-          // Employee is eligible if their joining date is on or before the last day of the selected month.
-          return !isAfter(joiningDate, endOfSelectedMonth);
+          if (employee.status === 'Active') {
+            return !isAfter(startOfMonth(joiningDate), selectedMonthStart);
+          }
+          
+          // Rule 2: For inactive employees, find the last paid month.
+          if (employee.status === 'Inactive') {
+            const paidSlips = Object.entries(employee.payslips || {})
+              .filter(([_, payslip]) => payslip.paymentStatus === 'Paid');
+
+            if (paidSlips.length === 0) {
+              // If never paid, their visibility is still determined by joining date.
+              // They will appear until they are paid and then go inactive.
+              return !isAfter(startOfMonth(joiningDate), selectedMonthStart);
+            }
+            
+            // Find the most recent paid month
+            const lastPaidMonthStr = paidSlips.sort(([a], [b]) => b.localeCompare(a))[0][0];
+            const lastPaidMonth = parse(lastPaidMonthStr, 'yyyy-MM', new Date());
+
+            // Show them only up to and including their last paid month.
+            // Do not show them for any month *after* their last paid month.
+            return !isAfter(selectedMonthStart, lastPaidMonth);
+          }
+
+          return false; // Should not happen
+
         } catch (e) {
+          console.error(`Error processing filter for employee ${employee.id}`, e);
           return false;
         }
       });
@@ -534,7 +561,6 @@ export default function PayrollPage() {
                   const daysInMonth = getDaysInMonth(selectedDate);
                   const joiningDate = new Date(employee.joiningDate);
                   
-                  // Find the correct salary for the selected month
                   const relevantHistory = (employee.salaryHistory || [])
                       .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
                       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
