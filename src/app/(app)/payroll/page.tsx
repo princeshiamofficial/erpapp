@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -43,6 +44,7 @@ const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployee
 const EditEmployeeDialog = dynamic(() => import('@/components/payroll/EditEmployeeDialog').then(mod => mod.EditEmployeeDialog));
 const DeleteEmployeeDialog = dynamic(() => import('@/components/payroll/DeleteEmployeeDialog').then(mod => mod.DeleteEmployeeDialog));
 const EditPayslipDialog = dynamic(() => import('@/components/payroll/EditPayslipDialog').then(mod => mod.EditPayslipDialog));
+const IncrementSalaryDialog = dynamic(() => import('@/components/payroll/IncrementSalaryDialog').then(mod => mod.IncrementSalaryDialog));
 
 
 const ITEMS_PER_PAGE = 25;
@@ -72,6 +74,8 @@ export default function PayrollPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   
   const [payslipToEdit, setPayslipToEdit] = useState<Employee | null>(null);
+  const [employeeToIncrement, setEmployeeToIncrement] = useState<Employee | null>(null);
+
 
   const [selectedDate, setSelectedDate] = useState(subMonths(new Date(), 1));
 
@@ -317,6 +321,10 @@ export default function PayrollPage() {
                       <DropdownMenuItem onSelect={() => setEmployeeToEdit(employee)} className="cursor-pointer">
                         <Pencil className="mr-2 h-4 w-4" />
                         <span>Edit</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setEmployeeToIncrement(employee)} className="cursor-pointer">
+                        <TrendingUp className="mr-2 h-4 w-4" />
+                        <span>Increment</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => setEmployeeToDelete(employee)} className="cursor-pointer text-destructive focus:text-destructive">
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -690,6 +698,14 @@ export default function PayrollPage() {
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
+        />
+      )}
+       {employeeToIncrement && (
+        <IncrementSalaryDialog
+          isOpen={!!employeeToIncrement}
+          onOpenChange={(open) => !open && setEmployeeToIncrement(null)}
+          employee={employeeToIncrement}
+          onSalaryIncremented={fetchData}
         />
       )}
     </div>

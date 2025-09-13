@@ -9,6 +9,7 @@ import {
   updateEmployee as updateEmployeeService,
   deleteEmployee as deleteEmployeeService,
   updatePayslip as updatePayslipService, // Import new service
+  getEmployeeById, // Import this
 } from "@/lib/employee-service";
 
 export async function addEmployeeAction(
@@ -68,7 +69,6 @@ export async function deleteEmployeeAction(employeeId: string): Promise<{ succes
   }
 }
 
-// New action for updating payslip data
 export async function updatePayslipAction(
   employeeId: string,
   payslipId: string, // e.g., '2024-07'
@@ -84,5 +84,32 @@ export async function updatePayslipAction(
   } catch (error) {
     console.error("Error in updatePayslipAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function incrementEmployeeSalaryAction(
+  employeeId: string,
+  incrementAmount: number
+): Promise<{ success: boolean; error?: string }> {
+  if (incrementAmount <= 0) {
+    return { success: false, error: "Increment amount must be positive." };
+  }
+  try {
+    const employee = await getEmployeeById(employeeId);
+    if (!employee) {
+      return { success: false, error: "Employee not found." };
+    }
+    const currentSalary = employee.salary || 0;
+    const newSalary = currentSalary + incrementAmount;
+
+    const success = await updateEmployeeService(employeeId, { salary: newSalary });
+    if (success) {
+      revalidatePath("/(app)/payroll");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update employee's salary." };
+  } catch (error) {
+    console.error("Error in incrementEmployeeSalaryAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected server error occurred." };
   }
 }
