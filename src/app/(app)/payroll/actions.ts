@@ -12,6 +12,7 @@ import {
   getEmployeeById,
   deleteSalaryIncrement as deleteSalaryIncrementService,
   addLeaveRecord as addLeaveRecordService, // Import new service
+  deleteLeaveRecord as deleteLeaveRecordService,
 } from "@/lib/employee-service";
 
 export async function addEmployeeAction(
@@ -138,10 +139,11 @@ export async function deleteSalaryIncrementAction(
 // New action for adding leave
 export async function addLeaveRecordAction(
   employeeId: string,
-  leaveData: Omit<LeaveRecord, 'id'>
+  leaveData: Omit<LeaveRecord, 'id'>,
+  newTotalLeaveTaken?: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const success = await addLeaveRecordService(employeeId, leaveData);
+    const success = await addLeaveRecordService(employeeId, leaveData, newTotalLeaveTaken);
     if (success) {
       revalidatePath("/(app)/payroll");
       return { success: true };
@@ -149,6 +151,21 @@ export async function addLeaveRecordAction(
     return { success: false, error: "Failed to record leave in database." };
   } catch (error) {
     console.error("Error in addLeaveRecordAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+// New action for deleting a leave record
+export async function deleteLeaveRecordAction(employeeId: string, leaveRecordId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await deleteLeaveRecordService(employeeId, leaveRecordId);
+    if (success) {
+      revalidatePath("/(app)/payroll");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to delete leave record from database." };
+  } catch (error) {
+    console.error("Error in deleteLeaveRecordAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

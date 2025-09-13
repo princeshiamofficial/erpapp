@@ -216,12 +216,8 @@ export const deleteSalaryIncrement = async (employeeId: string, incrementDate: s
         }
 
         const newHistory = employee.salaryHistory.filter(h => h.date !== incrementDate);
-
-        // Only update the salary history, not the current salary.
-        const updates = {
-            salaryHistory: newHistory,
-            isReverting: true, // Signal to updateEmployee not to create a new history entry
-        };
+        
+        const updates = { salaryHistory: newHistory };
 
         const success = await updateEmployee(employeeId, updates, undefined);
         return success;
@@ -233,7 +229,7 @@ export const deleteSalaryIncrement = async (employeeId: string, incrementDate: s
     }
 };
 
-export const addLeaveRecord = async (employeeId: string, leaveRecord: Omit<LeaveRecord, 'id'>): Promise<boolean> => {
+export const addLeaveRecord = async (employeeId: string, leaveRecord: Omit<LeaveRecord, 'id'>, newTotalLeaveTaken?: number): Promise<boolean> => {
     try {
         const employee = await getEmployeeById(employeeId);
         if (!employee) {
@@ -246,7 +242,7 @@ export const addLeaveRecord = async (employeeId: string, leaveRecord: Omit<Leave
         };
 
         const updatedHistory = [...(employee.leaveHistory || []), newLeaveRecord];
-        const newLeaveTaken = (employee.leaveTaken || 0) + leaveRecord.days;
+        const newLeaveTaken = newTotalLeaveTaken !== undefined ? newTotalLeaveTaken : (employee.leaveTaken || 0) + leaveRecord.days;
 
         const updates = {
             leaveHistory: updatedHistory,
@@ -258,4 +254,33 @@ export const addLeaveRecord = async (employeeId: string, leaveRecord: Omit<Leave
         console.error(`Error adding leave record for employee ${employeeId}:`, error);
         return false;
     }
+};
+
+export const deleteLeaveRecord = async (employeeId: string, leaveRecordId: string): Promise<boolean> => {
+  try {
+    const employee = await getEmployeeById(employeeId);
+    if (!employee) {
+      throw new Error("Employee not found.");
+    }
+
+    const leaveHistory = employee.leaveHistory || [];
+    const updatedHistory = leaveHistory.filter(record => record.id !== leaveRecordId);
+
+    if (leaveHistory.length === updatedHistory.length) {
+      console.warn(`Leave record with ID ${leaveRecordId} not found for employee ${employeeId}. No changes made.`);
+      return false; 
+    }
+
+    const newLeaveTaken = updatedHistory.reduce((total, record) => total + record.days, 0);
+
+    const updates = {
+      leaveHistory: updatedHistory,
+      leaveTaken: newLeaveTaken,
+    };
+
+    return await updateEmployee(employeeId, updates);
+  } catch (error) {
+    console.error(`Error deleting leave record ${leaveRecordId} for employee ${employeeId}:`, error);
+    return false;
+  }
 };
