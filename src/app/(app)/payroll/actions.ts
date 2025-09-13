@@ -3,14 +3,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Employee, Payslip, SalaryIncrement } from "@/types";
+import type { Employee, Payslip, SalaryIncrement, LeaveRecord } from "@/types";
 import {
   addEmployee as addEmployeeService,
   updateEmployee as updateEmployeeService,
   deleteEmployee as deleteEmployeeService,
   updatePayslip as updatePayslipService,
   getEmployeeById,
-  deleteSalaryIncrement as deleteSalaryIncrementService, // Import new service
+  deleteSalaryIncrement as deleteSalaryIncrementService,
+  addLeaveRecord as addLeaveRecordService, // Import new service
 } from "@/lib/employee-service";
 
 export async function addEmployeeAction(
@@ -129,6 +130,25 @@ export async function deleteSalaryIncrementAction(
     return { success: false, error: "Failed to delete salary increment history." };
   } catch (error) {
     console.error("Error in deleteSalaryIncrementAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+
+// New action for adding leave
+export async function addLeaveRecordAction(
+  employeeId: string,
+  leaveData: Omit<LeaveRecord, 'id'>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await addLeaveRecordService(employeeId, leaveData);
+    if (success) {
+      revalidatePath("/(app)/payroll");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to record leave in database." };
+  } catch (error) {
+    console.error("Error in addLeaveRecordAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

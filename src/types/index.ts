@@ -24,6 +24,15 @@ export interface SalaryIncrement {
     incrementAmount: number;
 }
 
+export interface LeaveRecord {
+  id: string;
+  date: string; // ISO string for when the leave was taken/recorded
+  days: number;
+  reason: string;
+  recordedByUserId: string;
+  recordedByUserName: string;
+}
+
 export interface Payslip {
     id: string; // e.g., '2024-07' for July 2024
     presentDays: number;
@@ -51,6 +60,9 @@ export interface Employee {
   salary?: number | null;
   payslips?: { [key: string]: Payslip }; // Optional map of payslips
   salaryHistory?: SalaryIncrement[];
+  yearlyLeave?: number;
+  leaveTaken?: number;
+  leaveHistory?: LeaveRecord[];
 }
 
 export interface CustomStatus {

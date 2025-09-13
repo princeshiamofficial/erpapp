@@ -55,6 +55,7 @@ const EditEmployeeDialog = dynamic(() => import('@/components/payroll/EditEmploy
 const DeleteEmployeeDialog = dynamic(() => import('@/components/payroll/DeleteEmployeeDialog').then(mod => mod.DeleteEmployeeDialog));
 const EditPayslipDialog = dynamic(() => import('@/components/payroll/EditPayslipDialog').then(mod => mod.EditPayslipDialog));
 const IncrementSalaryDialog = dynamic(() => import('@/components/payroll/IncrementSalaryDialog').then(mod => mod.IncrementSalaryDialog));
+const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
 
 
 const ITEMS_PER_PAGE = 25;
@@ -88,6 +89,8 @@ export default function PayrollPage() {
 
   const [incrementToDelete, setIncrementToDelete] = useState<{ employeeId: string, increment: SalaryIncrement } | null>(null);
   const [isDeletingIncrement, setIsDeletingIncrement] = useState(false);
+
+  const [leaveToManage, setLeaveToManage] = useState<Employee | null>(null);
 
 
   const [selectedDate, setSelectedDate] = useState(subMonths(new Date(), 1));
@@ -741,19 +744,23 @@ export default function PayrollPage() {
                   </TableRow>
                 ))
               ) : paginatedEmployees.length > 0 ? (
-                 paginatedEmployees.map((employee, index) => (
+                 paginatedEmployees.map((employee, index) => {
+                   const yearlyLeave = employee.yearlyLeave || 12;
+                   const leaveTaken = employee.leaveTaken || 0;
+                   const availableLeave = yearlyLeave - leaveTaken;
+                   return (
                     <TableRow key={employee.id}>
                         <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
                         <TableCell>{employee.employeeId}</TableCell>
                         <TableCell className="font-medium">{employee.name}</TableCell>
                         <TableCell>{employee.designation}</TableCell>
-                        <TableCell>12</TableCell>
-                        <TableCell>12</TableCell>
+                        <TableCell>{yearlyLeave}</TableCell>
+                        <TableCell className="font-semibold text-green-600">{availableLeave}</TableCell>
                         <TableCell className="text-center">
-                          <Button variant="outline" size="sm" className="h-8">Manage</Button>
+                          <Button variant="outline" size="sm" className="h-8" onClick={() => setLeaveToManage(employee)}>Manage</Button>
                         </TableCell>
                     </TableRow>
-                 ))
+                 )})
               ) : (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center h-48 text-gray-500">
@@ -905,6 +912,15 @@ export default function PayrollPage() {
           onOpenChange={(open) => !open && setEmployeeToIncrement(null)}
           employee={employeeToIncrement}
           onSalaryIncremented={fetchData}
+        />
+      )}
+      {leaveToManage && currentUser && (
+        <ManageLeaveDialog
+            isOpen={!!leaveToManage}
+            onOpenChange={(open) => !open && setLeaveToManage(null)}
+            employee={leaveToManage}
+            currentUser={currentUser}
+            onLeaveUpdated={fetchData}
         />
       )}
       {incrementToDelete && (

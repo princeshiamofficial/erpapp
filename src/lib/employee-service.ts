@@ -1,14 +1,15 @@
 
 
-import type { Employee, Payslip, SalaryIncrement } from '@/types';
+import type { Employee, Payslip, SalaryIncrement, LeaveRecord } from '@/types';
 import { subYears } from 'date-fns';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { v4 as uuidv4 } from 'uuid';
 
 const EMPLOYEES_COLLECTION = 'employees';
 
 const defaultEmployeesData: Array<Omit<Employee, 'id' | 'employeeId' | 'userId'>> = [
-  { name: 'John Doe', email: 'john.doe@example.com', mobileNo: '01712345678', dob: subYears(new Date(), 30).toISOString(), designation: 'Software Engineer', joiningDate: subYears(new Date(), 2).toISOString(), status: 'Active', salary: 80000 },
-  { name: 'Jane Smith', email: 'jane.smith@example.com', mobileNo: '01812345678', dob: subYears(new Date(), 25).toISOString(), designation: 'Project Manager', joiningDate: subYears(new Date(), 1).toISOString(), status: 'Active', salary: 95000 },
+  { name: 'John Doe', email: 'john.doe@example.com', mobileNo: '01712345678', dob: subYears(new Date(), 30).toISOString(), designation: 'Software Engineer', joiningDate: subYears(new Date(), 2).toISOString(), status: 'Active', salary: 80000, yearlyLeave: 12, leaveTaken: 0, leaveHistory: [] },
+  { name: 'Jane Smith', email: 'jane.smith@example.com', mobileNo: '01812345678', dob: subYears(new Date(), 25).toISOString(), designation: 'Project Manager', joiningDate: subYears(new Date(), 1).toISOString(), status: 'Active', salary: 95000, yearlyLeave: 12, leaveTaken: 0, leaveHistory: [] },
 ];
 
 export const seedDefaultEmployees = async (): Promise<Employee[]> => {
@@ -90,7 +91,15 @@ export const addEmployee = async (employeeData: Omit<Employee, 'id' | 'employeeI
         
         const newIdNumber = maxIdNumber + 1;
         const employeeId = `EMP-${String(newIdNumber).padStart(3, '0')}`;
-        const newEmployeeData = { ...employeeData, employeeId, payslips: {}, salaryHistory: [] };
+        const newEmployeeData = { 
+            ...employeeData, 
+            employeeId, 
+            payslips: {}, 
+            salaryHistory: [],
+            yearlyLeave: employeeData.yearlyLeave || 12,
+            leaveTaken: employeeData.leaveTaken || 0,
+            leaveHistory: employeeData.leaveHistory || [],
+        };
 
         const newDoc = await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents`, {
             method: 'POST',
@@ -211,6 +220,7 @@ export const deleteSalaryIncrement = async (employeeId: string, incrementDate: s
         // Only update the salary history, not the current salary.
         const updates = {
             salaryHistory: newHistory,
+            isReverting: true, // Signal to updateEmployee not to create a new history entry
         };
 
         const success = await updateEmployee(employeeId, updates, undefined);
@@ -219,6 +229,33 @@ export const deleteSalaryIncrement = async (employeeId: string, incrementDate: s
     } catch (error) {
         console.error(`Error deleting salary increment for employee ${employeeId}:`, error);
         if (error instanceof Error) throw error;
+        return false;
+    }
+};
+
+export const addLeaveRecord = async (employeeId: string, leaveRecord: Omit<LeaveRecord, 'id'>): Promise<boolean> => {
+    try {
+        const employee = await getEmployeeById(employeeId);
+        if (!employee) {
+            throw new Error("Employee not found.");
+        }
+
+        const newLeaveRecord: LeaveRecord = {
+            ...leaveRecord,
+            id: uuidv4(),
+        };
+
+        const updatedHistory = [...(employee.leaveHistory || []), newLeaveRecord];
+        const newLeaveTaken = (employee.leaveTaken || 0) + leaveRecord.days;
+
+        const updates = {
+            leaveHistory: updatedHistory,
+            leaveTaken: newLeaveTaken,
+        };
+
+        return await updateEmployee(employeeId, updates);
+    } catch (error) {
+        console.error(`Error adding leave record for employee ${employeeId}:`, error);
         return false;
     }
 };
