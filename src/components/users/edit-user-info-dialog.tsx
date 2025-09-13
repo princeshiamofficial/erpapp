@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -132,7 +131,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="userCompany-edit">Company Name (Optional)</Label>
+              <Label htmlFor="userCompany-edit">{isVendor ? 'Business Name' : 'Company Name'} (Optional)</Label>
               <Input
                 id="userCompany-edit"
                 value={companyName}
