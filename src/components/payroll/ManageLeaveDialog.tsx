@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -229,7 +228,7 @@ export function ManageLeaveDialog({ employee, onLeaveUpdated, isOpen, onOpenChan
                   <AlertDialogFooter>
                       <AlertDialogCancel onClick={() => setRecordToDelete(null)} disabled={isDeleting}>Cancel</AlertDialogCancel>
                       <AlertDialogAction onClick={handleConfirmDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                          {isDeleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Deleting...</> : "Yes, Delete"}
+                          {isDeleting ? <><Loader2 className="h-4 w-4 animate-spin mr-2"/>Deleting...</> : "Yes, Delete"}
                       </AlertDialogAction>
                   </AlertDialogFooter>
               </AlertDialogContent>
