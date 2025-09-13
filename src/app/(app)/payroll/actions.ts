@@ -90,7 +90,8 @@ export async function updatePayslipAction(
 
 export async function incrementEmployeeSalaryAction(
   employeeId: string,
-  incrementAmount: number
+  incrementAmount: number,
+  incrementDate: string
 ): Promise<{ success: boolean; error?: string }> {
   if (incrementAmount <= 0) {
     return { success: false, error: "Increment amount must be positive." };
@@ -103,7 +104,7 @@ export async function incrementEmployeeSalaryAction(
     const currentSalary = employee.salary || 0;
     const newSalary = currentSalary + incrementAmount;
 
-    const success = await updateEmployeeService(employeeId, { salary: newSalary });
+    const success = await updateEmployeeService(employeeId, { salary: newSalary }, incrementDate);
     if (success) {
       revalidatePath("/(app)/payroll");
       return { success: true };

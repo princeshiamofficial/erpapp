@@ -108,7 +108,7 @@ export const addEmployee = async (employeeData: Omit<Employee, 'id' | 'employeeI
     }
 };
 
-export const updateEmployee = async (employeeId: string, updates: Partial<Omit<Employee, 'id' | 'employeeId'>>): Promise<boolean> => {
+export const updateEmployee = async (employeeId: string, updates: Partial<Omit<Employee, 'id' | 'employeeId'>> & { isReverting?: boolean }, incrementDate?: string): Promise<boolean> => {
     try {
         await ensureCollectionExistsV3(EMPLOYEES_COLLECTION);
         const existingEmployee = await getEmployeeById(employeeId);
@@ -120,24 +120,22 @@ export const updateEmployee = async (employeeId: string, updates: Partial<Omit<E
         const currentSalary = existingEmployee.salary || 0;
         const newSalary = updates.salary;
 
-        // Check if salary is being updated and it's a genuine increment, not a revert.
         if (newSalary !== undefined && newSalary !== null && newSalary !== currentSalary) {
-            const isReverting = updates.isReverting || false;
+            const isReverting = finalUpdates.isReverting || false;
             
             if (!isReverting) {
                 const newIncrement: SalaryIncrement = {
-                    date: new Date().toISOString(),
+                    date: incrementDate || new Date().toISOString(),
                     previousSalary: currentSalary,
                     newSalary: newSalary,
                     incrementAmount: newSalary - currentSalary,
                 };
-                // Prepend to the existing history array from the updates if it exists, otherwise from the original employee object.
                 const updatedHistory = [newIncrement, ...(finalUpdates.salaryHistory || existingEmployee.salaryHistory || [])];
                 finalUpdates.salaryHistory = updatedHistory;
             }
         }
         
-        delete (finalUpdates as any).isReverting; // Clean up the flag
+        delete finalUpdates.isReverting;
 
         const finalData = { ...existingEmployee, ...finalUpdates };
         delete (finalData as any).id;
@@ -154,27 +152,6 @@ export const updateEmployee = async (employeeId: string, updates: Partial<Omit<E
     }
 };
 
-export const updateModelStock = async (modelId: string, quantityChange: number): Promise<boolean> => {
-    try {
-        const doc = await fetchFromApiV3(`collections/serviceModels/documents/${modelId}`);
-        if (!doc || !doc.data) {
-            throw new Error("Model not found for stock update.");
-        }
-        const currentStock = doc.data.stockCount || 0;
-        const newStock = currentStock + quantityChange;
-        
-        const finalData = { ...doc.data, stockCount: newStock };
-        
-        await fetchFromApiV3(`collections/serviceModels/documents/${modelId}`, {
-            method: 'PUT',
-            body: JSON.stringify({ data: finalData })
-        });
-        return true;
-    } catch (error) {
-        console.error(`Error updating stock for model ${modelId} via API v3:`, error);
-        return false;
-    }
-};
 
 export const deleteEmployee = async (employeeId: string): Promise<boolean> => {
     try {
@@ -236,7 +213,7 @@ export const deleteSalaryIncrement = async (employeeId: string, incrementDate: s
             salaryHistory: newHistory,
         };
 
-        const success = await updateEmployee(employeeId, updates);
+        const success = await updateEmployee(employeeId, updates, undefined);
         return success;
 
     } catch (error) {
