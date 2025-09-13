@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import Link from "next/link";
@@ -31,6 +30,7 @@ import {
   MapPin, 
   ClipboardList,
   Gift,
+  Store,
 } from "lucide-react";
 import type { UserRole, GlobalSettings } from "@/types";
 import { cn } from "@/lib/utils";
@@ -69,7 +69,7 @@ const navItems: NavItem[] = [
   { href: "/quotation", label: "Quotations", icon: ClipboardList, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
   { href: "/gifts", label: "Gifts", icon: Gift, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
   { href: "/tracking-links", label: "Tracking Links", icon: Link2, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
-  { href: "/finance-manager", label: "Finance Manager", icon: DollarSign, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
+  { href: "/finance-manager", label: "Finance Manager", icon: DollarSign, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "LR"] },
   { href: "/purchase-request", label: "Purchase Request", icon: ShoppingCart, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "LR"] },
   { href: "/invoice", label: "Invoice", icon: FileText, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
   { href: "/payroll", label: "Payroll", icon: Landmark, roles: ["SYSTEM_ADMIN", "ADMIN"] }, 
@@ -84,6 +84,7 @@ const navItems: NavItem[] = [
     href: "",
     subItems: [
       { href: "/users", label: "User Management", icon: Users, roles: ["SYSTEM_ADMIN", "ADMIN"] },
+      { href: "/vendors", label: "Vendors", icon: Store, roles: ["SYSTEM_ADMIN", "ADMIN"] },
       { href: "/admin/model-management", label: "Model Management", icon: Layers, roles: ["SYSTEM_ADMIN", "ADMIN"] },
       { href: "/admin/statuses", label: "Status Management", icon: ListChecks, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/service-management", label: "Service Options", icon: Settings2, roles: ["SYSTEM_ADMIN"] },
