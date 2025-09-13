@@ -77,7 +77,7 @@ import type { DateRange, PredefinedRange } from "@/components/dashboard/date-ran
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TeamPerformanceGraph } from '@/components/dashboard/TeamPerformanceGraph';
-import { getTaskEntries, type TaskEntry } from '@/lib/team-performance-service'; // Import new service
+import { getTaskEntries, type TaskEntry, getMonthlyTargetHistory, setMonthlyTargetHistory } from '@/lib/team-performance-service'; // Import new service
 
 // Lazy loading components
 const DateRangePicker = dynamic(() => import('@/components/dashboard/date-range-picker').then(mod => mod.DateRangePicker), {
@@ -1184,9 +1184,11 @@ function DashboardContent() {
               onDateRangeChange={handleTeamPerformanceDateRangeChange}
               selectedDateRange={teamPerformanceDateRange}
               userMap={userMap}
+              globalSettings={globalSettings}
               onTeamChange={handleTeamChange}
               selectedTeam={selectedTeam}
               isAdminView={isAdminView}
+              refetchData={refetch}
             />
           </div>
           <div className={cn("lg:col-span-1", isDesignerRepOrLr ? "" : "hidden")}>
