@@ -32,7 +32,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -43,7 +42,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay } from 'date-fns';
-import { DELIVERED_STATUS_ID, READY_FOR_DESIGN_STATUS_ID } from '@/lib/status-service'; // Import status IDs
+import { DELIVERED_STATUS_ID, READY_FOR_DESIGN_STATUS_ID, SHIPPED_STATUS_ID } from '@/lib/status-service'; // Import status IDs
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-BD', {
@@ -312,17 +311,19 @@ export function ReportPageClient() {
       const designer = designerMap.get(order.designerRepresentativeId);
       if (!designer) return;
       
-      // Check for 'Assigned' within date range
       const assignmentLog = order.statusHistory.find(h => h.status === READY_FOR_DESIGN_STATUS_ID);
       const isAssignedInRange = assignmentLog && isWithinInterval(parseISO(assignmentLog.timestamp), { start: startDate, end: endDate });
 
       if (isAssignedInRange) {
         designer.assigned += 1;
-        // Check if this same assigned order was also delivered in the date range
-        const deliveryLog = order.statusHistory.find(h => h.status === DELIVERED_STATUS_ID);
-        if (deliveryLog && isWithinInterval(parseISO(deliveryLog.timestamp), { start: startDate, end: endDate })) {
-          designer.done += 1;
-        }
+      }
+
+      // A design is "done" when it is moved to the courier/shipped stage.
+      const shippedLog = order.statusHistory.find(h => h.status === SHIPPED_STATUS_ID);
+      const isShippedInRange = shippedLog && isWithinInterval(parseISO(shippedLog.timestamp), { start: startDate, end: endDate });
+
+      if (isShippedInRange) {
+        designer.done += 1;
       }
       
       designerMap.set(order.designerRepresentativeId, designer);
