@@ -22,21 +22,27 @@ interface EditUserInfoDialogProps {
   user: User;
   onUserInfoUpdated: () => void;
   isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChange }: EditUserInfoDialogProps) {
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
   const [companyName, setCompanyName] = useState(user.companyName || '');
+  const [phone, setPhone] = useState(user.phone || '');
+  const [category, setCategory] = useState(user.category || '');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  const isVendor = user.role === 'VENDOR';
 
   useEffect(() => {
     if (isOpen && user) {
       setName(user.name);
       setEmail(user.email);
       setCompanyName(user.companyName || '');
+      setPhone(user.phone || '');
+      setCategory(user.category || '');
     }
   }, [isOpen, user]);
 
@@ -50,13 +56,27 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
       });
       return;
     }
+    
+    if (isVendor && phone.trim() && !/^0\d{10}$/.test(phone.trim())) {
+        toast({
+            title: "Validation Error",
+            description: "Phone number must be 11 digits and start with 0.",
+            variant: "destructive"
+        });
+        return;
+    }
 
     setIsLoading(true);
-    const updates = {
+    const updates: { name: string, email: string, companyName: string | null, phone?: string | null, category?: string | null } = {
       name: name.trim(),
       email: email.trim(),
       companyName: companyName.trim() || null,
     };
+    
+    if (isVendor) {
+        updates.phone = phone.trim() || null;
+        updates.category = category.trim() || null;
+    }
 
     const result = await updateUserInfoAction(user.id, updates);
     setIsLoading(false);
@@ -89,7 +109,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="space-y-1">
               <Label htmlFor="userName-edit">Name</Label>
               <Input
@@ -120,6 +140,32 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
                 disabled={isLoading}
               />
             </div>
+            {isVendor && (
+              <>
+                <div className="space-y-1">
+                  <Label htmlFor="userPhone-edit">Phone (Optional)</Label>
+                  <Input
+                    id="userPhone-edit"
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    disabled={isLoading}
+                    pattern="(^0\d{10}$)|(^$)"
+                    title="Phone number must be 11 digits and start with 0, or be empty."
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="userCategory-edit">Category (Optional)</Label>
+                  <Input
+                    id="userCategory-edit"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    disabled={isLoading}
+                    placeholder="e.g., Printing, Materials"
+                  />
+                </div>
+              </>
+            )}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>

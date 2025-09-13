@@ -122,14 +122,16 @@ export default function VendorsPage() {
                   <TableRow>
                     <TableHead className="pl-6">Name</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
                     <TableHead>Company</TableHead>
+                    <TableHead>Category</TableHead>
                     <TableHead className="pr-6 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     [...Array(5)].map((_, i) => (
-                      <TableRow key={`skel-vendor-${i}`}><TableCell colSpan={4}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
+                      <TableRow key={`skel-vendor-${i}`}><TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
                     ))
                   ) : filteredVendors.length > 0 ? (
                     filteredVendors.map(vendor => (
@@ -144,7 +146,9 @@ export default function VendorsPage() {
                           </div>
                         </TableCell>
                         <TableCell>{vendor.email}</TableCell>
+                        <TableCell>{vendor.phone || 'N/A'}</TableCell>
                         <TableCell>{vendor.companyName || 'N/A'}</TableCell>
+                        <TableCell>{vendor.category || 'N/A'}</TableCell>
                         <TableCell className="pr-6 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
@@ -157,7 +161,7 @@ export default function VendorsPage() {
                       </TableRow>
                     ))
                   ) : (
-                    <TableRow><TableCell colSpan={4} className="h-48 text-center"><Store className="mx-auto h-12 w-12 opacity-30 mb-3" />No vendors found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={6} className="h-48 text-center"><Store className="mx-auto h-12 w-12 opacity-30 mb-3" />No vendors found.</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>

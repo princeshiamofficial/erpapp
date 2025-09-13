@@ -8,6 +8,8 @@ export interface User {
   email: string;
   role: UserRole;
   companyName?: string | null;
+  phone?: string | null; // Added
+  category?: string | null; // Added for Vendors
   password?: string;
   avatarUrl?: string | null;
   monthlyOrderTarget?: number | null;

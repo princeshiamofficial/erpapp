@@ -192,7 +192,7 @@ export const updateUserBanStatus = async (userId: string, isBanned: boolean): Pr
 // Update user's basic information (name, email, companyName)
 export const updateUserInfo = async (
   userId: string,
-  updates: { name?: string; email?: string; companyName?: string | null }
+  updates: Partial<Pick<User, 'name' | 'email' | 'companyName' | 'phone' | 'category'>>
 ): Promise<boolean> => {
   try {
     const userDoc = doc(db, USERS_COLLECTION, userId);
@@ -200,6 +200,8 @@ export const updateUserInfo = async (
     if (updates.name !== undefined) dataToUpdate.name = updates.name;
     if (updates.email !== undefined) dataToUpdate.email = updates.email;
     if (updates.companyName !== undefined) dataToUpdate.companyName = updates.companyName === '' ? null : updates.companyName;
+    if (updates.phone !== undefined) dataToUpdate.phone = updates.phone === '' ? null : updates.phone;
+    if (updates.category !== undefined) dataToUpdate.category = updates.category === '' ? null : updates.category;
 
 
     if (Object.keys(dataToUpdate).length === 0) {
@@ -281,4 +283,3 @@ export const seedInitialAdminUser = async () => {
     console.error("Error checking or seeding/updating admin user:", error);
   }
 };
-

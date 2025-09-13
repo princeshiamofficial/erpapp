@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -8,6 +9,7 @@ import {
   deleteUserFromFirestore as deleteUserFromDbService, 
   updateUserFCMTokenInFirestore // Added import
 } from "@/lib/user-service"; 
+import { User } from "@/types";
 
 export async function toggleUserBanStatusAction(
   userId: string,
@@ -18,6 +20,7 @@ export async function toggleUserBanStatusAction(
     const success = await updateUserBanStatus(userId, newBanStatus);
     if (success) {
       revalidatePath("/(app)/users");
+      revalidatePath("/(app)/vendors");
       return { success: true, newBanStatus };
     }
     return { success: false, error: "Failed to update user ban status in database." };
@@ -29,12 +32,13 @@ export async function toggleUserBanStatusAction(
 
 export async function updateUserInfoAction(
   userId: string,
-  updates: { name?: string; email?: string; companyName?: string | null }
+  updates: Partial<Pick<User, 'name' | 'email' | 'companyName' | 'phone' | 'category'>>
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const success = await updateUserInfoInDb(userId, updates);
     if (success) {
       revalidatePath("/(app)/users");
+      revalidatePath("/(app)/vendors");
       return { success: true };
     }
     return { success: false, error: "Failed to update user information in database." };
@@ -49,6 +53,7 @@ export async function deleteUserAction(userId: string): Promise<{ success: boole
     const success = await deleteUserFromDbService(userId);
     if (success) {
       revalidatePath("/(app)/users");
+      revalidatePath("/(app)/vendors");
       return { success: true };
     }
     return { success: false, error: "Failed to delete user from database." };
