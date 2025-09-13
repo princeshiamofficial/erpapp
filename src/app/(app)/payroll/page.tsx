@@ -124,40 +124,36 @@ export default function PayrollPage() {
       
       results = results.filter(employee => {
         try {
-          // Rule 1: Always show active employees whose joining date is on or before the selected month.
           const joiningDate = new Date(employee.joiningDate);
           if (employee.status === 'Active') {
             return !isAfter(startOfMonth(joiningDate), selectedMonthStart);
           }
           
-          // Rule 2: For inactive employees, find the last paid month.
           if (employee.status === 'Inactive') {
             const paidSlips = Object.entries(employee.payslips || {})
               .filter(([_, payslip]) => payslip.paymentStatus === 'Paid');
 
             if (paidSlips.length === 0) {
-              // If never paid, their visibility is still determined by joining date.
-              // They will appear until they are paid and then go inactive.
               return !isAfter(startOfMonth(joiningDate), selectedMonthStart);
             }
             
-            // Find the most recent paid month
             const lastPaidMonthStr = paidSlips.sort(([a], [b]) => b.localeCompare(a))[0][0];
             const lastPaidMonth = parse(lastPaidMonthStr, 'yyyy-MM', new Date());
 
-            // Show them only up to and including their last paid month.
-            // Do not show them for any month *after* their last paid month.
             return !isAfter(selectedMonthStart, lastPaidMonth);
           }
 
-          return false; // Should not happen
+          return false;
 
         } catch (e) {
           console.error(`Error processing filter for employee ${employee.id}`, e);
           return false;
         }
       });
+    } else if (activeTab === 'leave_management') {
+      results = results.filter(employee => employee.status === 'Active');
     }
+
 
     if (searchTerm) {
       const lowercasedFilter = searchTerm.toLowerCase();
@@ -273,7 +269,7 @@ export default function PayrollPage() {
           
           const relevantHistory = (employee.salaryHistory || [])
               .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
-              .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
           const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
 
           const perDaySalary = effectiveSalary / (daysInMonth > 0 ? daysInMonth : 30);
@@ -932,4 +928,3 @@ export default function PayrollPage() {
   );
 }
 
-    
