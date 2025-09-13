@@ -19,14 +19,14 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle } from 'lucide-react';
 import type { Employee, User, SalaryIncrement } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth } from 'date-fns';
-import { deleteEmployeeAction } from './actions';
+import { deleteEmployeeAction, deleteSalaryIncrementAction } from './actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import {
@@ -35,6 +35,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -75,6 +76,9 @@ export default function PayrollPage() {
   
   const [payslipToEdit, setPayslipToEdit] = useState<Employee | null>(null);
   const [employeeToIncrement, setEmployeeToIncrement] = useState<Employee | null>(null);
+
+  const [incrementToDelete, setIncrementToDelete] = useState<{ employeeId: string, increment: SalaryIncrement } | null>(null);
+  const [isDeletingIncrement, setIsDeletingIncrement] = useState(false);
 
 
   const [selectedDate, setSelectedDate] = useState(subMonths(new Date(), 1));
@@ -137,7 +141,7 @@ export default function PayrollPage() {
         (employee.salaryHistory || []).map(history => ({
             ...history,
             employeeName: employee.name,
-            employeeId: employee.employeeId
+            employeeId: employee.id
         }))
     ).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [employees]);
@@ -166,6 +170,20 @@ export default function PayrollPage() {
     }
     setIsDeleting(false);
     setEmployeeToDelete(null);
+  };
+  
+  const handleConfirmDeleteIncrement = async () => {
+    if (!incrementToDelete) return;
+    setIsDeletingIncrement(true);
+    const result = await deleteSalaryIncrementAction(incrementToDelete.employeeId, incrementToDelete.increment.date);
+    if (result.success) {
+      toast({ title: "Increment Reverted", description: "The salary increment has been deleted and salary reverted." });
+      fetchData();
+    } else {
+      toast({ title: "Error", description: result.error, variant: "destructive" });
+    }
+    setIsDeletingIncrement(false);
+    setIncrementToDelete(null);
   };
 
 
@@ -677,6 +695,7 @@ export default function PayrollPage() {
                 <TableHead>Previous Salary</TableHead>
                 <TableHead>Increment Amount</TableHead>
                 <TableHead>New Salary</TableHead>
+                <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -688,21 +707,33 @@ export default function PayrollPage() {
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-8" /></TableCell>
                   </TableRow>
                 ))
               ) : allIncrementHistory.length > 0 ? (
                 allIncrementHistory.map((item, index) => (
                   <TableRow key={index}>
-                    <TableCell className="font-medium">{item.employeeName} ({item.employeeId})</TableCell>
+                    <TableCell className="font-medium">{item.employeeName}</TableCell>
                     <TableCell>{format(new Date(item.date), 'd MMM, yyyy')}</TableCell>
                     <TableCell>{formatCurrency(item.previousSalary)}</TableCell>
                     <TableCell className="text-green-600 font-medium">+ {formatCurrency(item.incrementAmount)}</TableCell>
                     <TableCell className="font-semibold">{formatCurrency(item.newSalary)}</TableCell>
+                    <TableCell className="text-right">
+                       <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                          onClick={() => setIncrementToDelete({ employeeId: item.employeeId, increment: item })}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span className="sr-only">Delete Increment</span>
+                        </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-48 text-gray-500">
+                  <TableCell colSpan={6} className="text-center h-48 text-gray-500">
                     <History className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                     No salary increment history found.
                   </TableCell>
@@ -780,6 +811,28 @@ export default function PayrollPage() {
           employee={employeeToIncrement}
           onSalaryIncremented={fetchData}
         />
+      )}
+      {incrementToDelete && (
+        <AlertDialog open={!!incrementToDelete} onOpenChange={() => setIncrementToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
+                Are you absolutely sure?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This will delete the salary increment from <span className="font-semibold">{format(new Date(incrementToDelete.increment.date), 'd MMM, yyyy')}</span> for <span className="font-semibold">{incrementToDelete.employeeName}</span>.
+                The employee's salary will be reverted from <span className="font-semibold">{formatCurrency(incrementToDelete.increment.newSalary)}</span> to <span className="font-semibold">{formatCurrency(incrementToDelete.increment.previousSalary)}</span>. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setIncrementToDelete(null)} disabled={isDeletingIncrement}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDeleteIncrement} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isDeletingIncrement}>
+                {isDeletingIncrement ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Yes, delete and revert salary"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );

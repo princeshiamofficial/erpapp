@@ -191,3 +191,34 @@ export const updatePayslip = async (employeeId: string, payslipId: string, paysl
     return false;
   }
 };
+
+export const deleteSalaryIncrement = async (employeeId: string, incrementDate: string): Promise<boolean> => {
+    try {
+        const employee = await getEmployeeById(employeeId);
+        if (!employee || !employee.salaryHistory) {
+            throw new Error("Employee or salary history not found.");
+        }
+        
+        const historyEntryToDelete = employee.salaryHistory.find(h => h.date === incrementDate);
+        if (!historyEntryToDelete) {
+            throw new Error("Specific increment history entry not found.");
+        }
+
+        // Revert salary and filter out the deleted history entry
+        const newSalary = historyEntryToDelete.previousSalary;
+        const newHistory = employee.salaryHistory.filter(h => h.date !== incrementDate);
+
+        const updates = {
+            salary: newSalary,
+            salaryHistory: newHistory,
+        };
+
+        const success = await updateEmployee(employeeId, updates);
+        return success;
+
+    } catch (error) {
+        console.error(`Error deleting salary increment for employee ${employeeId}:`, error);
+        if (error instanceof Error) throw error;
+        return false;
+    }
+};

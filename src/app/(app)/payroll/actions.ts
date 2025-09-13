@@ -3,13 +3,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Employee, Payslip } from "@/types";
+import type { Employee, Payslip, SalaryIncrement } from "@/types";
 import {
   addEmployee as addEmployeeService,
   updateEmployee as updateEmployeeService,
   deleteEmployee as deleteEmployeeService,
-  updatePayslip as updatePayslipService, // Import new service
-  getEmployeeById, // Import this
+  updatePayslip as updatePayslipService,
+  getEmployeeById,
+  deleteSalaryIncrement as deleteSalaryIncrementService, // Import new service
 } from "@/lib/employee-service";
 
 export async function addEmployeeAction(
@@ -111,5 +112,22 @@ export async function incrementEmployeeSalaryAction(
   } catch (error) {
     console.error("Error in incrementEmployeeSalaryAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected server error occurred." };
+  }
+}
+
+export async function deleteSalaryIncrementAction(
+  employeeId: string,
+  incrementDate: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await deleteSalaryIncrementService(employeeId, incrementDate);
+    if (success) {
+      revalidatePath("/(app)/payroll");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to delete salary increment history." };
+  } catch (error) {
+    console.error("Error in deleteSalaryIncrementAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
