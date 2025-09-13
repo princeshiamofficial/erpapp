@@ -138,7 +138,7 @@ export async function deleteLeadActivityAction(
         return { success: false, error: "Failed to delete activity from lead." };
     } catch (error) {
         console.error("Error in deleteLeadActivityAction:", error);
-        return { success: false, error: error instanceof Error ? error.message : "An unexpected server error occurred." };
+        return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
     }
 }
 
@@ -257,8 +257,8 @@ export async function transferLeadAction(
 
 export async function transferLeadsBatchAction(
     sourceCrmId: string,
-    targetCrmId: string,
-    numberOfLeads: number,
+    targetCrmIds: string[],
+    numberOfLeadsPerCrm: number,
     dateRange: { from: string, to: string },
     actingUser: User
 ): Promise<{ success: boolean, transferredCount: number, error?: string }> {
@@ -267,11 +267,6 @@ export async function transferLeadsBatchAction(
     }
 
     try {
-        const targetCrmUser = await getUserFromDb(targetCrmId);
-        if (!targetCrmUser) {
-            return { success: false, transferredCount: 0, error: "The target CRM user was not found." };
-        }
-
         const allLeads = await getLeadsFromDb();
         
         let leadsToFilter = allLeads;
@@ -279,39 +274,45 @@ export async function transferLeadsBatchAction(
             leadsToFilter = allLeads.filter(lead => lead.crmId === sourceCrmId);
         }
         
-        const sourceLeads = leadsToFilter
-            .filter(lead => {
-                const leadDate = new Date(lead.date);
-                return leadDate >= new Date(dateRange.from) && leadDate <= new Date(dateRange.to);
-            });
+        const sourceLeads = leadsToFilter.filter(lead => {
+            const leadDate = new Date(lead.date);
+            return leadDate >= new Date(dateRange.from) && leadDate <= new Date(dateRange.to);
+        });
 
-        // Shuffle the array to get random leads
         const shuffledLeads = sourceLeads.sort(() => 0.5 - Math.random());
-        
-        // Get the requested number of leads from the shuffled array
-        const leadsToTransfer = shuffledLeads.slice(0, numberOfLeads);
+        let totalTransferredCount = 0;
 
-        if (leadsToTransfer.length === 0) {
-            return { success: true, transferredCount: 0, error: "No matching leads found for the selected criteria." };
-        }
-
-        let transferredCount = 0;
-        for (const lead of leadsToTransfer) {
-            const updates = {
-                crmId: targetCrmUser.id,
-                crmName: targetCrmUser.name,
-            };
-            const success = await updateLead(lead.id, updates);
-            if (success) {
-                transferredCount++;
+        for (const targetCrmId of targetCrmIds) {
+            const targetCrmUser = await getUserFromDb(targetCrmId);
+            if (!targetCrmUser) {
+                console.warn(`Target CRM user with ID ${targetCrmId} not found. Skipping.`);
+                continue;
             }
+
+            const leadsToTransfer = shuffledLeads.splice(0, numberOfLeadsPerCrm);
+            if (leadsToTransfer.length === 0) {
+                break; // No more leads to transfer
+            }
+            
+            let transferredForThisCrm = 0;
+            for (const lead of leadsToTransfer) {
+                const updates = {
+                    crmId: targetCrmUser.id,
+                    crmName: targetCrmUser.name,
+                };
+                const success = await updateLead(lead.id, updates);
+                if (success) {
+                    transferredForThisCrm++;
+                }
+            }
+            totalTransferredCount += transferredForThisCrm;
         }
         
-        if (transferredCount > 0) {
+        if (totalTransferredCount > 0) {
             revalidatePath("/(app)/pipeline");
         }
 
-        return { success: true, transferredCount };
+        return { success: true, transferredCount: totalTransferredCount };
 
     } catch (error) {
         console.error("Error in transferLeadsBatchAction:", error);
