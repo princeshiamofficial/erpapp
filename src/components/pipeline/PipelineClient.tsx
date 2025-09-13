@@ -391,9 +391,9 @@ export function PipelineClient() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={() => setIsImportOpen(true)}><FileSpreadsheet className="mr-2 h-4 w-4" />Import Leads</DropdownMenuItem>
                 <DropdownMenuItem onSelect={handleExport} disabled={filteredLeads.length === 0}><Download className="mr-2 h-4 w-4" />Export Leads</DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => setIsBulkTransferOpen(true)}><Users className="mr-2 h-4 w-4" />Bulk Transfer</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            <Button onClick={() => setIsBulkTransferOpen(true)} variant="outline" className="w-full sm:w-auto h-10"><Users className="mr-2 h-4 w-4" />Leads Transfer</Button>
             <Button onClick={handleOpenAddDialog} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10"><PlusCircle className="mr-2 h-5 w-5" />Add Lead</Button>
           </div>
         </div>
