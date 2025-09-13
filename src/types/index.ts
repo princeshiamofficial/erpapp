@@ -65,6 +65,18 @@ export interface Employee {
   leaveHistory?: LeaveRecord[];
 }
 
+export interface Vendor {
+  id: string;
+  vendorId: string; // V-001
+  name: string;
+  contactPerson: string;
+  phone: string;
+  address: string;
+  category: string; // e.g., 'Printing', 'Materials', 'Logistics'
+  createdAt: string; // ISO string
+  updatedAt: string; // ISO string
+}
+
 export interface CustomStatus {
   id: string;
   xid: string; // A custom, URL-friendly identifier
