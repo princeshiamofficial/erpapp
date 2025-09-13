@@ -288,20 +288,20 @@ export function ReportPageClient() {
     if (orders.length === 0 || allUsers.length === 0 || !selectedDateRange?.from) {
       return [];
     }
-
+  
     const startDate = startOfDay(selectedDateRange.from);
     const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
-
+  
     const designerMap = new Map<string, { name: string; assigned: number; done: number; }>();
     allUsers
       .filter(user => user.role === 'DESIGNER_REPRESENTATIVE')
       .forEach(dr => {
         designerMap.set(dr.id, { name: dr.name, assigned: 0, done: 0 });
       });
-
+  
     orders.forEach(order => {
       if (!order.designerRepresentativeId) return;
-
+  
       const designer = designerMap.get(order.designerRepresentativeId);
       if (!designer) return;
       
@@ -309,7 +309,7 @@ export function ReportPageClient() {
       const lastAssignmentLog = order.statusHistory
         .filter(h => h.status === READY_FOR_DESIGN_STATUS_ID)
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-
+  
       if (lastAssignmentLog && isWithinInterval(parseISO(lastAssignmentLog.timestamp), { start: startDate, end: endDate })) {
         designer.assigned += 1;
       }
@@ -318,24 +318,24 @@ export function ReportPageClient() {
       const lastShippedLog = order.statusHistory
         .filter(h => h.status === SHIPPED_STATUS_ID)
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-
+  
       if (lastShippedLog && isWithinInterval(parseISO(lastShippedLog.timestamp), { start: startDate, end: endDate })) {
         designer.done += 1;
       }
       
       designerMap.set(order.designerRepresentativeId, designer);
     });
-
+  
     return Array.from(designerMap.entries())
       .map(([id, data]) => ({
         designerId: id,
         designerName: data.name,
         designsAssigned: data.assigned,
         designsDone: data.done,
-        completionRate: data.assigned > 0 ? (data.done / data.assigned) * 100 : 0,
+        completionRate: data.designsAssigned > 0 ? (data.done / data.designsAssigned) * 100 : 0,
       }))
-      .sort((a, b) => b.designsDone - a.designsAssigned || b.designsDone - a.designsDone);
-
+      .sort((a, b) => b.designsDone - a.designsDone || b.designsAssigned - a.designsAssigned);
+  
   }, [orders, allUsers, selectedDateRange]);
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
@@ -486,4 +486,5 @@ export function ReportPageClient() {
         />
       )}
     </>
-    
+  );
+}
