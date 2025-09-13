@@ -18,7 +18,7 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX } from 'lucide-react';
 import type { Employee, User } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
@@ -621,6 +621,22 @@ export default function PayrollPage() {
     </Card>
   );
 
+  const leaveManagementContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+      <CardHeader className="p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <CardTitle className="text-xl font-bold text-gray-800">Leave Management</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="p-6 pt-0">
+        <div className="text-center py-16 text-gray-500">
+          <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+          Leave Management feature coming soon.
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'salary_sheet':
@@ -631,6 +647,8 @@ export default function PayrollPage() {
         return employeePerformanceContent;
       case 'attendees_report':
         return attendeesReportContent;
+      case 'leave_management':
+        return leaveManagementContent;
       default:
         return employeeListContent;
     }
@@ -654,6 +672,7 @@ export default function PayrollPage() {
             <TabsTrigger value="employee_performance" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee Performance</TabsTrigger>
           )}
           <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
+          <TabsTrigger value="leave_management" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Leave Management</TabsTrigger>
         </TabsList>
         <div className="mt-6">
             {renderActiveTab()}
