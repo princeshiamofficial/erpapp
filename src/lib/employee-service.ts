@@ -55,6 +55,24 @@ export const getEmployees = async (): Promise<Employee[]> => {
   }
 };
 
+export const getEmployeeById = async (employeeId: string): Promise<Employee | null> => {
+    if (!employeeId) return null;
+    try {
+        const response = await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`);
+        if (response && response.data) {
+            return { id: response.id, ...response.data } as Employee;
+        }
+        return null;
+    } catch (error) {
+        // If a document is not found, the API throws an error. We should handle this gracefully.
+        if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
+          return null;
+        }
+        console.error(`Error fetching employee by ID ${employeeId} via API v3:`, error);
+        return null;
+    }
+};
+
 export const addEmployee = async (employeeData: Omit<Employee, 'id' | 'employeeId'>): Promise<Employee | null> => {
     try {
         await ensureCollectionExistsV3(EMPLOYEES_COLLECTION);
