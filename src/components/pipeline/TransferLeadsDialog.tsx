@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -30,10 +31,10 @@ interface TransferLeadsDialogProps {
   onLeadsTransferred: () => void;
   allCrmUsers: User[];
   currentUser: User;
+  sourceCrmId: string; // The source is now determined by the main page filter
 }
 
-export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, allCrmUsers, currentUser }: TransferLeadsDialogProps) {
-  const [sourceCrmId, setSourceCrmId] = useState('');
+export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, allCrmUsers, currentUser, sourceCrmId }: TransferLeadsDialogProps) {
   const [targetCrmId, setTargetCrmId] = useState('');
   const [leadAmount, setLeadAmount] = useState('10');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: subDays(new Date(), 29), to: new Date() });
@@ -41,7 +42,7 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
   const { toast } = useToast();
 
   const handleTransfer = async () => {
-    if (!sourceCrmId || !targetCrmId || !leadAmount || !dateRange?.from || !dateRange?.to) {
+    if (!targetCrmId || !leadAmount || !dateRange?.from || !dateRange?.to) {
       toast({ title: "Missing Information", description: "Please fill all fields.", variant: "destructive" });
       return;
     }
@@ -129,10 +130,6 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
           <div className="space-y-1">
             <Label>Date Range of Leads</Label>
             <DateRangePicker initialRange={dateRange} onDateRangeChange={(range) => setDateRange(range)} />
-          </div>
-          <div className="space-y-1">
-            <Label>From CRM</Label>
-            <CrmSelector value={sourceCrmId} onChange={setSourceCrmId} placeholder="Select source CRM" disabled={isSubmitting} excludeId={targetCrmId} />
           </div>
           <div className="space-y-1">
             <Label>To CRM</Label>

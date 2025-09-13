@@ -272,12 +272,15 @@ export async function transferLeadsBatchAction(
             return { success: false, transferredCount: 0, error: "The target CRM user was not found." };
         }
 
-        // Fetch all leads for the source user and then filter by date
-        // This is not efficient, but it's how we must work with the current services.
         const allLeads = await getLeadsFromDb();
         
-        const sourceLeads = allLeads
-            .filter(lead => lead.crmId === sourceCrmId)
+        let leadsToFilter = allLeads;
+        // If a specific source CRM is selected (not 'all'), filter by it
+        if (sourceCrmId && sourceCrmId !== 'all') {
+            leadsToFilter = allLeads.filter(lead => lead.crmId === sourceCrmId);
+        }
+        
+        const sourceLeads = leadsToFilter
             .filter(lead => {
                 const leadDate = new Date(lead.date);
                 return leadDate >= new Date(dateRange.from) && leadDate <= new Date(dateRange.to);
