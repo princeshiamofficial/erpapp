@@ -293,11 +293,11 @@ export function ReportPageClient() {
     const startDate = startOfDay(selectedDateRange.from);
     const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
   
-    const designerMap = new Map<string, { name: string; assigned: number; done: number; }>();
+    const designerMap = new Map<string, { name: string; assigned: Set<string>; done: Set<string>; }>();
     allUsers
       .filter(user => user.role === 'DESIGNER_REPRESENTATIVE')
       .forEach(dr => {
-        designerMap.set(dr.id, { name: dr.name, assigned: 0, done: 0 });
+        designerMap.set(dr.id, { name: dr.name, assigned: new Set(), done: new Set() });
       });
   
     orders.forEach(order => {
@@ -311,7 +311,7 @@ export function ReportPageClient() {
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
   
       if (lastAssignmentLog && isWithinInterval(parseISO(lastAssignmentLog.timestamp), { start: startDate, end: endDate })) {
-        designer.assigned += 1;
+        designer.assigned.add(order.id);
       }
       
       const lastShippedLog = order.statusHistory
@@ -319,7 +319,7 @@ export function ReportPageClient() {
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
   
       if (lastShippedLog && isWithinInterval(parseISO(lastShippedLog.timestamp), { start: startDate, end: endDate })) {
-        designer.done += 1;
+        designer.done.add(order.id);
       }
       
       designerMap.set(order.designerRepresentativeId, designer);
@@ -328,17 +328,14 @@ export function ReportPageClient() {
     const designersWithData = Array.from(designerMap.entries()).map(([id, data]) => ({
         designerId: id,
         designerName: data.name,
-        designsAssigned: data.assigned,
-        designsDone: data.done,
+        designsAssigned: data.assigned.size,
+        designsDone: data.done.size,
     }));
     
-    const totalDone = designersWithData.reduce((sum, item) => sum + item.designsDone, 0);
-    const averageDone = designersWithData.length > 0 ? totalDone / designersWithData.length : 0;
-  
     return designersWithData
       .map(data => ({
         ...data,
-        completionRate: averageDone > 0 ? (data.designsDone / averageDone) * 100 : 0,
+        completionRate: data.designsAssigned > 0 ? (data.designsDone / data.designsAssigned) * 100 : 0,
       }))
       .sort((a, b) => b.designsDone - a.designsDone || b.completionRate - a.completionRate);
   
@@ -462,7 +459,7 @@ export function ReportPageClient() {
                           <TableCell className="text-center font-mono">{item.designsDone}</TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center justify-center gap-4">
-                              <Progress value={item.completionRate} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
+                              <Progress value={Math.min(100, item.completionRate)} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
                               <Badge variant="outline" className="w-16 justify-center">{item.completionRate.toFixed(1)}%</Badge>
                             </div>
                           </TableCell>
