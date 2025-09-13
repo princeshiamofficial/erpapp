@@ -121,9 +121,6 @@ export default function VendorsPage() {
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
           <div><h1 className="page-title">Vendors</h1><p className="page-description">Manage and track all company vendors.</p></div>
-          <Button size="lg" onClick={handleOpenAddDialog} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10 shadow-md">
-            <PlusCircle className="mr-2 h-5 w-5" />Add Vendor
-          </Button>
         </div>
 
         <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
