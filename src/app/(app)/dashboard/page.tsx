@@ -39,6 +39,7 @@ import {
   Landmark, // For Payment Methods
   MessageSquare, // For Feedback
   Star, // For Feedback stars
+  Trash2, // For delete icon
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -64,8 +65,9 @@ import { useToast } from '@/hooks/use-toast';
 import { getUsers } from '@/lib/user-service';
 import { getProjects } from '@/lib/project-service';
 import { getLeads } from '@/lib/lead-service';
-import { getFeedback } from '@/lib/feedback-service'; // Import getFeedback
+import { getFeedback, deleteFeedbackAction } from '@/lib/feedback-service'; // Import getFeedback and deleteFeedbackAction
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'; // Added AlertDialog
 import { getGlobalSettings } from '@/lib/settings-service';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -260,6 +262,9 @@ function DashboardContent() {
   const [selectedPredefinedValue, setSelectedPredefinedValue] = useState<PredefinedRange | "custom" | null>("thisMonth");
   const [chartGranularity, setChartGranularity] = useState<'daily' | 'hourly'>('daily');
   const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
+  const [feedbackToDelete, setFeedbackToDelete] = useState<Feedback | null>(null);
+  const [isDeletingFeedback, setIsDeletingFeedback] = useState(false);
+
   
   const isDesignerRepOrLr = currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR';
 
@@ -282,7 +287,7 @@ function DashboardContent() {
     }
   }, [currentUser, toast]);
 
-  const { data: queryData, isLoading: isLoadingData } = useQuery({
+  const { data: queryData, isLoading: isLoadingData, refetch } = useQuery({
     queryKey: ['dashboardData', currentUser?.id],
     queryFn: fetchDashboardData,
     enabled: !!currentUser,
@@ -902,368 +907,388 @@ function DashboardContent() {
     }
   };
 
+  const handleDeleteFeedback = async () => {
+    if (!feedbackToDelete) return;
+    setIsDeletingFeedback(true);
+    const result = await deleteFeedbackAction(feedbackToDelete.id);
+    if (result.success) {
+      toast({ title: "Feedback Deleted", description: "The feedback entry has been removed." });
+      refetch();
+    } else {
+      toast({ title: "Error", description: result.error || "Could not delete feedback.", variant: "destructive" });
+    }
+    setIsDeletingFeedback(false);
+    setFeedbackToDelete(null);
+  };
+
+  const canDeleteFeedback = useMemo(() => {
+    if (!currentUser) return false;
+    return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
+  }, [currentUser]);
+
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 custom-scrollbar-hidden">
-      <div className="bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--primary))] text-primary-foreground p-6 sm:p-8 rounded-xl shadow-xl">
-        <h1 className="text-3xl sm:text-4xl font-bold flex items-center">
-          Welcome {currentUser?.name.split(' ')[0] || 'User'}
-          <Hand className="ml-2 h-8 w-8 transform rotate-[20deg] text-yellow-300" />
-        </h1>
-        <p className="text-md sm:text-lg text-primary-foreground/90 mt-1">
-          Here's an overview of your business activity.
-        </p>
-      </div>
-
-      {!isDesignerRepOrLr && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <Card className="shadow-sm bg-card">
-              <CardContent className="p-3 sm:p-4 flex items-center justify-between">
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <Users className="h-5 w-5 mr-2 text-primary/80" />
-                  <span>Select CR</span>
-                </div>
-                {canSelectCR ? (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-xs h-9 sm:h-10 truncate">
-                          {selectedCrmName} <ChevronDown className="ml-1.5 h-3.5 w-3.5 opacity-70" />
-                        </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent>
-                        <DropdownMenuLabel>Filter by CRM</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => setSelectedCrmId('all')}>All CRs</DropdownMenuItem>
-                        {allCrmUsers.map(crm => (
-                            <DropdownMenuItem key={crm.id} onSelect={() => setSelectedCrmId(crm.id)}>
-                            {crm.name}
-                            </DropdownMenuItem>
-                        ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                ) : (
-                    <Button variant="outline" size="sm" className="text-xs h-9 sm:h-10" disabled>
-                        Your Data
-                    </Button>
-                )}
-              </CardContent>
-            </Card>
-            <Card className="shadow-sm bg-card">
-              <CardContent className="p-3 sm:p-4 flex items-center justify-between">
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <CalendarDays className="h-5 w-5 mr-2 text-primary/80" />
-                  <span>Filter by Date</span>
-                </div>
-                {selectedDateRange ? (
-                  <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={handleDateRangeChange} />
-                ) : (
-                  <Skeleton className="h-10 w-full sm:w-[260px]"/>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-          
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            {summaryCardData.map((card) => (
-              <SummaryCard
-                key={card.title}
-                title={card.title}
-                value={card.value}
-                icon={card.icon}
-                iconColorClass={card.iconColorClass}
-                circleBgClass={card.circleBgClass}
-                isLoading={isLoadingContent}
-              />
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            <Card className="shadow-xl bg-card lg:col-span-3">
-              <CardHeader className="border-b">
-                <CardTitle className="flex items-center text-xl text-foreground">
-                  <BarChartBig className="mr-2 h-6 w-6 text-primary" />
-                  Sales ({currentDateRangeLabel})
-                  {currentUser?.role === 'CRM' && <span className="ml-2 text-sm font-normal text-muted-foreground">(Your Sales)</span>}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">
-                {isLoadingContent ? ( 
-                  <div className="flex items-center justify-center h-full">
-                    <Skeleton className="h-full w-full" />
-                  </div>
-                ) : (
-                  <ChartContainer config={chartConfig} className="w-full h-full">
-                    <RechartsLineChart
-                      data={salesChartData}
-                      margin={{
-                        top: 5,
-                        right: 20,
-                        left: -10, 
-                        bottom: 0,
-                      }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border)/0.5)" />
-                      <XAxis
-                        dataKey="date" 
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        tickFormatter={(value) => {
-                          if (chartGranularity === 'hourly') {
-                            const hour = parseInt(value);
-                            if (isNaN(hour)) return value; 
-                            if (hour === 0) return '12 AM';
-                            if (hour === 12) return '12 PM';
-                            if (hour < 12) return `${hour} AM`;
-                            return `${hour - 12} PM`;
-                          }
-                          try {
-                            return format(parseISO(value), 'd MMM');
-                          } catch (e) { return value; } 
-                        }}
-                        className="text-xs"
-                        interval={chartGranularity === 'hourly' && salesChartData.length > 12 ? 'preserveStartEnd' : undefined} 
-                      />
-                      <YAxis
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        tickFormatter={(value) => currentUser?.role === 'CRM' ? value : `৳${Number(value).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})}`}
-                        className="text-xs"
-                      />
-                      <ChartTooltip
-                        cursor={false}
-                        content={<CustomTooltipContent />}
-                      />
-                      <RechartsLegend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '10px'}} />
-                      <Line
-                        dataKey={chartDataKey}
-                        type="monotone"
-                        stroke="var(--color-sales)"
-                        strokeWidth={2}
-                        dot={{
-                          r: 4,
-                          fill: "var(--color-sales)",
-                          strokeWidth: 2,
-                          stroke: "hsl(var(--background))",
-                        }}
-                        activeDot={{
-                           r: 6,
-                           fill: "var(--color-sales)",
-                           strokeWidth: 2,
-                           stroke: "hsl(var(--background))",
-                        }}
-                      />
-                    </RechartsLineChart>
-                  </ChartContainer>
-                )}
-              </CardContent>
-            </Card>
-
-            <div className="lg:col-span-2 grid grid-cols-1 gap-6">
-                <Card className="shadow-xl bg-card">
-                    <CardHeader>
-                    <CardTitle className="flex items-center text-xl text-foreground">
-                        <PieChartIcon className="mr-2 h-6 w-6 text-primary" />
-                        Traffic Sources
-                    </CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-[250px] p-4">
-                    {isLoadingContent ? (
-                        <div className="flex items-center justify-center h-full">
-                        <Skeleton className="h-40 w-40 rounded-full" />
-                        </div>
-                    ) : trafficSourcesData.length > 0 ? (
-                        <ChartContainer config={trafficSourcesChartConfig} className="w-full h-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <RechartsPieChart>
-                                    <ChartTooltip content={<ChartTooltipContent nameKey="value" hideLabel />} />
-                                    <Pie data={trafficSourcesData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({ percent }) => `${(percent * 100).toFixed(0)}%`}>
-                                        {trafficSourcesData.map((entry) => (
-                                            <Cell key={`cell-${entry.name}`} fill={entry.fill} />
-                                        ))}
-                                    </Pie>
-                                    <ChartLegend content={<ChartLegendContent nameKey="name" />} />
-                                </RechartsPieChart>
-                            </ResponsiveContainer>
-                        </ChartContainer>
-                    ) : (
-                        <div className="flex items-center justify-center h-full text-muted-foreground">
-                            No lead source data available.
-                        </div>
-                    )}
-                    </CardContent>
-                </Card>
-                {canSeeAdminCharts && (
-                  <Card className="shadow-xl bg-card">
-                      <CardHeader>
-                      <CardTitle className="flex items-center text-xl text-foreground">
-                          <Landmark className="mr-2 h-6 w-6 text-primary" />
-                          Payment Analysis
-                      </CardTitle>
-                      </CardHeader>
-                      <CardContent className="h-[250px] p-4">
-                      {isLoadingContent ? (
-                          <Skeleton className="h-[200px] w-full" />
-                        ) : paymentMethodData.length > 0 ? (
-                          <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
-                              <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
-                                <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={80} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
-                                <XAxis type="number" hide />
-                                <ChartTooltip
-                                  cursor={{ fill: 'hsl(var(--muted))' }}
-                                  content={({ active, payload }) => {
-                                    if (active && payload && payload.length) {
-                                      return (
-                                        <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                          <div className="grid grid-cols-1 gap-1.5">
-                                            <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
-                                            <span className="text-xs text-muted-foreground">Amount: {formatCurrency(payload[0].payload.amount)}</span>
-                                          </div>
-                                        </div>
-                                      )
-                                    }
-                                    return null;
-                                  }}
-                                />
-                                <Bar dataKey="percentage" fill="var(--color-count)" radius={[0, 4, 4, 0]} barSize={20}>
-                                    <LabelList 
-                                        dataKey="percentage" 
-                                        position="right" 
-                                        offset={8} 
-                                        className="fill-foreground text-xs font-medium"
-                                        formatter={(value: number) => `${value.toFixed(1)}%`}
-                                    />
-                                </Bar>
-                              </RechartsBarChart>
-                          </ChartContainer>
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-muted-foreground">
-                              No payment data for this period.
-                          </div>
-                        )}
-                      </CardContent>
-                  </Card>
-                )}
-            </div>
-          </div>
-        </>
-      )}
-      
-      <div className={cn("grid grid-cols-1 gap-6", isDesignerRepOrLr ? "lg:grid-cols-2" : "")}>
-        <div className="lg:col-span-1">
-          <TeamPerformanceGraph
-            monthlyTargetData={teamPerformanceData}
-            totalPerformanceTarget={totalPerformanceTarget}
-            onDateRangeChange={handleTeamPerformanceDateRangeChange}
-            selectedDateRange={teamPerformanceDateRange}
-            userMap={userMap}
-            onTeamChange={handleTeamChange}
-            selectedTeam={selectedTeam}
-            isAdminView={isAdminView}
-          />
+    <>
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8 custom-scrollbar-hidden">
+        <div className="bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--primary))] text-primary-foreground p-6 sm:p-8 rounded-xl shadow-xl">
+          <h1 className="text-3xl sm:text-4xl font-bold flex items-center">
+            Welcome {currentUser?.name.split(' ')[0] || 'User'}
+            <Hand className="ml-2 h-8 w-8 transform rotate-[20deg] text-yellow-300" />
+          </h1>
+          <p className="text-md sm:text-lg text-primary-foreground/90 mt-1">
+            Here's an overview of your business activity.
+          </p>
         </div>
-        <div className={cn("lg:col-span-1", isDesignerRepOrLr ? "" : "hidden")}>
-              <Card className="shadow-xl bg-card">
-                <CardHeader>
-                  <CardTitle className="flex items-center text-xl text-foreground">
-                    <MessageSquare className="mr-2 h-6 w-6 text-primary" />
-                    Recent Feedback
-                  </CardTitle>
-                  <CardDescription>Latest client feedback from tracking pages.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {isLoadingContent ? (
-                    <div className="space-y-4">
-                      {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
-                    </div>
-                  ) : recentFeedback.length > 0 ? (
-                    <ScrollArea className="h-[400px] pr-3">
-                      <div className="space-y-4">
-                        {recentFeedback.map(feedback => {
-                          const user = userMap.get(feedback.crmUserId || '');
-                          return (
-                            <div key={feedback.id} className="p-4 border rounded-lg bg-secondary/30">
-                              <div className="flex justify-between items-start">
-                                <div className="flex items-center gap-3">
-                                  <Avatar className="h-10 w-10 border-2 border-primary/20">
-                                    <AvatarImage src={user?.avatarUrl || undefined} alt={user?.name} />
-                                    <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <p className="font-semibold text-foreground">{feedback.companyName}</p>
-                                    <p className="text-xs text-muted-foreground">Order ID: {feedback.orderId}</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1.5 text-amber-500">
-                                  {[...Array(5)].map((_, i) => (
-                                    <Star
-                                      key={i}
-                                      className={cn("h-4 w-4", i < feedback.rating ? "fill-amber-400 text-amber-400" : "fill-muted stroke-muted-foreground")}
-                                    />
-                                  ))}
-                                </div>
-                              </div>
-                              <p className="text-sm text-foreground/90 mt-3 italic border-l-2 border-primary pl-3">
-                                {renderFeedbackText(feedback.text)}
-                              </p>
-                              <p className="text-xs text-right text-muted-foreground mt-2">
-                                - Submitted {format(parseISO(feedback.submittedAt), "d MMM, yyyy")}
-                              </p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </ScrollArea>
+
+        {!isDesignerRepOrLr && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <Card className="shadow-sm bg-card">
+                <CardContent className="p-3 sm:p-4 flex items-center justify-between">
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Users className="h-5 w-5 mr-2 text-primary/80" />
+                    <span>Select CR</span>
+                  </div>
+                  {canSelectCR ? (
+                      <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="text-xs h-9 sm:h-10 truncate">
+                            {selectedCrmName} <ChevronDown className="ml-1.5 h-3.5 w-3.5 opacity-70" />
+                          </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent>
+                          <DropdownMenuLabel>Filter by CRM</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onSelect={() => setSelectedCrmId('all')}>All CRs</DropdownMenuItem>
+                          {allCrmUsers.map(crm => (
+                              <DropdownMenuItem key={crm.id} onSelect={() => setSelectedCrmId(crm.id)}>
+                              {crm.name}
+                              </DropdownMenuItem>
+                          ))}
+                          </DropdownMenuContent>
+                      </DropdownMenu>
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
-                      <MessageSquare className="h-16 w-16 opacity-30 mb-4" />
-                      <p className="font-medium">No feedback has been submitted yet.</p>
-                    </div>
+                      <Button variant="outline" size="sm" className="text-xs h-9 sm:h-10" disabled>
+                          Your Data
+                      </Button>
+                  )}
+                </CardContent>
+              </Card>
+              <Card className="shadow-sm bg-card">
+                <CardContent className="p-3 sm:p-4 flex items-center justify-between">
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <CalendarDays className="h-5 w-5 mr-2 text-primary/80" />
+                    <span>Filter by Date</span>
+                  </div>
+                  {selectedDateRange ? (
+                    <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={handleDateRangeChange} />
+                  ) : (
+                    <Skeleton className="h-10 w-full sm:w-[260px]"/>
                   )}
                 </CardContent>
               </Card>
             </div>
-      </div>
-      
-      {!isDesignerRepOrLr && (
-          <>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                <SalesPerformanceClient
-                allOrders={salesPerformanceOrders}
-                allCrmUsers={allCrmUsers}
+            
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              {summaryCardData.map((card) => (
+                <SummaryCard
+                  key={card.title}
+                  title={card.title}
+                  value={card.value}
+                  icon={card.icon}
+                  iconColorClass={card.iconColorClass}
+                  circleBgClass={card.circleBgClass}
+                  isLoading={isLoadingContent}
                 />
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+              <Card className="shadow-xl bg-card lg:col-span-3">
+                <CardHeader className="border-b">
+                  <CardTitle className="flex items-center text-xl text-foreground">
+                    <BarChartBig className="mr-2 h-6 w-6 text-primary" />
+                    Sales ({currentDateRangeLabel})
+                    {currentUser?.role === 'CRM' && <span className="ml-2 text-sm font-normal text-muted-foreground">(Your Sales)</span>}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="h-[300px] sm:h-[350px] p-2 sm:p-4">
+                  {isLoadingContent ? ( 
+                    <div className="flex items-center justify-center h-full">
+                      <Skeleton className="h-full w-full" />
+                    </div>
+                  ) : (
+                    <ChartContainer config={chartConfig} className="w-full h-full">
+                      <RechartsLineChart
+                        data={salesChartData}
+                        margin={{
+                          top: 5,
+                          right: 20,
+                          left: -10, 
+                          bottom: 0,
+                        }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border)/0.5)" />
+                        <XAxis
+                          dataKey="date" 
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          tickFormatter={(value) => {
+                            if (chartGranularity === 'hourly') {
+                              const hour = parseInt(value);
+                              if (isNaN(hour)) return value; 
+                              if (hour === 0) return '12 AM';
+                              if (hour === 12) return '12 PM';
+                              if (hour < 12) return `${hour} AM`;
+                              return `${hour - 12} PM`;
+                            }
+                            try {
+                              return format(parseISO(value), 'd MMM');
+                            } catch (e) { return value; } 
+                          }}
+                          className="text-xs"
+                          interval={chartGranularity === 'hourly' && salesChartData.length > 12 ? 'preserveStartEnd' : undefined} 
+                        />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          tickFormatter={(value) => currentUser?.role === 'CRM' ? value : `৳${Number(value).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})}`}
+                          className="text-xs"
+                        />
+                        <ChartTooltip
+                          cursor={false}
+                          content={<CustomTooltipContent />}
+                        />
+                        <RechartsLegend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '10px'}} />
+                        <Line
+                          dataKey={chartDataKey}
+                          type="monotone"
+                          stroke="var(--color-sales)"
+                          strokeWidth={2}
+                          dot={{
+                            r: 4,
+                            fill: "var(--color-sales)",
+                            strokeWidth: 2,
+                            stroke: "hsl(var(--background))",
+                          }}
+                          activeDot={{
+                             r: 6,
+                             fill: "var(--color-sales)",
+                             strokeWidth: 2,
+                             stroke: "hsl(var(--background))",
+                          }}
+                        />
+                      </RechartsLineChart>
+                    </ChartContainer>
+                  )}
+                </CardContent>
+              </Card>
+
+              <div className="lg:col-span-2 grid grid-cols-1 gap-6">
+                  <Card className="shadow-xl bg-card">
+                      <CardHeader>
+                      <CardTitle className="flex items-center text-xl text-foreground">
+                          <PieChartIcon className="mr-2 h-6 w-6 text-primary" />
+                          Traffic Sources
+                      </CardTitle>
+                      </CardHeader>
+                      <CardContent className="h-[250px] p-4">
+                      {isLoadingContent ? (
+                          <div className="flex items-center justify-center h-full">
+                          <Skeleton className="h-40 w-40 rounded-full" />
+                          </div>
+                      ) : trafficSourcesData.length > 0 ? (
+                          <ChartContainer config={trafficSourcesChartConfig} className="w-full h-full">
+                              <ResponsiveContainer width="100%" height="100%">
+                                  <RechartsPieChart>
+                                      <ChartTooltip content={<ChartTooltipContent nameKey="value" hideLabel />} />
+                                      <Pie data={trafficSourcesData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label={({ percent }) => `${(percent * 100).toFixed(0)}%`}>
+                                          {trafficSourcesData.map((entry) => (
+                                              <Cell key={`cell-${entry.name}`} fill={entry.fill} />
+                                          ))}
+                                      </Pie>
+                                      <ChartLegend content={<ChartLegendContent nameKey="name" />} />
+                                  </RechartsPieChart>
+                              </ResponsiveContainer>
+                          </ChartContainer>
+                      ) : (
+                          <div className="flex items-center justify-center h-full text-muted-foreground">
+                              No lead source data available.
+                          </div>
+                      )}
+                      </CardContent>
+                  </Card>
+                  {canSeeAdminCharts && (
+                    <Card className="shadow-xl bg-card">
+                        <CardHeader>
+                        <CardTitle className="flex items-center text-xl text-foreground">
+                            <Landmark className="mr-2 h-6 w-6 text-primary" />
+                            Payment Analysis
+                        </CardTitle>
+                        </CardHeader>
+                        <CardContent className="h-[250px] p-4">
+                        {isLoadingContent ? (
+                            <Skeleton className="h-[200px] w-full" />
+                          ) : paymentMethodData.length > 0 ? (
+                            <ChartContainer config={paymentMethodsChartConfig} className="w-full h-full">
+                                <RechartsBarChart data={paymentMethodData} layout="vertical" margin={{ top: 5, right: 60, left: 10, bottom: 5 }}>
+                                  <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} width={80} stroke="hsl(var(--border))" axisLine={false} tickLine={false} />
+                                  <XAxis type="number" hide />
+                                  <ChartTooltip
+                                    cursor={{ fill: 'hsl(var(--muted))' }}
+                                    content={({ active, payload }) => {
+                                      if (active && payload && payload.length) {
+                                        return (
+                                          <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                            <div className="grid grid-cols-1 gap-1.5">
+                                              <span className="text-sm font-bold text-foreground">{payload[0].payload.name}</span>
+                                              <span className="text-xs text-muted-foreground">Amount: {formatCurrency(payload[0].payload.amount)}</span>
+                                            </div>
+                                          </div>
+                                        )
+                                      }
+                                      return null;
+                                    }}
+                                  />
+                                  <Bar dataKey="percentage" fill="var(--color-count)" radius={[0, 4, 4, 0]} barSize={20}>
+                                      <LabelList 
+                                          dataKey="percentage" 
+                                          position="right" 
+                                          offset={8} 
+                                          className="fill-foreground text-xs font-medium"
+                                          formatter={(value: number) => `${value.toFixed(1)}%`}
+                                      />
+                                  </Bar>
+                                </RechartsBarChart>
+                            </ChartContainer>
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-muted-foreground">
+                                No payment data for this period.
+                            </div>
+                          )}
+                        </CardContent>
+                    </Card>
+                  )}
+              </div>
+            </div>
+          </>
+        )}
+        
+        <div className={cn("grid grid-cols-1 gap-6", isDesignerRepOrLr ? "lg:grid-cols-2" : "")}>
+          <div className="lg:col-span-1">
+            <TeamPerformanceGraph
+              monthlyTargetData={teamPerformanceData}
+              totalPerformanceTarget={totalPerformanceTarget}
+              onDateRangeChange={handleTeamPerformanceDateRangeChange}
+              selectedDateRange={teamPerformanceDateRange}
+              userMap={userMap}
+              onTeamChange={handleTeamChange}
+              selectedTeam={selectedTeam}
+              isAdminView={isAdminView}
+            />
+          </div>
+          <div className={cn("lg:col-span-1", isDesignerRepOrLr ? "" : "hidden")}>
                 <Card className="shadow-xl bg-card">
-                <CardHeader>
+                  <CardHeader>
                     <CardTitle className="flex items-center text-xl text-foreground">
-                    <MessageSquare className="mr-2 h-6 w-6 text-primary" />
-                    Recent Feedback
+                      <MessageSquare className="mr-2 h-6 w-6 text-primary" />
+                      Recent Feedback
                     </CardTitle>
                     <CardDescription>Latest client feedback from tracking pages.</CardDescription>
-                </CardHeader>
-                <CardContent>
+                  </CardHeader>
+                  <CardContent>
                     {isLoadingContent ? (
-                    <div className="space-y-4">
+                      <div className="space-y-4">
                         {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
-                    </div>
+                      </div>
                     ) : recentFeedback.length > 0 ? (
-                    <ScrollArea className="h-[400px] pr-3">
+                      <ScrollArea className="h-[400px] pr-3">
                         <div className="space-y-4">
-                        {recentFeedback.map(feedback => {
-                            const user = userMap.get(feedback.crmUserId || '');
+                          {recentFeedback.map(feedback => {
+                            const crmUser = userMap.get(feedback.crmUserId || '');
                             return (
-                                <div key={feedback.id} className="p-4 border rounded-lg bg-secondary/30">
+                              <div key={feedback.id} className="p-4 border rounded-lg bg-secondary/30" onDoubleClick={canDeleteFeedback ? () => setFeedbackToDelete(feedback) : undefined}>
                                 <div className="flex justify-between items-start">
-                                    <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-3">
                                     <Avatar className="h-10 w-10 border-2 border-primary/20">
-                                        <AvatarImage src={user?.avatarUrl || undefined} alt={user?.name} />
-                                        <AvatarFallback>{getInitials(user?.name)}</AvatarFallback>
+                                      <AvatarImage src={crmUser?.avatarUrl || undefined} alt={crmUser?.name} />
+                                      <AvatarFallback>{getInitials(crmUser?.name)}</AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <p className="font-semibold text-foreground">{feedback.companyName}</p>
-                                        <p className="text-xs text-muted-foreground">Order ID: {feedback.orderId}</p>
+                                      <p className="font-semibold text-foreground">{feedback.companyName}</p>
+                                      <p className="text-xs text-muted-foreground">Order ID: {feedback.orderId}</p>
                                     </div>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-amber-500">
+                                    {[...Array(5)].map((_, i) => (
+                                      <Star
+                                        key={i}
+                                        className={cn("h-4 w-4", i < feedback.rating ? "fill-amber-400 text-amber-400" : "fill-muted stroke-muted-foreground")}
+                                      />
+                                    ))}
+                                  </div>
+                                </div>
+                                <p className="text-sm text-foreground/90 mt-3 italic border-l-2 border-primary pl-3">
+                                  {renderFeedbackText(feedback.text)}
+                                </p>
+                                <p className="text-xs text-right text-muted-foreground mt-2">
+                                  - Submitted {format(parseISO(feedback.submittedAt), "d MMM, yyyy")}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </ScrollArea>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
+                        <MessageSquare className="h-16 w-16 opacity-30 mb-4" />
+                        <p className="font-medium">No feedback has been submitted yet.</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+        </div>
+        
+        {!isDesignerRepOrLr && (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                  <SalesPerformanceClient
+                  allOrders={salesPerformanceOrders}
+                  allCrmUsers={allCrmUsers}
+                  />
+                  <Card className="shadow-xl bg-card">
+                  <CardHeader>
+                    <CardTitle className="flex items-center text-xl text-foreground">
+                      <MessageSquare className="mr-2 h-6 w-6 text-primary" />
+                      Recent Feedback
+                    </CardTitle>
+                    <CardDescription>Latest client feedback from tracking pages.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {isLoadingContent ? (
+                      <div className="space-y-4">
+                        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+                      </div>
+                    ) : recentFeedback.length > 0 ? (
+                      <ScrollArea className="h-[400px] pr-3">
+                        <div className="space-y-4">
+                          {recentFeedback.map(feedback => {
+                            const crmUser = userMap.get(feedback.crmUserId || '');
+                            return (
+                                <div key={feedback.id} className="p-4 border rounded-lg bg-secondary/30" onDoubleClick={canDeleteFeedback ? () => setFeedbackToDelete(feedback) : undefined}>
+                                  <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-3">
+                                      <Avatar className="h-10 w-10 border-2 border-primary/20">
+                                        <AvatarImage src={crmUser?.avatarUrl || undefined} alt={crmUser?.name} />
+                                        <AvatarFallback>{getInitials(crmUser?.name)}</AvatarFallback>
+                                      </Avatar>
+                                      <div>
+                                          <p className="font-semibold text-foreground">{feedback.companyName}</p>
+                                          <p className="text-xs text-muted-foreground">Order ID: {feedback.orderId}</p>
+                                      </div>
                                     </div>
                                     <div className="flex items-center gap-1.5 text-amber-500">
                                         {[...Array(5)].map((_, i) => (
@@ -1273,71 +1298,95 @@ function DashboardContent() {
                                             />
                                         ))}
                                     </div>
-                                </div>
-                                <p className="text-sm text-foreground/90 mt-3 italic border-l-2 border-primary pl-3">
-                                    {renderFeedbackText(feedback.text)}
-                                </p>
-                                <p className="text-xs text-right text-muted-foreground mt-2">
-                                    - Submitted {format(parseISO(feedback.submittedAt), "d MMM, yyyy")}
-                                </p>
+                                  </div>
+                                  <p className="text-sm text-foreground/90 mt-3 italic border-l-2 border-primary pl-3">
+                                      {renderFeedbackText(feedback.text)}
+                                  </p>
+                                  <p className="text-xs text-right text-muted-foreground mt-2">
+                                      - Submitted {format(parseISO(feedback.submittedAt), "d MMM, yyyy")}
+                                  </p>
                                 </div>
                             );
-                        })}
+                          })}
                         </div>
-                    </ScrollArea>
+                      </ScrollArea>
                     ) : (
-                    <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
-                        <MessageSquare className="h-16 w-16 opacity-30 mb-4" />
-                        <p className="font-medium">No feedback has been submitted yet.</p>
-                    </div>
+                      <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
+                          <MessageSquare className="h-16 w-16 opacity-30 mb-4" />
+                          <p className="font-medium">No feedback has been submitted yet.</p>
+                      </div>
                     )}
-                </CardContent>
+                  </CardContent>
                 </Card>
-            </div>
-          </>
-      )}
-      
-      <div className={cn("grid grid-cols-1 gap-6 mt-6", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
+              </div>
+            </>
+        )}
         
-        <Card className="shadow-xl bg-card">
-          <CardHeader>
-            <CardTitle className="flex items-center text-xl text-foreground">
-              <Briefcase className="mr-2 h-6 w-6 text-primary" />
-              Project Overview
-            </CardTitle>
-             <CardDescription>Project distribution by status for the selected period.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <StatusTimeline
-              counts={projectCounts}
-              config={visibleProjectStatusDisplayConfig}
-              isLoading={isLoadingContent}
-              title="Project Status"
-            />
-          </CardContent>
-        </Card>
-        
-        {currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' && (
+        <div className={cn("grid grid-cols-1 gap-6 mt-6", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
+          
           <Card className="shadow-xl bg-card">
             <CardHeader>
               <CardTitle className="flex items-center text-xl text-foreground">
-                <Users className="mr-2 h-6 w-6 text-primary" />
-                Pipeline Overview
+                <Briefcase className="mr-2 h-6 w-6 text-primary" />
+                Project Overview
               </CardTitle>
-               <CardDescription>Lead distribution by category for the selected period.</CardDescription>
+               <CardDescription>Project distribution by status for the selected period.</CardDescription>
             </CardHeader>
             <CardContent>
               <StatusTimeline
-                counts={leadCategoryCounts}
-                config={ALL_LEAD_CATEGORIES_CONFIG}
+                counts={projectCounts}
+                config={visibleProjectStatusDisplayConfig}
                 isLoading={isLoadingContent}
-                title="Lead Category"
+                title="Project Status"
               />
             </CardContent>
           </Card>
-        )}
-      </div>
+          
+          {currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' && (
+            <Card className="shadow-xl bg-card">
+              <CardHeader>
+                <CardTitle className="flex items-center text-xl text-foreground">
+                  <Users className="mr-2 h-6 w-6 text-primary" />
+                  Pipeline Overview
+                </CardTitle>
+                 <CardDescription>Lead distribution by category for the selected period.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <StatusTimeline
+                  counts={leadCategoryCounts}
+                  config={ALL_LEAD_CATEGORIES_CONFIG}
+                  isLoading={isLoadingContent}
+                  title="Lead Category"
+                />
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
-    </div>
+      </div>
+      
+      {feedbackToDelete && (
+          <AlertDialog open={!!feedbackToDelete} onOpenChange={() => setFeedbackToDelete(null)}>
+              <AlertDialogContent>
+                  <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2">
+                          <AlertTriangle className="h-6 w-6 text-destructive" />
+                          Delete Feedback?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                          Are you sure you want to permanently delete the feedback for order <span className="font-semibold">{feedbackToDelete.orderId}</span>? This action cannot be undone.
+                      </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                      <AlertDialogCancel onClick={() => setFeedbackToDelete(null)} disabled={isDeletingFeedback}>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteFeedback} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isDeletingFeedback}>
+                          {isDeletingFeedback ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Deleting...</> : "Delete"}
+                      </AlertDialogAction>
+                  </AlertDialogFooter>
+              </AlertDialogContent>
+          </AlertDialog>
+      )}
+
+    </>
   );
 }

@@ -56,3 +56,18 @@ export const addFeedback = async (feedbackData: Omit<Feedback, 'id'>): Promise<b
     return false;
   }
 };
+
+export async function deleteFeedbackAction(feedbackId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${feedbackId}`, {
+        method: 'DELETE'
+    });
+    return { success: true };
+  } catch (error) {
+    console.error(`Error deleting feedback ${feedbackId} via API v3:`, error);
+    if (error instanceof Error) {
+        return { success: false, error: error.message };
+    }
+    return { success: false, error: 'An unknown error occurred during deletion.' };
+  }
+}
