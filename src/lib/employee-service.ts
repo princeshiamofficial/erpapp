@@ -1,6 +1,6 @@
 
 
-import type { Employee, Payslip } from '@/types';
+import type { Employee, Payslip, SalaryIncrement } from '@/types';
 import { subYears } from 'date-fns';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
@@ -90,7 +90,7 @@ export const addEmployee = async (employeeData: Omit<Employee, 'id' | 'employeeI
         
         const newIdNumber = maxIdNumber + 1;
         const employeeId = `EMP-${String(newIdNumber).padStart(3, '0')}`;
-        const newEmployeeData = { ...employeeData, employeeId, payslips: {} };
+        const newEmployeeData = { ...employeeData, employeeId, payslips: {}, salaryHistory: [] };
 
         const newDoc = await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents`, {
             method: 'POST',
@@ -111,8 +111,29 @@ export const addEmployee = async (employeeData: Omit<Employee, 'id' | 'employeeI
 export const updateEmployee = async (employeeId: string, updates: Partial<Omit<Employee, 'id' | 'employeeId'>>): Promise<boolean> => {
     try {
         await ensureCollectionExistsV3(EMPLOYEES_COLLECTION);
-        const existingEmployee = await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`);
-        const finalData = { ...existingEmployee.data, ...updates };
+        const existingEmployee = await getEmployeeById(employeeId);
+        if (!existingEmployee) {
+            throw new Error("Employee not found for update.");
+        }
+
+        const finalUpdates = { ...updates };
+        const currentSalary = existingEmployee.salary || 0;
+        const newSalary = updates.salary;
+
+        if (newSalary !== undefined && newSalary !== null && newSalary !== currentSalary) {
+            const newIncrement: SalaryIncrement = {
+                date: new Date().toISOString(),
+                previousSalary: currentSalary,
+                newSalary: newSalary,
+                incrementAmount: newSalary - currentSalary,
+            };
+            const updatedHistory = [...(existingEmployee.salaryHistory || []), newIncrement];
+            finalUpdates.salaryHistory = updatedHistory;
+        }
+
+        const finalData = { ...existingEmployee, ...finalUpdates };
+        delete (finalData as any).id;
+
 
         await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`, {
             method: 'PUT',
@@ -141,8 +162,8 @@ export const deleteEmployee = async (employeeId: string): Promise<boolean> => {
 // New function to update a payslip record within an employee's document
 export const updatePayslip = async (employeeId: string, payslipId: string, payslipData: Omit<Payslip, 'id' | 'updatedAt'>): Promise<boolean> => {
   try {
-    const existingEmployee = await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`);
-    if (!existingEmployee || !existingEmployee.data) {
+    const existingEmployee = await getEmployeeById(employeeId);
+    if (!existingEmployee) {
         throw new Error("Employee not found");
     }
 
@@ -153,11 +174,12 @@ export const updatePayslip = async (employeeId: string, payslipId: string, paysl
     };
 
     const updatedPayslips = {
-      ...(existingEmployee.data.payslips || {}),
+      ...(existingEmployee.payslips || {}),
       [payslipId]: updatedPayslip,
     };
     
-    const finalData = { ...existingEmployee.data, payslips: updatedPayslips };
+    const finalData = { ...existingEmployee, payslips: updatedPayslips };
+    delete (finalData as any).id;
 
     await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`, {
         method: 'PUT',

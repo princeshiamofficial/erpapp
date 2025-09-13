@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History } from 'lucide-react';
-import type { Employee, User } from '@/types';
+import type { Employee, User, SalaryIncrement } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
@@ -130,6 +131,17 @@ export default function PayrollPage() {
     }
     return results;
   }, [employees, searchTerm, activeTab, selectedDate]);
+
+  const allIncrementHistory = useMemo(() => {
+    return employees.flatMap(employee => 
+        (employee.salaryHistory || []).map(history => ({
+            ...history,
+            employeeName: employee.name,
+            employeeId: employee.employeeId
+        }))
+    ).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [employees]);
+
 
   const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
   const paginatedEmployees = useMemo(() => {
@@ -649,12 +661,55 @@ export default function PayrollPage() {
       <CardHeader className="p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <CardTitle className="text-xl font-bold text-gray-800">Increment History</CardTitle>
+           <div className="relative flex-grow sm:flex-grow-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input placeholder="Search history..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+            </div>
         </div>
       </CardHeader>
       <CardContent className="p-6 pt-0">
-        <div className="text-center py-16 text-gray-500">
-          <History className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-          Increment History feature coming soon.
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Employee</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Previous Salary</TableHead>
+                <TableHead>Increment Amount</TableHead>
+                <TableHead>New Salary</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                [...Array(5)].map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  </TableRow>
+                ))
+              ) : allIncrementHistory.length > 0 ? (
+                allIncrementHistory.map((item, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">{item.employeeName} ({item.employeeId})</TableCell>
+                    <TableCell>{format(new Date(item.date), 'd MMM, yyyy')}</TableCell>
+                    <TableCell>{formatCurrency(item.previousSalary)}</TableCell>
+                    <TableCell className="text-green-600 font-medium">+ {formatCurrency(item.incrementAmount)}</TableCell>
+                    <TableCell className="font-semibold">{formatCurrency(item.newSalary)}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center h-48 text-gray-500">
+                    <History className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                    No salary increment history found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
       </CardContent>
     </Card>

@@ -17,6 +17,13 @@ export interface User {
   feedback?: Feedback[];
 }
 
+export interface SalaryIncrement {
+    date: string; // ISO string
+    previousSalary: number;
+    newSalary: number;
+    incrementAmount: number;
+}
+
 export interface Payslip {
     id: string; // e.g., '2024-07' for July 2024
     presentDays: number;
@@ -43,6 +50,7 @@ export interface Employee {
   avatarUrl?: string | null;
   salary?: number | null;
   payslips?: { [key: string]: Payslip }; // Optional map of payslips
+  salaryHistory?: SalaryIncrement[];
 }
 
 export interface CustomStatus {
