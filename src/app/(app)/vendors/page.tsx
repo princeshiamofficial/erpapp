@@ -6,53 +6,50 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Search, MoreVertical, Store, Loader2, Edit3, Trash2 } from "lucide-react";
+import { Search, MoreVertical, Store, Loader2, Edit, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { Vendor, User } from '@/types';
+import type { User } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getVendors } from '@/lib/vendor-service';
+import { getUsers, deleteUserFromFirestore } from '@/lib/user-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { deleteVendorAction } from './actions';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { format, parseISO } from 'date-fns';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { deleteUserAction } from '@/app/(app)/users/actions';
 
-const AddEditVendorDialog = dynamic(() => import('@/components/vendors/AddEditVendorDialog').then(mod => mod.AddEditVendorDialog));
-const DeleteVendorDialog = dynamic(() => import('@/components/vendors/DeleteVendorDialog').then(mod => mod.DeleteVendorDialog));
+const EditUserInfoDialog = dynamic(() => import('@/components/users/edit-user-info-dialog').then(mod => mod.EditUserInfoDialog));
+const DeleteUserDialog = dynamic(() => import('@/components/users/delete-user-dialog').then(mod => mod.DeleteUserDialog));
 
-const formatDate = (dateString?: string) => {
-  if (!dateString) return "N/A";
-  try {
-    return format(parseISO(dateString), 'd MMM yyyy');
-  } catch (e) {
-    return "Invalid Date";
-  }
+const getInitials = (name: string) => {
+  if (!name) return '??';
+  const names = name.split(' ');
+  if (names.length === 1) return names[0].charAt(0).toUpperCase();
+  return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
+
 
 export default function VendorsPage() {
   const { currentUser } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
 
-  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
-  const [isAddEditOpen, setIsAddEditOpen] = useState(false);
-  const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
-
-  const [vendorToDelete, setVendorToDelete] = useState<Vendor | null>(null);
+  const [userToEdit, setUserToEdit] = useState<User | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const fetchedVendors = await getVendors();
-      setVendors(fetchedVendors);
+      const fetchedUsers = await getUsers();
+      setAllUsers(fetchedUsers);
     } catch (error) {
-      console.error("Failed to fetch vendors data:", error);
-      toast({ title: "Error", description: "Could not load vendors data.", variant: "destructive" });
+      console.error("Failed to fetch users data:", error);
+      toast({ title: "Error", description: "Could not load users data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -67,45 +64,30 @@ export default function VendorsPage() {
   }, [currentUser, fetchData, router]);
 
   const filteredVendors = useMemo(() => {
+    const vendors = allUsers.filter(u => u.role === 'VENDOR');
     if (!searchTerm) return vendors;
     const lowerSearchTerm = searchTerm.toLowerCase();
     return vendors.filter(vendor =>
       vendor.name.toLowerCase().includes(lowerSearchTerm) ||
-      vendor.contactPerson.toLowerCase().includes(lowerSearchTerm) ||
-      vendor.phone.toLowerCase().includes(lowerSearchTerm) ||
-      vendor.category.toLowerCase().includes(lowerSearchTerm)
+      (vendor.email && vendor.email.toLowerCase().includes(lowerSearchTerm)) ||
+      (vendor.companyName && vendor.companyName.toLowerCase().includes(lowerSearchTerm))
     );
-  }, [vendors, searchTerm]);
-
-  const handleOpenAddDialog = () => {
-    setEditingVendor(null);
-    setIsAddEditOpen(true);
-  };
-
-  const handleOpenEditDialog = (vendor: Vendor) => {
-    setEditingVendor(vendor);
-    setIsAddEditOpen(true);
-  };
-
-  const handleVendorSaved = () => {
-    setIsAddEditOpen(false);
-    setEditingVendor(null);
-    fetchData();
-  };
+  }, [allUsers, searchTerm]);
   
-  const handleDeleteRequest = (vendor: Vendor) => {
-    setVendorToDelete(vendor);
+  const handleUserSaved = () => {
+    setUserToEdit(null);
+    fetchData();
   };
 
   const handleConfirmDelete = async () => {
-    if (!vendorToDelete) return;
+    if (!userToDelete) return;
     setIsDeleting(true);
-    const result = await deleteVendorAction(vendorToDelete.id);
+    const result = await deleteUserAction(userToDelete.id);
     setIsDeleting(false);
-    setVendorToDelete(null);
+    setUserToDelete(null);
 
     if (result.success) {
-      toast({ title: "Vendor Deleted", description: "The vendor record has been successfully deleted." });
+      toast({ title: "Vendor Deleted", description: "The vendor user account has been successfully deleted." });
       fetchData();
     } else {
       toast({ title: "Error", description: result.error || "Could not delete the vendor.", variant: "destructive" });
@@ -120,7 +102,7 @@ export default function VendorsPage() {
     <>
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
-          <div><h1 className="page-title">Vendors</h1><p className="page-description">Manage and track all company vendors.</p></div>
+          <div><h1 className="page-title">Vendors</h1><p className="page-description">Manage all company vendors from the user list.</p></div>
         </div>
 
         <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
@@ -138,42 +120,44 @@ export default function VendorsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="pl-6">Vendor ID</TableHead>
-                    <TableHead>Vendor Name</TableHead>
-                    <TableHead>Contact Person</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead>Address</TableHead>
+                    <TableHead className="pl-6">Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Company</TableHead>
                     <TableHead className="pr-6 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {isLoading ? (
                     [...Array(5)].map((_, i) => (
-                      <TableRow key={`skel-vendor-${i}`}><TableCell colSpan={7}><Skeleton className="h-8 w-full" /></TableCell></TableRow>
+                      <TableRow key={`skel-vendor-${i}`}><TableCell colSpan={4}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
                     ))
                   ) : filteredVendors.length > 0 ? (
                     filteredVendors.map(vendor => (
                       <TableRow key={vendor.id} className="hover:bg-muted/50">
-                        <TableCell className="pl-6 font-mono text-primary">{vendor.vendorId}</TableCell>
-                        <TableCell className="font-medium">{vendor.name}</TableCell>
-                        <TableCell>{vendor.contactPerson}</TableCell>
-                        <TableCell>{vendor.phone}</TableCell>
-                        <TableCell>{vendor.category}</TableCell>
-                        <TableCell className="truncate max-w-xs">{vendor.address}</TableCell>
+                        <TableCell className="pl-6 font-medium">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9 border">
+                              <AvatarImage src={vendor.avatarUrl || undefined} alt={vendor.name}/>
+                              <AvatarFallback>{getInitials(vendor.name)}</AvatarFallback>
+                            </Avatar>
+                            <span>{vendor.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>{vendor.email}</TableCell>
+                        <TableCell>{vendor.companyName || 'N/A'}</TableCell>
                         <TableCell className="pr-6 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onSelect={() => handleOpenEditDialog(vendor)} className="cursor-pointer"><Edit3 className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => handleDeleteRequest(vendor)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => setUserToEdit(vendor)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit Info</DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => setUserToDelete(vendor)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete Vendor</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))
                   ) : (
-                    <TableRow><TableCell colSpan={7} className="h-48 text-center"><Store className="mx-auto h-12 w-12 opacity-30 mb-3" />No vendors found.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={4} className="h-48 text-center"><Store className="mx-auto h-12 w-12 opacity-30 mb-3" />No vendors found.</TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
@@ -182,20 +166,24 @@ export default function VendorsPage() {
         </Card>
       </div>
 
-      <AddEditVendorDialog
-        isOpen={isAddEditOpen}
-        onOpenChange={setIsAddEditOpen}
-        onVendorSaved={handleVendorSaved}
-        vendor={editingVendor}
-      />
+      {userToEdit && (
+        <EditUserInfoDialog
+            user={userToEdit}
+            onUserInfoUpdated={handleUserSaved}
+            isOpen={!!userToEdit}
+            onOpenChange={() => setUserToEdit(null)}
+        />
+      )}
 
-      <DeleteVendorDialog
-        isOpen={!!vendorToDelete}
-        onOpenChange={() => setVendorToDelete(null)}
-        onConfirmDelete={handleConfirmDelete}
-        vendor={vendorToDelete}
-        isDeleting={isDeleting}
-      />
+      {userToDelete && (
+        <DeleteUserDialog
+          isOpen={!!userToDelete}
+          onOpenChange={() => setUserToDelete(null)}
+          onConfirmDelete={handleConfirmDelete}
+          user={userToDelete}
+          isDeleting={isDeleting}
+        />
+      )}
     </>
   );
 }
