@@ -332,10 +332,12 @@ export function ReportPageClient() {
         designsDone: data.done.size,
     }));
     
+    const totalDesignsDone = designersWithData.reduce((sum, data) => sum + data.designsDone, 0);
+
     return designersWithData
       .map(data => ({
         ...data,
-        completionRate: data.designsAssigned > 0 ? (data.designsDone / data.designsAssigned) * 100 : 0,
+        completionRate: totalDesignsDone > 0 ? (data.designsDone / totalDesignsDone) * 100 : 0,
       }))
       .sort((a, b) => b.designsDone - a.designsDone || b.completionRate - a.completionRate);
   
@@ -459,7 +461,7 @@ export function ReportPageClient() {
                           <TableCell className="text-center font-mono">{item.designsDone}</TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center justify-center gap-4">
-                              <Progress value={Math.min(100, item.completionRate)} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
+                              <Progress value={item.completionRate} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
                               <Badge variant="outline" className="w-16 justify-center">{item.completionRate.toFixed(1)}%</Badge>
                             </div>
                           </TableCell>
