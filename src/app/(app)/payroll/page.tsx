@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -722,6 +721,8 @@ export default function PayrollPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>SL</TableHead>
+                <TableHead>Employee ID</TableHead>
                 <TableHead>Name of Employee</TableHead>
                 <TableHead>Yearly Leave</TableHead>
                 <TableHead>Available</TableHead>
@@ -732,6 +733,8 @@ export default function PayrollPage() {
               {isLoading ? (
                 [...Array(5)].map((_, index) => (
                   <TableRow key={index}>
+                    <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
@@ -739,8 +742,10 @@ export default function PayrollPage() {
                   </TableRow>
                 ))
               ) : paginatedEmployees.length > 0 ? (
-                 paginatedEmployees.map((employee) => (
+                 paginatedEmployees.map((employee, index) => (
                     <TableRow key={employee.id}>
+                        <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
+                        <TableCell>{employee.employeeId}</TableCell>
                         <TableCell className="font-medium">{employee.name}</TableCell>
                         <TableCell>12</TableCell>
                         <TableCell>12</TableCell>
@@ -751,7 +756,7 @@ export default function PayrollPage() {
                  ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center h-48 text-gray-500">
+                  <TableCell colSpan={6} className="text-center h-48 text-gray-500">
                     <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                      No employees to manage leave for.
                   </TableCell>
@@ -926,3 +931,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
