@@ -236,7 +236,7 @@ export default function PayrollPage() {
           const daysInMonth = getDaysInMonth(selectedDate);
           
           const relevantHistory = (employee.salaryHistory || [])
-              .filter(h => !isAfter(new Date(h.date), endOfMonth(selectedDate)))
+              .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
               .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
           const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
 
