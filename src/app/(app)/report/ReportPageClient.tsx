@@ -28,14 +28,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon } from 'lucide-react'; // Import UsersIcon
 import { useAuth } from '@/contexts/auth-context'; // Corrected import path
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { updateReportFiltersAction } from './actions';
@@ -341,7 +334,7 @@ export function ReportPageClient() {
         designsDone: data.done,
         completionRate: data.assigned > 0 ? (data.done / data.assigned) * 100 : 0,
       }))
-      .sort((a, b) => b.designsDone - a.designsDone || b.designsAssigned - a.designsAssigned);
+      .sort((a, b) => b.designsDone - a.designsAssigned || b.designsDone - a.designsDone);
 
   }, [orders, allUsers, selectedDateRange]);
 
@@ -493,5 +486,4 @@ export function ReportPageClient() {
         />
       )}
     </>
-  );
-}
+    
