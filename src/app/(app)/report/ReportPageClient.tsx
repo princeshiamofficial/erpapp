@@ -36,8 +36,9 @@ import { updateReportFiltersAction } from './actions';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
-import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay } from 'date-fns';
+import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay, getYear } from 'date-fns';
 import { READY_FOR_DESIGN_STATUS_ID, SHIPPED_STATUS_ID } from '@/lib/status-service'; // Import status IDs
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Import Avatar components
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-BD', {
@@ -58,7 +59,15 @@ interface DesignerPerformanceData {
   designsAssigned: number;
   designsDone: number;
   completionRate: number;
+  avatarUrl?: string | null; // Added avatarUrl
 }
+
+const getInitials = (name: string | undefined): string => {
+  if (!name) return '??';
+  const names = name.split(' ');
+  if (names.length === 1) return names[0].charAt(0).toUpperCase();
+  return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
+};
 
 
 interface ReportFilterSettingsDialogProps {
@@ -293,11 +302,11 @@ export function ReportPageClient() {
     const startDate = startOfDay(selectedDateRange.from);
     const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
   
-    const designerMap = new Map<string, { name: string; assigned: Set<string>; done: Set<string>; }>();
+    const designerMap = new Map<string, { name: string; avatarUrl?: string | null; assigned: Set<string>; done: Set<string>; }>();
     allUsers
       .filter(user => user.role === 'DESIGNER_REPRESENTATIVE')
       .forEach(dr => {
-        designerMap.set(dr.id, { name: dr.name, assigned: new Set(), done: new Set() });
+        designerMap.set(dr.id, { name: dr.name, avatarUrl: dr.avatarUrl, assigned: new Set(), done: new Set() });
       });
   
     orders.forEach(order => {
@@ -306,7 +315,7 @@ export function ReportPageClient() {
       const designer = designerMap.get(order.designerRepresentativeId);
       if (!designer) return;
       
-      const lastAssignmentLog = order.statusHistory
+      const lastAssignmentLog = [...order.statusHistory]
         .filter(h => h.status === READY_FOR_DESIGN_STATUS_ID)
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
   
@@ -314,7 +323,7 @@ export function ReportPageClient() {
         designer.assigned.add(order.id);
       }
       
-      const lastShippedLog = order.statusHistory
+      const lastShippedLog = [...order.statusHistory]
         .filter(h => h.status === SHIPPED_STATUS_ID)
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
   
@@ -328,6 +337,7 @@ export function ReportPageClient() {
     const designersWithData = Array.from(designerMap.entries()).map(([id, data]) => ({
         designerId: id,
         designerName: data.name,
+        avatarUrl: data.avatarUrl,
         designsAssigned: data.assigned.size,
         designsDone: data.done.size,
     }));
@@ -339,7 +349,7 @@ export function ReportPageClient() {
         ...data,
         completionRate: totalDesignsDone > 0 ? (data.designsDone / totalDesignsDone) * 100 : 0,
       }))
-      .sort((a, b) => b.designsDone - a.designsDone || b.completionRate - a.completionRate);
+      .sort((a, b) => b.designsDone - a.designsDone);
   
   }, [orders, allUsers, selectedDateRange]);
 
@@ -442,7 +452,7 @@ export function ReportPageClient() {
                     {isLoading ? (
                       [...Array(3)].map((_, i) => (
                         <TableRow key={`skel-designer-${i}`}>
-                          <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                          <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-24" /></div></TableCell>
                           <TableCell className="text-center"><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
                           <TableCell className="text-center"><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
                           <TableCell>
@@ -456,12 +466,20 @@ export function ReportPageClient() {
                     ) : designerPerformanceData.length > 0 ? (
                       designerPerformanceData.map((item) => (
                         <TableRow key={item.designerId}>
-                          <TableCell className="font-medium">{item.designerName}</TableCell>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                                <Avatar className="h-8 w-8 border">
+                                    <AvatarImage src={item.avatarUrl || undefined} alt={item.designerName} />
+                                    <AvatarFallback>{getInitials(item.designerName)}</AvatarFallback>
+                                </Avatar>
+                                <span>{item.designerName}</span>
+                            </div>
+                          </TableCell>
                           <TableCell className="text-center font-mono">{item.designsAssigned}</TableCell>
                           <TableCell className="text-center font-mono">{item.designsDone}</TableCell>
                           <TableCell className="text-center">
                             <div className="flex items-center justify-center gap-4">
-                              <Progress value={item.completionRate} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
+                              <Progress value={Math.min(100, item.completionRate)} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
                               <Badge variant="outline" className="w-16 justify-center">{item.completionRate.toFixed(1)}%</Badge>
                             </div>
                           </TableCell>
