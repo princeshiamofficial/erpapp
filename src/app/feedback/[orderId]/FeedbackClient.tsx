@@ -93,7 +93,7 @@ export function FeedbackClient({ order, existingFeedback }: FeedbackClientProps)
         <!-- Open Feedback -->
         <div class="feedback-section pt-4" data-question="ওপেন ফিডব্যাক">
             <label for="open-feedback" class="block text-base font-semibold text-gray-700 mb-3">৬. ওপেন ফিডব্যাক (ঐচ্ছিক)</label>
-            <textarea id="open-feedback" rows="4" class="w-full p-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" placeholder="আপনার বিস্তারিত মতামত এখানে লিখুন..."></textarea>
+            <textarea id="open-feedback" maxlength="101" rows="4" class="w-full p-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition" placeholder="আপনার বিস্তারিত মতামত এখানে লিখুন..."></textarea>
         </div>
 
         <!-- Submit Button -->
