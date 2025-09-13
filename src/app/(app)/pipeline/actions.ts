@@ -275,7 +275,6 @@ export async function transferLeadsBatchAction(
         const allLeads = await getLeadsFromDb();
         
         let leadsToFilter = allLeads;
-        // If a specific source CRM is selected (not 'all'), filter by it
         if (sourceCrmId && sourceCrmId !== 'all') {
             leadsToFilter = allLeads.filter(lead => lead.crmId === sourceCrmId);
         }
@@ -284,15 +283,20 @@ export async function transferLeadsBatchAction(
             .filter(lead => {
                 const leadDate = new Date(lead.date);
                 return leadDate >= new Date(dateRange.from) && leadDate <= new Date(dateRange.to);
-            })
-            .slice(0, numberOfLeads);
+            });
 
-        if (sourceLeads.length === 0) {
+        // Shuffle the array to get random leads
+        const shuffledLeads = sourceLeads.sort(() => 0.5 - Math.random());
+        
+        // Get the requested number of leads from the shuffled array
+        const leadsToTransfer = shuffledLeads.slice(0, numberOfLeads);
+
+        if (leadsToTransfer.length === 0) {
             return { success: true, transferredCount: 0, error: "No matching leads found for the selected criteria." };
         }
 
         let transferredCount = 0;
-        for (const lead of sourceLeads) {
+        for (const lead of leadsToTransfer) {
             const updates = {
                 crmId: targetCrmUser.id,
                 crmName: targetCrmUser.name,
