@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -720,6 +721,7 @@ export default function PayrollPage() {
                 <TableHead>SL</TableHead>
                 <TableHead>Employee ID</TableHead>
                 <TableHead>Name of Employee</TableHead>
+                <TableHead>Designation</TableHead>
                 <TableHead>Yearly Leave</TableHead>
                 <TableHead>Available</TableHead>
                 <TableHead className="text-center">Action</TableHead>
@@ -732,6 +734,7 @@ export default function PayrollPage() {
                     <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
@@ -743,6 +746,7 @@ export default function PayrollPage() {
                         <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
                         <TableCell>{employee.employeeId}</TableCell>
                         <TableCell className="font-medium">{employee.name}</TableCell>
+                        <TableCell>{employee.designation}</TableCell>
                         <TableCell>12</TableCell>
                         <TableCell>12</TableCell>
                         <TableCell className="text-center">
@@ -752,7 +756,7 @@ export default function PayrollPage() {
                  ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center h-48 text-gray-500">
+                  <TableCell colSpan={7} className="text-center h-48 text-gray-500">
                     <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                      No employees to manage leave for.
                   </TableCell>
