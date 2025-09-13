@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -323,16 +324,23 @@ export function ReportPageClient() {
       
       designerMap.set(order.designerRepresentativeId, designer);
     });
-  
-    return Array.from(designerMap.entries())
-      .map(([id, data]) => ({
+    
+    const designersWithData = Array.from(designerMap.entries()).map(([id, data]) => ({
         designerId: id,
         designerName: data.name,
         designsAssigned: data.assigned,
         designsDone: data.done,
-        completionRate: data.designsAssigned > 0 ? (data.done / data.designsAssigned) * 100 : 0,
+    }));
+    
+    const totalDone = designersWithData.reduce((sum, item) => sum + item.designsDone, 0);
+    const averageDone = designersWithData.length > 0 ? totalDone / designersWithData.length : 0;
+  
+    return designersWithData
+      .map(data => ({
+        ...data,
+        completionRate: averageDone > 0 ? (data.designsDone / averageDone) * 100 : 0,
       }))
-      .sort((a, b) => b.designsDone - a.designsAssigned || b.completionRate - a.completionRate);
+      .sort((a, b) => b.designsDone - a.designsDone || b.completionRate - a.completionRate);
   
   }, [orders, allUsers, selectedDateRange]);
 
