@@ -122,7 +122,7 @@ export const updateEmployee = async (employeeId: string, updates: Partial<Omit<E
 
         // Check if salary is being updated and it's a genuine increment, not a revert.
         if (newSalary !== undefined && newSalary !== null && newSalary !== currentSalary) {
-            const isReverting = (finalUpdates.salaryHistory || []).length < (existingEmployee.salaryHistory || []).length;
+            const isReverting = updates.isReverting || false;
             
             if (!isReverting) {
                 const newIncrement: SalaryIncrement = {
@@ -136,6 +136,8 @@ export const updateEmployee = async (employeeId: string, updates: Partial<Omit<E
                 finalUpdates.salaryHistory = updatedHistory;
             }
         }
+        
+        delete (finalUpdates as any).isReverting; // Clean up the flag
 
         const finalData = { ...existingEmployee, ...finalUpdates };
         delete (finalData as any).id;
@@ -148,6 +150,28 @@ export const updateEmployee = async (employeeId: string, updates: Partial<Omit<E
         return true;
     } catch (error) {
         console.error(`Error updating employee ${employeeId} via API v3:`, error);
+        return false;
+    }
+};
+
+export const updateModelStock = async (modelId: string, quantityChange: number): Promise<boolean> => {
+    try {
+        const doc = await fetchFromApiV3(`collections/serviceModels/documents/${modelId}`);
+        if (!doc || !doc.data) {
+            throw new Error("Model not found for stock update.");
+        }
+        const currentStock = doc.data.stockCount || 0;
+        const newStock = currentStock + quantityChange;
+        
+        const finalData = { ...doc.data, stockCount: newStock };
+        
+        await fetchFromApiV3(`collections/serviceModels/documents/${modelId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ data: finalData })
+        });
+        return true;
+    } catch (error) {
+        console.error(`Error updating stock for model ${modelId} via API v3:`, error);
         return false;
     }
 };
@@ -204,18 +228,11 @@ export const deleteSalaryIncrement = async (employeeId: string, incrementDate: s
         if (!employee || !employee.salaryHistory) {
             throw new Error("Employee or salary history not found.");
         }
-        
-        const historyEntryToDelete = employee.salaryHistory.find(h => h.date === incrementDate);
-        if (!historyEntryToDelete) {
-            throw new Error("Specific increment history entry not found.");
-        }
 
-        // Revert salary and filter out the deleted history entry
-        const newSalary = historyEntryToDelete.previousSalary;
         const newHistory = employee.salaryHistory.filter(h => h.date !== incrementDate);
 
+        // Only update the salary history, not the current salary.
         const updates = {
-            salary: newSalary,
             salaryHistory: newHistory,
         };
 
