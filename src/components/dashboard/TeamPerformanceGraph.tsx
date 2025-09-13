@@ -19,7 +19,7 @@ import {
     ChartTooltip,
     ChartTooltipContent,
   } from "@/components/ui/chart"
-import { parseISO, startOfDay, isSameDay } from 'date-fns';
+import { parseISO, startOfDay, isSameDay, getDaysInMonth, startOfMonth, subMonths, format, differenceInDays, endOfDay, endOfMonth } from 'date-fns';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { Input } from '@/components/ui/input';
@@ -28,9 +28,9 @@ import { useAuth } from '@/contexts/auth-context';
 import { Label } from "@/components/ui/label";
 import { addTaskEntryAction } from '@/app/(app)/dashboard/actions';
 import { useToast } from '@/hooks/use-toast';
-import { getTaskEntries, TaskEntry } from '@/lib/team-performance-service';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Added Avatar
-import { ScrollArea } from '@/components/ui/scroll-area'; // Added ScrollArea
+import { getTaskEntries, TaskEntry, getMonthlyTargetHistory, setMonthlyTargetHistory } from '@/lib/team-performance-service';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
+import { ScrollArea } from '@/components/ui/scroll-area'; 
 
 
 interface DailyTargetData {
@@ -64,7 +64,7 @@ const getInitials = (name: string | undefined): string => {
 };
 
 
-export function TeamPerformanceGraph({ monthlyTargetData, totalPerformanceTarget, selectedDateRange, userMap, onDateRangeChange, onTeamChange, selectedTeam, isAdminView }: TeamPerformanceGraphProps) {
+export function TeamPerformanceGraph({ monthlyTargetData: initialMonthlyTargetData, totalPerformanceTarget: initialTotalPerformanceTarget, selectedDateRange, userMap, onDateRangeChange, onTeamChange, selectedTeam, isAdminView }: TeamPerformanceGraphProps) {
   const [chartType, setChartType] = useState<'line'>('line');
   const [tasksDone, setTasksDone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -72,6 +72,9 @@ export function TeamPerformanceGraph({ monthlyTargetData, totalPerformanceTarget
   const [taskEntries, setTaskEntries] = useState<TaskEntry[]>([]);
   const { currentUser } = useAuth();
   const { toast } = useToast();
+
+  const [monthlyTargetData, setMonthlyTargetData] = useState(initialMonthlyTargetData);
+  const [totalPerformanceTarget, setTotalPerformanceTarget] = useState(initialTotalPerformanceTarget);
 
   const fetchTaskData = async () => {
     const entries = await getTaskEntries();
@@ -84,7 +87,6 @@ export function TeamPerformanceGraph({ monthlyTargetData, totalPerformanceTarget
 
   useEffect(() => {
     if (!currentUser) return;
-    const todayStr = new Date().toISOString().split('T')[0];
     
     const todaysSubmission = taskEntries.find(entry => 
         isSameDay(parseISO(entry.date), new Date()) && 
@@ -117,8 +119,8 @@ export function TeamPerformanceGraph({ monthlyTargetData, totalPerformanceTarget
     if (result.success) {
         toast({ title: "Tasks Submitted", description: `Your ${taskCount} completed tasks have been recorded.` });
         setTasksDone('');
-        setHasSubmittedToday(true); // Prevent further submissions
-        await fetchTaskData(); // Refresh the entries to reflect the new submission
+        setHasSubmittedToday(true); 
+        await fetchTaskData(); 
     } else {
         toast({ title: "Submission Failed", description: result.error, variant: "destructive" });
     }
