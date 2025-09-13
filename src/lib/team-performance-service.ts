@@ -5,6 +5,7 @@ import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 import type { UserRole } from '@/types';
 
 const COLLECTION_NAME = 'teamPerformance';
+const MONTHLY_TARGET_COLLECTION_NAME = 'monthlyTeamTargets';
 
 export interface TaskEntry {
   id: string;
@@ -15,6 +16,16 @@ export interface TaskEntry {
   taskCount: number;
   createdAt: string; // ISO string
 }
+
+export interface MonthlyTargetHistory {
+    id: string; // e.g., 'CRM-2024-06'
+    team: UserRole | 'all';
+    month: string; // YYYY-MM
+    target: number;
+    achieved: number;
+    undone: number;
+}
+
 
 // Get all task entries
 export const getTaskEntries = async (): Promise<TaskEntry[]> => {
@@ -61,3 +72,55 @@ export const addTaskEntry = async (entry: Omit<TaskEntry, 'id' | 'createdAt'>): 
     return null;
   }
 };
+
+
+// New functions for monthly target history
+
+export const getMonthlyTargetHistory = async (team: UserRole | 'all'): Promise<MonthlyTargetHistory[]> => {
+    try {
+        await ensureCollectionExistsV3(MONTHLY_TARGET_COLLECTION_NAME);
+        const response = await fetchFromApiV3(`collections/${MONTHLY_TARGET_COLLECTION_NAME}/documents?limit=9999`);
+        if (response && Array.isArray(response.documents)) {
+            return response.documents
+                .map((doc: { id: string, data: any }) => ({ id: doc.id, ...doc.data } as MonthlyTargetHistory))
+                .filter(item => item.team === team)
+                .sort((a, b) => b.month.localeCompare(a.month)); // Sort descending by month
+        }
+        return [];
+    } catch (error) {
+        console.error(`Error fetching monthly target history for team ${team} via API v3:`, error);
+        return [];
+    }
+};
+
+export const setMonthlyTargetHistory = async (entry: Omit<MonthlyTargetHistory, 'id'>): Promise<MonthlyTargetHistory | null> => {
+    try {
+        await ensureCollectionExistsV3(MONTHLY_TARGET_COLLECTION_NAME);
+        const docId = `${entry.team}-${entry.month}`;
+        
+        const payload = {
+            id: docId,
+            data: entry
+        };
+
+        // Use POST to create, which will fail if the ID exists. We'll catch and then PUT.
+        try {
+             await fetchFromApiV3(`collections/${MONTHLY_TARGET_COLLECTION_NAME}/documents`, {
+                method: 'POST',
+                body: JSON.stringify(payload),
+            });
+        } catch (postError) {
+             // If POST fails (likely due to duplicate ID), use PUT to update.
+             await fetchFromApiV3(`collections/${MONTHLY_TARGET_COLLECTION_NAME}/documents/${docId}`, {
+                method: 'PUT',
+                body: JSON.stringify({ data: entry }),
+            });
+        }
+
+        return { id: docId, ...entry };
+    } catch (error) {
+        console.error("Error setting monthly target history via API v3:", error);
+        return null;
+    }
+};
+
