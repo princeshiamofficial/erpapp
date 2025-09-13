@@ -1,6 +1,7 @@
 
 import { Suspense } from 'react';
 import { getOrderById } from '@/lib/order-service';
+import { getFeedbackForOrder } from '@/lib/feedback-service'; // Import feedback service
 import { notFound } from 'next/navigation';
 import { FeedbackClient } from './FeedbackClient';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,17 +39,25 @@ export default async function FeedbackPage({ params }: FeedbackPageProps) {
     notFound();
   }
 
-  const orderData = await getOrderById(orderId);
+  // Fetch both order data and any existing feedback for that order
+  const [orderData, existingFeedback] = await Promise.all([
+    getOrderById(orderId),
+    getFeedbackForOrder(orderId)
+  ]);
 
   if (!orderData) {
     notFound();
   }
 
   const plainOrderData = JSON.parse(JSON.stringify(orderData));
+  const plainExistingFeedback = JSON.parse(JSON.stringify(existingFeedback));
 
   return (
     <Suspense fallback={<FeedbackPageSkeleton />}>
-      <FeedbackClient order={plainOrderData} />
+      <FeedbackClient
+        order={plainOrderData}
+        existingFeedback={plainExistingFeedback} // Pass existing feedback to client
+      />
     </Suspense>
   );
 }

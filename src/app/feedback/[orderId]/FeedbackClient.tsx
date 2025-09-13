@@ -1,14 +1,29 @@
 
 "use client";
 
-import React from 'react';
-import type { TrackingLink } from '@/types';
+import React, { useEffect } from 'react';
+import type { TrackingLink, Feedback } from '@/types';
 
 interface FeedbackClientProps {
   order: TrackingLink;
+  existingFeedback: Feedback[];
 }
 
-export function FeedbackClient({ order }: FeedbackClientProps) {
+export function FeedbackClient({ order, existingFeedback }: FeedbackClientProps) {
+  // Determine if the form should be shown or the thank you message
+  const showThankYou = existingFeedback && existingFeedback.length > 0;
+
+  useEffect(() => {
+    // If feedback already exists, immediately hide form and show thank you message
+    // This handles the client-side logic to prevent re-submission attempts.
+    if (showThankYou) {
+      const form = document.getElementById('feedback-form');
+      const thankYou = document.getElementById('thank-you-message');
+      if (form) form.style.display = 'none';
+      if (thankYou) thankYou.style.display = 'block';
+    }
+  }, [showThankYou]);
+
   // The full HTML structure is now in the layout. This component only renders the body content.
   const formHtml = `
     <div id="feedback-form" class="feedback-card space-y-4">
