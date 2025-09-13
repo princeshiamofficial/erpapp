@@ -254,3 +254,60 @@ export async function transferLeadAction(
         return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred during lead transfer." };
     }
 }
+
+export async function transferLeadsBatchAction(
+    sourceCrmId: string,
+    targetCrmId: string,
+    numberOfLeads: number,
+    dateRange: { from: string, to: string },
+    actingUser: User
+): Promise<{ success: boolean, transferredCount: number, error?: string }> {
+    if (!['ADMIN', 'SYSTEM_ADMIN'].includes(actingUser.role)) {
+        return { success: false, transferredCount: 0, error: "Permission denied." };
+    }
+
+    try {
+        const targetCrmUser = await getUserFromDb(targetCrmId);
+        if (!targetCrmUser) {
+            return { success: false, transferredCount: 0, error: "The target CRM user was not found." };
+        }
+
+        // Fetch all leads for the source user and then filter by date
+        // This is not efficient, but it's how we must work with the current services.
+        const allLeads = await getLeadsFromDb();
+        
+        const sourceLeads = allLeads
+            .filter(lead => lead.crmId === sourceCrmId)
+            .filter(lead => {
+                const leadDate = new Date(lead.date);
+                return leadDate >= new Date(dateRange.from) && leadDate <= new Date(dateRange.to);
+            })
+            .slice(0, numberOfLeads);
+
+        if (sourceLeads.length === 0) {
+            return { success: true, transferredCount: 0, error: "No matching leads found for the selected criteria." };
+        }
+
+        let transferredCount = 0;
+        for (const lead of sourceLeads) {
+            const updates = {
+                crmId: targetCrmUser.id,
+                crmName: targetCrmUser.name,
+            };
+            const success = await updateLead(lead.id, updates);
+            if (success) {
+                transferredCount++;
+            }
+        }
+        
+        if (transferredCount > 0) {
+            revalidatePath("/(app)/pipeline");
+        }
+
+        return { success: true, transferredCount };
+
+    } catch (error) {
+        console.error("Error in transferLeadsBatchAction:", error);
+        return { success: false, transferredCount: 0, error: error instanceof Error ? error.message : "An unexpected error occurred during bulk transfer." };
+    }
+}

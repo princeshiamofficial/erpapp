@@ -50,6 +50,7 @@ const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod
 const AddEditLeadDialog = dynamic(() => import('@/components/pipeline/AddEditLeadDialog').then(mod => mod.AddEditLeadDialog));
 const ImportLeadsDialog = dynamic(() => import('@/components/pipeline/ImportLeadsDialog').then(mod => mod.ImportLeadsDialog));
 const TransferLeadDialog = dynamic(() => import('@/components/pipeline/TransferLeadDialog').then(mod => mod.TransferLeadDialog));
+const TransferLeadsDialog = dynamic(() => import('@/components/pipeline/TransferLeadsDialog').then(mod => mod.TransferLeadsDialog));
 
 
 const KANBAN_COLUMNS_CONFIG: Array<{ title: string; category: LeadCategory; icon: React.ElementType; headerBgClass: string }> = [
@@ -81,6 +82,7 @@ export function PipelineClient() {
   const [editingLead, setEditingLead] = useState<Lead | null>(null);
 
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isBulkTransferOpen, setIsBulkTransferOpen] = useState(false);
   
   const [activeLead, setActiveLead] = useState<Lead | null>(null);
 
@@ -392,7 +394,7 @@ export function PipelineClient() {
                 <DropdownMenuItem onSelect={handleExport} disabled={filteredLeads.length === 0}><Download className="mr-2 h-4 w-4" />Export Leads</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button onClick={handleOpenAddDialog} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10"><PlusCircle className="mr-2 h-5 w-5" />Add Lead</Button>
+            <Button onDoubleClick={() => setIsBulkTransferOpen(true)} onClick={handleOpenAddDialog} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10"><PlusCircle className="mr-2 h-5 w-5" />Add Lead</Button>
           </div>
         </div>
 
@@ -437,6 +439,7 @@ export function PipelineClient() {
 
       <AddEditLeadDialog isOpen={isAddEditOpen} onOpenChange={setIsAddEditOpen} onLeadSaved={handleLeadSaved} lead={editingLead} currentUser={currentUser} />
       <ImportLeadsDialog isOpen={isImportOpen} onOpenChange={setIsImportOpen} onLeadsImported={handleLeadSaved} currentUser={currentUser} />
+      {currentUser && <TransferLeadsDialog isOpen={isBulkTransferOpen} onOpenChange={setIsBulkTransferOpen} onLeadsTransferred={fetchLeadsAndUsers} allCrmUsers={allCrmUsers} currentUser={currentUser} />}
       {leadToTransfer && (<TransferLeadDialog isOpen={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen} onLeadTransferred={handleLeadTransferred} lead={leadToTransfer} allCrmUsers={allCrmUsers.filter(u => u.id !== leadToTransfer.crmId)} currentUser={currentUser}/>)}
       {leadToView && (<ViewLeadDialog isOpen={isViewDialogOpen} onOpenChange={setIsViewDialogOpen} onLeadUpdated={handleLeadUpdatedFromView} onEditRequest={openEditDialogFromView} lead={leadToView} currentUser={currentUser} />)}
       {leadToDelete && (
