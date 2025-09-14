@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -139,26 +140,9 @@ export function PipelineClient() {
   }, [allUsers]);
 
   const sourceCrmOptions = useMemo(() => {
-    const unassignedOption = { id: 'unassigned', name: 'Unassigned Leads', role: 'SYSTEM_ADMIN' as const, email: '' };
     const allCrmsOption = { id: 'all', name: 'All CRMs', role: 'SYSTEM_ADMIN' as const, email: '' };
-    const activeCrmIds = new Set(allCrmUsers.map(u => u.id));
-    
-    const orphanedLeadCrmIds = new Set<string>();
-    leads.forEach(lead => {
-      if (lead.crmId && !activeCrmIds.has(lead.crmId)) {
-        orphanedLeadCrmIds.add(lead.crmId);
-      }
-    });
-
-    const orphanedUsers: User[] = Array.from(orphanedLeadCrmIds).map(id => ({
-      id: `[Deleted User: ${id}]`,
-      name: `[Deleted User: ${id.substring(0, 5)}...]`,
-      role: 'CRM',
-      email: ''
-    }));
-
-    return [allCrmsOption, unassignedOption, ...allCrmUsers, ...orphanedUsers];
-  }, [allCrmUsers, leads]);
+    return [allCrmsOption, ...allCrmUsers];
+  }, [allCrmUsers]);
 
 
   const filteredLeads = useMemo(() => {
@@ -428,7 +412,6 @@ export function PipelineClient() {
                 <Button variant="outline" role="combobox" aria-expanded={isCrmFilterOpen} className="w-full sm:w-auto justify-between bg-card border-border/50 focus:border-primary h-10"><span className="truncate">{selectedCrmName}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button>
               </PopoverTrigger><PopoverContent className="w-[--radix-popover-trigger-width)] p-0"><Command><CommandInput placeholder="Search CRM..." value={crmSearchQuery} onValueChange={setCrmSearchQuery} />
                 <CommandList><CommandEmpty>No CRM found.</CommandEmpty><CommandGroup>
-                  <CommandItem value="all" onSelect={() => { setSelectedCrmId('all'); setIsCrmFilterOpen(false); }}><Check className={cn("mr-2 h-4 w-4", selectedCrmId === 'all' ? "opacity-100" : "opacity-0")} />All CRMs</CommandItem>
                   {filteredCrmUsersForDropdown.map(crm => (<CommandItem key={crm.id} value={crm.name} onSelect={() => { setSelectedCrmId(crm.id); setIsCrmFilterOpen(false); }}><Check className={cn("mr-2 h-4 w-4", crm.id === selectedCrmId ? "opacity-100" : "opacity-0")} />{crm.name}</CommandItem>))}
                 </CommandGroup></CommandList></Command></PopoverContent>
               </Popover>
