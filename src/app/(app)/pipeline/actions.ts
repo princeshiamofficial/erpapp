@@ -275,7 +275,7 @@ export async function transferLeadsBatchAction(
         } else if (sourceCrmId) {
             leadsToFilter = allLeads.filter(lead => lead.crmId === sourceCrmId);
         } else {
-             return { success: false, transferredCount: 0, error: "A source for the leads must be specified." };
+            return { success: false, transferredCount: 0, error: "A source for the leads must be specified." };
         }
         
         const sourceLeads = leadsToFilter.filter(lead => {
@@ -283,12 +283,13 @@ export async function transferLeadsBatchAction(
             return leadDate >= new Date(dateRange.from) && leadDate <= new Date(dateRange.to);
         });
 
-        let availableLeads = [...sourceLeads].sort(() => 0.5 - Math.random());
-        let totalTransferredCount = 0;
-        
-        if (availableLeads.length === 0) {
+        if (sourceLeads.length === 0) {
             return { success: true, transferredCount: 0, error: "No leads found in the specified date range for the source CRM." };
         }
+        
+        // Create a mutable copy of the leads to draw from
+        let availableLeads = [...sourceLeads].sort(() => 0.5 - Math.random());
+        let totalTransferredCount = 0;
 
         for (const targetCrmId of targetCrmIds) {
             const targetCrmUser = await getUserFromDb(targetCrmId);
@@ -297,25 +298,25 @@ export async function transferLeadsBatchAction(
                 continue;
             }
             
+            // Take the requested number of leads from the available pool
             const leadsToTransfer = availableLeads.splice(0, numberOfLeadsPerCrm);
             
             if (leadsToTransfer.length === 0) {
-                break; // No more leads to transfer
+                console.log("No more available leads to transfer. Stopping.");
+                break; 
             }
             
-            for (const lead of leadsToTransfer) {
+            const updatePromises = leadsToTransfer.map(lead => {
                 const updates = {
                     crmId: targetCrmUser.id,
                     crmName: targetCrmUser.name,
                 };
-                const success = await updateLead(lead.id, updates);
-                if (success) {
-                    totalTransferredCount++;
-                } else {
-                    // If an update fails, add the lead back to the pool to be potentially picked by another CRM
-                    availableLeads.push(lead);
-                }
-            }
+                return updateLead(lead.id, updates);
+            });
+            
+            const results = await Promise.all(updatePromises);
+            const successfulUpdates = results.filter(success => success).length;
+            totalTransferredCount += successfulUpdates;
         }
         
         if (totalTransferredCount > 0) {
