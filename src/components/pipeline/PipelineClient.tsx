@@ -103,7 +103,7 @@ export function PipelineClient() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
   const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+  const [selectedLeadIds, setSelectedLeadIds] = useState(new Set<string>());
   const [isTransferSelectedDialogOpen, setIsTransferSelectedDialogOpen] = useState(false);
 
 
@@ -458,16 +458,18 @@ export function PipelineClient() {
         </div>
 
         {viewMode === 'kanban' ? (
-          <div className="flex-1 mt-4 overflow-x-auto pb-4"><div className="flex space-x-4 h-full min-w-max px-4 sm:px-0">
-            {KANBAN_COLUMNS_CONFIG.map((col) => (
-              <PipelineKanbanColumn
-                key={col.category} id={col.category} title={col.title} icon={col.icon}
-                leads={leadsByCategory[col.category] || []} headerBgClass={col.headerBgClass}
-                isLoading={isLoading} currentUser={currentUser}
-                onViewLead={openViewDialog} onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest} allCrmUsers={allCrmUsers}
-              />
-            ))}
-          </div></div>
+          <div className="flex-1 mt-4 overflow-x-auto pb-4 custom-scrollbar">
+            <div className="flex space-x-4 h-full min-w-max px-4 sm:px-0">
+              {KANBAN_COLUMNS_CONFIG.map((col) => (
+                <PipelineKanbanColumn
+                  key={col.category} id={col.category} title={col.title} icon={col.icon}
+                  leads={leadsByCategory[col.category] || []} headerBgClass={col.headerBgClass}
+                  isLoading={isLoading} currentUser={currentUser}
+                  onViewLead={openViewDialog} onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest} allCrmUsers={allCrmUsers}
+                />
+              ))}
+            </div>
+          </div>
         ) : viewMode === 'list' ? (
           <>
             <LeadListView
@@ -497,7 +499,7 @@ export function PipelineClient() {
         )}
       </div>
       <DragOverlay dropAnimation={null}>
-        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onViewLead={() => {}} onDeleteLead={() => {}} onTransferLead={() => {}} crmAvatarUrl={allCrmUsers.find(u => u.id === activeLead.crmId)?.avatarUrl} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
+        {activeLead ? <LeadCard lead={activeLead} isOverlay currentUser={currentUser} onViewLead={() => {}} onDeleteLead={() => {}} onTransferLead={() => {}} allCrmUsers={allCrmUsers} headerBgClass={KANBAN_COLUMNS_CONFIG.find(c => c.category === activeLead.category)?.headerBgClass || 'bg-gray-500'} /> : null}
       </DragOverlay>
 
       <AddEditLeadDialog isOpen={isAddEditOpen} onOpenChange={setIsAddEditOpen} onLeadSaved={handleLeadSaved} lead={editingLead} currentUser={currentUser} />
