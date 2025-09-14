@@ -1,13 +1,17 @@
 
 "use client";
 
-import type { Project, CustomStatus, User } from '@/types'; // Added CustomStatus, User
+import type { Project, CustomStatus, User } from '@/types'; 
 import { ProjectCard } from './ProjectCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { LucideIcon } from 'lucide-react';
 import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { motion, AnimatePresence } from 'framer-motion';
+
 
 interface KanbanColumnProps {
   id: string; 
@@ -18,11 +22,14 @@ interface KanbanColumnProps {
   headerTextClass?: string;
   headerIconClass?: string;
   isLoading?: boolean;
-  currentUser: User | null; // Added
-  allStatuses: CustomStatus[]; // Added
-  allUsers: User[]; // Added
-  onOpenAssignDrDialog: (project: Project) => void; // Added
+  currentUser: User | null; 
+  allStatuses: CustomStatus[]; 
+  allUsers: User[]; 
+  onOpenAssignDrDialog: (project: Project) => void;
+  isSearching?: boolean;
 }
+
+const PROJECTS_PER_PAGE = 20;
 
 export function KanbanColumn({ 
   id,
@@ -33,12 +40,30 @@ export function KanbanColumn({
   headerTextClass = "text-white",
   headerIconClass = "text-white",
   isLoading = false,
-  currentUser, // Added
-  allStatuses, // Added
-  allUsers, // Added
-  onOpenAssignDrDialog // Added
+  currentUser,
+  allStatuses,
+  allUsers,
+  onOpenAssignDrDialog,
+  isSearching = false,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
+  const [visibleCount, setVisibleCount] = useState(PROJECTS_PER_PAGE);
+
+  useEffect(() => {
+    if (isSearching) {
+      setVisibleCount(projects.length);
+    } else {
+      setVisibleCount(PROJECTS_PER_PAGE);
+    }
+  }, [projects, isSearching]);
+
+  const handleLoadMore = () => {
+    setVisibleCount(prevCount => prevCount + PROJECTS_PER_PAGE);
+  };
+  
+  const visibleProjects = useMemo(() => isSearching ? projects : projects.slice(0, visibleCount), [projects, visibleCount, isSearching]);
+  const hasMoreProjects = !isSearching && visibleCount < projects.length;
+
 
   return (
     <div 
@@ -63,21 +88,44 @@ export function KanbanColumn({
             <Skeleton className="h-20 w-full rounded-md" />
             <Skeleton className="h-20 w-full rounded-md" />
           </div>
-        ) : projects.length === 0 ? (
+        ) : visibleProjects.length === 0 ? (
           <div className="flex items-center justify-center h-32">
             <p className="text-xs text-muted-foreground text-center italic">No projects in this stage.</p>
           </div>
         ) : (
-          projects.map(project => (
-            <ProjectCard 
-              key={project.id} 
-              project={project} 
-              currentUser={currentUser} // Pass down
-              allStatuses={allStatuses} // Pass down
-              allUsers={allUsers} // Pass down
-              onOpenAssignDrDialog={onOpenAssignDrDialog} // Pass down
-            />
-          ))
+          <AnimatePresence>
+            {visibleProjects.map((project, index) => (
+              <motion.div
+                key={project.id}
+                layout
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2, delay: (index % PROJECTS_PER_PAGE) * 0.03 }}
+              >
+                  <ProjectCard 
+                    key={project.id} 
+                    project={project} 
+                    currentUser={currentUser}
+                    allStatuses={allStatuses}
+                    allUsers={allUsers}
+                    onOpenAssignDrDialog={onOpenAssignDrDialog} 
+                  />
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        )}
+        {hasMoreProjects && (
+          <div className="text-center pt-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs h-8"
+              onClick={handleLoadMore}
+            >
+              Load More ({projects.length - visibleCount} remaining)
+            </Button>
+          </div>
         )}
         </div>
       </ScrollArea>

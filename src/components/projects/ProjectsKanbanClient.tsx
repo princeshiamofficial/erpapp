@@ -441,6 +441,7 @@ export function ProjectsKanbanClient() {
                 allStatuses={allStatuses}
                 allUsers={allUsers}
                 onOpenAssignDrDialog={handleOpenAssignDrDialog}
+                isSearching={!!debouncedSearchTerm}
               />
             ))}
           </div>
