@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -7,8 +6,7 @@ import dynamic from 'next/dynamic';
 import type { Lead, User, LeadCategory, LeadStatusType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
-import { DndContext, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent, DragOverlay } from '@dnd-kit/core';
-import { closestCorners } from '@dnd-kit/core';
+import { DndContext, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent, type DragCancelEvent, closestCorners, DragOverlay } from '@dnd-kit/core';
 import { getLeads, updateLeadAction, deleteLeadAction } from '@/app/(app)/pipeline/actions';
 import { getUsers } from '@/lib/user-service'; // Added getUsers import
 import { Button } from '@/components/ui/button';
@@ -135,11 +133,35 @@ export function PipelineClient() {
     setAllCrmUsers(allUsers.filter(u => u.role === 'CRM' || u.role === 'ADMIN' || u.role === 'SYSTEM_ADMIN'));
   }, [allUsers]);
 
+  const sourceCrmOptions = useMemo(() => {
+    const unassignedOption = { id: 'unassigned', name: 'Unassigned Leads', role: 'SYSTEM_ADMIN' as const, email: '' };
+    const activeCrmIds = new Set(allCrmUsers.map(u => u.id));
+    
+    const orphanedLeadCrmIds = new Set<string>();
+    leads.forEach(lead => {
+      if (lead.crmId && !activeCrmIds.has(lead.crmId)) {
+        orphanedLeadCrmIds.add(lead.crmId);
+      }
+    });
+
+    const orphanedUsers: User[] = Array.from(orphanedLeadCrmIds).map(id => ({
+      id: id,
+      name: `[Deleted/Re-assigned User: ${id.substring(0, 5)}...]`,
+      role: 'CRM',
+      email: ''
+    }));
+
+    return [unassignedOption, ...allCrmUsers, ...orphanedUsers];
+  }, [allCrmUsers, leads]);
+
+
   const filteredLeads = useMemo(() => {
     let baseLeads = leads;
 
     if (currentUser?.role === 'CRM') {
       baseLeads = leads.filter(lead => lead.crmId === currentUser.id);
+    } else if (selectedCrmId === 'unassigned') {
+      baseLeads = leads.filter(lead => !lead.crmId);
     } else if (selectedCrmId !== 'all') {
       baseLeads = leads.filter(lead => lead.crmId === selectedCrmId);
     }
@@ -191,15 +213,16 @@ export function PipelineClient() {
   
   const selectedCrmName = useMemo(() => {
     if (selectedCrmId === 'all') return 'All CRMs';
-    return allCrmUsers.find(u => u.id === selectedCrmId)?.name || 'Filter by CRM...';
+    if (selectedCrmId === 'unassigned') return 'Unassigned Leads';
+    return allCrmUsers.find(u => u.id === selectedCrmId)?.name || `[Deleted User: ${selectedCrmId.substring(0, 5)}...]`;
   }, [selectedCrmId, allCrmUsers]);
   
   const filteredCrmUsersForDropdown = useMemo(() => {
-    if (!crmSearchQuery) return allCrmUsers;
-    return allCrmUsers.filter(user =>
+    if (!crmSearchQuery) return sourceCrmOptions;
+    return sourceCrmOptions.filter(user =>
       user.name.toLowerCase().includes(crmSearchQuery.toLowerCase())
     );
-  }, [allCrmUsers, crmSearchQuery]);
+  }, [sourceCrmOptions, crmSearchQuery]);
 
   const leadsByCategory = useMemo(() => {
     const grouped: Record<LeadCategory, Lead[]> = {
@@ -365,6 +388,7 @@ export function PipelineClient() {
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel} collisionDetection={closestCorners}>
       <div className="flex flex-col h-full">
+        {/* Filter Section */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header px-4 sm:px-0">
           <div><h1 className="page-title">Sales Pipeline</h1><p className="page-description">Track and manage potential sales leads and opportunities by category.</p></div>
         </div>
@@ -448,7 +472,7 @@ export function PipelineClient() {
 
       <AddEditLeadDialog isOpen={isAddEditOpen} onOpenChange={setIsAddEditOpen} onLeadSaved={handleLeadSaved} lead={editingLead} currentUser={currentUser} />
       <ImportLeadsDialog isOpen={isImportOpen} onOpenChange={setIsImportOpen} onLeadsImported={handleLeadSaved} currentUser={currentUser} />
-      {currentUser && <TransferLeadsDialog isOpen={isBulkTransferOpen} onOpenChange={setIsBulkTransferOpen} onLeadsTransferred={fetchLeadsAndUsers} allCrmUsers={allCrmUsers} currentUser={currentUser} />}
+      {currentUser && <TransferLeadsDialog isOpen={isBulkTransferOpen} onOpenChange={setIsBulkTransferOpen} onLeadsTransferred={fetchLeadsAndUsers} allCrmUsers={sourceCrmOptions} currentUser={currentUser} />}
       {leadToTransfer && (<TransferLeadDialog isOpen={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen} onLeadTransferred={handleLeadTransferred} lead={leadToTransfer} allCrmUsers={allCrmUsers.filter(u => u.id !== leadToTransfer.crmId)} currentUser={currentUser}/>)}
       {leadToView && (<ViewLeadDialog isOpen={isViewDialogOpen} onOpenChange={setIsViewDialogOpen} onLeadUpdated={handleLeadUpdatedFromView} onEditRequest={openEditDialogFromView} lead={leadToView} currentUser={currentUser} />)}
       {leadToDelete && (

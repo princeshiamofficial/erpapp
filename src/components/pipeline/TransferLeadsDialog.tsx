@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState } from 'react';
@@ -44,9 +43,6 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
   const [isSourcePopoverOpen, setIsSourcePopoverOpen] = useState(false);
   const { toast } = useToast();
   
-  const unassignedUserOption = { id: 'unassigned', name: 'Unassigned Leads', role: 'SYSTEM_ADMIN' as const, email: '' };
-  const sourceCrmOptions = [unassignedUserOption, ...allCrmUsers];
-
   const handleTransfer = async () => {
     if (!sourceCrmId || targetCrmIds.length === 0 || !leadAmount || !dateRange?.from || !dateRange?.to) {
       toast({ title: "Missing Information", description: "Please fill all fields.", variant: "destructive" });
@@ -106,7 +102,7 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
             <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" role="combobox" aria-expanded={isSourcePopoverOpen} className="w-full justify-between">
-                  {sourceCrmOptions.find(u => u.id === sourceCrmId)?.name || 'Select Source...'}
+                  {allCrmUsers.find(u => u.id === sourceCrmId)?.name || 'Select Source...'}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -116,7 +112,7 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
                   <CommandList>
                     <CommandEmpty>No user found.</CommandEmpty>
                     <CommandGroup>
-                       {sourceCrmOptions.map(user => (
+                       {allCrmUsers.map(user => (
                         <CommandItem
                           key={user.id}
                           value={user.name}
