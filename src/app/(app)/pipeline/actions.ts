@@ -274,7 +274,7 @@ export async function transferLeadsBatchAction(
         } else if (sourceCrmId === 'all') {
             leadsToTransfer = allLeads;
         } else if (sourceCrmId.startsWith('[Deleted User:')) {
-            const deletedUserId = sourceCrmId.substring(15, sourceCrmId.length - 4);
+            const deletedUserId = sourceCrmId.substring(15, sourceCrmId.length - 1);
             leadsToTransfer = allLeads.filter(lead => lead.crmId === deletedUserId);
         } else {
             leadsToTransfer = allLeads.filter(lead => lead.crmId === sourceCrmId);
@@ -311,12 +311,12 @@ export async function transferLeadsBatchAction(
                 updatePromises.push(updateLead(lead.id, updates));
             }
 
-            await Promise.all(updatePromises);
+            const results = await Promise.all(updatePromises);
+            const successfulCount = results.filter(Boolean).length;
+            totalTransferredCount += successfulCount;
             
             const assignedLeadIds = new Set(leadsToAssign.map(l => l.id));
             availableLeads = availableLeads.filter(l => !assignedLeadIds.has(l.id));
-
-            totalTransferredCount += leadsToAssign.length;
         }
         
         if (totalTransferredCount > 0) {
@@ -353,11 +353,20 @@ export async function transferSelectedLeadsAction(
       crmId: targetCrmUser.id,
       crmName: targetCrmUser.name,
     };
+    
+    let successfulTransfers = 0;
+    
+    for (const leadId of leadIds) {
+        try {
+            const success = await updateLead(leadId, updates);
+            if(success) {
+                successfulTransfers++;
+            }
+        } catch (error) {
+            console.error(`Failed to transfer lead ${leadId}:`, error);
+        }
+    }
 
-    const updatePromises = leadIds.map(leadId => updateLead(leadId, updates));
-    const results = await Promise.all(updatePromises);
-
-    const successfulTransfers = results.filter(success => success).length;
 
     if (successfulTransfers > 0) {
       revalidatePath("/(app)/pipeline");
@@ -378,3 +387,4 @@ export async function transferSelectedLeadsAction(
     return { success: false, transferredCount: 0, error: errorMessage };
   }
 }
+
