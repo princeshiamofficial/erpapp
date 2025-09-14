@@ -49,20 +49,17 @@ export function KanbanColumn({
   const { setNodeRef, isOver } = useDroppable({ id });
   const [visibleCount, setVisibleCount] = useState(PROJECTS_PER_PAGE);
 
+  // Reset visible count when the underlying leads array changes (e.g., due to filtering)
   useEffect(() => {
-    if (isSearching) {
-      setVisibleCount(projects.length);
-    } else {
-      setVisibleCount(PROJECTS_PER_PAGE);
-    }
-  }, [projects, isSearching]);
-
+    setVisibleCount(PROJECTS_PER_PAGE);
+  }, [projects]);
+  
   const handleLoadMore = () => {
     setVisibleCount(prevCount => prevCount + PROJECTS_PER_PAGE);
   };
   
-  const visibleProjects = useMemo(() => isSearching ? projects : projects.slice(0, visibleCount), [projects, visibleCount, isSearching]);
-  const hasMoreProjects = !isSearching && visibleCount < projects.length;
+  const visibleProjects = useMemo(() => projects.slice(0, visibleCount), [projects, visibleCount]);
+  const hasMoreProjects = visibleCount < projects.length;
 
 
   return (
