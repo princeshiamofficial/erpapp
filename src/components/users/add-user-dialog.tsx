@@ -19,15 +19,16 @@ interface AddUserDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   children?: React.ReactNode;
+  defaultRole?: UserRole;
 }
 
 const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR"];
 
-export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, children }: AddUserDialogProps) {
+export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, children, defaultRole }: AddUserDialogProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [companyName, setCompanyName] = useState('');
-  const [role, setRole] = useState<UserRole | undefined>(undefined);
+  const [role, setRole] = useState<UserRole | undefined>(defaultRole);
   const [password, setPassword] = useState('password');
   const [showPassword, setShowPassword] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -40,7 +41,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
     setName('');
     setEmail('');
     setCompanyName('');
-    setRole(undefined);
+    setRole(defaultRole);
     setPassword('password');
     setShowPassword(false);
     setSelectedFile(null);
@@ -48,13 +49,15 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  }, []); 
+  }, [defaultRole]); 
 
   useEffect(() => {
     if (!isOpen) {
       resetForm();
+    } else {
+       setRole(defaultRole);
     }
-  }, [isOpen, resetForm]);
+  }, [isOpen, resetForm, defaultRole]);
   
   useEffect(() => {
     let objectUrl: string | null = null;

@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { deleteUserAction } from '@/app/(app)/users/actions';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const AddUserDialog = dynamic(() => import('@/components/users/add-user-dialog').then(mod => mod.AddUserDialog));
 const EditUserInfoDialog = dynamic(() => import('@/components/users/edit-user-info-dialog').then(mod => mod.EditUserInfoDialog));
@@ -35,6 +36,7 @@ export default function VendorsPage() {
   const router = useRouter();
   const { toast } = useToast();
 
+  const [activeTab, setActiveTab] = useState("vendor_list");
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -98,6 +100,80 @@ export default function VendorsPage() {
     }
   };
 
+  const vendorListContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+        <CardHeader className="p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <CardTitle className="text-xl font-bold text-gray-800">Vendors List</CardTitle>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-grow sm:flex-grow-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input placeholder="Search vendors..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+                </div>
+                <Button 
+                    onClick={() => setIsAddUserDialogOpen(true)}
+                    className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add Vendor
+                </Button>
+            </div>
+        </div>
+        </CardHeader>
+        <CardContent className="p-0">
+        <div className="overflow-x-auto">
+            <Table>
+            <TableHeader>
+                <TableRow>
+                <TableHead className="pl-6">Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Business Name</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead className="pr-6 text-right">Actions</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {isLoading ? (
+                [...Array(5)].map((_, i) => (
+                    <TableRow key={`skel-vendor-${i}`}><TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
+                ))
+                ) : filteredVendors.length > 0 ? (
+                filteredVendors.map(vendor => (
+                    <TableRow key={vendor.id} className="hover:bg-muted/50">
+                    <TableCell className="pl-6 font-medium">
+                        <div className="flex items-center gap-3">
+                        <Avatar className="h-9 w-9 border">
+                            <AvatarImage src={vendor.avatarUrl || undefined} alt={vendor.name}/>
+                            <AvatarFallback>{getInitials(vendor.name)}</AvatarFallback>
+                        </Avatar>
+                        <span>{vendor.name}</span>
+                        </div>
+                    </TableCell>
+                    <TableCell>{vendor.email}</TableCell>
+                    <TableCell>{vendor.phone || 'N/A'}</TableCell>
+                    <TableCell>{vendor.companyName || 'N/A'}</TableCell>
+                    <TableCell>{vendor.category || 'N/A'}</TableCell>
+                    <TableCell className="pr-6 text-right">
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => setUserToEdit(vendor)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit Info</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setUserToDelete(vendor)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete Vendor</DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    </TableCell>
+                    </TableRow>
+                ))
+                ) : (
+                <TableRow><TableCell colSpan={6} className="h-48 text-center"><Store className="mx-auto h-12 w-12 opacity-30 mb-3" />No vendors found.</TableCell></TableRow>
+                )}
+            </TableBody>
+            </Table>
+        </div>
+        </CardContent>
+    </Card>
+  );
+
   if (!currentUser || !['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role)) {
     return <div className="p-8 text-center">Access Denied.</div>;
   }
@@ -105,77 +181,16 @@ export default function VendorsPage() {
   return (
     <>
       <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
-        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-          <CardHeader className="p-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <CardTitle className="text-xl font-bold text-gray-800">Vendors List</CardTitle>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <div className="relative flex-grow sm:flex-grow-0">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input placeholder="Search vendors..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
-                    </div>
-                    <Button 
-                        onClick={() => setIsAddUserDialogOpen(true)}
-                        className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                    >
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add Vendor
-                    </Button>
-                </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="pl-6">Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Business Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="pr-6 text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    [...Array(5)].map((_, i) => (
-                      <TableRow key={`skel-vendor-${i}`}><TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
-                    ))
-                  ) : filteredVendors.length > 0 ? (
-                    filteredVendors.map(vendor => (
-                      <TableRow key={vendor.id} className="hover:bg-muted/50">
-                        <TableCell className="pl-6 font-medium">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-9 w-9 border">
-                              <AvatarImage src={vendor.avatarUrl || undefined} alt={vendor.name}/>
-                              <AvatarFallback>{getInitials(vendor.name)}</AvatarFallback>
-                            </Avatar>
-                            <span>{vendor.name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>{vendor.email}</TableCell>
-                        <TableCell>{vendor.phone || 'N/A'}</TableCell>
-                        <TableCell>{vendor.companyName || 'N/A'}</TableCell>
-                        <TableCell>{vendor.category || 'N/A'}</TableCell>
-                        <TableCell className="pr-6 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onSelect={() => setUserToEdit(vendor)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit Info</DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => setUserToDelete(vendor)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete Vendor</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow><TableCell colSpan={6} className="h-48 text-center"><Store className="mx-auto h-12 w-12 opacity-30 mb-3" />No vendors found.</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
+            <TabsTrigger value="vendor_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor List</TabsTrigger>
+          </TabsList>
+          <div className="mt-6">
+            <TabsContent value="vendor_list">
+              {vendorListContent}
+            </TabsContent>
+          </div>
+        </Tabs>
       </div>
 
       <AddUserDialog 
@@ -183,6 +198,7 @@ export default function VendorsPage() {
         currentUser={currentUser}
         isOpen={isAddUserDialogOpen}
         onOpenChange={setIsAddUserDialogOpen}
+        defaultRole="VENDOR"
       />
 
       {userToEdit && (
