@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState } from 'react';
@@ -31,22 +32,24 @@ interface TransferLeadsDialogProps {
   onLeadsTransferred: () => void;
   allCrmUsers: User[];
   currentUser: User;
-  sourceCrmId: string; // This will now be the initial value for the source selector
 }
 
-export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, allCrmUsers, currentUser, sourceCrmId: initialSourceCrmId }: TransferLeadsDialogProps) {
-  const [sourceCrmId, setSourceCrmId] = useState(initialSourceCrmId);
+export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, allCrmUsers, currentUser }: TransferLeadsDialogProps) {
+  const [sourceCrmId, setSourceCrmId] = useState('');
   const [targetCrmIds, setTargetCrmIds] = useState<string[]>([]);
   const [leadAmount, setLeadAmount] = useState('10');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: subDays(new Date(), 29), to: new Date() });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTargetPopoverOpen, setIsTargetPopoverOpen] = useState(false);
-  const [isSourcePopoverOpen, setIsSourcePopoverOpen] = useState(false); // New state for source popover
+  const [isSourcePopoverOpen, setIsSourcePopoverOpen] = useState(false);
   const { toast } = useToast();
+  
+  const unassignedUserOption = { id: 'unassigned', name: 'Unassigned Leads', role: 'SYSTEM_ADMIN' as const, email: '' };
+  const sourceCrmOptions = [unassignedUserOption, ...allCrmUsers];
 
   const handleTransfer = async () => {
-    if (sourceCrmId === 'all' || targetCrmIds.length === 0 || !leadAmount || !dateRange?.from || !dateRange?.to) {
-      toast({ title: "Missing Information", description: "Please fill all fields, including a specific source CRM.", variant: "destructive" });
+    if (!sourceCrmId || targetCrmIds.length === 0 || !leadAmount || !dateRange?.from || !dateRange?.to) {
+      toast({ title: "Missing Information", description: "Please fill all fields.", variant: "destructive" });
       return;
     }
     
@@ -103,17 +106,17 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
             <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}>
               <PopoverTrigger asChild>
                 <Button variant="outline" role="combobox" aria-expanded={isSourcePopoverOpen} className="w-full justify-between">
-                  {allCrmUsers.find(u => u.id === sourceCrmId)?.name || 'Select Source CRM...'}
+                  {sourceCrmOptions.find(u => u.id === sourceCrmId)?.name || 'Select Source...'}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
-                  <CommandInput placeholder="Search CRM user..." />
+                  <CommandInput placeholder="Search user..." />
                   <CommandList>
                     <CommandEmpty>No user found.</CommandEmpty>
                     <CommandGroup>
-                       {allCrmUsers.map(user => (
+                       {sourceCrmOptions.map(user => (
                         <CommandItem
                           key={user.id}
                           value={user.name}
@@ -199,7 +202,7 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-          <Button onClick={handleTransfer} disabled={isSubmitting || sourceCrmId === 'all' || targetCrmIds.length === 0 || !leadAmount}>
+          <Button onClick={handleTransfer} disabled={isSubmitting || !sourceCrmId || targetCrmIds.length === 0 || !leadAmount}>
             {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Transferring...</> : "Transfer Leads"}
           </Button>
         </DialogFooter>

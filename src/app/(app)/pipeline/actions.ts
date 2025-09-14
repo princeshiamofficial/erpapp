@@ -269,9 +269,13 @@ export async function transferLeadsBatchAction(
     try {
         const allLeads = await getLeadsFromDb();
         
-        let leadsToFilter = allLeads;
-        if (sourceCrmId && sourceCrmId !== 'all') {
+        let leadsToFilter: Lead[];
+        if (sourceCrmId === 'unassigned') {
+            leadsToFilter = allLeads.filter(lead => !lead.crmId);
+        } else if (sourceCrmId) {
             leadsToFilter = allLeads.filter(lead => lead.crmId === sourceCrmId);
+        } else {
+             return { success: false, transferredCount: 0, error: "A source for the leads must be specified." };
         }
         
         const sourceLeads = leadsToFilter.filter(lead => {
