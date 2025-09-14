@@ -32,10 +32,10 @@ interface LeadListViewProps {
   onTransferLead: (lead: Lead) => void;
   onUpdateLeadCategory: (lead: Lead, newCategory: LeadCategory) => void; 
   allCrmUsers: User[];
-  isSelectionMode: boolean;
-  selectedLeadIds: Set<string>;
-  onSelectionChange: (leadId: string, isSelected: boolean) => void;
-  onSelectAll: (isSelected: boolean) => void;
+  isSelectionMode?: boolean;
+  selectedLeadIds?: Set<string>;
+  onSelectionChange?: (leadId: string, isSelected: boolean) => void;
+  onSelectAll?: (isSelected: boolean) => void;
 }
 
 const formatDateSafe = (dateString?: string) => {
@@ -66,7 +66,7 @@ const getStatusBadgeClass = (status: string) => {
 
 const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'POG', 'OC', 'OD', 'ROD'];
 
-export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDeleteLead, onTransferLead, onUpdateLeadCategory, allCrmUsers, isSelectionMode, selectedLeadIds, onSelectionChange, onSelectAll }: LeadListViewProps) {
+export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDeleteLead, onTransferLead, onUpdateLeadCategory, allCrmUsers, isSelectionMode = false, selectedLeadIds = new Set(), onSelectionChange = () => {}, onSelectAll = () => {} }: LeadListViewProps) {
   const canEdit = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
   const canDelete = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN';
   const canTransfer = (lead: Lead) => currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.id === lead.crmId;
