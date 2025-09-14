@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getUsers, deleteUserFromFirestore } from '@/lib/user-service';
+import { getUsers } from '@/lib/user-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -101,10 +101,7 @@ export default function VendorsPage() {
   return (
     <>
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
-          <div><h1 className="page-title">Vendors</h1><p className="page-description">Manage all company vendors from the user list.</p></div>
-        </div>
-
+        
         <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
           <CardHeader className="border-b p-5">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
