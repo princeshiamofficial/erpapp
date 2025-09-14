@@ -31,16 +31,16 @@ interface TransferLeadsDialogProps {
   onLeadsTransferred: () => void;
   allCrmUsers: User[];
   currentUser: User;
+  sourceCrmId: string; // Now passed as a prop
+  sourceCrmName: string; // Display name for the source
 }
 
-export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, allCrmUsers, currentUser }: TransferLeadsDialogProps) {
-  const [sourceCrmId, setSourceCrmId] = useState('');
+export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, allCrmUsers, currentUser, sourceCrmId, sourceCrmName }: TransferLeadsDialogProps) {
   const [targetCrmIds, setTargetCrmIds] = useState<string[]>([]);
   const [leadAmount, setLeadAmount] = useState('10');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: subDays(new Date(), 29), to: new Date() });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTargetPopoverOpen, setIsTargetPopoverOpen] = useState(false);
-  const [isSourcePopoverOpen, setIsSourcePopoverOpen] = useState(false);
   const { toast } = useToast();
   
   const handleTransfer = async () => {
@@ -94,48 +94,11 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Bulk Lead Transfer</DialogTitle>
-          <DialogDescription>Transfer a number of leads from one CRM to one or more other CRMs within a specific date range.</DialogDescription>
+          <DialogDescription>
+            Transfer leads from <span className="font-semibold">{sourceCrmName}</span> within a date range to other CRMs.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
-          <div className="space-y-1">
-            <Label>From CRM</Label>
-            <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={isSourcePopoverOpen} className="w-full justify-between">
-                  {allCrmUsers.find(u => u.id === sourceCrmId)?.name || 'Select Source...'}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                <Command>
-                  <CommandInput placeholder="Search user..." />
-                  <CommandList>
-                    <CommandEmpty>No user found.</CommandEmpty>
-                    <CommandGroup>
-                       {allCrmUsers.map(user => (
-                        <CommandItem
-                          key={user.id}
-                          value={user.name}
-                          onSelect={() => {
-                            setSourceCrmId(user.id);
-                            setIsSourcePopoverOpen(false);
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              sourceCrmId === user.id ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          {user.name}
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
           <div className="space-y-1">
             <Label htmlFor="lead-amount">Leads to Transfer (per CRM, Max 50)</Label>
             <Input id="lead-amount" type="number" value={leadAmount} onChange={e => {
@@ -198,7 +161,7 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-          <Button onClick={handleTransfer} disabled={isSubmitting || !sourceCrmId || targetCrmIds.length === 0 || !leadAmount}>
+          <Button onClick={handleTransfer} disabled={isSubmitting || targetCrmIds.length === 0 || !leadAmount}>
             {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Transferring...</> : "Transfer Leads"}
           </Button>
         </DialogFooter>

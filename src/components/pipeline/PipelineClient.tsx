@@ -146,7 +146,7 @@ export function PipelineClient() {
 
     const orphanedUsers: User[] = Array.from(orphanedLeadCrmIds).map(id => ({
       id: id,
-      name: `[Deleted/Re-assigned User: ${id.substring(0, 5)}...]`,
+      name: `[Deleted User: ${id.substring(0, 5)}...]`,
       role: 'CRM',
       email: ''
     }));
@@ -375,10 +375,6 @@ export function PipelineClient() {
   };
 
   const handleOpenBulkTransferDialog = () => {
-    if (currentUser?.role === 'CRM') {
-        toast({ title: "Permission Denied", description: "Only Admins can perform bulk transfers.", variant: "destructive" });
-        return;
-    }
     setIsBulkTransferOpen(true);
   };
 
@@ -472,7 +468,7 @@ export function PipelineClient() {
 
       <AddEditLeadDialog isOpen={isAddEditOpen} onOpenChange={setIsAddEditOpen} onLeadSaved={handleLeadSaved} lead={editingLead} currentUser={currentUser} />
       <ImportLeadsDialog isOpen={isImportOpen} onOpenChange={setIsImportOpen} onLeadsImported={handleLeadSaved} currentUser={currentUser} />
-      {currentUser && <TransferLeadsDialog isOpen={isBulkTransferOpen} onOpenChange={setIsBulkTransferOpen} onLeadsTransferred={fetchLeadsAndUsers} allCrmUsers={sourceCrmOptions} currentUser={currentUser} />}
+      {currentUser && <TransferLeadsDialog isOpen={isBulkTransferOpen} onOpenChange={setIsBulkTransferOpen} onLeadsTransferred={fetchLeadsAndUsers} allCrmUsers={sourceCrmOptions} currentUser={currentUser} sourceCrmId={selectedCrmId} sourceCrmName={selectedCrmName} />}
       {leadToTransfer && (<TransferLeadDialog isOpen={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen} onLeadTransferred={handleLeadTransferred} lead={leadToTransfer} allCrmUsers={allCrmUsers.filter(u => u.id !== leadToTransfer.crmId)} currentUser={currentUser}/>)}
       {leadToView && (<ViewLeadDialog isOpen={isViewDialogOpen} onOpenChange={setIsViewDialogOpen} onLeadUpdated={handleLeadUpdatedFromView} onEditRequest={openEditDialogFromView} lead={leadToView} currentUser={currentUser} />)}
       {leadToDelete && (
