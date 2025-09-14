@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,11 +16,10 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-import type { User, UserRole } from '@/types';
+import type { User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { transferSelectedLeadsAction } from '@/app/(app)/pipeline/actions';
-import { Loader2, ChevronsUpDown, Check, X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Loader2, ChevronsUpDown, Check } from 'lucide-react';
 
 interface TransferLeadsDialogProps {
   isOpen: boolean;
@@ -28,7 +27,7 @@ interface TransferLeadsDialogProps {
   onLeadsTransferred: () => void;
   allCrmUsers: User[];
   currentUser: User;
-  selectedLeadIds: string[];
+  selectedLeadIds?: string[];
 }
 
 export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, allCrmUsers, currentUser, selectedLeadIds = [] }: TransferLeadsDialogProps) {
@@ -36,6 +35,12 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTargetPopoverOpen, setIsTargetPopoverOpen] = useState(false);
   const { toast } = useToast();
+
+  // Filter out non-assignable pseudo-users like "Unassigned" or "Deleted User"
+  const assignableCrmUsers = useMemo(() => {
+    return allCrmUsers.filter(user => user.id && !user.id.startsWith('['));
+  }, [allCrmUsers]);
+
 
   const handleSubmit = async () => {
     if (!targetCrmId) {
@@ -66,7 +71,7 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
     }
   }, [isOpen]);
 
-  const selectedCrmName = allCrmUsers.find(u => u.id === targetCrmId)?.name || "Select target CRM...";
+  const selectedCrmName = assignableCrmUsers.find(u => u.id === targetCrmId)?.name || "Select target CRM...";
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -93,7 +98,7 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
                   <CommandList>
                     <CommandEmpty>No user found.</CommandEmpty>
                     <CommandGroup>
-                       {allCrmUsers.map(user => (
+                       {assignableCrmUsers.map(user => (
                         <CommandItem
                           key={user.id}
                           value={user.name}
