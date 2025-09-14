@@ -104,29 +104,23 @@ export default function VendorsPage() {
 
   return (
     <>
-      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
-          <div>
-            <h1 className="page-title">Vendors</h1>
-            <p className="page-description">Manage all company vendors from the user list.</p>
-          </div>
-          <Button 
-            size="lg" 
-            onClick={() => setIsAddUserDialogOpen(true)}
-            className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10"
-          >
-            <PlusCircle className="mr-2 h-5 w-5" /> Add Vendor
-          </Button>
-        </div>
-        
-        <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
-          <CardHeader className="border-b p-5">
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
+        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+          <CardHeader className="p-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <CardTitle className="text-card-foreground text-xl">All Vendors</CardTitle>
-              <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search vendors..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-background h-10 rounded-md w-full" />
-              </div>
+                <CardTitle className="text-xl font-bold text-gray-800">Vendors List</CardTitle>
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="relative flex-grow sm:flex-grow-0">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input placeholder="Search vendors..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+                    </div>
+                    <Button 
+                        onClick={() => setIsAddUserDialogOpen(true)}
+                        className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                    >
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add Vendor
+                    </Button>
+                </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
