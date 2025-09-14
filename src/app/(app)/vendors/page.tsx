@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { Search, MoreVertical, Store, Loader2, Edit, Trash2 } from "lucide-react";
+import { Search, MoreVertical, Store, Loader2, Edit, Trash2, PlusCircle } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User } from '@/types';
@@ -18,6 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { deleteUserAction } from '@/app/(app)/users/actions';
 
+const AddUserDialog = dynamic(() => import('@/components/users/add-user-dialog').then(mod => mod.AddUserDialog));
 const EditUserInfoDialog = dynamic(() => import('@/components/users/edit-user-info-dialog').then(mod => mod.EditUserInfoDialog));
 const DeleteUserDialog = dynamic(() => import('@/components/users/delete-user-dialog').then(mod => mod.DeleteUserDialog));
 
@@ -41,6 +42,8 @@ export default function VendorsPage() {
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -76,6 +79,7 @@ export default function VendorsPage() {
   
   const handleUserSaved = () => {
     setUserToEdit(null);
+    setIsAddUserDialogOpen(false);
     fetchData();
   };
 
@@ -101,6 +105,19 @@ export default function VendorsPage() {
   return (
     <>
       <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
+          <div>
+            <h1 className="page-title">Vendors</h1>
+            <p className="page-description">Manage all company vendors from the user list.</p>
+          </div>
+          <Button 
+            size="lg" 
+            onClick={() => setIsAddUserDialogOpen(true)}
+            className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10"
+          >
+            <PlusCircle className="mr-2 h-5 w-5" /> Add Vendor
+          </Button>
+        </div>
         
         <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
           <CardHeader className="border-b p-5">
@@ -166,6 +183,13 @@ export default function VendorsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <AddUserDialog 
+        onUserAdded={handleUserSaved}
+        currentUser={currentUser}
+        isOpen={isAddUserDialogOpen}
+        onOpenChange={setIsAddUserDialogOpen}
+      />
 
       {userToEdit && (
         <EditUserInfoDialog

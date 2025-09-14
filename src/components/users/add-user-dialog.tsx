@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"; // Removed DialogTrigger
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,18 +11,19 @@ import type { User, UserRole } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { UserCircle, UploadCloud, XCircle, Eye, EyeOff } from 'lucide-react';
-import { addUser as addUserToFirestoreService } from '@/lib/user-service'; // Renamed for clarity
+import { addUser as addUserToFirestoreService } from '@/lib/user-service';
 
 interface AddUserDialogProps {
-  onUserAdded: () => void; // Simplified callback
+  onUserAdded: () => void;
   currentUser: User;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  children?: React.ReactNode;
 }
 
 const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR"];
 
-export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange }: AddUserDialogProps) {
+export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, children }: AddUserDialogProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -165,25 +166,23 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange }
       monthlyOrderTarget: 0, 
       weeklyOrderTarget: 0,  
       isBanned: false,
+      fcmToken: null, 
     };
 
     const createdUser = await addUserToFirestoreService(newUserFirestoreData);
     setIsSubmitting(false);
 
     if (createdUser) {
-        onUserAdded(); // Notify parent
-        onOpenChange(false); // Close dialog
+        onUserAdded();
+        onOpenChange(false);
     } else {
        toast({ title: "Error", description: "Could not add user. Email might be in use or database error.", variant: "destructive"});
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      onOpenChange(open);
-      if (!open) resetForm();
-    }}>
-      {/* DialogTrigger is now handled by parent controlling isOpen state */}
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add New User</DialogTitle>
