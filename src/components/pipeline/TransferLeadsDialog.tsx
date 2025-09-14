@@ -31,20 +31,22 @@ interface TransferLeadsDialogProps {
   onLeadsTransferred: () => void;
   allCrmUsers: User[];
   currentUser: User;
-  sourceCrmId: string;
+  sourceCrmId: string; // This will now be the initial value for the source selector
 }
 
-export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, allCrmUsers, currentUser, sourceCrmId }: TransferLeadsDialogProps) {
+export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, allCrmUsers, currentUser, sourceCrmId: initialSourceCrmId }: TransferLeadsDialogProps) {
+  const [sourceCrmId, setSourceCrmId] = useState(initialSourceCrmId);
   const [targetCrmIds, setTargetCrmIds] = useState<string[]>([]);
   const [leadAmount, setLeadAmount] = useState('10');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: subDays(new Date(), 29), to: new Date() });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [isTargetPopoverOpen, setIsTargetPopoverOpen] = useState(false);
+  const [isSourcePopoverOpen, setIsSourcePopoverOpen] = useState(false); // New state for source popover
   const { toast } = useToast();
 
   const handleTransfer = async () => {
-    if (targetCrmIds.length === 0 || !leadAmount || !dateRange?.from || !dateRange?.to) {
-      toast({ title: "Missing Information", description: "Please fill all fields.", variant: "destructive" });
+    if (sourceCrmId === 'all' || targetCrmIds.length === 0 || !leadAmount || !dateRange?.from || !dateRange?.to) {
+      toast({ title: "Missing Information", description: "Please fill all fields, including a specific source CRM.", variant: "destructive" });
       return;
     }
     
@@ -54,7 +56,7 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
       return;
     }
 
-    if (sourceCrmId !== 'all' && targetCrmIds.includes(sourceCrmId)) {
+    if (targetCrmIds.includes(sourceCrmId)) {
         toast({ title: "Invalid Selection", description: "Source and Target CRM cannot be the same.", variant: "destructive" });
         return;
     }
@@ -97,6 +99,45 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-1">
+            <Label>From CRM</Label>
+            <Popover open={isSourcePopoverOpen} onOpenChange={setIsSourcePopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" aria-expanded={isSourcePopoverOpen} className="w-full justify-between">
+                  {allCrmUsers.find(u => u.id === sourceCrmId)?.name || 'Select Source CRM...'}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                <Command>
+                  <CommandInput placeholder="Search CRM user..." />
+                  <CommandList>
+                    <CommandEmpty>No user found.</CommandEmpty>
+                    <CommandGroup>
+                       {allCrmUsers.map(user => (
+                        <CommandItem
+                          key={user.id}
+                          value={user.name}
+                          onSelect={() => {
+                            setSourceCrmId(user.id);
+                            setIsSourcePopoverOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              sourceCrmId === user.id ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          {user.name}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="space-y-1">
             <Label htmlFor="lead-amount">Leads to Transfer (per CRM, Max 50)</Label>
             <Input id="lead-amount" type="number" value={leadAmount} onChange={e => {
                 const val = e.target.value.replace(/\s/g, '');
@@ -111,9 +152,9 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
           </div>
           <div className="space-y-1">
             <Label>To CRM(s)</Label>
-            <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+            <Popover open={isTargetPopoverOpen} onOpenChange={setIsTargetPopoverOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={isPopoverOpen} className="w-full justify-between h-auto min-h-10">
+                <Button variant="outline" role="combobox" aria-expanded={isTargetPopoverOpen} className="w-full justify-between h-auto min-h-10">
                   <div className="flex flex-wrap gap-1">
                     {targetCrmIds.length > 0 ? (
                       targetCrmIds.map(id => {
