@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -46,7 +45,7 @@ import {
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import Papa from 'papaparse';
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
-import { LeadListView } from '@/components/pipeline/LeadListView'; 
+import { LeadListView } from './LeadListView'; 
 
 const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod => mod.LeadCard), {
   ssr: false,
@@ -142,27 +141,28 @@ export function PipelineClient() {
 
   useEffect(() => {
     const crms = allUsers.filter(u => u.role === 'CRM' || u.role === 'ADMIN' || u.role === 'SYSTEM_ADMIN');
+    setAllCrmUsers(crms);
+  }, [allUsers]);
+
+  const sourceCrmOptions = useMemo(() => {
+    const allCrmsOption = { id: 'all', name: 'All CRMs', role: 'SYSTEM_ADMIN' as const, email: '' };
     const unassignedOption = { id: 'unassigned', name: 'Unassigned Leads', role: 'SYSTEM_ADMIN' as const, email: '' };
+    
     const deletedUsers = new Set<string>();
     leads.forEach(lead => {
-      if(lead.crmId && !crms.some(crm => crm.id === lead.crmId)){
+      if(lead.crmId && !allUsers.some(user => user.id === lead.crmId)){
         deletedUsers.add(lead.crmId);
       }
     });
     const deletedUserOptions = Array.from(deletedUsers).map(id => ({
       id: `[Deleted User: ${id}]`,
       name: `[Deleted User: ${id.substring(0, 5)}...]`,
-      role: 'SYSTEM_ADMIN' as const, // Treat as admin for filtering purposes
+      role: 'SYSTEM_ADMIN' as const,
       email: ''
     }));
 
-    setAllCrmUsers([unassignedOption, ...crms, ...deletedUserOptions]);
+    return [allCrmsOption, unassignedOption, ...allUsers.filter(u => u.role === 'CRM'), ...deletedUserOptions];
   }, [allUsers, leads]);
-
-  const sourceCrmOptions = useMemo(() => {
-    const allCrmsOption = { id: 'all', name: 'All CRMs', role: 'SYSTEM_ADMIN' as const, email: '' };
-    return [allCrmsOption, ...allCrmUsers];
-  }, [allCrmUsers]);
 
 
   const filteredLeads = useMemo(() => {
@@ -226,8 +226,8 @@ export function PipelineClient() {
   
   const selectedCrmName = useMemo(() => {
     if (selectedCrmId === 'all') return 'All CRMs';
-    return allCrmUsers.find(u => u.id === selectedCrmId)?.name || "Select CRM";
-  }, [selectedCrmId, allCrmUsers]);
+    return sourceCrmOptions.find(u => u.id === selectedCrmId)?.name || "Select CRM";
+  }, [selectedCrmId, sourceCrmOptions]);
   
   const filteredCrmUsersForDropdown = useMemo(() => {
     if (!crmSearchQuery) return sourceCrmOptions;
@@ -415,12 +415,14 @@ export function PipelineClient() {
     setSelectedLeadIds(new Set());
   };
 
+  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
+
 
   if (!currentUser) return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={handleDragCancel} collisionDetection={closestCorners}>
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-[calc(100vh-theme(spacing.24))]">
         {/* Filter Section */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header px-4 sm:px-0">
           <div><h1 className="page-title">Sales Pipeline</h1><p className="page-description">Track and manage potential sales leads and opportunities by category.</p></div>
@@ -452,12 +454,18 @@ export function PipelineClient() {
               <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('kanban')} className="h-8"><LayoutGrid className="h-4 w-4" /></Button>
               <Button variant={viewMode === 'calendar' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('calendar')} className="h-8"><CalendarIcon className="h-4 w-4" /></Button>
             </div>
-            <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" className="w-full sm:w-auto h-10">Actions <ChevronDown className="ml-2 h-4 w-4" /></Button></DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onSelect={() => setIsImportOpen(true)}><FileSpreadsheet className="mr-2 h-4 w-4" />Import Leads</DropdownMenuItem>
-                <DropdownMenuItem onSelect={handleExport} disabled={filteredLeads.length === 0}><Download className="mr-2 h-4 w-4" />Export Leads</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {isAdmin && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="w-full sm:w-auto h-10">Actions <ChevronDown className="ml-2 h-4 w-4" /></Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setIsImportOpen(true)}><FileSpreadsheet className="mr-2 h-4 w-4" />Import Leads</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={handleExport} disabled={filteredLeads.length === 0}><Download className="mr-2 h-4 w-4" />Export Leads</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={handleOpenBulkTransferDialog}><Users className="mr-2 h-4 w-4" /> Bulk Transfer</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             
             {viewMode === 'list' && !isSelectionMode && (
               <Button onClick={() => setIsSelectionMode(true)} variant="outline" className="w-full sm:w-auto h-10">
