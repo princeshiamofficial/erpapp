@@ -1,12 +1,11 @@
-
 // NOTE: This is a new helper file for the v3 API. It is not yet used by the application.
 // To use this, you would import functions from this file instead of 'api-helper.ts'.
 
-const API_V3_URL = "https://msi.colorhutbd.xyz/index.php";
+const API_V3_URL = process.env.API_V3_URL;
 
 export async function fetchFromApiV3(endpoint: string, options: RequestInit = {}) {
     if (!API_V3_URL) {
-        throw new Error("API v3 URL is not configured.");
+        throw new Error("API v3 URL is not configured in environment variables (API_V3_URL).");
     }
 
     const headers = {
