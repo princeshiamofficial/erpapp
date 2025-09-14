@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -32,7 +31,7 @@ interface TransferLeadsDialogProps {
   selectedLeadIds: string[];
 }
 
-export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, allCrmUsers, currentUser, selectedLeadIds }: TransferLeadsDialogProps) {
+export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, allCrmUsers, currentUser, selectedLeadIds = [] }: TransferLeadsDialogProps) {
   const [targetCrmId, setTargetCrmId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTargetPopoverOpen, setIsTargetPopoverOpen] = useState(false);
