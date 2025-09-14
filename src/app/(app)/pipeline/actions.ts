@@ -272,6 +272,9 @@ export async function transferLeadsBatchAction(
         let leadsToFilter: Lead[];
         if (sourceCrmId === 'unassigned') {
             leadsToFilter = allLeads.filter(lead => !lead.crmId);
+        } else if (sourceCrmId === 'all') {
+            // When 'all' is selected as source, we consider all leads regardless of crmId
+            leadsToFilter = allLeads;
         } else if (sourceCrmId) {
             leadsToFilter = allLeads.filter(lead => lead.crmId === sourceCrmId);
         } else {
@@ -279,16 +282,19 @@ export async function transferLeadsBatchAction(
         }
         
         const sourceLeads = leadsToFilter.filter(lead => {
-            const leadDate = new Date(lead.date);
-            return leadDate >= new Date(dateRange.from) && leadDate <= new Date(dateRange.to);
+            try {
+                const leadDate = new Date(lead.date);
+                return leadDate >= new Date(dateRange.from) && leadDate <= new Date(dateRange.to);
+            } catch (e) {
+                return false;
+            }
         });
 
         if (sourceLeads.length === 0) {
             return { success: true, transferredCount: 0, error: "No leads found in the specified date range for the source CRM." };
         }
         
-        // Create a mutable copy of the leads to draw from
-        let availableLeads = [...sourceLeads].sort(() => 0.5 - Math.random());
+        const availableLeads = [...sourceLeads].sort(() => 0.5 - Math.random());
         let totalTransferredCount = 0;
 
         for (const targetCrmId of targetCrmIds) {
@@ -298,7 +304,6 @@ export async function transferLeadsBatchAction(
                 continue;
             }
             
-            // Take the requested number of leads from the available pool
             const leadsToTransfer = availableLeads.splice(0, numberOfLeadsPerCrm);
             
             if (leadsToTransfer.length === 0) {
