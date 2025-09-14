@@ -13,11 +13,7 @@ import { getUsers } from '@/lib/user-service'; // Added getUsers import
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check, ChevronsUpDown, LayoutGrid, List, Calendar as CalendarIcon, Eye, X } from 'lucide-react';
-import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
-import { LeadListView } from '@/components/pipeline/LeadListView'; 
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import Papa from 'papaparse';
+import { format, parseISO, isSameWeek, isSameMonth, isSameYear } from 'date-fns';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,9 +35,18 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
-import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay } from 'date-fns';
+import { isWithinInterval, subDays, startOfDay, endOfDay } from 'date-fns';
 import { LeadCalendarView } from './LeadCalendarView';
 import { ViewLeadDialog } from './ViewLeadDialog';
+import {
+  PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall,
+  Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check,
+  ChevronsUpDown, LayoutGrid, List, Calendar as CalendarIcon, Eye, X
+} from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import Papa from 'papaparse';
+import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
+import { LeadListView } from '@/components/pipeline/LeadListView'; 
 
 const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod => mod.LeadCard), {
   ssr: false,
@@ -122,7 +127,7 @@ export function PipelineClient() {
         getLeads(),
         getUsers()
       ]);
-      setLeads(fetchedLeads);
+      setLeads(fetchedLeads.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       setAllUsers(fetchedUsers);
     } catch (error) {
       toast({ title: "Error fetching data", description: "Could not load pipeline or user data.", variant: "destructive" });
@@ -136,8 +141,23 @@ export function PipelineClient() {
   }, [fetchLeadsAndUsers]);
 
   useEffect(() => {
-    setAllCrmUsers(allUsers.filter(u => u.role === 'CRM' || u.role === 'ADMIN' || u.role === 'SYSTEM_ADMIN'));
-  }, [allUsers]);
+    const crms = allUsers.filter(u => u.role === 'CRM' || u.role === 'ADMIN' || u.role === 'SYSTEM_ADMIN');
+    const unassignedOption = { id: 'unassigned', name: 'Unassigned Leads', role: 'SYSTEM_ADMIN' as const, email: '' };
+    const deletedUsers = new Set<string>();
+    leads.forEach(lead => {
+      if(lead.crmId && !crms.some(crm => crm.id === lead.crmId)){
+        deletedUsers.add(lead.crmId);
+      }
+    });
+    const deletedUserOptions = Array.from(deletedUsers).map(id => ({
+      id: `[Deleted User: ${id}]`,
+      name: `[Deleted User: ${id.substring(0, 5)}...]`,
+      role: 'SYSTEM_ADMIN' as const, // Treat as admin for filtering purposes
+      email: ''
+    }));
+
+    setAllCrmUsers([unassignedOption, ...crms, ...deletedUserOptions]);
+  }, [allUsers, leads]);
 
   const sourceCrmOptions = useMemo(() => {
     const allCrmsOption = { id: 'all', name: 'All CRMs', role: 'SYSTEM_ADMIN' as const, email: '' };
@@ -146,12 +166,15 @@ export function PipelineClient() {
 
 
   const filteredLeads = useMemo(() => {
-    let baseLeads = [...leads].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    let baseLeads = [...leads];
 
     if (currentUser?.role === 'CRM') {
       baseLeads = baseLeads.filter(lead => lead.crmId === currentUser.id);
     } else if (selectedCrmId === 'unassigned') {
       baseLeads = baseLeads.filter(lead => !lead.crmId);
+    } else if (selectedCrmId.startsWith('[Deleted User:')) {
+      const deletedUserId = selectedCrmId.substring(15, selectedCrmId.length - 1);
+      baseLeads = baseLeads.filter(lead => lead.crmId === deletedUserId);
     } else if (selectedCrmId !== 'all') {
       baseLeads = baseLeads.filter(lead => lead.crmId === selectedCrmId);
     }
@@ -203,8 +226,7 @@ export function PipelineClient() {
   
   const selectedCrmName = useMemo(() => {
     if (selectedCrmId === 'all') return 'All CRMs';
-    if (selectedCrmId === 'unassigned') return 'Unassigned Leads';
-    return allCrmUsers.find(u => u.id === selectedCrmId)?.name || `[Deleted User: ${selectedCrmId.substring(0, 5)}...]`;
+    return allCrmUsers.find(u => u.id === selectedCrmId)?.name || "Select CRM";
   }, [selectedCrmId, allCrmUsers]);
   
   const filteredCrmUsersForDropdown = useMemo(() => {
