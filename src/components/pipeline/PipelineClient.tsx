@@ -135,6 +135,7 @@ export function PipelineClient() {
 
   const sourceCrmOptions = useMemo(() => {
     const unassignedOption = { id: 'unassigned', name: 'Unassigned Leads', role: 'SYSTEM_ADMIN' as const, email: '' };
+    const allCrmsOption = { id: 'all', name: 'All CRMs', role: 'SYSTEM_ADMIN' as const, email: '' };
     const activeCrmIds = new Set(allCrmUsers.map(u => u.id));
     
     const orphanedLeadCrmIds = new Set<string>();
@@ -151,7 +152,7 @@ export function PipelineClient() {
       email: ''
     }));
 
-    return [unassignedOption, ...allCrmUsers, ...orphanedUsers];
+    return [allCrmsOption, unassignedOption, ...allCrmUsers, ...orphanedUsers];
   }, [allCrmUsers, leads]);
 
 
@@ -468,7 +469,7 @@ export function PipelineClient() {
 
       <AddEditLeadDialog isOpen={isAddEditOpen} onOpenChange={setIsAddEditOpen} onLeadSaved={handleLeadSaved} lead={editingLead} currentUser={currentUser} />
       <ImportLeadsDialog isOpen={isImportOpen} onOpenChange={setIsImportOpen} onLeadsImported={handleLeadSaved} currentUser={currentUser} />
-      {currentUser && <TransferLeadsDialog isOpen={isBulkTransferOpen} onOpenChange={setIsBulkTransferOpen} onLeadsTransferred={fetchLeadsAndUsers} allCrmUsers={sourceCrmOptions} currentUser={currentUser} sourceCrmId={selectedCrmId} sourceCrmName={selectedCrmName} />}
+      {currentUser && <TransferLeadsDialog isOpen={isBulkTransferOpen} onOpenChange={setIsBulkTransferOpen} onLeadsTransferred={fetchLeadsAndUsers} allCrmUsers={allCrmUsers} currentUser={currentUser} />}
       {leadToTransfer && (<TransferLeadDialog isOpen={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen} onLeadTransferred={handleLeadTransferred} lead={leadToTransfer} allCrmUsers={allCrmUsers.filter(u => u.id !== leadToTransfer.crmId)} currentUser={currentUser}/>)}
       {leadToView && (<ViewLeadDialog isOpen={isViewDialogOpen} onOpenChange={setIsViewDialogOpen} onLeadUpdated={handleLeadUpdatedFromView} onEditRequest={openEditDialogFromView} lead={leadToView} currentUser={currentUser} />)}
       {leadToDelete && (

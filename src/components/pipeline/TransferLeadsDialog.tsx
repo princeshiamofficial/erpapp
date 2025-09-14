@@ -31,42 +31,35 @@ interface TransferLeadsDialogProps {
   onLeadsTransferred: () => void;
   allCrmUsers: User[];
   currentUser: User;
-  sourceCrmId: string; // Now passed as a prop
-  sourceCrmName: string; // Display name for the source
 }
 
-export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, allCrmUsers, currentUser, sourceCrmId, sourceCrmName }: TransferLeadsDialogProps) {
+export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, allCrmUsers, currentUser }: TransferLeadsDialogProps) {
   const [targetCrmIds, setTargetCrmIds] = useState<string[]>([]);
   const [leadAmount, setLeadAmount] = useState('10');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: subDays(new Date(), 29), to: new Date() });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTargetPopoverOpen, setIsTargetPopoverOpen] = useState(false);
   const { toast } = useToast();
-  
+
   const handleTransfer = async () => {
-    if (!sourceCrmId || targetCrmIds.length === 0 || !leadAmount || !dateRange?.from || !dateRange?.to) {
+    if (targetCrmIds.length === 0 || !leadAmount || !dateRange?.from || !dateRange?.to) {
       toast({ title: "Missing Information", description: "Please fill all fields.", variant: "destructive" });
       return;
     }
-    
+
     const amount = parseInt(leadAmount, 10);
     if (isNaN(amount) || amount <= 0 || amount > 50) {
       toast({ title: "Invalid Amount", description: "Number of leads must be between 1 and 50.", variant: "destructive" });
       return;
     }
 
-    if (targetCrmIds.includes(sourceCrmId)) {
-        toast({ title: "Invalid Selection", description: "Source and Target CRM cannot be the same.", variant: "destructive" });
-        return;
-    }
-
     setIsSubmitting(true);
     const result = await transferLeadsBatchAction(
-        sourceCrmId,
-        targetCrmIds,
-        amount,
-        { from: dateRange.from.toISOString(), to: dateRange.to.toISOString() },
-        currentUser
+      'unassigned', // Source is now hardcoded to 'unassigned'
+      targetCrmIds,
+      amount,
+      { from: dateRange.from.toISOString(), to: dateRange.to.toISOString() },
+      currentUser
     );
     setIsSubmitting(false);
 
@@ -81,11 +74,11 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
 
   const handleTargetCrmSelect = (crmId: string) => {
     setTargetCrmIds(prev => {
-        if (prev.includes(crmId)) {
-            return prev.filter(id => id !== crmId);
-        } else {
-            return [...prev, crmId];
-        }
+      if (prev.includes(crmId)) {
+        return prev.filter(id => id !== crmId);
+      } else {
+        return [...prev, crmId];
+      }
     });
   };
 
@@ -95,7 +88,7 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
         <DialogHeader>
           <DialogTitle>Bulk Lead Transfer</DialogTitle>
           <DialogDescription>
-            Transfer leads from <span className="font-semibold">{sourceCrmName}</span> within a date range to other CRMs.
+            Transfer <span className="font-semibold">Unassigned Leads</span> within a date range to selected CRM users.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
@@ -121,7 +114,7 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
                     {targetCrmIds.length > 0 ? (
                       targetCrmIds.map(id => {
                         const user = allCrmUsers.find(u => u.id === id);
-                        return <Badge key={id} variant="secondary">{user?.name || id}</Badge>
+                        return <Badge key={id} variant="secondary">{user?.name || id}</Badge>;
                       })
                     ) : (
                       "Select target CRM(s)..."
@@ -136,7 +129,7 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
                   <CommandList>
                     <CommandEmpty>No user found.</CommandEmpty>
                     <CommandGroup>
-                       {allCrmUsers.filter(u => u.id !== sourceCrmId).map(user => (
+                       {allCrmUsers.map(user => (
                         <CommandItem
                           key={user.id}
                           value={user.name}

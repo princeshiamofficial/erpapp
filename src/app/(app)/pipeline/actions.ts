@@ -269,16 +269,12 @@ export async function transferLeadsBatchAction(
     try {
         const allLeads = await getLeadsFromDb();
         
+        // Correctly filter source leads including the 'unassigned' case
         let leadsToFilter: Lead[];
         if (sourceCrmId === 'unassigned') {
             leadsToFilter = allLeads.filter(lead => !lead.crmId);
-        } else if (sourceCrmId === 'all') {
-            // When 'all' is selected as source, we consider all leads regardless of crmId
-            leadsToFilter = allLeads;
-        } else if (sourceCrmId) {
-            leadsToFilter = allLeads.filter(lead => lead.crmId === sourceCrmId);
         } else {
-            return { success: false, transferredCount: 0, error: "A source for the leads must be specified." };
+            return { success: false, transferredCount: 0, error: "Bulk transfer is only supported from the 'Unassigned Leads' pool." };
         }
         
         const sourceLeads = leadsToFilter.filter(lead => {
@@ -296,6 +292,7 @@ export async function transferLeadsBatchAction(
         
         const availableLeads = [...sourceLeads].sort(() => 0.5 - Math.random());
         let totalTransferredCount = 0;
+        let updatePromises: Promise<boolean>[] = [];
 
         for (const targetCrmId of targetCrmIds) {
             const targetCrmUser = await getUserFromDb(targetCrmId);
@@ -304,25 +301,24 @@ export async function transferLeadsBatchAction(
                 continue;
             }
             
-            const leadsToTransfer = availableLeads.splice(0, numberOfLeadsPerCrm);
+            const leadsToAssign = availableLeads.splice(0, numberOfLeadsPerCrm);
             
-            if (leadsToTransfer.length === 0) {
+            if (leadsToAssign.length === 0) {
                 console.log("No more available leads to transfer. Stopping.");
                 break; 
             }
             
-            const updatePromises = leadsToTransfer.map(lead => {
+            for (const lead of leadsToAssign) {
                 const updates = {
                     crmId: targetCrmUser.id,
                     crmName: targetCrmUser.name,
                 };
-                return updateLead(lead.id, updates);
-            });
-            
-            const results = await Promise.all(updatePromises);
-            const successfulUpdates = results.filter(success => success).length;
-            totalTransferredCount += successfulUpdates;
+                updatePromises.push(updateLead(lead.id, updates));
+            }
+            totalTransferredCount += leadsToAssign.length;
         }
+
+        await Promise.all(updatePromises);
         
         if (totalTransferredCount > 0) {
             revalidatePath("/(app)/pipeline");
