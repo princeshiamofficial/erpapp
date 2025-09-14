@@ -12,7 +12,7 @@ import { getUsers } from '@/lib/user-service'; // Added getUsers import
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check, ChevronsUpDown, LayoutGrid, List, Calendar as CalendarIcon, Eye } from 'lucide-react';
+import { PlusCircle, Search, FileSpreadsheet, UploadCloud, Download, Bot, ShoppingCart, PhoneCall, Briefcase, Users, User as UserIcon, BaggageClaim, AlertTriangle, Loader2, ChevronDown, Check, ChevronsUpDown, LayoutGrid, List, Calendar as CalendarIcon, Eye, X } from 'lucide-react';
 import { PipelineKanbanColumn } from '@/components/pipeline/PipelineKanbanColumn';
 import { LeadListView } from '@/components/pipeline/LeadListView'; 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -102,6 +102,11 @@ export function PipelineClient() {
   });
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+  const [isTransferSelectedDialogOpen, setIsTransferSelectedDialogOpen] = useState(false);
+
+
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 10 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
@@ -146,7 +151,7 @@ export function PipelineClient() {
     });
 
     const orphanedUsers: User[] = Array.from(orphanedLeadCrmIds).map(id => ({
-      id: id,
+      id: `[Deleted User: ${id}]`,
       name: `[Deleted User: ${id.substring(0, 5)}...]`,
       role: 'CRM',
       email: ''
@@ -335,6 +340,26 @@ export function PipelineClient() {
     await handleUpdateLeadCategory(lead, newCategory);
   };
   const handleDragCancel = () => { setActiveLead(null); };
+
+  const handleSelectionChange = (leadId: string, isSelected: boolean) => {
+    setSelectedLeadIds(prev => {
+      const newSet = new Set(prev);
+      if (isSelected) {
+        newSet.add(leadId);
+      } else {
+        newSet.delete(leadId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedLeadIds(new Set(paginatedLeads.map(l => l.id)));
+    } else {
+      setSelectedLeadIds(new Set());
+    }
+  };
   
   const renderPagination = () => {
     const pageNumbers = [];
@@ -377,6 +402,11 @@ export function PipelineClient() {
 
   const handleOpenBulkTransferDialog = () => {
     setIsBulkTransferOpen(true);
+  };
+
+  const cancelSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedLeadIds(new Set());
   };
 
 
@@ -423,7 +453,24 @@ export function PipelineClient() {
                 <DropdownMenuItem onSelect={handleExport} disabled={filteredLeads.length === 0}><Download className="mr-2 h-4 w-4" />Export Leads</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button onClick={handleOpenBulkTransferDialog} variant="outline" className="w-full sm:w-auto h-10"><Users className="mr-2 h-4 w-4" />Leads Transfer</Button>
+            
+            {viewMode === 'list' && !isSelectionMode && (
+              <Button onClick={() => setIsSelectionMode(true)} variant="outline" className="w-full sm:w-auto h-10">
+                <Check className="mr-2 h-4 w-4" /> Select to Transfer
+              </Button>
+            )}
+
+            {viewMode === 'list' && isSelectionMode && (
+              <>
+                <Button onClick={() => setIsTransferSelectedDialogOpen(true)} disabled={selectedLeadIds.size === 0} className="w-full sm:w-auto h-10 bg-blue-600 hover:bg-blue-700">
+                  <Users className="mr-2 h-4 w-4" /> Transfer Selected ({selectedLeadIds.size})
+                </Button>
+                <Button onClick={cancelSelectionMode} variant="ghost" className="w-full sm:w-auto h-10 text-destructive hover:text-destructive hover:bg-destructive/10">
+                  <X className="mr-2 h-4 w-4" /> Cancel
+                </Button>
+              </>
+            )}
+
             <Button onClick={handleOpenAddDialog} className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground h-10"><PlusCircle className="mr-2 h-5 w-5" />Add Lead</Button>
           </div>
         </div>
@@ -445,6 +492,10 @@ export function PipelineClient() {
                leads={paginatedLeads} isLoading={isLoading} currentUser={currentUser}
                onViewLead={openViewDialog} onDeleteLead={handleDeleteRequest} onTransferLead={handleTransferRequest}
                onUpdateLeadCategory={handleUpdateLeadCategory} allCrmUsers={allCrmUsers}
+               isSelectionMode={isSelectionMode}
+               selectedLeadIds={selectedLeadIds}
+               onSelectionChange={handleSelectionChange}
+               onSelectAll={handleSelectAll}
             />
             {totalPages > 1 && (
               <div className="mt-4 flex justify-center"><Pagination><PaginationContent>
@@ -469,7 +520,7 @@ export function PipelineClient() {
 
       <AddEditLeadDialog isOpen={isAddEditOpen} onOpenChange={setIsAddEditOpen} onLeadSaved={handleLeadSaved} lead={editingLead} currentUser={currentUser} />
       <ImportLeadsDialog isOpen={isImportOpen} onOpenChange={setIsImportOpen} onLeadsImported={handleLeadSaved} currentUser={currentUser} />
-      {currentUser && <TransferLeadsDialog isOpen={isBulkTransferOpen} onOpenChange={setIsBulkTransferOpen} onLeadsTransferred={fetchLeadsAndUsers} allCrmUsers={allCrmUsers} currentUser={currentUser} />}
+      {currentUser.role !== 'CRM' && <TransferLeadsDialog isOpen={isBulkTransferOpen} onOpenChange={setIsBulkTransferOpen} onLeadsTransferred={fetchLeadsAndUsers} allCrmUsers={allCrmUsers} currentUser={currentUser} />}
       {leadToTransfer && (<TransferLeadDialog isOpen={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen} onLeadTransferred={handleLeadTransferred} lead={leadToTransfer} allCrmUsers={allCrmUsers.filter(u => u.id !== leadToTransfer.crmId)} currentUser={currentUser}/>)}
       {leadToView && (<ViewLeadDialog isOpen={isViewDialogOpen} onOpenChange={setIsViewDialogOpen} onLeadUpdated={handleLeadUpdatedFromView} onEditRequest={openEditDialogFromView} lead={leadToView} currentUser={currentUser} />)}
       {leadToDelete && (
@@ -478,6 +529,21 @@ export function PipelineClient() {
             <AlertDialogFooter><AlertDialogCancel disabled={isDeletingLead}>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" onClick={handleConfirmDelete} disabled={isDeletingLead}>{isDeletingLead ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Yes, delete lead"}</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      )}
+
+      {isSelectionMode && currentUser && (
+        <TransferLeadsDialog
+          isOpen={isTransferSelectedDialogOpen}
+          onOpenChange={setIsTransferSelectedDialogOpen}
+          onLeadsTransferred={() => {
+            setIsTransferSelectedDialogOpen(false);
+            cancelSelectionMode();
+            fetchLeadsAndUsers();
+          }}
+          selectedLeadIds={Array.from(selectedLeadIds)}
+          allCrmUsers={allCrmUsers}
+          currentUser={currentUser}
+        />
       )}
     </DndContext>
   );
