@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -145,14 +146,14 @@ export function PipelineClient() {
 
 
   const filteredLeads = useMemo(() => {
-    let baseLeads = leads;
+    let baseLeads = [...leads].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     if (currentUser?.role === 'CRM') {
-      baseLeads = leads.filter(lead => lead.crmId === currentUser.id);
+      baseLeads = baseLeads.filter(lead => lead.crmId === currentUser.id);
     } else if (selectedCrmId === 'unassigned') {
-      baseLeads = leads.filter(lead => !lead.crmId);
+      baseLeads = baseLeads.filter(lead => !lead.crmId);
     } else if (selectedCrmId !== 'all') {
-      baseLeads = leads.filter(lead => lead.crmId === selectedCrmId);
+      baseLeads = baseLeads.filter(lead => lead.crmId === selectedCrmId);
     }
     
     // Date filter
