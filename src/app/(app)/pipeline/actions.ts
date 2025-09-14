@@ -259,7 +259,6 @@ export async function transferLeadsBatchAction(
     sourceCrmId: string,
     targetCrmIds: string[],
     numberOfLeadsPerCrm: number,
-    dateRange: { from: string, to: string },
     actingUser: User
 ): Promise<{ success: boolean, transferredCount: number, error?: string }> {
     if (!['ADMIN', 'SYSTEM_ADMIN'].includes(actingUser.role)) {
@@ -269,30 +268,24 @@ export async function transferLeadsBatchAction(
     try {
         const allLeads = await getLeadsFromDb();
         
-        // Correctly filter source leads including the 'unassigned' case
-        let leadsToFilter: Lead[];
+        let leadsToTransfer: Lead[];
         if (sourceCrmId === 'unassigned') {
-            leadsToFilter = allLeads.filter(lead => !lead.crmId);
+            leadsToTransfer = allLeads.filter(lead => !lead.crmId);
+        } else if (sourceCrmId === 'all') {
+            leadsToTransfer = allLeads;
+        } else if (sourceCrmId.startsWith('[Deleted User:')) {
+            const deletedUserId = sourceCrmId.substring(15, sourceCrmId.length - 4);
+            leadsToTransfer = allLeads.filter(lead => lead.crmId === deletedUserId);
         } else {
-            return { success: false, transferredCount: 0, error: "Bulk transfer is only supported from the 'Unassigned Leads' pool." };
+            leadsToTransfer = allLeads.filter(lead => lead.crmId === sourceCrmId);
         }
         
-        const sourceLeads = leadsToFilter.filter(lead => {
-            try {
-                const leadDate = new Date(lead.date);
-                return leadDate >= new Date(dateRange.from) && leadDate <= new Date(dateRange.to);
-            } catch (e) {
-                return false;
-            }
-        });
-
-        if (sourceLeads.length === 0) {
-            return { success: true, transferredCount: 0, error: "No leads found in the specified date range for the source CRM." };
+        if (leadsToTransfer.length === 0) {
+            return { success: true, transferredCount: 0, error: "No leads found for the selected source." };
         }
         
-        const availableLeads = [...sourceLeads].sort(() => 0.5 - Math.random());
+        let availableLeads = [...leadsToTransfer];
         let totalTransferredCount = 0;
-        let updatePromises: Promise<boolean>[] = [];
 
         for (const targetCrmId of targetCrmIds) {
             const targetCrmUser = await getUserFromDb(targetCrmId);
@@ -301,13 +294,19 @@ export async function transferLeadsBatchAction(
                 continue;
             }
             
-            const leadsToAssign = availableLeads.splice(0, numberOfLeadsPerCrm);
+            // Filter out leads already assigned to the target CRM
+            const leadsForThisTarget = availableLeads.filter(lead => lead.crmId !== targetCrmId);
+
+            // Shuffle the filtered leads for random selection
+            const shuffledLeads = [...leadsForThisTarget].sort(() => 0.5 - Math.random());
+            
+            const leadsToAssign = shuffledLeads.slice(0, numberOfLeadsPerCrm);
             
             if (leadsToAssign.length === 0) {
-                console.log("No more available leads to transfer. Stopping.");
-                break; 
+                continue;
             }
             
+            const updatePromises: Promise<boolean>[] = [];
             for (const lead of leadsToAssign) {
                 const updates = {
                     crmId: targetCrmUser.id,
@@ -315,10 +314,15 @@ export async function transferLeadsBatchAction(
                 };
                 updatePromises.push(updateLead(lead.id, updates));
             }
+
+            await Promise.all(updatePromises);
+            
+            // Remove the assigned leads from the main available pool
+            const assignedLeadIds = new Set(leadsToAssign.map(l => l.id));
+            availableLeads = availableLeads.filter(l => !assignedLeadIds.has(l.id));
+
             totalTransferredCount += leadsToAssign.length;
         }
-
-        await Promise.all(updatePromises);
         
         if (totalTransferredCount > 0) {
             revalidatePath("/(app)/pipeline");
