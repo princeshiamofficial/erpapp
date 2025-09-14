@@ -283,9 +283,12 @@ export async function transferLeadsBatchAction(
             return leadDate >= new Date(dateRange.from) && leadDate <= new Date(dateRange.to);
         });
 
-        const shuffledLeads = sourceLeads.sort(() => 0.5 - Math.random());
+        let availableLeads = [...sourceLeads].sort(() => 0.5 - Math.random());
         let totalTransferredCount = 0;
-        let transferredLeadIds = new Set<string>();
+        
+        if (availableLeads.length === 0) {
+            return { success: true, transferredCount: 0, error: "No leads found in the specified date range for the source CRM." };
+        }
 
         for (const targetCrmId of targetCrmIds) {
             const targetCrmUser = await getUserFromDb(targetCrmId);
@@ -294,11 +297,10 @@ export async function transferLeadsBatchAction(
                 continue;
             }
             
-            const leadsAvailableForThisTarget = shuffledLeads.filter(lead => !transferredLeadIds.has(lead.id));
-            const leadsToTransfer = leadsAvailableForThisTarget.slice(0, numberOfLeadsPerCrm);
+            const leadsToTransfer = availableLeads.splice(0, numberOfLeadsPerCrm);
             
             if (leadsToTransfer.length === 0) {
-                continue; // No more leads to transfer for this target
+                break; // No more leads to transfer
             }
             
             for (const lead of leadsToTransfer) {
@@ -309,7 +311,9 @@ export async function transferLeadsBatchAction(
                 const success = await updateLead(lead.id, updates);
                 if (success) {
                     totalTransferredCount++;
-                    transferredLeadIds.add(lead.id);
+                } else {
+                    // If an update fails, add the lead back to the pool to be potentially picked by another CRM
+                    availableLeads.push(lead);
                 }
             }
         }
