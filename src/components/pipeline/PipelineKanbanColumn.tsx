@@ -74,9 +74,13 @@ export function PipelineKanbanColumn({
         isOver ? 'border-primary ring-2 ring-primary shadow-xl scale-[1.01]' : 'border-border/30 shadow-sm'
       )}
     >
-      <div className={`px-3 py-2.5 flex items-center justify-between ${headerBgClass} ${headerTextClass} rounded-t-lg shrink-0`}>
+      <div className={cn(
+          `px-3 py-2.5 flex items-center justify-between rounded-t-lg shrink-0 sticky top-0 z-10`,
+          headerBgClass, 
+          headerTextClass
+      )}>
         <div className="flex items-center">
-          <Icon className={`mr-2 h-4 w-4 ${headerIconClass}`} />
+          <Icon className={cn(`mr-2 h-4 w-4`, headerIconClass)} />
           <h2 className="font-semibold text-sm tracking-wide">{title}</h2>
         </div>
         <span className="text-xs px-2 py-0.5 bg-black/20 rounded-full">{isLoading ? <Skeleton className="h-4 w-4 inline-block" /> : leads.length}</span>
