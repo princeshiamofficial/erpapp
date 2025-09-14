@@ -1,4 +1,5 @@
 
+
 import React, { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PipelineClient } from '@/components/pipeline/PipelineClient';
@@ -34,6 +35,7 @@ function PipelinePageSkeleton() {
              <div className="mt-4">
                 {[...Array(5)].map((_, i) => (
                     <div key={i} className="flex items-center space-x-4 p-4 border-b">
+                        <Skeleton className="h-5 w-5" />
                         <Skeleton className="h-10 w-32" />
                         <Skeleton className="h-5 w-48" />
                         <Skeleton className="h-5 w-24" />

@@ -1,7 +1,8 @@
 
+
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,13 +17,10 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-import type { User } from '@/types';
+import type { User, UserRole } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { transferLeadsBatchAction } from '@/app/(app)/pipeline/actions';
+import { transferSelectedLeadsAction } from '@/app/(app)/pipeline/actions';
 import { Loader2, ChevronsUpDown, Check, X } from 'lucide-react';
-import { DateRangePicker } from '@/components/dashboard/date-range-picker';
-import type { DateRange } from "react-day-picker";
-import { subDays } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 
 interface TransferLeadsDialogProps {
@@ -31,95 +29,62 @@ interface TransferLeadsDialogProps {
   onLeadsTransferred: () => void;
   allCrmUsers: User[];
   currentUser: User;
+  selectedLeadIds: string[];
 }
 
-export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, allCrmUsers, currentUser }: TransferLeadsDialogProps) {
-  const [targetCrmIds, setTargetCrmIds] = useState<string[]>([]);
-  const [leadAmount, setLeadAmount] = useState('10');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: subDays(new Date(), 29), to: new Date() });
+export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, allCrmUsers, currentUser, selectedLeadIds }: TransferLeadsDialogProps) {
+  const [targetCrmId, setTargetCrmId] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTargetPopoverOpen, setIsTargetPopoverOpen] = useState(false);
   const { toast } = useToast();
 
-  const handleTransfer = async () => {
-    if (targetCrmIds.length === 0 || !leadAmount || !dateRange?.from || !dateRange?.to) {
-      toast({ title: "Missing Information", description: "Please fill all fields.", variant: "destructive" });
-      return;
-    }
-
-    const amount = parseInt(leadAmount, 10);
-    if (isNaN(amount) || amount <= 0 || amount > 50) {
-      toast({ title: "Invalid Amount", description: "Number of leads must be between 1 and 50.", variant: "destructive" });
+  const handleSubmit = async () => {
+    if (!targetCrmId) {
+      toast({ title: "Missing Information", description: "Please select a CRM user to transfer the leads to.", variant: "destructive" });
       return;
     }
 
     setIsSubmitting(true);
-    const result = await transferLeadsBatchAction(
-      'unassigned', // Source is now hardcoded to 'unassigned'
-      targetCrmIds,
-      amount,
-      { from: dateRange.from.toISOString(), to: dateRange.to.toISOString() },
+    const result = await transferSelectedLeadsAction(
+      selectedLeadIds,
+      targetCrmId,
       currentUser
     );
     setIsSubmitting(false);
 
     if (result.success) {
-      toast({ title: "Transfer Successful", description: `${result.transferredCount} total leads have been transferred.` });
+      toast({ title: "Transfer Successful", description: `${result.transferredCount} lead(s) have been transferred.` });
       onLeadsTransferred();
       onOpenChange(false);
     } else {
       toast({ title: "Transfer Failed", description: result.error || "An error occurred.", variant: "destructive" });
     }
   };
+  
+  useEffect(() => {
+    if(!isOpen) {
+      setTargetCrmId('');
+    }
+  }, [isOpen]);
 
-  const handleTargetCrmSelect = (crmId: string) => {
-    setTargetCrmIds(prev => {
-      if (prev.includes(crmId)) {
-        return prev.filter(id => id !== crmId);
-      } else {
-        return [...prev, crmId];
-      }
-    });
-  };
+  const selectedCrmName = allCrmUsers.find(u => u.id === targetCrmId)?.name || "Select target CRM...";
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Bulk Lead Transfer</DialogTitle>
+          <DialogTitle>Transfer Selected Leads</DialogTitle>
           <DialogDescription>
-            Transfer <span className="font-semibold">Unassigned Leads</span> within a date range to selected CRM users.
+            You are about to transfer <span className="font-semibold text-foreground">{selectedLeadIds.length}</span> selected lead(s). Choose a CRM user to assign them to.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-1">
-            <Label htmlFor="lead-amount">Leads to Transfer (per CRM, Max 50)</Label>
-            <Input id="lead-amount" type="number" value={leadAmount} onChange={e => {
-                const val = e.target.value.replace(/\s/g, '');
-                if (val === '' || (parseInt(val, 10) >= 0 && parseInt(val, 10) <= 50)) {
-                    setLeadAmount(val);
-                }
-            }} placeholder="e.g., 25" max={50} min={1} />
-          </div>
-          <div className="space-y-1">
-            <Label>Date Range of Leads</Label>
-            <DateRangePicker initialRange={dateRange} onDateRangeChange={(range) => setDateRange(range)} />
-          </div>
-          <div className="space-y-1">
-            <Label>To CRM(s)</Label>
+            <Label htmlFor="target-crm">To CRM User *</Label>
             <Popover open={isTargetPopoverOpen} onOpenChange={setIsTargetPopoverOpen}>
               <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={isTargetPopoverOpen} className="w-full justify-between h-auto min-h-10">
-                  <div className="flex flex-wrap gap-1">
-                    {targetCrmIds.length > 0 ? (
-                      targetCrmIds.map(id => {
-                        const user = allCrmUsers.find(u => u.id === id);
-                        return <Badge key={id} variant="secondary">{user?.name || id}</Badge>;
-                      })
-                    ) : (
-                      "Select target CRM(s)..."
-                    )}
-                  </div>
+                <Button variant="outline" role="combobox" aria-expanded={isTargetPopoverOpen} className="w-full justify-between h-10">
+                  <span className="truncate">{selectedCrmName}</span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -133,13 +98,16 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
                         <CommandItem
                           key={user.id}
                           value={user.name}
-                          onSelect={() => handleTargetCrmSelect(user.id)}
+                          onSelect={() => {
+                            setTargetCrmId(user.id);
+                            setIsTargetPopoverOpen(false);
+                          }}
                           className="cursor-pointer"
                         >
                           <Check
                             className={cn(
                               "mr-2 h-4 w-4",
-                              targetCrmIds.includes(user.id) ? "opacity-100" : "opacity-0"
+                              targetCrmId === user.id ? "opacity-100" : "opacity-0"
                             )}
                           />
                           {user.name}
@@ -154,8 +122,8 @@ export function TransferLeadsDialog({ isOpen, onOpenChange, onLeadsTransferred, 
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-          <Button onClick={handleTransfer} disabled={isSubmitting || targetCrmIds.length === 0 || !leadAmount}>
-            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Transferring...</> : "Transfer Leads"}
+          <Button onClick={handleSubmit} disabled={isSubmitting || !targetCrmId}>
+            {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Transferring...</> : "Confirm Transfer"}
           </Button>
         </DialogFooter>
       </DialogContent>

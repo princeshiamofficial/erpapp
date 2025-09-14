@@ -294,12 +294,8 @@ export async function transferLeadsBatchAction(
                 continue;
             }
             
-            // Filter out leads already assigned to the target CRM
             const leadsForThisTarget = availableLeads.filter(lead => lead.crmId !== targetCrmId);
-
-            // Shuffle the filtered leads for random selection
             const shuffledLeads = [...leadsForThisTarget].sort(() => 0.5 - Math.random());
-            
             const leadsToAssign = shuffledLeads.slice(0, numberOfLeadsPerCrm);
             
             if (leadsToAssign.length === 0) {
@@ -317,7 +313,6 @@ export async function transferLeadsBatchAction(
 
             await Promise.all(updatePromises);
             
-            // Remove the assigned leads from the main available pool
             const assignedLeadIds = new Set(leadsToAssign.map(l => l.id));
             availableLeads = availableLeads.filter(l => !assignedLeadIds.has(l.id));
 
@@ -334,4 +329,52 @@ export async function transferLeadsBatchAction(
         console.error("Error in transferLeadsBatchAction:", error);
         return { success: false, transferredCount: 0, error: error instanceof Error ? error.message : "An unexpected error occurred during bulk transfer." };
     }
+}
+
+export async function transferSelectedLeadsAction(
+  leadIds: string[],
+  targetCrmId: string,
+  actingUser: User
+): Promise<{ success: boolean; transferredCount: number; error?: string }> {
+  if (!['ADMIN', 'SYSTEM_ADMIN', 'CRM'].includes(actingUser.role)) {
+    return { success: false, transferredCount: 0, error: "Permission denied." };
+  }
+  if (leadIds.length === 0) {
+    return { success: false, transferredCount: 0, error: "No leads were selected for transfer." };
+  }
+
+  try {
+    const targetCrmUser = await getUserFromDb(targetCrmId);
+    if (!targetCrmUser) {
+      return { success: false, transferredCount: 0, error: "The target CRM user was not found." };
+    }
+
+    const updates = {
+      crmId: targetCrmUser.id,
+      crmName: targetCrmUser.name,
+    };
+
+    const updatePromises = leadIds.map(leadId => updateLead(leadId, updates));
+    const results = await Promise.all(updatePromises);
+
+    const successfulTransfers = results.filter(success => success).length;
+
+    if (successfulTransfers > 0) {
+      revalidatePath("/(app)/pipeline");
+    }
+
+    if (successfulTransfers < leadIds.length) {
+      return {
+        success: false,
+        transferredCount: successfulTransfers,
+        error: `Could not transfer all selected leads. ${successfulTransfers} of ${leadIds.length} were successful.`,
+      };
+    }
+
+    return { success: true, transferredCount: successfulTransfers };
+  } catch (error) {
+    console.error("Error in transferSelectedLeadsAction:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unexpected server error occurred.";
+    return { success: false, transferredCount: 0, error: errorMessage };
+  }
 }
