@@ -1,12 +1,11 @@
 
-
 "use client";
 
 import type { Lead, User } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Edit, CalendarDays, MapPin, StickyNote, Bot, Trash2, Users, Eye } from 'lucide-react';
+import { Edit, CalendarDays, MapPin, StickyNote, Bot, Trash2, Users, Eye, User as CrmIcon } from 'lucide-react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { cn } from '@/lib/utils';
@@ -32,7 +31,7 @@ interface LeadCardProps {
   onViewLead: (lead: Lead) => void;
   onDeleteLead: (lead: Lead) => void;
   onTransferLead: (lead: Lead) => void; 
-  crmAvatarUrl?: string;
+  allCrmUsers: User[]; // Pass all CRM users
   headerBgClass: string; 
 }
 
@@ -53,12 +52,14 @@ const formatDateSafe = (dateString?: string) => {
 };
 
 
-export function LeadCard({ lead, isOverlay = false, currentUser, onViewLead, onDeleteLead, onTransferLead, crmAvatarUrl, headerBgClass }: LeadCardProps) {
+export function LeadCard({ lead, isOverlay = false, currentUser, onViewLead, onDeleteLead, onTransferLead, allCrmUsers, headerBgClass }: LeadCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: lead.id,
     data: { lead },
     disabled: isOverlay,
   });
+  
+  const crmUser = allCrmUsers.find(u => u.id === lead.crmId);
 
   const style = !isOverlay && transform ? {
     transform: CSS.Translate.toString(transform),
@@ -158,7 +159,7 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onViewLead, onD
                 <TooltipTrigger asChild>
                   <div className="flex items-center">
                     <Avatar className="h-6 w-6 text-xs mr-2 cursor-pointer">
-                      <AvatarImage src={crmAvatarUrl || undefined} alt={lead.crmName} />
+                      <AvatarImage src={crmUser?.avatarUrl || undefined} alt={lead.crmName} />
                       <AvatarFallback>{getInitials(lead.crmName)}</AvatarFallback>
                     </Avatar>
                     <span>{lead.phone}</span>

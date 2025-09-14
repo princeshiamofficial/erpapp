@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import dynamic from 'next/dynamic';
@@ -9,6 +8,10 @@ import type { LucideIcon } from 'lucide-react';
 import { useDroppable } from '@dnd-kit/core';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Button } from '@/components/ui/button';
+import { motion, AnimatePresence } from 'framer-motion';
+
 
 const LeadCard = dynamic(() => import('@/components/pipeline/LeadCard').then(mod => mod.LeadCard), {
   ssr: false,
@@ -31,6 +34,8 @@ interface PipelineKanbanColumnProps {
   allCrmUsers: User[];
 }
 
+const LEADS_PER_PAGE = 20;
+
 export function PipelineKanbanColumn({
   id,
   title, 
@@ -47,6 +52,19 @@ export function PipelineKanbanColumn({
   allCrmUsers,
 }: PipelineKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id });
+  const [visibleCount, setVisibleCount] = useState(LEADS_PER_PAGE);
+
+  // Reset visible count when the underlying leads array changes (e.g., due to filtering)
+  useEffect(() => {
+    setVisibleCount(LEADS_PER_PAGE);
+  }, [leads]);
+  
+  const handleLoadMore = () => {
+    setVisibleCount(prevCount => prevCount + LEADS_PER_PAGE);
+  };
+  
+  const visibleLeads = useMemo(() => leads.slice(0, visibleCount), [leads, visibleCount]);
+  const hasMoreLeads = visibleCount < leads.length;
 
   return (
     <div
@@ -65,31 +83,52 @@ export function PipelineKanbanColumn({
       </div>
       <ScrollArea className="flex-1 bg-background/10 custom-scrollbar">
         <div className="space-y-3 p-3">
-          {isLoading ? (
+          {isLoading && leads.length === 0 ? (
             <div className="space-y-3">
               <Skeleton className="h-20 w-full rounded-md" />
               <Skeleton className="h-20 w-full rounded-md" />
+              <Skeleton className="h-20 w-full rounded-md" />
             </div>
-          ) : leads.length === 0 ? (
+          ) : visibleLeads.length === 0 ? (
             <div className="flex items-center justify-center h-32">
               <p className="text-xs text-muted-foreground text-center italic">No leads in this category.</p>
             </div>
           ) : (
-            leads.map(lead => {
-              const crmUser = allCrmUsers.find(u => u.id === lead.crmId);
-              return (
-                <LeadCard
-                  key={lead.id}
-                  lead={lead}
-                  currentUser={currentUser}
-                  onViewLead={onViewLead}
-                  onDeleteLead={onDeleteLead}
-                  onTransferLead={onTransferLead}
-                  crmAvatarUrl={crmUser?.avatarUrl || undefined}
-                  headerBgClass={headerBgClass}
-                />
-              )
-            })
+            <AnimatePresence>
+                {visibleLeads.map((lead, index) => (
+                    <motion.div
+                        key={lead.id}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2, delay: (index % LEADS_PER_PAGE) * 0.03 }}
+                    >
+                        <LeadCard
+                            lead={lead}
+                            currentUser={currentUser}
+                            onViewLead={onViewLead}
+                            onDeleteLead={onDeleteLead}
+                            onTransferLead={onTransferLead}
+                            allCrmUsers={allCrmUsers}
+                            headerBgClass={headerBgClass}
+                        />
+                    </motion.div>
+                ))}
+            </AnimatePresence>
+          )}
+
+          {hasMoreLeads && (
+            <div className="text-center pt-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs h-8"
+                onClick={handleLoadMore}
+              >
+                Load More ({leads.length - visibleCount} remaining)
+              </Button>
+            </div>
           )}
         </div>
       </ScrollArea>
