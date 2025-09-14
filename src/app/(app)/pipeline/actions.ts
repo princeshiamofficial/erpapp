@@ -285,6 +285,7 @@ export async function transferLeadsBatchAction(
 
         const shuffledLeads = sourceLeads.sort(() => 0.5 - Math.random());
         let totalTransferredCount = 0;
+        let transferredLeadIds = new Set<string>();
 
         for (const targetCrmId of targetCrmIds) {
             const targetCrmUser = await getUserFromDb(targetCrmId);
@@ -292,13 +293,14 @@ export async function transferLeadsBatchAction(
                 console.warn(`Target CRM user with ID ${targetCrmId} not found. Skipping.`);
                 continue;
             }
-
-            const leadsToTransfer = shuffledLeads.splice(0, numberOfLeadsPerCrm);
+            
+            const leadsAvailableForThisTarget = shuffledLeads.filter(lead => !transferredLeadIds.has(lead.id));
+            const leadsToTransfer = leadsAvailableForThisTarget.slice(0, numberOfLeadsPerCrm);
+            
             if (leadsToTransfer.length === 0) {
-                break; // No more leads to transfer
+                continue; // No more leads to transfer for this target
             }
             
-            let transferredForThisCrm = 0;
             for (const lead of leadsToTransfer) {
                 const updates = {
                     crmId: targetCrmUser.id,
@@ -306,10 +308,10 @@ export async function transferLeadsBatchAction(
                 };
                 const success = await updateLead(lead.id, updates);
                 if (success) {
-                    transferredForThisCrm++;
+                    totalTransferredCount++;
+                    transferredLeadIds.add(lead.id);
                 }
             }
-            totalTransferredCount += transferredForThisCrm;
         }
         
         if (totalTransferredCount > 0) {
