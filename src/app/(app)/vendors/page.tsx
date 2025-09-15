@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { Search, MoreVertical, Store, Loader2, Edit, Trash2, PlusCircle, Package } from "lucide-react";
+import { Search, MoreVertical, Store, Loader2, Edit, Trash2, PlusCircle, Package, Layers } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User } from '@/types';
@@ -23,6 +23,8 @@ const AddUserDialog = dynamic(() => import('@/components/users/add-user-dialog')
 const EditUserInfoDialog = dynamic(() => import('@/components/users/edit-user-info-dialog').then(mod => mod.EditUserInfoDialog));
 const DeleteUserDialog = dynamic(() => import('@/components/users/delete-user-dialog').then(mod => mod.DeleteUserDialog));
 const AddEditProductDialog = dynamic(() => import('@/components/vendors/AddEditProductDialog').then(mod => mod.AddEditProductDialog));
+const AddEditCategoryDialog = dynamic(() => import('@/components/vendors/AddEditCategoryDialog').then(mod => mod.AddEditCategoryDialog));
+
 
 const getInitials = (name: string) => {
   if (!name) return '??';
@@ -49,8 +51,10 @@ export default function VendorsPage() {
   
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isAddEditProductDialogOpen, setIsAddEditProductDialogOpen] = useState(false);
-  const [productToEdit, setProductToEdit] = useState<any | null>(null); // Replace 'any' with a Product type later
+  const [productToEdit, setProductToEdit] = useState<any | null>(null); 
 
+  const [isAddEditCategoryDialogOpen, setIsAddEditCategoryDialogOpen] = useState(false);
+  const [categoryToEdit, setCategoryToEdit] = useState<any | null>(null);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -120,6 +124,23 @@ export default function VendorsPage() {
   const handleOpenEditProductDialog = (product: any) => {
     setProductToEdit(product);
     setIsAddEditProductDialogOpen(true);
+  };
+
+  const handleCategorySaved = () => {
+    toast({ title: "Success", description: "Category has been saved." });
+    setIsAddEditCategoryDialogOpen(false);
+    setCategoryToEdit(null);
+    // You would refetch categories here in a real implementation
+  };
+
+  const handleOpenAddCategoryDialog = () => {
+    setCategoryToEdit(null);
+    setIsAddEditCategoryDialogOpen(true);
+  };
+
+  const handleOpenEditCategoryDialog = (category: any) => {
+    setCategoryToEdit(category);
+    setIsAddEditCategoryDialogOpen(true);
   };
 
 
@@ -222,6 +243,7 @@ export default function VendorsPage() {
                 <Package className="h-10 w-10 mb-2" />
                 <p className="font-semibold">No Products Yet</p>
                 <p className="text-sm">Click "Add New Product" to get started.</p>
+                 <Button variant="outline" size="sm" className="mt-4" onClick={() => handleOpenEditProductDialog({ id: '123', name: 'Sample Product', category: 'Sample', price: 100 })}>Edit Sample</Button>
             </div>
         </CardContent>
     </Card>
@@ -234,15 +256,16 @@ export default function VendorsPage() {
                 <CardTitle className="text-xl font-bold text-gray-800">Categories</CardTitle>
                 <CardDescription>Manage vendor product categories here.</CardDescription>
             </div>
-            <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground">
+            <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleOpenAddCategoryDialog}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Category
             </Button>
         </CardHeader>
         <CardContent>
-            <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
-                <Package className="h-10 w-10 mb-2" />
-                <p className="font-semibold">Coming Soon</p>
-                <p className="text-sm">This section is under construction.</p>
+             <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
+                <Layers className="h-10 w-10 mb-2" />
+                <p className="font-semibold">No Categories Yet</p>
+                <p className="text-sm">Click "Add New Category" to get started.</p>
+                <Button variant="outline" size="sm" className="mt-4" onClick={() => handleOpenEditCategoryDialog({ id: 'cat1', name: 'Sample Category' })}>Edit Sample</Button>
             </div>
         </CardContent>
     </Card>
@@ -311,6 +334,13 @@ export default function VendorsPage() {
           currentUser={currentUser}
         />
       )}
+      
+      <AddEditCategoryDialog
+        isOpen={isAddEditCategoryDialogOpen}
+        onOpenChange={setIsAddEditCategoryDialogOpen}
+        onCategorySaved={handleCategorySaved}
+        category={categoryToEdit}
+      />
     </>
   );
 }
