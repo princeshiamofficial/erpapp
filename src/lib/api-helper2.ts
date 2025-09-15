@@ -55,14 +55,18 @@ export const ensureCollectionExistsV3 = async (collectionName: string) => {
         if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
             console.log(`V3 Collection '${collectionName}' not found. Attempting to create it...`);
             try {
-                // Corrected payload format for creating a collection.
-                // The API expects the collection name directly in the 'name' field of the JSON body.
                 await fetchFromApiV3('collections', {
                     method: 'POST',
                     body: JSON.stringify({ name: collectionName }),
                 });
                 console.log(`V3 Collection '${collectionName}' created successfully.`);
             } catch (creationError) {
+                // If creation fails because it already exists (due to a race condition), we can ignore it.
+                if (creationError instanceof Error && creationError.message.toLowerCase().includes('already exists')) {
+                    console.log(`V3 Collection '${collectionName}' already exists. Race condition handled.`);
+                    return; // This is a successful outcome.
+                }
+                // For other creation errors, we should still throw.
                 console.error(`Failed to create v3 collection '${collectionName}':`, creationError);
                 throw new Error(`Could not create required v3 collection '${collectionName}'.`);
             }
@@ -72,3 +76,4 @@ export const ensureCollectionExistsV3 = async (collectionName: string) => {
         }
     }
 };
+
