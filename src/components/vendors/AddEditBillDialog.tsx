@@ -18,10 +18,10 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from '@/lib/utils';
 import { Separator } from "@/components/ui/separator";
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
+import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@/components/ui/table';
 
 interface AddEditBillDialogProps {
   isOpen: boolean;
@@ -236,7 +236,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
         amount: newPaidAmountNum,
         date: new Date().toISOString(),
         paymentMethod: newPaymentMethod,
-        notes: newPaymentNotes || null,
+        notes: newPaymentNotes.trim() || null,
         recordedByUserId: currentUser.id,
         recordedByUserName: currentUser.name,
       });
@@ -395,15 +395,21 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
                     <Input id="paidAmount" type="number" value={newPaidAmount} onChange={(e) => setNewPaidAmount(e.target.value)} placeholder="e.g., 5000" min="0" />
                 </div>
                  {(parseFloat(newPaidAmount) || 0) > 0 && (
-                  <div className="space-y-1">
-                    <Label htmlFor="paymentMethod">Payment Method</Label>
-                    <Select value={newPaymentMethod} onValueChange={setNewPaymentMethod} required={(parseFloat(newPaidAmount) || 0) > 0}>
-                      <SelectTrigger><SelectValue placeholder="Select method..." /></SelectTrigger>
-                      <SelectContent>
-                        {isLoadingOptions ? <div className="p-2 text-sm">Loading...</div> : paymentMethodOptions.map(opt => <SelectItem key={opt.id} value={opt.name}>{opt.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <>
+                    <div className="space-y-1">
+                      <Label htmlFor="paymentMethod">Payment Method</Label>
+                      <Select value={newPaymentMethod} onValueChange={setNewPaymentMethod} required={(parseFloat(newPaidAmount) || 0) > 0}>
+                        <SelectTrigger><SelectValue placeholder="Select method..." /></SelectTrigger>
+                        <SelectContent>
+                          {isLoadingOptions ? <div className="p-2 text-sm">Loading...</div> : paymentMethodOptions.map(opt => <SelectItem key={opt.id} value={opt.name}>{opt.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                        <Label htmlFor="paymentNotes">Payment Notes</Label>
+                        <Input id="paymentNotes" value={newPaymentNotes} onChange={(e) => setNewPaymentNotes(e.target.value)} placeholder="Optional notes for this payment" />
+                    </div>
+                  </>
                 )}
             </div>
 
