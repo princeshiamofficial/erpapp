@@ -29,18 +29,7 @@ export default async function BillPage({ params }: BillPageProps) {
 
   return (
     <div className="min-h-screen bg-background py-6 sm:py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary print:p-0 print:m-0 print:bg-white">
-       <header className="text-center mb-8 sm:mb-12 print:hidden">
-        <div className="inline-block mb-2">
-            <Image
-              src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
-              alt="Color Hut Logo"
-              width={253}
-              height={64}
-              priority
-              className="object-contain mx-auto"
-            />
-        </div>
-      </header>
+      
 
       <Suspense fallback={<BillPageSkeleton />}>
         <BillDetailsClient
@@ -86,3 +75,4 @@ function BillPageSkeleton() {
       </div>
     );
 }
+
