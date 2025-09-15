@@ -596,10 +596,23 @@ export default function VendorsPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {(paginatedData as VendorBill[]).map(bill => (
+                                {(paginatedData as VendorBill[]).map(bill => {
+                                   const vendor = allUsers.find(u => u.id === bill.vendorId);
+                                   return (
                                     <TableRow key={bill.id}>
                                         <TableCell>{formatDate(bill.billDate)}</TableCell>
-                                        <TableCell>{bill.vendorName}</TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <Avatar className="h-9 w-9 border">
+                                                    <AvatarImage src={vendor?.avatarUrl || undefined} alt={bill.vendorName}/>
+                                                    <AvatarFallback>{getInitials(bill.vendorName)}</AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <div className="font-medium">{bill.vendorName}</div>
+                                                    <div className="text-xs text-muted-foreground">{vendor?.id}</div>
+                                                </div>
+                                            </div>
+                                        </TableCell>
                                         <TableCell>{formatCurrency(bill.total)}</TableCell>
                                         <TableCell className="text-destructive font-medium">{formatCurrency(bill.dueAmount)}</TableCell>
                                         <TableCell><Badge className={getStatusBadgeClass(bill.status)}>{bill.status}</Badge></TableCell>
@@ -614,7 +627,7 @@ export default function VendorsPage() {
                                             </DropdownMenu>
                                         </TableCell>
                                     </TableRow>
-                                ))}
+                                )})}
                             </TableBody>
                         </Table>
                     ) : (
