@@ -608,7 +608,7 @@ export default function VendorsPage() {
                                                     <AvatarFallback>{getInitials(bill.vendorName)}</AvatarFallback>
                                                 </Avatar>
                                                 <div>
-                                                    <div className="font-medium">{bill.vendorName}</div>
+                                                    <div className="font-medium">{vendor?.companyName}</div>
                                                     <div className="text-xs text-muted-foreground">{vendor?.id}</div>
                                                 </div>
                                             </div>
@@ -768,5 +768,7 @@ export default function VendorsPage() {
     </>
   );
 }
+
+    
 
     
