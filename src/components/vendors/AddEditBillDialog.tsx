@@ -21,7 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@/components/ui/table';
 
 interface AddEditBillDialogProps {
   isOpen: boolean;
@@ -447,3 +447,5 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
 }
 
 export default AddEditBillDialog;
+
+    
