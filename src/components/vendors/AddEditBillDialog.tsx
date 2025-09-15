@@ -252,7 +252,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                <div className="space-y-1">
-                <Label htmlFor="vendor">Vendor *</Label>
+                <Label htmlFor="vendor">Vendor</Label>
                 <Select value={selectedVendorId} onValueChange={setSelectedVendorId} required>
                     <SelectTrigger><SelectValue placeholder="Select a vendor" /></SelectTrigger>
                     <SelectContent>
@@ -261,7 +261,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="billDate">Bill Date *</Label>
+                <Label htmlFor="billDate">Bill Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !billDate && "text-muted-foreground")}>
@@ -275,12 +275,12 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
             </div>
 
             <div className="space-y-3 mt-4 border-t border-border pt-4">
-              <Label className="text-lg font-semibold">Bill Items *</Label>
+              <Label className="text-lg font-semibold">Bill Items</Label>
               {billItems.map((item, index) => (
                 <div key={item.id} className="p-3 border rounded-md bg-secondary/30 space-y-3">
                    <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_auto] gap-x-3 gap-y-2 items-end">
                       <div className="space-y-1">
-                        <Label htmlFor={`product-${item.id}`}>Product *</Label>
+                        <Label htmlFor={`product-${item.id}`}>Product</Label>
                         <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
                             <PopoverTrigger asChild>
                                 <Button variant="outline" role="combobox" className="w-full justify-between bg-background">
@@ -303,7 +303,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
                         </Popover>
                       </div>
                       <div className="space-y-1">
-                        <Label htmlFor={`quantity-${item.id}`}>Quantity *</Label>
+                        <Label htmlFor={`quantity-${item.id}`}>Quantity</Label>
                         <Input id={`quantity-${item.id}`} type="number" value={item.quantity} onChange={(e) => handleItemChange(item.id, 'quantity', e.target.value)} min="1" required className="bg-background" />
                       </div>
                       <div className="space-y-1">
@@ -333,7 +333,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
                 </div>
                  {(parseFloat(paidAmount) || 0) > 0 && (
                   <div className="space-y-1">
-                    <Label htmlFor="paymentMethod">Payment Method *</Label>
+                    <Label htmlFor="paymentMethod">Payment Method</Label>
                     <Select value={paymentMethod} onValueChange={setPaymentMethod} required>
                       <SelectTrigger><SelectValue placeholder="Select method..." /></SelectTrigger>
                       <SelectContent>
