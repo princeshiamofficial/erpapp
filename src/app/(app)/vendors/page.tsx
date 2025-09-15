@@ -154,12 +154,6 @@ export default function VendorsPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input placeholder="Search vendors..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
                 </div>
-                <Button 
-                    onClick={() => setIsAddUserDialogOpen(true)}
-                    className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                >
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Vendor
-                </Button>
             </div>
         </div>
         </CardHeader>
