@@ -49,39 +49,30 @@ const MaintenancePage: React.FC<{ message: string | null }> = ({ message }) => {
   );
 };
 
-
-export function AppProviders({
+// This new component will contain the logic that uses the useAuth hook.
+function AppShell({
   children,
-  initialUser,
   initialGlobalSettings,
 }: {
   children: React.ReactNode;
-  initialUser: User | null;
   initialGlobalSettings: GlobalSettings;
 }) {
   const { currentUser, isLoading, logout, isSuspendedDialogOpen } = useAuth();
   const router = useRouter();
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [showLoadingScreen, setShowLoadingScreen] = useState(true);
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   // This effect handles the logout button which is now part of a server component layout
   useEffect(() => {
-    if (!isClient) return;
     const logoutButton = document.querySelector('[data-logout-button]');
     if (logoutButton) {
       const handleLogoutClick = () => logout();
       logoutButton.addEventListener('click', handleLogoutClick);
       return () => logoutButton.removeEventListener('click', handleLogoutClick);
     }
-  }, [logout, isClient]);
+  }, [logout]);
 
   useEffect(() => {
-    if (!isClient) return;
     let progressInterval: NodeJS.Timeout | undefined;
     if (isLoading) {
       setShowLoadingScreen(true);
@@ -105,23 +96,22 @@ export function AppProviders({
     return () => {
       if (progressInterval) clearInterval(progressInterval);
     };
-  }, [isLoading, isClient]);
+  }, [isLoading]);
 
   useEffect(() => {
-    if (!isClient) return;
     if (!isLoading && !currentUser && !isSuspendedDialogOpen) {
       router.replace('/login');
     }
-  }, [currentUser, isLoading, router, isSuspendedDialogOpen, isClient]);
+  }, [currentUser, isLoading, router, isSuspendedDialogOpen]);
 
   const inMaintenanceMode = useMemo(() => {
-    if (isLoading || !initialGlobalSettings || !isClient) return false;
+    if (isLoading || !initialGlobalSettings) return false;
     if (!initialGlobalSettings.maintenanceMode) return false;
     if (currentUser?.role === 'SYSTEM_ADMIN') return false;
     return true;
-  }, [isLoading, initialGlobalSettings, currentUser, isClient]);
+  }, [isLoading, initialGlobalSettings, currentUser]);
   
-  if (!isClient || (!currentUser && showLoadingScreen)) {
+  if (!currentUser && showLoadingScreen) {
       return (
       <AnimatePresence>
         {showLoadingScreen && (
@@ -171,11 +161,43 @@ export function AppProviders({
     return <MaintenancePage message={initialGlobalSettings?.maintenanceMessage ?? null} />;
   }
 
-  // Moved localStorage access into a useEffect inside SidebarProvider, which is a client component
   return (
     <SidebarProvider>
         {currentUser && !isSuspendedDialogOpen ? children : null}
         {isSuspendedDialogOpen && <AccountSuspendedDialog isOpen={isSuspendedDialogOpen} onConfirmLogout={logout} />}
     </SidebarProvider>
+  );
+}
+
+// AppProviders is now simpler and primarily sets up the context.
+export function AppProviders({
+  children,
+  initialUser, // This prop is no longer used here but kept for structural consistency
+  initialGlobalSettings,
+}: {
+  children: React.ReactNode;
+  initialUser: User | null;
+  initialGlobalSettings: GlobalSettings;
+}) {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    // Render a basic loading state on the server to prevent errors
+    return (
+       <div className="fixed inset-0 z-50 flex h-screen w-full flex-col items-center justify-center bg-background text-foreground">
+          <Logo className="h-20 w-20 text-primary" />
+          <p className="mt-6 text-lg font-semibold text-primary tracking-wider">Loading...</p>
+       </div>
+    );
+  }
+
+  return (
+    <AppShell initialGlobalSettings={initialGlobalSettings}>
+      {children}
+    </AppShell>
   );
 }
