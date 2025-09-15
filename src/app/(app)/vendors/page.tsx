@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -418,15 +419,15 @@ export default function VendorsPage() {
     </Card>
   );
 
-  const mehnurContent = (
+  const vendorBillsContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
         <CardHeader className="p-6">
-            <CardTitle className="text-xl font-bold text-gray-800">Mehnur's Tab</CardTitle>
-            <CardDescription>This is a placeholder for Mehnur's content.</CardDescription>
+            <CardTitle className="text-xl font-bold text-gray-800">Vendor Bill's</CardTitle>
+            <CardDescription>This is a placeholder for Vendor Bill's content.</CardDescription>
         </CardHeader>
         <CardContent>
             <div className="text-center text-gray-500 py-16">
-                Content for Mehnur goes here.
+                Content for Vendor Bill's goes here.
             </div>
         </CardContent>
     </Card>
@@ -440,17 +441,17 @@ export default function VendorsPage() {
     <>
       <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="inline-flex h-10 items-center justify-center text-muted-foreground bg-white p-1 rounded-full shadow-sm border border-gray-200">
-                <TabsTrigger value="vendor_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor List</TabsTrigger>
-                <TabsTrigger value="products" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Products</TabsTrigger>
-                <TabsTrigger value="categories" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Categories</TabsTrigger>
-                <TabsTrigger value="mehnur" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Mehnur</TabsTrigger>
-            </TabsList>
+          <TabsList className="inline-flex h-10 items-center justify-center text-muted-foreground bg-white p-1 rounded-full shadow-sm border border-gray-200">
+            <TabsTrigger value="vendor_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor List</TabsTrigger>
+            <TabsTrigger value="products" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Products</TabsTrigger>
+            <TabsTrigger value="categories" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Categories</TabsTrigger>
+            <TabsTrigger value="vendor_bills" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor Bill's</TabsTrigger>
+          </TabsList>
             <div className="mt-6">
                 <TabsContent value="vendor_list">{vendorListContent}</TabsContent>
                 <TabsContent value="products">{productsContent}</TabsContent>
                 <TabsContent value="categories">{categoriesContent}</TabsContent>
-                <TabsContent value="mehnur">{mehnurContent}</TabsContent>
+                <TabsContent value="vendor_bills">{vendorBillsContent}</TabsContent>
             </div>
         </Tabs>
       </div>
