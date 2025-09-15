@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -264,6 +265,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
       updatedAt: new Date().toISOString(),
       createdByUserId: isEditMode && bill ? bill.createdByUserId : currentUser.id,
       createdByUserName: isEditMode && bill ? bill.createdByUserName : currentUser.name,
+      billId: isEditMode && bill ? bill.billId : null,
     };
 
     let result = null;
@@ -461,4 +463,3 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
 
 export default AddEditBillDialog;
 
-    

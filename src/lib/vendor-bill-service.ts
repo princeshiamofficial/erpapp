@@ -3,6 +3,7 @@
 import type { VendorBill, BillPaymentRecord } from '@/types';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 import { v4 as uuidv4 } from 'uuid';
+import { format } from 'date-fns';
 
 const COLLECTION_NAME = 'vendorBills';
 
@@ -43,9 +44,33 @@ export const getBillById = async (id: string): Promise<VendorBill | null> => {
 export const addVendorBill = async (billData: Omit<VendorBill, 'id'>): Promise<VendorBill | null> => {
   try {
     await ensureCollectionExistsV3(COLLECTION_NAME);
+
+    const currentDate = new Date();
+    const datePrefix = `INV-${format(currentDate, 'yyyyMMdd')}-`;
+    
+    // Fetch all bills to determine the next sequence number for the day
+    const allBillsResponse = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999`);
+    let newSequence = 1;
+    if (allBillsResponse && Array.isArray(allBillsResponse.documents)) {
+        const sameDayBills = allBillsResponse.documents.filter((doc: { data: any }) => doc.data.billId?.startsWith(datePrefix));
+        if (sameDayBills.length > 0) {
+            const lastSequence = Math.max(...sameDayBills.map((doc: { data: any }) => {
+                const numPart = parseInt(doc.data.billId.split('-').pop() || '0', 10);
+                return isNaN(numPart) ? 0 : numPart;
+            }));
+            newSequence = lastSequence + 1;
+        }
+    }
+    const billId = `${datePrefix}${String(newSequence).padStart(3, '0')}`;
+    
+    const billDataWithId = {
+      ...billData,
+      billId: billId, // Add the custom formatted ID
+    };
+
     const newDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
         method: 'POST',
-        body: JSON.stringify({ data: billData }),
+        body: JSON.stringify({ data: billDataWithId }),
     });
     return { id: newDoc.id, ...newDoc.data } as VendorBill;
   } catch (error) {
@@ -82,4 +107,3 @@ export const deleteVendorBill = async (id: string): Promise<boolean> => {
     }
 };
 
-    

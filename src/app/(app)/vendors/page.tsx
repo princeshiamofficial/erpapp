@@ -185,7 +185,7 @@ export default function VendorsPage() {
     const lowerSearchTerm = searchTerm.toLowerCase();
     return bills.filter(bill =>
         bill.vendorName.toLowerCase().includes(lowerSearchTerm) ||
-        (bill.id && bill.id.toLowerCase().includes(lowerSearchTerm))
+        (bill.billId && bill.billId.toLowerCase().includes(lowerSearchTerm))
     );
   }, [bills, searchTerm]);
 
@@ -587,6 +587,7 @@ export default function VendorsPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead>Bill ID</TableHead>
                                     <TableHead>Bill Date</TableHead>
                                     <TableHead>Vendor</TableHead>
                                     <TableHead>Total</TableHead>
@@ -600,6 +601,7 @@ export default function VendorsPage() {
                                    const vendor = allUsers.find(u => u.id === bill.vendorId);
                                    return (
                                     <TableRow key={bill.id}>
+                                        <TableCell className="font-mono">{bill.billId}</TableCell>
                                         <TableCell>{formatDate(bill.billDate)}</TableCell>
                                         <TableCell>
                                             <div className="flex items-center gap-2">
@@ -772,3 +774,4 @@ export default function VendorsPage() {
     
 
     
+
