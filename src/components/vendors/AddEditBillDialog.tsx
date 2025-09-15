@@ -118,6 +118,18 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
     }
   }, [isOpen, bill, isEditMode, fetchOptions]);
   
+  const filteredProductsByVendor = useMemo(() => {
+    if (!selectedVendorId) {
+      return products;
+    }
+    const selectedVendor = vendors.find(v => v.id === selectedVendorId);
+    if (!selectedVendor || !selectedVendor.category) {
+      return [];
+    }
+    return products.filter(p => p.category === selectedVendor.category);
+  }, [selectedVendorId, vendors, products]);
+
+
   useEffect(() => {
     const total = billItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
     setBillItemsTotal(total);
@@ -290,15 +302,15 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
                         <Label htmlFor={`product-${item.id}`}>Product</Label>
                         <Popover open={popoverOpenStates[item.id] || false} onOpenChange={(open) => togglePopover(item.id, open)}>
                             <PopoverTrigger asChild>
-                                <Button variant="outline" role="combobox" className="w-full justify-between bg-background">
+                                <Button variant="outline" role="combobox" className="w-full justify-between bg-background" disabled={!selectedVendorId}>
                                     <span className="truncate">{item.productName || "Select product..."}</span>
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                                <Command><CommandInput placeholder="Search product..." /><CommandList><CommandEmpty>No product found.</CommandEmpty>
+                                <Command><CommandInput placeholder="Search product..." /><CommandList><CommandEmpty>No product found for this vendor's category.</CommandEmpty>
                                 <CommandGroup>
-                                    {products.map(p => (
+                                    {filteredProductsByVendor.map(p => (
                                         <CommandItem key={p.id} value={p.name} onSelect={(val) => { handleItemChange(item.id, 'productName', val); togglePopover(item.id, false);}}>
                                             <Check className={cn("mr-2 h-4 w-4", item.productName === p.name ? "opacity-100" : "opacity-0")} />
                                             {p.name}
