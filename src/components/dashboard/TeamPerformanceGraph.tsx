@@ -77,6 +77,16 @@ export function TeamPerformanceGraph({ monthlyTargetData: initialMonthlyTargetDa
 
   const [monthlyTargetData, setMonthlyTargetData] = useState(initialMonthlyTargetData);
   const [totalPerformanceTarget, setTotalPerformanceTarget] = useState(initialTotalPerformanceTarget);
+  
+  const performanceTitle = useMemo(() => {
+    if (!currentUser) return "Team Performance";
+    const userRole = currentUser.role;
+    if (userRole === 'CRM' || userRole === 'DESIGNER_REPRESENTATIVE') {
+      return "My Performance";
+    }
+    return "Team Performance";
+  }, [currentUser]);
+
 
   useEffect(() => {
     setMonthlyTargetData(initialMonthlyTargetData);
@@ -195,7 +205,7 @@ export function TeamPerformanceGraph({ monthlyTargetData: initialMonthlyTargetDa
       <CardHeader>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-                <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>Team Performance</CardTitle>
+                <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>{performanceTitle}</CardTitle>
                 <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
             </div>
              <div className="flex items-baseline gap-2 text-right">
@@ -326,3 +336,5 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
+    
