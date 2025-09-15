@@ -59,7 +59,8 @@ export function AddEditCategoryDialog({ isOpen, onOpenChange, onCategorySaved, c
     if (isEditMode && category) {
         result = await updateVendorCategory(category.id, { name: name.trim() });
     } else {
-        result = await addVendorCategory({ name: name.trim() });
+        const newCategory = await addVendorCategory({ name: name.trim() });
+        result = !!newCategory;
     }
     
     setIsSubmitting(false);

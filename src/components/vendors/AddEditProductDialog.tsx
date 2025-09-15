@@ -80,7 +80,8 @@ export function AddEditProductDialog({ isOpen, onOpenChange, onProductSaved, pro
     if (isEditMode && product) {
         result = await updateVendorProduct(product.id, productData);
     } else {
-        result = await addVendorProduct(productData);
+        const newProduct = await addVendorProduct(productData);
+        result = !!newProduct;
     }
     
     setIsSubmitting(false);
