@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Store, MapPin, Phone, FileText, StickyNote, Percent, ReceiptText, CheckCircle, Truck, User } from "lucide-react";
@@ -9,6 +9,7 @@ import type { VendorBill, BillPaymentRecord } from "@/types";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from '@/components/ui/skeleton';
 import { parseISO, format } from 'date-fns';
+import JsBarcode from 'jsbarcode';
 
 const formatCurrency = (value: number | null | undefined): string => {
   if (value === null || value === undefined) return 'N/A';
@@ -33,6 +34,23 @@ interface BillDetailsClientProps {
 export function BillDetailsClient({ bill: initialBill }: BillDetailsClientProps) {
   const [bill, setBill] = useState(initialBill);
   const [isClient, setIsClient] = useState(false);
+  const barcodeRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    if (barcodeRef.current && bill.id) {
+      try {
+        JsBarcode(barcodeRef.current, bill.id, {
+          format: "CODE128",
+          displayValue: false,
+          width: 2,
+          height: 50,
+          margin: 10,
+        });
+      } catch (e) {
+        console.error("JsBarcode error:", e);
+      }
+    }
+  }, [bill.id]);
 
   useEffect(() => {
     setIsClient(true);
@@ -54,6 +72,7 @@ export function BillDetailsClient({ bill: initialBill }: BillDetailsClientProps)
           <p className="text-lg font-semibold">Bill ID: <span className="text-foreground">{bill.id}</span></p>
           <div className="text-sm text-muted-foreground">Bill Date: {isClient ? formatDate(bill.billDate) : <div className="h-4 w-40"><Skeleton className="h-full w-full" /></div>}</div>
           {bill.dueDate && <div className="text-sm text-destructive font-medium">Due Date: {isClient ? formatDate(bill.dueDate) : <div className="h-4 w-40"><Skeleton className="h-full w-full" /></div>}</div>}
+           <div className="mt-2"><svg ref={barcodeRef} className="object-contain" data-ai-hint="barcode scan"></svg></div>
         </div>
       </div>
 
@@ -144,7 +163,7 @@ export function BillDetailsClient({ bill: initialBill }: BillDetailsClientProps)
             </div>
           )}
 
-          {showPaidBadge ? (<div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end"><div className="absolute -left-8 -top-4 sm:-left-12 sm:-top-6 transform -rotate-[15deg] border-4 border-green-500 text-green-500 font-bold uppercase text-3xl sm:text-4xl px-3 py-1 rounded-md shadow-lg bg-background/80 dark:bg-card/80 backdrop-blur-sm flex items-center gap-2"><CheckCircle className="h-8 w-8"/>PAID</div></div>)
+          {showPaidBadge ? (<div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end"><div className="absolute -left-8 -top-4 sm:-left-12 sm:-top-6 transform -rotate-[15deg] border-4 border-green-500 text-green-500 font-bold uppercase text-3xl sm:text-4xl px-3 py-1 rounded-md shadow-lg bg-background/80 dark:bg-card/80 backdrop-blur-sm">PAID</div></div>)
           : (bill.dueAmount > 0.01) && (<><Separator className="my-2 bg-border/50" /><div className="flex justify-between"><span className="text-lg font-bold text-primary">Amount Due:</span><span className="text-lg font-bold text-primary">{formatCurrency(bill.dueAmount)}</span></div></>)}
         </div>
       </div>
