@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -363,268 +363,6 @@ export default function VendorsPage() {
         </PaginationItem>
     ));
   };
-
-
-  const vendorListContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <CardTitle className="text-xl font-bold text-gray-800">Vendors List</CardTitle>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-                <div className="relative flex-grow sm:flex-grow-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input placeholder="Search vendors..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
-                </div>
-                 <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => setIsAddUserDialogOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Vendor</Button>
-            </div>
-        </div>
-        </CardHeader>
-        <CardContent className="p-0">
-        <div className="overflow-x-auto">
-            <Table>
-            <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-6">Vendor Name</TableHead>
-                  <TableHead>Business Name</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Address</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="pr-6 text-right">Actions</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {isLoading ? (
-                [...Array(5)].map((_, i) => (
-                    <TableRow key={`skel-vendor-${i}`}><TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
-                ))
-                ) : filteredVendors.length > 0 ? (
-                filteredVendors.map(vendor => (
-                    <TableRow key={vendor.id} className="hover:bg-muted/50">
-                    <TableCell className="pl-6 font-medium">
-                        <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9 border">
-                            <AvatarImage src={vendor.avatarUrl || undefined} alt={vendor.name}/>
-                            <AvatarFallback>{getInitials(vendor.name)}</AvatarFallback>
-                        </Avatar>
-                        <span>{vendor.name}</span>
-                        </div>
-                    </TableCell>
-                    <TableCell>{vendor.companyName || 'N/A'}</TableCell>
-                    <TableCell>{vendor.phone || 'N/A'}</TableCell>
-                    <TableCell>{vendor.address || 'N/A'}</TableCell>
-                    <TableCell>{vendor.category || 'N/A'}</TableCell>
-                    <TableCell className="pr-6 text-right">
-                        <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={()={() => setUserToEdit(vendor)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit Info</DropdownMenuItem>
-                            <DropdownMenuItem onSelect={()={() => setUserToDelete(vendor)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete Vendor</DropdownMenuItem>
-                        </DropdownMenuContent>
-                        </DropdownMenu>
-                    </TableCell>
-                    </TableRow>
-                ))
-                ) : (
-                <TableRow><TableCell colSpan={6} className="h-48 text-center"><Store className="mx-auto h-12 w-12 opacity-30 mb-3" />No vendors found.</TableCell></TableRow>
-                )}
-            </TableBody>
-            </Table>
-        </div>
-        </CardContent>
-    </Card>
-  );
-
-  const productsContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-                <CardTitle className="text-xl font-bold text-gray-800">Products</CardTitle>
-                <CardDescription>Manage vendor products here.</CardDescription>
-            </div>
-             <div className="flex items-center gap-2 w-full sm:w-auto">
-                <div className="relative flex-grow sm:flex-grow-0">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input placeholder="Search products..." value={productSearchTerm} onChange={e => setProductSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
-                </div>
-                <Button 
-                    className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                    onClick={handleOpenAddProductDialog}
-                >
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Product
-                </Button>
-            </div>
-        </CardHeader>
-        <CardContent>
-           {isLoading ? <Skeleton className="h-48 w-full" /> : 
-           filteredProducts.length > 0 ? (
-               <Table>
-                   <TableHeader>
-                       <TableRow>
-                           <TableHead>Product Name</TableHead>
-                           <TableHead>Category</TableHead>
-                           <TableHead>Unit Price</TableHead>
-                           <TableHead className="text-right">Actions</TableHead>
-                       </TableRow>
-                   </TableHeader>
-                   <TableBody>
-                       {filteredProducts.map(product => (
-                           <TableRow key={product.id}>
-                               <TableCell className="font-medium">{product.name}</TableCell>
-                               <TableCell>{product.category}</TableCell>
-                               <TableCell>{formatCurrency(product.price)}</TableCell>
-                               <TableCell className="text-right">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onSelect={() => handleOpenEditProductDialog(product)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                                        <DropdownMenuItem onSelect={() => setProductToDelete(product)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                   </DropdownMenu>
-                               </TableCell>
-                           </TableRow>
-                       ))}
-                   </TableBody>
-               </Table>
-           ) : (
-             <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
-                <Package className="h-10 w-10 mb-2" />
-                <p className="font-semibold">No Products Yet</p>
-                <p className="text-sm">Click "Add New Product" to get started.</p>
-            </div>
-           )}
-        </CardContent>
-    </Card>
-  );
-  
-  const categoriesContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-      <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <CardTitle className="text-xl font-bold text-gray-800">Categories</CardTitle>
-          <CardDescription>Manage vendor product categories here.</CardDescription>
-        </div>
-        <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleOpenAddCategoryDialog}>
-          <PlusCircle className="mr-2 h-4 w-4" /> Add New Category
-        </Button>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <Skeleton className="h-48 w-full" />
-        ) : categories.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Category Name</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {categories.map((cat) => (
-                <TableRow key={cat.id}>
-                  <TableCell className="font-medium">{cat.name}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onSelect={() => handleOpenEditCategoryDialog(cat)} className="cursor-pointer">
-                          <Pencil className="mr-2 h-4 w-4" />Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => setCategoryToDelete(cat)} className="cursor-pointer text-destructive focus:text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" />Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        ) : (
-          <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
-            <Layers className="h-10 w-10 mb-2" />
-            <p className="font-semibold">No Categories Yet</p>
-            <p className="text-sm">Click "Add New Category" to get started.</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-
-  const vendorBillsContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-                <CardTitle className="text-xl font-bold text-gray-800">Vendor Bills</CardTitle>
-                <CardDescription>Manage bills and payments for vendors.</CardDescription>
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              <div className="relative flex-grow sm:flex-grow-0">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input placeholder="Search bills..." className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
-              </div>
-              <Button 
-                className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                onClick={handleOpenAddBillDialog}
-              >
-                  <PlusCircle className="mr-2 h-4 w-4" /> Create New bill
-              </Button>
-            </div>
-        </CardHeader>
-        <CardContent>
-            {isLoading ? <Skeleton className="h-64 w-full" /> : filteredBills.length > 0 ? (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Bill Date</TableHead>
-                            <TableHead>Vendor</TableHead>
-                            <TableHead>Total</TableHead>
-                            <TableHead>Due</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {(paginatedData as VendorBill[]).map(bill => (
-                            <TableRow key={bill.id}>
-                                <TableCell>{formatDate(bill.billDate)}</TableCell>
-                                <TableCell>{bill.vendorName}</TableCell>
-                                <TableCell>{formatCurrency(bill.total)}</TableCell>
-                                <TableCell className="text-destructive font-medium">{formatCurrency(bill.dueAmount)}</TableCell>
-                                <TableCell><Badge className={getStatusBadgeClass(bill.status)}>{bill.status}</Badge></TableCell>
-                                <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onSelect={() => handleOpenEditBillDialog(bill)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                                            <DropdownMenuItem onSelect={() => setBillToDelete(bill)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            ) : (
-                <div className="text-center text-gray-500 py-16">
-                   <Receipt className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                   <p className="font-semibold">No Bills Found</p>
-                   <p className="text-sm">Create a new bill to see it here.</p>
-                </div>
-            )}
-        </CardContent>
-        {totalPages > 1 && (
-            <CardFooter className="py-4 border-t">
-                 <Pagination><PaginationContent>
-                    <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                    {renderPagination()}
-                    <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                </PaginationContent></Pagination>
-            </CardFooter>
-        )}
-    </Card>
-  );
   
   if (!currentUser || !['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role)) {
     return <div className="p-8 text-center">Access Denied.</div>;
@@ -641,10 +379,263 @@ export default function VendorsPage() {
             <TabsTrigger value="vendor_bills" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor Bill's</TabsTrigger>
           </TabsList>
             <div className="mt-6">
-                {activeTab === 'vendor_list' && vendorListContent}
-                {activeTab === 'products' && productsContent}
-                {activeTab === 'categories' && categoriesContent}
-                {activeTab === 'vendor_bills' && vendorBillsContent}
+                {activeTab === 'vendor_list' && (
+                  <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+                    <CardHeader className="p-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <CardTitle className="text-xl font-bold text-gray-800">Vendors List</CardTitle>
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <div className="relative flex-grow sm:flex-grow-0">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input placeholder="Search vendors..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+                            </div>
+                            <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => setIsAddUserDialogOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Vendor</Button>
+                        </div>
+                    </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                        <Table>
+                        <TableHeader>
+                            <TableRow>
+                              <TableHead className="pl-6">Vendor Name</TableHead>
+                              <TableHead>Business Name</TableHead>
+                              <TableHead>Phone</TableHead>
+                              <TableHead>Address</TableHead>
+                              <TableHead>Category</TableHead>
+                              <TableHead className="pr-6 text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                            [...Array(5)].map((_, i) => (
+                                <TableRow key={`skel-vendor-${i}`}><TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
+                            ))
+                            ) : paginatedData.length > 0 ? (
+                            (paginatedData as User[]).map(vendor => (
+                                <TableRow key={vendor.id} className="hover:bg-muted/50">
+                                <TableCell className="pl-6 font-medium">
+                                    <div className="flex items-center gap-3">
+                                    <Avatar className="h-9 w-9 border">
+                                        <AvatarImage src={vendor.avatarUrl || undefined} alt={vendor.name}/>
+                                        <AvatarFallback>{getInitials(vendor.name)}</AvatarFallback>
+                                    </Avatar>
+                                    <span>{vendor.name}</span>
+                                    </div>
+                                </TableCell>
+                                <TableCell>{vendor.companyName || 'N/A'}</TableCell>
+                                <TableCell>{vendor.phone || 'N/A'}</TableCell>
+                                <TableCell>{vendor.address || 'N/A'}</TableCell>
+                                <TableCell>{vendor.category || 'N/A'}</TableCell>
+                                <TableCell className="pr-6 text-right">
+                                    <DropdownMenu>
+                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onSelect={() => setUserToEdit(vendor)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit Info</DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => setUserToDelete(vendor)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete Vendor</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                                </TableRow>
+                            ))
+                            ) : (
+                            <TableRow><TableCell colSpan={6} className="h-48 text-center"><Store className="mx-auto h-12 w-12 opacity-30 mb-3" />No vendors found.</TableCell></TableRow>
+                            )}
+                        </TableBody>
+                        </Table>
+                    </div>
+                    </CardContent>
+                </Card>
+                )}
+                {activeTab === 'products' && (
+                  <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+                    <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <CardTitle className="text-xl font-bold text-gray-800">Products</CardTitle>
+                            <CardDescription>Manage vendor products here.</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <div className="relative flex-grow sm:flex-grow-0">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Input placeholder="Search products..." value={productSearchTerm} onChange={e => setProductSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+                            </div>
+                            <Button 
+                                className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                                onClick={handleOpenAddProductDialog}
+                            >
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add New Product
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                      {isLoading ? <Skeleton className="h-48 w-full" /> : 
+                      filteredProducts.length > 0 ? (
+                          <Table>
+                              <TableHeader>
+                                  <TableRow>
+                                      <TableHead>Product Name</TableHead>
+                                      <TableHead>Category</TableHead>
+                                      <TableHead>Unit Price</TableHead>
+                                      <TableHead className="text-right">Actions</TableHead>
+                                  </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                  {filteredProducts.map(product => (
+                                      <TableRow key={product.id}>
+                                          <TableCell className="font-medium">{product.name}</TableCell>
+                                          <TableCell>{product.category}</TableCell>
+                                          <TableCell>{formatCurrency(product.price)}</TableCell>
+                                          <TableCell className="text-right">
+                                            <DropdownMenu>
+                                              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end">
+                                                  <DropdownMenuItem onSelect={() => handleOpenEditProductDialog(product)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                                  <DropdownMenuItem onSelect={() => setProductToDelete(product)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                                              </DropdownMenuContent>
+                                            </DropdownMenu>
+                                          </TableCell>
+                                      </TableRow>
+                                  ))}
+                              </TableBody>
+                          </Table>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
+                            <Package className="h-10 w-10 mb-2" />
+                            <p className="font-semibold">No Products Yet</p>
+                            <p className="text-sm">Click "Add New Product" to get started.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                </Card>
+                )}
+                {activeTab === 'categories' && (
+                  <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+                    <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <CardTitle className="text-xl font-bold text-gray-800">Categories</CardTitle>
+                        <CardDescription>Manage vendor product categories here.</CardDescription>
+                      </div>
+                      <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleOpenAddCategoryDialog}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add New Category
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                      {isLoading ? (
+                        <Skeleton className="h-48 w-full" />
+                      ) : categories.length > 0 ? (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Category Name</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {categories.map((cat) => (
+                              <TableRow key={cat.id}>
+                                <TableCell className="font-medium">{cat.name}</TableCell>
+                                <TableCell className="text-right">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onSelect={() => handleOpenEditCategoryDialog(cat)} className="cursor-pointer">
+                                        <Pencil className="mr-2 h-4 w-4" />Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onSelect={() => setCategoryToDelete(cat)} className="cursor-pointer text-destructive focus:text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" />Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
+                          <Layers className="h-10 w-10 mb-2" />
+                          <p className="font-semibold">No Categories Yet</p>
+                          <p className="text-sm">Click "Add New Category" to get started.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+                {activeTab === 'vendor_bills' && (
+                  <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+                    <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <CardTitle className="text-xl font-bold text-gray-800">Vendor Bills</CardTitle>
+                            <CardDescription>Manage bills and payments for vendors.</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
+                          <div className="relative flex-grow sm:flex-grow-0">
+                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                              <Input placeholder="Search bills..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+                          </div>
+                          <Button 
+                            className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                            onClick={handleOpenAddBillDialog}
+                          >
+                              <PlusCircle className="mr-2 h-4 w-4" /> Create New bill
+                          </Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        {isLoading ? <Skeleton className="h-64 w-full" /> : paginatedData.length > 0 ? (
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Bill Date</TableHead>
+                                        <TableHead>Vendor</TableHead>
+                                        <TableHead>Total</TableHead>
+                                        <TableHead>Due</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {(paginatedData as VendorBill[]).map(bill => (
+                                        <TableRow key={bill.id}>
+                                            <TableCell>{formatDate(bill.billDate)}</TableCell>
+                                            <TableCell>{bill.vendorName}</TableCell>
+                                            <TableCell>{formatCurrency(bill.total)}</TableCell>
+                                            <TableCell className="text-destructive font-medium">{formatCurrency(bill.dueAmount)}</TableCell>
+                                            <TableCell><Badge className={getStatusBadgeClass(bill.status)}>{bill.status}</Badge></TableCell>
+                                            <TableCell className="text-right">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onSelect={() => handleOpenEditBillDialog(bill)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => setBillToDelete(bill)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        ) : (
+                            <div className="text-center text-gray-500 py-16">
+                              <Receipt className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                              <p className="font-semibold">No Bills Found</p>
+                              <p className="text-sm">Create a new bill to see it here.</p>
+                            </div>
+                        )}
+                    </CardContent>
+                    {totalPages > 1 && (
+                        <CardFooter className="py-4 border-t">
+                            <Pagination><PaginationContent>
+                                <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
+                                {renderPagination()}
+                                <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
+                            </PaginationContent></Pagination>
+                        </CardFooter>
+                    )}
+                  </Card>
+                )}
             </div>
         </Tabs>
       </div>
