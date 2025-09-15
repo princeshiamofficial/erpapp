@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -174,11 +173,27 @@ export default function VendorsPage() {
     </Card>
   );
 
-  const productsAndCategoriesContent = (
+  const productsContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
         <CardHeader className="p-6">
-            <CardTitle className="text-xl font-bold text-gray-800">Products & Categories</CardTitle>
-            <CardDescription>Manage vendor products and categories here.</CardDescription>
+            <CardTitle className="text-xl font-bold text-gray-800">Products</CardTitle>
+            <CardDescription>Manage vendor products here.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
+                <Package className="h-10 w-10 mb-2" />
+                <p className="font-semibold">Coming Soon</p>
+                <p className="text-sm">This section is under construction.</p>
+            </div>
+        </CardContent>
+    </Card>
+  );
+  
+  const categoriesContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+        <CardHeader className="p-6">
+            <CardTitle className="text-xl font-bold text-gray-800">Categories</CardTitle>
+            <CardDescription>Manage vendor product categories here.</CardDescription>
         </CardHeader>
         <CardContent>
             <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
@@ -200,14 +215,18 @@ export default function VendorsPage() {
          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
             <TabsTrigger value="vendor_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor List</TabsTrigger>
-            <TabsTrigger value="products_categories" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Products & Categories</TabsTrigger>
+            <TabsTrigger value="products" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Products</TabsTrigger>
+            <TabsTrigger value="categories" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Categories</TabsTrigger>
           </TabsList>
           <div className="mt-6">
             <TabsContent value="vendor_list">
               {vendorListContent}
             </TabsContent>
-            <TabsContent value="products_categories">
-              {productsAndCategoriesContent}
+            <TabsContent value="products">
+              {productsContent}
+            </TabsContent>
+             <TabsContent value="categories">
+              {categoriesContent}
             </TabsContent>
           </div>
         </Tabs>
@@ -241,4 +260,3 @@ export default function VendorsPage() {
       )}
     </>
   );
-}
