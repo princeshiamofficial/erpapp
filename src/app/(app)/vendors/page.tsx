@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -222,12 +221,12 @@ export default function VendorsPage() {
             <Table>
             <TableHeader>
                 <TableRow>
-                <TableHead className="pl-6">Name</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>Business Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="pr-6 text-right">Actions</TableHead>
+                  <TableHead className="pl-6">Vendor Name</TableHead>
+                  <TableHead>Business Name</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Address</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="pr-6 text-right">Actions</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -247,9 +246,9 @@ export default function VendorsPage() {
                         <span>{vendor.name}</span>
                         </div>
                     </TableCell>
+                    <TableCell>{vendor.companyName || 'N/A'}</TableCell>
                     <TableCell>{vendor.phone || 'N/A'}</TableCell>
                     <TableCell>{vendor.address || 'N/A'}</TableCell>
-                    <TableCell>{vendor.companyName || 'N/A'}</TableCell>
                     <TableCell>{vendor.category || 'N/A'}</TableCell>
                     <TableCell className="pr-6 text-right">
                         <DropdownMenu>
