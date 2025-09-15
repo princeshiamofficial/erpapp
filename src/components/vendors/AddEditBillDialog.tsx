@@ -61,7 +61,12 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [billItemsTotal, setBillItemsTotal] = useState<number>(0);
-  
+  const [discount, setDiscount] = useState('');
+  const [paidAmount, setPaidAmount] = useState('');
+  const [calculatedDiscount, setCalculatedDiscount] = useState(0);
+  const [netTotal, setNetTotal] = useState(0);
+  const [amountDue, setAmountDue] = useState(0);
+
   const [popoverOpenStates, setPopoverOpenStates] = useState<Record<string, boolean>>({});
 
   const { toast } = useToast();
@@ -82,7 +87,29 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
   useEffect(() => {
     const total = billItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
     setBillItemsTotal(total);
-  }, [billItems]);
+
+    let discountVal = 0;
+    const discountStr = discount.trim();
+    if (discountStr.endsWith('%')) {
+        const percentage = parseFloat(discountStr.slice(0, -1));
+        if (!isNaN(percentage) && percentage >= 0) {
+            discountVal = (percentage / 100) * total;
+        }
+    } else {
+        const fixedAmount = parseFloat(discountStr);
+        if (!isNaN(fixedAmount) && fixedAmount >= 0) {
+            discountVal = fixedAmount;
+        }
+    }
+    discountVal = Math.min(discountVal, total);
+    setCalculatedDiscount(discountVal);
+
+    const currentNetTotal = Math.max(0, total - discountVal);
+    setNetTotal(currentNetTotal);
+
+    const paid = parseFloat(paidAmount) || 0;
+    setAmountDue(Math.max(0, currentNetTotal - paid));
+  }, [billItems, discount, paidAmount]);
 
 
   const calculateLineItemTotal = (unitPrice: number | null, quantityStr: string): number | null => {
@@ -213,11 +240,45 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
             
             <Separator className="my-4" />
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                    <Label htmlFor="discount">Discount</Label>
+                    <div className="relative">
+                       <Input id="discount" value={discount} onChange={(e) => setDiscount(e.target.value)} placeholder="e.g., 100 or 5%" className="pl-7"/>
+                       <Percent className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    </div>
+                </div>
+                <div className="space-y-1">
+                    <Label htmlFor="paidAmount">Paid Amount</Label>
+                    <Input id="paidAmount" type="number" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} placeholder="e.g., 5000" min="0" />
+                </div>
+            </div>
+
             <div className="mt-4 p-4 border rounded-md bg-muted/30 space-y-2">
               <h4 className="text-md font-semibold text-foreground mb-2">Summary</h4>
+              <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Subtotal:</span>
+                  <span className="font-medium text-foreground">{formatCurrencyBdt(billItemsTotal)}</span>
+              </div>
+              {calculatedDiscount > 0 && (
+                <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Discount:</span>
+                    <span className="font-medium text-red-600">- {formatCurrencyBdt(calculatedDiscount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm font-semibold">
+                  <span className="text-foreground">Net Total:</span>
+                  <span className="text-foreground">{formatCurrencyBdt(netTotal)}</span>
+              </div>
+              {(parseFloat(paidAmount) || 0) > 0 && (
+                <div className="flex justify-between text-sm pt-1 border-t border-dashed">
+                    <span className="text-muted-foreground">Paid:</span>
+                    <span className="font-medium text-green-600">- {formatCurrencyBdt(parseFloat(paidAmount))}</span>
+                </div>
+              )}
               <div className="flex justify-between text-lg font-bold mt-1 pt-1 border-t border-border">
-                <span className="text-primary">Total Bill Amount:</span>
-                <span className="text-primary">{formatCurrencyBdt(billItemsTotal)}</span>
+                <span className="text-primary">Amount Due:</span>
+                <span className="text-primary">{formatCurrencyBdt(amountDue)}</span>
               </div>
             </div>
 
