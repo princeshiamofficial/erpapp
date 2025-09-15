@@ -6,21 +6,50 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { Search, MoreVertical, Store, Loader2, Edit, Trash2, PlusCircle, Package, Layers } from "lucide-react";
-import { useAuth } from "@/contexts/auth-context";
-import { useRouter } from "next/navigation";
-import type { User, VendorProduct, VendorCategory } from '@/types';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis
+} from "@/components/ui/pagination";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Store, PlusCircle, Package, Layers } from 'lucide-react';
+import type { Employee, User, VendorProduct, VendorCategory } from '@/types';
+import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse } from 'date-fns';
+import { deleteUserAction } from '@/app/(app)/users/actions';
+import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'next/navigation';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Progress } from '@/components/ui/progress';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle 
+} from "@/components/ui/alert-dialog";
 import { getVendorCategories, deleteVendorCategory } from '@/lib/vendor-category-service';
 import { getVendorProducts, deleteVendorProduct } from '@/lib/vendor-product-service'; // Import deleteVendorProduct
-import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { deleteUserAction } from '@/app/(app)/users/actions';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 
 const AddUserDialog = dynamic(() => import('@/components/users/add-user-dialog').then(mod => mod.AddUserDialog));
 const EditUserInfoDialog = dynamic(() => import('@/components/users/edit-user-info-dialog').then(mod => mod.EditUserInfoDialog));
@@ -254,7 +283,7 @@ export default function VendorsPage() {
                         <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => setUserToEdit(vendor)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit Info</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setUserToEdit(vendor)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit Info</DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => setUserToDelete(vendor)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete Vendor</DropdownMenuItem>
                         </DropdownMenuContent>
                         </DropdownMenu>
@@ -313,7 +342,7 @@ export default function VendorsPage() {
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onSelect={() => handleOpenEditProductDialog(product)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => handleOpenEditProductDialog(product)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
                                         <DropdownMenuItem onSelect={() => setProductToDelete(product)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
                                     </DropdownMenuContent>
                                    </DropdownMenu>
@@ -366,7 +395,7 @@ export default function VendorsPage() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onSelect={() => handleOpenEditCategoryDialog(cat)} className="cursor-pointer">
-                          <Edit className="mr-2 h-4 w-4" />Edit
+                          <Pencil className="mr-2 h-4 w-4" />Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => setCategoryToDelete(cat)} className="cursor-pointer text-destructive focus:text-destructive">
                           <Trash2 className="mr-2 h-4 w-4" />Delete
@@ -388,6 +417,20 @@ export default function VendorsPage() {
       </CardContent>
     </Card>
   );
+
+  const mehnurContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+        <CardHeader className="p-6">
+            <CardTitle className="text-xl font-bold text-gray-800">Mehnur's Tab</CardTitle>
+            <CardDescription>This is a placeholder for Mehnur's content.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div className="text-center text-gray-500 py-16">
+                Content for Mehnur goes here.
+            </div>
+        </CardContent>
+    </Card>
+  );
   
   if (!currentUser || !['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role)) {
     return <div className="p-8 text-center">Access Denied.</div>;
@@ -397,29 +440,18 @@ export default function VendorsPage() {
     <>
       <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-         <TabsList className="inline-flex h-10 items-center justify-center text-muted-foreground bg-white p-1 rounded-full shadow-sm border border-gray-200">
-            <TabsTrigger value="vendor_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor List</TabsTrigger>
-            <TabsTrigger value="products" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Products</TabsTrigger>
-            <TabsTrigger value="categories" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Categories</TabsTrigger>
-            <Button
-              variant="ghost"
-              onClick={() => {}}
-              className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white"
-            >
-              Mehnur
-            </Button>
-          </TabsList>
-          <div className="mt-6">
-            <TabsContent value="vendor_list">
-              {vendorListContent}
-            </TabsContent>
-            <TabsContent value="products">
-              {productsContent}
-            </TabsContent>
-             <TabsContent value="categories">
-              {categoriesContent}
-            </TabsContent>
-          </div>
+            <TabsList className="inline-flex h-10 items-center justify-center text-muted-foreground bg-white p-1 rounded-full shadow-sm border border-gray-200">
+                <TabsTrigger value="vendor_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor List</TabsTrigger>
+                <TabsTrigger value="products" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Products</TabsTrigger>
+                <TabsTrigger value="categories" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Categories</TabsTrigger>
+                <TabsTrigger value="mehnur" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Mehnur</TabsTrigger>
+            </TabsList>
+            <div className="mt-6">
+                <TabsContent value="vendor_list">{vendorListContent}</TabsContent>
+                <TabsContent value="products">{productsContent}</TabsContent>
+                <TabsContent value="categories">{categoriesContent}</TabsContent>
+                <TabsContent value="mehnur">{mehnurContent}</TabsContent>
+            </div>
         </Tabs>
       </div>
 
@@ -492,5 +524,3 @@ export default function VendorsPage() {
     </>
   );
 }
-
-    
