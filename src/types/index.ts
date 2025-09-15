@@ -484,6 +484,7 @@ export interface VendorBill {
   paidAmount: number;
   dueAmount: number;
   status: VendorBillStatus;
+  paymentMethod?: string | null;
   notes?: string | null;
   createdAt: string; // ISO string
   updatedAt: string; // ISO string

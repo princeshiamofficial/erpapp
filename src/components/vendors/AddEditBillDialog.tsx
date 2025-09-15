@@ -7,9 +7,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { User, VendorProduct, OrderItem, VendorBill, BillItem, VendorBillStatus } from "@/types";
+import type { User, VendorProduct, OrderItem, VendorBill, BillItem, VendorBillStatus, ServicePaymentMethodItem } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addVendorBill, updateVendorBill } from '@/lib/vendor-bill-service';
+import { getPaymentMethods } from '@/lib/service-options-service';
 import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, CalendarDays, Percent } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -64,17 +65,34 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
   const [billItemsTotal, setBillItemsTotal] = useState<number>(0);
   const [discount, setDiscount] = useState('');
   const [paidAmount, setPaidAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
   const [calculatedDiscount, setCalculatedDiscount] = useState(0);
   const [netTotal, setNetTotal] = useState(0);
   const [amountDue, setAmountDue] = useState(0);
 
   const [popoverOpenStates, setPopoverOpenStates] = useState<Record<string, boolean>>({});
+  const [paymentMethodOptions, setPaymentMethodOptions] = useState<ServicePaymentMethodItem[]>([]);
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
+
 
   const { toast } = useToast();
   const isEditMode = !!bill;
 
+  const fetchOptions = useCallback(async () => {
+    setIsLoadingOptions(true);
+    try {
+      const fetchedPaymentMethods = await getPaymentMethods();
+      setPaymentMethodOptions(fetchedPaymentMethods);
+    } catch (error) {
+      toast({ title: "Error", description: "Could not load payment methods.", variant: "destructive" });
+    } finally {
+      setIsLoadingOptions(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
     if (isOpen) {
+      fetchOptions();
       if (isEditMode && bill) {
         setSelectedVendorId(bill.vendorId);
         setBillId(bill.billId || '');
@@ -87,6 +105,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
         setNotes(bill.notes || '');
         setDiscount(bill.discount.toString() || '');
         setPaidAmount(bill.paidAmount.toString() || '');
+        setPaymentMethod(bill.paymentMethod || '');
       } else {
         setSelectedVendorId('');
         setBillId('');
@@ -96,10 +115,11 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
         setNotes('');
         setDiscount('');
         setPaidAmount('');
+        setPaymentMethod('');
       }
       setIsSubmitting(false);
     }
-  }, [isOpen, bill, isEditMode]);
+  }, [isOpen, bill, isEditMode, fetchOptions]);
   
   useEffect(() => {
     const total = billItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
@@ -169,6 +189,11 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const paidAmountNum = parseFloat(paidAmount) || 0;
+    if (paidAmountNum > 0 && !paymentMethod) {
+        toast({ title: "Validation Error", description: "Please select a payment method when a paid amount is entered.", variant: "destructive" });
+        return;
+    }
     if (!selectedVendorId || !billDate || billItems.some(item => !item.productName || !item.quantity)) {
         toast({ title: "Validation Error", description: "Please fill all required fields.", variant: "destructive" });
         return;
@@ -176,7 +201,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
 
     setIsSubmitting(true);
     
-    const status: VendorBillStatus = amountDue <= 0 ? 'Paid' : (parseFloat(paidAmount) > 0 ? 'Partially Paid' : 'Unpaid');
+    const status: VendorBillStatus = amountDue <= 0 ? 'Paid' : (paidAmountNum > 0 ? 'Partially Paid' : 'Unpaid');
     
     const billPayload = {
       vendorId: selectedVendorId,
@@ -189,9 +214,10 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
       subtotal: billItemsTotal,
       discount: calculatedDiscount,
       total: netTotal,
-      paidAmount: parseFloat(paidAmount) || 0,
+      paidAmount: paidAmountNum,
       dueAmount: amountDue,
       status,
+      paymentMethod: paidAmountNum > 0 ? paymentMethod : null,
       createdAt: isEditMode ? bill.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdByUserId: isEditMode ? bill.createdByUserId : currentUser.id,
@@ -199,7 +225,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
     };
 
     let result = null;
-    if (isEditMode) {
+    if (isEditMode && bill) {
       result = await updateVendorBill(bill.id, billPayload);
     } else {
       result = await addVendorBill(billPayload as Omit<VendorBill, 'id'>);
@@ -300,7 +326,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
             
             <Separator className="my-4" />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                 <div className="space-y-1">
                     <Label htmlFor="discount">Discount</Label>
                     <div className="relative">
@@ -312,6 +338,17 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
                     <Label htmlFor="paidAmount">Paid Amount</Label>
                     <Input id="paidAmount" type="number" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} placeholder="e.g., 5000" min="0" />
                 </div>
+                 {(parseFloat(paidAmount) || 0) > 0 && (
+                  <div className="space-y-1">
+                    <Label htmlFor="paymentMethod">Payment Method *</Label>
+                    <Select value={paymentMethod} onValueChange={setPaymentMethod} required>
+                      <SelectTrigger><SelectValue placeholder="Select method..." /></SelectTrigger>
+                      <SelectContent>
+                        {isLoadingOptions ? <div className="p-2 text-sm">Loading...</div> : paymentMethodOptions.map(opt => <SelectItem key={opt.id} value={opt.name}>{opt.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
             </div>
 
             <div className="mt-4 p-4 border rounded-md bg-muted/30 space-y-2">
