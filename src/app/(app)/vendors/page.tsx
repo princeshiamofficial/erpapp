@@ -279,7 +279,7 @@ export default function VendorsPage() {
                        <TableRow>
                            <TableHead>Product Name</TableHead>
                            <TableHead>Category</TableHead>
-                           <TableHead>Price</TableHead>
+                           <TableHead>Unit Price</TableHead>
                            <TableHead className="text-right">Actions</TableHead>
                        </TableRow>
                    </TableHeader>
@@ -311,56 +311,57 @@ export default function VendorsPage() {
   
   const categoriesContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-                <CardTitle className="text-xl font-bold text-gray-800">Categories</CardTitle>
-                <CardDescription>Manage vendor product categories here.</CardDescription>
-            </div>
-            <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleOpenAddCategoryDialog}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add New Category
-            </Button>
-        </CardHeader>
-        <CardContent>
-           {isLoading ? <Skeleton className="h-48 w-full" /> : 
-           categories.length > 0 ? (
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Category Name</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {categories.map(cat => (
-                            <TableRow key={cat.id}>
-                                <TableCell className="font-medium">{cat.name}</TableCell>
-                                <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onSelect={() => handleOpenEditCategoryDialog(cat)} className="cursor-pointer">
-                                                <Edit className="mr-2 h-4 w-4" />Edit
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onSelect={() => setCategoryToDelete(cat)} className="cursor-pointer text-destructive focus:text-destructive">
-                                                <Trash2 className="mr-2 h-4 w-4" />Delete
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            ) : (
-                <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
-                    <Layers className="h-10 w-10 mb-2" />
-                    <p className="font-semibold">No Categories Yet</p>
-                    <p className="text-sm">Click "Add New Category" to get started.</p>
-                </div>
-            )}
-        </CardContent>
+      <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <CardTitle className="text-xl font-bold text-gray-800">Categories</CardTitle>
+          <CardDescription>Manage vendor product categories here.</CardDescription>
+        </div>
+        <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleOpenAddCategoryDialog}>
+          <PlusCircle className="mr-2 h-4 w-4" /> Add New Category
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <Skeleton className="h-48 w-full" />
+        ) : categories.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Category Name</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {categories.map((cat) => (
+                <TableRow key={cat.id}>
+                  <TableCell className="font-medium">{cat.name}</TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => handleOpenEditCategoryDialog(cat)} className="cursor-pointer">
+                          <Edit className="mr-2 h-4 w-4" />Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setCategoryToDelete(cat)} className="cursor-pointer text-destructive focus:text-destructive">
+                          <Trash2 className="mr-2 h-4 w-4" />Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
+            <Layers className="h-10 w-10 mb-2" />
+            <p className="font-semibold">No Categories Yet</p>
+            <p className="text-sm">Click "Add New Category" to get started.</p>
+          </div>
+        )}
+      </CardContent>
     </Card>
   );
   
