@@ -12,7 +12,7 @@ import { useRouter } from "next/navigation";
 import type { User, VendorProduct, VendorCategory } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getUsers } from '@/lib/user-service';
-import { getVendorCategories } from '@/lib/vendor-category-service';
+import { getVendorCategories, deleteVendorCategory } from '@/lib/vendor-category-service';
 import { getVendorProducts } from '@/lib/vendor-product-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,7 @@ const EditUserInfoDialog = dynamic(() => import('@/components/users/edit-user-in
 const DeleteUserDialog = dynamic(() => import('@/components/users/delete-user-dialog').then(mod => mod.DeleteUserDialog));
 const AddEditProductDialog = dynamic(() => import('@/components/vendors/AddEditProductDialog').then(mod => mod.AddEditProductDialog));
 const AddEditCategoryDialog = dynamic(() => import('@/components/vendors/AddEditCategoryDialog').then(mod => mod.AddEditCategoryDialog));
+const DeleteCategoryDialog = dynamic(() => import('@/components/vendors/DeleteCategoryDialog').then(mod => mod.DeleteCategoryDialog));
 
 
 const getInitials = (name: string) => {
@@ -58,6 +59,8 @@ export default function VendorsPage() {
 
   const [isAddEditCategoryDialogOpen, setIsAddEditCategoryDialogOpen] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<any | null>(null);
+  const [categoryToDelete, setCategoryToDelete] = useState<VendorCategory | null>(null);
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
   
   const [products, setProducts] = useState<VendorProduct[]>([]);
   const [categories, setCategories] = useState<VendorCategory[]>([]);
@@ -163,6 +166,20 @@ export default function VendorsPage() {
   const handleOpenEditCategoryDialog = (category: any) => {
     setCategoryToEdit(category);
     setIsAddEditCategoryDialogOpen(true);
+  };
+  
+  const handleConfirmDeleteCategory = async () => {
+    if (!categoryToDelete) return;
+    setIsDeletingCategory(true);
+    const result = await deleteVendorCategory(categoryToDelete.id);
+    setIsDeletingCategory(false);
+    setCategoryToDelete(null);
+    if (result) {
+      toast({ title: "Category Deleted" });
+      fetchData();
+    } else {
+      toast({ title: "Error", description: "Failed to delete category.", variant: "destructive" });
+    }
   };
 
 
@@ -306,20 +323,36 @@ export default function VendorsPage() {
         <CardContent>
            {isLoading ? <Skeleton className="h-48 w-full" /> : 
            categories.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                    {categories.map(cat => (
-                        <div key={cat.id} className="group relative">
-                            <Badge variant="secondary" className="text-base py-1.5 px-3">
-                                {cat.name}
-                            </Badge>
-                            <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleOpenEditCategoryDialog(cat)}>
-                                    <Edit className="h-3 w-3" />
-                                </Button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Category Name</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {categories.map(cat => (
+                            <TableRow key={cat.id}>
+                                <TableCell className="font-medium">{cat.name}</TableCell>
+                                <TableCell className="text-right">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onSelect={() => handleOpenEditCategoryDialog(cat)} className="cursor-pointer">
+                                                <Edit className="mr-2 h-4 w-4" />Edit
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onSelect={() => setCategoryToDelete(cat)} className="cursor-pointer text-destructive focus:text-destructive">
+                                                <Trash2 className="mr-2 h-4 w-4" />Delete
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
             ) : (
                 <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
                     <Layers className="h-10 w-10 mb-2" />
@@ -382,6 +415,16 @@ export default function VendorsPage() {
           onConfirmDelete={handleConfirmDelete}
           user={userToDelete}
           isDeleting={isDeleting}
+        />
+      )}
+      
+      {categoryToDelete && (
+        <DeleteCategoryDialog
+          isOpen={!!categoryToDelete}
+          onOpenChange={() => setCategoryToDelete(null)}
+          onConfirmDelete={handleConfirmDeleteCategory}
+          category={categoryToDelete}
+          isDeleting={isDeletingCategory}
         />
       )}
 
