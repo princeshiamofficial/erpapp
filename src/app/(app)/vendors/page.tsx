@@ -39,6 +39,7 @@ export default function VendorsPage() {
   const [activeTab, setActiveTab] = useState("vendor_list");
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [productSearchTerm, setProductSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   const [userToEdit, setUserToEdit] = useState<User | null>(null);
@@ -181,9 +182,15 @@ export default function VendorsPage() {
                 <CardTitle className="text-xl font-bold text-gray-800">Products</CardTitle>
                 <CardDescription>Manage vendor products here.</CardDescription>
             </div>
-            <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                <PlusCircle className="mr-2 h-4 w-4" /> Add New Product
-            </Button>
+             <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-grow sm:flex-grow-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input placeholder="Search products..." value={productSearchTerm} onChange={e => setProductSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+                </div>
+                <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Product
+                </Button>
+            </div>
         </CardHeader>
         <CardContent>
             <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
@@ -198,8 +205,10 @@ export default function VendorsPage() {
   const categoriesContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
         <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <CardTitle className="text-xl font-bold text-gray-800">Categories</CardTitle>
-            <CardDescription>Manage vendor product categories here.</CardDescription>
+            <div>
+                <CardTitle className="text-xl font-bold text-gray-800">Categories</CardTitle>
+                <CardDescription>Manage vendor product categories here.</CardDescription>
+            </div>
             <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground">
                 <PlusCircle className="mr-2 h-4 w-4" /> Add New Category
             </Button>
