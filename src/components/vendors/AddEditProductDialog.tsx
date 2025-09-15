@@ -108,7 +108,7 @@ export function AddEditProductDialog({ isOpen, onOpenChange, onProductSaved, pro
             <Input id="product-category" value={category} onChange={e => setCategory(e.target.value)} required />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="product-price">Price (BDT) *</Label>
+            <Label htmlFor="product-price">Unit Price (BDT) *</Label>
             <Input id="product-price" type="number" value={price} onChange={e => setPrice(e.target.value)} required min="0" />
           </div>
           <div className="space-y-1">
