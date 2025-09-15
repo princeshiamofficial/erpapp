@@ -14,33 +14,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { User } from '@/types';
+import type { User, VendorProduct, VendorCategory } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-// Define a product type for clarity, assuming a structure
-// In a real app, this would be in your `types.ts` file
-interface Product {
-    id: string;
-    name: string;
-    category: string;
-    price: number;
-    description?: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-}
+import { addVendorProduct, updateVendorProduct } from '@/lib/vendor-product-service';
 
 interface AddEditProductDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onProductSaved: () => void;
-  product?: Product | null;
+  product?: VendorProduct | null;
   currentUser: User;
-  categories?: Category[];
+  categories: VendorCategory[];
 }
 
 export function AddEditProductDialog({ isOpen, onOpenChange, onProductSaved, product, currentUser, categories = [] }: AddEditProductDialogProps) {
@@ -61,7 +47,6 @@ export function AddEditProductDialog({ isOpen, onOpenChange, onProductSaved, pro
         setPrice(product.price.toString());
         setDescription(product.description || '');
       } else {
-        // Reset form for add mode
         setName('');
         setCategory('');
         setPrice('');
@@ -84,16 +69,28 @@ export function AddEditProductDialog({ isOpen, onOpenChange, onProductSaved, pro
     }
 
     setIsSubmitting(true);
-    // Here you would call your server action to save the product
-    // For example: const result = isEditMode ? await updateProductAction(...) : await addProductAction(...);
+    const productData = {
+        name,
+        category,
+        price: numericPrice,
+        description,
+    };
     
-    // Simulating API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    let result;
+    if (isEditMode && product) {
+        result = await updateVendorProduct(product.id, productData);
+    } else {
+        result = await addVendorProduct(productData);
+    }
     
     setIsSubmitting(false);
     
-    // For now, we'll just call the success handler
-    onProductSaved();
+    if (result) {
+        toast({ title: `Product ${isEditMode ? 'Updated' : 'Added'}`, description: `Product "${name}" has been saved.`});
+        onProductSaved();
+    } else {
+        toast({ title: "Error", description: "Could not save product.", variant: "destructive"});
+    }
   };
 
   return (

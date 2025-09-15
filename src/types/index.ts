@@ -444,3 +444,16 @@ export interface Gift {
   createdAt: string; // ISO string
   updatedAt: string; // ISO string
 }
+
+export interface VendorProduct {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  description?: string;
+}
+
+export interface VendorCategory {
+  id: string;
+  name: string;
+}

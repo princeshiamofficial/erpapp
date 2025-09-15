@@ -15,17 +15,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-
-interface Category {
-    id: string;
-    name: string;
-}
+import type { VendorCategory } from '@/types';
+import { addVendorCategory, updateVendorCategory } from '@/lib/vendor-category-service';
 
 interface AddEditCategoryDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onCategorySaved: () => void;
-  category?: Category | null;
+  category?: VendorCategory | null;
 }
 
 export function AddEditCategoryDialog({ isOpen, onOpenChange, onCategorySaved, category }: AddEditCategoryDialogProps) {
@@ -58,15 +55,21 @@ export function AddEditCategoryDialog({ isOpen, onOpenChange, onCategorySaved, c
     }
 
     setIsSubmitting(true);
-    // Here you would call your server action to save the category
-    // For example: const result = isEditMode ? await updateCategoryAction(...) : await addCategoryAction(...);
-    
-    // Simulating API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    let result;
+    if (isEditMode && category) {
+        result = await updateVendorCategory(category.id, { name: name.trim() });
+    } else {
+        result = await addVendorCategory({ name: name.trim() });
+    }
     
     setIsSubmitting(false);
     
-    onCategorySaved();
+    if (result) {
+        toast({ title: `Category ${isEditMode ? 'Updated' : 'Added'}`, description: `Category "${name.trim()}" has been saved.`});
+        onCategorySaved();
+    } else {
+        toast({ title: "Error", description: `Could not save category.`, variant: "destructive"});
+    }
   };
 
   return (
