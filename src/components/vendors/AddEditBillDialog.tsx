@@ -252,7 +252,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
       billDate: billDate!.toISOString(),
       dueDate: dueDate ? dueDate.toISOString() : null,
       items: billItems.map(item => ({...item, quantity: parseInt(item.quantity), unitPrice: item.unitPrice!, lineItemTotalPrice: item.lineItemTotalPrice!})),
-      notes: notes || null,
+      notes: notes.trim() || null,
       subtotal: billItemsTotal,
       discount: calculatedDiscount,
       total: netTotal,
@@ -362,6 +362,13 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
               <Button type="button" variant="outline" onClick={handleAddItem} className="mt-2"><PlusCircle className="mr-2 h-4 w-4" /> Add Item</Button>
             </div>
             
+            <Separator className="my-4" />
+            
+            <div className="space-y-1">
+                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Textarea id="notes" value={notes} onChange={e => setNotes(e.target.value)} placeholder="Add any relevant notes for this bill..."/>
+            </div>
+
             <Separator className="my-4" />
 
             {existingPayments.length > 0 && (
