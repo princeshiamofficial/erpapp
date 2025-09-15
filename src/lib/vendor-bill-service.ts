@@ -1,6 +1,8 @@
 
-import type { VendorBill } from '@/types';
+
+import type { VendorBill, BillPaymentRecord } from '@/types';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { v4 as uuidv4 } from 'uuid';
 
 const COLLECTION_NAME = 'vendorBills';
 

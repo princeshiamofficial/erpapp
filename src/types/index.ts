@@ -470,22 +470,32 @@ export interface BillItem {
 
 export type VendorBillStatus = 'Paid' | 'Unpaid' | 'Partially Paid';
 
+export interface BillPaymentRecord {
+  id: string;
+  amount: number;
+  date: string; // ISO string
+  paymentMethod: string;
+  notes?: string | null;
+  recordedByUserId: string;
+  recordedByUserName: string;
+}
+
 export interface VendorBill {
   id: string;
   vendorId: string;
   vendorName: string;
-  billId?: string | null; // e.g., INV-12345 from the vendor
+  billId?: string | null;
   billDate: string; // ISO string
   dueDate?: string | null; // ISO string
   items: BillItem[];
+  notes?: string | null;
   subtotal: number;
   discount: number;
   total: number;
-  paidAmount: number;
+  paidAmount: number; // Denormalized total paid amount
   dueAmount: number;
   status: VendorBillStatus;
-  paymentMethod?: string | null;
-  notes?: string | null;
+  payments: BillPaymentRecord[];
   createdAt: string; // ISO string
   updatedAt: string; // ISO string
   createdByUserId: string;
