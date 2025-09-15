@@ -431,6 +431,7 @@ export default function VendorsPage() {
             onUserInfoUpdated={handleUserSaved}
             isOpen={!!userToEdit}
             onOpenChange={() => setUserToEdit(null)}
+            availableCategories={categories}
         />
       )}
 

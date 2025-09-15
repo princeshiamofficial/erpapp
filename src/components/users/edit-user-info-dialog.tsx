@@ -1,3 +1,5 @@
+
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -12,7 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { User } from "@/types";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { User, VendorCategory } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { updateUserInfoAction } from '@/app/(app)/users/actions';
 import { Edit3 } from 'lucide-react';
@@ -22,9 +25,10 @@ interface EditUserInfoDialogProps {
   onUserInfoUpdated: () => void;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  availableCategories?: VendorCategory[]; // Make optional
 }
 
-export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChange }: EditUserInfoDialogProps) {
+export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChange, availableCategories = [] }: EditUserInfoDialogProps) {
   const [name, setName] = useState(user.name);
   const [email, setEmail] = useState(user.email);
   const [companyName, setCompanyName] = useState(user.companyName || '');
@@ -155,13 +159,17 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="userCategory-edit">Category (Optional)</Label>
-                  <Input
-                    id="userCategory-edit"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    disabled={isLoading}
-                    placeholder="e.g., Printing, Materials"
-                  />
+                   <Select value={category} onValueChange={setCategory} disabled={isLoading}>
+                    <SelectTrigger id="userCategory-edit">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None</SelectItem>
+                      {availableCategories.map(cat => (
+                        <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </>
             )}
