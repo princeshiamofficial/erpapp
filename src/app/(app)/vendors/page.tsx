@@ -18,8 +18,8 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Store, PlusCircle, Package, Layers, Edit } from 'lucide-react';
-import type { Employee, User, VendorProduct, VendorCategory } from '@/types';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Store, PlusCircle, Package, Layers, Edit, Receipt } from 'lucide-react';
+import type { Employee, User, VendorProduct, VendorCategory, VendorBill, VendorBillStatus } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
@@ -48,7 +48,8 @@ import {
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
 import { getVendorCategories, deleteVendorCategory } from '@/lib/vendor-category-service';
-import { getVendorProducts, deleteVendorProduct } from '@/lib/vendor-product-service'; // Import deleteVendorProduct
+import { getVendorProducts, deleteVendorProduct } from '@/lib/vendor-product-service';
+import { getVendorBills, deleteVendorBill } from '@/lib/vendor-bill-service';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 
@@ -67,6 +68,22 @@ const getInitials = (name: string) => {
   const names = name.split(' ');
   if (names.length === 1) return names[0].charAt(0).toUpperCase();
   return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
+};
+
+const ITEMS_PER_PAGE = 25;
+
+const formatCurrency = (value?: number | null): string => {
+  if (value === undefined || value === null) return 'N/A';
+  return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
+};
+
+const formatDate = (dateString?: string) => {
+  if (!dateString) return "N/A";
+  try {
+    return format(parseISO(dateString), 'd MMM, yyyy');
+  } catch (e) {
+    return "Invalid Date";
+  }
 };
 
 
@@ -91,7 +108,10 @@ export default function VendorsPage() {
   const [productToDelete, setProductToDelete] = useState<VendorProduct | null>(null);
   const [isDeletingProduct, setIsDeletingProduct] = useState(false);
 
-  const [isAddEditBillDialogOpen, setIsAddEditBillDialogOpen] = useState(false); // New state for bill dialog
+  const [isAddEditBillDialogOpen, setIsAddEditBillDialogOpen] = useState(false);
+  const [billToEdit, setBillToEdit] = useState<VendorBill | null>(null);
+  const [billToDelete, setBillToDelete] = useState<VendorBill | null>(null);
+  const [isDeletingBill, setIsDeletingBill] = useState(false);
 
 
   const [isAddEditCategoryDialogOpen, setIsAddEditCategoryDialogOpen] = useState(false);
@@ -101,19 +121,23 @@ export default function VendorsPage() {
   
   const [products, setProducts] = useState<VendorProduct[]>([]);
   const [categories, setCategories] = useState<VendorCategory[]>([]);
+  const [bills, setBills] = useState<VendorBill[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedUsers, fetchedCategories, fetchedProducts] = await Promise.all([
+      const [fetchedUsers, fetchedCategories, fetchedProducts, fetchedBills] = await Promise.all([
         getUsers(),
         getVendorCategories(),
         getVendorProducts(),
+        getVendorBills(),
       ]);
       setAllUsers(fetchedUsers);
       setCategories(fetchedCategories);
       setProducts(fetchedProducts);
+      setBills(fetchedBills);
     } catch (error) {
       console.error("Failed to fetch vendor page data:", error);
       toast({ title: "Error", description: "Could not load required data.", variant: "destructive" });
@@ -149,6 +173,20 @@ export default function VendorsPage() {
       product.category.toLowerCase().includes(lowerSearchTerm)
     );
   }, [products, productSearchTerm]);
+
+  const filteredBills = useMemo(() => {
+    if (!searchTerm) return bills;
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return bills.filter(bill =>
+        bill.vendorName.toLowerCase().includes(lowerSearchTerm) ||
+        (bill.billId && bill.billId.toLowerCase().includes(lowerSearchTerm)) ||
+        bill.id.toLowerCase().includes(lowerSearchTerm)
+    );
+  }, [bills, searchTerm]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, activeTab]);
 
   const handleUserSaved = () => {
     setUserToEdit(null);
@@ -203,6 +241,36 @@ export default function VendorsPage() {
     }
   };
 
+  const handleBillSaved = () => {
+    setIsAddEditBillDialogOpen(false);
+    setBillToEdit(null);
+    fetchData();
+  };
+
+  const handleOpenAddBillDialog = () => {
+    setBillToEdit(null);
+    setIsAddEditBillDialogOpen(true);
+  };
+
+  const handleOpenEditBillDialog = (bill: VendorBill) => {
+    setBillToEdit(bill);
+    setIsAddEditBillDialogOpen(true);
+  };
+  
+  const handleConfirmDeleteBill = async () => {
+      if (!billToDelete) return;
+      setIsDeletingBill(true);
+      const result = await deleteVendorBill(billToDelete.id);
+      setIsDeletingBill(false);
+      setBillToDelete(null);
+      if (result) {
+        toast({ title: "Bill Deleted" });
+        fetchData();
+      } else {
+        toast({ title: "Error", description: "Failed to delete bill.", variant: "destructive" });
+      }
+  };
+
 
   const handleCategorySaved = () => {
     toast({ title: "Success", description: "Category has been saved." });
@@ -234,6 +302,67 @@ export default function VendorsPage() {
       toast({ title: "Error", description: "Failed to delete category.", variant: "destructive" });
     }
   };
+  
+  const getStatusBadgeClass = (status: VendorBillStatus) => {
+    switch (status) {
+        case 'Paid': return 'bg-green-100 text-green-800 border-green-200';
+        case 'Unpaid': return 'bg-red-100 text-red-800 border-red-200';
+        case 'Partially Paid': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+  
+  const totalPages = useMemo(() => {
+    if (activeTab === 'vendor_list') return Math.ceil(filteredVendors.length / ITEMS_PER_PAGE);
+    if (activeTab === 'products') return Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+    if (activeTab === 'vendor_bills') return Math.ceil(filteredBills.length / ITEMS_PER_PAGE);
+    // Add other tabs here...
+    return 1;
+  }, [activeTab, filteredVendors, filteredProducts, filteredBills]);
+
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    if (activeTab === 'vendor_list') return filteredVendors.slice(startIndex, endIndex);
+    if (activeTab === 'products') return filteredProducts.slice(startIndex, endIndex);
+    if (activeTab === 'vendor_bills') return filteredBills.slice(startIndex, endIndex);
+    // Add other tabs here...
+    return [];
+  }, [activeTab, currentPage, filteredVendors, filteredProducts, filteredBills]);
+
+  const renderPagination = () => {
+    const pageNumbers = [];
+    const maxPagesToShow = 5; 
+    
+    if (totalPages <= maxPagesToShow) {
+      for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+    } else {
+      let startPage = Math.max(1, currentPage - 2);
+      let endPage = Math.min(totalPages, currentPage + 2);
+
+      if (currentPage < 3) endPage = maxPagesToShow;
+      else if (currentPage > totalPages - 2) startPage = totalPages - maxPagesToShow + 1;
+      
+      if (startPage > 1) {
+        pageNumbers.push(1);
+        if (startPage > 2) pageNumbers.push('...');
+      }
+      for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) pageNumbers.push('...');
+        pageNumbers.push(totalPages);
+      }
+    }
+    return pageNumbers.map((page, index) => (
+        <PaginationItem key={index}>
+        {page === '...' ? <PaginationEllipsis />
+        : <PaginationLink href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(page as number);}} className={cn(currentPage === page && 'bg-primary text-primary-foreground hover:bg-primary/90')}>
+            {page}
+          </PaginationLink>
+        }
+        </PaginationItem>
+    ));
+  };
 
 
   const vendorListContent = (
@@ -246,6 +375,7 @@ export default function VendorsPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input placeholder="Search vendors..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
                 </div>
+                 <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => setIsAddUserDialogOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Vendor</Button>
             </div>
         </div>
         </CardHeader>
@@ -287,8 +417,8 @@ export default function VendorsPage() {
                         <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => setUserToEdit(vendor)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit Info</DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => setUserToDelete(vendor)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete Vendor</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={()={() => setUserToEdit(vendor)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit Info</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={()={() => setUserToDelete(vendor)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete Vendor</DropdownMenuItem>
                         </DropdownMenuContent>
                         </DropdownMenu>
                     </TableCell>
@@ -341,7 +471,7 @@ export default function VendorsPage() {
                            <TableRow key={product.id}>
                                <TableCell className="font-medium">{product.name}</TableCell>
                                <TableCell>{product.category}</TableCell>
-                               <TableCell>{product.price}</TableCell>
+                               <TableCell>{formatCurrency(product.price)}</TableCell>
                                <TableCell className="text-right">
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
@@ -426,7 +556,7 @@ export default function VendorsPage() {
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
         <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-                <CardTitle className="text-xl font-bold text-gray-800">Vendor Bill's</CardTitle>
+                <CardTitle className="text-xl font-bold text-gray-800">Vendor Bills</CardTitle>
                 <CardDescription>Manage bills and payments for vendors.</CardDescription>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -436,17 +566,63 @@ export default function VendorsPage() {
               </div>
               <Button 
                 className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                onClick={() => setIsAddEditBillDialogOpen(true)}
+                onClick={handleOpenAddBillDialog}
               >
                   <PlusCircle className="mr-2 h-4 w-4" /> Create New bill
               </Button>
             </div>
         </CardHeader>
         <CardContent>
-            <div className="text-center text-gray-500 py-16">
-                Content for Vendor Bill's goes here.
-            </div>
+            {isLoading ? <Skeleton className="h-64 w-full" /> : filteredBills.length > 0 ? (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Bill Date</TableHead>
+                            <TableHead>Vendor</TableHead>
+                            <TableHead>Total</TableHead>
+                            <TableHead>Due</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {(paginatedData as VendorBill[]).map(bill => (
+                            <TableRow key={bill.id}>
+                                <TableCell>{formatDate(bill.billDate)}</TableCell>
+                                <TableCell>{bill.vendorName}</TableCell>
+                                <TableCell>{formatCurrency(bill.total)}</TableCell>
+                                <TableCell className="text-destructive font-medium">{formatCurrency(bill.dueAmount)}</TableCell>
+                                <TableCell><Badge className={getStatusBadgeClass(bill.status)}>{bill.status}</Badge></TableCell>
+                                <TableCell className="text-right">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onSelect={() => handleOpenEditBillDialog(bill)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                            <DropdownMenuItem onSelect={() => setBillToDelete(bill)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            ) : (
+                <div className="text-center text-gray-500 py-16">
+                   <Receipt className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                   <p className="font-semibold">No Bills Found</p>
+                   <p className="text-sm">Create a new bill to see it here.</p>
+                </div>
+            )}
         </CardContent>
+        {totalPages > 1 && (
+            <CardFooter className="py-4 border-t">
+                 <Pagination><PaginationContent>
+                    <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
+                    {renderPagination()}
+                    <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
+                </PaginationContent></Pagination>
+            </CardFooter>
+        )}
     </Card>
   );
   
@@ -536,18 +712,38 @@ export default function VendorsPage() {
         onCategorySaved={handleCategorySaved}
         category={categoryToEdit}
       />
-
+      
       <AddEditBillDialog
           isOpen={isAddEditBillDialogOpen}
-          onOpenChange={setIsAddEditBillDialogOpen}
-          onBillSaved={() => {
-              setIsAddEditBillDialogOpen(false);
-              // You might want to refetch bill data here in the future
+          onOpenChange={(open) => {
+              setIsAddEditBillDialogOpen(open);
+              if (!open) setBillToEdit(null);
           }}
+          onBillSaved={handleBillSaved}
+          bill={billToEdit}
           currentUser={currentUser}
           vendors={filteredVendors}
           products={products}
       />
+      
+       {billToDelete && (
+        <AlertDialog open={!!billToDelete} onOpenChange={() => setBillToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the bill record. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setBillToDelete(null)} disabled={isDeletingBill}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDeleteBill} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isDeletingBill}>
+                {isDeletingBill ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Deleting...</> : "Delete Bill"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   );
 }
