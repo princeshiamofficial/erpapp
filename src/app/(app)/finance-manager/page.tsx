@@ -410,8 +410,8 @@ export default function FinanceManagerPage() {
   }, [selectedUserIdFilter, allUsersForFilter]);
 
   return (
-    <div className="space-y-6 p-1 sm:p-0">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header bg-card rounded-lg p-4 shadow-md">
         <div>
           <h1 className="page-title">Finance Manager</h1>
           <p className="page-description">
@@ -733,5 +733,7 @@ export default function FinanceManagerPage() {
     
 
 
+
+    
 
     
