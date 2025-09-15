@@ -609,7 +609,7 @@ export default function VendorsPage() {
                                                 </Avatar>
                                                 <div>
                                                     <div className="font-medium">{vendor?.companyName}</div>
-                                                    <div className="text-xs text-muted-foreground">{vendor?.id}</div>
+                                                    <div className="text-xs text-muted-foreground">{vendor?.name}</div>
                                                 </div>
                                             </div>
                                         </TableCell>
