@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
+import { Separator } from "@/components/ui/separator";
 import { format } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -145,6 +145,19 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
     setAmountDue(Math.max(0, currentNetTotal - paid));
   }, [billItems, discount, paidAmount]);
 
+  const canSubmit = useMemo(() => {
+    if (isSubmitting) return false;
+    if (!selectedVendorId || !billDate) return false;
+    if (billItems.length === 0 || billItems.some(item => !item.productName || !item.quantity || parseInt(item.quantity) <= 0)) return false;
+    
+    const paidAmountNum = parseFloat(paidAmount) || 0;
+    if (paidAmountNum > 0 && !paymentMethod) {
+      return false;
+    }
+    
+    return true;
+  }, [isSubmitting, selectedVendorId, billDate, billItems, paidAmount, paymentMethod]);
+
 
   const calculateLineItemTotal = (unitPrice: number | null, quantityStr: string): number | null => {
     if (unitPrice === null) return null;
@@ -186,35 +199,29 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const paidAmountNum = parseFloat(paidAmount) || 0;
-    if (paidAmountNum > 0 && !paymentMethod) {
-        toast({ title: "Validation Error", description: "Please select a payment method when a paid amount is entered.", variant: "destructive" });
-        return;
+    if (!canSubmit) {
+      toast({ title: "Validation Error", description: "Please fill all required fields correctly.", variant: "destructive" });
+      return;
     }
-    if (!selectedVendorId || !billDate || billItems.some(item => !item.productName || !item.quantity)) {
-        toast({ title: "Validation Error", description: "Please fill all required fields.", variant: "destructive" });
-        return;
-    }
-
+    
     setIsSubmitting(true);
     
-    const status: VendorBillStatus = amountDue <= 0 ? 'Paid' : (paidAmountNum > 0 ? 'Partially Paid' : 'Unpaid');
+    const status: VendorBillStatus = amountDue <= 0 ? 'Paid' : (parseFloat(paidAmount) > 0 ? 'Partially Paid' : 'Unpaid');
     
     const billPayload = {
       vendorId: selectedVendorId,
       vendorName: vendors.find(v => v.id === selectedVendorId)?.name || 'Unknown',
-      billId: null, // Removed from dialog
-      billDate: billDate.toISOString(),
+      billDate: billDate!.toISOString(),
       dueDate: dueDate ? dueDate.toISOString() : null,
       items: billItems.map(item => ({...item, quantity: parseInt(item.quantity), unitPrice: item.unitPrice!, lineItemTotalPrice: item.lineItemTotalPrice!})),
       notes: notes || null,
       subtotal: billItemsTotal,
       discount: calculatedDiscount,
       total: netTotal,
-      paidAmount: paidAmountNum,
+      paidAmount: parseFloat(paidAmount) || 0,
       dueAmount: amountDue,
       status,
-      paymentMethod: paidAmountNum > 0 ? paymentMethod : null,
+      paymentMethod: (parseFloat(paidAmount) || 0) > 0 ? paymentMethod : null,
       createdAt: isEditMode ? bill.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdByUserId: isEditMode ? bill.createdByUserId : currentUser.id,
@@ -334,7 +341,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
                  {(parseFloat(paidAmount) || 0) > 0 && (
                   <div className="space-y-1">
                     <Label htmlFor="paymentMethod">Payment Method</Label>
-                    <Select value={paymentMethod} onValueChange={setPaymentMethod} required>
+                    <Select value={paymentMethod} onValueChange={setPaymentMethod} required={(parseFloat(paidAmount) || 0) > 0}>
                       <SelectTrigger><SelectValue placeholder="Select method..." /></SelectTrigger>
                       <SelectContent>
                         {isLoadingOptions ? <div className="p-2 text-sm">Loading...</div> : paymentMethodOptions.map(opt => <SelectItem key={opt.id} value={opt.name}>{opt.name}</SelectItem>)}
@@ -375,7 +382,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
           </div>
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit">
+            <Button type="submit" disabled={!canSubmit}>
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : 'Save Bill'}
             </Button>
           </DialogFooter>
