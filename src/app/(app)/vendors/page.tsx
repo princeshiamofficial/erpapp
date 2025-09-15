@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -175,9 +176,14 @@ export default function VendorsPage() {
 
   const productsContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="p-6">
-            <CardTitle className="text-xl font-bold text-gray-800">Products</CardTitle>
-            <CardDescription>Manage vendor products here.</CardDescription>
+        <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <CardTitle className="text-xl font-bold text-gray-800">Products</CardTitle>
+                <CardDescription>Manage vendor products here.</CardDescription>
+            </div>
+            <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add New Product
+            </Button>
         </CardHeader>
         <CardContent>
             <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
@@ -191,9 +197,12 @@ export default function VendorsPage() {
   
   const categoriesContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="p-6">
+        <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <CardTitle className="text-xl font-bold text-gray-800">Categories</CardTitle>
             <CardDescription>Manage vendor product categories here.</CardDescription>
+            <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                <PlusCircle className="mr-2 h-4 w-4" /> Add New Category
+            </Button>
         </CardHeader>
         <CardContent>
             <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
@@ -204,7 +213,7 @@ export default function VendorsPage() {
         </CardContent>
     </Card>
   );
-
+  
   if (!currentUser || !['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role)) {
     return <div className="p-8 text-center">Access Denied.</div>;
   }
@@ -260,3 +269,4 @@ export default function VendorsPage() {
       )}
     </>
   );
+}
