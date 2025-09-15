@@ -78,19 +78,17 @@ const formatCurrency = (value?: number | null): string => {
 };
 
 const formatDate = (dateString?: string) => {
-  if (!dateString) return "N/A";
-  try {
-    // It's safer to parseISO first to handle the ISO format from the database
-    return format(parseISO(dateString), 'd MMM, yyyy');
-  } catch (e) {
-    // If parseISO fails, try creating a new Date directly as a fallback
+    if (!dateString) return "N/A";
     try {
-      return format(new Date(dateString), 'd MMM, yyyy');
-    } catch (e2) {
-       console.error("Invalid date string for formatting:", dateString, e2);
-       return "Invalid Date";
+        const date = parseISO(dateString);
+        if (isNaN(date.getTime())) {
+            throw new Error('Invalid date');
+        }
+        return format(date, 'd MMM, yyyy');
+    } catch (e) {
+        console.error("Invalid date string for formatting:", dateString, e);
+        return "Invalid Date";
     }
-  }
 };
 
 
@@ -388,7 +386,6 @@ export default function VendorsPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input placeholder="Search vendors..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
                     </div>
-                    <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => setIsAddUserDialogOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Vendor</Button>
                 </div>
             </div>
             </CardHeader>
@@ -757,3 +754,5 @@ export default function VendorsPage() {
     </>
   );
 }
+
+    
