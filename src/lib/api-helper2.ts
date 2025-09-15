@@ -1,4 +1,5 @@
 
+
 // NOTE: This is a new helper file for the v3 API. It is not yet used by the application.
 // To use this, you would import functions from this file instead of 'api-helper.ts'.
 
@@ -54,7 +55,8 @@ export const ensureCollectionExistsV3 = async (collectionName: string) => {
         if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
             console.log(`V3 Collection '${collectionName}' not found. Attempting to create it...`);
             try {
-                // Corrected payload format for creating a collection
+                // Corrected payload format for creating a collection.
+                // The API expects the collection name directly in the 'name' field of the JSON body.
                 await fetchFromApiV3('collections', {
                     method: 'POST',
                     body: JSON.stringify({ name: collectionName }),
