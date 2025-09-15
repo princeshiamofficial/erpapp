@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import Image from 'next/image';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Store, MapPin, Phone, FileText, StickyNote, Percent, ReceiptText, CheckCircle, Truck, User } from "lucide-react";
@@ -65,7 +66,16 @@ export function BillDetailsClient({ bill: initialBill, vendor }: BillDetailsClie
       <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30 print:mb-4 print:pb-4">
         <div>
           <h2 className="text-3xl font-bold text-primary mb-2 flex items-center"><FileText className="h-8 w-8 mr-3" /> VENDOR BILL</h2>
-          <p className="font-bold text-foreground">Color Hut</p>
+           <div className="mb-2">
+              <Image
+                src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+                alt="Color Hut Logo"
+                width={160}
+                height={40}
+                priority
+                className="object-contain rounded-md"
+              />
+          </div>
           <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
           <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
         </div>
