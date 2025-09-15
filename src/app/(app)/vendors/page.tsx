@@ -9,9 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Search, MoreVertical, Store, Loader2, Edit, Trash2, PlusCircle, Package, Layers } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { User } from '@/types';
+import type { User, VendorProduct, VendorCategory } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getUsers } from '@/lib/user-service';
+import { getVendorCategories } from '@/lib/vendor-category-service';
+import { getVendorProducts } from '@/lib/vendor-product-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -55,15 +57,25 @@ export default function VendorsPage() {
 
   const [isAddEditCategoryDialogOpen, setIsAddEditCategoryDialogOpen] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<any | null>(null);
+  
+  const [products, setProducts] = useState<VendorProduct[]>([]);
+  const [categories, setCategories] = useState<VendorCategory[]>([]);
+
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const fetchedUsers = await getUsers();
+      const [fetchedUsers, fetchedCategories, fetchedProducts] = await Promise.all([
+        getUsers(),
+        getVendorCategories(),
+        getVendorProducts(),
+      ]);
       setAllUsers(fetchedUsers);
+      setCategories(fetchedCategories);
+      setProducts(fetchedProducts);
     } catch (error) {
-      console.error("Failed to fetch users data:", error);
-      toast({ title: "Error", description: "Could not load users data.", variant: "destructive" });
+      console.error("Failed to fetch vendor page data:", error);
+      toast({ title: "Error", description: "Could not load required data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -88,6 +100,15 @@ export default function VendorsPage() {
     );
   }, [allUsers, searchTerm]);
   
+  const filteredProducts = useMemo(() => {
+    if (!productSearchTerm) return products;
+    const lowerSearchTerm = productSearchTerm.toLowerCase();
+    return products.filter(product =>
+      product.name.toLowerCase().includes(lowerSearchTerm) ||
+      product.category.toLowerCase().includes(lowerSearchTerm)
+    );
+  }, [products, productSearchTerm]);
+
   const handleUserSaved = () => {
     setUserToEdit(null);
     setIsAddUserDialogOpen(false);
@@ -110,10 +131,10 @@ export default function VendorsPage() {
   };
   
   const handleProductSaved = () => {
-    // In a real app, you would refetch products here.
     toast({ title: "Success", description: "Product has been saved."});
     setIsAddEditProductDialogOpen(false);
     setProductToEdit(null);
+    fetchData();
   };
 
   const handleOpenAddProductDialog = () => {
@@ -130,7 +151,7 @@ export default function VendorsPage() {
     toast({ title: "Success", description: "Category has been saved." });
     setIsAddEditCategoryDialogOpen(false);
     setCategoryToEdit(null);
-    // You would refetch categories here in a real implementation
+    fetchData();
   };
 
   const handleOpenAddCategoryDialog = () => {
@@ -233,12 +254,39 @@ export default function VendorsPage() {
             </div>
         </CardHeader>
         <CardContent>
-            <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
+           {isLoading ? <Skeleton className="h-48 w-full" /> : 
+           filteredProducts.length > 0 ? (
+               <Table>
+                   <TableHeader>
+                       <TableRow>
+                           <TableHead>Product Name</TableHead>
+                           <TableHead>Category</TableHead>
+                           <TableHead>Price</TableHead>
+                           <TableHead className="text-right">Actions</TableHead>
+                       </TableRow>
+                   </TableHeader>
+                   <TableBody>
+                       {filteredProducts.map(product => (
+                           <TableRow key={product.id}>
+                               <TableCell className="font-medium">{product.name}</TableCell>
+                               <TableCell>{product.category}</TableCell>
+                               <TableCell>{product.price}</TableCell>
+                               <TableCell className="text-right">
+                                   <Button variant="ghost" size="sm" onClick={() => handleOpenEditProductDialog(product)}>
+                                       <Edit className="h-4 w-4" />
+                                   </Button>
+                               </TableCell>
+                           </TableRow>
+                       ))}
+                   </TableBody>
+               </Table>
+           ) : (
+             <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
                 <Package className="h-10 w-10 mb-2" />
                 <p className="font-semibold">No Products Yet</p>
                 <p className="text-sm">Click "Add New Product" to get started.</p>
-                 <Button variant="outline" size="sm" className="mt-4" onClick={() => handleOpenEditProductDialog({ id: '123', name: 'Sample Product', category: 'Sample', price: 100 })}>Edit Sample</Button>
             </div>
+           )}
         </CardContent>
     </Card>
   );
@@ -255,12 +303,29 @@ export default function VendorsPage() {
             </Button>
         </CardHeader>
         <CardContent>
-             <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
-                <Layers className="h-10 w-10 mb-2" />
-                <p className="font-semibold">No Categories Yet</p>
-                <p className="text-sm">Click "Add New Category" to get started.</p>
-                <Button variant="outline" size="sm" className="mt-4" onClick={() => handleOpenEditCategoryDialog({ id: 'cat1', name: 'Sample Category' })}>Edit Sample</Button>
-            </div>
+           {isLoading ? <Skeleton className="h-48 w-full" /> : 
+           categories.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                    {categories.map(cat => (
+                        <div key={cat.id} className="group relative">
+                            <Badge variant="secondary" className="text-base py-1.5 px-3">
+                                {cat.name}
+                            </Badge>
+                            <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleOpenEditCategoryDialog(cat)}>
+                                    <Edit className="h-3 w-3" />
+                                </Button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
+                    <Layers className="h-10 w-10 mb-2" />
+                    <p className="font-semibold">No Categories Yet</p>
+                    <p className="text-sm">Click "Add New Category" to get started.</p>
+                </div>
+            )}
         </CardContent>
     </Card>
   );
@@ -326,7 +391,7 @@ export default function VendorsPage() {
           onProductSaved={handleProductSaved}
           product={productToEdit}
           currentUser={currentUser}
-          categories={[]}
+          categories={categories}
         />
       )}
       
