@@ -397,10 +397,17 @@ export default function VendorsPage() {
     <>
       <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
+         <TabsList className="inline-flex h-10 items-center justify-center text-muted-foreground bg-white p-1 rounded-full shadow-sm border border-gray-200">
             <TabsTrigger value="vendor_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor List</TabsTrigger>
             <TabsTrigger value="products" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Products</TabsTrigger>
             <TabsTrigger value="categories" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Categories</TabsTrigger>
+            <Button
+              variant="ghost"
+              onClick={() => {}}
+              className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white"
+            >
+              Mehnur
+            </Button>
           </TabsList>
           <div className="mt-6">
             <TabsContent value="vendor_list">
@@ -485,3 +492,5 @@ export default function VendorsPage() {
     </>
   );
 }
+
+    
