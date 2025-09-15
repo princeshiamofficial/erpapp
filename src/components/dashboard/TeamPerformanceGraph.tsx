@@ -141,11 +141,20 @@ export function TeamPerformanceGraph({ monthlyTargetData: initialMonthlyTargetDa
     if (!monthlyTargetData || monthlyTargetData.length === 0) {
       return { totalDone: 0 };
     }
-    return monthlyTargetData.reduce((acc, day) => {
-      acc.totalDone += day.totalDone;
-      return acc;
-    }, { totalDone: 0 });
-  }, [monthlyTargetData]);
+    
+    let doneCount = 0;
+    
+    if (isAdminView) {
+      doneCount = monthlyTargetData.reduce((acc, day) => acc + day.totalDone, 0);
+    } else if (currentUser) {
+      doneCount = monthlyTargetData.reduce((acc, day) => {
+        const userDoneToday = day.userData[currentUser.id]?.done || 0;
+        return acc + userDoneToday;
+      }, 0);
+    }
+
+    return { totalDone: doneCount };
+  }, [monthlyTargetData, isAdminView, currentUser]);
 
 
   const renderChart = () => {
