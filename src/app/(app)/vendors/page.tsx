@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -326,6 +327,7 @@ export default function VendorsPage() {
           onProductSaved={handleProductSaved}
           product={productToEdit}
           currentUser={currentUser}
+          categories={[{id: 'cat1', name: 'Sample Category'}, {id: 'cat2', name: 'Another Category'}]}
         />
       )}
       

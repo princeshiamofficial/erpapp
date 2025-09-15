@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Define a product type for clarity, assuming a structure
 // In a real app, this would be in your `types.ts` file
@@ -28,15 +29,21 @@ interface Product {
     description?: string;
 }
 
+interface Category {
+  id: string;
+  name: string;
+}
+
 interface AddEditProductDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onProductSaved: () => void;
   product?: Product | null;
   currentUser: User;
+  categories?: Category[];
 }
 
-export function AddEditProductDialog({ isOpen, onOpenChange, onProductSaved, product, currentUser }: AddEditProductDialogProps) {
+export function AddEditProductDialog({ isOpen, onOpenChange, onProductSaved, product, currentUser, categories = [] }: AddEditProductDialogProps) {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [price, setPrice] = useState('');
@@ -105,7 +112,20 @@ export function AddEditProductDialog({ isOpen, onOpenChange, onProductSaved, pro
           </div>
           <div className="space-y-1">
             <Label htmlFor="product-category">Category *</Label>
-            <Input id="product-category" value={category} onChange={e => setCategory(e.target.value)} required />
+            <Select value={category} onValueChange={setCategory} required>
+                <SelectTrigger id="product-category">
+                    <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                    {categories && categories.length > 0 ? (
+                        categories.map(cat => (
+                            <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                        ))
+                    ) : (
+                        <div className="p-2 text-sm text-muted-foreground">No categories found.</div>
+                    )}
+                </SelectContent>
+            </Select>
           </div>
           <div className="space-y-1">
             <Label htmlFor="product-price">Unit Price (BDT) *</Label>
