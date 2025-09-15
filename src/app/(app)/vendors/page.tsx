@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -19,7 +18,7 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Store, PlusCircle, Package, Layers } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Store, PlusCircle, Package, Layers, Edit } from 'lucide-react';
 import type { Employee, User, VendorProduct, VendorCategory } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
@@ -284,7 +283,7 @@ export default function VendorsPage() {
                         <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => setUserToEdit(vendor)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit Info</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setUserToEdit(vendor)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit Info</DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => setUserToDelete(vendor)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete Vendor</DropdownMenuItem>
                         </DropdownMenuContent>
                         </DropdownMenu>
@@ -426,9 +425,15 @@ export default function VendorsPage() {
                 <CardTitle className="text-xl font-bold text-gray-800">Vendor Bill's</CardTitle>
                 <CardDescription>This is a placeholder for Vendor Bill's content.</CardDescription>
             </div>
-            <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                <PlusCircle className="mr-2 h-4 w-4" /> Create New bill
-            </Button>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-grow sm:flex-grow-0">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input placeholder="Search bills..." className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+              </div>
+              <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <PlusCircle className="mr-2 h-4 w-4" /> Create New bill
+              </Button>
+            </div>
         </CardHeader>
         <CardContent>
             <div className="text-center text-gray-500 py-16">
@@ -453,10 +458,10 @@ export default function VendorsPage() {
             <TabsTrigger value="vendor_bills" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor Bill's</TabsTrigger>
           </TabsList>
             <div className="mt-6">
-                <TabsContent value="vendor_list">{vendorListContent}</TabsContent>
-                <TabsContent value="products">{productsContent}</TabsContent>
-                <TabsContent value="categories">{categoriesContent}</TabsContent>
-                <TabsContent value="vendor_bills">{vendorBillsContent}</TabsContent>
+                {activeTab === 'vendor_list' && vendorListContent}
+                {activeTab === 'products' && productsContent}
+                {activeTab === 'categories' && categoriesContent}
+                {activeTab === 'vendor_bills' && vendorBillsContent}
             </div>
         </Tabs>
       </div>
