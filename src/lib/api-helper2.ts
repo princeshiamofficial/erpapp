@@ -1,3 +1,4 @@
+
 // NOTE: This is a new helper file for the v3 API. It is not yet used by the application.
 // To use this, you would import functions from this file instead of 'api-helper.ts'.
 
@@ -20,7 +21,7 @@ export async function fetchFromApiV3(endpoint: string, options: RequestInit = {}
         let errorData = { message: `API v3 request failed with status ${response.status}. Response: ${errorText}` };
         try {
             const parsedJson = JSON.parse(errorText);
-            errorData.message = parsedJson.message || errorData.message;
+            errorData.message = parsedJson.message || parsedJson.error || errorData.message;
         } catch (e) {
             // Not a JSON response, the raw text is the best we have.
         }
@@ -53,6 +54,7 @@ export const ensureCollectionExistsV3 = async (collectionName: string) => {
         if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
             console.log(`V3 Collection '${collectionName}' not found. Attempting to create it...`);
             try {
+                // Corrected payload format for creating a collection
                 await fetchFromApiV3('collections', {
                     method: 'POST',
                     body: JSON.stringify({ name: collectionName }),
