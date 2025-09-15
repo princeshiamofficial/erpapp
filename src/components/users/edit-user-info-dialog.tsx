@@ -62,17 +62,27 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
       return;
     }
     
-    if (isVendor && phone.trim() && !/^0\d{10}$/.test(phone.trim())) {
-        toast({
-            title: "Validation Error",
-            description: "Phone number must be 11 digits and start with 0.",
-            variant: "destructive"
-        });
-        return;
+    if (isVendor) {
+        if (!companyName.trim()) {
+            toast({ title: "Validation Error", description: "Business Name is required for vendors.", variant: "destructive" });
+            return;
+        }
+        if (!phone.trim() || !/^0\d{10}$/.test(phone.trim())) {
+            toast({ title: "Validation Error", description: "A valid 11-digit phone number is required for vendors.", variant: "destructive" });
+            return;
+        }
+        if (!address.trim()) {
+            toast({ title: "Validation Error", description: "Address is required for vendors.", variant: "destructive" });
+            return;
+        }
+        if (!category || category === 'none') {
+             toast({ title: "Validation Error", description: "Category is required for vendors.", variant: "destructive" });
+            return;
+        }
     }
 
     setIsLoading(true);
-    const updates: { name: string, email: string, companyName: string | null, phone?: string | null, address?: string | null, category?: string | null } = {
+    const updates: Partial<Pick<User, 'name' | 'email' | 'companyName' | 'phone' | 'address' | 'category'>> = {
       name: name.trim(),
       email: email.trim(),
       companyName: companyName.trim() || null,
@@ -80,21 +90,15 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
     
     if (isVendor) {
         updates.phone = phone.trim() || null;
-        updates.address = address.trim() || null; // Add address to updates
-        const categoryToSave = category === 'none' ? null : category.trim() || null;
-        updates.category = categoryToSave;
+        updates.address = address.trim() || null;
+        updates.category = category === 'none' ? null : category.trim() || null;
     }
 
     const result = await updateUserInfoAction(user.id, updates);
     setIsLoading(false);
 
     if (result.success) {
-      toast({
-        title: "User Info Updated",
-        description: `${user.name}'s information has been updated.`,
-      });
       onUserInfoUpdated();
-      onOpenChange(false);
     } else {
       toast({
         title: "Update Failed",
@@ -118,7 +122,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="space-y-1">
-              <Label htmlFor="userName-edit">Name</Label>
+              <Label htmlFor="userName-edit">Name *</Label>
               <Input
                 id="userName-edit"
                 value={name}
@@ -128,7 +132,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="userEmail-edit">Email</Label>
+              <Label htmlFor="userEmail-edit">Email *</Label>
               <Input
                 id="userEmail-edit"
                 type="email"
@@ -139,46 +143,49 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="userCompany-edit">{isVendor ? 'Business Name' : 'Company Name'} (Optional)</Label>
+              <Label htmlFor="userCompany-edit">{isVendor ? 'Business Name *' : 'Company Name (Optional)'}</Label>
               <Input
                 id="userCompany-edit"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 disabled={isLoading}
+                required={isVendor}
               />
             </div>
             {isVendor && (
               <>
                 <div className="space-y-1">
-                  <Label htmlFor="userPhone-edit">Phone (Optional)</Label>
+                  <Label htmlFor="userPhone-edit">Phone *</Label>
                   <Input
                     id="userPhone-edit"
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     disabled={isLoading}
-                    pattern="(^0\d{10}$)|(^$)"
-                    title="Phone number must be 11 digits and start with 0, or be empty."
+                    required={isVendor}
+                    pattern="^0\d{10}$"
+                    title="Phone number must be 11 digits and start with 0."
                   />
                 </div>
                 <div className="space-y-1">
-                   <Label htmlFor="userAddress-edit">Address (Optional)</Label>
+                   <Label htmlFor="userAddress-edit">Address *</Label>
                    <Textarea
                      id="userAddress-edit"
                      value={address}
                      onChange={(e) => setAddress(e.target.value)}
                      disabled={isLoading}
+                     required={isVendor}
                      placeholder="Enter vendor's full address"
                    />
                  </div>
                 <div className="space-y-1">
-                  <Label htmlFor="userCategory-edit">Category (Optional)</Label>
-                   <Select value={category || 'none'} onValueChange={setCategory} disabled={isLoading}>
+                  <Label htmlFor="userCategory-edit">Category *</Label>
+                   <Select value={category || 'none'} onValueChange={setCategory} disabled={isLoading} required={isVendor}>
                     <SelectTrigger id="userCategory-edit">
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="none">Select a category</SelectItem>
                       {availableCategories.map(cat => (
                         <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                       ))}

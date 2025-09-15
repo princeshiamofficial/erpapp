@@ -141,13 +141,20 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
       });
       return;
     }
-    if (role === 'VENDOR' && phone && !/^0\d{10}$/.test(phone)) {
-       toast({
-        title: "Validation Error",
-        description: "For vendors, the phone number must be 11 digits and start with 0 if provided.",
-        variant: "destructive",
-      });
-      return;
+
+    if (role === 'VENDOR') {
+        if (!companyName.trim()) {
+            toast({ title: "Validation Error", description: "Business Name is required for vendors.", variant: "destructive" });
+            return;
+        }
+        if (!phone.trim() || !/^0\d{10}$/.test(phone)) {
+            toast({ title: "Validation Error", description: "A valid 11-digit phone number is required for vendors.", variant: "destructive" });
+            return;
+        }
+        if (!address.trim()) {
+            toast({ title: "Validation Error", description: "Address is required for vendors.", variant: "destructive" });
+            return;
+        }
     }
 
     setIsSubmitting(true);
@@ -256,16 +263,16 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
             {role === 'VENDOR' && (
               <>
                  <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="companyName-add" className="text-right">Business</Label>
-                  <Input id="companyName-add" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="col-span-3" placeholder="Vendor's Business Name"/>
+                  <Label htmlFor="companyName-add" className="text-right">Business Name*</Label>
+                  <Input id="companyName-add" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="col-span-3" placeholder="Vendor's Business Name" required/>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="phone-add" className="text-right">Phone</Label>
-                  <Input id="phone-add" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="col-span-3" placeholder="Vendor's Phone Number"/>
+                  <Label htmlFor="phone-add" className="text-right">Phone*</Label>
+                  <Input id="phone-add" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="col-span-3" placeholder="Vendor's Phone Number" required/>
                 </div>
                 <div className="grid grid-cols-4 items-start gap-4">
-                   <Label htmlFor="address-add" className="text-right pt-2">Address</Label>
-                   <Textarea id="address-add" value={address} onChange={(e) => setAddress(e.target.value)} className="col-span-3" placeholder="Vendor's Address" />
+                   <Label htmlFor="address-add" className="text-right pt-2">Address*</Label>
+                   <Textarea id="address-add" value={address} onChange={(e) => setAddress(e.target.value)} className="col-span-3" placeholder="Vendor's Address" required/>
                 </div>
               </>
             )}
@@ -280,6 +287,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
                       alt="Avatar preview"
                       width={64}
                       height={64}
+                      unoptimized
                       className="rounded-full object-cover border border-muted"
                       data-ai-hint="user avatar"
                     />
@@ -298,6 +306,15 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
                     >
                       <UploadCloud className="mr-2 h-4 w-4" /> {selectedFile ? "Change" : "Upload"}
                     </Button>
+                    <Input
+                      id="avatarFile-add"
+                      type="file"
+                      accept="image/*"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      className="hidden"
+                      disabled={isSubmitting}
+                    />
                     {selectedFile && (
                       <Button type="button" variant="ghost" size="sm" onClick={handleRemovePreview} className="text-xs text-muted-foreground hover:text-destructive" disabled={isSubmitting}>
                         <XCircle className="mr-1 h-3 w-3" /> Clear
@@ -305,15 +322,6 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
                     )}
                   </div>
                 </div>
-                <Input
-                  id="avatarFile-add"
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  className="hidden"
-                  disabled={isSubmitting}
-                />
                 <p className="text-xs text-muted-foreground">
                   Optional. Max 2MB.
                   {selectedFile && <span className="block mt-0.5">Selected: {selectedFile.name}</span>}
