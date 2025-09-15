@@ -122,7 +122,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="space-y-1">
-              <Label htmlFor="userName-edit">Name *</Label>
+              <Label htmlFor="userName-edit">Name</Label>
               <Input
                 id="userName-edit"
                 value={name}
@@ -132,7 +132,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="userEmail-edit">Email *</Label>
+              <Label htmlFor="userEmail-edit">Email</Label>
               <Input
                 id="userEmail-edit"
                 type="email"
@@ -143,7 +143,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
               />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="userCompany-edit">{isVendor ? 'Business Name *' : 'Company Name (Optional)'}</Label>
+              <Label htmlFor="userCompany-edit">{isVendor ? 'Business Name' : 'Company Name (Optional)'}</Label>
               <Input
                 id="userCompany-edit"
                 value={companyName}
@@ -155,7 +155,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
             {isVendor && (
               <>
                 <div className="space-y-1">
-                  <Label htmlFor="userPhone-edit">Phone *</Label>
+                  <Label htmlFor="userPhone-edit">Phone</Label>
                   <Input
                     id="userPhone-edit"
                     type="tel"
@@ -168,7 +168,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
                   />
                 </div>
                 <div className="space-y-1">
-                   <Label htmlFor="userAddress-edit">Address *</Label>
+                   <Label htmlFor="userAddress-edit">Address</Label>
                    <Textarea
                      id="userAddress-edit"
                      value={address}
@@ -179,7 +179,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
                    />
                  </div>
                 <div className="space-y-1">
-                  <Label htmlFor="userCategory-edit">Category *</Label>
+                  <Label htmlFor="userCategory-edit">Category</Label>
                    <Select value={category || 'none'} onValueChange={setCategory} disabled={isLoading} required={isVendor}>
                     <SelectTrigger id="userCategory-edit">
                       <SelectValue placeholder="Select a category" />

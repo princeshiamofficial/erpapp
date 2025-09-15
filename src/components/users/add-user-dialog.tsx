@@ -263,15 +263,15 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
             {role === 'VENDOR' && (
               <>
                  <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="companyName-add" className="text-right">Business Name*</Label>
+                  <Label htmlFor="companyName-add" className="text-right">Business Name</Label>
                   <Input id="companyName-add" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="col-span-3" placeholder="Vendor's Business Name" required/>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="phone-add" className="text-right">Phone*</Label>
+                  <Label htmlFor="phone-add" className="text-right">Phone</Label>
                   <Input id="phone-add" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="col-span-3" placeholder="Vendor's Phone Number" required/>
                 </div>
                 <div className="grid grid-cols-4 items-start gap-4">
-                   <Label htmlFor="address-add" className="text-right pt-2">Address*</Label>
+                   <Label htmlFor="address-add" className="text-right pt-2">Address</Label>
                    <Textarea id="address-add" value={address} onChange={(e) => setAddress(e.target.value)} className="col-span-3" placeholder="Vendor's Address" required/>
                 </div>
               </>

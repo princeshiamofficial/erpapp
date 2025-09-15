@@ -167,7 +167,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label htmlFor="date">Date *</Label>
+                <Label htmlFor="date">Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
@@ -200,16 +200,16 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
               </div>
             </div>
             <div className="space-y-1">
-                <Label htmlFor="contactName">Contact Name *</Label>
+                <Label htmlFor="contactName">Contact Name</Label>
                 <Input id="contactName" value={contactName} onChange={(e) => setContactName(e.target.value)} required />
               </div>
             <div className="space-y-1">
-              <Label htmlFor="businessName">Business Name *</Label>
+              <Label htmlFor="businessName">Business Name</Label>
               <Input id="businessName" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required placeholder="e.g., Color Hut"/>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
-                <Label htmlFor="phone">Phone *</Label>
+                <Label htmlFor="phone">Phone</Label>
                 <Input
                     id="phone"
                     type="tel"
@@ -225,7 +225,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
                 {phoneError && <p className="text-xs text-destructive">{phoneError}</p>}
               </div>
               <div className="space-y-1">
-                <Label htmlFor="source">Source *</Label>
+                <Label htmlFor="source">Source</Label>
                 <Select value={source} onValueChange={setSource} required>
                   <SelectTrigger id="source">
                     <SelectValue placeholder="Select a source" />
@@ -237,7 +237,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
               </div>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="customerType">Customer Type *</Label>
+              <Label htmlFor="customerType">Customer Type</Label>
               <Select value={customerType} onValueChange={(value) => setCustomerType(value as CustomerType)} required>
                 <SelectTrigger id="customerType">
                   <SelectValue placeholder="Select a customer type" />
@@ -249,7 +249,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
               </Select>
             </div>
             <div className="space-y-1">
-              <Label htmlFor="address">Address *</Label>
+              <Label htmlFor="address">Address</Label>
               <Textarea id="address" value={address} onChange={(e) => setAddress(e.target.value)} required />
             </div>
             <div className="space-y-1">
