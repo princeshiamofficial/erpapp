@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -184,8 +185,7 @@ export default function VendorsPage() {
     const lowerSearchTerm = searchTerm.toLowerCase();
     return bills.filter(bill =>
         bill.vendorName.toLowerCase().includes(lowerSearchTerm) ||
-        (bill.billId && bill.billId.toLowerCase().includes(lowerSearchTerm)) ||
-        bill.id.toLowerCase().includes(lowerSearchTerm)
+        (bill.id && bill.id.toLowerCase().includes(lowerSearchTerm))
     );
   }, [bills, searchTerm]);
 
@@ -608,6 +608,7 @@ export default function VendorsPage() {
                                                 <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuItem onSelect={() => handleOpenEditBillDialog(bill)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                                    <DropdownMenuItem asChild><Link href={`/bill/${bill.id}`} target="_blank"><Eye className="mr-2 h-4 w-4" />View Bill</Link></DropdownMenuItem>
                                                     <DropdownMenuItem onSelect={() => setBillToDelete(bill)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>

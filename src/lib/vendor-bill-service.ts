@@ -23,6 +23,23 @@ export const getVendorBills = async (): Promise<VendorBill[]> => {
   }
 };
 
+export const getBillById = async (id: string): Promise<VendorBill | null> => {
+    if (!id) return null;
+    try {
+        const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`);
+        if (response && response.data) {
+            return { id: response.id, ...response.data } as VendorBill;
+        }
+        return null;
+    } catch (error) {
+        if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
+          return null;
+        }
+        console.error(`Error fetching vendor bill by ID ${id} via API v3:`, error);
+        return null;
+    }
+};
+
 export const addVendorBill = async (billData: Omit<VendorBill, 'id'>): Promise<VendorBill | null> => {
   try {
     await ensureCollectionExistsV3(COLLECTION_NAME);
