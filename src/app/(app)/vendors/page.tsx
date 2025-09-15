@@ -22,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 const AddUserDialog = dynamic(() => import('@/components/users/add-user-dialog').then(mod => mod.AddUserDialog));
 const EditUserInfoDialog = dynamic(() => import('@/components/users/edit-user-info-dialog').then(mod => mod.EditUserInfoDialog));
 const DeleteUserDialog = dynamic(() => import('@/components/users/delete-user-dialog').then(mod => mod.DeleteUserDialog));
+const AddEditProductDialog = dynamic(() => import('@/components/vendors/AddEditProductDialog').then(mod => mod.AddEditProductDialog));
 
 const getInitials = (name: string) => {
   if (!name) return '??';
@@ -47,6 +48,9 @@ export default function VendorsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+  const [isAddEditProductDialogOpen, setIsAddEditProductDialogOpen] = useState(false);
+  const [productToEdit, setProductToEdit] = useState<any | null>(null); // Replace 'any' with a Product type later
+
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -100,6 +104,24 @@ export default function VendorsPage() {
       toast({ title: "Error", description: result.error || "Could not delete the vendor.", variant: "destructive" });
     }
   };
+  
+  const handleProductSaved = () => {
+    // In a real app, you would refetch products here.
+    toast({ title: "Success", description: "Product has been saved."});
+    setIsAddEditProductDialogOpen(false);
+    setProductToEdit(null);
+  };
+
+  const handleOpenAddProductDialog = () => {
+    setProductToEdit(null);
+    setIsAddEditProductDialogOpen(true);
+  };
+  
+  const handleOpenEditProductDialog = (product: any) => {
+    setProductToEdit(product);
+    setIsAddEditProductDialogOpen(true);
+  };
+
 
   const vendorListContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
@@ -184,10 +206,13 @@ export default function VendorsPage() {
             </div>
              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <div className="relative flex-grow sm:flex-grow-0">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input placeholder="Search products..." value={productSearchTerm} onChange={e => setProductSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input placeholder="Search products..." value={productSearchTerm} onChange={e => setProductSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
                 </div>
-                <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                <Button 
+                    className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                    onClick={handleOpenAddProductDialog}
+                >
                     <PlusCircle className="mr-2 h-4 w-4" /> Add New Product
                 </Button>
             </div>
@@ -195,8 +220,8 @@ export default function VendorsPage() {
         <CardContent>
             <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
                 <Package className="h-10 w-10 mb-2" />
-                <p className="font-semibold">Coming Soon</p>
-                <p className="text-sm">This section is under construction.</p>
+                <p className="font-semibold">No Products Yet</p>
+                <p className="text-sm">Click "Add New Product" to get started.</p>
             </div>
         </CardContent>
     </Card>
@@ -274,6 +299,16 @@ export default function VendorsPage() {
           onConfirmDelete={handleConfirmDelete}
           user={userToDelete}
           isDeleting={isDeleting}
+        />
+      )}
+
+      {currentUser && (
+        <AddEditProductDialog
+          isOpen={isAddEditProductDialogOpen}
+          onOpenChange={setIsAddEditProductDialogOpen}
+          onProductSaved={handleProductSaved}
+          product={productToEdit}
+          currentUser={currentUser}
         />
       )}
     </>
