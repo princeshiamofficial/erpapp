@@ -19,8 +19,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { format } from 'date-fns';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface AddEditBillDialogProps {
   isOpen: boolean;
@@ -55,7 +55,6 @@ const initialBillItemState: DialogBillItem = {
 
 export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, currentUser, vendors, products }: AddEditBillDialogProps) {
   const [selectedVendorId, setSelectedVendorId] = useState('');
-  const [billId, setBillId] = useState('');
   const [billDate, setBillDate] = useState<Date | undefined>(new Date());
   const [dueDate, setDueDate] = useState<Date | undefined>();
   const [billItems, setBillItems] = useState<DialogBillItem[]>([{ ...initialBillItemState }]);
@@ -95,7 +94,6 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
       fetchOptions();
       if (isEditMode && bill) {
         setSelectedVendorId(bill.vendorId);
-        setBillId(bill.billId || '');
         setBillDate(new Date(bill.billDate));
         setDueDate(bill.dueDate ? new Date(bill.dueDate) : undefined);
         setBillItems(bill.items.map(item => ({
@@ -108,7 +106,6 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
         setPaymentMethod(bill.paymentMethod || '');
       } else {
         setSelectedVendorId('');
-        setBillId('');
         setBillDate(new Date());
         setDueDate(undefined);
         setBillItems([{ ...initialBillItemState, id: uuidv4() }]);
@@ -206,7 +203,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
     const billPayload = {
       vendorId: selectedVendorId,
       vendorName: vendors.find(v => v.id === selectedVendorId)?.name || 'Unknown',
-      billId: billId || null,
+      billId: null, // Removed from dialog
       billDate: billDate.toISOString(),
       dueDate: dueDate ? dueDate.toISOString() : null,
       items: billItems.map(item => ({...item, quantity: parseInt(item.quantity), unitPrice: item.unitPrice!, lineItemTotalPrice: item.lineItemTotalPrice!})),
@@ -253,8 +250,8 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-               <div className="sm:col-span-1 space-y-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+               <div className="space-y-1">
                 <Label htmlFor="vendor">Vendor *</Label>
                 <Select value={selectedVendorId} onValueChange={setSelectedVendorId} required>
                     <SelectTrigger><SelectValue placeholder="Select a vendor" /></SelectTrigger>
@@ -263,11 +260,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
                     </SelectContent>
                 </Select>
               </div>
-              <div className="sm:col-span-1 space-y-1">
-                <Label htmlFor="billId">Bill/Invoice ID</Label>
-                <Input id="billId" value={billId} onChange={(e) => setBillId(e.target.value)} placeholder="e.g., INV-12345" />
-              </div>
-              <div className="sm:col-span-1 space-y-1">
+              <div className="space-y-1">
                 <Label htmlFor="billDate">Bill Date *</Label>
                 <Popover>
                   <PopoverTrigger asChild>
