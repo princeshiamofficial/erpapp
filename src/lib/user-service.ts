@@ -52,6 +52,8 @@ export const addUser = async (userData: Omit<User, 'id'>): Promise<User | null> 
       ...userData,
       id: userId,
       companyName: userData.companyName || null,
+      phone: userData.phone || null,
+      address: userData.address || null,
       avatarUrl: userData.avatarUrl || null,
       monthlyOrderTarget: userData.monthlyOrderTarget === undefined ? null : userData.monthlyOrderTarget,
       weeklyOrderTarget: userData.weeklyOrderTarget === undefined ? null : userData.weeklyOrderTarget,
@@ -192,7 +194,7 @@ export const updateUserBanStatus = async (userId: string, isBanned: boolean): Pr
 // Update user's basic information (name, email, companyName)
 export const updateUserInfo = async (
   userId: string,
-  updates: Partial<Pick<User, 'name' | 'email' | 'companyName' | 'phone' | 'category'>>
+  updates: Partial<Pick<User, 'name' | 'email' | 'companyName' | 'phone' | 'address' | 'category'>>
 ): Promise<boolean> => {
   try {
     const userDoc = doc(db, USERS_COLLECTION, userId);
@@ -201,6 +203,7 @@ export const updateUserInfo = async (
     if (updates.email !== undefined) dataToUpdate.email = updates.email;
     if (updates.companyName !== undefined) dataToUpdate.companyName = updates.companyName === '' ? null : updates.companyName;
     if (updates.phone !== undefined) dataToUpdate.phone = updates.phone === '' ? null : updates.phone;
+    if (updates.address !== undefined) dataToUpdate.address = updates.address === '' ? null : updates.address;
     if (updates.category !== undefined) dataToUpdate.category = updates.category === '' ? null : updates.category;
 
 

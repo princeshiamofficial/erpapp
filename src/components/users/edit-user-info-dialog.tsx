@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from '@/components/ui/textarea'; // Import Textarea
 import type { User, VendorCategory } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { updateUserInfoAction } from '@/app/(app)/users/actions';
@@ -24,7 +25,7 @@ interface EditUserInfoDialogProps {
   onUserInfoUpdated: () => void;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  availableCategories?: VendorCategory[]; // Make optional
+  availableCategories?: VendorCategory[];
 }
 
 export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChange, availableCategories = [] }: EditUserInfoDialogProps) {
@@ -32,6 +33,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
   const [email, setEmail] = useState(user.email);
   const [companyName, setCompanyName] = useState(user.companyName || '');
   const [phone, setPhone] = useState(user.phone || '');
+  const [address, setAddress] = useState(user.address || ''); // New state for address
   const [category, setCategory] = useState(user.category || '');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -44,6 +46,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
       setEmail(user.email);
       setCompanyName(user.companyName || '');
       setPhone(user.phone || '');
+      setAddress(user.address || ''); // Set address state
       setCategory(user.category || '');
     }
   }, [isOpen, user]);
@@ -69,7 +72,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
     }
 
     setIsLoading(true);
-    const updates: { name: string, email: string, companyName: string | null, phone?: string | null, category?: string | null } = {
+    const updates: { name: string, email: string, companyName: string | null, phone?: string | null, address?: string | null, category?: string | null } = {
       name: name.trim(),
       email: email.trim(),
       companyName: companyName.trim() || null,
@@ -77,6 +80,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
     
     if (isVendor) {
         updates.phone = phone.trim() || null;
+        updates.address = address.trim() || null; // Add address to updates
         const categoryToSave = category === 'none' ? null : category.trim() || null;
         updates.category = categoryToSave;
     }
@@ -90,7 +94,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
         description: `${user.name}'s information has been updated.`,
       });
       onUserInfoUpdated();
-      onOpenChange(false); // Close dialog on success
+      onOpenChange(false);
     } else {
       toast({
         title: "Update Failed",
@@ -157,6 +161,16 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
                     title="Phone number must be 11 digits and start with 0, or be empty."
                   />
                 </div>
+                <div className="space-y-1">
+                   <Label htmlFor="userAddress-edit">Address (Optional)</Label>
+                   <Textarea
+                     id="userAddress-edit"
+                     value={address}
+                     onChange={(e) => setAddress(e.target.value)}
+                     disabled={isLoading}
+                     placeholder="Enter vendor's full address"
+                   />
+                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="userCategory-edit">Category (Optional)</Label>
                    <Select value={category || 'none'} onValueChange={setCategory} disabled={isLoading}>

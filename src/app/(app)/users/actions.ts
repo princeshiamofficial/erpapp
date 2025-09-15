@@ -32,7 +32,7 @@ export async function toggleUserBanStatusAction(
 
 export async function updateUserInfoAction(
   userId: string,
-  updates: Partial<Pick<User, 'name' | 'email' | 'companyName' | 'phone' | 'category'>>
+  updates: Partial<Pick<User, 'name' | 'email' | 'companyName' | 'phone' | 'address' | 'category'>>
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const success = await updateUserInfoInDb(userId, updates);

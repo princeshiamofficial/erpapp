@@ -8,8 +8,9 @@ export interface User {
   email: string;
   role: UserRole;
   companyName?: string | null;
-  phone?: string | null; // Added
-  category?: string | null; // Added for Vendors
+  phone?: string | null; 
+  address?: string | null; // Added for Vendors
+  category?: string | null; 
   password?: string;
   avatarUrl?: string | null;
   monthlyOrderTarget?: number | null;
@@ -54,6 +55,7 @@ export interface Employee {
   name: string;
   email?: string | null;
   mobileNo: string;
+  address?: string | null;
   dob: string; // ISO string date
   designation: string;
   joiningDate: string; // ISO string date

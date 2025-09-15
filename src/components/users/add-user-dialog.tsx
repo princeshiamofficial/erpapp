@@ -28,6 +28,8 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [address, setAddress] = useState('');
+  const [phone, setPhone] = useState('');
   const [role, setRole] = useState<UserRole | undefined>(defaultRole);
   const [password, setPassword] = useState('password');
   const [showPassword, setShowPassword] = useState(false);
@@ -41,6 +43,8 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
     setName('');
     setEmail('');
     setCompanyName('');
+    setAddress('');
+    setPhone('');
     setRole(defaultRole);
     setPassword('password');
     setShowPassword(false);
@@ -136,6 +140,14 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
       });
       return;
     }
+    if (role === 'VENDOR' && phone && !/^0\d{10}$/.test(phone)) {
+       toast({
+        title: "Validation Error",
+        description: "For vendors, the phone number must be 11 digits and start with 0 if provided.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsSubmitting(true);
     let avatarBase64Url: string | undefined = undefined;
@@ -165,6 +177,8 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
       role,
       password, 
       companyName: companyName || undefined,
+      phone: phone || undefined,
+      address: address || undefined,
       avatarUrl: avatarBase64Url,
       monthlyOrderTarget: 0, 
       weeklyOrderTarget: 0,  
@@ -224,11 +238,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
                 </Button>
               </div>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="companyName-add" className="text-right">Company</Label>
-              <Input id="companyName-add" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
+             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="role-add" className="text-right">Role</Label>
               <Select value={role} onValueChange={(value) => setRole(value as UserRole)} required>
                 <SelectTrigger id="role-add" className="col-span-3">
@@ -241,6 +251,23 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
                 </SelectContent>
               </Select>
             </div>
+            
+            {role === 'VENDOR' && (
+              <>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="companyName-add" className="text-right">Business</Label>
+                  <Input id="companyName-add" value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="col-span-3" placeholder="Vendor's Business Name"/>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="phone-add" className="text-right">Phone</Label>
+                  <Input id="phone-add" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="col-span-3" placeholder="Vendor's Phone Number"/>
+                </div>
+                <div className="grid grid-cols-4 items-start gap-4">
+                   <Label htmlFor="address-add" className="text-right pt-2">Address</Label>
+                   <Textarea id="address-add" value={address} onChange={(e) => setAddress(e.target.value)} className="col-span-3" placeholder="Vendor's Address" />
+                </div>
+              </>
+            )}
 
             <div className="grid grid-cols-4 items-start gap-4 mt-2">
               <Label htmlFor="avatarFile-add" className="text-right pt-2">Avatar</Label>
