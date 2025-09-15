@@ -50,6 +50,7 @@ import {
 import { getVendorCategories, deleteVendorCategory } from '@/lib/vendor-category-service';
 import { getVendorProducts, deleteVendorProduct } from '@/lib/vendor-product-service'; // Import deleteVendorProduct
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import Link from 'next/link';
 
 const AddUserDialog = dynamic(() => import('@/components/users/add-user-dialog').then(mod => mod.AddUserDialog));
 const EditUserInfoDialog = dynamic(() => import('@/components/users/edit-user-info-dialog').then(mod => mod.EditUserInfoDialog));
@@ -58,6 +59,7 @@ const AddEditProductDialog = dynamic(() => import('@/components/vendors/AddEditP
 const AddEditCategoryDialog = dynamic(() => import('@/components/vendors/AddEditCategoryDialog').then(mod => mod.AddEditCategoryDialog));
 const DeleteCategoryDialog = dynamic(() => import('@/components/vendors/DeleteCategoryDialog').then(mod => mod.DeleteCategoryDialog));
 const DeleteProductDialog = dynamic(() => import('@/components/vendors/DeleteProductDialog').then(mod => mod.DeleteProductDialog));
+const AddEditBillDialog = dynamic(() => import('@/components/vendors/AddEditBillDialog').then(mod => mod.AddEditBillDialog));
 
 
 const getInitials = (name: string) => {
@@ -88,6 +90,8 @@ export default function VendorsPage() {
   const [productToEdit, setProductToEdit] = useState<any | null>(null); 
   const [productToDelete, setProductToDelete] = useState<VendorProduct | null>(null);
   const [isDeletingProduct, setIsDeletingProduct] = useState(false);
+
+  const [isAddEditBillDialogOpen, setIsAddEditBillDialogOpen] = useState(false); // New state for bill dialog
 
 
   const [isAddEditCategoryDialogOpen, setIsAddEditCategoryDialogOpen] = useState(false);
@@ -423,14 +427,17 @@ export default function VendorsPage() {
         <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
                 <CardTitle className="text-xl font-bold text-gray-800">Vendor Bill's</CardTitle>
-                <CardDescription>This is a placeholder for Vendor Bill's content.</CardDescription>
+                <CardDescription>Manage bills and payments for vendors.</CardDescription>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
               <div className="relative flex-grow sm:flex-grow-0">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input placeholder="Search bills..." className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
               </div>
-              <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground">
+              <Button 
+                className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                onClick={() => setIsAddEditBillDialogOpen(true)}
+              >
                   <PlusCircle className="mr-2 h-4 w-4" /> Create New bill
               </Button>
             </div>
@@ -514,23 +521,32 @@ export default function VendorsPage() {
         />
       )}
 
-
-      {currentUser && (
-        <AddEditProductDialog
-          isOpen={isAddEditProductDialogOpen}
-          onOpenChange={setIsAddEditProductDialogOpen}
-          onProductSaved={handleProductSaved}
-          product={productToEdit}
-          currentUser={currentUser}
-          categories={categories}
-        />
-      )}
+      <AddEditProductDialog
+        isOpen={isAddEditProductDialogOpen}
+        onOpenChange={setIsAddEditProductDialogOpen}
+        onProductSaved={handleProductSaved}
+        product={productToEdit}
+        currentUser={currentUser}
+        categories={categories}
+      />
       
       <AddEditCategoryDialog
         isOpen={isAddEditCategoryDialogOpen}
         onOpenChange={setIsAddEditCategoryDialogOpen}
         onCategorySaved={handleCategorySaved}
         category={categoryToEdit}
+      />
+
+      <AddEditBillDialog
+          isOpen={isAddEditBillDialogOpen}
+          onOpenChange={setIsAddEditBillDialogOpen}
+          onBillSaved={() => {
+              setIsAddEditBillDialogOpen(false);
+              // You might want to refetch bill data here in the future
+          }}
+          currentUser={currentUser}
+          vendors={filteredVendors}
+          products={products}
       />
     </>
   );
