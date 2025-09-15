@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Store, MapPin, Phone, FileText, StickyNote, Percent, ReceiptText, CheckCircle, Truck, User } from "lucide-react";
-import type { VendorBill, BillPaymentRecord } from "@/types";
+import type { VendorBill, BillPaymentRecord, User as VendorUser } from "@/types";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from '@/components/ui/skeleton';
 import { parseISO, format } from 'date-fns';
@@ -29,9 +29,10 @@ const formatDate = (dateString: string | undefined) => {
 
 interface BillDetailsClientProps {
   bill: VendorBill;
+  vendor: VendorUser | null;
 }
 
-export function BillDetailsClient({ bill: initialBill }: BillDetailsClientProps) {
+export function BillDetailsClient({ bill: initialBill, vendor }: BillDetailsClientProps) {
   const [bill, setBill] = useState(initialBill);
   const [isClient, setIsClient] = useState(false);
   const barcodeRef = useRef<SVGSVGElement>(null);
@@ -79,7 +80,9 @@ export function BillDetailsClient({ bill: initialBill }: BillDetailsClientProps)
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 print:mb-4">
         <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
           <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Store className="h-4 w-4"/>Bill To:</h4>
-          <p className="text-lg font-semibold text-foreground">{bill.vendorName}</p>
+          <p className="text-lg font-semibold text-foreground">{vendor?.companyName || bill.vendorName}</p>
+          {vendor?.address && <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground"/>{vendor.address}</p>}
+          {vendor?.phone && <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground"/>{vendor.phone}</p>}
         </div>
       </div>
 

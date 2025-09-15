@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation';
 import { BillDetailsClient } from './BillDetailsClient';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
+import { getUserById } from '@/lib/user-service';
 
 interface BillPageProps {
   params: { billId: string };
@@ -19,7 +20,12 @@ export default async function BillPage({ params }: BillPageProps) {
     notFound();
   }
 
+  const vendorDataResult = billDataResult.vendorId 
+    ? await getUserById(billDataResult.vendorId) 
+    : null;
+
   const plainBillData = JSON.parse(JSON.stringify(billDataResult));
+  const plainVendorData = vendorDataResult ? JSON.parse(JSON.stringify(vendorDataResult)) : null;
 
   return (
     <div className="min-h-screen bg-background py-6 sm:py-10 px-4 sm:px-6 lg:px-8 selection:bg-primary/20 selection:text-primary print:p-0 print:m-0 print:bg-white">
@@ -39,6 +45,7 @@ export default async function BillPage({ params }: BillPageProps) {
       <Suspense fallback={<BillPageSkeleton />}>
         <BillDetailsClient
             bill={plainBillData}
+            vendor={plainVendorData}
         />
       </Suspense>
 
