@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -13,7 +14,7 @@ import type { User, VendorProduct, VendorCategory } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { getUsers } from '@/lib/user-service';
 import { getVendorCategories, deleteVendorCategory } from '@/lib/vendor-category-service';
-import { getVendorProducts } from '@/lib/vendor-product-service';
+import { getVendorProducts, deleteVendorProduct } from '@/lib/vendor-product-service'; // Import deleteVendorProduct
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -28,6 +29,7 @@ const DeleteUserDialog = dynamic(() => import('@/components/users/delete-user-di
 const AddEditProductDialog = dynamic(() => import('@/components/vendors/AddEditProductDialog').then(mod => mod.AddEditProductDialog));
 const AddEditCategoryDialog = dynamic(() => import('@/components/vendors/AddEditCategoryDialog').then(mod => mod.AddEditCategoryDialog));
 const DeleteCategoryDialog = dynamic(() => import('@/components/vendors/DeleteCategoryDialog').then(mod => mod.DeleteCategoryDialog));
+const DeleteProductDialog = dynamic(() => import('@/components/vendors/DeleteProductDialog').then(mod => mod.DeleteProductDialog));
 
 
 const getInitials = (name: string) => {
@@ -56,6 +58,9 @@ export default function VendorsPage() {
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isAddEditProductDialogOpen, setIsAddEditProductDialogOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<any | null>(null); 
+  const [productToDelete, setProductToDelete] = useState<VendorProduct | null>(null);
+  const [isDeletingProduct, setIsDeletingProduct] = useState(false);
+
 
   const [isAddEditCategoryDialogOpen, setIsAddEditCategoryDialogOpen] = useState(false);
   const [categoryToEdit, setCategoryToEdit] = useState<any | null>(null);
@@ -150,6 +155,22 @@ export default function VendorsPage() {
     setProductToEdit(product);
     setIsAddEditProductDialogOpen(true);
   };
+
+  const handleConfirmDeleteProduct = async () => {
+    if (!productToDelete) return;
+    setIsDeletingProduct(true);
+    const result = await deleteVendorProduct(productToDelete.id);
+    setIsDeletingProduct(false);
+    setProductToDelete(null);
+
+    if (result) {
+      toast({ title: "Product Deleted" });
+      fetchData();
+    } else {
+      toast({ title: "Error", description: "Failed to delete product.", variant: "destructive" });
+    }
+  };
+
 
   const handleCategorySaved = () => {
     toast({ title: "Success", description: "Category has been saved." });
@@ -290,9 +311,13 @@ export default function VendorsPage() {
                                <TableCell>{product.category}</TableCell>
                                <TableCell>{product.price}</TableCell>
                                <TableCell className="text-right">
-                                   <Button variant="ghost" size="sm" onClick={() => handleOpenEditProductDialog(product)}>
-                                       <Edit className="h-4 w-4" />
-                                   </Button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onSelect={() => handleOpenEditProductDialog(product)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => setProductToDelete(product)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                   </DropdownMenu>
                                </TableCell>
                            </TableRow>
                        ))}
@@ -428,6 +453,17 @@ export default function VendorsPage() {
           isDeleting={isDeletingCategory}
         />
       )}
+
+      {productToDelete && (
+        <DeleteProductDialog
+          isOpen={!!productToDelete}
+          onOpenChange={() => setProductToDelete(null)}
+          onConfirmDelete={handleConfirmDeleteProduct}
+          product={productToDelete}
+          isDeleting={isDeletingProduct}
+        />
+      )}
+
 
       {currentUser && (
         <AddEditProductDialog
