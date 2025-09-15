@@ -1,0 +1,64 @@
+
+import type { VendorBill } from '@/types';
+import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+
+const COLLECTION_NAME = 'vendorBills';
+
+export const getVendorBills = async (): Promise<VendorBill[]> => {
+  try {
+    await ensureCollectionExistsV3(COLLECTION_NAME);
+    const response = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999&orderBy=billDate&direction=desc`);
+    if (response && Array.isArray(response.documents)) {
+      return response.documents.map((doc: { id: string, data: any }) => ({
+        id: doc.id,
+        ...doc.data
+      } as VendorBill));
+    }
+    return [];
+  } catch (error) {
+    console.error("Error fetching vendor bills via API v3:", error);
+    return [];
+  }
+};
+
+export const addVendorBill = async (billData: Omit<VendorBill, 'id'>): Promise<VendorBill | null> => {
+  try {
+    await ensureCollectionExistsV3(COLLECTION_NAME);
+    const newDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
+        method: 'POST',
+        body: JSON.stringify({ data: billData }),
+    });
+    return { id: newDoc.id, ...newDoc.data } as VendorBill;
+  } catch (error) {
+    console.error("Error adding vendor bill via API v3:", error);
+    return null;
+  }
+};
+
+export const updateVendorBill = async (id: string, updates: Partial<Omit<VendorBill, 'id'>>): Promise<boolean> => {
+    try {
+        const existingDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`);
+        const finalData = { ...existingDoc.data, ...updates };
+
+        await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ data: finalData })
+        });
+        return true;
+    } catch (error) {
+        console.error(`Error updating vendor bill ${id} via API v3:`, error);
+        return false;
+    }
+};
+
+export const deleteVendorBill = async (id: string): Promise<boolean> => {
+    try {
+        await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
+            method: 'DELETE'
+        });
+        return true;
+    } catch (error) {
+        console.error(`Error deleting vendor bill ${id} via API v3:`, error);
+        return false;
+    }
+};

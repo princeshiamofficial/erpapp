@@ -459,3 +459,34 @@ export interface VendorCategory {
   id: string;
   name: string;
 }
+
+export interface BillItem {
+  id: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+  lineItemTotalPrice: number;
+}
+
+export type VendorBillStatus = 'Paid' | 'Unpaid' | 'Partially Paid';
+
+export interface VendorBill {
+  id: string;
+  vendorId: string;
+  vendorName: string;
+  billId?: string | null; // e.g., INV-12345 from the vendor
+  billDate: string; // ISO string
+  dueDate?: string | null; // ISO string
+  items: BillItem[];
+  subtotal: number;
+  discount: number;
+  total: number;
+  paidAmount: number;
+  dueAmount: number;
+  status: VendorBillStatus;
+  notes?: string | null;
+  createdAt: string; // ISO string
+  updatedAt: string; // ISO string
+  createdByUserId: string;
+  createdByUserName: string;
+}

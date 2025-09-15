@@ -7,8 +7,9 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import type { User, VendorProduct, OrderItem } from "@/types";
+import type { User, VendorProduct, OrderItem, VendorBill, BillItem, VendorBillStatus } from "@/types";
 import { useToast } from '@/hooks/use-toast';
+import { addVendorBill, updateVendorBill } from '@/lib/vendor-bill-service';
 import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, CalendarDays, Percent } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -24,7 +25,7 @@ interface AddEditBillDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onBillSaved: () => void;
-  bill?: any | null; // Replace 'any' with a proper Bill type later
+  bill?: VendorBill | null;
   currentUser: User;
   vendors: User[];
   products: VendorProduct[];
@@ -73,14 +74,30 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
   const isEditMode = !!bill;
 
   useEffect(() => {
-    // This will run when the dialog opens or the bill prop changes.
-    // Here you would populate the form if in edit mode.
     if (isOpen) {
-      if (isEditMode) {
-        // set form fields from bill prop
+      if (isEditMode && bill) {
+        setSelectedVendorId(bill.vendorId);
+        setBillId(bill.billId || '');
+        setBillDate(new Date(bill.billDate));
+        setDueDate(bill.dueDate ? new Date(bill.dueDate) : undefined);
+        setBillItems(bill.items.map(item => ({
+          ...item,
+          quantity: item.quantity.toString(),
+        })));
+        setNotes(bill.notes || '');
+        setDiscount(bill.discount.toString() || '');
+        setPaidAmount(bill.paidAmount.toString() || '');
       } else {
-        // reset form for add mode
+        setSelectedVendorId('');
+        setBillId('');
+        setBillDate(new Date());
+        setDueDate(undefined);
+        setBillItems([{ ...initialBillItemState, id: uuidv4() }]);
+        setNotes('');
+        setDiscount('');
+        setPaidAmount('');
       }
+      setIsSubmitting(false);
     }
   }, [isOpen, bill, isEditMode]);
   
@@ -152,8 +169,51 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({ title: "In Progress", description: "This feature is currently under development." });
-    // Logic for submitting the bill will go here
+    if (!selectedVendorId || !billDate || billItems.some(item => !item.productName || !item.quantity)) {
+        toast({ title: "Validation Error", description: "Please fill all required fields.", variant: "destructive" });
+        return;
+    }
+
+    setIsSubmitting(true);
+    
+    const status: VendorBillStatus = amountDue <= 0 ? 'Paid' : (parseFloat(paidAmount) > 0 ? 'Partially Paid' : 'Unpaid');
+    
+    const billPayload = {
+      vendorId: selectedVendorId,
+      vendorName: vendors.find(v => v.id === selectedVendorId)?.name || 'Unknown',
+      billId: billId || null,
+      billDate: billDate.toISOString(),
+      dueDate: dueDate ? dueDate.toISOString() : null,
+      items: billItems.map(item => ({...item, quantity: parseInt(item.quantity), unitPrice: item.unitPrice!, lineItemTotalPrice: item.lineItemTotalPrice!})),
+      notes: notes || null,
+      subtotal: billItemsTotal,
+      discount: calculatedDiscount,
+      total: netTotal,
+      paidAmount: parseFloat(paidAmount) || 0,
+      dueAmount: amountDue,
+      status,
+      createdAt: isEditMode ? bill.createdAt : new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      createdByUserId: isEditMode ? bill.createdByUserId : currentUser.id,
+      createdByUserName: isEditMode ? bill.createdByUserName : currentUser.name,
+    };
+
+    let result = null;
+    if (isEditMode) {
+      result = await updateVendorBill(bill.id, billPayload);
+    } else {
+      result = await addVendorBill(billPayload as Omit<VendorBill, 'id'>);
+    }
+    
+    setIsSubmitting(false);
+
+    if (result) {
+        toast({ title: `Bill ${isEditMode ? 'Updated' : 'Created'}`, description: `Vendor bill has been saved successfully.`});
+        onBillSaved();
+        onOpenChange(false);
+    } else {
+        toast({ title: "Error", description: "Failed to save the vendor bill.", variant: "destructive" });
+    }
   };
 
   return (
@@ -296,4 +356,3 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
 }
 
 export default AddEditBillDialog;
-
