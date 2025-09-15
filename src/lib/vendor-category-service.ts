@@ -37,6 +37,7 @@ export const addVendorCategory = async (categoryData: Omit<VendorCategory, 'id'>
 
 export const updateVendorCategory = async (id: string, updates: Partial<VendorCategory>): Promise<boolean> => {
   try {
+    await ensureCollectionExistsV3(COLLECTION_NAME);
     const existingDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`);
     const finalData = { ...existingDoc.data, ...updates };
     await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
@@ -52,6 +53,7 @@ export const updateVendorCategory = async (id: string, updates: Partial<VendorCa
 
 export const deleteVendorCategory = async (id: string): Promise<boolean> => {
   try {
+    await ensureCollectionExistsV3(COLLECTION_NAME);
     await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
         method: 'DELETE'
     });

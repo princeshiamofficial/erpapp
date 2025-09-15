@@ -37,6 +37,7 @@ export const addVendorProduct = async (productData: Omit<VendorProduct, 'id'>): 
 
 export const updateVendorProduct = async (id: string, updates: Partial<VendorProduct>): Promise<boolean> => {
   try {
+    await ensureCollectionExistsV3(COLLECTION_NAME);
     const existingDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`);
     const finalData = { ...existingDoc.data, ...updates };
     await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
@@ -52,6 +53,7 @@ export const updateVendorProduct = async (id: string, updates: Partial<VendorPro
 
 export const deleteVendorProduct = async (id: string): Promise<boolean> => {
   try {
+    await ensureCollectionExistsV3(COLLECTION_NAME);
     await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`, {
         method: 'DELETE'
     });
