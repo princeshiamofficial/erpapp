@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -78,7 +77,8 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
     
     if (isVendor) {
         updates.phone = phone.trim() || null;
-        updates.category = category.trim() || null;
+        const categoryToSave = category === 'none' ? null : category.trim() || null;
+        updates.category = categoryToSave;
     }
 
     const result = await updateUserInfoAction(user.id, updates);
@@ -159,12 +159,12 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="userCategory-edit">Category (Optional)</Label>
-                   <Select value={category} onValueChange={setCategory} disabled={isLoading}>
+                   <Select value={category || 'none'} onValueChange={setCategory} disabled={isLoading}>
                     <SelectTrigger id="userCategory-edit">
                       <SelectValue placeholder="Select a category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {availableCategories.map(cat => (
                         <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
                       ))}
