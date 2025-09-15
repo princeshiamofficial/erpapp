@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { Search, MoreVertical, Store, Loader2, Edit, Trash2, PlusCircle } from "lucide-react";
+import { Search, MoreVertical, Store, Loader2, Edit, Trash2, PlusCircle, Package } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { User } from '@/types';
@@ -174,6 +174,22 @@ export default function VendorsPage() {
     </Card>
   );
 
+  const productsAndCategoriesContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+        <CardHeader className="p-6">
+            <CardTitle className="text-xl font-bold text-gray-800">Products & Categories</CardTitle>
+            <CardDescription>Manage vendor products and categories here.</CardDescription>
+        </CardHeader>
+        <CardContent>
+            <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
+                <Package className="h-10 w-10 mb-2" />
+                <p className="font-semibold">Coming Soon</p>
+                <p className="text-sm">This section is under construction.</p>
+            </div>
+        </CardContent>
+    </Card>
+  );
+
   if (!currentUser || !['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role)) {
     return <div className="p-8 text-center">Access Denied.</div>;
   }
@@ -184,10 +200,14 @@ export default function VendorsPage() {
          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
             <TabsTrigger value="vendor_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor List</TabsTrigger>
+            <TabsTrigger value="products_categories" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Products & Categories</TabsTrigger>
           </TabsList>
           <div className="mt-6">
             <TabsContent value="vendor_list">
               {vendorListContent}
+            </TabsContent>
+            <TabsContent value="products_categories">
+              {productsAndCategoriesContent}
             </TabsContent>
           </div>
         </Tabs>
