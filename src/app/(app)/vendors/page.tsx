@@ -421,9 +421,14 @@ export default function VendorsPage() {
 
   const vendorBillsContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="p-6">
-            <CardTitle className="text-xl font-bold text-gray-800">Vendor Bill's</CardTitle>
-            <CardDescription>This is a placeholder for Vendor Bill's content.</CardDescription>
+        <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <CardTitle className="text-xl font-bold text-gray-800">Vendor Bill's</CardTitle>
+                <CardDescription>This is a placeholder for Vendor Bill's content.</CardDescription>
+            </div>
+            <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                <PlusCircle className="mr-2 h-4 w-4" /> Create New bill
+            </Button>
         </CardHeader>
         <CardContent>
             <div className="text-center text-gray-500 py-16">
