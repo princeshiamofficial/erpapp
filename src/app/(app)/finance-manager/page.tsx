@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -411,7 +412,7 @@ export default function FinanceManagerPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header bg-card rounded-lg p-4 shadow-md">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header bg-card rounded-lg p-4 shadow-xl">
         <div>
           <h1 className="page-title">Finance Manager</h1>
           <p className="page-description">
