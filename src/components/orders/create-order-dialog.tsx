@@ -784,7 +784,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   )}
                 </div>
                  <div className="space-y-1">
-                    <Label htmlFor="newAdvancePaymentNotes">Reference/Notes (Optional)</Label>
+                    <Label htmlFor="newAdvancePaymentNotes">Reference/Notes</Label>
                     <Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID"/>
                 </div>
                  <div className="space-y-1 md:col-span-2 lg:col-span-3">
