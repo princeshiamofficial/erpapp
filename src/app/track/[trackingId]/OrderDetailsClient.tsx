@@ -480,6 +480,8 @@ export function OrderDetailsClient({
   const isConsideredDelivered = isDeliveredByCourier || isDeliveredInternally;
   
   const amountDue = isConsideredDelivered ? 0 : (grandTotal - totalAdvancePaid);
+  
+  const showPaidBadge = (grandTotal > 0 && amountDue <= 0.01) || isConsideredDelivered;
 
 
   return (
@@ -635,9 +637,22 @@ export function OrderDetailsClient({
                     <span className="text-md font-medium text-foreground">+ {formatCurrency(shippingCharge)}</span>
                   </div>
                 )}
-                {totalAdvancePaid > 0 && (<div className="flex justify-between mb-2"><span className="text-md text-muted-foreground">Total Advance Paid:</span><span className="text-md font-medium text-green-600">- {formatCurrency(totalAdvancePaid)}</span></div>)}
-                {isConsideredDelivered || (orderSubtotal > 0 && amountDue <= 0.01) ? (<div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end"><div className="absolute -left-8 -top-4 sm:-left-12 sm:-top-6 transform -rotate-[15deg] border-4 border-green-500 text-green-500 font-bold uppercase text-3xl sm:text-4xl px-3 py-1 rounded-md shadow-lg bg-background/80 dark:bg-card/80 backdrop-blur-sm">PAID</div></div>)
-                : (orderSubtotal > 0 && amountDue > 0.01) && (<><Separator className="my-2 bg-border/50" /><div className="flex justify-between"><span className="text-lg font-bold text-primary">Amount Due:</span><span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span></div></>)}
+                {totalAdvancePaid > 0 && (<div className="flex justify-between mb-2"><span className="text-md text-muted-foreground">{showPaidBadge ? "Total Paid:" : "Total Advance Paid:"}</span><span className="font-medium text-green-600">- {formatCurrency(totalAdvancePaid)}</span></div>)}
+                
+                {showPaidBadge ? (
+                    <div className="absolute -left-16 -top-12 sm:-left-24 sm:-top-16 transform -rotate-[20deg]">
+                        <Image
+                            src="https://colorhutbd.xyz/image/paid-stamp.webp"
+                            alt="Paid Stamp"
+                            width={150}
+                            height={150}
+                            className="opacity-80"
+                            unoptimized
+                        />
+                    </div>
+                ) : (grandTotal > 0 && amountDue > 0.01) && (
+                    <><Separator className="my-2 bg-border/50" /><div className="flex justify-between"><span className="text-lg font-bold text-primary">Amount Due:</span><span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span></div></>
+                )}
               </div>
             </div>
           )}
@@ -723,5 +738,7 @@ export function OrderDetailsClient({
     </>
   );
 }
+
+    
 
     
