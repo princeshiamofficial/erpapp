@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -33,6 +32,7 @@ import { getTaskEntries, TaskEntry, getMonthlyTargetHistory, setMonthlyTargetHis
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; 
 import { ScrollArea } from '@/components/ui/scroll-area'; 
 import type { GlobalSettings } from '@/types';
+import Link from 'next/link';
 
 
 interface DailyTargetData {
@@ -227,19 +227,29 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                  {isInputVisible && (
                     <div className="flex items-center gap-1 w-full sm:w-auto">
                         <Label htmlFor="tasks-done-input" className="text-xs text-muted-foreground mr-1 whitespace-nowrap sr-only">{inputLabel}</Label>
-                        <Input 
-                            id="tasks-done-input"
-                            type="number" 
-                            placeholder={`${inputLabel}...`}
-                            value={tasksDone} 
-                            onChange={(e) => setTasksDone(e.target.value)} 
-                            className="h-10 w-full sm:w-32"
-                            min="0"
-                            disabled={hasSubmittedToday}
-                        />
-                        <Button onClick={handleDoneClick} disabled={isSubmitting || tasksDone.trim() === '' || hasSubmittedToday} className="h-10">
-                            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : hasSubmittedToday ? "Submitted" : "Done"}
-                        </Button>
+                        {!hasSubmittedToday ? (
+                          <>
+                            <Input 
+                                id="tasks-done-input"
+                                type="number" 
+                                placeholder={`${inputLabel}...`}
+                                value={tasksDone} 
+                                onChange={(e) => setTasksDone(e.target.value)} 
+                                className="h-10 w-full sm:w-32"
+                                min="0"
+                                disabled={hasSubmittedToday}
+                            />
+                            <Button onClick={handleDoneClick} disabled={isSubmitting || tasksDone.trim() === '' || hasSubmittedToday} className="h-10">
+                                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Done"}
+                            </Button>
+                          </>
+                        ) : (
+                          <Button asChild className="h-10 w-full sm:w-auto">
+                            <Link href="https://colorhut.xyz/dr/" target="_blank">
+                              Open DR 2.O
+                            </Link>
+                          </Button>
+                        )}
                     </div>
                  )}
                 {isAdminView && onTeamChange && (
@@ -338,3 +348,5 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
+    
