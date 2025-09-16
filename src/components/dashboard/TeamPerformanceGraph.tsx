@@ -118,7 +118,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
     }
     const taskCount = parseInt(tasksDone, 10);
     if (isNaN(taskCount) || taskCount < 0) {
-        toast({ title: "Invalid Input", description: "Please enter a valid number of tasks.", variant: "destructive" });
+        toast({ title: "Invalid Input", description: "Please enter a valid non-negative number of tasks.", variant: "destructive" });
         return;
     }
     
@@ -237,7 +237,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                             min="0"
                             disabled={hasSubmittedToday}
                         />
-                        <Button onClick={handleDoneClick} disabled={isSubmitting || !tasksDone || hasSubmittedToday} className="h-10">
+                        <Button onClick={handleDoneClick} disabled={isSubmitting || tasksDone.trim() === '' || hasSubmittedToday} className="h-10">
                             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : hasSubmittedToday ? "Submitted" : "Done"}
                         </Button>
                     </div>
