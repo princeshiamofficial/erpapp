@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2 } from "lucide-react";
+import { Send, Package, CalendarDays, Clock, CheckCircle, Info, Phone, Building, MapPin, Layers, Heart, ChevronDown, ChevronUp, MessageCircle, UserCheck, FileText, Landmark, Loader2, AlertTriangle, StickyNote, Percent, ReceiptText, Truck, Trash2, Link as LinkIcon } from "lucide-react";
 import JsBarcode from 'jsbarcode';
 import type { Comment, CustomStatus, TrackingLink, User, UserRole, OrderItem, AdvancePaymentRecord } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -24,6 +24,8 @@ import { formatDistanceToNowStrict, parseISO, format as formatDateFns } from 'da
 import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import NextLink from 'next/link';
+import { cn } from '@/lib/utils';
 
 
 const CLIENT_AVATAR_URL = 'https://i.ibb.co/7dphf0LX/avatar-with-a-young-face-pictures-of-men-vector-46356734.jpg';
@@ -614,7 +616,16 @@ export function OrderDetailsClient({
                       <TableRow key={record.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell className="text-xs text-muted-foreground">{isClient ? formatDate(record.date, false) : <Skeleton className="h-4 w-24"/>}</TableCell>
                         <TableCell className="font-medium text-green-600">{formatCurrency(record.amount)}</TableCell>
-                        <TableCell className="text-card-foreground">{record.paymentMethod || 'N/A'}</TableCell>
+                         <TableCell>
+                            {record.documentUrl ? (
+                                <NextLink href={record.documentUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-primary hover:underline" title="View Payment Proof">
+                                    <LinkIcon className="h-3.5 w-3.5" />
+                                    <span>{record.paymentMethod || 'N/A'}</span>
+                                </NextLink>
+                            ) : (
+                                <span className="text-card-foreground">{record.paymentMethod || 'N/A'}</span>
+                            )}
+                        </TableCell>
                         <TableCell className="text-xs text-muted-foreground">{record.notes || 'N/A'}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{record.recordedByUserName || 'N/A'}</TableCell>
                       </TableRow>
@@ -738,7 +749,3 @@ export function OrderDetailsClient({
     </>
   );
 }
-
-    
-
-    
