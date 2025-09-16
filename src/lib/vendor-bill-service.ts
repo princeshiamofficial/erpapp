@@ -52,10 +52,10 @@ export const addVendorBill = async (billData: Omit<VendorBill, 'id'>): Promise<V
     const allBillsResponse = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents?limit=9999`);
     let newSequence = 1;
     if (allBillsResponse && Array.isArray(allBillsResponse.documents)) {
-        const sameDayBills = allBillsResponse.documents.filter((doc: { data: any }) => doc.data.billId?.startsWith(datePrefix));
+        const sameDayBills = allBillsResponse.documents.filter((doc: { id: string, data: any }) => doc.id.startsWith(datePrefix));
         if (sameDayBills.length > 0) {
-            const lastSequence = Math.max(...sameDayBills.map((doc: { data: any }) => {
-                const numPart = parseInt(doc.data.billId.split('-').pop() || '0', 10);
+            const lastSequence = Math.max(...sameDayBills.map((doc: { id: string, data: any }) => {
+                const numPart = parseInt(doc.id.split('-').pop() || '0', 10);
                 return isNaN(numPart) ? 0 : numPart;
             }));
             newSequence = lastSequence + 1;
@@ -65,14 +65,20 @@ export const addVendorBill = async (billData: Omit<VendorBill, 'id'>): Promise<V
     
     const billDataWithId = {
       ...billData,
-      billId: billId, // Add the custom formatted ID
+      billId: billId, // Also keep it as a field inside the document
     };
 
-    const newDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
+    const payload = {
+        id: billId, // Use the custom ID for the document ID
+        data: billDataWithId
+    };
+
+    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
         method: 'POST',
-        body: JSON.stringify({ data: billDataWithId }),
+        body: JSON.stringify(payload),
     });
-    return { id: newDoc.id, ...newDoc.data } as VendorBill;
+    
+    return { id: billId, ...billDataWithId } as VendorBill;
   } catch (error) {
     console.error("Error adding vendor bill via API v3:", error);
     return null;
@@ -106,4 +112,3 @@ export const deleteVendorBill = async (id: string): Promise<boolean> => {
         return false;
     }
 };
-
