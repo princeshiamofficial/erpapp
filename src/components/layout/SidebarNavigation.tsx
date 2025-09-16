@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import Link from "next/link";
@@ -31,6 +32,7 @@ import {
   ClipboardList,
   Gift,
   Store,
+  Box,
 } from "lucide-react";
 import type { UserRole, GlobalSettings } from "@/types";
 import { cn } from "@/lib/utils";
@@ -52,6 +54,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR"] },
+  { href: "/dr2o", label: "DR 2.O", icon: Box, roles: ["DESIGNER_REPRESENTATIVE"] },
   { 
     isHeader: true,
     label: "CRM", 
