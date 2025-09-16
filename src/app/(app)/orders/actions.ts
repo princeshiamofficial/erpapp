@@ -31,6 +31,7 @@ interface CreateOrderDialogFormData {
   advancePaymentAmount?: string | null;
   advancePaymentMethod?: string | null;
   advancePaymentDocumentUrl?: string | null;
+  newAdvancePaymentNotes?: string | null;
   specialClientDiscount?: number | null;
   customPaymentMethodText?: string; 
   orderNotes?: string | null;
@@ -149,6 +150,7 @@ export async function createOrderAction(
       initialStatusId: data.initialStatusId,
       crmUserId: currentUser.id,
       crmUserName: currentUser.name,
+      newAdvancePaymentNotes: data.newAdvancePaymentNotes || null,
     };
 
     const createdOrder = await addOrderService(newOrderDataForService);
