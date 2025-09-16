@@ -87,15 +87,7 @@ export function BillDetailsClient({ bill: initialBill, vendor }: BillDetailsClie
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 print:mb-4">
-        <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
-          <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Store className="h-4 w-4"/>Bill To:</h4>
-          <p className="text-lg font-semibold text-foreground">{vendor?.companyName || bill.vendorName}</p>
-          {vendor?.address && <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground"/>{vendor.address}</p>}
-          {vendor?.phone && <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground"/>{vendor.phone}</p>}
-        </div>
-      </div>
-
+      
       {Array.isArray(bill.items) && bill.items.length > 0 && (
           <div className="mb-6 print:mb-4">
             <h3 className="text-lg font-semibold mb-3 text-foreground flex items-start">Bill Items</h3>
@@ -171,7 +163,7 @@ export function BillDetailsClient({ bill: initialBill, vendor }: BillDetailsClie
           
           {bill.paidAmount > 0 && (
             <div className="flex justify-between mb-2">
-              <span className="text-md text-muted-foreground">Total Paid:</span>
+              <span className="text-md text-muted-foreground">{showPaidBadge ? "Total Paid:" : "Total Advance Paid:"}</span>
               <span className="font-medium text-green-600">- {formatCurrency(bill.paidAmount)}</span>
             </div>
           )}

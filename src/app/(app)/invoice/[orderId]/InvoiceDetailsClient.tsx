@@ -112,7 +112,16 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
       <div className="flex flex-col sm:flex-row justify-between items-start mb-6 pb-6 border-b border-border/30 print:mb-4 print:pb-4">
         <div>
           <h2 className="text-3xl font-bold text-primary mb-2 flex items-center"><FileText className="h-8 w-8 mr-3" /> INVOICE</h2>
-          <p className="font-bold text-foreground">Color Hut</p>
+          <div className="mb-2">
+              <Image
+                src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+                alt="Color Hut Logo"
+                width={160}
+                height={40}
+                priority
+                className="object-contain rounded-md"
+              />
+          </div>
           <p className="text-muted-foreground text-sm">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
           <p className="text-muted-foreground text-sm">colorhut.official@gmail.com | +8801919-760626</p>
           <div className="text-sm text-muted-foreground mt-1.5">{lastEditedByEntry ? (isClient ? <>Last Updated: {lastEditedByEntry.changedByUserName} {formatDate(lastEditedByEntry.timestamp)}</> : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>) : (isClient ? `Order Placed: ${formatDate(order.createdAt)} ${order.crmUserName}` : <div className="h-4 w-64"><Skeleton className="h-full w-full" /></div>)}</div>
@@ -192,7 +201,7 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
 
           {totalAdvancePaid > 0 && (
             <div className="flex justify-between mb-2">
-              <span className="text-md text-muted-foreground">Total Advance Paid:</span>
+              <span className="text-md text-muted-foreground">{showPaidBadge ? "Total Paid:" : "Total Advance Paid:"}</span>
               <span className="font-medium text-green-600">- {formatCurrency(totalAdvancePaid)}</span>
             </div>
           )}
