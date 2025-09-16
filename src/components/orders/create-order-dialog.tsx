@@ -1,7 +1,8 @@
 
+
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createOrderAction } from '@/app/(app)/orders/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getModels, getLaminations, getPaymentMethods } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, UploadCloud, Paperclip, XCircle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -74,6 +75,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [calculatedDiscountAmount, setCalculatedDiscountAmount] = useState<number>(0);
   const [netPayable, setNetPayable] = useState<number>(0);
   const [amountDue, setAmountDue] = useState<number>(0);
+  
+  const [selectedPaymentProof, setSelectedPaymentProof] = useState<File | null>(null);
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
+  const paymentProofRef = useRef<HTMLInputElement>(null);
 
 
   const [modelOptions, setModelOptions] = useState<ServiceModelItem[]>([]);
@@ -108,6 +113,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setIsSubmitting(false);
     setCurrentOrderDate(new Date());
     setIsAutoFilled(false);
+    setSelectedPaymentProof(null);
+    setIsUploadingProof(false);
   }, []);
 
   const fetchOptions = useCallback(async () => {
@@ -210,6 +217,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
         setAdvancePaymentMethod('');
         setCustomPaymentMethodText('');
         setShowCustomPaymentInput(false);
+        setSelectedPaymentProof(null);
     }
   }, [isAdvancePaymentEntered]);
 
@@ -366,6 +374,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     const isDiscountValid = calculatedDiscountAmount <= orderItemsTotal || orderItemsTotal === 0;
 
     return !isSubmitting &&
+      !isUploadingProof &&
       jobId.trim() &&
       companyName.trim() && address.trim() && phoneNumber.trim() && initialStatusId && currentOrderDate &&
       (availableStatuses.length > 0 || !!initialStatusId) &&
@@ -383,75 +392,76 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       ) &&
       !(isAdvancePaymentEntered && !advancePaymentMethod.trim()) &&
       !(isAdvancePaymentEntered && advancePaymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
+      !(isAdvancePaymentEntered && !selectedPaymentProof) &&
       isAdvPaymentValid && isDiscountValid;
-  }, [isSubmitting, jobId, companyName, address, phoneNumber, initialStatusId, currentOrderDate, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, advancePaymentMethod, customPaymentMethodText, advancePaymentAmount, netPayable, calculatedDiscountAmount, orderItemsTotal]);
+  }, [isSubmitting, isUploadingProof, jobId, companyName, address, phoneNumber, initialStatusId, currentOrderDate, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, advancePaymentMethod, customPaymentMethodText, advancePaymentAmount, netPayable, calculatedDiscountAmount, orderItemsTotal, selectedPaymentProof]);
+
+  const handleProofFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({ title: "File too large", description: "Please select a file smaller than 5MB.", variant: "destructive" });
+        return;
+      }
+      setSelectedPaymentProof(file);
+    }
+  };
+
+  const handleRemoveProofFile = () => {
+    setSelectedPaymentProof(null);
+    if (paymentProofRef.current) paymentProofRef.current.value = "";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Final validations
+    if (!canSubmit) {
+      if (isAdvancePaymentEntered && !selectedPaymentProof) {
+        toast({ title: "Validation Error", description: "Payment proof is required when an advance payment is entered.", variant: "destructive" });
+      } else {
+        toast({ title: "Validation Error", description: "Please fill all required fields correctly.", variant: "destructive" });
+      }
+      return;
+    }
+    
     setIsSubmitting(true);
-
-    if (!jobId.trim() || !companyName.trim() || !address.trim() || !phoneNumber.trim() || !initialStatusId || !currentOrderDate) {
-      toast({ title: "Validation Error", description: "Job ID, Company Name, Address, Phone Number, Order Date and Initial Status are required.", variant: "destructive" });
-      setIsSubmitting(false); return;
-    }
-    if (orderItems.length === 0 || orderItems.some(item => !item.model || !item.lamination || parseInt(item.quantity) < 1 || item.unitPrice === null || item.lineItemTotalPrice === null)) {
-       toast({ title: "Validation Error", description: "All order items must be complete with Model, Quantity, Lamination, and valid pricing.", variant: "destructive" });
-       setIsSubmitting(false); return;
-    }
-
-    const currentIsAdvancePaymentEnteredLogic = (parseFloat(advancePaymentAmount) || 0) > 0;
-    let finalAdvancePaymentMethod = advancePaymentMethod.trim() || null;
-    if (currentIsAdvancePaymentEnteredLogic) {
-        if (!advancePaymentMethod.trim()) {
-            toast({ title: "Validation Error", description: "Payment Method is required when Advance Payment is entered.", variant: "destructive" });
-            setIsSubmitting(false); return;
+    let uploadedProofUrl: string | null = null;
+    
+    if (isAdvancePaymentEntered && selectedPaymentProof) {
+      setIsUploadingProof(true);
+      const formData = new FormData();
+      formData.append('file', selectedPaymentProof);
+      try {
+        const response = await fetch('https://erp.colorhutbd.xyz/file/upload.php', { method: 'POST', body: formData });
+        const result = await response.json();
+        if (response.ok && result.success && result.file_url) {
+          uploadedProofUrl = result.file_url;
+        } else {
+          throw new Error(result.message || 'File upload failed');
         }
-        if (advancePaymentMethod.toLowerCase() === 'other') {
-          if (!customPaymentMethodText.trim()) {
-            toast({ title: "Validation Error", description: "Please specify the 'Other' payment method.", variant: "destructive" });
-            setIsSubmitting(false); return;
-          }
-          finalAdvancePaymentMethod = customPaymentMethodText.trim();
-        }
-    } else {
-        finalAdvancePaymentMethod = null;
+      } catch (error) {
+        toast({ title: "Payment Proof Upload Failed", description: error instanceof Error ? error.message : "An unknown error occurred.", variant: "destructive" });
+        setIsUploadingProof(false);
+        setIsSubmitting(false);
+        return;
+      }
+      setIsUploadingProof(false);
     }
-
-    const parsedAdvPayment = parseFloat(advancePaymentAmount) || 0;
-    const grandTotal = netPayable;
-
-    if (parsedAdvPayment > grandTotal && grandTotal > 0) {
-        toast({ title: "Validation Error", description: `Advance payment (${formatCurrencyBdt(parsedAdvPayment)}) cannot exceed grand total of ${formatCurrencyBdt(grandTotal)}.`, variant: "destructive"});
-        setIsSubmitting(false); return;
-    }
-    if (calculatedDiscountAmount > orderItemsTotal && orderItemsTotal > 0) {
-         toast({ title: "Validation Error", description: `Special Client Discount (${formatCurrencyBdt(calculatedDiscountAmount)}) cannot exceed total items price of ${formatCurrencyBdt(orderItemsTotal)}.`, variant: "destructive"});
-        setIsSubmitting(false); return;
-    }
-
-    const parsedOrderItems: OrderItem[] = orderItems.map(item => ({
-        id: item.id,
-        model: item.model,
-        quantity: parseInt(item.quantity, 10),
-        lamination: item.lamination,
-        unitPrice: item.unitPrice!,
-        lineItemTotalPrice: item.lineItemTotalPrice!,
-    }));
 
     const orderDataForAction = {
       jobId: jobId.trim(),
       companyName: companyName.trim(),
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
-      createdAt: currentOrderDate.toISOString(),
-      orderItems: parsedOrderItems,
-      advancePaymentAmount: parsedAdvPayment > 0 ? parsedAdvPayment : null,
-      advancePaymentMethod: finalAdvancePaymentMethod,
+      createdAt: currentOrderDate!.toISOString(),
+      orderItems: orderItems.map(item => ({ ...item, quantity: parseInt(item.quantity, 10) })),
+      advancePaymentAmount: parseFloat(advancePaymentAmount) || null,
+      advancePaymentMethod: advancePaymentMethod.trim() ? (advancePaymentMethod.toLowerCase() === 'other' ? customPaymentMethodText.trim() : advancePaymentMethod.trim()) : null,
+      advancePaymentDocumentUrl: uploadedProofUrl,
       specialClientDiscount: calculatedDiscountAmount > 0 ? calculatedDiscountAmount : null,
       orderNotes: orderNotes.trim() || null,
       initialStatusId,
-      crmUserId: currentUser.id,
-      crmUserName: currentUser.name,
     };
 
     const result = await createOrderAction(orderDataForAction, currentUser);
@@ -464,7 +474,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       onOrderCreated();
       setIsOpen(false);
       resetForm();
-      // Open the new tracking page in a new tab
       window.open(`/track/${result.id}`, '_blank');
     }
   };
@@ -771,6 +780,27 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   )}
                 </div>
               )}
+               {isAdvancePaymentEntered && (
+                <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                  <Label htmlFor="payment-proof">Payment Proof *</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="payment-proof"
+                      type="file"
+                      ref={paymentProofRef}
+                      onChange={handleProofFileChange}
+                      className="flex-1"
+                      accept="image/*,application/pdf"
+                    />
+                    {selectedPaymentProof && (
+                      <Button type="button" variant="ghost" size="icon" onClick={handleRemoveProofFile}>
+                        <XCircle className="h-4 w-4 text-destructive"/>
+                      </Button>
+                    )}
+                  </div>
+                  {selectedPaymentProof && <p className="text-xs text-muted-foreground">File: {selectedPaymentProof.name}</p>}
+                </div>
+              )}
             </div>
 
             <div className="mt-4 p-4 border rounded-md bg-muted/30 space-y-2">
@@ -805,7 +835,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => { setIsOpen(false); }} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={!canSubmit}>
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Creating...</> : "Create Order"}
+              {isSubmitting || isUploadingProof ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isUploadingProof ? "Uploading..." : "Creating..."}</> : "Create Order"}
             </Button>
           </DialogFooter>
         </form>

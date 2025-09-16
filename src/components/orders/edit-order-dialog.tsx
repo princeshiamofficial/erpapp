@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,7 +20,7 @@ import type { TrackingLink, User, ServicePaymentMethodItem, OrderItem, ServiceMo
 import { useToast } from '@/hooks/use-toast';
 import { updateOrderAction } from '@/app/(app)/orders/actions';
 import { getPaymentMethods, getModels, getLaminations } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, UploadCloud, Paperclip, XCircle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -96,6 +96,10 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const [existingAdvancePayments, setExistingAdvancePayments] = useState<AdvancePaymentRecord[]>([]);
   const [totalExistingAdvancePaid, setTotalExistingAdvancePaid] = useState(0);
 
+  const [selectedPaymentProof, setSelectedPaymentProof] = useState<File | null>(null);
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
+  const paymentProofRef = useRef<HTMLInputElement>(null);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -154,6 +158,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setShowNewCustomPaymentInput(false); setNewCustomPaymentMethodText('');
     setPopoverOpenStates({}); setIsPaymentMethodPopoverOpen(false);
     setIsSubmitting(false);
+    setSelectedPaymentProof(null);
+    setIsUploadingProof(false);
   }, [order]);
 
   useEffect(() => {
@@ -261,8 +267,25 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
         setNewAdvancePaymentMethod('');
         setNewCustomPaymentMethodText('');
         setShowNewCustomPaymentInput(false);
+        setSelectedPaymentProof(null);
     }
   }, [isNewAdvanceEntered]);
+
+  const handleProofFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({ title: "File too large", description: "Please select a file smaller than 5MB.", variant: "destructive" });
+        return;
+      }
+      setSelectedPaymentProof(file);
+    }
+  };
+
+  const handleRemoveProofFile = () => {
+    setSelectedPaymentProof(null);
+    if (paymentProofRef.current) paymentProofRef.current.value = "";
+  };
 
 
   const canSubmit = useMemo(() => {
@@ -272,64 +295,67 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     const isAdvPaymentValid = totalAdvanceAfterNew <= grandTotal || grandTotal === 0;
     const isDiscountValid = calculatedDiscountAmount <= orderItemsTotal || orderItemsTotal === 0;
 
-    return !isSubmitting && jobIdInput.trim() && companyNameInput.trim() && address.trim() && phoneNumber.trim() && createdAt &&
+    return !isSubmitting && !isUploadingProof && jobIdInput.trim() && companyNameInput.trim() && address.trim() && phoneNumber.trim() && createdAt &&
       !isLoadingOptions && orderItems.length > 0 && orderItems.every(item => item.model && item.quantity && parseInt(item.quantity) > 0 && item.lamination && item.unitPrice !== null && item.lineItemTotalPrice !== null) &&
       !(isNewAdvanceEntered && !newAdvancePaymentMethod.trim()) &&
       !(isNewAdvanceEntered && newAdvancePaymentMethod.toLowerCase() === 'other' && !newCustomPaymentMethodText.trim()) &&
+      !(isNewAdvanceEntered && !selectedPaymentProof) &&
       isAdvPaymentValid && isDiscountValid;
-  }, [isSubmitting, jobIdInput, companyNameInput, address, phoneNumber, createdAt, isLoadingOptions, orderItems, isNewAdvanceEntered, newAdvancePaymentMethod, newCustomPaymentMethodText, currentUser, totalExistingAdvancePaid, newAdvanceAmount, netPayable, orderItemsTotal, calculatedDiscountAmount]);
+  }, [isSubmitting, isUploadingProof, jobIdInput, companyNameInput, address, phoneNumber, createdAt, isLoadingOptions, orderItems, isNewAdvanceEntered, newAdvancePaymentMethod, newCustomPaymentMethodText, currentUser, totalExistingAdvancePaid, newAdvanceAmount, netPayable, orderItemsTotal, calculatedDiscountAmount, selectedPaymentProof]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser || !currentUser.role) {
         toast({ title: "Authentication Error", variant: "destructive" }); return;
     }
-    if (!jobIdInput.trim() || !companyNameInput.trim() || !address.trim() || !phoneNumber.trim() || !createdAt) {
-      toast({ title: "Validation Error", description: "Job ID, Company, Address, Phone, Date Created are required.", variant: "destructive" }); return;
-    }
-    if (orderItems.length === 0 || orderItems.some(item => !item.model || !item.lamination || parseInt(item.quantity) < 1 || item.unitPrice === null || item.lineItemTotalPrice === null)) {
-       toast({ title: "Validation Error", description: "All order items must be complete.", variant: "destructive" }); return;
-    }
-    const parsedNewAdvAmount = parseFloat(newAdvanceAmount) || 0;
-    if (parsedNewAdvAmount > 0 && !newAdvancePaymentMethod.trim()) {
-        toast({ title: "Validation Error", description: "Payment Method is required for new advance payment.", variant: "destructive" }); return;
-    }
-    if (parsedNewAdvAmount > 0 && newAdvancePaymentMethod.toLowerCase() === 'other' && !newCustomPaymentMethodText.trim()) {
-        toast({ title: "Validation Error", description: "Specify 'Other' payment method.", variant: "destructive" }); return;
+    if (!canSubmit) {
+      if (isNewAdvanceEntered && !selectedPaymentProof) {
+        toast({ title: "Validation Error", description: "Payment proof is required for new advance payments.", variant: "destructive" });
+      } else {
+        toast({ title: "Validation Error", description: "Please ensure all required fields are filled correctly.", variant: "destructive" });
+      }
+      return;
     }
     
-    const totalAdvanceAfterNew = totalExistingAdvancePaid + parsedNewAdvAmount;
-    const grandTotal = netPayable;
-    if (totalAdvanceAfterNew > grandTotal && grandTotal > 0) {
-        toast({ title: "Validation Error", description: `Total advance payment cannot exceed grand total.`, variant: "destructive"}); return;
-    }
-    if (calculatedDiscountAmount > orderItemsTotal && orderItemsTotal > 0) {
-         toast({ title: "Validation Error", description: `Discount cannot exceed total items price.`, variant: "destructive"}); return;
+    setIsSubmitting(true);
+    let newUploadedProofUrl: string | null = null;
+    
+    if (isNewAdvanceEntered && selectedPaymentProof) {
+      setIsUploadingProof(true);
+      const formData = new FormData();
+      formData.append('file', selectedPaymentProof);
+      try {
+        const response = await fetch('https://erp.colorhutbd.xyz/file/upload.php', { method: 'POST', body: formData });
+        const result = await response.json();
+        if (response.ok && result.success && result.file_url) {
+          newUploadedProofUrl = result.file_url;
+        } else {
+          throw new Error(result.message || 'File upload failed');
+        }
+      } catch (error) {
+        toast({ title: "Payment Proof Upload Failed", description: error instanceof Error ? error.message : "An unknown error occurred.", variant: "destructive" });
+        setIsUploadingProof(false);
+        setIsSubmitting(false);
+        return;
+      }
+      setIsUploadingProof(false);
     }
 
-    setIsSubmitting(true);
-    const finalUpdates: Partial<TrackingLink> & { newAdvancePaymentAmount?: number | null; newAdvancePaymentMethod?: string | null; newAdvancePaymentNotes?: string | null; } = {
+    const finalUpdates: Partial<TrackingLink> & { newAdvancePaymentAmount?: number | null; newAdvancePaymentMethod?: string | null; newAdvancePaymentNotes?: string | null; newAdvancePaymentDocumentUrl?: string | null; } = {
       companyName: `${jobIdInput.trim()} • ${companyNameInput.trim()}`,
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
-      createdAt: createdAt.toISOString(),
+      createdAt: createdAt!.toISOString(),
       specialClientDiscountString: specialClientDiscount.trim() || null,
       orderNotes: orderNotes.trim() || null,
       orderItems: orderItems.map(item => ({ ...item, quantity: parseInt(item.quantity, 10), unitPrice: item.unitPrice!, lineItemTotalPrice: item.lineItemTotalPrice! })),
-      advancePayments: [...existingAdvancePayments],
     };
-
-    if (parsedNewAdvAmount > 0) {
-        const newRecord: AdvancePaymentRecord = {
-            id: uuidv4(),
-            amount: parsedNewAdvAmount,
-            date: new Date().toISOString(),
-            paymentMethod: newAdvancePaymentMethod.toLowerCase() === 'other' ? newCustomPaymentMethodText.trim() : newAdvancePaymentMethod.trim(),
-            notes: newAdvancePaymentNotes.trim() || null,
-            recordedByUserId: currentUser.id,
-            recordedByUserName: currentUser.name,
-        };
-        finalUpdates.advancePayments = [...(finalUpdates.advancePayments || []), newRecord];
+    
+    if (parseFloat(newAdvanceAmount) > 0) {
+      finalUpdates.newAdvancePaymentAmount = parseFloat(newAdvanceAmount);
+      finalUpdates.newAdvancePaymentMethod = newAdvancePaymentMethod.toLowerCase() === 'other' ? newCustomPaymentMethodText.trim() : newAdvancePaymentMethod.trim();
+      finalUpdates.newAdvancePaymentNotes = newAdvancePaymentNotes.trim() || null;
+      finalUpdates.newAdvancePaymentDocumentUrl = newUploadedProofUrl;
     }
     
     const result = await updateOrderAction(order.id, finalUpdates, currentUser);
@@ -378,7 +404,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                 </div>
                 <div className="space-y-1"><Label htmlFor="edit-orderDate">Date Created *</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal",!createdAt && "text-muted-foreground")} disabled={isSubmitting}><CalendarDays className="mr-2 h-4 w-4" />{createdAt ? formatDateForDialogInput(createdAt) : <span>Pick a date</span>}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="single" selected={createdAt} onSelect={setCreatedAt} initialFocus disabled={isSubmitting} /></PopoverContent></Popover></div>
               </div>
-              <div className="space-y-1"><Label htmlFor="edit-orderNotes">Order Notes (Optional)</Label><Textarea id="edit-orderNotes" value={orderNotes} onChange={e => setOrderNotes(e.target.value)} rows={3} disabled={isSubmitting}/></div>
+              <div className="space-y-1"><Label htmlFor="edit-orderNotes">Order Notes (Optional)</Label><Textarea id="edit-orderNotes" value={orderNotes} onChange={e=>setOrderNotes(e.target.value)} rows={3} disabled={isSubmitting}/></div>
               <div className="space-y-3 mt-4 border-t border-border pt-4"><Label className="text-lg font-semibold">Order Items *</Label>
                 {orderItems.map((item) => (<div key={item.id} className="p-3 border rounded-md bg-secondary/30 space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-[1.5fr_1fr_1.5fr_1fr_auto] gap-x-3 gap-y-2 items-end">
@@ -458,14 +484,23 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
 
               <div className="mt-4 border-t border-border pt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                 <div className="space-y-1"><Label htmlFor="newAdvanceAmount">Add New Advance Payment</Label><Input id="newAdvanceAmount" type="number" value={newAdvanceAmount} onChange={(e) => setNewAdvanceAmount(e.target.value)} placeholder="Amount (BDT)" min="0" step="0.01" disabled={isSubmitting} /></div>
-                {isNewAdvanceEntered && (<div className="space-y-1"><Label htmlFor="newAdvancePaymentMethod">New Payment Method <span className="text-destructive">*</span></Label>
-                  <Popover open={isPaymentMethodPopoverOpen} onOpenChange={setIsPaymentMethodPopoverOpen}>
-                    <PopoverTrigger asChild><Button variant="outline" role="combobox" className="w-full justify-between bg-background" disabled={isLoadingOptions || paymentMethodOptions.length === 0 || isSubmitting}><span className="flex-1 text-left whitespace-nowrap">{newAdvancePaymentMethod ? paymentMethodOptions.find(opt => opt.name === newAdvancePaymentMethod)?.name || newAdvancePaymentMethod : (isLoadingOptions ? "Loading..." : (paymentMethodOptions.length===0?"No methods":"Select method..."))}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
-                    <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-md p-0"><Command><CommandInput placeholder="Search method..." /><CommandList><CommandEmpty>No method found.</CommandEmpty><CommandGroup>{paymentMethodOptions.map(opt => (<CommandItem key={opt.id} value={opt.name} onSelect={(val) => {handleNewAdvancePaymentMethodChange(paymentMethodOptions.find(o=>o.name.toLowerCase()===val.toLowerCase())?.name||val);setIsPaymentMethodPopoverOpen(false);}}><Check className={cn("mr-2 h-4 w-4",newAdvancePaymentMethod===opt.name?"opacity-100":"opacity-0")}/><span className="whitespace-nowrap">{opt.name}</span></CommandItem>))}</CommandGroup></CommandList></Command></PopoverContent>
-                  </Popover>
-                  {showNewCustomPaymentInput && (<div className="mt-2 space-y-1"><Label htmlFor="newCustomPaymentText">Specify Other Method <span className="text-destructive">*</span></Label><Input id="newCustomPaymentText" value={newCustomPaymentMethodText} onChange={e=>setNewCustomPaymentMethodText(e.target.value)} required={newAdvancePaymentMethod.toLowerCase()==='other'} disabled={isSubmitting}/></div>)}
-                </div>)}
-                {isNewAdvanceEntered && (<div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">New Payment Notes</Label><Textarea id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} rows={1} placeholder="Optional notes for this payment" disabled={isSubmitting}/></div>)}
+                {isNewAdvanceEntered && (<>
+                    <div className="space-y-1"><Label htmlFor="newAdvancePaymentMethod">New Payment Method <span className="text-destructive">*</span></Label>
+                        <Popover open={isPaymentMethodPopoverOpen} onOpenChange={setIsPaymentMethodPopoverOpen}>
+                            <PopoverTrigger asChild><Button variant="outline" role="combobox" className="w-full justify-between bg-background" disabled={isLoadingOptions || paymentMethodOptions.length === 0 || isSubmitting}><span className="flex-1 text-left whitespace-nowrap">{newAdvancePaymentMethod ? paymentMethodOptions.find(opt => opt.name === newAdvancePaymentMethod)?.name || newAdvancePaymentMethod : (isLoadingOptions ? "Loading..." : (paymentMethodOptions.length===0?"No methods":"Select method..."))}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
+                            <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] w-max max-w-md p-0"><Command><CommandInput placeholder="Search method..." /><CommandList><CommandEmpty>No method found.</CommandEmpty><CommandGroup>{paymentMethodOptions.map(opt => (<CommandItem key={opt.id} value={opt.name} onSelect={(val) => {handleNewAdvancePaymentMethodChange(paymentMethodOptions.find(o=>o.name.toLowerCase()===val.toLowerCase())?.name||val);setIsPaymentMethodPopoverOpen(false);}}><Check className={cn("mr-2 h-4 w-4",newAdvancePaymentMethod===opt.name?"opacity-100":"opacity-0")}/><span className="whitespace-nowrap">{opt.name}</span></CommandItem>))}</CommandGroup></CommandList></Command></PopoverContent>
+                        </Popover>
+                        {showNewCustomPaymentInput && (<div className="mt-2 space-y-1"><Label htmlFor="newCustomPaymentText">Specify Other Method <span className="text-destructive">*</span></Label><Input id="newCustomPaymentText" value={newCustomPaymentMethodText} onChange={e=>setNewCustomPaymentMethodText(e.target.value)} required={newAdvancePaymentMethod.toLowerCase()==='other'} disabled={isSubmitting}/></div>)}
+                    </div>
+                    <div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">New Payment Notes</Label><Textarea id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} rows={1} placeholder="Optional notes for this payment" disabled={isSubmitting}/></div>
+                    <div className="space-y-1 md:col-span-2 lg:col-span-3"><Label htmlFor="payment-proof-edit">Payment Proof *</Label>
+                        <div className="flex items-center gap-2">
+                        <Input id="payment-proof-edit" type="file" ref={paymentProofRef} onChange={handleProofFileChange} className="flex-1" accept="image/*,application/pdf"/>
+                        {selectedPaymentProof && <Button type="button" variant="ghost" size="icon" onClick={handleRemoveProofFile}><XCircle className="h-4 w-4 text-destructive"/></Button>}
+                        </div>
+                        {selectedPaymentProof && <p className="text-xs text-muted-foreground">New file: {selectedPaymentProof.name}</p>}
+                    </div>
+                </>)}
               </div>
 
               <div className="mt-4 p-4 border rounded-md bg-muted/30 space-y-2">
@@ -478,7 +513,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
               </div>
 
             </div>
-            <DialogFooter className="pt-4 border-t"><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={!canSubmit}>{isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</> : "Save Changes"}</Button></DialogFooter>
+            <DialogFooter className="pt-4 border-t"><Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button><Button type="submit" disabled={!canSubmit}>{isSubmitting || isUploadingProof ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isUploadingProof ? "Uploading..." : "Saving..."}</> : "Save Changes"}</Button></DialogFooter>
           </form>)}
       </DialogContent>
     </Dialog>

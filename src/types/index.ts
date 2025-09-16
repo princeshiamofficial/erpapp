@@ -117,6 +117,7 @@ export interface AdvancePaymentRecord {
   notes?: string | null;
   recordedByUserId: string;
   recordedByUserName: string;
+  documentUrl?: string | null;
 }
 
 export interface Feedback {

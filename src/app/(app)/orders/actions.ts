@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -29,6 +30,7 @@ interface CreateOrderDialogFormData {
   }>;
   advancePaymentAmount?: string | null;
   advancePaymentMethod?: string | null;
+  advancePaymentDocumentUrl?: string | null;
   specialClientDiscount?: number | null;
   customPaymentMethodText?: string; 
   orderNotes?: string | null;
@@ -106,6 +108,10 @@ export async function createOrderAction(
       parsedAdvancePaymentAmount = numAdvancePayment;
     }
     
+    if (parsedAdvancePaymentAmount && parsedAdvancePaymentAmount > 0 && !data.advancePaymentDocumentUrl) {
+      return { error: "Payment proof is required for advance payments." };
+    }
+
     const netPayable = orderItemsTotal - (data.specialClientDiscount || 0);
     const grandTotal = netPayable; 
     if (parsedAdvancePaymentAmount !== null && parsedAdvancePaymentAmount > grandTotal && grandTotal > 0) {
@@ -136,6 +142,7 @@ export async function createOrderAction(
       orderItems: processedOrderItems,
       advancePaymentAmount: parsedAdvancePaymentAmount, 
       advancePaymentMethod: finalAdvancePaymentMethod,
+      advancePaymentDocumentUrl: data.advancePaymentDocumentUrl || null,
       specialClientDiscount: data.specialClientDiscount,
       shippingCharge: null,
       orderNotes: data.orderNotes?.trim() || null,
@@ -178,6 +185,7 @@ export async function updateOrderAction(
     newAdvancePaymentAmount?: number | null;
     newAdvancePaymentMethod?: string | null;
     newAdvancePaymentNotes?: string | null;
+    newAdvancePaymentDocumentUrl?: string | null;
   },
   currentUser: User
 ): Promise<{ success: boolean; error?: string; order?: TrackingLink }> {
@@ -197,6 +205,7 @@ export async function updateOrderAction(
     delete finalUpdates.newAdvancePaymentAmount;
     delete finalUpdates.newAdvancePaymentMethod;
     delete finalUpdates.newAdvancePaymentNotes;
+    delete finalUpdates.newAdvancePaymentDocumentUrl;
     delete finalUpdates.specialClientDiscountString;
 
     let currentOrderItemsTotal = (updates.orderItems || existingOrder.orderItems).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
@@ -306,6 +315,10 @@ export async function updateOrderAction(
         if (!updates.newAdvancePaymentMethod || !updates.newAdvancePaymentMethod.trim()) {
             return { success: false, error: "Payment method is required for new advance payment." };
         }
+        if (!updates.newAdvancePaymentDocumentUrl) {
+            return { success: false, error: "Payment proof is required for new advance payments." };
+        }
+
         const newAdvanceRecord: AdvancePaymentRecord = {
             id: uuidv4(),
             amount: updates.newAdvancePaymentAmount,
@@ -314,6 +327,7 @@ export async function updateOrderAction(
             notes: updates.newAdvancePaymentNotes?.trim() || null,
             recordedByUserId: currentUser.id,
             recordedByUserName: currentUser.name,
+            documentUrl: updates.newAdvancePaymentDocumentUrl,
         };
         finalUpdates.advancePayments = [...(existingOrder.advancePayments || []), newAdvanceRecord];
 
