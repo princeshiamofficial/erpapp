@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -69,6 +68,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [orderNotes, setOrderNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAutoFilled, setIsAutoFilled] = useState(false);
+  const [newAdvancePaymentNotes, setNewAdvancePaymentNotes] = useState('');
 
   const [orderItems, setOrderItems] = useState<DialogOrderItem[]>([{ ...initialOrderItemState, id: uuidv4() }]);
   const [orderItemsTotal, setOrderItemsTotal] = useState<number>(0);
@@ -103,6 +103,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     setShowCustomPaymentInput(false);
     setCustomPaymentMethodText('');
     setOrderNotes('');
+    setNewAdvancePaymentNotes('');
     setOrderItems([{ ...initialOrderItemState, id: uuidv4() }]);
     setPopoverOpenStates({});
     setIsPaymentMethodPopoverOpen(false);
@@ -216,6 +217,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     if (!isAdvancePaymentEntered) {
         setAdvancePaymentMethod('');
         setCustomPaymentMethodText('');
+        setNewAdvancePaymentNotes('');
         setShowCustomPaymentInput(false);
         setSelectedPaymentProof(null);
     }
@@ -459,6 +461,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       advancePaymentAmount: parseFloat(advancePaymentAmount) || null,
       advancePaymentMethod: advancePaymentMethod.trim() ? (advancePaymentMethod.toLowerCase() === 'other' ? customPaymentMethodText.trim() : advancePaymentMethod.trim()) : null,
       advancePaymentDocumentUrl: uploadedProofUrl,
+      newAdvancePaymentNotes: newAdvancePaymentNotes,
       specialClientDiscount: calculatedDiscountAmount > 0 ? calculatedDiscountAmount : null,
       orderNotes: orderNotes.trim() || null,
       initialStatusId,
@@ -712,6 +715,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                 />
               </div>
               {isAdvancePaymentEntered && (
+                <>
                 <div className="space-y-1">
                   <Label htmlFor="advancePaymentMethod">
                     Payment Method
@@ -779,6 +783,11 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                     </div>
                   )}
                 </div>
+                 <div className="space-y-1">
+                    <Label htmlFor="newAdvancePaymentNotes">Payment Notes (Optional)</Label>
+                    <Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="e.g., Part of invoice #123"/>
+                </div>
+                </>
               )}
                {isAdvancePaymentEntered && (
                 <div className="space-y-1 md:col-span-2 lg:col-span-3">
