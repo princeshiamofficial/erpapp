@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Building, MapPin, Phone, UserCheck, FileText, StickyNote, Percent, ReceiptText, CheckCircle, Truck } from "lucide-react";
@@ -196,8 +197,20 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
             </div>
           )}
 
-          {showPaidBadge ? (<div className="mt-3 pt-3 border-t border-dashed border-border/40 relative flex justify-end"><div className="absolute -left-8 -top-4 sm:-left-12 sm:-top-6 transform -rotate-[15deg] border-4 border-green-500 text-green-500 font-bold uppercase text-3xl sm:text-4xl px-3 py-1 rounded-md shadow-lg bg-background/80 dark:bg-card/80 backdrop-blur-sm flex items-center gap-2"><CheckCircle className="h-8 w-8"/>PAID</div></div>)
-          : (grandTotal > 0 && amountDue > 0.01) && (<><Separator className="my-2 bg-border/50" /><div className="flex justify-between"><span className="text-lg font-bold text-primary">Amount Due:</span><span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span></div></>)}
+          {showPaidBadge ? (
+              <div className="absolute -left-16 -top-12 sm:-left-24 sm:-top-16 transform -rotate-[20deg]">
+                  <Image
+                      src="https://colorhutbd.xyz/image/paid-stamp.webp"
+                      alt="Paid Stamp"
+                      width={150}
+                      height={150}
+                      className="opacity-80"
+                      unoptimized
+                  />
+              </div>
+          ) : (grandTotal > 0 && amountDue > 0.01) && (
+              <><Separator className="my-2 bg-border/50" /><div className="flex justify-between"><span className="text-lg font-bold text-primary">Amount Due:</span><span className="text-lg font-bold text-primary">{formatCurrency(amountDue)}</span></div></>
+          )}
         </div>
       </div>
     </div>
