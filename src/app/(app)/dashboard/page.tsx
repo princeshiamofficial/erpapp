@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -1179,6 +1180,7 @@ function DashboardContent() {
         <div className={cn("grid grid-cols-1 gap-6", isDesignerRepOrLr ? "lg:grid-cols-2" : "")}>
           <div className="lg:col-span-1">
             <TeamPerformanceGraph
+              allTasks={allTasks}
               monthlyTargetData={teamPerformanceData}
               totalPerformanceTarget={totalPerformanceTarget}
               onDateRangeChange={handleTeamPerformanceDateRangeChange}

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -47,6 +48,7 @@ interface DailyTargetData {
 }
 
 interface TeamPerformanceGraphProps {
+  allTasks: TaskEntry[]; // New prop
   monthlyTargetData: DailyTargetData[];
   totalPerformanceTarget: number;
   selectedDateRange: DateRange | undefined;
@@ -67,7 +69,7 @@ const getInitials = (name: string | undefined): string => {
 };
 
 
-export function TeamPerformanceGraph({ monthlyTargetData: initialMonthlyTargetData, totalPerformanceTarget: initialTotalPerformanceTarget, selectedDateRange, userMap, globalSettings, onDateRangeChange, onTeamChange, selectedTeam, isAdminView, refetchData }: TeamPerformanceGraphProps) {
+export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonthlyTargetData, totalPerformanceTarget: initialTotalPerformanceTarget, selectedDateRange, userMap, globalSettings, onDateRangeChange, onTeamChange, selectedTeam, isAdminView, refetchData }: TeamPerformanceGraphProps) {
   const [chartType, setChartType] = useState<'line'>('line');
   const [tasksDone, setTasksDone] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,13 +98,13 @@ export function TeamPerformanceGraph({ monthlyTargetData: initialMonthlyTargetDa
   useEffect(() => {
     if (!currentUser) return;
     
-    // Check for today's submission based on fetched task entries
-    // This part requires access to the raw task entries, which are now calculated in the parent.
-    // The parent `dashboard/page.tsx` will need to manage this state.
-    // For now, let's assume this check needs to be handled differently.
-    // We will refetch tasks on submit.
+    const today = new Date();
+    const hasEntry = allTasks.some(entry => 
+      entry.userId === currentUser.id && isSameDay(parseISO(entry.date), today)
+    );
+    setHasSubmittedToday(hasEntry);
     
-  }, [currentUser]);
+  }, [currentUser, allTasks]);
 
 
   const handleDateChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
@@ -336,5 +338,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
-
-    
