@@ -491,7 +491,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                         </Popover>
                         {showNewCustomPaymentInput && (<div className="mt-2 space-y-1"><Label htmlFor="newCustomPaymentText">Specify Other Method <span className="text-destructive">*</span></Label><Input id="newCustomPaymentText" value={newCustomPaymentMethodText} onChange={e=>setNewCustomPaymentMethodText(e.target.value)} required={newAdvancePaymentMethod.toLowerCase()==='other'} disabled={isSubmitting}/></div>)}
                     </div>
-                    <div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">New Payment Notes</Label><Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="Optional notes for this payment" disabled={isSubmitting}/></div>
+                    <div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">Reference/Notes (Optional)</Label><Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="Optional notes for this payment" disabled={isSubmitting}/></div>
                     <div className="space-y-1 md:col-span-2 lg:col-span-3"><Label htmlFor="payment-proof-edit">Payment Proof *</Label>
                         <div className="flex items-center gap-2">
                         <Input id="payment-proof-edit" type="file" ref={paymentProofRef} onChange={handleProofFileChange} className="flex-1" required={isNewAdvanceEntered} accept="image/*,application/pdf"/>
@@ -519,3 +519,4 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   );
 }
 
+    

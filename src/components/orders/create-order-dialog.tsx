@@ -20,7 +20,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { format, parseISO } from 'date-fns';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface CreateOrderDialogProps {
   currentUser: User;
@@ -784,13 +784,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   )}
                 </div>
                  <div className="space-y-1">
-                    <Label htmlFor="newAdvancePaymentNotes">Payment Notes (Optional)</Label>
+                    <Label htmlFor="newAdvancePaymentNotes">Reference/Notes (Optional)</Label>
                     <Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="e.g., Part of invoice #123"/>
                 </div>
-                </>
-              )}
-               {isAdvancePaymentEntered && (
-                <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                 <div className="space-y-1 md:col-span-2 lg:col-span-3">
                   <Label htmlFor="payment-proof">Payment Proof *</Label>
                   <div className="flex items-center gap-2">
                     <Input
@@ -799,6 +796,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                       ref={paymentProofRef}
                       onChange={handleProofFileChange}
                       className="flex-1"
+                      required={isAdvancePaymentEntered}
                       accept="image/*,application/pdf"
                     />
                     {selectedPaymentProof && (
@@ -809,6 +807,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                   </div>
                   {selectedPaymentProof && <p className="text-xs text-muted-foreground">File: {selectedPaymentProof.name}</p>}
                 </div>
+                </>
               )}
             </div>
 
@@ -852,3 +851,5 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
+
+    
