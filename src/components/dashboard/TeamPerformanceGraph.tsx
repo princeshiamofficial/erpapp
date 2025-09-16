@@ -245,7 +245,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                           </>
                         ) : (
                           <Button asChild className="h-10 w-full sm:w-auto">
-                            <Link href="https://colorhut.xyz/dr/" target="_blank">
+                            <Link href="/dr2o">
                               Open DR 2.O
                             </Link>
                           </Button>
@@ -348,5 +348,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
-
-    
