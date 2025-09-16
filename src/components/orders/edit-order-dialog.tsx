@@ -348,6 +348,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       specialClientDiscountString: specialClientDiscount.trim() || null,
       orderNotes: orderNotes.trim() || null,
       orderItems: orderItems.map(item => ({ ...item, quantity: parseInt(item.quantity, 10), unitPrice: item.unitPrice!, lineItemTotalPrice: item.lineItemTotalPrice! })),
+      advancePayments: [...existingAdvancePayments],
     };
     
     if (parseFloat(newAdvanceAmount) > 0) {
@@ -491,8 +492,12 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                         </Popover>
                         {showNewCustomPaymentInput && (<div className="mt-2 space-y-1"><Label htmlFor="newCustomPaymentText">Specify Other Method <span className="text-destructive">*</span></Label><Input id="newCustomPaymentText" value={newCustomPaymentMethodText} onChange={e=>setNewCustomPaymentMethodText(e.target.value)} required={newAdvancePaymentMethod.toLowerCase()==='other'} disabled={isSubmitting}/></div>)}
                     </div>
-                    <div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">Reference/Notes (Optional)</Label><Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="Optional notes for this payment" disabled={isSubmitting}/></div>
-                    <div className="space-y-1 md:col-span-2 lg:col-span-3"><Label htmlFor="payment-proof-edit">Payment Proof *</Label>
+                    <div className="space-y-1">
+                        <Label htmlFor="newAdvancePaymentNotes">Reference/Notes (Optional)</Label>
+                        <Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID" disabled={isSubmitting}/>
+                    </div>
+                    <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                        <Label htmlFor="payment-proof-edit">Payment Proof *</Label>
                         <div className="flex items-center gap-2">
                         <Input id="payment-proof-edit" type="file" ref={paymentProofRef} onChange={handleProofFileChange} className="flex-1" required={isNewAdvanceEntered} accept="image/*,application/pdf"/>
                         {selectedPaymentProof && <Button type="button" variant="ghost" size="icon" onClick={handleRemoveProofFile}><XCircle className="h-4 w-4 text-destructive"/></Button>}
@@ -518,5 +523,3 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     </Dialog>
   );
 }
-
-    
