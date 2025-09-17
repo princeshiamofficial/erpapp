@@ -7,17 +7,27 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit } from "lucide-react";
-import type { Dr2oEntry } from '@/types';
+import type { Dr2oEntry, User } from '@/types';
 import { getDr2oEntries } from '@/lib/dr2o-service';
+import { getUsers } from '@/lib/user-service';
 import { useAuth } from '@/contexts/auth-context';
 import { format, parseISO } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 const AddEditDr2oDialog = dynamic(() => import('@/components/dr2o/AddEditDr2oDialog').then(mod => mod.AddEditDr2oDialog));
+
+const getInitials = (name: string) => {
+  if (!name) return '??';
+  const names = name.split(' ');
+  if (names.length === 1) return names[0].charAt(0).toUpperCase();
+  return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
+};
 
 export default function DR2OPage() {
   const { currentUser } = useAuth();
   const [dr2oEntries, setDr2oEntries] = useState<Dr2oEntry[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Dr2oEntry | null>(null);
@@ -25,8 +35,12 @@ export default function DR2OPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const entries = await getDr2oEntries();
+      const [entries, users] = await Promise.all([
+          getDr2oEntries(),
+          getUsers()
+      ]);
       setDr2oEntries(entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+      setAllUsers(users);
     } catch (error) {
       console.error("Error fetching DR 2.O entries:", error);
     } finally {
@@ -106,24 +120,37 @@ export default function DR2OPage() {
                     <TableRow key={i}>
                         <TableCell colSpan={(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') ? 10 : 9}><Skeleton className="h-8 w-full" /></TableCell>
                     </TableRow>
-                  )) : userEntries.map((row) => (
-                    <TableRow key={row.id} className="hover:bg-gray-100 dark:hover:bg-muted/50 transition-colors duration-150">
-                      <TableCell className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-200 sticky left-0 bg-white dark:bg-card z-10">{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
-                      {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && <TableCell>{row.crmName}</TableCell>}
-                      <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.newCustomer1 || 'N/A'}</TableCell>
-                      <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.newCustomer2 || 'N/A'}</TableCell>
-                      <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.newCustomer3 || 'N/A'}</TableCell>
-                      <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.oldCustomer1 || 'N/A'}</TableCell>
-                      <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.oldCustomer2 || 'N/A'}</TableCell>
-                      <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.oldCustomer3 || 'N/A'}</TableCell>
-                      <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.oldCustomer4 || 'N/A'}</TableCell>
-                      <TableCell>
-                          <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(row)}>
-                              <Edit className="h-4 w-4"/>
-                          </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  )) : userEntries.map((row) => {
+                    const drUser = allUsers.find(u => u.id === row.crmId);
+                    return (
+                        <TableRow key={row.id} className="hover:bg-gray-100 dark:hover:bg-muted/50 transition-colors duration-150">
+                          <TableCell className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-200 sticky left-0 bg-white dark:bg-card z-10">{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
+                          {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                            <TableCell>
+                                <div className="flex items-center gap-2">
+                                    <Avatar className="h-8 w-8">
+                                        <AvatarImage src={drUser?.avatarUrl || undefined} alt={row.crmName} />
+                                        <AvatarFallback>{getInitials(row.crmName)}</AvatarFallback>
+                                    </Avatar>
+                                    <span>{row.crmName}</span>
+                                </div>
+                            </TableCell>
+                          )}
+                          <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.newCustomer1 || 'N/A'}</TableCell>
+                          <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.newCustomer2 || 'N/A'}</TableCell>
+                          <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.newCustomer3 || 'N/A'}</TableCell>
+                          <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.oldCustomer1 || 'N/A'}</TableCell>
+                          <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.oldCustomer2 || 'N/A'}</TableCell>
+                          <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.oldCustomer3 || 'N/A'}</TableCell>
+                          <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.oldCustomer4 || 'N/A'}</TableCell>
+                          <TableCell>
+                              <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(row)}>
+                                  <Edit className="h-4 w-4"/>
+                              </Button>
+                          </TableCell>
+                        </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
