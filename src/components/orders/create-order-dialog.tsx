@@ -465,7 +465,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       orderItems: orderItems.map(item => ({ ...item, quantity: parseInt(item.quantity, 10) })),
       advancePaymentAmount: parseFloat(advancePaymentAmount) || null,
       advancePaymentMethod: advancePaymentMethod.trim() ? (advancePaymentMethod.toLowerCase() === 'other' ? customPaymentMethodText.trim() : advancePaymentMethod.trim()) : null,
-      documentUrl: uploadedProofUrl,
+      advancePaymentDocumentUrl: uploadedProofUrl,
       newAdvancePaymentNotes: newAdvancePaymentNotes,
       specialClientDiscount: calculatedDiscountAmount > 0 ? calculatedDiscountAmount : null,
       orderNotes: orderNotes.trim() || null,

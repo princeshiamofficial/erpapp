@@ -203,7 +203,7 @@ export async function updateOrderAction(
     
     const allModels = await getModels();
 
-    const finalUpdates: Partial<TrackingLink> = { ...updates };
+    const finalUpdates: Partial<TrackingLink> & { documentUrl?: string | null; } = { ...updates };
     delete finalUpdates.newAdvancePaymentAmount;
     delete finalUpdates.newAdvancePaymentMethod;
     delete finalUpdates.newAdvancePaymentNotes;
