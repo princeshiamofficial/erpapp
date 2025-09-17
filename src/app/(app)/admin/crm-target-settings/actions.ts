@@ -17,8 +17,9 @@ import {
   setDrAssignmentNotificationTemplates, // New
   setRoleBasedTargets,
   setPipelineAccess, // New
+  setLeadCategoryAccess, // New
 } from "@/lib/settings-service";
-import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings } from "@/types"; 
+import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings, LeadCategory } from "@/types"; 
 import { adminApp } from '@/lib/firebase-admin';
 import { getUsers as getAllUsersFromDb, getUserById } from '@/lib/user-service';
 import type { FirebaseError } from 'firebase-admin';
@@ -199,6 +200,24 @@ export async function updateProjectStageAccessAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
+export async function updateLeadCategoryAccessAction(
+  permissions: Record<LeadCategory, UserRole[]>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setLeadCategoryAccess(permissions);
+    if (success) {
+      revalidatePath("/(app)/admin/custom-access");
+      revalidatePath("/(app)/pipeline");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update lead category access permissions." };
+  } catch (error) {
+    console.error("Error in updateLeadCategoryAccessAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
 
 export async function updateMaintenanceModeAction(
   enabled: boolean,

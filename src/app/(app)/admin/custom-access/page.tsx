@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { UserRole, GlobalSettings, ProjectStatusType, User, PipelineAccessSettings } from "@/types";
+import type { UserRole, GlobalSettings, ProjectStatusType, User, PipelineAccessSettings, LeadCategory } from "@/types";
 import { getGlobalSettings as fetchGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service';
 import {
@@ -18,10 +18,11 @@ import {
   updateRolesAllowedToViewFinancialsAction,
   updateProjectStageAccessAction,
   updatePipelineAccessAction,
+  updateLeadCategoryAccessAction, // New
 } from '../crm-target-settings/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter } from 'lucide-react';
+import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,6 +32,8 @@ const DELETABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRES
 const FINANCIAL_VISIBILITY_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'LR'];
 const PROJECT_STAGE_ACCESS_ROLES: UserRole[] = ['SYSTEM_ADMIN', 'ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'LR'];
 const PROJECT_STAGES: ProjectStatusType[] = ['CR Clearance', 'Cancel', 'On Design', 'On Hold', 'Logistics', 'Courier', 'Delivered'];
+const LEAD_CATEGORY_ACCESS_ROLES: UserRole[] = ['SYSTEM_ADMIN', 'ADMIN', 'CRM'];
+const LEAD_CATEGORIES: LeadCategory[] = ['POP', 'POG', 'OC', 'OD', 'ROD'];
 
 export default function CustomAccessPage() {
   const { currentUser } = useAuth();
@@ -41,6 +44,7 @@ export default function CustomAccessPage() {
   const [rolesAllowedToDelete, setRolesAllowedToDelete] = useState<Set<UserRole>>(new Set(['SYSTEM_ADMIN']));
   const [rolesAllowedToViewFinancials, setRolesAllowedToViewFinancials] = useState<Set<UserRole>>(new Set(['ADMIN', 'SYSTEM_ADMIN']));
   const [projectStageAccess, setProjectStageAccess] = useState<Record<ProjectStatusType, UserRole[]>>({} as Record<ProjectStatusType, UserRole[]>);
+  const [leadCategoryAccess, setLeadCategoryAccess] = useState<Record<LeadCategory, UserRole[]>>({} as Record<LeadCategory, UserRole[]>); // New state
   const [pipelineAccess, setPipelineAccess] = useState<Set<string>>(new Set());
   const [crmUsers, setCrmUsers] = useState<User[]>([]);
 
@@ -49,6 +53,7 @@ export default function CustomAccessPage() {
   const [isSubmittingOrderDeletion, setIsSubmittingOrderDeletion] = useState(false);
   const [isSubmittingFinancialVisibility, setIsSubmittingFinancialVisibility] = useState(false);
   const [isSubmittingProjectStageAccess, setIsSubmittingProjectStageAccess] = useState(false);
+  const [isSubmittingLeadCategoryAccess, setIsSubmittingLeadCategoryAccess] = useState(false); // New state
   const [isSubmittingPipelineAccess, setIsSubmittingPipelineAccess] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -62,6 +67,7 @@ export default function CustomAccessPage() {
       setRolesAllowedToDelete(new Set(globalSettings.rolesAllowedToDeleteOrders ?? ['SYSTEM_ADMIN']));
       setRolesAllowedToViewFinancials(new Set(globalSettings.rolesAllowedToViewFinancials ?? ['ADMIN', 'SYSTEM_ADMIN']));
       setProjectStageAccess(globalSettings.projectStageAccess || ({} as Record<ProjectStatusType, UserRole[]>));
+      setLeadCategoryAccess(globalSettings.leadCategoryAccess || ({} as Record<LeadCategory, UserRole[]>)); // Set new state
       setPipelineAccess(new Set(globalSettings.pipelineAccess?.canViewAllLeads ?? []));
       setCrmUsers(allUsers.filter(u => u.role === 'CRM'));
     } catch (error) {
@@ -132,6 +138,27 @@ export default function CustomAccessPage() {
     setIsSubmittingProjectStageAccess(false);
   };
   
+    // New handler for Lead Category Access
+  const handleLeadCategoryAccessChange = (category: LeadCategory, role: UserRole, checked: boolean | "indeterminate") => {
+    setLeadCategoryAccess(prev => {
+      const newPermissions = { ...prev };
+      const currentRolesForCategory = new Set(newPermissions[category] || []);
+      if (checked) currentRolesForCategory.add(role);
+      else currentRolesForCategory.delete(role);
+      newPermissions[category] = Array.from(currentRolesForCategory);
+      return newPermissions;
+    });
+  };
+
+  // New save handler for Lead Category Access
+  const handleSaveLeadCategoryAccess = async () => {
+    setIsSubmittingLeadCategoryAccess(true);
+    const result = await updateLeadCategoryAccessAction(leadCategoryAccess);
+    if (result.success) toast({ title: "Permissions Updated", description: "Lead category access permissions saved." });
+    else toast({ title: "Update Failed", description: result.error, variant: "destructive" });
+    setIsSubmittingLeadCategoryAccess(false);
+  };
+
   const handlePipelineAccessChange = (userId: string, checked: boolean | "indeterminate") => {
     setPipelineAccess(prev => {
       const newSet = new Set(prev);
@@ -228,7 +255,7 @@ export default function CustomAccessPage() {
 
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
-          <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Filter className="h-6 w-6 text-primary" />Pipeline Visibility</CardTitle>
+          <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Filter className="h-6 w-6 text-primary" />Global Pipeline Access</CardTitle>
           <CardDescription className="text-muted-foreground text-sm mt-0.5">Grant special permission to specific CRM users to view all leads, not just their own.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -267,6 +294,61 @@ export default function CustomAccessPage() {
         <CardFooter className="border-t p-5 flex justify-end">
           <Button onClick={handleSavePipelineAccess} disabled={isLoading || isSubmittingPipelineAccess}>
             {isSubmittingPipelineAccess ? "Saving..." : "Save Pipeline Permissions"}
+          </Button>
+        </CardFooter>
+      </Card>
+      
+      <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+        <CardHeader className="border-b p-5">
+          <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><FolderKanban className="h-6 w-6 text-primary" />Lead Category Access</CardTitle>
+          <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which user roles can view leads in each category.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="pl-6 font-semibold">Category</TableHead>
+                  {LEAD_CATEGORY_ACCESS_ROLES.map(role => (
+                    <TableHead key={role} className="text-center">{role.replace(/_/g, ' ')}</TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  LEAD_CATEGORIES.map(category => (
+                    <TableRow key={`skel-lead-cat-${category}`}>
+                      <TableCell className="pl-6"><Skeleton className="h-5 w-24" /></TableCell>
+                      {LEAD_CATEGORY_ACCESS_ROLES.map(role => (
+                        <TableCell key={`skel-lead-cell-${category}-${role}`} className="text-center"><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  LEAD_CATEGORIES.map(category => (
+                    <TableRow key={category} className="hover:bg-muted/30">
+                      <TableCell className="pl-6 font-medium">{category}</TableCell>
+                      {LEAD_CATEGORY_ACCESS_ROLES.map(role => (
+                        <TableCell key={`${category}-${role}`} className="text-center">
+                          <Checkbox
+                            id={`lead-perm-${category}-${role}`}
+                            checked={leadCategoryAccess[category]?.includes(role) || false}
+                            onCheckedChange={(checked) => handleLeadCategoryAccessChange(category, role, checked)}
+                            disabled={isSubmittingLeadCategoryAccess}
+                            aria-label={`Allow ${role} for ${category} category`}
+                          />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+        <CardFooter className="border-t p-5 flex justify-end">
+          <Button onClick={handleSaveLeadCategoryAccess} disabled={isLoading || isSubmittingLeadCategoryAccess}>
+            {isSubmittingLeadCategoryAccess ? "Saving Permissions..." : "Save Category Permissions"}
           </Button>
         </CardFooter>
       </Card>

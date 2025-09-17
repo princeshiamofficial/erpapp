@@ -4,7 +4,7 @@
 
 import { db } from './firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import type { GlobalSettings, UserRole, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings } from '@/types';
+import type { GlobalSettings, UserRole, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings, LeadCategory } from '@/types';
 
 const GLOBAL_SETTINGS_COLLECTION = 'globalSettings';
 const MAIN_SETTINGS_DOC_ID = 'main';
@@ -28,6 +28,16 @@ const DEFAULT_PROJECT_STAGE_ACCESS: Record<ProjectStatusType, UserRole[]> = {
   'Delivered': ['SYSTEM_ADMIN', 'ADMIN', 'LR'],
 };
 
+// New Default for Lead Category Access
+const DEFAULT_LEAD_CATEGORY_ACCESS: Record<LeadCategory, UserRole[]> = {
+  'POP': ['SYSTEM_ADMIN', 'ADMIN', 'CRM'],
+  'POG': ['SYSTEM_ADMIN', 'ADMIN', 'CRM'],
+  'OC': ['SYSTEM_ADMIN', 'ADMIN', 'CRM'],
+  'OD': ['SYSTEM_ADMIN', 'ADMIN', 'CRM'],
+  'ROD': ['SYSTEM_ADMIN', 'ADMIN', 'CRM'],
+};
+
+
 const DEFAULT_ROLE_BASED_TARGETS: RoleBasedTarget = {
     CRM: 50,
     DESIGNER_REPRESENTATIVE: 20,
@@ -46,6 +56,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   leaderboardBackgroundImageUrl: DEFAULT_LEADERBOARD_BACKGROUND_URL,
   expenseLoggingPermissions: DEFAULT_EXPENSE_LOGGING_PERMISSIONS,
   projectStageAccess: DEFAULT_PROJECT_STAGE_ACCESS,
+  leadCategoryAccess: DEFAULT_LEAD_CATEGORY_ACCESS, // New
   maintenanceMode: false,
   maintenanceMessage: "The application is currently down for maintenance. We'll be back shortly!",
   drAssignmentNotificationTitle: 'New Design Assigned By %assignerName%',
@@ -70,7 +81,7 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
       };
 
       const projectStageAccess = data.projectStageAccess || {};
-
+      const leadCategoryAccess = data.leadCategoryAccess || {}; // New
 
       return {
         globalMonthlyOrderTarget: data.globalMonthlyOrderTarget ?? DEFAULT_GLOBAL_SETTINGS.globalMonthlyOrderTarget,
@@ -84,6 +95,7 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         leaderboardBackgroundImageUrl: data.leaderboardBackgroundImageUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.leaderboardBackgroundImageUrl : data.leaderboardBackgroundImageUrl,
         expenseLoggingPermissions: fullExpensePerms,
         projectStageAccess: { ...DEFAULT_PROJECT_STAGE_ACCESS, ...projectStageAccess },
+        leadCategoryAccess: { ...DEFAULT_LEAD_CATEGORY_ACCESS, ...leadCategoryAccess }, // New
         maintenanceMode: data.maintenanceMode ?? DEFAULT_GLOBAL_SETTINGS.maintenanceMode,
         maintenanceMessage: data.maintenanceMessage ?? DEFAULT_GLOBAL_SETTINGS.maintenanceMessage,
         drAssignmentNotificationTitle: data.drAssignmentNotificationTitle ?? DEFAULT_GLOBAL_SETTINGS.drAssignmentNotificationTitle,
@@ -348,6 +360,27 @@ export async function setProjectStageAccess(permissions: Record<ProjectStatusTyp
     return true;
   } catch (error) {
     console.error("Error setting project stage access permissions:", error);
+    return false;
+  }
+}
+
+// New function to set lead category access
+export async function setLeadCategoryAccess(permissions: Record<LeadCategory, UserRole[]>): Promise<boolean> {
+  try {
+    const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+    const docSnap = await getDoc(settingsDocRef);
+    if (docSnap.exists()) {
+      await updateDoc(settingsDocRef, { leadCategoryAccess: permissions });
+    } else {
+      const initialData: GlobalSettings = {
+        ...DEFAULT_GLOBAL_SETTINGS,
+        leadCategoryAccess: permissions,
+      };
+      await setDoc(settingsDocRef, initialData);
+    }
+    return true;
+  } catch (error) {
+    console.error("Error setting lead category access permissions:", error);
     return false;
   }
 }

@@ -234,6 +234,8 @@ export interface PipelineAccessSettings {
   canViewAllLeads: string[]; // Array of CRM user IDs with special access
 }
 
+export type LeadCategory = 'POP' | 'POG' | 'OC' | 'OD' | 'ROD';
+
 export interface GlobalSettings {
   globalMonthlyOrderTarget: number;
   globalWeeklyOrderTarget: number;
@@ -247,6 +249,7 @@ export interface GlobalSettings {
   leaderboardThemeSettings?: LeaderboardThemeSettings | null;
   expenseLoggingPermissions?: ExpenseLoggingPermissions;
   projectStageAccess?: Record<ProjectStatusType, UserRole[]>;
+  leadCategoryAccess?: Record<LeadCategory, UserRole[]>; // New
   maintenanceMode?: boolean;
   maintenanceMessage?: string | null;
   drAssignmentNotificationTitle?: string;
@@ -353,7 +356,6 @@ export interface Project {
   designerRepresentativeAvatarUrl?: string | null;
 }
 
-export type LeadCategory = 'POP' | 'POG' | 'OC' | 'OD' | 'ROD';
 export type LeadStatusType = 'New Lead' | 'Contacted' | 'Qualified' | 'Proposal Sent' | 'Negotiation' | 'Won' | 'Lost';
 export type CustomerType = 'WARM' | 'COLD';
 
