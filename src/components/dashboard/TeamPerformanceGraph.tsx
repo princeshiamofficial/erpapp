@@ -252,6 +252,13 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                         )}
                     </div>
                  )}
+                 {isAdminView && (
+                    <Button asChild className="h-10 w-full sm:w-auto">
+                        <Link href="/dr2o">
+                            Open DR 2.O
+                        </Link>
+                    </Button>
+                 )}
                 {isAdminView && onTeamChange && (
                   <Select value={selectedTeam} onValueChange={(value) => onTeamChange(value as UserRole | 'all')}>
                     <SelectTrigger className="w-full sm:w-[180px]">
