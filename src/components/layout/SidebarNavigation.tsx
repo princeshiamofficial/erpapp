@@ -86,6 +86,7 @@ const navItems: NavItem[] = [
     href: "",
     subItems: [
       { href: "/users", label: "User Management", icon: Users, roles: ["SYSTEM_ADMIN", "ADMIN"] },
+      { href: "/admin/custom-access", label: "Custom Access", icon: Shield, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/model-management", label: "Model Management", icon: Layers, roles: ["SYSTEM_ADMIN", "ADMIN"] },
       { href: "/admin/statuses", label: "Status Management", icon: ListChecks, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/service-management", label: "Service Options", icon: Settings2, roles: ["SYSTEM_ADMIN"] },
