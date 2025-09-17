@@ -515,42 +515,65 @@ function DashboardContent() {
     return counts;
   }, [filteredLeads]);
   
-  const { totalSales, invoiceDue, totalPurchase, netValue, salesChartData, deliveredCount, ordersWithDueCount, invoicePaid } = useMemo(() => {
+  const { totalSales, invoiceDue, totalPurchase, netValue, salesChartData, deliveredCount, ordersWithDueCount, invoicePaid, invoiceCodPaid } = useMemo(() => {
     const interval = getDateRangeInterval();
     if (!interval) {
-        return { totalSales: 0, invoiceDue: 0, totalPurchase: 0, netValue: 0, salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0, invoicePaid: 0 };
+        return { totalSales: 0, invoiceDue: 0, totalPurchase: 0, netValue: 0, salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0, invoicePaid: 0, invoiceCodPaid: 0 };
     }
 
     let currentTotalSales = 0;
     let currentTotalAdvance = 0;
     let currentTotalPurchaseValue = 0;
     let currentOrdersWithDueCount = 0;
+    let currentInvoiceCodPaid = 0;
 
-    filteredOrders.forEach(order => {
-      const orderTotal = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
-      currentTotalSales += orderTotal;
+    let ordersForCalcs = allOrders;
+    if (currentUser?.role === 'CRM') {
+      ordersForCalcs = allOrders.filter(order => order.crmUserId === currentUser.id);
+    } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
+      ordersForCalcs = allOrders.filter(order => order.crmUserId === selectedCrmId);
+    }
 
-      if (Array.isArray(order.orderItems)) {
-        order.orderItems.forEach((item: OrderItem) => {
-          const modelDetails = allModels.find(m => m.name === item.model);
-          if (modelDetails && typeof modelDetails.buyingPrice === 'number' && typeof item.quantity === 'number' && item.quantity > 0) {
-            currentTotalPurchaseValue += (modelDetails.buyingPrice * item.quantity);
-          }
-        });
-      }
-      
-      const orderAdvance = (order.advancePayments || []).reduce((sum, p) => sum + p.amount, 0);
-      currentTotalAdvance += orderAdvance;
-      const orderDue = orderTotal - orderAdvance;
+    ordersForCalcs.forEach(order => {
+        const orderCreatedAt = parseISO(order.createdAt);
+        // Sales, Purchase, Due calculations based on orders *created* in the date range
+        if (isWithinInterval(orderCreatedAt, interval)) {
+            const orderTotal = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
+            currentTotalSales += orderTotal;
 
-      if (orderDue > 0.01) {
-        currentOrdersWithDueCount++;
-      }
+            if (Array.isArray(order.orderItems)) {
+                order.orderItems.forEach((item: OrderItem) => {
+                    const modelDetails = allModels.find(m => m.name === item.model);
+                    if (modelDetails && typeof modelDetails.buyingPrice === 'number' && typeof item.quantity === 'number' && item.quantity > 0) {
+                        currentTotalPurchaseValue += (modelDetails.buyingPrice * item.quantity);
+                    }
+                });
+            }
+            
+            const orderAdvance = (order.advancePayments || []).reduce((sum, p) => sum + p.amount, 0);
+            currentTotalAdvance += orderAdvance;
+            const orderDue = orderTotal - orderAdvance;
+
+            if (orderDue > 0.01) {
+                currentOrdersWithDueCount++;
+            }
+        }
+        
+        // COD calculation based on payments *made* in the date range
+        if (Array.isArray(order.advancePayments)) {
+            order.advancePayments.forEach(payment => {
+                if (payment.date && isWithinInterval(parseISO(payment.date), interval)) {
+                    const methodName = payment.paymentMethod?.toLowerCase() || '';
+                    if (methodName === 'cod' || methodName === 'system auto-settled' || methodName === 'courier') {
+                        currentInvoiceCodPaid += payment.amount;
+                    }
+                }
+            });
+        }
     });
     
     const currentInvoiceDue = currentTotalSales - currentTotalAdvance;
     const currentInvoicePaid = currentTotalSales - currentInvoiceDue;
-
 
     let currentDeliveredCount = 0;
     let ordersForDeliveryCount = allOrders; // Start with all orders
@@ -627,6 +650,7 @@ function DashboardContent() {
       deliveredCount: currentDeliveredCount.toString(),
       ordersWithDueCount: currentOrdersWithDueCount,
       invoicePaid: currentInvoicePaid,
+      invoiceCodPaid: currentInvoiceCodPaid,
     };
   }, [filteredOrders, allOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId]);
   
@@ -751,6 +775,7 @@ function DashboardContent() {
       { title: isCrm ? "Sales" : "Total Sales", value: isCrm ? filteredOrders.length.toString() : formatCurrency(totalSales), icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
       { title: "Invoice due", value: isCrm ? ordersWithDueCount.toString() : formatCurrency(invoiceDue), icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
       { title: "Invoice Paid", value: formatCurrency(invoicePaid), icon: Receipt, iconColorClass: "text-teal-600", circleBgClass: "bg-teal-100 dark:bg-teal-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
+      { title: "Invoice COD Paid", value: formatCurrency(invoiceCodPaid), icon: Truck, iconColorClass: "text-cyan-600", circleBgClass: "bg-cyan-100 dark:bg-cyan-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
       { title: "Delivered", value: deliveredCount, icon: PackageCheck, iconColorClass: "text-green-600", circleBgClass: "bg-green-100 dark:bg-green-500/20", isLoading: isLoadingData, roles: ['CRM', 'DESIGNER_REPRESENTATIVE'] },
       { title: "Net", value: formatCurrency(netValue), icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
       { title: "Total Sell Return", value: formatCurrency(0), icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
@@ -759,7 +784,7 @@ function DashboardContent() {
       { title: "Total Purchase Return", value: formatCurrency(0), icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
       { title: "Expense", value: formatCurrency(0), icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
     ];
-  }, [totalSales, netValue, invoiceDue, totalPurchase, isLoadingData, deliveredCount, currentUser, filteredOrders.length, ordersWithDueCount, invoicePaid]);
+  }, [totalSales, netValue, invoiceDue, totalPurchase, isLoadingData, deliveredCount, currentUser, filteredOrders.length, ordersWithDueCount, invoicePaid, invoiceCodPaid]);
 
   const summaryCardData = useMemo(() => {
     return summaryCardDefinitions.filter(card => {
@@ -991,7 +1016,7 @@ function DashboardContent() {
               </Card>
             </div>
             
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-4 sm:gap-6">
               {summaryCardData.map((card) => (
                 <SummaryCard
                   key={card.title}
