@@ -118,9 +118,11 @@ export const addOrder = async (orderData: {
   phoneNumber: string;
   orderItems: OrderItem[];
   advancePaymentAmount?: number | null;
+  advancePaymentMethod?: string | null;
+  advancePaymentDocumentUrl?: string | null;
+  newAdvancePaymentNotes?: string | null;
   specialClientDiscount?: number | null;
   shippingCharge?: number | null; 
-  advancePaymentMethod?: string | null;
   orderNotes?: string | null;
   initialStatusId: string;
   crmUserId: string;
@@ -166,7 +168,9 @@ export const addOrder = async (orderData: {
     if (orderData.advancePaymentAmount && orderData.advancePaymentAmount > 0) {
       initialAdvancePayments.push({
         id: uuidv4(), amount: orderData.advancePaymentAmount, date: finalCreatedAt,
-        paymentMethod: orderData.advancePaymentMethod || "Unknown", notes: "Initial advance payment.",
+        paymentMethod: orderData.advancePaymentMethod || "Unknown", 
+        notes: orderData.newAdvancePaymentNotes || "Initial advance payment.",
+        documentUrl: orderData.advancePaymentDocumentUrl || null,
         recordedByUserId: orderData.crmUserId, recordedByUserName: orderData.crmUserName,
       });
     }
