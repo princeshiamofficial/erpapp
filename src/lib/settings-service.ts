@@ -4,7 +4,7 @@
 
 import { db } from './firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import type { GlobalSettings, UserRole, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget } from '@/types';
+import type { GlobalSettings, UserRole, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings } from '@/types';
 
 const GLOBAL_SETTINGS_COLLECTION = 'globalSettings';
 const MAIN_SETTINGS_DOC_ID = 'main';
@@ -90,6 +90,7 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         drAssignmentNotificationBody: data.drAssignmentNotificationBody ?? DEFAULT_GLOBAL_SETTINGS.drAssignmentNotificationBody,
         reportProductFilters: data.reportProductFilters ?? DEFAULT_GLOBAL_SETTINGS.reportProductFilters,
         roleBasedTargets: data.roleBasedTargets ?? DEFAULT_GLOBAL_SETTINGS.roleBasedTargets,
+        pipelineAccess: data.pipelineAccess ?? { canViewAllLeads: [] },
       };
     } else {
       console.log("Global settings document not found, returning defaults. Creating document with defaults.");
@@ -239,6 +240,26 @@ export async function setRolesAllowedToViewFinancials(roles: UserRole[]): Promis
     console.error("Error setting roles allowed to view financials:", error);
     return false;
   }
+}
+
+export async function setPipelineAccess(permissions: PipelineAccessSettings): Promise<boolean> {
+    try {
+        const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+        const docSnap = await getDoc(settingsDocRef);
+        if (docSnap.exists()) {
+            await updateDoc(settingsDocRef, { pipelineAccess: permissions });
+        } else {
+            const initialData: GlobalSettings = {
+                ...DEFAULT_GLOBAL_SETTINGS,
+                pipelineAccess: permissions,
+            };
+            await setDoc(settingsDocRef, initialData);
+        }
+        return true;
+    } catch (error) {
+        console.error("Error setting pipeline access permissions:", error);
+        return false;
+    }
 }
 
 
@@ -418,4 +439,3 @@ export async function setRoleBasedTargets(targets: RoleBasedTarget): Promise<boo
     return false;
   }
 }
-
