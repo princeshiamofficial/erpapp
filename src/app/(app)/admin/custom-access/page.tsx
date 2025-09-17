@@ -24,10 +24,11 @@ import {
 } from '../crm-target-settings/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban, ChevronsUpDown, CheckIcon } from 'lucide-react';
+import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban, ChevronsUpDown, CheckIcon, Search } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 
 const EDITABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
 const DELETABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'LR'];
@@ -49,6 +50,7 @@ export default function CustomAccessPage() {
   const [leadCategoryAccess, setLeadCategoryAccess] = useState<Record<LeadCategory, LeadCategoryAccessSettings>>({} as Record<LeadCategory, LeadCategoryAccessSettings>);
   const [pipelineAccess, setPipelineAccess] = useState<Set<string>>(new Set());
   const [crmUsers, setCrmUsers] = useState<User[]>([]);
+  const [crmSearchTerm, setCrmSearchTerm] = useState('');
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmittingOrderEditing, setIsSubmittingOrderEditing] = useState(false);
@@ -157,9 +159,15 @@ export default function CustomAccessPage() {
   const handleLeadCategorySpecialAccessChange = (category: LeadCategory, userId: string) => {
     setLeadCategoryAccess(prev => {
       const newPermissions = { ...prev };
-      const currentSpecialAccess = new Set(newPermissions[category]?.specialAccess || []);
-      if (currentSpecialAccess.has(userId)) currentSpecialAccess.delete(userId); else currentSpecialAccess.add(userId);
-      if (!newPermissions[category]) newPermissions[category] = { roles: [], specialAccess: [] };
+      if (!newPermissions[category]) {
+        newPermissions[category] = { roles: [], specialAccess: [] };
+      }
+      const currentSpecialAccess = new Set(newPermissions[category].specialAccess);
+      if (currentSpecialAccess.has(userId)) {
+        currentSpecialAccess.delete(userId);
+      } else {
+        currentSpecialAccess.add(userId);
+      }
       newPermissions[category].specialAccess = Array.from(currentSpecialAccess);
       return newPermissions;
     });
@@ -190,6 +198,15 @@ export default function CustomAccessPage() {
     else toast({ title: "Update Failed", description: result.error, variant: "destructive" });
     setIsSubmittingPipelineAccess(false);
   };
+  
+  const filteredCrmUsers = useMemo(() => {
+    if (!crmSearchTerm) return crmUsers;
+    const lowerCaseSearch = crmSearchTerm.toLowerCase();
+    return crmUsers.filter(user => 
+      user.name.toLowerCase().includes(lowerCaseSearch) ||
+      user.email.toLowerCase().includes(lowerCaseSearch)
+    );
+  }, [crmUsers, crmSearchTerm]);
 
 
   if (!currentUser || currentUser.role !== 'SYSTEM_ADMIN') {
@@ -270,8 +287,21 @@ export default function CustomAccessPage() {
 
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5" onDoubleClick={() => setIsLeadCategoryAccessVisible(prev => !prev)}>
-          <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Filter className="h-6 w-6 text-primary" />Global Pipeline Access</CardTitle>
-          <CardDescription className="text-muted-foreground text-sm mt-0.5">Grant special permission to specific CRM users to view all leads, not just their own.</CardDescription>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex-1">
+              <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Filter className="h-6 w-6 text-primary" />Global Pipeline Access</CardTitle>
+              <CardDescription className="text-muted-foreground text-sm mt-0.5">Grant special permission to specific CRM users to view all leads, not just their own.</CardDescription>
+            </div>
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search CRM users..."
+                value={crmSearchTerm}
+                onChange={(e) => setCrmSearchTerm(e.target.value)}
+                className="pl-10 h-9"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <ScrollArea className="h-auto max-h-80">
@@ -286,7 +316,7 @@ export default function CustomAccessPage() {
                         <TableCell><Skeleton className="h-5 w-40 rounded"/></TableCell>
                         <TableCell><Skeleton className="h-5 w-52 rounded"/></TableCell>
                     </TableRow>
-                  )) : crmUsers.length > 0 ? crmUsers.map(user => (
+                  )) : filteredCrmUsers.length > 0 ? filteredCrmUsers.map(user => (
                     <TableRow key={user.id} className="hover:bg-muted/30">
                         <TableCell className="pl-6">
                             <Checkbox 
