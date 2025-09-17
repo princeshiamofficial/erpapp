@@ -518,14 +518,13 @@ function DashboardContent() {
   const { totalSales, invoiceDue, totalPurchase, netValue, salesChartData, deliveredCount, ordersWithDueCount, invoicePaid } = useMemo(() => {
     const interval = getDateRangeInterval();
     if (!interval) {
-        return { totalSales: formatCurrency(0), invoiceDue: formatCurrency(0), totalPurchase: formatCurrency(0), netValue: formatCurrency(0), salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0, invoicePaid: formatCurrency(0) };
+        return { totalSales: 0, invoiceDue: 0, totalPurchase: 0, netValue: 0, salesChartData: [], deliveredCount: '0', ordersWithDueCount: 0, invoicePaid: 0 };
     }
 
     let currentTotalSales = 0;
     let currentTotalAdvance = 0;
     let currentTotalPurchaseValue = 0;
     let currentOrdersWithDueCount = 0;
-    let currentInvoicePaid = 0;
 
     filteredOrders.forEach(order => {
       const orderTotal = (order.orderItems || []).reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
@@ -546,10 +545,12 @@ function DashboardContent() {
 
       if (orderDue > 0.01) {
         currentOrdersWithDueCount++;
-      } else {
-        currentInvoicePaid += orderTotal; // It's paid, add its total value to the paid amount
       }
     });
+    
+    const currentInvoiceDue = currentTotalSales - currentTotalAdvance;
+    const currentInvoicePaid = currentTotalSales - currentInvoiceDue;
+
 
     let currentDeliveredCount = 0;
     let ordersForDeliveryCount = allOrders; // Start with all orders
@@ -618,14 +619,14 @@ function DashboardContent() {
     }
 
     return {
-      totalSales: formatCurrency(currentTotalSales),
-      invoiceDue: formatCurrency(currentTotalSales - currentTotalAdvance),
-      totalPurchase: formatCurrency(currentTotalPurchaseValue),
-      netValue: formatCurrency(currentTotalSales - currentTotalPurchaseValue),
+      totalSales: currentTotalSales,
+      invoiceDue: currentInvoiceDue,
+      totalPurchase: currentTotalPurchaseValue,
+      netValue: currentTotalSales - currentTotalPurchaseValue,
       salesChartData: chartData,
       deliveredCount: currentDeliveredCount.toString(),
       ordersWithDueCount: currentOrdersWithDueCount,
-      invoicePaid: formatCurrency(currentInvoicePaid),
+      invoicePaid: currentInvoicePaid,
     };
   }, [filteredOrders, allOrders, allModels, selectedDateRange, selectedPredefinedValue, globalSettings, currentUser, selectedCrmId]);
   
@@ -732,7 +733,7 @@ function DashboardContent() {
   const handleDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
     setCurrentDateRangeLabel(label);
-    setSelectedPredefinedValue(predefined);
+    setSelectedPredefined(predefined);
   };
   
   const handleTeamPerformanceDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
@@ -747,13 +748,13 @@ function DashboardContent() {
   const summaryCardDefinitions = useMemo(() => {
     const isCrm = currentUser?.role === 'CRM';
     return [
-      { title: isCrm ? "Sales" : "Total Sales", value: isCrm ? filteredOrders.length.toString() : totalSales, icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
-      { title: "Invoice due", value: isCrm ? ordersWithDueCount.toString() : invoiceDue, icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
-      { title: "Invoice Paid", value: invoicePaid, icon: Receipt, iconColorClass: "text-teal-600", circleBgClass: "bg-teal-100 dark:bg-teal-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
+      { title: isCrm ? "Sales" : "Total Sales", value: isCrm ? filteredOrders.length.toString() : formatCurrency(totalSales), icon: ShoppingCart, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData },
+      { title: "Invoice due", value: isCrm ? ordersWithDueCount.toString() : formatCurrency(invoiceDue), icon: FileText, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData },
+      { title: "Invoice Paid", value: formatCurrency(invoicePaid), icon: Receipt, iconColorClass: "text-teal-600", circleBgClass: "bg-teal-100 dark:bg-teal-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
       { title: "Delivered", value: deliveredCount, icon: PackageCheck, iconColorClass: "text-green-600", circleBgClass: "bg-green-100 dark:bg-green-500/20", isLoading: isLoadingData, roles: ['CRM', 'DESIGNER_REPRESENTATIVE'] },
-      { title: "Net", value: netValue, icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
+      { title: "Net", value: formatCurrency(netValue), icon: BadgeDollarSign, iconColorClass: "text-emerald-600", circleBgClass: "bg-emerald-100 dark:bg-emerald-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
       { title: "Total Sell Return", value: formatCurrency(0), icon: Undo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
-      { title: "Total purchase", value: totalPurchase, icon: Download, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
+      { title: "Total purchase", value: formatCurrency(totalPurchase), icon: Download, iconColorClass: "text-sky-600", circleBgClass: "bg-sky-100 dark:bg-sky-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
       { title: "Purchase due", value: formatCurrency(0), icon: AlertTriangle, iconColorClass: "text-amber-600", circleBgClass: "bg-amber-100 dark:bg-amber-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
       { title: "Total Purchase Return", value: formatCurrency(0), icon: Redo2, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
       { title: "Expense", value: formatCurrency(0), icon: Receipt, iconColorClass: "text-rose-600", circleBgClass: "bg-rose-100 dark:bg-rose-500/20", isLoading: isLoadingData, roles: ['SYSTEM_ADMIN', 'ADMIN'] },
@@ -1394,3 +1395,4 @@ function DashboardContent() {
     </>
   );
 }
+
