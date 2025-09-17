@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
@@ -72,14 +73,16 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
       const items = event.clipboardData?.items;
       if (items) {
         for (let i = 0; i < items.length; i++) {
-          const file = items[i].getAsFile();
-          if (file) { // Found a file in clipboard
-             const processed = processFile(file);
-             if (processed) {
-               toast({title: "Image Pasted", description: "Image from clipboard has been attached as proof."});
-             }
-             event.preventDefault(); // Prevent default paste action
-             return;
+          if (items[i].type.indexOf("image") !== -1) {
+            const file = items[i].getAsFile();
+            if (file) {
+               const processed = processFile(file);
+               if (processed) {
+                 toast({title: "Image Pasted", description: "Image from clipboard has been attached as proof."});
+               }
+               event.preventDefault(); 
+               return;
+            }
           }
         }
       }
@@ -196,7 +199,7 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
                 <>
                   <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground">Drag & drop, paste, or click to upload proof</p>
-                  <p className="text-xs text-muted-foreground">(Optional, Max 5MB)</p>
+                  <p className="text-xs text-muted-foreground">(Optional, Max 5MB, Images Only)</p>
                 </>
               )}
             </div>
@@ -204,9 +207,9 @@ export function FileUploadConfirmationDialog({ isOpen, onOpenChange, onConfirm }
               id="file-upload"
               type="file"
               ref={fileInputRef}
-              onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
+              onChange={handleFileChange}
               className="hidden"
-              accept="image/jpeg,image/png,image/gif,image/webp"
+              accept="image/*"
             />
             
              <DialogFooter className="pt-4 border-t">

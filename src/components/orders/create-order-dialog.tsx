@@ -403,7 +403,11 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast({ title: "File too large", description: "Please select a file smaller than 5MB.", variant: "destructive" });
+        toast({ title: "File too large", description: "Please select an image smaller than 5MB.", variant: "destructive" });
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast({ title: "Invalid File Type", description: "Please select an image file.", variant: "destructive" });
         return;
       }
       setSelectedPaymentProof(file);
@@ -461,7 +465,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       orderItems: orderItems.map(item => ({ ...item, quantity: parseInt(item.quantity, 10) })),
       advancePaymentAmount: parseFloat(advancePaymentAmount) || null,
       advancePaymentMethod: advancePaymentMethod.trim() ? (advancePaymentMethod.toLowerCase() === 'other' ? customPaymentMethodText.trim() : advancePaymentMethod.trim()) : null,
-      advancePaymentDocumentUrl: uploadedProofUrl,
+      documentUrl: uploadedProofUrl,
       newAdvancePaymentNotes: newAdvancePaymentNotes,
       specialClientDiscount: calculatedDiscountAmount > 0 ? calculatedDiscountAmount : null,
       orderNotes: orderNotes.trim() || null,
@@ -798,7 +802,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                       onChange={handleProofFileChange}
                       className="flex-1"
                       required={isAdvancePaymentEntered}
-                      accept="image/*,application/pdf"
+                      accept="image/*"
                     />
                     {selectedPaymentProof && (
                       <Button type="button" variant="ghost" size="icon" onClick={handleRemoveProofFile}>

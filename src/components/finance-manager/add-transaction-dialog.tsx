@@ -147,6 +147,10 @@ export function AddTransactionDialog({
         toast({ title: "File too large", description: "Please select a file smaller than 50MB.", variant: "destructive" });
         return false;
       }
+      if (!file.type.startsWith('image/')) {
+        toast({ title: "Invalid File Type", description: "Please select an image file.", variant: "destructive" });
+        return false;
+      }
       setSelectedDocumentFile(file);
       return true;
     }
@@ -195,14 +199,16 @@ export function AddTransactionDialog({
       const items = event.clipboardData?.items;
       if (items) {
         for (let i = 0; i < items.length; i++) {
-          const file = items[i].getAsFile();
-          if (file) {
-             const processed = processFile(file);
-             if (processed) {
-               toast({title: "File Pasted", description: "File from clipboard has been attached."});
-             }
-             event.preventDefault(); 
-             return;
+          if (items[i].type.indexOf("image") !== -1) {
+            const file = items[i].getAsFile();
+            if (file) {
+              const processed = processFile(file);
+              if (processed) {
+                toast({title: "File Pasted", description: "Image from clipboard has been attached."});
+              }
+              event.preventDefault(); 
+              return;
+            }
           }
         }
       }
@@ -505,8 +511,8 @@ export function AddTransactionDialog({
                         </Button>
                     </div>
                   )}
-                  {!selectedDocumentFile && <p className="text-xs text-muted-foreground mt-0.5">Max 50MB. (Any file type)</p>}
-                  {!selectedDocumentFile && <p className="text-xs text-muted-foreground mt-0.5">You can also paste a file from clipboard.</p>}
+                  {!selectedDocumentFile && <p className="text-xs text-muted-foreground mt-0.5">Max 50MB. (Images Only)</p>}
+                  {!selectedDocumentFile && <p className="text-xs text-muted-foreground mt-0.5">You can also paste an image from clipboard.</p>}
                 </div>
                 <Input
                   id="transaction-document"
@@ -514,7 +520,7 @@ export function AddTransactionDialog({
                   ref={documentFileRef}
                   onChange={handleFileChange}
                   className="hidden"
-                  accept="*/*" 
+                  accept="image/*" 
                 />
               </div>
             )}

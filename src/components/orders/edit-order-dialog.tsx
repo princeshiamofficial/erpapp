@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -274,7 +275,11 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     const file = event.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast({ title: "File too large", description: "Please select a file smaller than 5MB.", variant: "destructive" });
+        toast({ title: "File too large", description: "Please select an image smaller than 5MB.", variant: "destructive" });
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        toast({ title: "Invalid File Type", description: "Please select an image file.", variant: "destructive" });
         return;
       }
       setSelectedPaymentProof(file);
@@ -340,7 +345,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       setIsUploadingProof(false);
     }
 
-    const finalUpdates: Partial<TrackingLink> & { newAdvancePaymentAmount?: number | null; newAdvancePaymentMethod?: string | null; newAdvancePaymentNotes?: string | null; newAdvancePaymentDocumentUrl?: string | null; } = {
+    const finalUpdates: Partial<TrackingLink> & { newAdvancePaymentAmount?: number | null; newAdvancePaymentMethod?: string | null; newAdvancePaymentNotes?: string | null; documentUrl?: string | null; } = {
       companyName: `${jobIdInput.trim()} • ${companyNameInput.trim()}`,
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
@@ -355,7 +360,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       finalUpdates.newAdvancePaymentAmount = parseFloat(newAdvanceAmount);
       finalUpdates.newAdvancePaymentMethod = newAdvancePaymentMethod.toLowerCase() === 'other' ? newCustomPaymentMethodText.trim() : newAdvancePaymentMethod.trim();
       finalUpdates.newAdvancePaymentNotes = newAdvancePaymentNotes.trim() || null;
-      finalUpdates.newAdvancePaymentDocumentUrl = newUploadedProofUrl;
+      finalUpdates.documentUrl = newUploadedProofUrl;
     }
     
     const result = await updateOrderAction(order.id, finalUpdates, currentUser);
@@ -492,7 +497,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                         </Popover>
                         {showNewCustomPaymentInput && (<div className="mt-2 space-y-1"><Label htmlFor="newCustomPaymentText">Specify Other Method <span className="text-destructive">*</span></Label><Input id="newCustomPaymentText" value={newCustomPaymentMethodText} onChange={e=>setNewCustomPaymentMethodText(e.target.value)} required={newAdvancePaymentMethod.toLowerCase()==='other'} disabled={isSubmitting}/></div>)}
                     </div>
-                    <div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">Reference/Notes</Label><Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID" disabled={isSubmitting}/></div>
+                    <div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">New Payment Notes</Label><Textarea id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} rows={1} placeholder="Optional notes for this payment" disabled={isSubmitting}/></div>
                      <div className="space-y-1 md:col-span-2 lg:col-span-3">
                         <Label htmlFor="payment-proof-edit">Payment Proof *</Label>
                         <div className="flex items-center gap-2">
@@ -503,7 +508,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                                 onChange={handleProofFileChange}
                                 className="flex-1"
                                 required={isNewAdvanceEntered}
-                                accept="image/*,application/pdf"
+                                accept="image/*"
                                 disabled={isSubmitting}
                             />
                             {selectedPaymentProof && (

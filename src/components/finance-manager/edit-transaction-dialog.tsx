@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -70,6 +71,10 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
         toast({ title: "File too large", description: "Please select a file smaller than 50MB.", variant: "destructive" });
         return false;
       }
+       if (!file.type.startsWith('image/')) {
+        toast({ title: "Invalid File Type", description: "Please select an image file.", variant: "destructive" });
+        return false;
+      }
       setSelectedDocumentFile(file);
       setCurrentDocumentUrl(null); // Clear existing URL if new file is chosen
       return true;
@@ -116,12 +121,14 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
       const items = event.clipboardData?.items;
       if (items) {
         for (let i = 0; i < items.length; i++) {
-          const file = items[i].getAsFile();
-          if (file) {
-             const processed = processFile(file);
-             if (processed) toast({title: "File Pasted", description: "File from clipboard has been attached."});
-             event.preventDefault(); return;
-          }
+           if (items[i].type.indexOf("image") !== -1) {
+            const file = items[i].getAsFile();
+            if (file) {
+                const processed = processFile(file);
+                if (processed) toast({title: "File Pasted", description: "Image from clipboard has been attached."});
+                event.preventDefault(); return;
+            }
+           }
         }
       }
     };
@@ -317,7 +324,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
                                 <p className="text-sm text-muted-foreground">
                                     {isDraggingOver ? "Drop file here" : "Drag & drop, paste, or click to upload"}
                                 </p>
-                                <p className="text-xs text-muted-foreground mt-0.5">Max 50MB. (Any file type)</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Max 50MB. (Images Only)</p>
                             </>
                         )}
                     </div>
@@ -327,7 +334,7 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
                         ref={documentFileRef}
                         onChange={handleFileChange}
                         className="hidden"
-                        accept="*/*" 
+                        accept="image/*" 
                     />
                     {isDocumentMissingForRequiredType && <p className="text-xs text-destructive mt-1">A document is required for this transaction type.</p>}
                  </div>
@@ -347,4 +354,3 @@ export function EditTransactionDialog({ currentUser, transaction, isOpen, onOpen
     </Dialog>
   );
 }
-
