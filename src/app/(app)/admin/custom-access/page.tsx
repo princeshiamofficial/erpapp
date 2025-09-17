@@ -372,7 +372,10 @@ export default function CustomAccessPage() {
                                   <CommandList><CommandEmpty>No user found.</CommandEmpty>
                                     <CommandGroup>
                                       {crmUsers.map((user) => (
-                                        <CommandItem key={`special-access-${category}-${user.id}`} value={user.name} onSelect={() => handleLeadCategorySpecialAccessChange(category, user.id)} className="cursor-pointer">
+                                        <CommandItem key={`special-access-${category}-${user.id}`} value={user.id} onSelect={(currentValue) => {
+                                          handleLeadCategorySpecialAccessChange(category, currentValue);
+                                          setPopoverStates(p => ({...p, [category]: false}));
+                                        }} className="cursor-pointer">
                                           <CheckIcon className={cn("mr-2 h-4 w-4", permissions.specialAccess.includes(user.id) ? "opacity-100" : "opacity-0")}/>
                                           {user.name}
                                         </CommandItem>
