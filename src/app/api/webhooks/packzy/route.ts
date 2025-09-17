@@ -1,11 +1,10 @@
-
 // /src/app/api/webhooks/packzy/route.ts
 
 import { NextResponse } from 'next/server';
 import { getOrderByTrackingCode, autoSettleOrderIfDelivered } from '@/lib/order-service';
 import { getUsers } from '@/lib/user-service';
 
-const PACKZY_WEBHOOK_SECRET = 'your-super-secret-webhook-key-for-packzy';
+const PACKZY_WEBHOOK_SECRET = 'cca7447386799c637d27e3426c6687a2';
 
 export async function POST(request: Request) {
   try {
