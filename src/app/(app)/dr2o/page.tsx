@@ -4,6 +4,8 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
 
 // Mock data for demonstration purposes
 const mockData = [
@@ -34,10 +36,17 @@ export default function DR2OPage() {
     <div className="p-4 sm:p-6 lg:p-8">
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
-            <CardTitle className="text-card-foreground text-xl">DR 2.O - Daily Reporting</CardTitle>
-            <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                Daily follow-up report for new and old customers.
-            </CardDescription>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="text-card-foreground text-xl">DR 2.O - Daily Reporting</CardTitle>
+                <CardDescription className="text-muted-foreground text-sm mt-0.5">
+                    Daily follow-up report for new and old customers.
+                </CardDescription>
+              </div>
+              <Button>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add New
+              </Button>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
