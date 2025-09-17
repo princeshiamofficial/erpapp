@@ -68,7 +68,7 @@ import { getProjects } from '@/lib/project-service';
 import { getLeads } from '@/lib/lead-service';
 import { getFeedback, deleteFeedbackAction } from '@/lib/feedback-service'; // Import getFeedback and deleteFeedbackAction
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'; // Added AlertDialog
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"; // Added AlertDialog
 import { getGlobalSettings } from '@/lib/settings-service';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -79,6 +79,8 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TeamPerformanceGraph } from '@/components/dashboard/TeamPerformanceGraph';
 import { getTaskEntries, type TaskEntry, getMonthlyTargetHistory, setMonthlyTargetHistory } from '@/lib/team-performance-service'; // Import new service
+import { CANCELLED_STATUS_ID } from '@/lib/status-service'; // Import CANCELLED_STATUS_ID
+
 
 // Lazy loading components
 const DateRangePicker = dynamic(() => import('@/components/dashboard/date-range-picker').then(mod => mod.DateRangePicker), {
@@ -533,6 +535,9 @@ function DashboardContent() {
     } else if ((currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN') && selectedCrmId !== 'all') {
       ordersForCalcs = allOrders.filter(order => order.crmUserId === selectedCrmId);
     }
+
+    // Filter out canceled orders before calculations
+    ordersForCalcs = ordersForCalcs.filter(order => order.currentStatus !== CANCELLED_STATUS_ID);
 
     ordersForCalcs.forEach(order => {
         const orderCreatedAt = parseISO(order.createdAt);
