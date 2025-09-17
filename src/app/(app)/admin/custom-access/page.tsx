@@ -57,7 +57,7 @@ export default function CustomAccessPage() {
   const [isSubmittingProjectStageAccess, setIsSubmittingProjectStageAccess] = useState(false);
   const [isSubmittingLeadCategoryAccess, setIsSubmittingLeadCategoryAccess] = useState(false);
   const [isSubmittingPipelineAccess, setIsSubmittingPipelineAccess] = useState(false);
-  const [isLeadCategoryAccessVisible, setIsLeadCategoryAccessVisible] = useState(true);
+  const [isLeadCategoryAccessVisible, setIsLeadCategoryAccessVisible] = useState(false);
   
   const [popoverStates, setPopoverStates] = useState<Record<string, boolean>>({});
 
