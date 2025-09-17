@@ -78,6 +78,7 @@ export default function DR2OPage() {
       if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
           return dr2oEntries;
       }
+      // Filter for both CRM and DESIGNER_REPRESENTATIVE roles
       return dr2oEntries.filter(entry => entry.crmId === currentUser.id);
   }, [currentUser, dr2oEntries]);
 
