@@ -57,6 +57,7 @@ export default function CustomAccessPage() {
   const [isSubmittingProjectStageAccess, setIsSubmittingProjectStageAccess] = useState(false);
   const [isSubmittingLeadCategoryAccess, setIsSubmittingLeadCategoryAccess] = useState(false);
   const [isSubmittingPipelineAccess, setIsSubmittingPipelineAccess] = useState(false);
+  const [isLeadCategoryAccessVisible, setIsLeadCategoryAccessVisible] = useState(true);
   
   const [popoverStates, setPopoverStates] = useState<Record<string, boolean>>({});
 
@@ -268,7 +269,7 @@ export default function CustomAccessPage() {
         </Card>
 
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5">
+        <CardHeader className="border-b p-5" onDoubleClick={() => setIsLeadCategoryAccessVisible(prev => !prev)}>
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Filter className="h-6 w-6 text-primary" />Global Pipeline Access</CardTitle>
           <CardDescription className="text-muted-foreground text-sm mt-0.5">Grant special permission to specific CRM users to view all leads, not just their own.</CardDescription>
         </CardHeader>
@@ -312,6 +313,7 @@ export default function CustomAccessPage() {
         </CardFooter>
       </Card>
       
+      {isLeadCategoryAccessVisible && (
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><FolderKanban className="h-6 w-6 text-primary" />Lead Category Access</CardTitle>
@@ -372,7 +374,7 @@ export default function CustomAccessPage() {
                                   <CommandList><CommandEmpty>No user found.</CommandEmpty>
                                     <CommandGroup>
                                       {crmUsers.map((user) => (
-                                        <CommandItem key={`special-access-${category}-${user.id}`} value={user.id} onSelect={() => handleLeadCategorySpecialAccessChange(category, user.id)} className="cursor-pointer">
+                                        <CommandItem key={`special-access-${category}-${user.id}`} value={user.name} onSelect={() => handleLeadCategorySpecialAccessChange(category, user.id)} className="cursor-pointer">
                                           <CheckIcon className={cn("mr-2 h-4 w-4", permissions.specialAccess.includes(user.id) ? "opacity-100" : "opacity-0")}/>
                                           {user.name}
                                         </CommandItem>
@@ -397,6 +399,7 @@ export default function CustomAccessPage() {
           </Button>
         </CardFooter>
       </Card>
+    )}
 
 
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
