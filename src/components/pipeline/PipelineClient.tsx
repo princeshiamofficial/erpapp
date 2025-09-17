@@ -3,12 +3,13 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import type { Lead, User, LeadCategory, LeadStatusType } from '@/types';
+import type { Lead, User, LeadCategory, LeadStatusType, GlobalSettings } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { DndContext, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent, type DragCancelEvent, closestCorners, DragOverlay } from '@dnd-kit/core';
 import { getLeads, updateLeadAction, deleteLeadAction } from '@/app/(app)/pipeline/actions';
-import { getUsers } from '@/lib/user-service'; // Added getUsers import
+import { getUsers } from '@/lib/user-service';
+import { getGlobalSettings } from '@/lib/settings-service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -75,6 +76,7 @@ export function PipelineClient() {
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
   const { currentUser } = useAuth();
+  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   
   const [allCrmUsers, setAllCrmUsers] = useState<User[]>([]);
   const [selectedCrmId, setSelectedCrmId] = useState<string>('all');
@@ -122,12 +124,14 @@ export function PipelineClient() {
     if (!currentUser) return;
     setIsLoading(true);
     try {
-      const [fetchedLeads, fetchedUsers] = await Promise.all([
+      const [fetchedLeads, fetchedUsers, fetchedSettings] = await Promise.all([
         getLeads(),
-        getUsers()
+        getUsers(),
+        getGlobalSettings()
       ]);
       setLeads(fetchedLeads.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       setAllUsers(fetchedUsers);
+      setGlobalSettings(fetchedSettings);
     } catch (error) {
       toast({ title: "Error fetching data", description: "Could not load pipeline or user data.", variant: "destructive" });
     } finally {
@@ -169,7 +173,10 @@ export function PipelineClient() {
     let baseLeads = [...leads];
 
     if (currentUser?.role === 'CRM') {
-      baseLeads = baseLeads.filter(lead => lead.crmId === currentUser.id);
+        const hasGlobalAccess = globalSettings?.pipelineAccess?.canViewAllLeads.includes(currentUser.id);
+        if (!hasGlobalAccess) {
+            baseLeads = baseLeads.filter(lead => lead.crmId === currentUser.id);
+        }
     } else if (selectedCrmId === 'unassigned') {
       baseLeads = baseLeads.filter(lead => !lead.crmId);
     } else if (selectedCrmId.startsWith('[Deleted User:')) {
@@ -211,7 +218,7 @@ export function PipelineClient() {
     }
 
     return baseLeads;
-  }, [leads, searchTerm, currentUser, selectedCrmId, selectedDateRange, categoryFilter, viewMode]);
+  }, [leads, searchTerm, currentUser, selectedCrmId, selectedDateRange, categoryFilter, viewMode, globalSettings]);
   
   const totalPages = Math.ceil(filteredLeads.length / ITEMS_PER_PAGE);
 
