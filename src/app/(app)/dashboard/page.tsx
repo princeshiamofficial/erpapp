@@ -733,7 +733,7 @@ function DashboardContent() {
   const handleDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
     setCurrentDateRangeLabel(label);
-    setSelectedPredefined(predefined);
+    setSelectedPredefinedValue(predefined);
   };
   
   const handleTeamPerformanceDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
@@ -1395,4 +1395,3 @@ function DashboardContent() {
     </>
   );
 }
-
