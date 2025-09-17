@@ -502,3 +502,17 @@ export interface VendorBill {
   createdByUserId: string;
   createdByUserName: string;
 }
+
+export interface Dr2oEntry {
+    id: string;
+    date: string; // ISO string
+    crmId: string;
+    crmName: string;
+    newCustomer1?: string;
+    newCustomer2?: string;
+    newCustomer3?: string;
+    oldCustomer1?: string;
+    oldCustomer2?: string;
+    oldCustomer3?: string;
+    oldCustomer4?: string;
+}
