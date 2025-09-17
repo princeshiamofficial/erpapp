@@ -9,20 +9,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { UserRole, GlobalSettings, ProjectStatusType, User, PipelineAccessSettings, LeadCategory } from "@/types";
+import type { UserRole, GlobalSettings, ProjectStatusType, User, PipelineAccessSettings, LeadCategory, LeadCategoryAccessSettings } from "@/types";
 import { getGlobalSettings as fetchGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import {
   updateRolesAllowedToEditOrdersAction,
   updateRolesAllowedToDeleteOrdersAction,
   updateRolesAllowedToViewFinancialsAction,
   updateProjectStageAccessAction,
   updatePipelineAccessAction,
-  updateLeadCategoryAccessAction, // New
+  updateLeadCategoryAccessAction,
 } from '../crm-target-settings/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban } from 'lucide-react';
+import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban, ChevronsUpDown, CheckIcon } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -44,7 +46,7 @@ export default function CustomAccessPage() {
   const [rolesAllowedToDelete, setRolesAllowedToDelete] = useState<Set<UserRole>>(new Set(['SYSTEM_ADMIN']));
   const [rolesAllowedToViewFinancials, setRolesAllowedToViewFinancials] = useState<Set<UserRole>>(new Set(['ADMIN', 'SYSTEM_ADMIN']));
   const [projectStageAccess, setProjectStageAccess] = useState<Record<ProjectStatusType, UserRole[]>>({} as Record<ProjectStatusType, UserRole[]>);
-  const [leadCategoryAccess, setLeadCategoryAccess] = useState<Record<LeadCategory, UserRole[]>>({} as Record<LeadCategory, UserRole[]>); // New state
+  const [leadCategoryAccess, setLeadCategoryAccess] = useState<Record<LeadCategory, LeadCategoryAccessSettings>>({} as Record<LeadCategory, LeadCategoryAccessSettings>);
   const [pipelineAccess, setPipelineAccess] = useState<Set<string>>(new Set());
   const [crmUsers, setCrmUsers] = useState<User[]>([]);
 
@@ -53,8 +55,10 @@ export default function CustomAccessPage() {
   const [isSubmittingOrderDeletion, setIsSubmittingOrderDeletion] = useState(false);
   const [isSubmittingFinancialVisibility, setIsSubmittingFinancialVisibility] = useState(false);
   const [isSubmittingProjectStageAccess, setIsSubmittingProjectStageAccess] = useState(false);
-  const [isSubmittingLeadCategoryAccess, setIsSubmittingLeadCategoryAccess] = useState(false); // New state
+  const [isSubmittingLeadCategoryAccess, setIsSubmittingLeadCategoryAccess] = useState(false);
   const [isSubmittingPipelineAccess, setIsSubmittingPipelineAccess] = useState(false);
+  
+  const [popoverStates, setPopoverStates] = useState<Record<string, boolean>>({});
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -67,7 +71,7 @@ export default function CustomAccessPage() {
       setRolesAllowedToDelete(new Set(globalSettings.rolesAllowedToDeleteOrders ?? ['SYSTEM_ADMIN']));
       setRolesAllowedToViewFinancials(new Set(globalSettings.rolesAllowedToViewFinancials ?? ['ADMIN', 'SYSTEM_ADMIN']));
       setProjectStageAccess(globalSettings.projectStageAccess || ({} as Record<ProjectStatusType, UserRole[]>));
-      setLeadCategoryAccess(globalSettings.leadCategoryAccess || ({} as Record<LeadCategory, UserRole[]>)); // Set new state
+      setLeadCategoryAccess(globalSettings.leadCategoryAccess || ({} as Record<LeadCategory, LeadCategoryAccessSettings>));
       setPipelineAccess(new Set(globalSettings.pipelineAccess?.canViewAllLeads ?? []));
       setCrmUsers(allUsers.filter(u => u.role === 'CRM'));
     } catch (error) {
@@ -138,19 +142,28 @@ export default function CustomAccessPage() {
     setIsSubmittingProjectStageAccess(false);
   };
   
-    // New handler for Lead Category Access
-  const handleLeadCategoryAccessChange = (category: LeadCategory, role: UserRole, checked: boolean | "indeterminate") => {
+  const handleLeadCategoryRoleChange = (category: LeadCategory, role: UserRole, checked: boolean | "indeterminate") => {
     setLeadCategoryAccess(prev => {
       const newPermissions = { ...prev };
-      const currentRolesForCategory = new Set(newPermissions[category] || []);
-      if (checked) currentRolesForCategory.add(role);
-      else currentRolesForCategory.delete(role);
-      newPermissions[category] = Array.from(currentRolesForCategory);
+      const currentRoles = new Set(newPermissions[category]?.roles || []);
+      if (checked) currentRoles.add(role); else currentRoles.delete(role);
+      if (!newPermissions[category]) newPermissions[category] = { roles: [], specialAccess: [] };
+      newPermissions[category].roles = Array.from(currentRoles);
       return newPermissions;
     });
   };
 
-  // New save handler for Lead Category Access
+  const handleLeadCategorySpecialAccessChange = (category: LeadCategory, userId: string) => {
+    setLeadCategoryAccess(prev => {
+      const newPermissions = { ...prev };
+      const currentSpecialAccess = new Set(newPermissions[category]?.specialAccess || []);
+      if (currentSpecialAccess.has(userId)) currentSpecialAccess.delete(userId); else currentSpecialAccess.add(userId);
+      if (!newPermissions[category]) newPermissions[category] = { roles: [], specialAccess: [] };
+      newPermissions[category].specialAccess = Array.from(currentSpecialAccess);
+      return newPermissions;
+    });
+  };
+
   const handleSaveLeadCategoryAccess = async () => {
     setIsSubmittingLeadCategoryAccess(true);
     const result = await updateLeadCategoryAccessAction(leadCategoryAccess);
@@ -158,6 +171,7 @@ export default function CustomAccessPage() {
     else toast({ title: "Update Failed", description: result.error, variant: "destructive" });
     setIsSubmittingLeadCategoryAccess(false);
   };
+
 
   const handlePipelineAccessChange = (userId: string, checked: boolean | "indeterminate") => {
     setPipelineAccess(prev => {
@@ -293,7 +307,7 @@ export default function CustomAccessPage() {
         </CardContent>
         <CardFooter className="border-t p-5 flex justify-end">
           <Button onClick={handleSavePipelineAccess} disabled={isLoading || isSubmittingPipelineAccess}>
-            {isSubmittingPipelineAccess ? "Saving..." : "Save Pipeline Permissions"}
+            {isSubmittingPipelineAccess ? "Saving..." : "Save Global Access"}
           </Button>
         </CardFooter>
       </Card>
@@ -301,46 +315,77 @@ export default function CustomAccessPage() {
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
           <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><FolderKanban className="h-6 w-6 text-primary" />Lead Category Access</CardTitle>
-          <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which user roles can view leads in each category.</CardDescription>
+          <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which roles and specific users can view leads in each category.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="pl-6 font-semibold">Category</TableHead>
+                  <TableHead className="pl-6 font-semibold sticky left-0 bg-card z-10">Category</TableHead>
                   {LEAD_CATEGORY_ACCESS_ROLES.map(role => (
                     <TableHead key={role} className="text-center">{role.replace(/_/g, ' ')}</TableHead>
                   ))}
+                  <TableHead className="text-center pr-6">Special Access</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   LEAD_CATEGORIES.map(category => (
                     <TableRow key={`skel-lead-cat-${category}`}>
-                      <TableCell className="pl-6"><Skeleton className="h-5 w-24" /></TableCell>
+                      <TableCell className="pl-6 sticky left-0 bg-card z-10"><Skeleton className="h-5 w-24" /></TableCell>
                       {LEAD_CATEGORY_ACCESS_ROLES.map(role => (
                         <TableCell key={`skel-lead-cell-${category}-${role}`} className="text-center"><Skeleton className="h-5 w-5 mx-auto" /></TableCell>
                       ))}
+                      <TableCell className="pr-6"><Skeleton className="h-10 w-48 mx-auto" /></TableCell>
                     </TableRow>
                   ))
                 ) : (
-                  LEAD_CATEGORIES.map(category => (
-                    <TableRow key={category} className="hover:bg-muted/30">
-                      <TableCell className="pl-6 font-medium">{category}</TableCell>
-                      {LEAD_CATEGORY_ACCESS_ROLES.map(role => (
-                        <TableCell key={`${category}-${role}`} className="text-center">
-                          <Checkbox
-                            id={`lead-perm-${category}-${role}`}
-                            checked={leadCategoryAccess[category]?.includes(role) || false}
-                            onCheckedChange={(checked) => handleLeadCategoryAccessChange(category, role, checked)}
-                            disabled={isSubmittingLeadCategoryAccess}
-                            aria-label={`Allow ${role} for ${category} category`}
-                          />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))
+                  LEAD_CATEGORIES.map(category => {
+                      const permissions = leadCategoryAccess[category] || { roles: [], specialAccess: [] };
+                      const selectedUsers = crmUsers.filter(u => permissions.specialAccess.includes(u.id));
+                      const selectedUsersDisplay = selectedUsers.length > 2 ? `${selectedUsers.length} users selected` : selectedUsers.map(u => u.name).join(", ");
+                      return (
+                        <TableRow key={category} className="hover:bg-muted/30">
+                          <TableCell className="pl-6 font-medium sticky left-0 bg-card z-10">{category}</TableCell>
+                          {LEAD_CATEGORY_ACCESS_ROLES.map(role => (
+                            <TableCell key={`${category}-${role}`} className="text-center">
+                              <Checkbox
+                                id={`lead-perm-${category}-${role}`}
+                                checked={permissions.roles?.includes(role) || false}
+                                onCheckedChange={(checked) => handleLeadCategoryRoleChange(category, role, checked)}
+                                disabled={isSubmittingLeadCategoryAccess}
+                                aria-label={`Allow ${role} for ${category} category`}
+                              />
+                            </TableCell>
+                          ))}
+                           <TableCell className="pr-6 text-center">
+                            <Popover open={popoverStates[category]} onOpenChange={(open) => setPopoverStates(p => ({...p, [category]: open}))}>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm" className="w-48 h-8">
+                                    <span className="truncate">{selectedUsersDisplay || "Select users..."}</span>
+                                    <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                <Command><CommandInput placeholder="Search user..." />
+                                  <CommandList><CommandEmpty>No user found.</CommandEmpty>
+                                    <CommandGroup>
+                                      {crmUsers.map((user) => (
+                                        <CommandItem key={`special-access-${category}-${user.id}`} value={user.name} onSelect={() => handleLeadCategorySpecialAccessChange(category, user.id)} className="cursor-pointer">
+                                          <CheckIcon className={cn("mr-2 h-4 w-4", permissions.specialAccess.includes(user.id) ? "opacity-100" : "opacity-0")}/>
+                                          {user.name}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
                 )}
               </TableBody>
             </Table>

@@ -16,10 +16,10 @@ import {
   setMaintenanceMode,
   setDrAssignmentNotificationTemplates, // New
   setRoleBasedTargets,
-  setPipelineAccess, // New
-  setLeadCategoryAccess, // New
+  setPipelineAccess,
+  setLeadCategoryAccess,
 } from "@/lib/settings-service";
-import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings, LeadCategory } from "@/types"; 
+import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings, LeadCategory, LeadCategoryAccessSettings } from "@/types"; 
 import { adminApp } from '@/lib/firebase-admin';
 import { getUsers as getAllUsersFromDb, getUserById } from '@/lib/user-service';
 import type { FirebaseError } from 'firebase-admin';
@@ -202,7 +202,7 @@ export async function updateProjectStageAccessAction(
 }
 
 export async function updateLeadCategoryAccessAction(
-  permissions: Record<LeadCategory, UserRole[]>
+  permissions: Record<LeadCategory, LeadCategoryAccessSettings>
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const success = await setLeadCategoryAccess(permissions);

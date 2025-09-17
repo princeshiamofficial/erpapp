@@ -236,6 +236,11 @@ export interface PipelineAccessSettings {
 
 export type LeadCategory = 'POP' | 'POG' | 'OC' | 'OD' | 'ROD';
 
+export interface LeadCategoryAccessSettings {
+  roles: UserRole[];
+  specialAccess: string[]; // Array of user IDs with special access
+}
+
 export interface GlobalSettings {
   globalMonthlyOrderTarget: number;
   globalWeeklyOrderTarget: number;
@@ -249,7 +254,7 @@ export interface GlobalSettings {
   leaderboardThemeSettings?: LeaderboardThemeSettings | null;
   expenseLoggingPermissions?: ExpenseLoggingPermissions;
   projectStageAccess?: Record<ProjectStatusType, UserRole[]>;
-  leadCategoryAccess?: Record<LeadCategory, UserRole[]>; // New
+  leadCategoryAccess?: Record<LeadCategory, LeadCategoryAccessSettings>;
   maintenanceMode?: boolean;
   maintenanceMessage?: string | null;
   drAssignmentNotificationTitle?: string;
