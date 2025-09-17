@@ -230,6 +230,10 @@ export interface RoleBasedTarget {
     LR: number;
 }
 
+export interface PipelineAccessSettings {
+  canViewAllLeads: string[]; // Array of CRM user IDs with special access
+}
+
 export interface GlobalSettings {
   globalMonthlyOrderTarget: number;
   globalWeeklyOrderTarget: number;
@@ -249,6 +253,7 @@ export interface GlobalSettings {
   drAssignmentNotificationBody?: string;
   reportProductFilters?: string[];
   roleBasedTargets?: RoleBasedTarget;
+  pipelineAccess?: PipelineAccessSettings; // New setting
 }
 
 export interface LeaderboardThemeSettings {

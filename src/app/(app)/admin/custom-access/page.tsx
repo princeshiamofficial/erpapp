@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -8,19 +9,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
-import type { UserRole, GlobalSettings, ProjectStatusType } from "@/types";
+import type { UserRole, GlobalSettings, ProjectStatusType, User, PipelineAccessSettings } from "@/types";
 import { getGlobalSettings as fetchGlobalSettings } from '@/lib/settings-service';
+import { getUsers } from '@/lib/user-service';
 import {
   updateRolesAllowedToEditOrdersAction,
   updateRolesAllowedToDeleteOrdersAction,
   updateRolesAllowedToViewFinancialsAction,
   updateProjectStageAccessAction,
-} from '../crm-target-settings/actions'; // Actions are in the same directory
+  updatePipelineAccessAction,
+} from '../crm-target-settings/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield } from 'lucide-react';
+import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const EDITABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
 const DELETABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'LR'];
@@ -37,21 +41,29 @@ export default function CustomAccessPage() {
   const [rolesAllowedToDelete, setRolesAllowedToDelete] = useState<Set<UserRole>>(new Set(['SYSTEM_ADMIN']));
   const [rolesAllowedToViewFinancials, setRolesAllowedToViewFinancials] = useState<Set<UserRole>>(new Set(['ADMIN', 'SYSTEM_ADMIN']));
   const [projectStageAccess, setProjectStageAccess] = useState<Record<ProjectStatusType, UserRole[]>>({} as Record<ProjectStatusType, UserRole[]>);
+  const [pipelineAccess, setPipelineAccess] = useState<Set<string>>(new Set());
+  const [crmUsers, setCrmUsers] = useState<User[]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmittingOrderEditing, setIsSubmittingOrderEditing] = useState(false);
   const [isSubmittingOrderDeletion, setIsSubmittingOrderDeletion] = useState(false);
   const [isSubmittingFinancialVisibility, setIsSubmittingFinancialVisibility] = useState(false);
   const [isSubmittingProjectStageAccess, setIsSubmittingProjectStageAccess] = useState(false);
+  const [isSubmittingPipelineAccess, setIsSubmittingPipelineAccess] = useState(false);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const globalSettings = await fetchGlobalSettings();
+      const [globalSettings, allUsers] = await Promise.all([
+          fetchGlobalSettings(),
+          getUsers()
+      ]);
       setRolesAllowedToEdit(new Set(globalSettings.rolesAllowedToEditOrders ?? ['ADMIN', 'SYSTEM_ADMIN']));
       setRolesAllowedToDelete(new Set(globalSettings.rolesAllowedToDeleteOrders ?? ['SYSTEM_ADMIN']));
       setRolesAllowedToViewFinancials(new Set(globalSettings.rolesAllowedToViewFinancials ?? ['ADMIN', 'SYSTEM_ADMIN']));
       setProjectStageAccess(globalSettings.projectStageAccess || ({} as Record<ProjectStatusType, UserRole[]>));
+      setPipelineAccess(new Set(globalSettings.pipelineAccess?.canViewAllLeads ?? []));
+      setCrmUsers(allUsers.filter(u => u.role === 'CRM'));
     } catch (error) {
       console.error("Error fetching settings:", error);
       toast({ title: "Error", description: "Could not load access settings.", variant: "destructive" });
@@ -119,6 +131,24 @@ export default function CustomAccessPage() {
     else toast({ title: "Update Failed", description: result.error, variant: "destructive" });
     setIsSubmittingProjectStageAccess(false);
   };
+  
+  const handlePipelineAccessChange = (userId: string, checked: boolean | "indeterminate") => {
+    setPipelineAccess(prev => {
+      const newSet = new Set(prev);
+      if (checked) newSet.add(userId);
+      else newSet.delete(userId);
+      return newSet;
+    });
+  };
+
+  const handleSavePipelineAccess = async () => {
+    setIsSubmittingPipelineAccess(true);
+    const result = await updatePipelineAccessAction({ canViewAllLeads: Array.from(pipelineAccess) });
+    if (result.success) toast({ title: "Permissions Updated", description: "Pipeline access permissions saved." });
+    else toast({ title: "Update Failed", description: result.error, variant: "destructive" });
+    setIsSubmittingPipelineAccess(false);
+  };
+
 
   if (!currentUser || currentUser.role !== 'SYSTEM_ADMIN') {
     return <div className="p-8 text-center">Access Denied. You must be a System Administrator to view this page.</div>;
@@ -129,7 +159,7 @@ export default function CustomAccessPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3"><Shield className="h-8 w-8 text-primary"/>Custom Access Control</h1>
-          <p className="text-base text-muted-foreground mt-1">Manage role-based permissions for orders and project stages.</p>
+          <p className="text-base text-muted-foreground mt-1">Manage role-based permissions for orders, projects, and pipeline visibility.</p>
         </div>
         <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10">
           <RefreshCw className={cn("h-5 w-5", isLoading ? 'animate-spin' : '')} />
@@ -195,6 +225,52 @@ export default function CustomAccessPage() {
             </Button>
           </CardFooter>
         </Card>
+
+      <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+        <CardHeader className="border-b p-5">
+          <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Filter className="h-6 w-6 text-primary" />Pipeline Visibility</CardTitle>
+          <CardDescription className="text-muted-foreground text-sm mt-0.5">Grant special permission to specific CRM users to view all leads, not just their own.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <ScrollArea className="h-auto max-h-80">
+            <Table>
+                <TableHeader>
+                    <TableRow><TableHead className="pl-6 w-12">Allow</TableHead><TableHead>CRM User</TableHead><TableHead>Email</TableHead></TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? [...Array(3)].map((_, i) => (
+                    <TableRow key={`pipe-skel-${i}`}>
+                        <TableCell className="pl-6"><Skeleton className="h-5 w-5 rounded"/></TableCell>
+                        <TableCell><Skeleton className="h-5 w-40 rounded"/></TableCell>
+                        <TableCell><Skeleton className="h-5 w-52 rounded"/></TableCell>
+                    </TableRow>
+                  )) : crmUsers.length > 0 ? crmUsers.map(user => (
+                    <TableRow key={user.id} className="hover:bg-muted/30">
+                        <TableCell className="pl-6">
+                            <Checkbox 
+                                id={`pipeline-perm-${user.id}`} 
+                                checked={pipelineAccess.has(user.id)} 
+                                onCheckedChange={(checked) => handlePipelineAccessChange(user.id, checked)}
+                                disabled={isSubmittingPipelineAccess}
+                            />
+                        </TableCell>
+                        <TableCell><Label htmlFor={`pipeline-perm-${user.id}`} className="font-medium cursor-pointer">{user.name}</Label></TableCell>
+                        <TableCell><Label htmlFor={`pipeline-perm-${user.id}`} className="text-muted-foreground cursor-pointer">{user.email}</Label></TableCell>
+                    </TableRow>
+                  )) : (
+                    <TableRow><TableCell colSpan={3} className="text-center h-24 text-muted-foreground">No users with the CRM role were found.</TableCell></TableRow>
+                  )}
+                </TableBody>
+            </Table>
+          </ScrollArea>
+        </CardContent>
+        <CardFooter className="border-t p-5 flex justify-end">
+          <Button onClick={handleSavePipelineAccess} disabled={isLoading || isSubmittingPipelineAccess}>
+            {isSubmittingPipelineAccess ? "Saving..." : "Save Pipeline Permissions"}
+          </Button>
+        </CardFooter>
+      </Card>
+
 
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">

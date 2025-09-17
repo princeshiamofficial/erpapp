@@ -16,8 +16,9 @@ import {
   setMaintenanceMode,
   setDrAssignmentNotificationTemplates, // New
   setRoleBasedTargets,
+  setPipelineAccess, // New
 } from "@/lib/settings-service";
-import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget } from "@/types"; 
+import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings } from "@/types"; 
 import { adminApp } from '@/lib/firebase-admin';
 import { getUsers as getAllUsersFromDb, getUserById } from '@/lib/user-service';
 import type { FirebaseError } from 'firebase-admin';
@@ -96,6 +97,26 @@ export async function updateRolesAllowedToViewFinancialsAction(roles: UserRole[]
     return { success: false, error: "Failed to update financial visibility permissions in database." };
   } catch (error) {
     console.error("Error in updateRolesAllowedToViewFinancialsAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updatePipelineAccessAction(permissions: PipelineAccessSettings): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Basic validation
+    if (!permissions || !Array.isArray(permissions.canViewAllLeads)) {
+      return { success: false, error: "Invalid permission structure provided." };
+    }
+
+    const success = await setPipelineAccess(permissions);
+    if (success) {
+      revalidatePath("/(app)/admin/custom-access");
+      revalidatePath("/(app)/pipeline");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update pipeline access permissions in database." };
+  } catch (error) {
+    console.error("Error in updatePipelineAccessAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
