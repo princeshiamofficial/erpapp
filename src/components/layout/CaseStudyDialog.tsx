@@ -46,7 +46,7 @@ const ChatMessage = ({ name, message, time, isCurrentUser, onReply }: { name: st
 export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
   const [replyingTo, setReplyingTo] = useState<{ name: string; message: string } | null>(null);
   const { currentUser } = useAuth();
-  const [selectedTeam, setSelectedTeam] = useState('all');
+  const [selectedTeam, setSelectedTeam] = useState('CR Team');
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
 
@@ -68,7 +68,6 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                         <SelectValue placeholder="Select Team" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">All Teams</SelectItem>
                         <SelectItem value="CR Team">CR Team</SelectItem>
                         <SelectItem value="DR Team">DR Team</SelectItem>
                         <SelectItem value="LR Team">LR Team</SelectItem>
