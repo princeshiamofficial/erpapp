@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -90,9 +91,9 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
 
     let result;
     if (isEditMode && entry) {
-      result = await updateDr2oEntryAction(entry.id, entryData);
+      result = await updateDr2oEntryAction(entry.id, entryData, 'CR');
     } else {
-      result = await addDr2oEntryAction(entryData);
+      result = await addDr2oEntryAction(entryData, 'CR');
     }
     
     setIsSubmitting(false);

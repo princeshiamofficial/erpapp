@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -37,8 +38,9 @@ export default function DR2OPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
+      // Fetching only for CR Team for now
       const [entries, users] = await Promise.all([
-          getDr2oEntries(),
+          getDr2oEntries('CR'),
           getUsers()
       ]);
       setDr2oEntries(entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
@@ -80,7 +82,6 @@ export default function DR2OPage() {
       if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
           return dr2oEntries;
       }
-      // Filter for both CRM and DESIGNER_REPRESENTATIVE roles
       return dr2oEntries.filter(entry => entry.crmId === currentUser.id);
   }, [currentUser, dr2oEntries]);
   
