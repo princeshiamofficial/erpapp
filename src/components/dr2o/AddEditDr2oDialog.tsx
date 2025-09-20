@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -14,13 +15,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
-import type { Dr2oEntry, User } from '@/types';
+import { Loader2, Calendar as CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
+import type { Dr2oEntry, User, LrEntryItem } from '@/types';
 import { addDr2oEntryAction, updateDr2oEntryAction } from '@/app/(app)/workflow/actions';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { v4 as uuidv4 } from 'uuid';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface AddEditDr2oDialogProps {
   isOpen: boolean;
@@ -40,6 +43,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
   const [oldCustomer2, setOldCustomer2] = useState('');
   const [oldCustomer3, setOldCustomer3] = useState('');
   const [oldCustomer4, setOldCustomer4] = useState('');
+  const [lrItems, setLrItems] = useState<LrEntryItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -56,6 +60,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
         setOldCustomer2(entry.oldCustomer2 || '');
         setOldCustomer3(entry.oldCustomer3 || '');
         setOldCustomer4(entry.oldCustomer4 || '');
+        setLrItems(entry.lrItems || []);
       } else {
         setDate(new Date());
         setNewCustomer1('');
@@ -65,12 +70,32 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
         setOldCustomer2('');
         setOldCustomer3('');
         setOldCustomer4('');
+        setLrItems([{ id: uuidv4(), companyName: '', productName: '', productQty: 0, dueOrderName: '', dueOrderQty: 0 }]);
       }
       setIsSubmitting(false);
     }
   }, [isOpen, entry, isEditMode]);
 
   const canSelectDate = currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN';
+  
+  const handleLrItemChange = (id: string, field: keyof LrEntryItem, value: string | number) => {
+    setLrItems(prevItems =>
+      prevItems.map(item =>
+        item.id === id ? { ...item, [field]: value } : item
+      )
+    );
+  };
+  
+  const handleAddLrItem = () => {
+    setLrItems(prev => [...prev, { id: uuidv4(), companyName: '', productName: '', productQty: 0, dueOrderName: '', dueOrderQty: 0 }]);
+  };
+
+  const handleRemoveLrItem = (id: string) => {
+    if (lrItems.length > 1) {
+      setLrItems(prev => prev.filter(item => item.id !== id));
+    }
+  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,6 +112,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
       crmName: currentUser.name,
       newCustomer1, newCustomer2, newCustomer3,
       oldCustomer1, oldCustomer2, oldCustomer3, oldCustomer4,
+      lrItems: team === 'LR' ? lrItems : [],
     };
 
     let result;
@@ -129,9 +155,38 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
   const renderFormFields = () => {
     if (team === 'LR') {
       return (
-        <div className="text-center text-muted-foreground p-4">
-          <p>You are submitting a daily entry for the LR Team.</p>
-          <p className="text-sm">No additional details are required for this entry.</p>
+        <div className="space-y-4">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Company Name</TableHead>
+                <TableHead>Product Name</TableHead>
+                <TableHead>Product Qty</TableHead>
+                <TableHead>Due Order Name</TableHead>
+                <TableHead>Due Order Qty</TableHead>
+                <TableHead></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {lrItems.map((item) => (
+                <TableRow key={item.id}>
+                  <TableCell><Input value={item.companyName} onChange={e => handleLrItemChange(item.id, 'companyName', e.target.value)} /></TableCell>
+                  <TableCell><Input value={item.productName} onChange={e => handleLrItemChange(item.id, 'productName', e.target.value)} /></TableCell>
+                  <TableCell><Input type="number" value={item.productQty} onChange={e => handleLrItemChange(item.id, 'productQty', parseInt(e.target.value) || 0)} /></TableCell>
+                  <TableCell><Input value={item.dueOrderName} onChange={e => handleLrItemChange(item.id, 'dueOrderName', e.target.value)} /></TableCell>
+                  <TableCell><Input type="number" value={item.dueOrderQty} onChange={e => handleLrItemChange(item.id, 'dueOrderQty', parseInt(e.target.value) || 0)} /></TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon" onClick={() => handleRemoveLrItem(item.id)} disabled={lrItems.length <= 1}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <Button type="button" variant="outline" size="sm" onClick={handleAddLrItem}>
+            <PlusCircle className="mr-2 h-4 w-4" /> Add Row
+          </Button>
         </div>
       );
     }
@@ -164,7 +219,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg md:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{getDialogTitle()}</DialogTitle>
           <DialogDescription>{getDialogDescription()}</DialogDescription>

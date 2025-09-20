@@ -515,6 +515,15 @@ export interface VendorBill {
   createdByUserName: string;
 }
 
+export interface LrEntryItem {
+  id: string;
+  companyName: string;
+  productName: string;
+  productQty: number;
+  dueOrderName: string;
+  dueOrderQty: number;
+}
+
 export interface Dr2oEntry {
     id: string;
     date: string; // ISO string
@@ -527,4 +536,5 @@ export interface Dr2oEntry {
     oldCustomer2?: string;
     oldCustomer3?: string;
     oldCustomer4?: string;
+    lrItems?: LrEntryItem[]; // New field for LR team entries
 }
