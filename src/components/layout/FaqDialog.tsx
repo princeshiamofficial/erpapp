@@ -59,7 +59,7 @@ const faqData = [
   }
 ];
 
-const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR"];
+const ALL_USER_ROLES: UserRole[] = ["CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR"];
 
 function AddFaqDialog({ isOpen, onOpenChange }: { isOpen: boolean, onOpenChange: (open: boolean) => void }) {
   const [question, setQuestion] = useState('');
