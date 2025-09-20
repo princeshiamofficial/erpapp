@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, Edit } from "lucide-react";
-import type { Dr2oEntry, User } from '@/types';
+import type { Dr2oEntry, User, LrEntryItem } from '@/types';
 import { getDr2oEntries } from '@/lib/dr2o-service';
 import { getUsers } from '@/lib/user-service';
 import { useAuth } from '@/contexts/auth-context';
