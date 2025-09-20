@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -106,15 +105,69 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
       toast({ title: "Error", description: result.error || "Failed to save the report.", variant: "destructive" });
     }
   };
+  
+  const getDialogTitle = () => {
+    const action = isEditMode ? 'Edit' : 'Add';
+    switch (team) {
+      case 'CR': return `${action} CR Report`;
+      case 'DR': return `${action} DR Report`;
+      case 'LR': return `${action} LR Daily Entry`;
+      default: return `${action} Daily Report`;
+    }
+  };
+
+  const getDialogDescription = () => {
+    if (isEditMode) return `Editing report for ${format(new Date(entry!.date), 'PPP')}`;
+    switch (team) {
+      case 'CR': return 'Fill in your daily customer follow-ups.';
+      case 'DR': return 'Fill in your daily DR follow-ups.';
+      case 'LR': return 'Submit your daily entry for the logistics team.';
+      default: return 'Fill in your daily report.';
+    }
+  };
+  
+  const renderFormFields = () => {
+    if (team === 'LR') {
+      return (
+        <div className="text-center text-muted-foreground p-4">
+          <p>You are submitting a daily entry for the LR Team.</p>
+          <p className="text-sm">No additional details are required for this entry.</p>
+        </div>
+      );
+    }
+    
+    // Default fields for CR and DR
+    return (
+      <>
+        <fieldset className="border p-4 rounded-md">
+          <legend className="text-sm font-medium px-1">New Customers</legend>
+          <div className="space-y-2 mt-2">
+            <Input value={newCustomer1} onChange={e => setNewCustomer1(e.target.value)} placeholder="New Customer 1" />
+            <Input value={newCustomer2} onChange={e => setNewCustomer2(e.target.value)} placeholder="New Customer 2" />
+            <Input value={newCustomer3} onChange={e => setNewCustomer3(e.target.value)} placeholder="New Customer 3" />
+          </div>
+        </fieldset>
+
+        <fieldset className="border p-4 rounded-md">
+          <legend className="text-sm font-medium px-1">Old Customer Follow-ups</legend>
+          <div className="space-y-2 mt-2">
+            <Input value={oldCustomer1} onChange={e => setOldCustomer1(e.target.value)} placeholder="Old Customer 1" />
+            <Input value={oldCustomer2} onChange={e => setOldCustomer2(e.target.value)} placeholder="Old Customer 2" />
+            <Input value={oldCustomer3} onChange={e => setOldCustomer3(e.target.value)} placeholder="Old Customer 3" />
+            <Input value={oldCustomer4} onChange={e => setOldCustomer4(e.target.value)} placeholder="Old Customer 4" />
+          </div>
+        </fieldset>
+      </>
+    );
+  };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit' : 'Add'} Daily Report</DialogTitle>
-          <DialogDescription>
-            {isEditMode ? `Editing report for ${format(new Date(entry.date), 'PPP')}` : 'Fill in your daily customer follow-ups.'}
-          </DialogDescription>
+          <DialogTitle>{getDialogTitle()}</DialogTitle>
+          <DialogDescription>{getDialogDescription()}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="py-4 space-y-4 max-h-[70vh] overflow-y-auto pr-2">
           <div className="space-y-1">
@@ -141,25 +194,8 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
               </PopoverContent>
             </Popover>
           </div>
-
-          <fieldset className="border p-4 rounded-md">
-            <legend className="text-sm font-medium px-1">New Customers</legend>
-            <div className="space-y-2 mt-2">
-              <Input value={newCustomer1} onChange={e => setNewCustomer1(e.target.value)} placeholder="New Customer 1" />
-              <Input value={newCustomer2} onChange={e => setNewCustomer2(e.target.value)} placeholder="New Customer 2" />
-              <Input value={newCustomer3} onChange={e => setNewCustomer3(e.target.value)} placeholder="New Customer 3" />
-            </div>
-          </fieldset>
-
-          <fieldset className="border p-4 rounded-md">
-            <legend className="text-sm font-medium px-1">Old Customer Follow-ups</legend>
-            <div className="space-y-2 mt-2">
-              <Input value={oldCustomer1} onChange={e => setOldCustomer1(e.target.value)} placeholder="Old Customer 1" />
-              <Input value={oldCustomer2} onChange={e => setOldCustomer2(e.target.value)} placeholder="Old Customer 2" />
-              <Input value={oldCustomer3} onChange={e => setOldCustomer3(e.target.value)} placeholder="Old Customer 3" />
-              <Input value={oldCustomer4} onChange={e => setOldCustomer4(e.target.value)} placeholder="Old Customer 4" />
-            </div>
-          </fieldset>
+          
+          {renderFormFields()}
           
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
