@@ -32,7 +32,7 @@ export default function DR2OPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Dr2oEntry | null>(null);
-  const [activeTab, setActiveTab] = useState("daily_reports");
+  const [activeTab, setActiveTab] = useState("cr_team");
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -83,10 +83,23 @@ export default function DR2OPage() {
       // Filter for both CRM and DESIGNER_REPRESENTATIVE roles
       return dr2oEntries.filter(entry => entry.crmId === currentUser.id);
   }, [currentUser, dr2oEntries]);
+  
+  const PlaceholderContent = ({ teamName }: { teamName: string }) => (
+    <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+        <CardHeader>
+            <CardTitle>{teamName} Dashboard</CardTitle>
+            <CardDescription>Content for the {teamName} will be displayed here.</CardDescription>
+        </CardHeader>
+        <CardContent className="h-64 flex items-center justify-center">
+            <p className="text-muted-foreground">Coming soon...</p>
+        </CardContent>
+    </Card>
+  );
+
 
   const renderActiveTabContent = () => {
     switch (activeTab) {
-      case 'daily_reports':
+      case 'cr_team':
         return (
           <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
             <CardHeader className="border-b p-5">
@@ -161,6 +174,10 @@ export default function DR2OPage() {
             </CardContent>
           </Card>
         );
+      case 'dr_team':
+        return <PlaceholderContent teamName="DR Team" />;
+      case 'lr_team':
+        return <PlaceholderContent teamName="LR Team" />;
       default:
         return null;
     }
@@ -171,7 +188,9 @@ export default function DR2OPage() {
       <div className="p-4 sm:p-6 lg:p-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="inline-flex h-10 items-center justify-center text-muted-foreground bg-white p-1 rounded-full shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-                <TabsTrigger value="daily_reports" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">Daily Reports</TabsTrigger>
+                <TabsTrigger value="cr_team" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">CR Team</TabsTrigger>
+                <TabsTrigger value="dr_team" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">DR Team</TabsTrigger>
+                <TabsTrigger value="lr_team" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">LR Team</TabsTrigger>
             </TabsList>
             <div className="mt-6">
                 {renderActiveTabContent()}
