@@ -52,11 +52,13 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
   
   const renderReplyHeader = () => {
     if (!msg.replyingTo) {
+      if (isCurrentUser) return null; // Don't show name for own non-reply messages
       return <p className="text-sm font-semibold">{msg.userName}</p>;
     }
     
     // Don't show header if replying to self
     if (msg.userId === (currentUser?.id) && msg.userName === msg.replyingTo.name) {
+       if (isCurrentUser) return null;
        return <p className="text-sm font-semibold">{msg.userName}</p>;
     }
 
