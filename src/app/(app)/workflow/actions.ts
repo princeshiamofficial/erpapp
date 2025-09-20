@@ -10,10 +10,11 @@ import {
 } from "@/lib/dr2o-service";
 
 export async function addDr2oEntryAction(
-  data: Omit<Dr2oEntry, 'id'>
+  data: Omit<Dr2oEntry, 'id'>,
+  team: 'CR' | 'DR' | 'LR'
 ): Promise<{ success: boolean; data?: Dr2oEntry; error?: string }> {
   try {
-    const newEntry = await addDr2oEntry(data);
+    const newEntry = await addDr2oEntry(data, team);
     if (newEntry) {
       revalidatePath("/(app)/workflow");
       return { success: true, data: newEntry };
@@ -27,10 +28,11 @@ export async function addDr2oEntryAction(
 
 export async function updateDr2oEntryAction(
   id: string,
-  updates: Partial<Omit<Dr2oEntry, 'id'>>
+  updates: Partial<Omit<Dr2oEntry, 'id'>>,
+  team: 'CR' | 'DR' | 'LR'
 ): Promise<{ success: boolean; data?: Dr2oEntry; error?: string }> {
     try {
-        const success = await updateDr2oEntry(id, updates);
+        const success = await updateDr2oEntry(id, updates, team);
         if (success) {
             revalidatePath("/(app)/workflow");
             return { success: true };

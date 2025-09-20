@@ -33,14 +33,13 @@ export default function DR2OPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Dr2oEntry | null>(null);
-  const [activeTab, setActiveTab] = useState("cr_team");
+  const [activeTab, setActiveTab] = useState("dr_team");
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      // Fetching only for CR Team for now
       const [entries, users] = await Promise.all([
-          getDr2oEntries('CR'),
+          getDr2oEntries('DR'),
           getUsers()
       ]);
       setDr2oEntries(entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
@@ -101,6 +100,8 @@ export default function DR2OPage() {
   const renderActiveTabContent = () => {
     switch (activeTab) {
       case 'cr_team':
+        return <PlaceholderContent teamName="CR Team" />;
+      case 'dr_team':
         return (
           <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
             <CardHeader className="border-b p-5">
@@ -175,8 +176,6 @@ export default function DR2OPage() {
             </CardContent>
           </Card>
         );
-      case 'dr_team':
-        return <PlaceholderContent teamName="DR Team" />;
       case 'lr_team':
         return <PlaceholderContent teamName="LR Team" />;
       default:
@@ -205,6 +204,7 @@ export default function DR2OPage() {
             onDr2oSaved={handleDr2oSaved}
             entry={editingEntry}
             currentUser={currentUser}
+            team="DR"
         />
       )}
     </>

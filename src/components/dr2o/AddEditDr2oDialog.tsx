@@ -29,9 +29,10 @@ interface AddEditDr2oDialogProps {
   onDr2oSaved: () => void;
   entry?: Dr2oEntry | null;
   currentUser: User;
+  team: 'CR' | 'DR' | 'LR';
 }
 
-export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, currentUser }: AddEditDr2oDialogProps) {
+export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, currentUser, team }: AddEditDr2oDialogProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [newCustomer1, setNewCustomer1] = useState('');
   const [newCustomer2, setNewCustomer2] = useState('');
@@ -91,9 +92,9 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
 
     let result;
     if (isEditMode && entry) {
-      result = await updateDr2oEntryAction(entry.id, entryData, 'CR');
+      result = await updateDr2oEntryAction(entry.id, entryData, team);
     } else {
-      result = await addDr2oEntryAction(entryData, 'CR');
+      result = await addDr2oEntryAction(entryData, team);
     }
     
     setIsSubmitting(false);
