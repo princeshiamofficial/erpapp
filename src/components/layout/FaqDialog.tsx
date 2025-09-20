@@ -11,8 +11,10 @@ import {
 } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Input } from '../ui/input';
-import { Search } from 'lucide-react';
+import { Search, PlusCircle } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
+import { useAuth } from '@/contexts/auth-context';
+import { Button } from '../ui/button';
 
 interface FaqDialogProps {
   children: React.ReactNode;
@@ -51,6 +53,7 @@ const faqData = [
 
 export function FaqDialog({ children }: FaqDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const { currentUser } = useAuth();
 
   const filteredFaqs = useMemo(() => {
     if (!searchTerm) {
@@ -63,6 +66,8 @@ export function FaqDialog({ children }: FaqDialogProps) {
         faq.answer.toLowerCase().includes(lowercasedSearchTerm)
     );
   }, [searchTerm]);
+  
+  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
 
   return (
     <Dialog>
@@ -75,14 +80,22 @@ export function FaqDialog({ children }: FaqDialogProps) {
             <DialogTitle className="text-3xl font-bold text-gray-800 dark:text-gray-100">
               Dialogue
             </DialogTitle>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search questions..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="pl-10 h-10 rounded-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
-              />
+            <div className="flex w-full sm:w-auto items-center gap-2">
+                <div className="relative flex-grow sm:w-64">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                        placeholder="Search questions..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="pl-10 h-10 rounded-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                    />
+                </div>
+                {isAdmin && (
+                    <Button variant="outline" size="sm" className="h-10 rounded-full shrink-0">
+                        <PlusCircle className="h-4 w-4 mr-1 sm:mr-2"/>
+                        <span className="hidden sm:inline">Add New</span>
+                    </Button>
+                )}
             </div>
           </div>
         </DialogHeader>
