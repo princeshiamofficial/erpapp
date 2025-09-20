@@ -16,6 +16,9 @@ import { Paperclip, Reply, Send, X } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
+import { useAuth } from '@/contexts/auth-context';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 interface CaseStudyDialogProps {
   children: React.ReactNode;
@@ -42,6 +45,10 @@ const ChatMessage = ({ name, message, time, isCurrentUser, onReply }: { name: st
 
 export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
   const [replyingTo, setReplyingTo] = useState<{ name: string; message: string } | null>(null);
+  const { currentUser } = useAuth();
+  const [selectedTeam, setSelectedTeam] = useState('all');
+
+  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
 
   return (
     <Dialog>
@@ -51,9 +58,24 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
       <DialogContent className="sm:max-w-md p-0">
         <DialogHeader className="p-4 border-b">
           <DialogTitle>Case Study Discussion</DialogTitle>
-          <DialogDescription>
-            A group chat about a recent successful project.
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <DialogDescription>
+              A group chat about a recent successful project.
+            </DialogDescription>
+             {isAdmin && (
+                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                    <SelectTrigger className="w-[150px] h-8 text-xs">
+                        <SelectValue placeholder="Select Team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">All Teams</SelectItem>
+                        <SelectItem value="CR Team">CR Team</SelectItem>
+                        <SelectItem value="DR Team">DR Team</SelectItem>
+                        <SelectItem value="LR Team">LR Team</SelectItem>
+                    </SelectContent>
+                </Select>
+            )}
+          </div>
         </DialogHeader>
         <div className="flex flex-col h-[60vh]">
           <ScrollArea className="flex-1 p-4">
