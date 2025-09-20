@@ -1,8 +1,9 @@
 
+
 import type { Dr2oEntry } from '@/types';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
-const COLLECTION_NAME = 'dr2o';
+const COLLECTION_NAME = 'workflow';
 
 export const getDr2oEntries = async (): Promise<Dr2oEntry[]> => {
   try {

@@ -245,8 +245,8 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                           </>
                         ) : (
                           <Button asChild className="h-10 w-full sm:w-auto">
-                            <Link href="/dr2o">
-                              Open DR 2.O
+                            <Link href="/workflow">
+                              Open Desk
                             </Link>
                           </Button>
                         )}
@@ -254,8 +254,8 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                  )}
                  {isAdminView && (
                     <Button asChild className="h-10 w-full sm:w-auto">
-                        <Link href="/dr2o">
-                            Open DR 2.O
+                        <Link href="/workflow">
+                            Open Desk
                         </Link>
                     </Button>
                  )}

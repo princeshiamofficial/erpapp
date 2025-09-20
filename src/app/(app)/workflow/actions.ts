@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -14,7 +15,7 @@ export async function addDr2oEntryAction(
   try {
     const newEntry = await addDr2oEntry(data);
     if (newEntry) {
-      revalidatePath("/(app)/dr2o");
+      revalidatePath("/(app)/workflow");
       return { success: true, data: newEntry };
     }
     return { success: false, error: "Failed to add DR 2.O entry to database." };
@@ -31,7 +32,7 @@ export async function updateDr2oEntryAction(
     try {
         const success = await updateDr2oEntry(id, updates);
         if (success) {
-            revalidatePath("/(app)/dr2o");
+            revalidatePath("/(app)/workflow");
             return { success: true };
         }
         return { success: false, error: "Failed to update DR 2.O entry." };
