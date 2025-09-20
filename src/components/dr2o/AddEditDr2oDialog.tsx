@@ -170,11 +170,11 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
             <TableBody>
               {lrItems.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell><Input value={item.companyName} onChange={e => handleLrItemChange(item.id, 'companyName', e.target.value)} /></TableCell>
-                  <TableCell><Input value={item.productName} onChange={e => handleLrItemChange(item.id, 'productName', e.target.value)} /></TableCell>
-                  <TableCell><Input type="number" value={item.productQty} onChange={e => handleLrItemChange(item.id, 'productQty', parseInt(e.target.value) || 0)} /></TableCell>
-                  <TableCell><Input value={item.dueOrderName} onChange={e => handleLrItemChange(item.id, 'dueOrderName', e.target.value)} /></TableCell>
-                  <TableCell><Input type="number" value={item.dueOrderQty} onChange={e => handleLrItemChange(item.id, 'dueOrderQty', parseInt(e.target.value) || 0)} /></TableCell>
+                  <TableCell><Input value={item.companyName} onChange={e => handleLrItemChange(item.id, 'companyName', e.target.value)} className="bg-muted/50" /></TableCell>
+                  <TableCell><Input value={item.productName} onChange={e => handleLrItemChange(item.id, 'productName', e.target.value)} className="bg-muted/50" /></TableCell>
+                  <TableCell><Input type="number" value={item.productQty} onChange={e => handleLrItemChange(item.id, 'productQty', parseInt(e.target.value) || 0)} className="bg-muted/50" /></TableCell>
+                  <TableCell><Input value={item.dueOrderName} onChange={e => handleLrItemChange(item.id, 'dueOrderName', e.target.value)} className="bg-muted/50" /></TableCell>
+                  <TableCell><Input type="number" value={item.dueOrderQty} onChange={e => handleLrItemChange(item.id, 'dueOrderQty', parseInt(e.target.value) || 0)} className="bg-muted/50" /></TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" onClick={() => handleRemoveLrItem(item.id)} disabled={lrItems.length <= 1}>
                       <Trash2 className="h-4 w-4 text-destructive" />
