@@ -41,6 +41,7 @@ export const addDr2oEntry = async (entryData: Omit<Dr2oEntry, 'id'>): Promise<Dr
 
 export const updateDr2oEntry = async (id: string, updates: Partial<Dr2oEntry>): Promise<boolean> => {
   try {
+    await ensureCollectionExistsV3(COLLECTION_NAME); // Added this line for safety during updates.
     const existingDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${id}`);
     const finalData = { ...existingDoc.data, ...updates };
 

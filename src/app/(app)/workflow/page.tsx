@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -90,9 +89,9 @@ export default function DR2OPage() {
           <CardHeader className="border-b p-5">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <CardTitle className="text-card-foreground text-xl">DR 2.O - Daily Reporting</CardTitle>
+                  <CardTitle className="text-card-foreground text-xl">Daily Reports</CardTitle>
                   <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                      Daily follow-up report for new and old customers.
+                      Daily follow-up reports for new and old customers.
                   </CardDescription>
                 </div>
                 <Button onClick={handleOpenAddDialog} disabled={!canAddNew && currentUser?.role !== 'ADMIN' && currentUser?.role !== 'SYSTEM_ADMIN'}>
