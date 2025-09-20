@@ -80,22 +80,35 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
 
-  const fetchMessages = useCallback(async () => {
+  const fetchMessages = useCallback(async (isAutoUpdate = false) => {
     if (!isOpen) return;
-    setIsLoading(true);
+    if (!isAutoUpdate) setIsLoading(true);
     try {
       const fetchedMessages = await getMessagesAction(selectedTeam);
       setMessages(fetchedMessages);
     } catch (error) {
-      toast({ title: "Error", description: "Could not load case study messages.", variant: "destructive" });
+      if (!isAutoUpdate) {
+        toast({ title: "Error", description: "Could not load case study messages.", variant: "destructive" });
+      }
+      console.error("Failed to fetch case study messages:", error);
     } finally {
-      setIsLoading(false);
+      if (!isAutoUpdate) setIsLoading(false);
     }
   }, [isOpen, selectedTeam, toast]);
 
   useEffect(() => {
     fetchMessages();
   }, [fetchMessages]);
+
+  useEffect(() => {
+    if (isOpen) {
+      const intervalId = setInterval(() => {
+        fetchMessages(true);
+      }, 30000); // 30 seconds
+
+      return () => clearInterval(intervalId);
+    }
+  }, [isOpen, fetchMessages]);
   
   useEffect(() => {
     if (scrollAreaRef.current) {
