@@ -87,7 +87,7 @@ export function AppHeader() {
           >
             <Link href="/faq">
               <HelpCircle className="h-5 w-5 sm:mr-2" />
-              <span className="hidden sm:inline">Dialogs</span>
+              <span className="hidden sm:inline">Dialogue</span>
             </Link>
           </Button>
           <Button
