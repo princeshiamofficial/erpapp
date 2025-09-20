@@ -72,7 +72,7 @@ export function AppHeader() {
                 width={160}
                 height={40}
                 priority
-                className="object-contain"
+                className="object-contain rounded-md"
               />
           </Link>
         </div>
