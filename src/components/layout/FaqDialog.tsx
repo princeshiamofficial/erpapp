@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -22,67 +22,41 @@ import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import type { UserRole } from '@/types';
-
+import { getFaqs, type Faq } from '@/lib/faq-service';
+import { addFaqAction } from '@/app/(app)/faq/actions';
+import { Skeleton } from '../ui/skeleton';
 
 interface FaqDialogProps {
   children: React.ReactNode;
 }
 
-const faqData = [
-  {
-    question: "What is Color Hut's main business?",
-    answer: "Color Hut specializes in providing high-quality design and printing services, including menu books, packaging, and various marketing materials for businesses."
-  },
-  {
-    question: "How can I track my order?",
-    answer: "You can track your order using the 'Tracking Links' page. Each order has a unique tracking link that shows its current status and history."
-  },
-  {
-    question: "Who can I contact for design changes?",
-    answer: "Once an order is in the 'On Design' stage, a Designer Representative (DR) will be assigned. You can communicate with them through the comments section on the order's tracking page."
-  },
-  {
-    question: "What is the typical turnaround time?",
-    answer: "Turnaround time varies based on the complexity and size of the order. Each stage in the 'Projects' view has an estimated SLA (Service Level Agreement) to give you an idea of the timeline."
-  },
-  {
-    question: "How do I provide feedback on a completed order?",
-    answer: "After an order is marked as 'Delivered', you may receive a request to provide feedback on the product quality, design, and service through a dedicated feedback form."
-  },
-  {
-    question: "What is the 'SOW' page for?",
-    answer: "The SOW (Statement of Work) page is a business report that analyzes your order history to provide insights into your purchasing patterns and loyalty score."
-  },
-  {
-    question: "Can I import multiple leads at once?",
-    answer: "Yes, if you have Admin permissions, you can use the 'Import Leads' feature on the Pipeline page to upload a CSV file with multiple leads."
-  }
-];
-
 const ALL_USER_ROLES: UserRole[] = ["CRM", "DESIGNER_REPRESENTATIVE", "LR"];
 
-function AddFaqDialog({ isOpen, onOpenChange }: { isOpen: boolean, onOpenChange: (open: boolean) => void }) {
+function AddFaqDialog({ isOpen, onOpenChange, onFaqAdded }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onFaqAdded: () => void }) {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [selectedRole, setSelectedRole] = useState<UserRole | 'ALL'>('ALL');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!question.trim() || !answer.trim()) {
       toast({ title: "Validation Error", description: "Question and Answer fields are required.", variant: "destructive" });
       return;
     }
     setIsSubmitting(true);
-    // Placeholder for submission logic
-    console.log("New FAQ Submitted:", { question, answer, role: selectedRole });
-    setTimeout(() => {
+    const result = await addFaqAction(question, answer, selectedRole);
+
+    if (result.success) {
       toast({ title: "Success", description: "New FAQ has been added." });
       setIsSubmitting(false);
+      onFaqAdded(); // This will trigger a refetch in the parent
       onOpenChange(false);
-      // In a real app, you'd call a function here to refetch the FAQ data.
-    }, 1000);
+    } else {
+      toast({ title: "Error", description: result.error || "Could not add FAQ.", variant: "destructive" });
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -133,26 +107,57 @@ function AddFaqDialog({ isOpen, onOpenChange }: { isOpen: boolean, onOpenChange:
 
 export function FaqDialog({ children }: FaqDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [allFaqs, setAllFaqs] = useState<Faq[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { currentUser } = useAuth();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const { toast } = useToast();
+
+  const fetchFaqs = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const faqs = await getFaqs();
+      setAllFaqs(faqs);
+    } catch (error) {
+      toast({ title: "Error", description: "Could not load FAQs.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+  
+  // Fetch FAQs when the dialog is opened for the first time
+  const handleDialogOpen = (open: boolean) => {
+    if (open && allFaqs.length === 0) {
+      fetchFaqs();
+    }
+  }
+
 
   const filteredFaqs = useMemo(() => {
+    // Filter by role first
+    const roleFiltered = allFaqs.filter(faq => {
+      if (faq.role === 'ALL') return true;
+      if (currentUser?.role && faq.role === currentUser.role) return true;
+      if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') return true; // Admins see all
+      return false;
+    });
+
     if (!searchTerm) {
-      return faqData;
+      return roleFiltered;
     }
     const lowercasedSearchTerm = searchTerm.toLowerCase();
-    return faqData.filter(
+    return roleFiltered.filter(
       faq =>
         faq.question.toLowerCase().includes(lowercasedSearchTerm) ||
         faq.answer.toLowerCase().includes(lowercasedSearchTerm)
     );
-  }, [searchTerm]);
+  }, [searchTerm, allFaqs, currentUser]);
   
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
 
   return (
     <>
-      <Dialog>
+      <Dialog onOpenChange={handleDialogOpen}>
         <DialogTrigger asChild>
           {children}
         </DialogTrigger>
@@ -183,11 +188,15 @@ export function FaqDialog({ children }: FaqDialogProps) {
           </DialogHeader>
           <ScrollArea className="h-[60vh]">
             <div className="p-6 pt-0">
-              {filteredFaqs.length > 0 ? (
+              {isLoading ? (
+                 <div className="w-full space-y-3">
+                   {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
+                 </div>
+              ) : filteredFaqs.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full space-y-3">
                   {filteredFaqs.map((faq, index) => (
                     <AccordionItem 
-                      key={index} 
+                      key={faq.id} 
                       value={`item-${index}`} 
                       className="bg-white dark:bg-gray-800/50 rounded-lg shadow-sm border border-gray-200/80 dark:border-gray-700/50"
                     >
@@ -203,14 +212,14 @@ export function FaqDialog({ children }: FaqDialogProps) {
               ) : (
                 <div className="text-center py-16 text-gray-500">
                   <p className="font-semibold">No questions found.</p>
-                  <p className="text-sm">Try adjusting your search term.</p>
+                  <p className="text-sm">Try adjusting your search term or check back later.</p>
                 </div>
               )}
             </div>
           </ScrollArea>
         </DialogContent>
       </Dialog>
-      <AddFaqDialog isOpen={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} />
+      <AddFaqDialog isOpen={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onFaqAdded={fetchFaqs} />
     </>
   );
 }
