@@ -13,17 +13,19 @@ import {
 } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Input } from '../ui/input';
-import { Search, PlusCircle, Loader2 } from 'lucide-react';
+import { Search, PlusCircle, Loader2, MoreVertical, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import type { UserRole } from '@/types';
 import { getFaqs, type Faq } from '@/lib/faq-service';
-import { addFaqAction } from '@/app/(app)/faq/actions';
+import { addFaqAction, updateFaqAction, deleteFaqAction } from '@/app/(app)/faq/actions';
 import { Skeleton } from '../ui/skeleton';
 
 interface FaqDialogProps {
@@ -32,12 +34,38 @@ interface FaqDialogProps {
 
 const ALL_USER_ROLES: UserRole[] = ["CRM", "DESIGNER_REPRESENTATIVE", "LR"];
 
-function AddFaqDialog({ isOpen, onOpenChange, onFaqAdded }: { isOpen: boolean, onOpenChange: (open: boolean) => void, onFaqAdded: () => void }) {
+function AddEditFaqDialog({ 
+    isOpen, 
+    onOpenChange, 
+    onFaqSaved, 
+    faqToEdit 
+}: { 
+    isOpen: boolean; 
+    onOpenChange: (open: boolean) => void; 
+    onFaqSaved: () => void;
+    faqToEdit: Faq | null;
+}) {
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
   const [selectedRole, setSelectedRole] = useState<UserRole | 'ALL'>('ALL');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  
+  const isEditMode = !!faqToEdit;
+
+  useEffect(() => {
+    if (isOpen) {
+        if (isEditMode && faqToEdit) {
+            setQuestion(faqToEdit.question);
+            setAnswer(faqToEdit.answer);
+            setSelectedRole(faqToEdit.role);
+        } else {
+            setQuestion('');
+            setAnswer('');
+            setSelectedRole('ALL');
+        }
+    }
+  }, [isOpen, faqToEdit, isEditMode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,15 +74,20 @@ function AddFaqDialog({ isOpen, onOpenChange, onFaqAdded }: { isOpen: boolean, o
       return;
     }
     setIsSubmitting(true);
-    const result = await addFaqAction(question, answer, selectedRole);
+    let result;
+    if (isEditMode && faqToEdit) {
+        result = await updateFaqAction(faqToEdit.id, question, answer, selectedRole);
+    } else {
+        result = await addFaqAction(question, answer, selectedRole);
+    }
 
     if (result.success) {
-      toast({ title: "Success", description: "New FAQ has been added." });
+      toast({ title: "Success", description: `FAQ has been ${isEditMode ? 'updated' : 'added'}.` });
       setIsSubmitting(false);
-      onFaqAdded(); // This will trigger a refetch in the parent
+      onFaqSaved();
       onOpenChange(false);
     } else {
-      toast({ title: "Error", description: result.error || "Could not add FAQ.", variant: "destructive" });
+      toast({ title: "Error", description: result.error || `Could not ${isEditMode ? 'update' : 'add'} FAQ.`, variant: "destructive" });
       setIsSubmitting(false);
     }
   };
@@ -63,9 +96,9 @@ function AddFaqDialog({ isOpen, onOpenChange, onFaqAdded }: { isOpen: boolean, o
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add New FAQ</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit' : 'Add New'} FAQ</DialogTitle>
           <DialogDescription>
-            Create a new question and answer pair. You can restrict its visibility to a specific role.
+            {isEditMode ? 'Update this question and answer.' : 'Create a new question and answer pair.'}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -96,7 +129,7 @@ function AddFaqDialog({ isOpen, onOpenChange, onFaqAdded }: { isOpen: boolean, o
            <DialogFooter className="pt-4">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Adding...</> : "Add FAQ"}
+                {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>{isEditMode ? 'Saving...' : 'Adding...'}</> : (isEditMode ? 'Save Changes' : 'Add FAQ')}
               </Button>
           </DialogFooter>
         </form>
@@ -105,12 +138,17 @@ function AddFaqDialog({ isOpen, onOpenChange, onFaqAdded }: { isOpen: boolean, o
   );
 }
 
+
 export function FaqDialog({ children }: FaqDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [allFaqs, setAllFaqs] = useState<Faq[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { currentUser } = useAuth();
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isAddEditDialogOpen, setIsAddEditDialogOpen] = useState(false);
+  const [faqToEdit, setFaqToEdit] = useState<Faq | null>(null);
+  const [faqToDelete, setFaqToDelete] = useState<Faq | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const { toast } = useToast();
 
   const fetchFaqs = useCallback(async () => {
@@ -125,20 +163,17 @@ export function FaqDialog({ children }: FaqDialogProps) {
     }
   }, [toast]);
   
-  // Fetch FAQs when the dialog is opened for the first time
   const handleDialogOpen = (open: boolean) => {
     if (open && allFaqs.length === 0) {
       fetchFaqs();
     }
   }
 
-
   const filteredFaqs = useMemo(() => {
-    // Filter by role first
     const roleFiltered = allFaqs.filter(faq => {
       if (faq.role === 'ALL') return true;
       if (currentUser?.role && faq.role === currentUser.role) return true;
-      if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') return true; // Admins see all
+      if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') return true;
       return false;
     });
 
@@ -154,6 +189,30 @@ export function FaqDialog({ children }: FaqDialogProps) {
   }, [searchTerm, allFaqs, currentUser]);
   
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
+  
+  const handleOpenAddDialog = () => {
+    setFaqToEdit(null);
+    setIsAddEditDialogOpen(true);
+  };
+  
+  const handleOpenEditDialog = (faq: Faq) => {
+    setFaqToEdit(faq);
+    setIsAddEditDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!faqToDelete) return;
+    setIsDeleting(true);
+    const result = await deleteFaqAction(faqToDelete.id);
+    if (result.success) {
+      toast({ title: "FAQ Deleted", description: "The FAQ has been removed." });
+      fetchFaqs();
+    } else {
+      toast({ title: "Error", description: result.error || "Could not delete FAQ.", variant: "destructive" });
+    }
+    setIsDeleting(false);
+    setFaqToDelete(null);
+  };
 
   return (
     <>
@@ -178,7 +237,7 @@ export function FaqDialog({ children }: FaqDialogProps) {
                       />
                   </div>
                   {isAdmin && (
-                      <Button variant="outline" size="sm" className="h-10 rounded-full shrink-0" onClick={() => setIsAddDialogOpen(true)}>
+                      <Button variant="outline" size="sm" className="h-10 rounded-full shrink-0" onClick={handleOpenAddDialog}>
                           <PlusCircle className="h-4 w-4 mr-1 sm:mr-2"/>
                           <span className="hidden sm:inline">Add New</span>
                       </Button>
@@ -195,18 +254,35 @@ export function FaqDialog({ children }: FaqDialogProps) {
               ) : filteredFaqs.length > 0 ? (
                 <Accordion type="single" collapsible className="w-full space-y-3">
                   {filteredFaqs.map((faq, index) => (
-                    <AccordionItem 
-                      key={faq.id} 
-                      value={`item-${index}`} 
-                      className="bg-white dark:bg-gray-800/50 rounded-lg shadow-sm border border-gray-200/80 dark:border-gray-700/50"
-                    >
-                      <AccordionTrigger className="px-6 py-4 text-left font-semibold text-gray-700 dark:text-gray-200 hover:no-underline [&>svg]:text-primary">
-                        {faq.question}
-                      </AccordionTrigger>
-                      <AccordionContent className="px-6 text-gray-600 dark:text-gray-300">
-                        {faq.answer}
-                      </AccordionContent>
-                    </AccordionItem>
+                    <div key={faq.id} className="group relative bg-white dark:bg-gray-800/50 rounded-lg shadow-sm border border-gray-200/80 dark:border-gray-700/50">
+                        <AccordionItem value={`item-${index}`} className="border-b-0">
+                            <AccordionTrigger className="px-6 py-4 text-left font-semibold text-gray-700 dark:text-gray-200 hover:no-underline [&>svg]:text-primary">
+                                {faq.question}
+                            </AccordionTrigger>
+                            <AccordionContent className="px-6 text-gray-600 dark:text-gray-300">
+                                {faq.answer}
+                            </AccordionContent>
+                        </AccordionItem>
+                        {isAdmin && (
+                          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <DropdownMenu>
+                               <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                               </DropdownMenuTrigger>
+                               <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onSelect={() => handleOpenEditDialog(faq)} className="cursor-pointer">
+                                    <Edit className="mr-2 h-4 w-4" /> Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onSelect={() => setFaqToDelete(faq)} className="cursor-pointer text-destructive focus:text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                  </DropdownMenuItem>
+                               </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        )}
+                    </div>
                   ))}
                 </Accordion>
               ) : (
@@ -219,7 +295,27 @@ export function FaqDialog({ children }: FaqDialogProps) {
           </ScrollArea>
         </DialogContent>
       </Dialog>
-      <AddFaqDialog isOpen={isAddDialogOpen} onOpenChange={setIsAddDialogOpen} onFaqAdded={fetchFaqs} />
+      <AddEditFaqDialog isOpen={isAddEditDialogOpen} onOpenChange={setIsAddEditDialogOpen} onFaqSaved={fetchFaqs} faqToEdit={faqToEdit} />
+      {faqToDelete && (
+        <AlertDialog open={!!faqToDelete} onOpenChange={() => setFaqToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-destructive" /> Are you sure?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                This action will permanently delete the FAQ: "<span className="font-semibold">{faqToDelete.question}</span>". This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeleting} onClick={() => setFaqToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                {isDeleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/>Deleting...</> : "Delete"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </>
   );
 }

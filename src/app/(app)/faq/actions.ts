@@ -3,7 +3,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { UserRole } from '@/types';
-import { addFaq as addFaqService } from '@/lib/faq-service';
+import { addFaq as addFaqService, updateFaq as updateFaqService, deleteFaq as deleteFaqService } from '@/lib/faq-service';
 
 export async function addFaqAction(
   question: string,
@@ -26,6 +26,42 @@ export async function addFaqAction(
     return { success: false, error: "Failed to add FAQ to the database." };
   } catch (error) {
     console.error("Error in addFaqAction:", error);
+    return { success: false, error: "An unexpected server error occurred." };
+  }
+}
+
+export async function updateFaqAction(
+  faqId: string,
+  question: string,
+  answer: string,
+  role: UserRole | 'ALL'
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!question.trim() || !answer.trim()) {
+      return { success: false, error: "Question and Answer are required." };
+    }
+    const success = await updateFaqService(faqId, { question, answer, role });
+    if (success) {
+      revalidatePath("/(app)/layout", "layout");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update FAQ in the database." };
+  } catch (error) {
+    console.error("Error in updateFaqAction:", error);
+    return { success: false, error: "An unexpected server error occurred." };
+  }
+}
+
+export async function deleteFaqAction(faqId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await deleteFaqService(faqId);
+    if (success) {
+      revalidatePath("/(app)/layout", "layout");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to delete FAQ from the database." };
+  } catch (error) {
+    console.error("Error in deleteFaqAction:", error);
     return { success: false, error: "An unexpected server error occurred." };
   }
 }

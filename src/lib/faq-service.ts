@@ -53,3 +53,35 @@ export const addFaq = async (faqData: Omit<Faq, 'id' | 'createdAt'>): Promise<Fa
     return null;
   }
 };
+
+export const updateFaq = async (faqId: string, updates: Partial<Omit<Faq, 'id' | 'createdAt'>>): Promise<boolean> => {
+  try {
+    const existingDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${faqId}`);
+    if (!existingDoc) {
+      throw new Error("FAQ not found for update.");
+    }
+    const finalData = { ...existingDoc.data, ...updates };
+
+    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${faqId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ data: finalData })
+    });
+    return true;
+  } catch (error) {
+    console.error(`Error updating FAQ ${faqId} via API v3:`, error);
+    return false;
+  }
+};
+
+
+export const deleteFaq = async (faqId: string): Promise<boolean> => {
+  try {
+    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${faqId}`, {
+        method: 'DELETE'
+    });
+    return true;
+  } catch (error) {
+    console.error(`Error deleting FAQ ${faqId} via API v3:`, error);
+    return false;
+  }
+};
