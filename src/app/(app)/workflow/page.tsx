@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -6,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit } from "lucide-react";
+import { PlusCircle, Edit, Eye } from "lucide-react";
 import type { Dr2oEntry, User, LrEntryItem } from '@/types';
 import { getDr2oEntries } from '@/lib/dr2o-service';
 import { getUsers } from '@/lib/user-service';
@@ -17,6 +18,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const AddEditDr2oDialog = dynamic(() => import('@/components/dr2o/AddEditDr2oDialog').then(mod => mod.AddEditDr2oDialog));
+const ViewLrEntryDialog = dynamic(() => import('@/components/dr2o/ViewLrEntryDialog').then(mod => mod.ViewLrEntryDialog));
 
 const getInitials = (name: string) => {
   if (!name) return '??';
@@ -33,7 +35,9 @@ export default function DR2OPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Dr2oEntry | null>(null);
+  const [viewingEntry, setViewingEntry] = useState<Dr2oEntry | null>(null);
   const [activeTab, setActiveTab] = useState<TeamType>("CR");
 
   const fetchData = useCallback(async (team: TeamType) => {
@@ -64,6 +68,11 @@ export default function DR2OPage() {
   const handleOpenEditDialog = (entry: Dr2oEntry) => {
     setEditingEntry(entry);
     setIsDialogOpen(true);
+  };
+
+  const handleOpenViewDialog = (entry: Dr2oEntry) => {
+    setViewingEntry(entry);
+    setIsViewDialogOpen(true);
   };
 
   const handleDr2oSaved = () => {
@@ -209,7 +218,7 @@ export default function DR2OPage() {
                     <TableRow>
                       <TableHead>Date</TableHead>
                       <TableHead>LR Name</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -235,7 +244,10 @@ export default function DR2OPage() {
                                 <span>{row.crmName}</span>
                             </div>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="text-right">
+                             <Button variant="outline" size="sm" onClick={() => handleOpenViewDialog(row)} className="mr-2 h-8">
+                                <Eye className="h-4 w-4 mr-1.5"/> View Items
+                            </Button>
                              <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(row)}>
                                 <Edit className="h-4 w-4"/>
                             </Button>
@@ -278,6 +290,14 @@ export default function DR2OPage() {
             team={activeTab}
         />
       )}
+       {viewingEntry && (
+        <ViewLrEntryDialog
+          isOpen={isViewDialogOpen}
+          onOpenChange={setIsViewDialogOpen}
+          entry={viewingEntry}
+        />
+      )}
     </>
   );
 }
+
