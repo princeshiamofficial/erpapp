@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -23,8 +22,10 @@ const getInitials = (name: string) => {
   if (!name) return '??';
   const names = name.split(' ');
   if (names.length === 1) return names[0].charAt(0).toUpperCase();
-  return names[0].charAt(0).toUpperCase() + names[names.length - 1].charAt(0).toUpperCase();
+  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
+
+type TeamType = 'CR' | 'DR' | 'LR';
 
 export default function DR2OPage() {
   const { currentUser } = useAuth();
@@ -33,27 +34,27 @@ export default function DR2OPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Dr2oEntry | null>(null);
-  const [activeTab, setActiveTab] = useState("dr_team");
+  const [activeTab, setActiveTab] = useState<TeamType>("CR");
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (team: TeamType) => {
     setIsLoading(true);
     try {
       const [entries, users] = await Promise.all([
-          getDr2oEntries('DR'),
+          getDr2oEntries(team),
           getUsers()
       ]);
       setDr2oEntries(entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       setAllUsers(users);
     } catch (error) {
-      console.error("Error fetching DR 2.O entries:", error);
+      console.error(`Error fetching DR 2.O entries for ${team}:`, error);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    fetchData(activeTab);
+  }, [fetchData, activeTab]);
 
   const handleOpenAddDialog = () => {
     setEditingEntry(null);
@@ -66,7 +67,7 @@ export default function DR2OPage() {
   };
 
   const handleDr2oSaved = () => {
-    fetchData();
+    fetchData(activeTab);
     setIsDialogOpen(false);
   };
 
@@ -96,20 +97,29 @@ export default function DR2OPage() {
     </Card>
   );
 
+  const getTeamNameForDialog = (team: TeamType) => {
+    switch(team) {
+      case 'CR': return 'CR Team';
+      case 'DR': return 'DR Team';
+      case 'LR': return 'LR Team';
+      default: return 'Team';
+    }
+  };
+
 
   const renderActiveTabContent = () => {
     switch (activeTab) {
-      case 'cr_team':
+      case 'CR':
         return <PlaceholderContent teamName="CR Team" />;
-      case 'dr_team':
+      case 'DR':
         return (
           <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
             <CardHeader className="border-b p-5">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
-                    <CardTitle className="text-card-foreground text-xl">Daily Reports</CardTitle>
+                    <CardTitle className="text-card-foreground text-xl">DR Team Daily Reports</CardTitle>
                     <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                        Daily follow-up reports for new and old customers.
+                        Daily follow-up reports for new and old customers from the Designer Rep team.
                     </CardDescription>
                   </div>
                   <Button onClick={handleOpenAddDialog} disabled={!canAddNew && currentUser?.role !== 'ADMIN' && currentUser?.role !== 'SYSTEM_ADMIN'}>
@@ -176,8 +186,69 @@ export default function DR2OPage() {
             </CardContent>
           </Card>
         );
-      case 'lr_team':
-        return <PlaceholderContent teamName="LR Team" />;
+      case 'LR':
+        return (
+          <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+            <CardHeader className="border-b p-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-card-foreground text-xl">LR Team Daily Tasks</CardTitle>
+                    <CardDescription className="text-muted-foreground text-sm mt-0.5">
+                        Logistics and fulfillment team daily entries.
+                    </CardDescription>
+                  </div>
+                  <Button onClick={handleOpenAddDialog} disabled={!canAddNew && currentUser?.role !== 'ADMIN' && currentUser?.role !== 'SYSTEM_ADMIN'}>
+                      <PlusCircle className="mr-2 h-4 w-4" /> Add New
+                  </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+               <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>LR Name</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading ? [...Array(5)].map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell colSpan={3}><Skeleton className="h-8 w-full" /></TableCell>
+                      </TableRow>
+                    )) : userEntries.length === 0 ? (
+                        <TableRow>
+                            <TableCell colSpan={3} className="text-center h-48 text-muted-foreground">No entries found for the LR Team.</TableCell>
+                        </TableRow>
+                    ) : userEntries.map((row) => {
+                      const lrUser = allUsers.find(u => u.id === row.crmId);
+                      return (
+                        <TableRow key={row.id}>
+                          <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
+                          <TableCell>
+                             <div className="flex items-center gap-2">
+                                <Avatar className="h-8 w-8">
+                                    <AvatarImage src={lrUser?.avatarUrl || undefined} alt={row.crmName} />
+                                    <AvatarFallback>{getInitials(row.crmName)}</AvatarFallback>
+                                </Avatar>
+                                <span>{row.crmName}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                             <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(row)}>
+                                <Edit className="h-4 w-4"/>
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        );
       default:
         return null;
     }
@@ -186,11 +257,11 @@ export default function DR2OPage() {
   return (
     <>
       <div className="p-4 sm:p-6 lg:p-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TeamType)} className="w-full">
             <TabsList className="inline-flex h-10 items-center justify-center text-muted-foreground bg-white p-1 rounded-full shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-                <TabsTrigger value="cr_team" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">CR Team</TabsTrigger>
-                <TabsTrigger value="dr_team" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">DR Team</TabsTrigger>
-                <TabsTrigger value="lr_team" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">LR Team</TabsTrigger>
+                <TabsTrigger value="CR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">CR Team</TabsTrigger>
+                <TabsTrigger value="DR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">DR Team</TabsTrigger>
+                <TabsTrigger value="LR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">LR Team</TabsTrigger>
             </TabsList>
             <div className="mt-6">
                 {renderActiveTabContent()}
@@ -204,7 +275,7 @@ export default function DR2OPage() {
             onDr2oSaved={handleDr2oSaved}
             entry={editingEntry}
             currentUser={currentUser}
-            team="DR"
+            team={activeTab}
         />
       )}
     </>
