@@ -20,6 +20,7 @@ export function AppHeader() {
   const [isSyncing, setIsSyncing] = useState(false);
   const { toast } = useToast();
   const { currentUser } = useAuth();
+  const { state: sidebarState } = useSidebar();
 
   const handleSyncClick = async () => {
     setIsSyncing(true);
@@ -60,7 +61,10 @@ export function AppHeader() {
       <div className="container flex h-[4.5rem] items-center justify-between max-w-full px-4 sm:px-6 lg:px-8">
         <div className="flex items-center">
           <SidebarTrigger className="text-foreground hover:bg-accent hover:text-accent-foreground -ml-2 p-1.5 rounded-md md:hidden" />
-          <Link href="/dashboard" className="hidden md:flex items-center space-x-2 text-primary hover:text-primary/80 transition-colors ml-2">
+          <Link href="/dashboard" className={cn(
+            "items-center space-x-2 text-primary hover:text-primary/80 transition-colors ml-2 hidden",
+            sidebarState === 'collapsed' ? "md:flex" : "md:hidden"
+          )}>
              <Logo className="h-7 w-7" />
             <span className="font-extrabold text-xl tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400">Color Hut</span>
           </Link>
