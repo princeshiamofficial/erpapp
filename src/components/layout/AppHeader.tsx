@@ -14,6 +14,7 @@ import { settleAllDeliveredOrdersAction } from '@/app/(app)/dashboard/actions';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { useIsMobile } from '@/hooks/use-mobile';
+import Image from 'next/image';
 
 
 export function AppHeader() {
@@ -65,8 +66,14 @@ export function AppHeader() {
             "flex items-center space-x-2 text-primary hover:text-primary/80 transition-colors ml-2",
             sidebarState === 'expanded' && "hidden"
           )}>
-             <Logo className="h-7 w-7" />
-            <span className="font-extrabold text-xl tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400">Color Hut</span>
+             <Image
+                src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+                alt="Color Hut Logo"
+                width={160}
+                height={40}
+                priority
+                className="object-contain"
+              />
           </Link>
         </div>
         
