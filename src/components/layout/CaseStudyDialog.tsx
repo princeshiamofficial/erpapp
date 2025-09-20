@@ -85,7 +85,7 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
     if (!isAutoUpdate) setIsLoading(true);
     try {
       const fetchedMessages = await getMessagesAction(selectedTeam);
-      setMessages(fetchedMessages);
+      setMessages(fetchedMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
     } catch (error) {
       if (!isAutoUpdate) {
         toast({ title: "Error", description: "Could not load case study messages.", variant: "destructive" });
@@ -126,7 +126,7 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
     const result = await addMessageAction(selectedTeam, newMessage, replyingTo, currentUser);
     
     if (result.success && result.message) {
-      setMessages(prev => [...prev, result.message!]);
+      setMessages(prev => [...prev, result.message!].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
       setNewMessage('');
       setReplyingTo(null);
     } else {
