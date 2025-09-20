@@ -170,9 +170,9 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
           </div>
         </DialogHeader>
         <div className="flex flex-col h-[60vh]">
-          <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+          <ScrollArea className="flex-1 p-4 pt-0" ref={scrollAreaRef}>
              {isLoading ? (
-               <div className="space-y-6">
+               <div className="space-y-6 pt-4">
                  {[...Array(3)].map((_, i) => (
                    <div key={i} className={`flex items-start gap-3 ${i % 2 === 0 ? '' : 'flex-row-reverse'}`}>
                       <Skeleton className="h-8 w-8 rounded-full" />
@@ -184,7 +184,7 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                  ))}
                </div>
              ) : messages.length > 0 ? (
-                <div className="space-y-6">
+                <div className="space-y-6 pt-4">
                   {messages.map((msg) => (
                     <ChatMessage 
                       key={msg.id} 
