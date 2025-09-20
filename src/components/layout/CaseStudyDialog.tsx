@@ -254,22 +254,28 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                 </Button>
               </div>
             )}
-            <div className="relative">
-              <Input 
-                placeholder="Type a message..." 
-                className={`pr-20 ${replyingTo ? 'rounded-t-none' : ''}`}
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                disabled={isSending}
-              />
-              <div className="absolute inset-y-0 right-0 flex items-center">
-                <Button variant="ghost" size="icon" disabled={isSending}>
-                  <Paperclip className="h-5 w-5" />
-                </Button>
-                <Button variant="ghost" size="icon" className="text-primary hover:text-primary/90" onClick={handleSendMessage} disabled={isSending || !newMessage.trim()}>
-                  {isSending ? <Loader2 className="h-5 w-5 animate-spin"/> : <Send className="h-5 w-5" />}
-                </Button>
+            <div className="relative flex items-center gap-2">
+              <Avatar className="h-9 w-9 border flex-shrink-0">
+                <AvatarImage src={currentUser?.avatarUrl || undefined} alt={currentUser?.name} />
+                <AvatarFallback>{getInitials(currentUser?.name)}</AvatarFallback>
+              </Avatar>
+              <div className="relative flex-1">
+                <Input 
+                  placeholder="Type a message..." 
+                  className={`pr-20 ${replyingTo ? 'rounded-t-none' : ''}`}
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  disabled={isSending}
+                />
+                <div className="absolute inset-y-0 right-0 flex items-center">
+                  <Button variant="ghost" size="icon" disabled={isSending}>
+                    <Paperclip className="h-5 w-5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="text-primary hover:text-primary/90" onClick={handleSendMessage} disabled={isSending || !newMessage.trim()}>
+                    {isSending ? <Loader2 className="h-5 w-5 animate-spin"/> : <Send className="h-5 w-5" />}
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
