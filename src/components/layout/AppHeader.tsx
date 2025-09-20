@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/auth-context';
 import { useIsMobile } from '@/hooks/use-mobile';
 import Image from 'next/image';
+import { CaseStudyDialog } from './CaseStudyDialog';
 
 
 export function AppHeader() {
@@ -90,17 +91,16 @@ export function AppHeader() {
               <span className="hidden sm:inline">Dialogue</span>
             </Link>
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-foreground hover:bg-accent hover:text-accent-foreground h-10"
-            asChild
-          >
-            <Link href="/case-study">
+          <CaseStudyDialog>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-foreground hover:bg-accent hover:text-accent-foreground h-10"
+            >
               <BookText className="h-5 w-5 sm:mr-2" />
               <span className="hidden sm:inline">Case Study</span>
-            </Link>
-          </Button>
+            </Button>
+          </CaseStudyDialog>
           <NotificationBell />
           {showSyncButton && (
             <Button
