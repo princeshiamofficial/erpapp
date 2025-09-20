@@ -8,7 +8,7 @@ import Link from "next/link";
 import { Logo } from '@/components/layout/Logo';
 import { NotificationBell } from '@/components/layout/NotificationBell';
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, HelpCircle, BookText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { settleAllDeliveredOrdersAction } from '@/app/(app)/dashboard/actions';
 import { cn } from '@/lib/utils';
@@ -67,6 +67,28 @@ export function AppHeader() {
         </div>
         
         <div className="flex items-center space-x-1 sm:space-x-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-foreground hover:bg-accent hover:text-accent-foreground h-10"
+            asChild
+          >
+            <Link href="/faq">
+              <HelpCircle className="h-5 w-5 sm:mr-2" />
+              <span className="hidden sm:inline">FAQ</span>
+            </Link>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-foreground hover:bg-accent hover:text-accent-foreground h-10"
+            asChild
+          >
+            <Link href="/case-study">
+              <BookText className="h-5 w-5 sm:mr-2" />
+              <span className="hidden sm:inline">Case Study</span>
+            </Link>
+          </Button>
           <NotificationBell />
           {showSyncButton && (
             <Button
