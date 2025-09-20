@@ -59,9 +59,9 @@ const ChatMessage = ({ msg, isCurrentUser, onReply, onDelete, canDelete }: { msg
         <div className={`max-w-xs rounded-2xl p-3 ${isCurrentUser ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'}`}>
           <p className="text-sm font-semibold">{msg.userName}</p>
            {msg.replyingTo && (
-             <div className="text-xs italic bg-black/10 dark:bg-white/10 p-1.5 rounded-md mt-1 mb-2 border-l-2 border-primary/50">
-               <p className="font-semibold">{msg.replyingTo.name}</p>
-               <p className="truncate">"{msg.replyingTo.message}"</p>
+             <div className="mt-1 mb-2 pl-2 border-l-2 border-primary/50 bg-black/10 dark:bg-white/10 rounded-r-md py-1">
+                <p className="text-xs font-semibold">{msg.replyingTo.name}</p>
+                <p className="text-xs italic truncate">"{msg.replyingTo.message}"</p>
              </div>
            )}
           <p className="text-sm">{msg.message}</p>
