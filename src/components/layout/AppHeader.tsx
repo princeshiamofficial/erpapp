@@ -63,8 +63,9 @@ export function AppHeader() {
         <div className="flex items-center">
           <SidebarTrigger className="text-foreground hover:bg-accent hover:text-accent-foreground -ml-2 p-1.5 rounded-md md:hidden" />
           <Link href="/dashboard" className={cn(
-            "flex items-center space-x-2 text-primary hover:text-primary/80 transition-colors ml-2",
-            sidebarState === 'expanded' && "hidden"
+            "items-center space-x-2 text-primary hover:text-primary/80 transition-colors ml-2",
+             "hidden md:flex",
+            sidebarState === 'expanded' && "md:hidden"
           )}>
              <Image
                 src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
@@ -86,7 +87,7 @@ export function AppHeader() {
           >
             <Link href="/faq">
               <HelpCircle className="h-5 w-5 sm:mr-2" />
-              <span className="hidden sm:inline">FAQ</span>
+              <span className="hidden sm:inline">Dialogs</span>
             </Link>
           </Button>
           <Button
