@@ -81,26 +81,30 @@ export function AppHeader() {
         </div>
         
         <div className="flex items-center space-x-1 sm:space-x-2">
-          <FaqDialog>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-foreground hover:bg-accent hover:text-accent-foreground h-10"
-            >
-              <HelpCircle className="h-5 w-5 sm:mr-2" />
-              <span className="hidden sm:inline">Dialogue</span>
-            </Button>
-          </FaqDialog>
-          <CaseStudyDialog>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-foreground hover:bg-accent hover:text-accent-foreground h-10"
-            >
-              <BookText className="h-5 w-5 sm:mr-2" />
-              <span className="hidden sm:inline">Case Study</span>
-            </Button>
-          </CaseStudyDialog>
+          {currentUser?.role !== 'VENDOR' && (
+            <>
+              <FaqDialog>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-foreground hover:bg-accent hover:text-accent-foreground h-10"
+                >
+                  <HelpCircle className="h-5 w-5 sm:mr-2" />
+                  <span className="hidden sm:inline">Dialogue</span>
+                </Button>
+              </FaqDialog>
+              <CaseStudyDialog>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-foreground hover:bg-accent hover:text-accent-foreground h-10"
+                >
+                  <BookText className="h-5 w-5 sm:mr-2" />
+                  <span className="hidden sm:inline">Case Study</span>
+                </Button>
+              </CaseStudyDialog>
+            </>
+          )}
           <NotificationBell />
           {showSyncButton && (
             <Button
