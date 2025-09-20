@@ -538,3 +538,17 @@ export interface Dr2oEntry {
     oldCustomer4?: string;
     lrItems?: LrEntryItem[]; // New field for LR team entries
 }
+
+export interface CaseStudyMessage {
+  id: string;
+  team: 'CR' | 'DR' | 'LR';
+  userId: string;
+  userName: string;
+  userAvatarUrl?: string | null;
+  message: string;
+  replyingTo?: {
+    name: string;
+    message: string;
+  } | null;
+  timestamp: string; // ISO string
+}
