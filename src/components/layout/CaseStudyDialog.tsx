@@ -31,7 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { parseISO } from 'date-fns';
-import type { CaseStudyMessage } from '@/types';
+import type { CaseStudyMessage, User } from '@/types';
 import { getMessagesAction, addMessageAction, deleteMessageAction } from '@/app/(app)/casestudy/actions';
 import { Skeleton } from '../ui/skeleton';
 
@@ -48,49 +48,70 @@ const getInitials = (name: string | undefined): string => {
 };
 
 
-const ChatMessage = ({ msg, isCurrentUser, onReply, onDelete, canDelete }: { msg: CaseStudyMessage, isCurrentUser: boolean, onReply: () => void, onDelete: () => void, canDelete: boolean }) => (
-  <div className={`group flex items-start gap-3 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
-    <Avatar className="h-8 w-8 border">
-      <AvatarImage src={msg.userAvatarUrl || undefined} alt={msg.userName} />
-      <AvatarFallback>{getInitials(msg.userName)}</AvatarFallback>
-    </Avatar>
-    <div className={`flex flex-col gap-1.5 ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-      {msg.replyingTo ? (
-        <div className="text-xs text-muted-foreground flex items-center gap-1">
-          <Reply className="h-3 w-3" />
-          <span className="font-semibold">{msg.userName}</span> replied to <span className="font-semibold">{msg.replyingTo.name}</span>
-        </div>
-      ) : (
-        <p className="text-sm font-semibold">{msg.userName}</p>
-      )}
+const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDelete }: { msg: CaseStudyMessage, isCurrentUser: boolean, currentUser: User | null, onReply: () => void, onDelete: () => void, canDelete: boolean }) => {
+  
+  const renderReplyHeader = () => {
+    if (!msg.replyingTo) {
+      return <p className="text-sm font-semibold">{msg.userName}</p>;
+    }
+    
+    // Don't show header if replying to self
+    if (msg.userId === (currentUser?.id) && msg.userName === msg.replyingTo.name) {
+       return <p className="text-sm font-semibold">{msg.userName}</p>;
+    }
 
-      {msg.replyingTo && (
-        <div className="max-w-xs rounded-2xl p-3 bg-muted/60 rounded-bl-none rounded-br-none relative opacity-80">
-           <p className="text-xs italic truncate">"{msg.replyingTo.message}"</p>
-        </div>
-      )}
+    let replierName = <span className="font-semibold">{msg.userName}</span>;
+    if (isCurrentUser) {
+      replierName = <span className="font-semibold">You</span>;
+    }
 
-      <div className="flex items-end gap-2">
-        <div className={`relative flex items-center gap-2 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
-          <div className={`max-w-xs rounded-2xl p-3 ${isCurrentUser ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'} ${msg.replyingTo ? (isCurrentUser ? '!rounded-tr-md' : '!rounded-tl-md') : ''}`}>
-            <p className="text-sm">{msg.message}</p>
-          </div>
-          <div className="flex shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onReply}>
-                <Reply className="h-4 w-4 text-muted-foreground" />
-              </Button>
-              {canDelete && (
-                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={onDelete}>
-                      <Trash2 className="h-4 w-4" />
+    return (
+      <div className="text-xs text-muted-foreground flex items-center gap-1">
+        <Reply className="h-3 w-3" />
+        {replierName}
+        {' replied to '}
+        <span className="font-semibold">{msg.replyingTo.name}</span>
+      </div>
+    );
+  };
+  
+  return (
+      <div className={`group flex items-start gap-3 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
+        <Avatar className="h-8 w-8 border">
+          <AvatarImage src={msg.userAvatarUrl || undefined} alt={msg.userName} />
+          <AvatarFallback>{getInitials(msg.userName)}</AvatarFallback>
+        </Avatar>
+        <div className={`flex flex-col gap-1.5 ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+          {renderReplyHeader()}
+    
+          {msg.replyingTo && (
+            <div className="max-w-xs rounded-2xl p-3 bg-muted/60 rounded-bl-none rounded-br-none relative opacity-80">
+               <p className="text-xs italic truncate">"{msg.replyingTo.message}"</p>
+            </div>
+          )}
+    
+          <div className="flex items-end gap-2">
+            <div className={`relative flex items-center gap-2 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
+              <div className={`max-w-xs rounded-2xl p-3 ${isCurrentUser ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'} ${msg.replyingTo ? (isCurrentUser ? '!rounded-tr-md' : '!rounded-tl-md') : ''}`}>
+                <p className="text-sm">{msg.message}</p>
+              </div>
+              <div className="flex shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onReply}>
+                    <Reply className="h-4 w-4 text-muted-foreground" />
                   </Button>
-              )}
+                  {canDelete && (
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={onDelete}>
+                          <Trash2 className="h-4 w-4" />
+                      </Button>
+                  )}
+              </div>
+            </div>
           </div>
+          <span className="text-xs text-muted-foreground -mt-1">{formatDistanceToNowStrict(parseISO(msg.timestamp), { addSuffix: true })}</span>
         </div>
       </div>
-      <span className="text-xs text-muted-foreground -mt-1">{formatDistanceToNowStrict(parseISO(msg.timestamp), { addSuffix: true })}</span>
-    </div>
-  </div>
-);
+  )
+};
 
 export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -236,7 +257,8 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                     <ChatMessage 
                       key={msg.id} 
                       msg={msg} 
-                      isCurrentUser={msg.userId === currentUser?.id} 
+                      isCurrentUser={msg.userId === currentUser?.id}
+                      currentUser={currentUser}
                       onReply={() => setReplyingTo({ name: msg.userName, message: msg.message })}
                       onDelete={() => setMessageToDelete(msg)}
                       canDelete={isAdmin}
