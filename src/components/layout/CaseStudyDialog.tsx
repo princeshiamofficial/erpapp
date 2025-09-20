@@ -10,9 +10,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Paperclip, Reply, Send, X, Loader2, BookText } from 'lucide-react';
+import { Paperclip, Reply, Send, X, Loader2, BookText, Trash2, AlertTriangle } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
@@ -22,7 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { parseISO } from 'date-fns';
 import type { CaseStudyMessage } from '@/types';
-import { getMessagesAction, addMessageAction } from '@/app/(app)/casestudy/actions';
+import { getMessagesAction, addMessageAction, deleteMessageAction } from '@/app/(app)/casestudy/actions';
 import { Skeleton } from '../ui/skeleton';
 
 
@@ -38,7 +48,7 @@ const getInitials = (name: string | undefined): string => {
 };
 
 
-const ChatMessage = ({ msg, isCurrentUser, onReply }: { msg: CaseStudyMessage, isCurrentUser: boolean, onReply: () => void }) => (
+const ChatMessage = ({ msg, isCurrentUser, onReply, onDelete, canDelete }: { msg: CaseStudyMessage, isCurrentUser: boolean, onReply: () => void, onDelete: () => void, canDelete: boolean }) => (
   <div className={`group flex items-start gap-3 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
     <Avatar className="h-8 w-8 border">
       <AvatarImage src={msg.userAvatarUrl || undefined} alt={msg.userName} />
@@ -56,9 +66,16 @@ const ChatMessage = ({ msg, isCurrentUser, onReply }: { msg: CaseStudyMessage, i
            )}
           <p className="text-sm">{msg.message}</p>
         </div>
-        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" onClick={onReply}>
-          <Reply className="h-4 w-4 text-muted-foreground" />
-        </Button>
+        <div className="flex shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onReply}>
+              <Reply className="h-4 w-4 text-muted-foreground" />
+            </Button>
+            {canDelete && (
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={onDelete}>
+                    <Trash2 className="h-4 w-4" />
+                </Button>
+            )}
+        </div>
       </div>
       <span className="text-xs text-muted-foreground mt-1">{formatDistanceToNowStrict(parseISO(msg.timestamp), { addSuffix: true })}</span>
     </div>
@@ -76,6 +93,9 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
   const [selectedTeam, setSelectedTeam] = useState<'CR' | 'DR' | 'LR'>('CR');
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  
+  const [messageToDelete, setMessageToDelete] = useState<CaseStudyMessage | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
@@ -141,6 +161,20 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
       handleSendMessage();
     }
   };
+  
+  const handleConfirmDelete = async () => {
+    if (!messageToDelete) return;
+    setIsDeleting(true);
+    const result = await deleteMessageAction(selectedTeam, messageToDelete.id);
+    if (result.success) {
+        toast({ title: "Message Deleted" });
+        setMessages(prev => prev.filter(m => m.id !== messageToDelete.id));
+    } else {
+        toast({ title: "Error", description: result.error, variant: "destructive" });
+    }
+    setIsDeleting(false);
+    setMessageToDelete(null);
+  };
 
 
   return (
@@ -170,7 +204,8 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
           </div>
         </DialogHeader>
         <div className="flex flex-col h-[60vh]">
-          <ScrollArea className="flex-1 p-4 pt-0" ref={scrollAreaRef}>
+          <ScrollArea className="flex-1" ref={scrollAreaRef}>
+             <div className="p-4 pt-0">
              {isLoading ? (
                <div className="space-y-6 pt-4">
                  {[...Array(3)].map((_, i) => (
@@ -190,7 +225,9 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                       key={msg.id} 
                       msg={msg} 
                       isCurrentUser={msg.userId === currentUser?.id} 
-                      onReply={() => setReplyingTo({ name: msg.userName, message: msg.message })} 
+                      onReply={() => setReplyingTo({ name: msg.userName, message: msg.message })}
+                      onDelete={() => setMessageToDelete(msg)}
+                      canDelete={isAdmin}
                     />
                   ))}
                 </div>
@@ -201,6 +238,7 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                     <p className="text-sm">Be the first to start a conversation for the {selectedTeam} team.</p>
                 </div>
              )}
+             </div>
           </ScrollArea>
           <Separator />
           <div className="p-4 bg-background">
@@ -236,6 +274,23 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
             </div>
           </div>
         </div>
+        {messageToDelete && (
+          <AlertDialog open={!!messageToDelete} onOpenChange={() => setMessageToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-destructive"/>Delete Message?</AlertDialogTitle>
+                    <AlertDialogDescription>Are you sure you want to delete this message? This action cannot be undone.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <div className="p-4 bg-muted rounded-md border text-sm text-muted-foreground italic">"{messageToDelete.message}"</div>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setMessageToDelete(null)} disabled={isDeleting}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={isDeleting}>
+                      {isDeleting ? <><Loader2 className="h-4 w-4 animate-spin mr-2"/> Deleting...</> : "Delete"}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </DialogContent>
     </Dialog>
   );

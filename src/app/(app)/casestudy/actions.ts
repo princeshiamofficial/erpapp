@@ -2,7 +2,7 @@
 "use server";
 
 import type { CaseStudyMessage, User } from "@/types";
-import { getMessages, addMessage } from "@/lib/case-study-service";
+import { getMessages, addMessage, deleteMessage } from "@/lib/case-study-service";
 import { revalidatePath } from "next/cache";
 
 export async function getMessagesAction(team: 'CR' | 'DR' | 'LR'): Promise<CaseStudyMessage[]> {
@@ -40,4 +40,21 @@ export async function addMessageAction(
     console.error("Error in addMessageAction:", error);
     return { success: false, error: "An unexpected server error occurred." };
   }
+}
+
+export async function deleteMessageAction(
+  team: 'CR' | 'DR' | 'LR',
+  messageId: string,
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const success = await deleteMessage(team, messageId);
+        if (success) {
+            revalidatePath("/(app)/layout", "layout");
+            return { success: true };
+        }
+        return { success: false, error: "Failed to delete message from the database." };
+    } catch (error) {
+        console.error("Error in deleteMessageAction:", error);
+        return { success: false, error: "An unexpected error occurred while deleting the message." };
+    }
 }

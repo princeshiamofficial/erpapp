@@ -1,5 +1,4 @@
 
-
 import type { CaseStudyMessage } from '@/types';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
@@ -49,4 +48,18 @@ export const addMessage = async (team: 'CR' | 'DR' | 'LR', messageData: Omit<Cas
     if (error instanceof Error) throw error;
     return null;
   }
+};
+
+export const deleteMessage = async (team: 'CR' | 'DR' | 'LR', messageId: string): Promise<boolean> => {
+    const collectionName = getCollectionNameForTeam(team);
+    try {
+        await ensureCollectionExistsV3(collectionName);
+        await fetchFromApiV3(`collections/${collectionName}/documents/${messageId}`, {
+            method: 'DELETE'
+        });
+        return true;
+    } catch (error) {
+        console.error(`Error deleting message ${messageId} from ${collectionName} via API v3:`, error);
+        return false;
+    }
 };
