@@ -345,7 +345,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       setIsUploadingProof(false);
     }
 
-    const finalUpdates: Partial<TrackingLink> & { newAdvancePaymentAmount?: number | null; newAdvancePaymentMethod?: string | null; newAdvancePaymentNotes?: string | null; documentUrl?: string | null; } = {
+    const finalUpdates: Partial<TrackingLink> & { newAdvancePaymentAmount?: number | null; newAdvancePaymentMethod?: string | null; newAdvancePaymentNotes?: string | null; newAdvancePaymentDocumentUrl?: string | null; } = {
       companyName: `${jobIdInput.trim()} • ${companyNameInput.trim()}`,
       address: address.trim(),
       phoneNumber: phoneNumber.trim(),
@@ -360,7 +360,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       finalUpdates.newAdvancePaymentAmount = parseFloat(newAdvanceAmount);
       finalUpdates.newAdvancePaymentMethod = newAdvancePaymentMethod.toLowerCase() === 'other' ? newCustomPaymentMethodText.trim() : newAdvancePaymentMethod.trim();
       finalUpdates.newAdvancePaymentNotes = newAdvancePaymentNotes.trim() || null;
-      finalUpdates.documentUrl = newUploadedProofUrl;
+      finalUpdates.newAdvancePaymentDocumentUrl = newUploadedProofUrl;
     }
     
     const result = await updateOrderAction(order.id, finalUpdates, currentUser);
@@ -509,7 +509,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                                 className="flex-1"
                                 required={isNewAdvanceEntered}
                                 accept="image/*"
-                                disabled={isSubmitting}
+                                disabled={isSubmitting || isUploadingProof}
                             />
                             {selectedPaymentProof && (
                                 <Button type="button" variant="ghost" size="icon" onClick={handleRemoveProofFile} disabled={isSubmitting}>

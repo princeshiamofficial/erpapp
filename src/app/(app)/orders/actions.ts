@@ -23,7 +23,7 @@ interface CreateOrderDialogFormData {
   orderItems: Array<{
     id: string;
     model: string;
-    quantity: string;
+    quantity: number; // Changed from string to number
     lamination: string;
     unitPrice: number | null;
     lineItemTotalPrice: number | null;
@@ -73,8 +73,7 @@ export async function createOrderAction(
     const processedOrderItems: OrderItem[] = [];
     for (const item of data.orderItems) {
       if (!item.model?.trim()) return { error: `Model is required for all order items.` };
-      const quantity = parseInt(item.quantity, 10);
-      // For SOW entries, quantity might be 0, so we allow it. For regular orders it should be > 0.
+      const quantity = item.quantity; // Already a number
       if (isNaN(quantity) || quantity < 0) return { error: `Invalid quantity for model "${item.model}". Quantity must be a non-negative number.` };
       
       const lamination = item.lamination?.trim() || 'N/A'; // Default lamination if empty
@@ -94,10 +93,10 @@ export async function createOrderAction(
       orderItemsTotal += lineItemTotalPrice;
     }
 
-    if (data.specialClientDiscount !== null && data.specialClientDiscount < 0) {
+    if (data.specialClientDiscount !== null && data.specialClientDiscount !== undefined && data.specialClientDiscount < 0) {
       return { error: "Special Client Discount must be a non-negative number." };
     }
-    if (data.specialClientDiscount !== null && data.specialClientDiscount > orderItemsTotal && orderItemsTotal > 0) {
+    if (data.specialClientDiscount !== null && data.specialClientDiscount !== undefined && data.specialClientDiscount > orderItemsTotal && orderItemsTotal > 0) {
       return { error: "Special Client Discount cannot exceed the total order price." };
     }
 
@@ -203,7 +202,7 @@ export async function updateOrderAction(
     
     const allModels = await getModels();
 
-    const finalUpdates: Partial<TrackingLink> & { documentUrl?: string | null; } = { ...updates };
+    const finalUpdates: Partial<TrackingLink> & { newAdvancePaymentDocumentUrl?: string | null; } = { ...updates };
     delete finalUpdates.newAdvancePaymentAmount;
     delete finalUpdates.newAdvancePaymentMethod;
     delete finalUpdates.newAdvancePaymentNotes;
