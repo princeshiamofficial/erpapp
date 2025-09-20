@@ -68,9 +68,6 @@ export function ViewLrEntryDialog({ isOpen, onOpenChange, entry }: ViewLrEntryDi
                 </Table>
             </ScrollArea>
         </div>
-        <DialogFooter>
-          <Button onClick={() => onOpenChange(false)}>Close</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
