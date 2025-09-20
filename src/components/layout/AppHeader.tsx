@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useIsMobile } from '@/hooks/use-mobile';
 import Image from 'next/image';
 import { CaseStudyDialog } from './CaseStudyDialog';
+import { FaqDialog } from './FaqDialog';
 
 
 export function AppHeader() {
@@ -80,17 +81,16 @@ export function AppHeader() {
         </div>
         
         <div className="flex items-center space-x-1 sm:space-x-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-foreground hover:bg-accent hover:text-accent-foreground h-10"
-            asChild
-          >
-            <Link href="/faq">
+          <FaqDialog>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-foreground hover:bg-accent hover:text-accent-foreground h-10"
+            >
               <HelpCircle className="h-5 w-5 sm:mr-2" />
               <span className="hidden sm:inline">Dialogue</span>
-            </Link>
-          </Button>
+            </Button>
+          </FaqDialog>
           <CaseStudyDialog>
             <Button
               variant="ghost"

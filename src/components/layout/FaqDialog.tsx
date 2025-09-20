@@ -1,0 +1,119 @@
+
+"use client";
+
+import React, { useState, useMemo } from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Input } from '../ui/input';
+import { Search } from 'lucide-react';
+import { ScrollArea } from '../ui/scroll-area';
+
+interface FaqDialogProps {
+  children: React.ReactNode;
+}
+
+const faqData = [
+  {
+    question: "What is Color Hut's main business?",
+    answer: "Color Hut specializes in providing high-quality design and printing services, including menu books, packaging, and various marketing materials for businesses."
+  },
+  {
+    question: "How can I track my order?",
+    answer: "You can track your order using the 'Tracking Links' page. Each order has a unique tracking link that shows its current status and history."
+  },
+  {
+    question: "Who can I contact for design changes?",
+    answer: "Once an order is in the 'On Design' stage, a Designer Representative (DR) will be assigned. You can communicate with them through the comments section on the order's tracking page."
+  },
+  {
+    question: "What is the typical turnaround time?",
+    answer: "Turnaround time varies based on the complexity and size of the order. Each stage in the 'Projects' view has an estimated SLA (Service Level Agreement) to give you an idea of the timeline."
+  },
+  {
+    question: "How do I provide feedback on a completed order?",
+    answer: "After an order is marked as 'Delivered', you may receive a request to provide feedback on the product quality, design, and service through a dedicated feedback form."
+  },
+  {
+    question: "What is the 'SOW' page for?",
+    answer: "The SOW (Statement of Work) page is a business report that analyzes your order history to provide insights into your purchasing patterns and loyalty score."
+  },
+  {
+    question: "Can I import multiple leads at once?",
+    answer: "Yes, if you have Admin permissions, you can use the 'Import Leads' feature on the Pipeline page to upload a CSV file with multiple leads."
+  }
+];
+
+export function FaqDialog({ children }: FaqDialogProps) {
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const filteredFaqs = useMemo(() => {
+    if (!searchTerm) {
+      return faqData;
+    }
+    const lowercasedSearchTerm = searchTerm.toLowerCase();
+    return faqData.filter(
+      faq =>
+        faq.question.toLowerCase().includes(lowercasedSearchTerm) ||
+        faq.answer.toLowerCase().includes(lowercasedSearchTerm)
+    );
+  }, [searchTerm]);
+
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        {children}
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-xl md:max-w-2xl lg:max-w-3xl p-0 bg-gray-50 dark:bg-gray-900">
+        <DialogHeader className="p-6 pb-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <DialogTitle className="text-3xl font-bold text-gray-800 dark:text-gray-100">
+              Dialogue
+            </DialogTitle>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search questions..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-10 h-10 rounded-full bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+              />
+            </div>
+          </div>
+        </DialogHeader>
+        <ScrollArea className="h-[60vh]">
+          <div className="p-6 pt-0">
+            {filteredFaqs.length > 0 ? (
+              <Accordion type="single" collapsible className="w-full space-y-3">
+                {filteredFaqs.map((faq, index) => (
+                  <AccordionItem 
+                    key={index} 
+                    value={`item-${index}`} 
+                    className="bg-white dark:bg-gray-800/50 rounded-lg shadow-sm border border-gray-200/80 dark:border-gray-700/50"
+                  >
+                    <AccordionTrigger className="px-6 py-4 text-left font-semibold text-gray-700 dark:text-gray-200 hover:no-underline [&>svg]:text-red-500">
+                      {faq.question}
+                    </AccordionTrigger>
+                    <AccordionContent className="px-6 text-gray-600 dark:text-gray-300">
+                      {faq.answer}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            ) : (
+              <div className="text-center py-16 text-gray-500">
+                <p className="font-semibold">No questions found.</p>
+                <p className="text-sm">Try adjusting your search term.</p>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+}
