@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
 import type { Dr2oEntry, User } from '@/types';
-import { addDr2oEntryAction, updateDr2oEntryAction } from '@/app/(app)/dr2o/actions';
+import { addDr2oEntryAction, updateDr2oEntryAction } from '@/app/(app)/workflow/actions';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
