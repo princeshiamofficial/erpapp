@@ -179,7 +179,6 @@ export interface Comment {
   userName: string;
   userRole?: UserRole | 'Client';
   text: string;
-  timestamp: string; // ISO string
   isInternal: boolean;
   replies?: Comment[];
   likes?: {
@@ -546,6 +545,7 @@ export interface CaseStudyMessage {
   userName: string;
   userAvatarUrl?: string | null;
   message: string;
+  imageUrl?: string | null;
   replyingTo?: {
     name: string;
     message: string;

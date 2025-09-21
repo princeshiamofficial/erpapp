@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Paperclip, Reply, Send, X, Loader2, BookText, Trash2, AlertTriangle } from 'lucide-react';
+import { Paperclip, Reply, Send, X, Loader2, BookText, Trash2, AlertTriangle, Image as ImageIcon } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
@@ -34,6 +34,7 @@ import { parseISO } from 'date-fns';
 import type { CaseStudyMessage, User, UserRole } from '@/types';
 import { getMessagesAction, addMessageAction, deleteMessageAction } from '@/app/(app)/casestudy/actions';
 import { Skeleton } from '../ui/skeleton';
+import NextImage from 'next/image';
 
 
 interface CaseStudyDialogProps {
@@ -52,7 +53,7 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
   
   const renderReplyHeader = () => {
     if (!msg.replyingTo) {
-      if (isCurrentUser) return null; 
+      if (isCurrentUser && msg.userName === currentUser?.name) return null; 
       return <p className="text-sm font-semibold">{msg.userName}</p>;
     }
     
@@ -91,10 +92,17 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
           )}
     
           <div className="flex items-end gap-2">
-            <div className={`relative flex items-center gap-2 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
-              <div className={`max-w-xs rounded-2xl p-3 ${isCurrentUser ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'} ${msg.replyingTo ? (isCurrentUser ? '!rounded-tr-md' : '!rounded-tl-md') : ''}`}>
-                <p className="text-sm">{msg.message}</p>
-              </div>
+            <div className={`relative flex flex-col items-center gap-2 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
+              {msg.imageUrl && (
+                  <div className="max-w-xs rounded-lg overflow-hidden border">
+                      <NextImage src={msg.imageUrl} alt="Uploaded image" width={300} height={300} className="object-cover" />
+                  </div>
+              )}
+              {msg.message && (
+                <div className={`max-w-xs rounded-2xl p-3 ${isCurrentUser ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'} ${msg.replyingTo ? (isCurrentUser ? '!rounded-tr-md' : '!rounded-tl-md') : ''}`}>
+                  <p className="text-sm">{msg.message}</p>
+                </div>
+              )}
               <div className="flex shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onReply}>
                     <Reply className="h-4 w-4 text-muted-foreground" />
@@ -117,6 +125,8 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<CaseStudyMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ name: string; message: string } | null>(null);
@@ -124,6 +134,7 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
   const [selectedTeam, setSelectedTeam] = useState<'CR' | 'DR' | 'LR' | null>(null);
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [messageToDelete, setMessageToDelete] = useState<CaseStudyMessage | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -184,17 +195,58 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
         });
     }
   }, [messages]);
-  
+
+  const handleImageSelect = (file: File | null) => {
+      if (file) {
+          if (file.size > 5 * 1024 * 1024) { // 5MB limit
+              toast({ title: "Image too large", description: "Please select an image smaller than 5MB.", variant: "destructive" });
+              return;
+          }
+          setSelectedImage(file);
+          const reader = new FileReader();
+          reader.onloadend = () => {
+              setImagePreview(reader.result as string);
+          };
+          reader.readAsDataURL(file);
+      } else {
+          setSelectedImage(null);
+          setImagePreview(null);
+      }
+  };
+
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !currentUser || !selectedTeam) return;
+    if ((!newMessage.trim() && !selectedImage) || !currentUser || !selectedTeam) return;
     setIsSending(true);
+
+    let imageUrl: string | null = null;
+    if (selectedImage) {
+        const formData = new FormData();
+        formData.append('file', selectedImage);
+        try {
+            const response = await fetch('https://colorhutbd.xyz/model-image/index.php', {
+                method: 'POST',
+                body: formData,
+            });
+            const result = await response.json();
+            if (response.ok && result.success && result.file_url) {
+                imageUrl = result.file_url;
+            } else {
+                throw new Error(result.message || 'Image upload failed');
+            }
+        } catch (error) {
+            toast({ title: "Error uploading image", description: error instanceof Error ? error.message : "An unknown error occurred", variant: "destructive" });
+            setIsSending(false);
+            return;
+        }
+    }
     
-    const result = await addMessageAction(selectedTeam, newMessage, replyingTo, currentUser);
+    const result = await addMessageAction(selectedTeam, newMessage, imageUrl, replyingTo, currentUser);
     
     if (result.success && result.message) {
       setMessages(prev => [...prev, result.message!].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
       setNewMessage('');
       setReplyingTo(null);
+      handleImageSelect(null);
     } else {
       toast({ title: "Error", description: result.error, variant: "destructive" });
     }
@@ -272,7 +324,7 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                       msg={msg} 
                       isCurrentUser={msg.userId === currentUser?.id}
                       currentUser={currentUser}
-                      onReply={() => setReplyingTo({ name: msg.userName, message: msg.message })}
+                      onReply={() => setReplyingTo({ name: msg.userName, message: msg.message || 'Image' })}
                       onDelete={() => setMessageToDelete(msg)}
                       canDelete={isAdmin}
                     />
@@ -305,6 +357,14 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                     </Button>
                   </div>
                 )}
+                 {imagePreview && (
+                    <div className="relative mb-2 p-2 border bg-muted rounded-t-lg">
+                        <NextImage src={imagePreview} alt="Image preview" width={80} height={80} className="rounded-md object-cover" />
+                        <Button variant="ghost" size="icon" className="absolute top-0 right-0 h-6 w-6 bg-black/50 text-white hover:bg-black/70" onClick={() => handleImageSelect(null)}>
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
+                )}
                 <div className="relative flex items-center gap-2">
                   <Avatar className="h-9 w-9 border flex-shrink-0">
                     <AvatarImage src={currentUser?.avatarUrl || undefined} alt={currentUser?.name} />
@@ -321,10 +381,11 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                       maxLength={2000}
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center">
-                      <Button variant="ghost" size="icon" disabled={isSending}>
+                      <Button variant="ghost" size="icon" disabled={isSending} onClick={() => fileInputRef.current?.click()}>
                         <Paperclip className="h-5 w-5" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="text-primary hover:text-primary/90" onClick={handleSendMessage} disabled={isSending || !newMessage.trim()}>
+                      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e.target.files?.[0] || null)} />
+                      <Button variant="ghost" size="icon" className="text-primary hover:text-primary/90" onClick={handleSendMessage} disabled={isSending || (!newMessage.trim() && !selectedImage)}>
                         {isSending ? <Loader2 className="h-5 w-5 animate-spin"/> : <Send className="h-5 w-5" />}
                       </Button>
                     </div>

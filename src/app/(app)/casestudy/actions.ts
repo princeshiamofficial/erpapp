@@ -16,10 +16,11 @@ export async function getMessagesAction(team: 'CR' | 'DR' | 'LR'): Promise<CaseS
 export async function addMessageAction(
   team: 'CR' | 'DR' | 'LR',
   message: string,
+  imageUrl: string | null,
   replyingTo: { name: string; message: string } | null,
   currentUser: User
 ): Promise<{ success: boolean; message?: CaseStudyMessage; error?: string }> {
-  if (!message.trim()) {
+  if (!message.trim() && !imageUrl) {
     return { success: false, error: "Message cannot be empty." };
   }
 
@@ -30,6 +31,7 @@ export async function addMessageAction(
       userName: currentUser.name,
       userAvatarUrl: currentUser.avatarUrl,
       message,
+      imageUrl,
       replyingTo,
     };
     const newMessage = await addMessage(team, messageData);
@@ -56,23 +58,35 @@ export async function addMessageAction(
             const customSoundUrl = globalSettings.toastSoundUrl;
             
             const notificationTitle = `New Message in ${team} Case Study`;
-            const notificationBody = `${currentUser.name}: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`;
+            let notificationBody = `${currentUser.name}: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`;
+            if (imageUrl && !message) {
+              notificationBody = `${currentUser.name} sent an image.`;
+            } else if (imageUrl && message) {
+              notificationBody = `${currentUser.name} sent an image: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`;
+            }
+
             const targetUrl = '/'; // Or a more specific link if available
 
             for (const member of teamMembers) {
                  const fcmMessage: messaging.Message = {
                     token: member.fcmToken!,
-                    notification: { title: notificationTitle, body: notificationBody },
+                    notification: { 
+                      title: notificationTitle, 
+                      body: notificationBody,
+                      ...(imageUrl && { imageUrl }),
+                    },
                     data: { 
                       title: notificationTitle, 
                       body: notificationBody, 
                       targetUrl, 
                       click_action: targetUrl, 
-                      ...(customSoundUrl && { customSoundUrl }) 
+                      ...(customSoundUrl && { customSoundUrl }),
+                      ...(imageUrl && { imageUrl }),
                     },
                     webpush: { 
                       notification: { 
                         icon: currentUser.avatarUrl || '/icons/icon-192x192.png',
+                        ...(imageUrl && { image: imageUrl }),
                         ...(customSoundUrl ? { sound: customSoundUrl } : { sound: "default" }) 
                       },
                       fcmOptions: {
