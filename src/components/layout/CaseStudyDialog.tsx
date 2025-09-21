@@ -117,9 +117,11 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
           <div className="flex items-end gap-2">
             <div className={`relative flex flex-col items-center gap-2 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
               {msg.imageUrl && (
-                  <div className="w-[250px] h-[250px] rounded-lg overflow-hidden border">
-                      <NextImage src={msg.imageUrl} alt="Uploaded image" width={250} height={250} className="object-cover w-full h-full" />
-                  </div>
+                  <a href={msg.imageUrl} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
+                    <div className="w-[250px] h-[250px] rounded-lg overflow-hidden border hover:border-primary transition-all">
+                        <NextImage src={msg.imageUrl} alt="Uploaded image" width={250} height={250} className="object-cover w-full h-full" />
+                    </div>
+                  </a>
               )}
               {msg.message && (
                 <div className={`max-w-xs rounded-2xl p-3 ${isCurrentUser ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'} ${msg.replyingTo ? (isCurrentUser ? '!rounded-tr-md' : '!rounded-tl-md') : ''}`}>
@@ -532,3 +534,5 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
     </Dialog>
   );
 }
+
+    
