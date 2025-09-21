@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -140,7 +141,7 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
             </div>
           )}
     
-          <div className="flex items-end gap-2">
+          <div className="flex items-center gap-2">
             <div className={`relative flex flex-col items-center gap-2 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
               <a href={msg.imageUrl || '#'} target="_blank" rel="noopener noreferrer" className={cn("block", msg.imageUrl ? 'cursor-pointer' : 'cursor-default')}>
                   {msg.imageUrl && (
@@ -154,16 +155,16 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
                   <p className="text-sm">{renderTextWithMentions(msg.message, isCurrentUser, currentUser?.name)}</p>
                 </div>
               )}
-              <div className="flex shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onReply}>
-                    <Reply className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                  {canDelete && (
-                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={onDelete}>
-                          <Trash2 className="h-4 w-4" />
-                      </Button>
-                  )}
-              </div>
+            </div>
+            <div className="flex shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onReply}>
+                  <Reply className="h-4 w-4 text-muted-foreground" />
+                </Button>
+                {canDelete && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={onDelete}>
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                )}
             </div>
           </div>
           <span className="text-xs text-muted-foreground -mt-1">{format(parseISO(msg.timestamp), "h:mm a")}</span>
