@@ -57,7 +57,7 @@ const renderTextWithMentions = (text: string) => {
     if (!text) return '';
     return text.split(/(@[a-zA-Z0-9_]+)/g).map((part, index) => {
       if (index % 2 === 1 && part.startsWith('@')) {
-         return <strong key={index} className="text-primary font-semibold">{part}</strong>;
+         return <strong key={index} className="text-blue-600 font-semibold">{part}</strong>;
       }
       return part;
     });
@@ -534,5 +534,3 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
     </Dialog>
   );
 }
-
-    
