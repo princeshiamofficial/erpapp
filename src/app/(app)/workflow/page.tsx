@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Eye, Trash2, Loader2, AlertTriangle } from "lucide-react";
+import { PlusCircle, Edit, Eye, Trash2, Loader2, AlertTriangle, MoreVertical } from "lucide-react";
 import type { Dr2oEntry, User, LrEntryItem } from '@/types';
 import { getDr2oEntries } from '@/lib/dr2o-service';
 import { getUsers } from '@/lib/user-service';
@@ -19,6 +19,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { deleteDr2oEntryAction } from './actions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 
 const AddEditDr2oDialog = dynamic(() => import('@/components/dr2o/AddEditDr2oDialog').then(mod => mod.AddEditDr2oDialog));
@@ -155,7 +156,7 @@ export default function DR2OPage() {
     </Card>
   );
 
-  const getTeamNameForDialog = (team: TeamType) => {
+  const getDialogTitle = (team: TeamType) => {
     switch(team) {
       case 'CR': return 'CR Team';
       case 'DR': return 'DR Team';
@@ -231,16 +232,23 @@ export default function DR2OPage() {
                             <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.oldCustomer3 || 'N/A'}</TableCell>
                             <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.oldCustomer4 || 'N/A'}</TableCell>
                             <TableCell>
-                                <div className="flex items-center">
-                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(row)}>
-                                        <Edit className="h-4 w-4"/>
-                                    </Button>
-                                    {isAdmin && (
-                                        <Button variant="ghost" size="icon" onClick={() => setEntryToDelete(row)} className="text-destructive hover:text-destructive/80">
-                                            <Trash2 className="h-4 w-4"/>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <MoreVertical className="h-4 w-4" />
                                         </Button>
-                                    )}
-                                </div>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} className="cursor-pointer">
+                                            <Edit className="mr-2 h-4 w-4" /> Edit
+                                        </DropdownMenuItem>
+                                        {isAdmin && (
+                                            <DropdownMenuItem onSelect={() => setEntryToDelete(row)} className="cursor-pointer text-destructive focus:text-destructive">
+                                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                            </DropdownMenuItem>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
                             </TableCell>
                           </TableRow>
                       );
@@ -301,19 +309,26 @@ export default function DR2OPage() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                             <Button variant="outline" size="sm" onClick={() => handleOpenViewDialog(row)} className="mr-2 h-8">
-                                <Eye className="h-4 w-4 mr-1.5"/> View Items
-                            </Button>
-                            <div className="inline-flex">
-                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(row)}>
-                                    <Edit className="h-4 w-4"/>
-                                </Button>
-                                {isAdmin && (
-                                    <Button variant="ghost" size="icon" onClick={() => setEntryToDelete(row)} className="text-destructive hover:text-destructive/80">
-                                        <Trash2 className="h-4 w-4"/>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <MoreVertical className="h-4 w-4" />
                                     </Button>
-                                )}
-                            </div>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onSelect={() => handleOpenViewDialog(row)} className="cursor-pointer">
+                                        <Eye className="mr-2 h-4 w-4" /> View Items
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} className="cursor-pointer">
+                                        <Edit className="mr-2 h-4 w-4" /> Edit
+                                    </DropdownMenuItem>
+                                    {isAdmin && (
+                                        <DropdownMenuItem onSelect={() => setEntryToDelete(row)} className="cursor-pointer text-destructive focus:text-destructive">
+                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       );
@@ -333,13 +348,13 @@ export default function DR2OPage() {
     <>
       <div className="p-4 sm:p-6 lg:p-8">
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TeamType)} className="w-full">
-            {isAdmin && (
+            {isAdmin ? (
               <TabsList className="inline-flex h-10 items-center justify-center text-muted-foreground bg-white p-1 rounded-full shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                   <TabsTrigger value="CR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">CR Team</TabsTrigger>
                   <TabsTrigger value="DR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">DR Team</TabsTrigger>
                   <TabsTrigger value="LR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">LR Team</TabsTrigger>
               </TabsList>
-            )}
+            ) : null}
             <div className="mt-6">
                 {renderActiveTabContent()}
             </div>
