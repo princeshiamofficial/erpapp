@@ -132,42 +132,43 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
           <AvatarImage src={msg.userAvatarUrl || undefined} alt={msg.userName} />
           <AvatarFallback>{getInitials(msg.userName)}</AvatarFallback>
         </Avatar>
-        <div className={`flex flex-col gap-1.5 ${isCurrentUser ? 'items-end' : 'items-start'}`}>
-          {renderReplyHeader()}
-    
-          {msg.replyingTo && (
-            <div className="max-w-xs rounded-2xl p-3 bg-muted/60 rounded-bl-none rounded-br-none relative opacity-80">
-               <p className="text-xs italic truncate">"{msg.replyingTo.message}"</p>
-            </div>
-          )}
-    
-          <div className="flex items-center gap-2">
-            <div className={`relative flex flex-col items-center gap-2 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
-              <a href={msg.imageUrl || '#'} target="_blank" rel="noopener noreferrer" className={cn("block", msg.imageUrl ? 'cursor-pointer' : 'cursor-default')}>
-                  {msg.imageUrl && (
-                      <div className="w-[250px] h-[250px] rounded-lg overflow-hidden border hover:border-primary transition-all">
-                          <NextImage src={msg.imageUrl} alt="Uploaded image" width={250} height={250} className="object-cover w-full h-full" />
-                      </div>
-                  )}
-              </a>
-              {msg.message && (
-                <div className={`max-w-xs rounded-2xl p-3 ${isCurrentUser ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'} ${msg.replyingTo ? (isCurrentUser ? '!rounded-tr-md' : '!rounded-tl-md') : ''}`}>
-                  <p className="text-sm">{renderTextWithMentions(msg.message, isCurrentUser, currentUser?.name)}</p>
-                </div>
-              )}
-            </div>
-            <div className="flex shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onReply}>
-                  <Reply className="h-4 w-4 text-muted-foreground" />
-                </Button>
-                {canDelete && (
-                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={onDelete}>
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
+        <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
+              <div className={`flex flex-col gap-1.5 ${isCurrentUser ? 'items-end' : 'items-start'}`}>
+                {renderReplyHeader()}
+          
+                {msg.replyingTo && (
+                  <div className="max-w-xs rounded-2xl p-3 bg-muted/60 rounded-bl-none rounded-br-none relative opacity-80">
+                     <p className="text-xs italic truncate">"{msg.replyingTo.message}"</p>
+                  </div>
                 )}
-            </div>
+          
+                {msg.imageUrl && (
+                  <a href={msg.imageUrl} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
+                    <div className="w-[250px] h-[250px] rounded-lg overflow-hidden border hover:border-primary transition-all">
+                        <NextImage src={msg.imageUrl} alt="Uploaded image" width={250} height={250} className="object-cover w-full h-full" />
+                    </div>
+                  </a>
+                )}
+                {msg.message && (
+                  <div className={`max-w-xs rounded-2xl p-3 ${isCurrentUser ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'} ${msg.replyingTo ? (isCurrentUser ? '!rounded-tr-md' : '!rounded-tl-md') : ''}`}>
+                    <p className="text-sm">{renderTextWithMentions(msg.message, isCurrentUser, currentUser?.name)}</p>
+                  </div>
+                )}
+                <span className="text-xs text-muted-foreground -mt-1">{format(parseISO(msg.timestamp), "h:mm a")}</span>
+              </div>
+
+              <div className="flex shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={onReply}>
+                    <Reply className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                  {canDelete && (
+                      <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive/70 hover:text-destructive" onClick={onDelete}>
+                          <Trash2 className="h-4 w-4" />
+                      </Button>
+                  )}
+              </div>
           </div>
-          <span className="text-xs text-muted-foreground -mt-1">{format(parseISO(msg.timestamp), "h:mm a")}</span>
         </div>
       </div>
   )
