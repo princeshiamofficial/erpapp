@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Input } from '../ui/input';
-import { Search, PlusCircle, Loader2, MoreVertical, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { Search, PlusCircle, Loader2, MoreVertical, Edit, Trash2, AlertTriangle, Bold, Italic, Link as LinkIcon, List, ListOrdered, Code, Quote } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '../ui/button';
@@ -29,6 +29,7 @@ import { addFaqAction, updateFaqAction, deleteFaqAction } from '@/app/(app)/faq/
 import { Skeleton } from '../ui/skeleton';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Separator } from '../ui/separator';
 
 interface FaqDialogProps {
   children: React.ReactNode;
@@ -52,6 +53,7 @@ function AddEditFaqDialog({
   const [selectedRole, setSelectedRole] = useState<UserRole | 'ALL'>('ALL');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const answerTextareaRef = useRef<HTMLTextAreaElement>(null);
   
   const isEditMode = !!faqToEdit;
 
@@ -68,6 +70,43 @@ function AddEditFaqDialog({
         }
     }
   }, [isOpen, faqToEdit, isEditMode]);
+
+  const insertMarkdown = (syntax: { prefix: string; suffix?: string, placeholder: string }) => {
+    const textarea = answerTextareaRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = answer.substring(start, end);
+    const placeholder = selectedText || syntax.placeholder;
+
+    const newText = 
+      answer.substring(0, start) +
+      syntax.prefix +
+      placeholder +
+      (syntax.suffix || '') +
+      answer.substring(end);
+
+    setAnswer(newText);
+
+    // Focus and select the placeholder text
+    setTimeout(() => {
+      textarea.focus();
+      const newStart = start + syntax.prefix.length;
+      const newEnd = newStart + placeholder.length;
+      textarea.setSelectionRange(newStart, newEnd);
+    }, 0);
+  };
+  
+  const markdownToolbarActions = [
+    { icon: Bold, onClick: () => insertMarkdown({ prefix: '**', suffix: '**', placeholder: 'Bold Text' }), label: 'Bold' },
+    { icon: Italic, onClick: () => insertMarkdown({ prefix: '_', suffix: '_', placeholder: 'Italic Text' }), label: 'Italic' },
+    { icon: LinkIcon, onClick: () => insertMarkdown({ prefix: '[', suffix: '](https://)', placeholder: 'Link Text' }), label: 'Link' },
+    { icon: List, onClick: () => insertMarkdown({ prefix: '\n- ', placeholder: 'List Item' }), label: 'Unordered List' },
+    { icon: ListOrdered, onClick: () => insertMarkdown({ prefix: '\n1. ', placeholder: 'List Item' }), label: 'Ordered List' },
+    { icon: Code, onClick: () => insertMarkdown({ prefix: '`', suffix: '`', placeholder: 'Code' }), label: 'Code' },
+    { icon: Quote, onClick: () => insertMarkdown({ prefix: '> ', placeholder: 'Quote' }), label: 'Blockquote' },
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +135,7 @@ function AddEditFaqDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit' : 'Add New'} FAQ</DialogTitle>
           <DialogDescription>
@@ -110,7 +149,24 @@ function AddEditFaqDialog({
           </div>
           <div className="space-y-1">
             <Label htmlFor="faq-answer">Answer</Label>
-            <Textarea id="faq-answer" value={answer} onChange={e => setAnswer(e.target.value)} placeholder="Provide the answer" required />
+            <div className="border rounded-md">
+                <div className="p-1 border-b bg-muted/50 flex items-center gap-1">
+                   {markdownToolbarActions.map((action, index) => (
+                       <Button key={index} type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={action.onClick} title={action.label}>
+                         <action.icon className="h-4 w-4" />
+                       </Button>
+                   ))}
+                </div>
+                <Textarea 
+                  id="faq-answer" 
+                  ref={answerTextareaRef}
+                  value={answer} 
+                  onChange={e => setAnswer(e.target.value)} 
+                  placeholder="Provide the answer. Markdown is supported." 
+                  required 
+                  className="min-h-[150px] border-0 rounded-t-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+            </div>
             <p className="text-xs text-muted-foreground">Markdown is supported for formatting.</p>
           </div>
           <div className="space-y-1">
