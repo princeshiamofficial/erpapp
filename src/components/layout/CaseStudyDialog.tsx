@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Paperclip, Reply, Send, X, Loader2, BookText, Trash2, AlertTriangle, Image as ImageIcon } from 'lucide-react';
+import { Paperclip, Reply, Send, X, Loader2, BookText, Trash2, AlertTriangle, Image as ImageIcon, ShieldCheck } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
@@ -484,7 +484,9 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                                         <CommandItem key={user.id} value={user.name} onSelect={() => handleMentionSelect(user.name)} className="cursor-pointer flex items-center gap-2">
                                             <Avatar className="h-6 w-6 text-xs"><AvatarImage src={user.avatarUrl || undefined} /><AvatarFallback className="bg-muted text-xs">{getInitials(user.name)}</AvatarFallback></Avatar>
                                             <span className="text-xs font-medium">{user.name}</span>
-                                            <span className="text-xs text-muted-foreground">({user.role.replace(/_/g, ' ')})</span>
+                                            {(user.role === 'ADMIN' || user.role === 'SYSTEM_ADMIN') && (
+                                                <ShieldCheck className="h-4 w-4 text-blue-500" />
+                                            )}
                                         </CommandItem>
                                     ))}
                                 </CommandList>
