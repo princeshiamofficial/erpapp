@@ -39,7 +39,16 @@ export async function addMessageAction(
       // Send push notifications to other team members
       try {
         const allUsers = await getUsers();
-        const teamMembers = allUsers.filter(u => u.role === team && u.id !== currentUser.id && u.fcmToken);
+        
+        let targetRole: UserRole;
+        switch (team) {
+            case 'CR': targetRole = 'CRM'; break;
+            case 'DR': targetRole = 'DESIGNER_REPRESENTATIVE'; break;
+            case 'LR': targetRole = 'LR'; break;
+            default: return { success: true, message: newMessage }; // Or handle error
+        }
+
+        const teamMembers = allUsers.filter(u => u.role === targetRole && u.id !== currentUser.id && u.fcmToken);
 
         if (teamMembers.length > 0) {
             console.log(`[CaseStudy] Sending notifications to ${teamMembers.length} members of ${team} team.`);
