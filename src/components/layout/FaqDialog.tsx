@@ -27,6 +27,8 @@ import type { UserRole } from '@/types';
 import { getFaqs, type Faq } from '@/lib/faq-service';
 import { addFaqAction, updateFaqAction, deleteFaqAction } from '@/app/(app)/faq/actions';
 import { Skeleton } from '../ui/skeleton';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface FaqDialogProps {
   children: React.ReactNode;
@@ -109,6 +111,7 @@ function AddEditFaqDialog({
           <div className="space-y-1">
             <Label htmlFor="faq-answer">Answer</Label>
             <Textarea id="faq-answer" value={answer} onChange={e => setAnswer(e.target.value)} placeholder="Provide the answer" required />
+            <p className="text-xs text-muted-foreground">Markdown is supported for formatting.</p>
           </div>
           <div className="space-y-1">
             <Label htmlFor="faq-role">Visible To</Label>
@@ -260,7 +263,11 @@ export function FaqDialog({ children }: FaqDialogProps) {
                                 {faq.question}
                             </AccordionTrigger>
                             <AccordionContent className="px-6 text-gray-600 dark:text-gray-300">
-                                {faq.answer}
+                              <div className="prose dark:prose-invert max-w-none">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                  {faq.answer}
+                                </ReactMarkdown>
+                              </div>
                             </AccordionContent>
                         </AccordionItem>
                         {isAdmin && (
