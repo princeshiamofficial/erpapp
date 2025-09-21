@@ -29,8 +29,7 @@ import { Separator } from '../ui/separator';
 import { useAuth } from '@/contexts/auth-context';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { formatDistanceToNowStrict } from 'date-fns';
-import { parseISO } from 'date-fns';
+import { formatDistanceToNowStrict, format, parseISO } from 'date-fns';
 import type { CaseStudyMessage, User, UserRole } from '@/types';
 import { getMessagesAction, addMessageAction, deleteMessageAction } from '@/app/(app)/casestudy/actions';
 import { getUsers } from '@/lib/user-service';
@@ -56,16 +55,12 @@ const getInitials = (name: string | undefined): string => {
 const renderTextWithMentions = (text: string, isCurrentUserMessage: boolean, currentUserName: string | undefined) => {
     if (!text) return '';
     
-    // Improved regex to capture mentions at the start of the string or preceded by whitespace
     const regex = /(^|\s)(@([a-zA-Z0-9_]+))/g;
   
-    // Split by the regex, keeping the delimiters
     let parts = text.split(regex);
   
-    // The split will result in groups: [non-mention, whitespace, full_mention, mention_name, non-mention, ...]. We process these.
     let renderedParts = [];
     for (let i = 0; i < parts.length; ) {
-        // Not a mention part
         if (i % 4 === 0) {
             renderedParts.push(parts[i]);
             i++;
@@ -74,7 +69,6 @@ const renderTextWithMentions = (text: string, isCurrentUserMessage: boolean, cur
             const fullMention = parts[i + 1];
             const mentionName = parts[i + 2];
             
-            // Check if the mention is the current user's name
             const isCurrentUserMention = currentUserName && (mentionName.toLowerCase() === currentUserName.toLowerCase() || mentionName.toLowerCase() === currentUserName.replace(/\s+/g, '_').toLowerCase());
 
             let mentionClass = "text-blue-600 font-semibold";
@@ -148,13 +142,13 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
     
           <div className="flex items-end gap-2">
             <div className={`relative flex flex-col items-center gap-2 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
-              {msg.imageUrl && (
-                  <a href={msg.imageUrl} target="_blank" rel="noopener noreferrer" className="block cursor-pointer">
-                    <div className="w-[250px] h-[250px] rounded-lg overflow-hidden border hover:border-primary transition-all">
-                        <NextImage src={msg.imageUrl} alt="Uploaded image" width={250} height={250} className="object-cover w-full h-full" />
-                    </div>
-                  </a>
-              )}
+              <a href={msg.imageUrl || '#'} target="_blank" rel="noopener noreferrer" className={cn("block", msg.imageUrl ? 'cursor-pointer' : 'cursor-default')}>
+                  {msg.imageUrl && (
+                      <div className="w-[250px] h-[250px] rounded-lg overflow-hidden border hover:border-primary transition-all">
+                          <NextImage src={msg.imageUrl} alt="Uploaded image" width={250} height={250} className="object-cover w-full h-full" />
+                      </div>
+                  )}
+              </a>
               {msg.message && (
                 <div className={`max-w-xs rounded-2xl p-3 ${isCurrentUser ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'} ${msg.replyingTo ? (isCurrentUser ? '!rounded-tr-md' : '!rounded-tl-md') : ''}`}>
                   <p className="text-sm">{renderTextWithMentions(msg.message, isCurrentUser, currentUser?.name)}</p>
@@ -172,7 +166,7 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
               </div>
             </div>
           </div>
-          <span className="text-xs text-muted-foreground -mt-1">{formatDistanceToNowStrict(parseISO(msg.timestamp), { addSuffix: true })}</span>
+          <span className="text-xs text-muted-foreground -mt-1">{format(parseISO(msg.timestamp), "h:mm a")}</span>
         </div>
       </div>
   )
