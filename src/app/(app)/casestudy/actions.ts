@@ -63,8 +63,22 @@ export async function addMessageAction(
                  const fcmMessage: messaging.Message = {
                     token: member.fcmToken!,
                     notification: { title: notificationTitle, body: notificationBody },
-                    data: { title: notificationTitle, body: notificationBody, targetUrl, click_action: targetUrl, ...(customSoundUrl && { customSoundUrl }) },
-                    webpush: { notification: { icon: currentUser.avatarUrl || '/icons/icon-192x192.png', ...(customSoundUrl ? {} : { sound: "default" }) }, fcmOptions: { link: targetUrl } },
+                    data: { 
+                      title: notificationTitle, 
+                      body: notificationBody, 
+                      targetUrl, 
+                      click_action: targetUrl, 
+                      ...(customSoundUrl && { customSoundUrl }) 
+                    },
+                    webpush: { 
+                      notification: { 
+                        icon: currentUser.avatarUrl || '/icons/icon-192x192.png',
+                        ...(customSoundUrl ? { sound: customSoundUrl } : { sound: "default" }) 
+                      },
+                      fcmOptions: {
+                          link: targetUrl
+                      }
+                    },
                  };
                  if (adminApp && typeof adminApp.messaging === 'function') {
                     await adminApp.messaging().send(fcmMessage);
