@@ -33,8 +33,13 @@ import { formatDistanceToNowStrict } from 'date-fns';
 import { parseISO } from 'date-fns';
 import type { CaseStudyMessage, User, UserRole } from '@/types';
 import { getMessagesAction, addMessageAction, deleteMessageAction } from '@/app/(app)/casestudy/actions';
+import { getUsers } from '@/lib/user-service';
 import { Skeleton } from '../ui/skeleton';
 import NextImage from 'next/image';
+import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandInput, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from '@/lib/utils';
+import { Check } from 'lucide-react';
 
 
 interface CaseStudyDialogProps {
@@ -46,6 +51,16 @@ const getInitials = (name: string | undefined): string => {
   const names = name.split(' ');
   if (names.length === 1) return names[0].charAt(0).toUpperCase();
   return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+};
+
+const renderTextWithMentions = (text: string) => {
+    if (!text) return '';
+    return text.split(/(@[a-zA-Z0-9_]+)/g).map((part, index) => {
+      if (index % 2 === 1 && part.startsWith('@')) {
+         return <strong key={index} className="text-primary font-semibold">{part}</strong>;
+      }
+      return part;
+    });
 };
 
 
@@ -100,7 +115,7 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
               )}
               {msg.message && (
                 <div className={`max-w-xs rounded-2xl p-3 ${isCurrentUser ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'} ${msg.replyingTo ? (isCurrentUser ? '!rounded-tr-md' : '!rounded-tl-md') : ''}`}>
-                  <p className="text-sm">{msg.message}</p>
+                  <p className="text-sm">{renderTextWithMentions(msg.message)}</p>
                 </div>
               )}
               <div className="flex shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -131,10 +146,16 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ name: string; message: string } | null>(null);
   const { currentUser } = useAuth();
+  const [allUsers, setAllUsers] = useState<User[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<'CR' | 'DR' | 'LR' | null>(null);
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageTextareaRef = useRef<HTMLInputElement>(null);
+
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [activeMentionStartIndex, setActiveMentionStartIndex] = useState<number | null>(null);
+  const [mentionSuggestions, setMentionSuggestions] = useState<Array<User>>([]);
   
   const [messageToDelete, setMessageToDelete] = useState<CaseStudyMessage | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -155,37 +176,42 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
     }
   }, [currentUser, isAdmin, selectedTeam]);
 
-  const fetchMessages = useCallback(async (isAutoUpdate = false) => {
+  const fetchMessagesAndUsers = useCallback(async (isAutoUpdate = false) => {
     if (!isOpen || !selectedTeam) return;
     if (!isAutoUpdate) setIsLoading(true);
     try {
-      const fetchedMessages = await getMessagesAction(selectedTeam);
+      const [fetchedMessages, fetchedUsers] = await Promise.all([
+        getMessagesAction(selectedTeam),
+        getUsers()
+      ]);
       setMessages(fetchedMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
+      setAllUsers(fetchedUsers);
     } catch (error) {
       if (!isAutoUpdate) {
-        toast({ title: "Error", description: "Could not load case study messages.", variant: "destructive" });
+        toast({ title: "Error", description: "Could not load case study messages or user data.", variant: "destructive" });
       }
-      console.error("Failed to fetch case study messages:", error);
+      console.error("Failed to fetch case study data:", error);
     } finally {
       if (!isAutoUpdate) setIsLoading(false);
     }
   }, [isOpen, selectedTeam, toast]);
 
+
   useEffect(() => {
     if (isOpen && selectedTeam) {
-      fetchMessages();
+      fetchMessagesAndUsers();
     }
-  }, [isOpen, selectedTeam, fetchMessages]);
+  }, [isOpen, selectedTeam, fetchMessagesAndUsers]);
 
   useEffect(() => {
     if (isOpen && selectedTeam) {
       const intervalId = setInterval(() => {
-        fetchMessages(true);
+        fetchMessagesAndUsers(true);
       }, 30000); // 30 seconds
 
       return () => clearInterval(intervalId);
     }
-  }, [isOpen, selectedTeam, fetchMessages]);
+  }, [isOpen, selectedTeam, fetchMessagesAndUsers]);
   
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -253,8 +279,49 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
     setIsSending(false);
   };
   
+  const handleTextChangeForMention = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const text = e.target.value;
+    setNewMessage(text);
+    const cursorPosition = e.target.selectionStart;
+    if (cursorPosition === null) {
+      setMentionQuery(null); setActiveMentionStartIndex(null); setMentionSuggestions([]); return;
+    }
+    const textBeforeCursor = text.substring(0, cursorPosition);
+    const lastAtSymbolIndex = textBeforeCursor.lastIndexOf('@');
+    if (lastAtSymbolIndex !== -1) {
+        const textAfterAt = text.substring(lastAtSymbolIndex + 1, cursorPosition);
+        const isAtStartOfWord = lastAtSymbolIndex === 0 || (lastAtSymbolIndex > 0 && /\s/.test(textBeforeCursor[lastAtSymbolIndex - 1]));
+        if (isAtStartOfWord && /^[a-zA-Z0-9_]*$/.test(textAfterAt)) {
+            setMentionQuery(textAfterAt); setActiveMentionStartIndex(lastAtSymbolIndex);
+            const usersToSearchFromProp = Array.isArray(allUsers) ? allUsers : [];
+            const filtered = usersToSearchFromProp.filter(user => user.name.toLowerCase().includes(textAfterAt.toLowerCase())).slice(0, 5);
+            setMentionSuggestions(filtered); return;
+        }
+    }
+    setMentionQuery(null); setActiveMentionStartIndex(null); setMentionSuggestions([]);
+  };
+
+  const handleMentionSelect = (userNameToInsert: string) => {
+    if (activeMentionStartIndex === null || !messageTextareaRef.current) return;
+    const text = newMessage;
+    const mentionTag = userNameToInsert.replace(/\s+/g, '_');
+    const queryLength = mentionQuery?.length || 0;
+    const textBeforeAt = text.substring(0, activeMentionStartIndex);
+    const textAfterMentionQuery = text.substring(activeMentionStartIndex + 1 + queryLength);
+    const newText = `${textBeforeAt}@${mentionTag} ${textAfterMentionQuery.trimStart()}`;
+    setNewMessage(newText);
+    const newCursorPosition = activeMentionStartIndex + 1 + mentionTag.length + 1;
+    setTimeout(() => {
+      if (messageTextareaRef.current) {
+        messageTextareaRef.current.focus();
+        messageTextareaRef.current.setSelectionRange(newCursorPosition, newCursorPosition);
+      }
+    }, 0);
+    setMentionQuery(null); setActiveMentionStartIndex(null); setMentionSuggestions([]);
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && mentionSuggestions.length === 0) {
       e.preventDefault();
       handleSendMessage();
     }
@@ -370,26 +437,49 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                     <AvatarImage src={currentUser?.avatarUrl || undefined} alt={currentUser?.name} />
                     <AvatarFallback>{getInitials(currentUser?.name)}</AvatarFallback>
                   </Avatar>
-                  <div className="relative flex-1">
-                    <Input 
-                      placeholder="Type a message..." 
-                      className={`pr-20 ${replyingTo ? 'rounded-t-none' : ''}`}
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      disabled={isSending}
-                      maxLength={2000}
-                    />
-                    <div className="absolute inset-y-0 right-0 flex items-center">
-                      <Button variant="ghost" size="icon" disabled={isSending} onClick={() => fileInputRef.current?.click()}>
-                        <Paperclip className="h-5 w-5" />
-                      </Button>
-                      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e.target.files?.[0] || null)} />
-                      <Button variant="ghost" size="icon" className="text-primary hover:text-primary/90" onClick={handleSendMessage} disabled={isSending || (!newMessage.trim() && !selectedImage)}>
-                        {isSending ? <Loader2 className="h-5 w-5 animate-spin"/> : <Send className="h-5 w-5" />}
-                      </Button>
-                    </div>
-                  </div>
+                  <Popover open={mentionQuery !== null && mentionSuggestions.length > 0} onOpenChange={(open) => { if (!open) { setMentionQuery(null); setActiveMentionStartIndex(null); setMentionSuggestions([]); } }}>
+                    <PopoverAnchor asChild>
+                        <div className="relative flex-1">
+                          <Input 
+                            ref={messageTextareaRef}
+                            placeholder="Type a message..." 
+                            className={`pr-20 ${replyingTo ? 'rounded-t-none' : ''}`}
+                            value={newMessage}
+                            onChange={handleTextChangeForMention}
+                            onKeyDown={handleKeyDown}
+                            disabled={isSending}
+                            maxLength={2000}
+                          />
+                          <div className="absolute inset-y-0 right-0 flex items-center">
+                            <Button variant="ghost" size="icon" disabled={isSending} onClick={() => fileInputRef.current?.click()}>
+                              <Paperclip className="h-5 w-5" />
+                            </Button>
+                            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => handleImageSelect(e.target.files?.[0] || null)} />
+                            <Button variant="ghost" size="icon" className="text-primary hover:text-primary/90" onClick={handleSendMessage} disabled={isSending || (!newMessage.trim() && !selectedImage)}>
+                              {isSending ? <Loader2 className="h-5 w-5 animate-spin"/> : <Send className="h-5 w-5" />}
+                            </Button>
+                          </div>
+                        </div>
+                    </PopoverAnchor>
+                    {mentionQuery !== null && mentionSuggestions.length > 0 && (
+                        <PopoverContent className="w-[250px] p-0" side="top" align="start" onOpenAutoFocus={(e) => e.preventDefault()}>
+                            <Command>
+                                <CommandList>
+                                    {mentionSuggestions.map((user) => (
+                                        <CommandItem key={user.id} value={user.name} onSelect={() => handleMentionSelect(user.name)} className="cursor-pointer flex items-center gap-2">
+                                            <Avatar className="h-6 w-6 text-xs"><AvatarImage src={user.avatarUrl || undefined} /><AvatarFallback className="bg-muted text-xs">{getInitials(user.name)}</AvatarFallback></Avatar>
+                                            <span className="text-xs font-medium">{user.name}</span>
+                                            <span className="text-xs text-muted-foreground">({user.role.replace(/_/g, ' ')})</span>
+                                        </CommandItem>
+                                    ))}
+                                </CommandList>
+                                {mentionSuggestions.length === 0 && mentionQuery && (
+                                    <CommandEmpty>No users found matching "@{mentionQuery}"</CommandEmpty>
+                                )}
+                            </Command>
+                        </PopoverContent>
+                    )}
+                  </Popover>
                 </div>
               </div>
             </>
