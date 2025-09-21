@@ -29,6 +29,7 @@ export async function addMessageAction(
       team,
       userId: currentUser.id,
       userName: currentUser.name,
+      userRole: currentUser.role, // Add user role to the message
       userAvatarUrl: currentUser.avatarUrl,
       message,
       imageUrl,
@@ -50,10 +51,14 @@ export async function addMessageAction(
             default: return { success: true, message: newMessage }; // Or handle error
         }
 
-        const teamMembers = allUsers.filter(u => u.role === targetRole && u.id !== currentUser.id && u.fcmToken);
+        const teamMembers = allUsers.filter(u => 
+          (u.role === targetRole || u.role === 'ADMIN' || u.role === 'SYSTEM_ADMIN') && 
+          u.id !== currentUser.id && 
+          u.fcmToken
+        );
 
         if (teamMembers.length > 0) {
-            console.log(`[CaseStudy] Sending notifications to ${teamMembers.length} members of ${team} team.`);
+            console.log(`[CaseStudy] Sending notifications to ${teamMembers.length} members of ${team} team and admins.`);
             const globalSettings = await getGlobalSettings();
             const customSoundUrl = globalSettings.toastSoundUrl;
             

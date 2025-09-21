@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Paperclip, Reply, Send, X, Loader2, BookText, Trash2, AlertTriangle, Image as ImageIcon, ShieldCheck } from 'lucide-react';
+import { Paperclip, Reply, Send, X, Loader2, BookText, Trash2, AlertTriangle, Image as ImageIcon } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
@@ -65,11 +65,17 @@ const renderTextWithMentions = (text: string) => {
 
 
 const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDelete }: { msg: CaseStudyMessage, isCurrentUser: boolean, currentUser: User | null, onReply: () => void, onDelete: () => void, canDelete: boolean }) => {
+  const isAdminMessage = msg.userRole === 'ADMIN' || msg.userRole === 'SYSTEM_ADMIN';
   
   const renderReplyHeader = () => {
     if (!msg.replyingTo) {
       if (isCurrentUser && msg.userName === currentUser?.name) return null; 
-      return <p className="text-sm font-semibold">{msg.userName}</p>;
+      return (
+        <div className="flex items-center gap-1.5">
+          <p className="text-sm font-semibold">{msg.userName}</p>
+          {isAdminMessage && <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-blue-500"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></svg>}
+        </div>
+      );
     }
     
     if (isCurrentUser && msg.userName === msg.replyingTo.name) {
@@ -442,7 +448,7 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                 )}
                  {imagePreview && (
                     <div className="relative mb-2 p-2 border bg-muted rounded-t-lg">
-                        <NextImage src={imagePreview} alt="Image preview" width={80} height={80} className="rounded-md object-cover w-20 h-20" />
+                        <NextImage src={imagePreview} alt="Image preview" width={80} height={80} className="object-cover w-20 h-20" />
                         <Button variant="ghost" size="icon" className="absolute top-0 right-0 h-6 w-6 bg-black/50 text-white hover:bg-black/70" onClick={() => handleImageSelect(null)}>
                             <X className="h-4 w-4" />
                         </Button>

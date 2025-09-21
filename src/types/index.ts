@@ -543,6 +543,7 @@ export interface CaseStudyMessage {
   team: 'CR' | 'DR' | 'LR';
   userId: string;
   userName: string;
+  userRole?: UserRole | null;
   userAvatarUrl?: string | null;
   message: string;
   imageUrl?: string | null;
