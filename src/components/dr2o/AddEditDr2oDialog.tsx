@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -108,8 +107,8 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
 
     const entryData = {
       date: date.toISOString(),
-      crmId: currentUser.id,
-      crmName: currentUser.name,
+      crmId: isEditMode && entry ? entry.crmId : currentUser.id,
+      crmName: isEditMode && entry ? entry.crmName : currentUser.name,
       newCustomer1, newCustomer2, newCustomer3,
       oldCustomer1, oldCustomer2, oldCustomer3, oldCustomer4,
       lrItems: team === 'LR' ? lrItems : [],
