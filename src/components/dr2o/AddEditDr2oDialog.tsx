@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -76,6 +77,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
   }, [isOpen, entry, isEditMode]);
 
   const canSelectDate = currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN';
+  const canEditEntry = isEditMode ? (currentUser.id === entry?.crmId || isAdmin) : true;
   
   const handleLrItemChange = (id: string, field: keyof LrEntryItem, value: string | number) => {
     setLrItems(prevItems =>
@@ -150,6 +152,8 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
       default: return 'Fill in your daily report.';
     }
   };
+  const isAdmin = useMemo(() => currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN', [currentUser]);
+
   
   const renderFormFields = () => {
     if (team === 'LR') {
@@ -163,30 +167,30 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                   <div className="space-y-1">
                     <Label htmlFor={`m-companyName-${item.id}`} className="text-xs">Company Name</Label>
-                    <Input id={`m-companyName-${item.id}`} value={item.companyName} onChange={e => handleLrItemChange(item.id, 'companyName', e.target.value)} />
+                    <Input id={`m-companyName-${item.id}`} value={item.companyName} onChange={e => handleLrItemChange(item.id, 'companyName', e.target.value)} disabled={!canEditEntry} />
                   </div>
                    <div className="space-y-1">
                     <Label htmlFor={`m-productName-${item.id}`} className="text-xs">Product Name</Label>
-                    <Input id={`m-productName-${item.id}`} value={item.productName} onChange={e => handleLrItemChange(item.id, 'productName', e.target.value)} />
+                    <Input id={`m-productName-${item.id}`} value={item.productName} onChange={e => handleLrItemChange(item.id, 'productName', e.target.value)} disabled={!canEditEntry} />
                   </div>
                    <div className="space-y-1">
                     <Label htmlFor={`m-productQty-${item.id}`} className="text-xs">Product Qty</Label>
-                    <Input id={`m-productQty-${item.id}`} type="number" value={item.productQty} onChange={e => handleLrItemChange(item.id, 'productQty', parseInt(e.target.value) || 0)} />
+                    <Input id={`m-productQty-${item.id}`} type="number" value={item.productQty} onChange={e => handleLrItemChange(item.id, 'productQty', parseInt(e.target.value) || 0)} disabled={!canEditEntry} />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor={`m-courierId-${item.id}`} className="text-xs">Courier ID</Label>
-                    <Input id={`m-courierId-${item.id}`} value={item.courierId} onChange={e => handleLrItemChange(item.id, 'courierId', e.target.value)} />
+                    <Input id={`m-courierId-${item.id}`} value={item.courierId} onChange={e => handleLrItemChange(item.id, 'courierId', e.target.value)} disabled={!canEditEntry} />
                   </div>
                    <div className="space-y-1">
                     <Label htmlFor={`m-dueOrderName-${item.id}`} className="text-xs">Due Order Name</Label>
-                    <Input id={`m-dueOrderName-${item.id}`} value={item.dueOrderName} onChange={e => handleLrItemChange(item.id, 'dueOrderName', e.target.value)} />
+                    <Input id={`m-dueOrderName-${item.id}`} value={item.dueOrderName} onChange={e => handleLrItemChange(item.id, 'dueOrderName', e.target.value)} disabled={!canEditEntry} />
                   </div>
                    <div className="space-y-1">
                     <Label htmlFor={`m-dueOrderQty-${item.id}`} className="text-xs">Due Order Qty</Label>
-                    <Input id={`m-dueOrderQty-${item.id}`} type="number" value={item.dueOrderQty} onChange={e => handleLrItemChange(item.id, 'dueOrderQty', parseInt(e.target.value) || 0)} />
+                    <Input id={`m-dueOrderQty-${item.id}`} type="number" value={item.dueOrderQty} onChange={e => handleLrItemChange(item.id, 'dueOrderQty', parseInt(e.target.value) || 0)} disabled={!canEditEntry} />
                   </div>
                 </div>
-                {lrItems.length > 1 && (
+                {lrItems.length > 1 && canEditEntry && (
                   <Button variant="ghost" size="icon" className="absolute -top-1 -right-1 h-7 w-7" onClick={() => handleRemoveLrItem(item.id)}>
                     <XCircle className="h-4 w-4 text-destructive" />
                   </Button>
@@ -202,30 +206,30 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
                 <div className="grid grid-cols-3 gap-x-4 gap-y-3">
                   <div className="space-y-1">
                     <Label htmlFor={`d-companyName-${item.id}`} className="text-xs">Company Name</Label>
-                    <Input id={`d-companyName-${item.id}`} value={item.companyName} onChange={e => handleLrItemChange(item.id, 'companyName', e.target.value)} className="h-9"/>
+                    <Input id={`d-companyName-${item.id}`} value={item.companyName} onChange={e => handleLrItemChange(item.id, 'companyName', e.target.value)} className="h-9" disabled={!canEditEntry}/>
                   </div>
                    <div className="space-y-1">
                     <Label htmlFor={`d-productName-${item.id}`} className="text-xs">Product Name</Label>
-                    <Input id={`d-productName-${item.id}`} value={item.productName} onChange={e => handleLrItemChange(item.id, 'productName', e.target.value)} className="h-9"/>
+                    <Input id={`d-productName-${item.id}`} value={item.productName} onChange={e => handleLrItemChange(item.id, 'productName', e.target.value)} className="h-9" disabled={!canEditEntry}/>
                   </div>
                    <div className="space-y-1">
                     <Label htmlFor={`d-productQty-${item.id}`} className="text-xs">Product Qty</Label>
-                    <Input id={`d-productQty-${item.id}`} type="number" value={item.productQty} onChange={e => handleLrItemChange(item.id, 'productQty', parseInt(e.target.value) || 0)} className="h-9"/>
+                    <Input id={`d-productQty-${item.id}`} type="number" value={item.productQty} onChange={e => handleLrItemChange(item.id, 'productQty', parseInt(e.target.value) || 0)} className="h-9" disabled={!canEditEntry}/>
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor={`d-courierId-${item.id}`} className="text-xs">Courier ID</Label>
-                    <Input id={`d-courierId-${item.id}`} value={item.courierId} onChange={e => handleLrItemChange(item.id, 'courierId', e.target.value)} className="h-9"/>
+                    <Input id={`d-courierId-${item.id}`} value={item.courierId} onChange={e => handleLrItemChange(item.id, 'courierId', e.target.value)} className="h-9" disabled={!canEditEntry}/>
                   </div>
                    <div className="space-y-1">
                     <Label htmlFor={`d-dueOrderName-${item.id}`} className="text-xs">Due Order Name</Label>
-                    <Input id={`d-dueOrderName-${item.id}`} value={item.dueOrderName} onChange={e => handleLrItemChange(item.id, 'dueOrderName', e.target.value)} className="h-9"/>
+                    <Input id={`d-dueOrderName-${item.id}`} value={item.dueOrderName} onChange={e => handleLrItemChange(item.id, 'dueOrderName', e.target.value)} className="h-9" disabled={!canEditEntry}/>
                   </div>
                    <div className="space-y-1">
                     <Label htmlFor={`d-dueOrderQty-${item.id}`} className="text-xs">Due Order Qty</Label>
-                    <Input id={`d-dueOrderQty-${item.id}`} type="number" value={item.dueOrderQty} onChange={e => handleLrItemChange(item.id, 'dueOrderQty', parseInt(e.target.value) || 0)} className="h-9"/>
+                    <Input id={`d-dueOrderQty-${item.id}`} type="number" value={item.dueOrderQty} onChange={e => handleLrItemChange(item.id, 'dueOrderQty', parseInt(e.target.value) || 0)} className="h-9" disabled={!canEditEntry}/>
                   </div>
                 </div>
-                {lrItems.length > 1 && (
+                {lrItems.length > 1 && canEditEntry && (
                   <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-7 w-7" onClick={() => handleRemoveLrItem(item.id)}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
@@ -233,9 +237,11 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
               </div>
             ))}
           </div>
-          <Button type="button" variant="outline" size="sm" onClick={handleAddLrItem}>
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Row
-          </Button>
+          {canEditEntry && (
+            <Button type="button" variant="outline" size="sm" onClick={handleAddLrItem}>
+                <PlusCircle className="mr-2 h-4 w-4" /> Add Row
+            </Button>
+          )}
         </div>
       );
     }
@@ -303,7 +309,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
           
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !canEditEntry}>
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : (isEditMode ? 'Save Changes' : 'Submit Report')}
             </Button>
           </DialogFooter>

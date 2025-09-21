@@ -54,8 +54,10 @@ export default function DR2OPage() {
   useEffect(() => {
     if (currentUser) {
       if (isAdmin) {
-        setActiveTab("CR"); // Default for admin
+        // For admin, default to CR but allow switching
+        // No change needed here, state is managed by Tabs component
       } else {
+        // For non-admins, lock to their role's tab
         switch (currentUser.role) {
           case 'CRM':
             setActiveTab('CR');
@@ -67,7 +69,7 @@ export default function DR2OPage() {
             setActiveTab('LR');
             break;
           default:
-            // Handle other roles or set a default if necessary
+            setActiveTab('CR'); // Fallback for any other roles
             break;
         }
       }
@@ -91,8 +93,18 @@ export default function DR2OPage() {
   }, []);
 
   useEffect(() => {
-    fetchData(activeTab);
-  }, [fetchData, activeTab]);
+    if (currentUser) { // Only fetch if user is loaded
+        if (isAdmin) {
+             fetchData(activeTab); // Admin fetches based on active tab
+        } else if (currentUser.role === 'CRM') {
+            fetchData('CR');
+        } else if (currentUser.role === 'DESIGNER_REPRESENTATIVE') {
+            fetchData('DR');
+        } else if (currentUser.role === 'LR') {
+            fetchData('LR');
+        }
+    }
+  }, [currentUser, activeTab, isAdmin, fetchData]);
 
   const handleOpenAddDialog = () => {
     setEditingEntry(null);
@@ -138,11 +150,16 @@ export default function DR2OPage() {
 
   const userEntries = useMemo(() => {
       if (!currentUser) return [];
-      if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
+      if (isAdmin) {
           return dr2oEntries;
       }
+      if (currentUser.role === 'LR' && activeTab === 'LR') {
+          // LR users see all LR entries
+          return dr2oEntries;
+      }
+      // Other roles see only their own entries
       return dr2oEntries.filter(entry => entry.crmId === currentUser.id);
-  }, [currentUser, dr2oEntries]);
+  }, [currentUser, dr2oEntries, activeTab, isAdmin]);
   
   const PlaceholderContent = ({ teamName }: { teamName: string }) => (
     <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
@@ -296,6 +313,7 @@ export default function DR2OPage() {
                         </TableRow>
                     ) : userEntries.map((row) => {
                       const lrUser = allUsers.find(u => u.id === row.crmId);
+                      const canEdit = currentUser?.id === row.crmId || isAdmin;
                       return (
                         <TableRow key={row.id}>
                           <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
@@ -319,7 +337,7 @@ export default function DR2OPage() {
                                     <DropdownMenuItem onSelect={() => handleOpenViewDialog(row)} className="cursor-pointer">
                                         <Eye className="mr-2 h-4 w-4" /> View Items
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} className="cursor-pointer">
+                                    <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} className="cursor-pointer" disabled={!canEdit}>
                                         <Edit className="mr-2 h-4 w-4" /> Edit
                                     </DropdownMenuItem>
                                     {isAdmin && (
@@ -348,13 +366,13 @@ export default function DR2OPage() {
     <>
       <div className="p-4 sm:p-6 lg:p-8">
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TeamType)} className="w-full">
-            {isAdmin ? (
+            {isAdmin && (
               <TabsList className="inline-flex h-10 items-center justify-center text-muted-foreground bg-white p-1 rounded-full shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                   <TabsTrigger value="CR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">CR Team</TabsTrigger>
                   <TabsTrigger value="DR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">DR Team</TabsTrigger>
                   <TabsTrigger value="LR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">LR Team</TabsTrigger>
               </TabsList>
-            ) : null}
+            )}
             <div className="mt-6">
                 {renderActiveTabContent()}
             </div>
