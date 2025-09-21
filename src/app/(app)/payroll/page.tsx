@@ -558,7 +558,6 @@ export default function PayrollPage() {
                   const payslip = employee.payslips?.[monthYearId];
                   
                   const daysInMonth = getDaysInMonth(selectedDate);
-                  const joiningDate = new Date(employee.joiningDate);
                   
                   const relevantHistory = (employee.salaryHistory || [])
                       .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
@@ -566,19 +565,8 @@ export default function PayrollPage() {
                   const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
 
 
-                  let perDaySalary = 0;
-                  let presentDays = 0;
-
-                  if (isSameMonth(joiningDate, selectedDate) && joiningDate.getFullYear() === selectedDate.getFullYear()) {
-                    const joiningDay = getDate(joiningDate);
-                    const workableDays = daysInMonth - joiningDay + 1;
-                    perDaySalary = effectiveSalary / (daysInMonth > 0 ? daysInMonth : 30);
-                    presentDays = payslip?.presentDays ?? workableDays;
-                  } else {
-                    perDaySalary = effectiveSalary / (daysInMonth > 0 ? daysInMonth : 30);
-                    presentDays = payslip?.presentDays ?? 30;
-                  }
-
+                  const perDaySalary = effectiveSalary / (daysInMonth > 0 ? daysInMonth : 30);
+                  const presentDays = payslip?.presentDays ?? 30;
                   const providentFund = effectiveSalary * 0.07;
                   const lateDays = payslip?.lateDays ?? 0;
                   const incentive = payslip?.incentive ?? 0;
@@ -848,6 +836,18 @@ export default function PayrollPage() {
     </Card>
   );
 
+  const fundWalletContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+      <CardHeader className="p-6">
+        <CardTitle className="text-xl font-bold text-gray-800">Fund Wallet</CardTitle>
+        <p className="text-sm text-gray-500">This section is under construction.</p>
+      </CardHeader>
+      <CardContent className="p-6 pt-0 text-center text-gray-500">
+        <p>Functionality to fund employee wallets will be available here soon.</p>
+      </CardContent>
+    </Card>
+  );
+
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'salary_sheet':
@@ -862,6 +862,8 @@ export default function PayrollPage() {
         return leaveManagementContent;
       case 'increment_history':
         return incrementHistoryContent;
+      case 'fund_wallet':
+        return fundWalletContent;
       default:
         return employeeListContent;
     }
@@ -887,6 +889,7 @@ export default function PayrollPage() {
           <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
           <TabsTrigger value="leave_management" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Leave Management</TabsTrigger>
           <TabsTrigger value="increment_history" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Increment History</TabsTrigger>
+          <TabsTrigger value="fund_wallet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Fund Wallet</TabsTrigger>
         </TabsList>
         <div className="mt-6">
             {renderActiveTab()}
@@ -947,4 +950,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
