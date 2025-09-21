@@ -31,7 +31,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNowStrict } from 'date-fns';
 import { parseISO } from 'date-fns';
-import type { CaseStudyMessage, User } from '@/types';
+import type { CaseStudyMessage, User, UserRole } from '@/types';
 import { getMessagesAction, addMessageAction, deleteMessageAction } from '@/app/(app)/casestudy/actions';
 import { Skeleton } from '../ui/skeleton';
 
@@ -52,14 +52,12 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
   
   const renderReplyHeader = () => {
     if (!msg.replyingTo) {
-      if (isCurrentUser) return null; // Don't show name for own non-reply messages
+      if (isCurrentUser) return null; 
       return <p className="text-sm font-semibold">{msg.userName}</p>;
     }
     
-    // Don't show header if replying to self
-    if (msg.userId === (currentUser?.id) && msg.userName === msg.replyingTo.name) {
-       if (isCurrentUser) return null;
-       return <p className="text-sm font-semibold">{msg.userName}</p>;
+    if (isCurrentUser && msg.userName === msg.replyingTo.name) {
+       return null;
     }
 
     let replierName = <span className="font-semibold">{msg.userName}</span>;
@@ -123,7 +121,7 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ name: string; message: string } | null>(null);
   const { currentUser } = useAuth();
-  const [selectedTeam, setSelectedTeam] = useState<'CR' | 'DR' | 'LR'>('CR');
+  const [selectedTeam, setSelectedTeam] = useState<'CR' | 'DR' | 'LR' | null>(null);
   const { toast } = useToast();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   
@@ -133,8 +131,21 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
 
+  useEffect(() => {
+    if (!currentUser) return;
+    if (isAdmin) {
+      if (!selectedTeam) setSelectedTeam('CR'); // Default for admin
+    } else {
+        const userRole = currentUser.role;
+        if (userRole === 'CRM') setSelectedTeam('CR');
+        else if (userRole === 'DESIGNER_REPRESENTATIVE') setSelectedTeam('DR');
+        else if (userRole === 'LR') setSelectedTeam('LR');
+        else setSelectedTeam(null); // No chat for other roles
+    }
+  }, [currentUser, isAdmin, selectedTeam]);
+
   const fetchMessages = useCallback(async (isAutoUpdate = false) => {
-    if (!isOpen) return;
+    if (!isOpen || !selectedTeam) return;
     if (!isAutoUpdate) setIsLoading(true);
     try {
       const fetchedMessages = await getMessagesAction(selectedTeam);
@@ -150,20 +161,20 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
   }, [isOpen, selectedTeam, toast]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && selectedTeam) {
       fetchMessages();
     }
   }, [isOpen, selectedTeam, fetchMessages]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && selectedTeam) {
       const intervalId = setInterval(() => {
         fetchMessages(true);
       }, 30000); // 30 seconds
 
       return () => clearInterval(intervalId);
     }
-  }, [isOpen, fetchMessages]);
+  }, [isOpen, selectedTeam, fetchMessages]);
   
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -175,7 +186,7 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
   }, [messages]);
   
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !currentUser) return;
+    if (!newMessage.trim() || !currentUser || !selectedTeam) return;
     setIsSending(true);
     
     const result = await addMessageAction(selectedTeam, newMessage, replyingTo, currentUser);
@@ -198,7 +209,7 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
   };
   
   const handleConfirmDelete = async () => {
-    if (!messageToDelete) return;
+    if (!messageToDelete || !selectedTeam) return;
     setIsDeleting(true);
     const result = await deleteMessageAction(selectedTeam, messageToDelete.id);
     if (result.success) {
@@ -224,7 +235,7 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
             <DialogDescription>
               A group chat about a recent successful project.
             </DialogDescription>
-             {isAdmin && (
+             {isAdmin && selectedTeam && (
                 <Select value={selectedTeam} onValueChange={(value) => setSelectedTeam(value as 'CR' | 'DR' | 'LR')}>
                     <SelectTrigger className="w-[150px] h-8 text-xs">
                         <SelectValue placeholder="Select Team" />
@@ -253,7 +264,7 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                    </div>
                  ))}
                </div>
-             ) : messages.length > 0 ? (
+             ) : selectedTeam && messages.length > 0 ? (
                 <div className="space-y-6 pt-4">
                   {messages.map((msg) => (
                     <ChatMessage 
@@ -268,53 +279,59 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                   ))}
                 </div>
              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground pt-4">
                     <BookText className="h-16 w-16 opacity-30 mb-4" />
                     <p className="font-medium">No Discussions Yet</p>
-                    <p className="text-sm">Be the first to start a conversation for the {selectedTeam} team.</p>
+                    <p className="text-sm">
+                      {selectedTeam ? `Be the first to start a conversation for the ${selectedTeam} team.` : "No chat available for your role."}
+                    </p>
                 </div>
              )}
              </div>
           </ScrollArea>
-          <Separator />
-          <div className="p-4 bg-background">
-             {replyingTo && (
-              <div className="bg-muted p-2 rounded-t-lg border-b border-border/50 text-xs text-muted-foreground relative">
-                <div className="flex items-center">
-                  <Reply className="h-3 w-3 mr-2" />
-                  <p>Replying to <span className="font-semibold text-foreground">{replyingTo.name}</span></p>
+          {selectedTeam && (
+            <>
+              <Separator />
+              <div className="p-4 bg-background">
+                {replyingTo && (
+                  <div className="bg-muted p-2 rounded-t-lg border-b border-border/50 text-xs text-muted-foreground relative">
+                    <div className="flex items-center">
+                      <Reply className="h-3 w-3 mr-2" />
+                      <p>Replying to <span className="font-semibold text-foreground">{replyingTo.name}</span></p>
+                    </div>
+                    <p className="pl-5 truncate italic">"{replyingTo.message}"</p>
+                    <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => setReplyingTo(null)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <div className="relative flex items-center gap-2">
+                  <Avatar className="h-9 w-9 border flex-shrink-0">
+                    <AvatarImage src={currentUser?.avatarUrl || undefined} alt={currentUser?.name} />
+                    <AvatarFallback>{getInitials(currentUser?.name)}</AvatarFallback>
+                  </Avatar>
+                  <div className="relative flex-1">
+                    <Input 
+                      placeholder="Type a message..." 
+                      className={`pr-20 ${replyingTo ? 'rounded-t-none' : ''}`}
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      disabled={isSending}
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center">
+                      <Button variant="ghost" size="icon" disabled={isSending}>
+                        <Paperclip className="h-5 w-5" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="text-primary hover:text-primary/90" onClick={handleSendMessage} disabled={isSending || !newMessage.trim()}>
+                        {isSending ? <Loader2 className="h-5 w-5 animate-spin"/> : <Send className="h-5 w-5" />}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-                <p className="pl-5 truncate italic">"{replyingTo.message}"</p>
-                <Button variant="ghost" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => setReplyingTo(null)}>
-                  <X className="h-4 w-4" />
-                </Button>
               </div>
-            )}
-            <div className="relative flex items-center gap-2">
-              <Avatar className="h-9 w-9 border flex-shrink-0">
-                <AvatarImage src={currentUser?.avatarUrl || undefined} alt={currentUser?.name} />
-                <AvatarFallback>{getInitials(currentUser?.name)}</AvatarFallback>
-              </Avatar>
-              <div className="relative flex-1">
-                <Input 
-                  placeholder="Type a message..." 
-                  className={`pr-20 ${replyingTo ? 'rounded-t-none' : ''}`}
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  disabled={isSending}
-                />
-                <div className="absolute inset-y-0 right-0 flex items-center">
-                  <Button variant="ghost" size="icon" disabled={isSending}>
-                    <Paperclip className="h-5 w-5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="text-primary hover:text-primary/90" onClick={handleSendMessage} disabled={isSending || !newMessage.trim()}>
-                    {isSending ? <Loader2 className="h-5 w-5 animate-spin"/> : <Send className="h-5 w-5" />}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
         {messageToDelete && (
           <AlertDialog open={!!messageToDelete} onOpenChange={() => setMessageToDelete(null)}>
