@@ -42,6 +42,7 @@ export function ViewLrEntryDialog({ isOpen, onOpenChange, entry }: ViewLrEntryDi
                             <TableHead>Company Name</TableHead>
                             <TableHead>Product Name</TableHead>
                             <TableHead>Product Qty</TableHead>
+                            <TableHead>Courier ID</TableHead>
                             <TableHead>Due Order Name</TableHead>
                             <TableHead>Due Order Qty</TableHead>
                         </TableRow>
@@ -53,13 +54,14 @@ export function ViewLrEntryDialog({ isOpen, onOpenChange, entry }: ViewLrEntryDi
                                     <TableCell>{item.companyName}</TableCell>
                                     <TableCell>{item.productName}</TableCell>
                                     <TableCell>{item.productQty}</TableCell>
+                                    <TableCell>{item.courierId}</TableCell>
                                     <TableCell>{item.dueOrderName}</TableCell>
                                     <TableCell>{item.dueOrderQty}</TableCell>
                                 </TableRow>
                             ))
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                                <TableCell colSpan={6} className="text-center h-24 text-muted-foreground">
                                     No items were recorded for this entry.
                                 </TableCell>
                             </TableRow>

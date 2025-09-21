@@ -519,6 +519,7 @@ export interface LrEntryItem {
   companyName: string;
   productName: string;
   productQty: number;
+  courierId: string;
   dueOrderName: string;
   dueOrderQty: number;
 }

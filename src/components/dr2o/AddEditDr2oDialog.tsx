@@ -59,7 +59,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
         setOldCustomer2(entry.oldCustomer2 || '');
         setOldCustomer3(entry.oldCustomer3 || '');
         setOldCustomer4(entry.oldCustomer4 || '');
-        setLrItems(entry.lrItems && entry.lrItems.length > 0 ? entry.lrItems : [{ id: uuidv4(), companyName: '', productName: '', productQty: 0, dueOrderName: '', dueOrderQty: 0 }]);
+        setLrItems(entry.lrItems && entry.lrItems.length > 0 ? entry.lrItems : [{ id: uuidv4(), companyName: '', productName: '', productQty: 0, courierId: '', dueOrderName: '', dueOrderQty: 0 }]);
       } else {
         setDate(new Date());
         setNewCustomer1('');
@@ -69,7 +69,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
         setOldCustomer2('');
         setOldCustomer3('');
         setOldCustomer4('');
-        setLrItems([{ id: uuidv4(), companyName: '', productName: '', productQty: 0, dueOrderName: '', dueOrderQty: 0 }]);
+        setLrItems([{ id: uuidv4(), companyName: '', productName: '', productQty: 0, courierId: '', dueOrderName: '', dueOrderQty: 0 }]);
       }
       setIsSubmitting(false);
     }
@@ -86,7 +86,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
   };
   
   const handleAddLrItem = () => {
-    setLrItems(prev => [...prev, { id: uuidv4(), companyName: '', productName: '', productQty: 0, dueOrderName: '', dueOrderQty: 0 }]);
+    setLrItems(prev => [...prev, { id: uuidv4(), companyName: '', productName: '', productQty: 0, courierId: '', dueOrderName: '', dueOrderQty: 0 }]);
   };
 
   const handleRemoveLrItem = (id: string) => {
@@ -173,6 +173,10 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
                     <Label htmlFor={`m-productQty-${item.id}`} className="text-xs">Product Qty</Label>
                     <Input id={`m-productQty-${item.id}`} type="number" value={item.productQty} onChange={e => handleLrItemChange(item.id, 'productQty', parseInt(e.target.value) || 0)} />
                   </div>
+                  <div className="space-y-1">
+                    <Label htmlFor={`m-courierId-${item.id}`} className="text-xs">Courier ID</Label>
+                    <Input id={`m-courierId-${item.id}`} value={item.courierId} onChange={e => handleLrItemChange(item.id, 'courierId', e.target.value)} />
+                  </div>
                    <div className="space-y-1">
                     <Label htmlFor={`m-dueOrderName-${item.id}`} className="text-xs">Due Order Name</Label>
                     <Input id={`m-dueOrderName-${item.id}`} value={item.dueOrderName} onChange={e => handleLrItemChange(item.id, 'dueOrderName', e.target.value)} />
@@ -199,6 +203,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
                   <TableHead>Company Name</TableHead>
                   <TableHead>Product Name</TableHead>
                   <TableHead>Product Qty</TableHead>
+                  <TableHead>Courier ID</TableHead>
                   <TableHead>Due Order Name</TableHead>
                   <TableHead>Due Order Qty</TableHead>
                   <TableHead></TableHead>
@@ -210,6 +215,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
                     <TableCell><Input value={item.companyName} onChange={e => handleLrItemChange(item.id, 'companyName', e.target.value)} className="bg-muted/50" /></TableCell>
                     <TableCell><Input value={item.productName} onChange={e => handleLrItemChange(item.id, 'productName', e.target.value)} className="bg-muted/50" /></TableCell>
                     <TableCell><Input type="number" value={item.productQty} onChange={e => handleLrItemChange(item.id, 'productQty', parseInt(e.target.value) || 0)} className="bg-muted/50" /></TableCell>
+                    <TableCell><Input value={item.courierId} onChange={e => handleLrItemChange(item.id, 'courierId', e.target.value)} className="bg-muted/50" /></TableCell>
                     <TableCell><Input value={item.dueOrderName} onChange={e => handleLrItemChange(item.id, 'dueOrderName', e.target.value)} className="bg-muted/50" /></TableCell>
                     <TableCell><Input type="number" value={item.dueOrderQty} onChange={e => handleLrItemChange(item.id, 'dueOrderQty', parseInt(e.target.value) || 0)} className="bg-muted/50" /></TableCell>
                     <TableCell>
