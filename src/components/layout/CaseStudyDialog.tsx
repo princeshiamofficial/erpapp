@@ -293,7 +293,22 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
         const isAtStartOfWord = lastAtSymbolIndex === 0 || (lastAtSymbolIndex > 0 && /\s/.test(textBeforeCursor[lastAtSymbolIndex - 1]));
         if (isAtStartOfWord && /^[a-zA-Z0-9_]*$/.test(textAfterAt)) {
             setMentionQuery(textAfterAt); setActiveMentionStartIndex(lastAtSymbolIndex);
-            const usersToSearchFromProp = Array.isArray(allUsers) ? allUsers : [];
+
+            const teamRoleMapping: Record<TeamType, UserRole> = {
+                CR: 'CRM',
+                DR: 'DESIGNER_REPRESENTATIVE',
+                LR: 'LR'
+            };
+            
+            const relevantRole = teamRoleMapping[selectedTeam!];
+            
+            const usersToSearchFromProp = (Array.isArray(allUsers) ? allUsers : [])
+              .filter(user => 
+                user.role === relevantRole || 
+                user.role === 'ADMIN' || 
+                user.role === 'SYSTEM_ADMIN'
+              );
+
             const filtered = usersToSearchFromProp.filter(user => user.name.toLowerCase().includes(textAfterAt.toLowerCase())).slice(0, 5);
             setMentionSuggestions(filtered); return;
         }
