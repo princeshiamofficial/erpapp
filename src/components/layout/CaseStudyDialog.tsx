@@ -318,8 +318,10 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyDown={handleKeyDown}
                       disabled={isSending}
+                      maxLength={2000}
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center">
+                      <span className="text-xs text-muted-foreground mr-2">{newMessage.length}/2000</span>
                       <Button variant="ghost" size="icon" disabled={isSending}>
                         <Paperclip className="h-5 w-5" />
                       </Button>
