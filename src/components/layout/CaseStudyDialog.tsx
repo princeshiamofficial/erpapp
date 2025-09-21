@@ -78,10 +78,6 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
       );
     }
     
-    if (isCurrentUser && msg.userName === msg.replyingTo.name) {
-       return null;
-    }
-
     let replierName = <span className="font-semibold">{msg.userName}</span>;
     if (isCurrentUser) {
       replierName = <span className="font-semibold">You</span>;
