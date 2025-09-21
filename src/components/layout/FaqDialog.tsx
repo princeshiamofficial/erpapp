@@ -319,10 +319,8 @@ export function FaqDialog({ children }: FaqDialogProps) {
                                 {faq.question}
                             </AccordionTrigger>
                             <AccordionContent className="px-6 text-gray-600 dark:text-gray-300">
-                              <div className="prose dark:prose-invert max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                                  {faq.answer}
-                                </ReactMarkdown>
+                              <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{faq.answer}</ReactMarkdown>
                               </div>
                             </AccordionContent>
                         </AccordionItem>
