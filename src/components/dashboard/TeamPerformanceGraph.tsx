@@ -99,9 +99,19 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
     if (!currentUser) return;
     
     const today = new Date();
-    const hasEntry = allTasks.some(entry => 
-      entry.userId === currentUser.id && isSameDay(parseISO(entry.date), today)
-    );
+    
+    let hasEntry = false;
+    if (currentUser.role === 'LR') {
+      // For LR role, check if ANY LR user has submitted today
+      hasEntry = allTasks.some(entry => 
+        entry.role === 'LR' && isSameDay(parseISO(entry.date), today)
+      );
+    } else {
+      // For other roles, check if the current user has submitted
+      hasEntry = allTasks.some(entry => 
+        entry.userId === currentUser.id && isSameDay(parseISO(entry.date), today)
+      );
+    }
     setHasSubmittedToday(hasEntry);
     
   }, [currentUser, allTasks]);
