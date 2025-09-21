@@ -7,6 +7,7 @@ import type { Dr2oEntry } from "@/types";
 import {
   addDr2oEntry,
   updateDr2oEntry,
+  deleteDr2oEntry,
 } from "@/lib/dr2o-service";
 
 export async function addDr2oEntryAction(
@@ -41,5 +42,22 @@ export async function updateDr2oEntryAction(
     } catch (error) {
         console.error("Error in updateDr2oEntryAction:", error);
         return { success: false, error: error instanceof Error ? error.message : "An unexpected server error occurred." };
+    }
+}
+
+export async function deleteDr2oEntryAction(
+    id: string,
+    team: 'CR' | 'DR' | 'LR'
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const success = await deleteDr2oEntry(id, team);
+        if (success) {
+            revalidatePath("/(app)/workflow");
+            return { success: true };
+        }
+        return { success: false, error: "Failed to delete entry from database." };
+    } catch (error) {
+        console.error("Error in deleteDr2oEntryAction:", error);
+        return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
     }
 }

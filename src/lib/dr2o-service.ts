@@ -65,3 +65,16 @@ export const updateDr2oEntry = async (id: string, updates: Partial<Dr2oEntry>, t
     return false;
   }
 };
+
+export const deleteDr2oEntry = async (id: string, team: 'CR' | 'DR' | 'LR'): Promise<boolean> => {
+  const collectionName = getCollectionNameForTeam(team);
+  try {
+    await fetchFromApiV3(`collections/${collectionName}/documents/${id}`, {
+      method: 'DELETE'
+    });
+    return true;
+  } catch (error) {
+    console.error(`Error deleting entry ${id} from ${collectionName} via API v3:`, error);
+    return false;
+  }
+};

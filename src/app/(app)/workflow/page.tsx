@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -6,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Edit, Eye } from "lucide-react";
+import { PlusCircle, Edit, Eye, Trash2, Loader2, AlertTriangle } from "lucide-react";
 import type { Dr2oEntry, User, LrEntryItem } from '@/types';
 import { getDr2oEntries } from '@/lib/dr2o-service';
 import { getUsers } from '@/lib/user-service';
@@ -15,6 +16,10 @@ import { format, parseISO } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
+import { deleteDr2oEntryAction } from './actions';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
 
 const AddEditDr2oDialog = dynamic(() => import('@/components/dr2o/AddEditDr2oDialog').then(mod => mod.AddEditDr2oDialog));
 const ViewLrEntryDialog = dynamic(() => import('@/components/dr2o/ViewLrEntryDialog').then(mod => mod.ViewLrEntryDialog));
@@ -38,6 +43,10 @@ export default function DR2OPage() {
   const [editingEntry, setEditingEntry] = useState<Dr2oEntry | null>(null);
   const [viewingEntry, setViewingEntry] = useState<Dr2oEntry | null>(null);
   const [activeTab, setActiveTab] = useState<TeamType>("CR");
+  
+  const [entryToDelete, setEntryToDelete] = useState<Dr2oEntry | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const { toast } = useToast();
 
   const isAdmin = useMemo(() => currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN', [currentUser]);
 
@@ -103,6 +112,22 @@ export default function DR2OPage() {
     fetchData(activeTab);
     setIsDialogOpen(false);
   };
+  
+  const handleConfirmDelete = async () => {
+    if (!entryToDelete) return;
+    setIsDeleting(true);
+    const result = await deleteDr2oEntryAction(entryToDelete.id, activeTab);
+    setIsDeleting(false);
+    setEntryToDelete(null);
+
+    if (result.success) {
+      toast({ title: "Entry Deleted", description: "The daily report has been removed." });
+      fetchData(activeTab);
+    } else {
+      toast({ title: "Error", description: result.error || "Could not delete the entry.", variant: "destructive" });
+    }
+  };
+
 
   const canAddNew = useMemo(() => {
     if (!currentUser || !dr2oEntries) return false;
@@ -206,9 +231,16 @@ export default function DR2OPage() {
                             <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.oldCustomer3 || 'N/A'}</TableCell>
                             <TableCell className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">{row.oldCustomer4 || 'N/A'}</TableCell>
                             <TableCell>
-                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(row)}>
-                                    <Edit className="h-4 w-4"/>
-                                </Button>
+                                <div className="flex items-center">
+                                    <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(row)}>
+                                        <Edit className="h-4 w-4"/>
+                                    </Button>
+                                    {isAdmin && (
+                                        <Button variant="ghost" size="icon" onClick={() => setEntryToDelete(row)} className="text-destructive hover:text-destructive/80">
+                                            <Trash2 className="h-4 w-4"/>
+                                        </Button>
+                                    )}
+                                </div>
                             </TableCell>
                           </TableRow>
                       );
@@ -272,9 +304,16 @@ export default function DR2OPage() {
                              <Button variant="outline" size="sm" onClick={() => handleOpenViewDialog(row)} className="mr-2 h-8">
                                 <Eye className="h-4 w-4 mr-1.5"/> View Items
                             </Button>
-                             <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(row)}>
-                                <Edit className="h-4 w-4"/>
-                            </Button>
+                            <div className="inline-flex">
+                                <Button variant="ghost" size="icon" onClick={() => handleOpenEditDialog(row)}>
+                                    <Edit className="h-4 w-4"/>
+                                </Button>
+                                {isAdmin && (
+                                    <Button variant="ghost" size="icon" onClick={() => setEntryToDelete(row)} className="text-destructive hover:text-destructive/80">
+                                        <Trash2 className="h-4 w-4"/>
+                                    </Button>
+                                )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
@@ -322,6 +361,27 @@ export default function DR2OPage() {
           onOpenChange={setIsViewDialogOpen}
           entry={viewingEntry}
         />
+      )}
+      {entryToDelete && (
+        <AlertDialog open={!!entryToDelete} onOpenChange={() => setEntryToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5 text-destructive"/>
+                        Are you sure?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete the report from <span className="font-semibold">{format(parseISO(entryToDelete.date), 'PPP')}</span> submitted by <span className="font-semibold">{entryToDelete.crmName}</span>. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel onClick={() => setEntryToDelete(null)} disabled={isDeleting}>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleConfirmDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                        {isDeleting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Deleting...</> : "Yes, Delete"}
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
       )}
     </>
   );
