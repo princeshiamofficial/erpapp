@@ -94,8 +94,8 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
           <div className="flex items-end gap-2">
             <div className={`relative flex flex-col items-center gap-2 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
               {msg.imageUrl && (
-                  <div className="max-w-xs rounded-lg overflow-hidden border">
-                      <NextImage src={msg.imageUrl} alt="Uploaded image" width={300} height={300} className="object-cover" />
+                  <div className="w-[250px] h-[250px] rounded-lg overflow-hidden border">
+                      <NextImage src={msg.imageUrl} alt="Uploaded image" width={250} height={250} className="object-cover w-full h-full" />
                   </div>
               )}
               {msg.message && (
@@ -359,7 +359,7 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                 )}
                  {imagePreview && (
                     <div className="relative mb-2 p-2 border bg-muted rounded-t-lg">
-                        <NextImage src={imagePreview} alt="Image preview" width={80} height={80} className="rounded-md object-cover" />
+                        <NextImage src={imagePreview} alt="Image preview" width={80} height={80} className="rounded-md object-cover w-20 h-20" />
                         <Button variant="ghost" size="icon" className="absolute top-0 right-0 h-6 w-6 bg-black/50 text-white hover:bg-black/70" onClick={() => handleImageSelect(null)}>
                             <X className="h-4 w-4" />
                         </Button>
