@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -39,6 +38,31 @@ export default function DR2OPage() {
   const [editingEntry, setEditingEntry] = useState<Dr2oEntry | null>(null);
   const [viewingEntry, setViewingEntry] = useState<Dr2oEntry | null>(null);
   const [activeTab, setActiveTab] = useState<TeamType>("CR");
+
+  const isAdmin = useMemo(() => currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN', [currentUser]);
+
+  useEffect(() => {
+    if (currentUser) {
+      if (isAdmin) {
+        setActiveTab("CR"); // Default for admin
+      } else {
+        switch (currentUser.role) {
+          case 'CRM':
+            setActiveTab('CR');
+            break;
+          case 'DESIGNER_REPRESENTATIVE':
+            setActiveTab('DR');
+            break;
+          case 'LR':
+            setActiveTab('LR');
+            break;
+          default:
+            // Handle other roles or set a default if necessary
+            break;
+        }
+      }
+    }
+  }, [currentUser, isAdmin]);
 
   const fetchData = useCallback(async (team: TeamType) => {
     setIsLoading(true);
@@ -270,11 +294,13 @@ export default function DR2OPage() {
     <>
       <div className="p-4 sm:p-6 lg:p-8">
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TeamType)} className="w-full">
-            <TabsList className="inline-flex h-10 items-center justify-center text-muted-foreground bg-white p-1 rounded-full shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-                <TabsTrigger value="CR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">CR Team</TabsTrigger>
-                <TabsTrigger value="DR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">DR Team</TabsTrigger>
-                <TabsTrigger value="LR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">LR Team</TabsTrigger>
-            </TabsList>
+            {isAdmin && (
+              <TabsList className="inline-flex h-10 items-center justify-center text-muted-foreground bg-white p-1 rounded-full shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+                  <TabsTrigger value="CR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">CR Team</TabsTrigger>
+                  <TabsTrigger value="DR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">DR Team</TabsTrigger>
+                  <TabsTrigger value="LR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">LR Team</TabsTrigger>
+              </TabsList>
+            )}
             <div className="mt-6">
                 {renderActiveTabContent()}
             </div>
@@ -300,4 +326,3 @@ export default function DR2OPage() {
     </>
   );
 }
-
