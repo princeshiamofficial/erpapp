@@ -82,6 +82,9 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
     if (isCurrentUser) {
       replierName = <span className="font-semibold">You</span>;
     }
+    
+    const targetIsCurrentUser = currentUser?.name === msg.replyingTo.name;
+    const targetName = targetIsCurrentUser ? 'You' : msg.replyingTo.name;
 
     return (
       <div className="text-xs text-muted-foreground flex items-center gap-1">
@@ -91,7 +94,7 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
             {isAdminMessage && <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 text-blue-500"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></svg>}
         </div>
         {' replied to '}
-        <span className="font-semibold">{msg.replyingTo.name}</span>
+        <span className="font-semibold">{targetName}</span>
       </div>
     );
   };
