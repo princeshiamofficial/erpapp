@@ -62,7 +62,11 @@ export async function addMessageAction(
             const globalSettings = await getGlobalSettings();
             const customSoundUrl = globalSettings.toastSoundUrl;
             
-            const notificationTitle = `New Message in ${team} Case Study`;
+            let notificationTitle = `New Message in ${team} Case Study`;
+            if (replyingTo) {
+                notificationTitle = `New Reply in ${team} Case Study`;
+            }
+
             let notificationBody = `${currentUser.name}: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`;
             if (imageUrl && !message) {
               notificationBody = `${currentUser.name} sent an image.`;
@@ -70,7 +74,7 @@ export async function addMessageAction(
               notificationBody = `${currentUser.name} sent an image: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`;
             }
 
-            const targetUrl = '/'; // Or a more specific link if available
+            const targetUrl = `/?casestudy=${team}`;
 
             for (const member of teamMembers) {
                  const fcmMessage: messaging.Message = {
