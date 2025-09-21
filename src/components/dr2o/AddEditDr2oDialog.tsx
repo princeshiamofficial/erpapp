@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Calendar as CalendarIcon, PlusCircle, Trash2 } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, PlusCircle, Trash2, XCircle } from 'lucide-react';
 import type { Dr2oEntry, User, LrEntryItem } from '@/types';
 import { addDr2oEntryAction, updateDr2oEntryAction } from '@/app/(app)/workflow/actions';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
