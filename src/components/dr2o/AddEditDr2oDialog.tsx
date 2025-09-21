@@ -59,7 +59,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
         setOldCustomer2(entry.oldCustomer2 || '');
         setOldCustomer3(entry.oldCustomer3 || '');
         setOldCustomer4(entry.oldCustomer4 || '');
-        setLrItems(entry.lrItems || []);
+        setLrItems(entry.lrItems && entry.lrItems.length > 0 ? entry.lrItems : [{ id: uuidv4(), companyName: '', productName: '', productQty: 0, dueOrderName: '', dueOrderQty: 0 }]);
       } else {
         setDate(new Date());
         setNewCustomer1('');
@@ -111,7 +111,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
       crmName: isEditMode && entry ? entry.crmName : currentUser.name,
       newCustomer1, newCustomer2, newCustomer3,
       oldCustomer1, oldCustomer2, oldCustomer3, oldCustomer4,
-      lrItems: team === 'LR' ? lrItems : [],
+      lrItems: team === 'LR' ? lrItems.filter(item => item.companyName.trim() !== '' || item.productName.trim() !== '') : [],
     };
 
     let result;
@@ -155,34 +155,73 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
     if (team === 'LR') {
       return (
         <div className="space-y-4">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Company Name</TableHead>
-                <TableHead>Product Name</TableHead>
-                <TableHead>Product Qty</TableHead>
-                <TableHead>Due Order Name</TableHead>
-                <TableHead>Due Order Qty</TableHead>
-                <TableHead></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {lrItems.map((item) => (
-                <TableRow key={item.id}>
-                  <TableCell><Input value={item.companyName} onChange={e => handleLrItemChange(item.id, 'companyName', e.target.value)} className="bg-muted/50" /></TableCell>
-                  <TableCell><Input value={item.productName} onChange={e => handleLrItemChange(item.id, 'productName', e.target.value)} className="bg-muted/50" /></TableCell>
-                  <TableCell><Input type="number" value={item.productQty} onChange={e => handleLrItemChange(item.id, 'productQty', parseInt(e.target.value) || 0)} className="bg-muted/50" /></TableCell>
-                  <TableCell><Input value={item.dueOrderName} onChange={e => handleLrItemChange(item.id, 'dueOrderName', e.target.value)} className="bg-muted/50" /></TableCell>
-                  <TableCell><Input type="number" value={item.dueOrderQty} onChange={e => handleLrItemChange(item.id, 'dueOrderQty', parseInt(e.target.value) || 0)} className="bg-muted/50" /></TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => handleRemoveLrItem(item.id)} disabled={lrItems.length <= 1}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
+          {/* Mobile View */}
+          <div className="space-y-4 md:hidden">
+            {lrItems.map((item, index) => (
+              <div key={item.id} className="p-3 border rounded-lg bg-muted/30 space-y-2 relative">
+                <p className="font-semibold text-sm">Item {index + 1}</p>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                  <div className="space-y-1">
+                    <Label htmlFor={`m-companyName-${item.id}`} className="text-xs">Company Name</Label>
+                    <Input id={`m-companyName-${item.id}`} value={item.companyName} onChange={e => handleLrItemChange(item.id, 'companyName', e.target.value)} />
+                  </div>
+                   <div className="space-y-1">
+                    <Label htmlFor={`m-productName-${item.id}`} className="text-xs">Product Name</Label>
+                    <Input id={`m-productName-${item.id}`} value={item.productName} onChange={e => handleLrItemChange(item.id, 'productName', e.target.value)} />
+                  </div>
+                   <div className="space-y-1">
+                    <Label htmlFor={`m-productQty-${item.id}`} className="text-xs">Product Qty</Label>
+                    <Input id={`m-productQty-${item.id}`} type="number" value={item.productQty} onChange={e => handleLrItemChange(item.id, 'productQty', parseInt(e.target.value) || 0)} />
+                  </div>
+                   <div className="space-y-1">
+                    <Label htmlFor={`m-dueOrderName-${item.id}`} className="text-xs">Due Order Name</Label>
+                    <Input id={`m-dueOrderName-${item.id}`} value={item.dueOrderName} onChange={e => handleLrItemChange(item.id, 'dueOrderName', e.target.value)} />
+                  </div>
+                   <div className="space-y-1">
+                    <Label htmlFor={`m-dueOrderQty-${item.id}`} className="text-xs">Due Order Qty</Label>
+                    <Input id={`m-dueOrderQty-${item.id}`} type="number" value={item.dueOrderQty} onChange={e => handleLrItemChange(item.id, 'dueOrderQty', parseInt(e.target.value) || 0)} />
+                  </div>
+                </div>
+                {lrItems.length > 1 && (
+                  <Button variant="ghost" size="icon" className="absolute -top-1 -right-1 h-7 w-7" onClick={() => handleRemoveLrItem(item.id)}>
+                    <XCircle className="h-4 w-4 text-destructive" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+          
+          {/* Desktop View */}
+          <div className="hidden md:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Company Name</TableHead>
+                  <TableHead>Product Name</TableHead>
+                  <TableHead>Product Qty</TableHead>
+                  <TableHead>Due Order Name</TableHead>
+                  <TableHead>Due Order Qty</TableHead>
+                  <TableHead></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {lrItems.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell><Input value={item.companyName} onChange={e => handleLrItemChange(item.id, 'companyName', e.target.value)} className="bg-muted/50" /></TableCell>
+                    <TableCell><Input value={item.productName} onChange={e => handleLrItemChange(item.id, 'productName', e.target.value)} className="bg-muted/50" /></TableCell>
+                    <TableCell><Input type="number" value={item.productQty} onChange={e => handleLrItemChange(item.id, 'productQty', parseInt(e.target.value) || 0)} className="bg-muted/50" /></TableCell>
+                    <TableCell><Input value={item.dueOrderName} onChange={e => handleLrItemChange(item.id, 'dueOrderName', e.target.value)} className="bg-muted/50" /></TableCell>
+                    <TableCell><Input type="number" value={item.dueOrderQty} onChange={e => handleLrItemChange(item.id, 'dueOrderQty', parseInt(e.target.value) || 0)} className="bg-muted/50" /></TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => handleRemoveLrItem(item.id)} disabled={lrItems.length <= 1}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
           <Button type="button" variant="outline" size="sm" onClick={handleAddLrItem}>
             <PlusCircle className="mr-2 h-4 w-4" /> Add Row
           </Button>
