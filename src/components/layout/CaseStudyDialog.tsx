@@ -53,14 +53,46 @@ const getInitials = (name: string | undefined): string => {
   return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
-const renderTextWithMentions = (text: string) => {
+const renderTextWithMentions = (text: string, isCurrentUserMessage: boolean, currentUserName: string | undefined) => {
     if (!text) return '';
-    return text.split(/(@[a-zA-Z0-9_]+)/g).map((part, index) => {
-      if (index % 2 === 1 && part.startsWith('@')) {
-         return <strong key={index} className="text-blue-600 font-semibold">{part}</strong>;
-      }
-      return part;
-    });
+    
+    // Improved regex to capture mentions at the start of the string or preceded by whitespace
+    const regex = /(^|\s)(@([a-zA-Z0-9_]+))/g;
+  
+    // Split by the regex, keeping the delimiters
+    let parts = text.split(regex);
+  
+    // The split will result in groups: [non-mention, whitespace, full_mention, mention_name, non-mention, ...]. We process these.
+    let renderedParts = [];
+    for (let i = 0; i < parts.length; ) {
+        // Not a mention part
+        if (i % 4 === 0) {
+            renderedParts.push(parts[i]);
+            i++;
+        } else {
+            const whitespace = parts[i];
+            const fullMention = parts[i + 1];
+            const mentionName = parts[i + 2];
+            
+            // Check if the mention is the current user's name
+            const isCurrentUserMention = currentUserName && (mentionName.toLowerCase() === currentUserName.toLowerCase() || mentionName.toLowerCase() === currentUserName.replace(/\s+/g, '_').toLowerCase());
+
+            let mentionClass = "text-blue-600 font-semibold";
+            if (isCurrentUserMention && isCurrentUserMessage) {
+                mentionClass = "text-white font-semibold";
+            }
+
+            renderedParts.push(
+                <React.Fragment key={`mention-${i}`}>
+                    {whitespace}
+                    <strong className={mentionClass}>{fullMention}</strong>
+                </React.Fragment>
+            );
+            i += 3;
+        }
+    }
+  
+    return renderedParts;
 };
 
 
@@ -125,7 +157,7 @@ const ChatMessage = ({ msg, isCurrentUser, currentUser, onReply, onDelete, canDe
               )}
               {msg.message && (
                 <div className={`max-w-xs rounded-2xl p-3 ${isCurrentUser ? 'bg-primary text-primary-foreground rounded-br-none' : 'bg-muted rounded-bl-none'} ${msg.replyingTo ? (isCurrentUser ? '!rounded-tr-md' : '!rounded-tl-md') : ''}`}>
-                  <p className="text-sm">{renderTextWithMentions(msg.message)}</p>
+                  <p className="text-sm">{renderTextWithMentions(msg.message, isCurrentUser, currentUser?.name)}</p>
                 </div>
               )}
               <div className="flex shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -217,7 +249,7 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
     if (isOpen && selectedTeam) {
       const intervalId = setInterval(() => {
         fetchMessagesAndUsers(true);
-      }, 30000); // 30 seconds
+      }, 15000); // 15 seconds
 
       return () => clearInterval(intervalId);
     }
