@@ -304,9 +304,10 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
             
             const usersToSearchFromProp = (Array.isArray(allUsers) ? allUsers : [])
               .filter(user => 
-                user.role === relevantRole || 
+                user.id !== currentUser?.id && // Exclude current user
+                (user.role === relevantRole || 
                 user.role === 'ADMIN' || 
-                user.role === 'SYSTEM_ADMIN'
+                user.role === 'SYSTEM_ADMIN')
               );
 
             const filtered = usersToSearchFromProp.filter(user => user.name.toLowerCase().includes(textAfterAt.toLowerCase())).slice(0, 5);
