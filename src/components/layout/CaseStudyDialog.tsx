@@ -485,7 +485,7 @@ export function CaseStudyDialog({ children }: CaseStudyDialogProps) {
                                             <Avatar className="h-6 w-6 text-xs"><AvatarImage src={user.avatarUrl || undefined} /><AvatarFallback className="bg-muted text-xs">{getInitials(user.name)}</AvatarFallback></Avatar>
                                             <span className="text-xs font-medium">{user.name}</span>
                                             {(user.role === 'ADMIN' || user.role === 'SYSTEM_ADMIN') && (
-                                                <ShieldCheck className="h-4 w-4 text-blue-500" />
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-blue-500"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="m9 12 2 2 4-4"/></svg>
                                             )}
                                         </CommandItem>
                                     ))}
