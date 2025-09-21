@@ -314,11 +314,11 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
             if (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') {
                 userBreakdown = Object.entries(userData)
                     .map(([userId, data]: [string, any]) => ({ user: userMap.get(userId), done: data.done }))
-                    .filter(item => item.user && item.done > 0)
+                    .filter(item => item.user && item.done >= 0) // Show users with 0 tasks as well
                     .sort((a,b) => b.done - a.done) as { user: UserType, done: number }[];
             } else {
                  userBreakdown = Object.entries(userData)
-                    .filter(([userId, data]: [string, any]) => data.role === currentUser.role && data.done > 0)
+                    .filter(([userId, data]: [string, any]) => data.role === currentUser.role && data.done >= 0) // Show users with 0 tasks as well
                     .map(([userId, data]: [string, any]) => ({ user: userMap.get(userId), done: data.done }))
                     .filter(item => item.user)
                     .sort((a,b) => b.done - a.done) as { user: UserType, done: number }[];
