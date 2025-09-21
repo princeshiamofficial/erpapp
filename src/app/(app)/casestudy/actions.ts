@@ -71,7 +71,7 @@ export async function addMessageAction(
             if (imageUrl && !message) {
               notificationBody = `${currentUser.name} sent an image.`;
             } else if (imageUrl && message) {
-              notificationBody = `${currentUser.name} sent an image: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`;
+              notificationBody = `${currentUser.name}: ${message.substring(0, 80)}${message.length > 80 ? '...' : ''}`;
             }
 
             const targetUrl = `/?casestudy=${team}`;
@@ -91,9 +91,12 @@ export async function addMessageAction(
                       click_action: targetUrl, 
                       ...(customSoundUrl && { customSoundUrl }),
                       ...(imageUrl && { imageUrl }),
+                      icon: currentUser.avatarUrl || '/icons/icon-192x192.png',
                     },
                     webpush: { 
                       notification: { 
+                        title: notificationTitle,
+                        body: notificationBody,
                         icon: currentUser.avatarUrl || '/icons/icon-192x192.png',
                         ...(imageUrl && { image: imageUrl }),
                         ...(customSoundUrl ? { sound: customSoundUrl } : { sound: "default" }) 
