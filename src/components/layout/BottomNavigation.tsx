@@ -28,16 +28,10 @@ export function BottomNavigation() {
   }, []);
 
   const getTranslateX = () => {
-    const activeIndex = navItems.findIndex(item => {
-        if (item.href === "/attendance") {
-            return pathname === "/attendance" || pathname === "/attendance/home";
-        }
-        return pathname.startsWith(item.href);
-    });
-
-    if (activeIndex === 1) return '0px'; // History
-    if (activeIndex === 2) return '80px'; // Profile
-    return '-80px'; // Home (index 0)
+    if (pathname.startsWith('/attendance/history')) return '0px';
+    if (pathname.startsWith('/attendance/profile')) return '80px';
+    // Default to 'Home' for /attendance or /attendance/home
+    return '-80px';
   };
   
   const isNavItemActive = (itemHref: string) => {
