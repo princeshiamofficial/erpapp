@@ -3,49 +3,47 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ShoppingCart, Briefcase } from "lucide-react";
+import { Home, History, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/projects", label: "Projects", icon: Briefcase },
-  { href: "/purchase-request", label: "Request", icon: ShoppingCart },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+const navItems: NavItem[] = [
+  { href: "/attendance", label: "Home", icon: Home },
+  { href: "/attendance/history", label: "History", icon: History },
 ];
 
 export function BottomNavigation() {
   const pathname = usePathname();
 
   return (
-    <div className="fixed bottom-0 left-0 z-50 w-full h-20 bg-card border-t border-border md:hidden">
-      <div className="grid h-full max-w-lg grid-cols-3 mx-auto">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm md:hidden z-50">
+      <div className="bg-green-600 text-white rounded-full shadow-lg p-2 flex justify-around items-center">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+          const isActive = pathname === item.href;
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "inline-flex flex-col items-center justify-center p-2 hover:bg-muted group transition-colors",
-                !isActive && "text-muted-foreground"
+                "flex flex-col items-center justify-center gap-1 p-2 rounded-full w-20 transition-all",
+                isActive ? "bg-white/20" : ""
               )}
             >
-              <div
+              <item.icon
                 className={cn(
-                  "flex items-center justify-center w-12 h-12 rounded-full transition-colors",
-                  isActive ? "bg-primary" : "bg-transparent group-hover:bg-muted"
+                  "w-6 h-6",
+                  isActive ? "text-white" : "text-white/80"
                 )}
-              >
-                <item.icon
-                  className={cn(
-                    "w-6 h-6",
-                    isActive ? "text-primary-foreground" : ""
-                  )}
-                />
-              </div>
+              />
               <span
                 className={cn(
-                  "text-xs font-medium mt-1 transition-colors",
-                  isActive ? "text-primary" : ""
+                  "text-xs font-medium",
+                  isActive ? "text-white" : "text-white/80"
                 )}
               >
                 {item.label}

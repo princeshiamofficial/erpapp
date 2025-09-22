@@ -18,6 +18,11 @@ export default function CheckInOutPage() {
   const [checkOutTime, setCheckOutTime] = useState<Date | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const { toast } = useToast();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -63,12 +68,12 @@ export default function CheckInOutPage() {
     return '00:00';
   };
   
-  const getGreeting = () => {
+  const getGreeting = useCallback(() => {
     const hour = currentTime.getHours();
     if (hour < 12) return 'Good morning';
     if (hour < 18) return 'Good afternoon';
     return 'Good evening';
-  }
+  }, [currentTime]);
   
   const name = currentUser?.name.split(' ')[0] || 'User';
 
@@ -79,17 +84,17 @@ export default function CheckInOutPage() {
         <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
           Hey {name}!
         </h1>
-        <p className="text-gray-600 dark:text-gray-400">{getGreeting()}, mark your attendance.</p>
+        {isClient && <p className="text-gray-600 dark:text-gray-400">{getGreeting()}, mark your attendance.</p>}
       </div>
 
       {/* Main Content */}
       <div className="flex flex-col items-center justify-center flex-grow w-full">
         <div className="text-center mb-10">
           <p className="text-5xl sm:text-6xl font-bold text-gray-800 dark:text-gray-200 font-mono tracking-tighter">
-            {format(currentTime, 'h:mm:ss a')}
+            {isClient ? format(currentTime, 'h:mm:ss a') : '--:--:--'}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {format(currentTime, "eeee, MMMM d, yyyy")}
+            {isClient ? format(currentTime, "eeee, MMMM d, yyyy") : 'Loading...'}
           </p>
         </div>
 
@@ -123,7 +128,7 @@ export default function CheckInOutPage() {
         <div className="border-l border-r border-gray-200 dark:border-gray-700">
           <p className="text-xs text-gray-500 dark:text-gray-400">Hours</p>
           <p className="font-bold text-lg text-gray-800 dark:text-gray-200">
-            {calculateHoursWorked()}
+            {isClient ? calculateHoursWorked() : '--:--'}
           </p>
         </div>
         <div>
@@ -131,20 +136,6 @@ export default function CheckInOutPage() {
           <p className="font-bold text-lg text-red-600">
             {checkOutTime ? format(checkOutTime, 'h:mm a') : '--:--'}
           </p>
-        </div>
-      </div>
-
-      {/* Bottom Nav */}
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm">
-        <div className="bg-green-600 text-white rounded-full shadow-lg p-2 flex justify-around items-center">
-          <Link href="/attendance/home" className="flex flex-col items-center justify-center gap-1 p-2 rounded-full">
-            <Home className="h-6 w-6" />
-            <span className="text-xs font-medium">Home</span>
-          </Link>
-          <Link href="#" className="flex flex-col items-center justify-center gap-1 p-2 rounded-full opacity-70">
-            <History className="h-6 w-6" />
-            <span className="text-xs font-medium">History</span>
-          </Link>
         </div>
       </div>
     </div>
