@@ -54,7 +54,7 @@ export default function AttendanceHistoryPage() {
           <CardContent>
             {/* Calendar Strip */}
             <div className="mb-6">
-              <ScrollArea className="w-full whitespace-nowrap rounded-md">
+              <ScrollArea className="w-full whitespace-nowrap rounded-md custom-scrollbar-hidden">
                 <div className="flex space-x-3 pb-4">
                   {calendarDays.map(day => {
                     const record = MOCK_ATTENDANCE_DATA.find(d => format(d.date, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
