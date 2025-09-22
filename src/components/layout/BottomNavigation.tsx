@@ -28,26 +28,12 @@ export function BottomNavigation() {
   }, []);
 
   const getTranslateX = () => {
-    // This logic now runs only on the client due to the isClient check below
-    const itemIndex = navItems.findIndex(item => {
-      // Use exact match for home, and startsWith for others.
-      if (item.href === "/attendance") {
-        return pathname === "/attendance" || pathname === "/attendance/home";
-      }
-      return pathname.startsWith(item.href);
-    });
-
-    switch (itemIndex) {
-      case 0: return '-80px';
-      case 1: return '0px';
-      case 2: return '80px';
-      default:
-        // A more robust default: if we are on a sub-page of attendance, default to Home.
-        if (pathname.startsWith('/attendance')) {
-            return '-80px';
-        }
-        return '0px'; // Fallback
-    }
+    if (pathname.startsWith('/attendance/history')) return '0px';
+    if (pathname.startsWith('/attendance/profile')) return '80px';
+    // Default to Home for /attendance or /attendance/home
+    if (pathname === '/attendance' || pathname === '/attendance/home') return '-80px';
+    // Fallback for any other /attendance sub-route
+    return '-80px';
   }
 
   return (
@@ -59,17 +45,21 @@ export function BottomNavigation() {
           }}/>
         )}
         {navItems.map((item) => {
-          // This logic also only runs on the client, ensuring consistency.
-          const isActive = isClient && (
-            item.href === "/attendance" 
-            ? (pathname === "/attendance" || pathname === "/attendance/home")
-            : pathname.startsWith(item.href)
-          );
+          let isActive = false;
+          if (isClient) {
+            if (item.href === "/attendance/history") {
+              isActive = pathname.startsWith('/attendance/history');
+            } else if (item.href === "/attendance/profile") {
+              isActive = pathname.startsWith('/attendance/profile');
+            } else { // Home
+              isActive = pathname === '/attendance' || pathname === '/attendance/home';
+            }
+          }
           
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={item.href === "/attendance" ? "/attendance/home" : item.href}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 p-2 rounded-full w-20 transition-all",
               )}
