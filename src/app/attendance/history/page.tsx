@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -45,20 +46,20 @@ const MOCK_ATTENDANCE_DATA: MockAttendanceEvent[] = [
 
 
 const STATUS_STYLES: Record<AttendanceStatus, { bg: string; text: string; dot: string }> = {
-  'On Time': { bg: 'bg-lime-100 dark:bg-lime-900/40', text: 'text-lime-700 dark:text-lime-300', dot: 'bg-lime-500' },
-  'Late': { bg: 'bg-yellow-100 dark:bg-yellow-900/40', text: 'text-yellow-700 dark:text-yellow-400', dot: 'bg-yellow-500' },
-  'Absent': { bg: 'bg-orange-100 dark:bg-orange-900/40', text: 'text-orange-700 dark:text-orange-400', dot: 'bg-orange-500' },
-  'On Leave': { bg: 'bg-violet-100 dark:bg-violet-900/40', text: 'text-violet-700 dark:text-violet-400', dot: 'bg-violet-500' },
-  'Holiday': { bg: 'bg-rose-100 dark:bg-rose-900/40', text: 'text-rose-700 dark:text-rose-400', dot: 'bg-rose-500' },
-  'Working': { bg: 'bg-gray-200 dark:bg-gray-700/40', text: 'text-gray-700 dark:text-gray-300', dot: 'bg-gray-500' },
+  'On Time': { bg: 'bg-lime-100 dark:bg-lime-900/40', text: 'text-lime-700 dark:text-lime-300', dot: '#84cc16' },
+  'Late': { bg: 'bg-yellow-100 dark:bg-yellow-900/40', text: 'text-yellow-700 dark:text-yellow-400', dot: '#f59e0b' },
+  'Absent': { bg: 'bg-orange-100 dark:bg-orange-900/40', text: 'text-orange-700 dark:text-orange-400', dot: '#f97316' },
+  'On Leave': { bg: 'bg-violet-100 dark:bg-violet-900/40', text: 'text-violet-700 dark:text-violet-400', dot: '#8b5cf6' },
+  'Holiday': { bg: 'bg-rose-100 dark:bg-rose-900/40', text: 'text-rose-700 dark:text-rose-400', dot: '#f43f5e' },
+  'Working': { bg: 'bg-gray-200 dark:bg-gray-700/40', text: 'text-gray-700 dark:text-gray-300', dot: '#a1a1aa' },
 };
 
 
 const chartData = [
-  { name: 'On Time', value: 15, fill: STATUS_STYLES['On Time'].dot },
-  { name: 'Late', value: 3, fill: STATUS_STYLES['Late'].dot },
-  { name: 'Absent', value: 4, fill: STATUS_STYLES['Absent'].dot },
-  { name: 'Working', value: 8, fill: STATUS_STYLES['Working'].dot }, // Remaining days in a 30-day month
+  { name: 'On Time', value: 15, fill: '#22c55e' }, // Brighter Green
+  { name: 'Late', value: 3, fill: '#f59e0b' }, // Amber
+  { name: 'Absent', value: 4, fill: '#ef4444' }, // Red
+  { name: 'Working', value: 8, fill: '#a8a29e' }, // Muted Gray
 ];
 
 // Custom Day component to render status tags
@@ -91,7 +92,7 @@ const DayWithStatus = ({ date, selected }: { date: Date; selected: boolean | und
 
 const LegendItem = ({ color, label }: { color: string, label: string }) => (
     <div className="flex items-center gap-2">
-        <div className={cn("h-3 w-3 rounded-full", color)}></div>
+        <div className="h-3 w-3 rounded-full" style={{ backgroundColor: color }}></div>
         <span className="text-xs text-muted-foreground">{label}</span>
     </div>
 );
