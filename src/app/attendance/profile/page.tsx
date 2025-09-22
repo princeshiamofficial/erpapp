@@ -69,19 +69,7 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-1">
             <ProfileLink href="#" icon={UserIcon} label="Edit Profile Information" />
-            <ProfileLink href="#" icon={Shield} label="Security & Password" />
-          </CardContent>
-        </Card>
-
-        {/* Settings Section */}
-        <Card className="bg-card shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Settings</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
             <ProfileLink href="#" icon={Bell} label="Notifications" />
-            <ProfileLink href="#" icon={Palette} label="Appearance" />
-            <ProfileLink href="/dashboard" icon={Settings} label="Go to App Settings" />
           </CardContent>
         </Card>
 
