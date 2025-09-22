@@ -58,20 +58,29 @@ const STATUS_STYLES: Record<AttendanceStatus, { bg: string; text: string; dot: s
 const chartData = [
   { name: 'On Time', value: 15, fill: '#A3CC39' },
   { name: 'Late', value: 3, fill: '#F2C94C' },
-  { name: '30 working days', value: 8, fill: '#4F4F4F' },
+  { name: 'Working days', value: 30, fill: '#4F4F4F' },
   { name: 'Absent', value: 4, fill: '#F2994A' },
 ];
 
 const RADIAN = Math.PI / 180;
 const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, payload }: any) => {
-  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-  const labelRadius = outerRadius + 20;
-  const x = cx + labelRadius * Math.cos(-midAngle * RADIAN);
-  const y = cy + labelRadius * Math.sin(-midAngle * RADIAN);
+  const radius = outerRadius + 25; // Move labels further out
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  const textAnchor = x > cx ? 'start' : 'end';
 
+  // Only show the label for "Working days" and position it at the bottom
+  if (payload.name === 'Working days') {
+    return (
+       <text x={cx} y={cy + outerRadius + 20} textAnchor="middle" dominantBaseline="central" className="text-sm font-semibold fill-gray-600 dark:fill-gray-400">
+        {`${payload.value} working days`}
+      </text>
+    );
+  }
+  
   return (
-    <text x={x} y={y} fill="#6b7280" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="text-xs font-medium">
-      {`${payload.name} ${payload.value > 0 ? `${payload.value} days` : ''}`}
+    <text x={x} y={y} fill="#6b7280" textAnchor={textAnchor} dominantBaseline="central" className="text-xs font-medium">
+      {`${payload.name} ${payload.value} days`}
     </text>
   );
 };
@@ -175,7 +184,7 @@ export default function AttendanceHistoryPage() {
                         outerRadius={70} 
                         paddingAngle={2} 
                         dataKey="value"
-                        labelLine={false}
+                        labelLine={true}
                         label={renderCustomizedLabel}
                     >
                         {chartData.map((entry, index) => (
