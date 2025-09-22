@@ -1,18 +1,21 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { LogIn, LogOut, Clock } from 'lucide-react';
+import { LogIn, LogOut, Clock, Fingerprint, Home, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
+import { format, differenceInHours, differenceInMinutes } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
+import { motion } from 'framer-motion';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 export default function CheckInOutPage() {
   const { currentUser } = useAuth();
   const [status, setStatus] = useState<'Checked In' | 'Checked Out'>('Checked Out');
-  const [lastActionTime, setLastActionTime] = useState<Date | null>(null);
+  const [checkInTime, setCheckInTime] = useState<Date | null>(null);
+  const [checkOutTime, setCheckOutTime] = useState<Date | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const { toast } = useToast();
 
@@ -24,13 +27,11 @@ export default function CheckInOutPage() {
   }, []);
 
   const handleCheckIn = () => {
-    if (status === 'Checked In') {
-        toast({ title: "Already Checked In", description: "You are already checked in for the day.", variant: "default" });
-        return;
-    }
-    setStatus('Checked In');
+    if (status === 'Checked In') return;
     const now = new Date();
-    setLastActionTime(now);
+    setStatus('Checked In');
+    setCheckInTime(now);
+    setCheckOutTime(null); // Reset checkout time on new check-in
     toast({
       title: "Checked In Successfully",
       description: `You checked in at ${format(now, 'h:mm:ss a')}.`,
@@ -38,69 +39,114 @@ export default function CheckInOutPage() {
   };
 
   const handleCheckOut = () => {
-     if (status === 'Checked Out') {
-        toast({ title: "Already Checked Out", description: "You have already checked out.", variant: "default" });
-        return;
-    }
-    setStatus('Checked Out');
+    if (status === 'Checked Out' || !checkInTime) return;
     const now = new Date();
-    setLastActionTime(now);
+    setStatus('Checked Out');
+    setCheckOutTime(now);
     toast({
       title: "Checked Out Successfully",
       description: `You checked out at ${format(now, 'h:mm:ss a')}.`,
     });
   };
 
-  return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-gray-900 dark:via-gray-800 dark:to-black p-4">
-      <Card className="w-full max-w-md shadow-2xl bg-card/95 backdrop-blur-md border-border/30 dark:border-border/50 rounded-xl">
-        <CardHeader className="text-center space-y-2 pt-8">
-          <Clock className="mx-auto h-12 w-12 text-primary" />
-          <CardTitle className="text-3xl font-bold tracking-tight">Attendance</CardTitle>
-          <CardDescription>
-            {format(currentTime, "eeee, MMMM d, yyyy")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="py-8 px-6 space-y-8">
-            <div className="text-center bg-muted/50 dark:bg-muted/30 p-6 rounded-lg border border-dashed">
-                <p className="text-5xl font-mono font-bold text-foreground">
-                    {format(currentTime, 'h:mm:ss a')}
-                </p>
-            </div>
-          
-            <div className="text-center">
-                 <p className="text-sm text-muted-foreground mb-1">Your current status:</p>
-                 <p className={`text-lg font-semibold ${status === 'Checked In' ? 'text-green-600' : 'text-red-600'}`}>
-                    {status}
-                 </p>
-                 {lastActionTime && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                        Last action at {format(lastActionTime, 'h:mm a')}
-                    </p>
-                 )}
-            </div>
+  const calculateHoursWorked = () => {
+    if (checkInTime && checkOutTime) {
+      const hours = differenceInHours(checkOutTime, checkInTime);
+      const minutes = differenceInMinutes(checkOutTime, checkInTime) % 60;
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+    if (checkInTime && status === 'Checked In') {
+        const hours = differenceInHours(new Date(), checkInTime);
+        const minutes = differenceInMinutes(new Date(), checkInTime) % 60;
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+    return '00:00';
+  };
+  
+  const getGreeting = () => {
+    const hour = currentTime.getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  }
+  
+  const name = currentUser?.name.split(' ')[0] || 'User';
 
-          <div className="grid grid-cols-2 gap-4">
-            <Button 
-                size="lg" 
-                className="h-16 text-lg" 
-                onClick={handleCheckIn} 
-                disabled={status === 'Checked In'}
-            >
-              <LogIn className="mr-2 h-6 w-6" /> Check In
-            </Button>
-            <Button 
-                size="lg" 
-                variant="destructive" 
-                className="h-16 text-lg bg-red-600 hover:bg-red-700" 
-                onClick={handleCheckOut}
-                disabled={status === 'Checked Out'}
-            >
-              <LogOut className="mr-2 h-6 w-6" /> Check Out
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-between bg-gray-100 dark:bg-gray-900 p-4 sm:p-6 pb-28">
+      {/* Header */}
+      <div className="w-full max-w-md text-left">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+          Hey {name}!
+        </h1>
+        <p className="text-gray-600 dark:text-gray-400">{getGreeting()}, mark your attendance.</p>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex flex-col items-center justify-center flex-grow w-full">
+        <div className="text-center mb-10">
+          <p className="text-5xl sm:text-6xl font-bold text-gray-800 dark:text-gray-200 font-mono tracking-tighter">
+            {format(currentTime, 'h:mm:ss a')}
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {format(currentTime, "eeee, MMMM d, yyyy")}
+          </p>
+        </div>
+
+        <motion.div
+          key={status}
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+        >
+          <Button
+            className={cn(
+              "h-48 w-48 sm:h-56 sm:w-56 rounded-full text-2xl font-bold shadow-2xl flex flex-col items-center justify-center transition-all duration-300 transform hover:scale-105",
+              status === 'Checked Out' ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-red-500 hover:bg-red-600 text-white'
+            )}
+            onClick={status === 'Checked Out' ? handleCheckIn : handleCheckOut}
+          >
+            <Fingerprint className="h-16 w-16 mb-2" />
+            {status === 'Checked Out' ? 'Check In' : 'Check Out'}
+          </Button>
+        </motion.div>
+      </div>
+
+      {/* Bottom Panel */}
+      <div className="w-full max-w-md bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-lg grid grid-cols-3 gap-2 text-center">
+        <div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Check-in</p>
+          <p className="font-bold text-lg text-green-600">
+            {checkInTime ? format(checkInTime, 'h:mm a') : '--:--'}
+          </p>
+        </div>
+        <div className="border-l border-r border-gray-200 dark:border-gray-700">
+          <p className="text-xs text-gray-500 dark:text-gray-400">Hours</p>
+          <p className="font-bold text-lg text-gray-800 dark:text-gray-200">
+            {calculateHoursWorked()}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Check-out</p>
+          <p className="font-bold text-lg text-red-600">
+            {checkOutTime ? format(checkOutTime, 'h:mm a') : '--:--'}
+          </p>
+        </div>
+      </div>
+
+      {/* Bottom Nav */}
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm">
+        <div className="bg-green-600 text-white rounded-full shadow-lg p-2 flex justify-around items-center">
+          <Link href="/attendance/home" className="flex flex-col items-center justify-center gap-1 p-2 rounded-full">
+            <Home className="h-6 w-6" />
+            <span className="text-xs font-medium">Home</span>
+          </Link>
+          <Link href="#" className="flex flex-col items-center justify-center gap-1 p-2 rounded-full opacity-70">
+            <History className="h-6 w-6" />
+            <span className="text-xs font-medium">History</span>
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }
