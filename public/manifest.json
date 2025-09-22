@@ -1,26 +1,20 @@
-
 {
-  "name": "Color Hut App",
-  "short_name": "ColorHut",
-  "start_url": "/",
+  "name": "Color Hut Attendance",
+  "short_name": "Attendance",
+  "start_url": "/attendance",
   "display": "standalone",
-  "background_color": "#FFFFFF",
+  "background_color": "#ffffff",
   "theme_color": "#EF6C00",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable",
-      "data-ai-hint": "app logo"
+      "type": "image/png"
     },
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable",
-      "data-ai-hint": "app logo large"
+      "type": "image/png"
     }
-  ],
-  "gcm_sender_id": "103953800507"
+  ]
 }
