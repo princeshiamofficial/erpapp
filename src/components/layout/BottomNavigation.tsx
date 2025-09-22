@@ -13,7 +13,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/attendance", label: "Home", icon: Home },
+  { href: "/attendance/home", label: "Home", icon: Home },
   { href: "/attendance/history", label: "History", icon: History },
   { href: "/attendance/profile", label: "Profile", icon: UserIcon },
 ];
@@ -22,7 +22,14 @@ export function BottomNavigation() {
   const pathname = usePathname();
 
   const getTranslateX = () => {
-    const itemIndex = navItems.findIndex(item => pathname.startsWith(item.href));
+    const itemIndex = navItems.findIndex(item => {
+        // Special check for home, as it could be /attendance or /attendance/home
+        if (item.href === "/attendance/home") {
+            return pathname === "/attendance" || pathname.startsWith("/attendance/home");
+        }
+        return pathname.startsWith(item.href)
+    });
+    
     switch (itemIndex) {
       case 0: return '-80px'; // Home
       case 1: return '0px';   // History
@@ -38,7 +45,11 @@ export function BottomNavigation() {
             transform: `translateX(${getTranslateX()})`
         }}/>
         {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
+          // Special active check for home
+          const isActive = item.href === "/attendance/home"
+            ? (pathname === "/attendance" || pathname.startsWith("/attendance/home"))
+            : pathname.startsWith(item.href);
+          
           return (
             <Link
               key={item.href}
