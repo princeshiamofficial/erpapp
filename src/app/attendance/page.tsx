@@ -7,11 +7,10 @@ import { LogIn, LogOut, Clock, Fingerprint, Home, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInHours, differenceInMinutes } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
-import { motion, useAnimationControls } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
-
-const LONG_PRESS_DURATION = 1000; // 1 second
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 
 export default function CheckInOutPage() {
   const { currentUser } = useAuth();
@@ -21,10 +20,7 @@ export default function CheckInOutPage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
-
-  const [isPressing, setIsPressing] = useState(false);
-  const progressControls = useAnimationControls();
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -37,36 +33,13 @@ export default function CheckInOutPage() {
     return () => clearInterval(timer);
   }, []);
 
-  const handleAction = () => {
+  const handleActionConfirm = () => {
     if (status === 'Checked Out') {
       handleCheckIn();
     } else {
       handleCheckOut();
     }
-  };
-  
-  const startPress = () => {
-    setIsPressing(true);
-    progressControls.start({
-      pathLength: 1,
-      transition: { duration: LONG_PRESS_DURATION / 1000, ease: "linear" }
-    });
-    timerRef.current = setTimeout(() => {
-      handleAction();
-      setIsPressing(false); // Action triggered, reset pressing state
-    }, LONG_PRESS_DURATION);
-  };
-  
-  const stopPress = () => {
-    setIsPressing(false);
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-    progressControls.start({
-      pathLength: 0,
-      transition: { duration: 0.2 }
-    });
+    setIsSheetOpen(false);
   };
 
   const handleCheckIn = () => {
@@ -143,33 +116,14 @@ export default function CheckInOutPage() {
           transition={{ type: 'spring', stiffness: 260, damping: 20 }}
           className="relative"
         >
-          <motion.svg
-            className="absolute inset-0 h-full w-full"
-            viewBox="0 0 100 100"
-            style={{ transform: 'rotate(-90deg)' }}
-          >
-            <motion.circle
-              cx="50"
-              cy="50"
-              r="48"
-              stroke="#FFFFFF"
-              strokeWidth="4"
-              fill="transparent"
-              initial={{ pathLength: 0 }}
-              animate={progressControls}
-            />
-          </motion.svg>
           <Button
             className={cn(
               "h-48 w-48 sm:h-56 sm:w-56 rounded-full text-2xl font-bold flex flex-col items-center justify-center transition-all duration-300 transform",
-              "shadow-[inset_4px_4px_8px_rgba(255,255,255,0.5),_inset_-4px_-4px_8px_rgba(0,0,0,0.1),_8px_8px_16px_rgba(0,0,0,0.2)]",
+              "shadow-[inset_4px_4px_8px_rgba(255,255,255,0.4),_inset_-4px_-4px_8px_rgba(0,0,0,0.1),_8px_8px_16px_rgba(0,0,0,0.1)]",
+              "hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),_inset_-2px_-2px_4px_rgba(0,0,0,0.15),_4px_4px_8px_rgba(0,0,0,0.1)]",
               status === 'Checked Out' ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-red-500 hover:bg-red-600 text-white'
             )}
-            onMouseDown={startPress}
-            onMouseUp={stopPress}
-            onMouseLeave={stopPress}
-            onTouchStart={startPress}
-            onTouchEnd={stopPress}
+            onClick={() => setIsSheetOpen(true)}
           >
             <Fingerprint className="h-20 w-20 mb-2" />
             {status === 'Checked Out' ? 'Check In' : 'Check Out'}
@@ -198,6 +152,28 @@ export default function CheckInOutPage() {
           </p>
         </div>
       </div>
+      
+      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+        <SheetContent side="bottom" className="w-full max-w-lg mx-auto rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle className="text-center text-xl">Confirm Action</SheetTitle>
+            <SheetDescription className="text-center">
+              You are about to {status === 'Checked Out' ? 'check in' : 'check out'}.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="py-8 text-center">
+            <Button
+              onClick={handleActionConfirm}
+              className={cn(
+                  "h-20 w-full text-lg font-semibold rounded-xl",
+                  status === 'Checked Out' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'
+              )}
+            >
+              Confirm {status === 'Checked Out' ? 'Check In' : 'Check Out'}
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
