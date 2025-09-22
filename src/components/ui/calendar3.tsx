@@ -1,13 +1,13 @@
-
 "use client"
 
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { DayPicker } from "react-day-picker"
-import { format } from "date-fns"
+import { DayPicker, DropdownProps } from "react-day-picker"
+import { format, getMonth, getYear } from "date-fns"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./select"
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
@@ -20,34 +20,31 @@ function Calendar3({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-4 sm:p-6 rounded-2xl bg-background shadow-sm", className)}
+      className={cn("p-0", className)}
       classNames={{
-        months: "flex flex-col sm:flex-row gap-6",
+        months: "flex flex-col",
         month: "space-y-3",
-        caption: "flex justify-center pt-1 relative items-center",
+        caption: "hidden", // We use a custom header outside the calendar
         caption_label: "text-lg font-semibold",
-        nav: "flex items-center gap-2",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
-          "h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-transparent p-0 opacity-60 hover:opacity-100 transition"
+          "h-8 w-8 rounded-full bg-transparent p-0 opacity-60 hover:opacity-100 transition"
         ),
-        nav_button_previous: "absolute left-1 sm:left-2",
-        nav_button_next: "absolute right-1 sm:right-2",
         table: "w-full border-collapse",
-        head_row: "flex",
+        head_row: "flex justify-around",
         head_cell:
-          "text-muted-foreground rounded-md flex-1 font-medium text-[0.8rem] sm:text-sm text-center",
-        row: "flex w-full mt-1 sm:mt-2",
-        cell: "flex-1 aspect-square relative text-center text-sm p-0 focus-within:z-20",
+          "text-muted-foreground rounded-md w-full font-medium text-xs sm:text-sm text-center",
+        row: "flex w-full mt-2 justify-around",
+        cell: "flex-1 h-14 relative text-center text-sm p-0 focus-within:z-20",
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-full w-full flex items-center justify-center font-normal rounded-full transition aria-selected:opacity-100"
+          "h-full w-full p-0 font-normal aria-selected:opacity-100 rounded-md"
         ),
         day_selected:
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
         day_today:
           "bg-accent text-accent-foreground font-semibold",
-        day_outside: "text-muted-foreground opacity-40",
+        day_outside: "text-muted-foreground opacity-30",
         day_disabled: "text-muted-foreground opacity-30 cursor-not-allowed",
         day_range_middle:
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
@@ -55,19 +52,12 @@ function Calendar3({
         ...classNames,
       }}
       formatters={{
-        formatWeekdayName: (day, options) => {
-          const isFriday = day.getDay() === 5
-          const dayColorClass = isFriday ? "text-destructive" : "text-foreground"
-          return (
-            <span className={cn("font-semibold", dayColorClass)}>
-              {format(day, "EE", { locale: options?.locale })}
-            </span>
-          )
-        },
+        formatWeekdayName: (day) => format(day, "EEEEE"), // Single letter for day of the week
       }}
       components={{
-        IconLeft: () => <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />,
-        IconRight: () => <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />,
+        // We're not using the internal nav buttons, so they can be empty
+        IconLeft: () => <></>,
+        IconRight: () => <></>,
       }}
       {...props}
     />
