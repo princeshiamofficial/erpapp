@@ -38,17 +38,8 @@ export default async function AuthenticatedLayout({
   const headersList = headers();
   const pathname = headersList.get('x-next-pathname') || '';
   
-  const isAttendanceRoute = pathname.startsWith('/attendance');
-
-  if (isAttendanceRoute) {
-    return (
-      <AppProviders initialUser={currentUser} initialGlobalSettings={globalSettings}>
-        <main className="flex-1 bg-background">
-          {children}
-        </main>
-      </AppProviders>
-    );
-  }
+  // This logic is now handled by moving the attendance routes out of the (app) group.
+  // We keep the rest of the layout logic.
   
   const isMobile = (header: string | null) => {
     if (!header) return false;
