@@ -106,8 +106,8 @@ export default function CheckInOutPage() {
         >
           <Button
             className={cn(
-              "h-48 w-48 sm:h-56 sm:w-56 rounded-full text-2xl font-bold shadow-2xl flex flex-col items-center justify-center transition-all duration-300 transform hover:scale-105",
-              status === 'Checked Out' ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-red-500 hover:bg-red-600 text-white'
+              "h-48 w-48 sm:h-56 sm:w-56 rounded-full text-2xl font-bold shadow-2xl flex flex-col items-center justify-center transition-all duration-300 transform hover:scale-105 ring-1 ring-inset ring-white/20",
+              status === 'Checked Out' ? 'bg-green-500 hover:bg-green-600 text-white shadow-green-500/40' : 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/40'
             )}
             onClick={status === 'Checked Out' ? handleCheckIn : handleCheckOut}
           >
