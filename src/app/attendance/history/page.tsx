@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, subDays, addDays } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Calendar, Clock, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, CheckCircle2, AlertCircle, ArrowLeft, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -105,4 +105,3 @@ export default function AttendanceHistoryPage() {
     </div>
   );
 }
-
