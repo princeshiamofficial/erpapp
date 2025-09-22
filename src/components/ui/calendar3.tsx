@@ -17,38 +17,38 @@ function Calendar3({
   showOutsideDays = true,
   ...props
 }: CalendarProps) {
-
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
+      className={cn("p-4 sm:p-6 rounded-2xl bg-background shadow-sm", className)}
       classNames={{
-        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month: "space-y-4",
+        months: "flex flex-col sm:flex-row gap-6",
+        month: "space-y-3",
         caption: "flex justify-center pt-1 relative items-center",
-        caption_label: "text-base font-semibold",
-        nav: "space-x-1 flex items-center",
+        caption_label: "text-lg font-semibold",
+        nav: "flex items-center gap-2",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+          "h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-transparent p-0 opacity-60 hover:opacity-100 transition"
         ),
-        nav_button_previous: "absolute left-1",
-        nav_button_next: "absolute right-1",
-        table: "w-full border-collapse space-y-1",
+        nav_button_previous: "absolute left-1 sm:left-2",
+        nav_button_next: "absolute right-1 sm:right-2",
+        table: "w-full border-collapse",
         head_row: "flex",
         head_cell:
-          "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-        row: "flex w-full mt-2",
-        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+          "text-muted-foreground rounded-md flex-1 font-medium text-[0.8rem] sm:text-sm text-center",
+        row: "flex w-full mt-1 sm:mt-2",
+        cell: "flex-1 aspect-square relative text-center text-sm p-0 focus-within:z-20",
         day: cn(
           buttonVariants({ variant: "ghost" }),
-          "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
+          "h-full w-full flex items-center justify-center font-normal rounded-full transition aria-selected:opacity-100"
         ),
         day_selected:
           "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-        day_today: "bg-accent text-accent-foreground",
-        day_outside: "text-muted-foreground opacity-50",
-        day_disabled: "text-muted-foreground opacity-50",
+        day_today:
+          "bg-accent text-accent-foreground font-semibold",
+        day_outside: "text-muted-foreground opacity-40",
+        day_disabled: "text-muted-foreground opacity-30 cursor-not-allowed",
         day_range_middle:
           "aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_hidden: "invisible",
@@ -56,23 +56,23 @@ function Calendar3({
       }}
       formatters={{
         formatWeekdayName: (day, options) => {
-          const isFriday = day.getDay() === 5;
-          const dayColorClass = isFriday ? 'text-destructive' : 'text-foreground';
+          const isFriday = day.getDay() === 5
+          const dayColorClass = isFriday ? "text-destructive" : "text-foreground"
           return (
-            <span className={cn('font-bold', dayColorClass)}>
-                {format(day, "EE", { locale: options?.locale })}
+            <span className={cn("font-semibold", dayColorClass)}>
+              {format(day, "EE", { locale: options?.locale })}
             </span>
           )
         },
       }}
       components={{
-        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
-        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
+        IconLeft: () => <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />,
+        IconRight: () => <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />,
       }}
       {...props}
     />
   )
 }
-Calendar3.displayName = "Calendar"
 
+Calendar3.displayName = "Calendar3"
 export { Calendar3 }
