@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -13,7 +14,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/attendance/home", label: "Home", icon: Home },
+  { href: "/attendance", label: "Home", icon: Home },
   { href: "/attendance/history", label: "History", icon: History },
   { href: "/attendance/profile", label: "Profile", icon: UserIcon },
 ];
@@ -34,13 +35,18 @@ export function BottomNavigation() {
   };
 
   const isNavItemActive = (itemHref: string) => {
-    if (itemHref === "/attendance/home") {
-      // Home is active for both the base attendance path and its explicit home path.
-      return pathname === '/attendance' || pathname === '/attendance/home';
+    // Exact match for the root attendance page to avoid matching all sub-routes.
+    if (itemHref === "/attendance") {
+        return pathname === '/attendance' || pathname === '/attendance/home';
     }
     // For other items, check if the path starts with their href.
     return pathname.startsWith(itemHref);
   };
+
+  // Hide the navigation on the login page
+  if (pathname === '/attendance/login') {
+    return null;
+  }
 
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm md:hidden z-50">
