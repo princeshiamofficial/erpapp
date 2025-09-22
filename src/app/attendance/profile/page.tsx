@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronRight, LogOut, Shield, LifeBuoy, Bell, Settings, User as UserIcon, Palette } from 'lucide-react';
+import { ChevronRight, LogOut, Shield, LifeBuoy, Bell, Settings, User as UserIcon, Palette, CalendarPlus } from 'lucide-react';
 import Link from 'next/link';
 
 const getInitials = (name: string | undefined): string => {
@@ -70,6 +70,7 @@ export default function ProfilePage() {
           <CardContent className="space-y-1">
             <ProfileLink href="#" icon={UserIcon} label="Edit Profile Information" />
             <ProfileLink href="#" icon={Bell} label="Notifications" />
+            <ProfileLink href="#" icon={CalendarPlus} label="Leave Request" />
           </CardContent>
         </Card>
 
