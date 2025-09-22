@@ -37,12 +37,13 @@ export default function AttendanceHistoryPage() {
   return (
     <div className="flex min-h-screen flex-col bg-gray-100 dark:bg-gray-900 p-4 sm:p-6 pb-28">
        <style>{`
-        .custom-scrollbar-hidden [data-radix-scroll-area-viewport] {
-          scrollbar-width: none; /* Firefox */
-          -ms-overflow-style: none; /* Internet Explorer 10+ */
+        /* Targeted styles to hide the scrollbar */
+        .calendar-scroll-area [data-radix-scroll-area-viewport] {
+          scrollbar-width: none; /* For Firefox */
+          -ms-overflow-style: none; /* For Internet Explorer and Edge */
         }
-        .custom-scrollbar-hidden [data-radix-scroll-area-viewport]::-webkit-scrollbar {
-          display: none; /* Safari and Chrome */
+        .calendar-scroll-area [data-radix-scroll-area-viewport]::-webkit-scrollbar {
+          display: none; /* For Chrome, Safari, and Opera */
         }
       `}</style>
       <div className="w-full max-w-2xl mx-auto">
@@ -63,7 +64,7 @@ export default function AttendanceHistoryPage() {
           <CardContent>
             {/* Calendar Strip */}
             <div className="mb-6">
-              <ScrollArea className="w-full whitespace-nowrap rounded-md custom-scrollbar-hidden">
+              <ScrollArea className="w-full whitespace-nowrap rounded-md calendar-scroll-area">
                 <div className="flex space-x-3 pb-4">
                   {calendarDays.map(day => {
                     const record = MOCK_ATTENDANCE_DATA.find(d => format(d.date, 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
