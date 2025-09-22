@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Text } from 'recharts';
 
 type AttendanceStatus = 'On Time' | 'Late' | 'Absent' | 'On Leave' | 'Holiday' | 'Working';
 
@@ -64,18 +64,17 @@ const chartData = [
 
 const RADIAN = Math.PI / 180;
 const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, payload }: any) => {
-  const radius = outerRadius + 25; // Move labels further out
+  const radius = outerRadius + 25;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
   const textAnchor = x > cx ? 'start' : 'end';
 
-  // Only show the label for "Working days" and position it at the bottom
   if (payload.name === 'Working days') {
-    return (
-       <text x={cx} y={cy + outerRadius + 20} textAnchor="middle" dominantBaseline="central" className="text-sm font-semibold fill-gray-600 dark:fill-gray-400">
-        {`30 working days`}
-      </text>
-    );
+     return (
+       <Text x={cx} y={cy + outerRadius + 25} textAnchor="middle" dominantBaseline="central" className="text-sm font-semibold fill-gray-600 dark:fill-gray-400">
+        30 working days
+      </Text>
+     );
   }
   
   return (
