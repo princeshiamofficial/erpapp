@@ -152,7 +152,7 @@ export default function CheckInOutPage() {
               cx="50"
               cy="50"
               r="48"
-              stroke={status === 'Checked Out' ? 'hsl(var(--primary))' : 'hsl(var(--destructive))'}
+              stroke="#FFFFFF"
               strokeWidth="4"
               fill="transparent"
               initial={{ pathLength: 0 }}
