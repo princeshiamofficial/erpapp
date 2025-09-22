@@ -37,7 +37,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay, getYear } from 'date-fns';
-import { READY_FOR_DESIGN_STATUS_ID, SHIPPED_STATUS_ID } from '@/lib/status-service'; // Import status IDs
+import { READY_FOR_DESIGN_STATUS_ID, LOGISTICS_STATUS_ID } from '@/lib/status-service'; // Import status IDs
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Import Avatar components
 
 const formatCurrency = (value: number) => {
@@ -323,11 +323,11 @@ export function ReportPageClient() {
         designer.assigned.add(order.id);
       }
       
-      const lastShippedLog = [...order.statusHistory]
-        .filter(h => h.status === SHIPPED_STATUS_ID)
+      const lastLogisticsLog = [...order.statusHistory]
+        .filter(h => h.status === LOGISTICS_STATUS_ID)
         .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
   
-      if (lastShippedLog && isWithinInterval(parseISO(lastShippedLog.timestamp), { start: startDate, end: endDate })) {
+      if (lastLogisticsLog && isWithinInterval(parseISO(lastLogisticsLog.timestamp), { start: startDate, end: endDate })) {
         designer.done.add(order.id);
       }
       
