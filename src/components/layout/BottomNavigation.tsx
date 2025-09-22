@@ -14,7 +14,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { href: "/attendance", label: "Home", icon: Home },
+  { href: "/attendance/home", label: "Home", icon: Home },
   { href: "/attendance/history", label: "History", icon: History },
   { href: "/attendance/profile", label: "Profile", icon: UserIcon },
 ];
@@ -28,13 +28,22 @@ export function BottomNavigation() {
   }, []);
 
   const getTranslateX = () => {
-    if (pathname.startsWith('/attendance/history')) return '0px';
-    if (pathname.startsWith('/attendance/profile')) return '80px';
-    // Default to Home for /attendance or /attendance/home
-    if (pathname === '/attendance' || pathname === '/attendance/home') return '-80px';
-    // Fallback for any other /attendance sub-route
+    if (pathname.startsWith('/attendance/history')) {
+      return '0px';
+    }
+    if (pathname.startsWith('/attendance/profile')) {
+      return '80px';
+    }
+    // This now correctly defaults to the "Home" position for both /attendance and /attendance/home
     return '-80px';
-  }
+  };
+
+  const isNavItemActive = (itemHref: string) => {
+    if (itemHref === "/attendance/home") {
+        return pathname === '/attendance' || pathname === '/attendance/home';
+    }
+    return pathname.startsWith(itemHref);
+  };
 
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm md:hidden z-50">
@@ -45,21 +54,12 @@ export function BottomNavigation() {
           }}/>
         )}
         {navItems.map((item) => {
-          let isActive = false;
-          if (isClient) {
-            if (item.href === "/attendance/history") {
-              isActive = pathname.startsWith('/attendance/history');
-            } else if (item.href === "/attendance/profile") {
-              isActive = pathname.startsWith('/attendance/profile');
-            } else { // Home
-              isActive = pathname === '/attendance' || pathname === '/attendance/home';
-            }
-          }
+          const isActive = isClient ? isNavItemActive(item.href) : false;
           
           return (
             <Link
               key={item.href}
-              href={item.href === "/attendance" ? "/attendance/home" : item.href}
+              href={item.href}
               className={cn(
                 "flex flex-col items-center justify-center gap-1 p-2 rounded-full w-20 transition-all",
               )}
