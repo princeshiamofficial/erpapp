@@ -72,7 +72,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
   // Only show the label for "Working days" and position it at the bottom
   if (payload.name === 'Working days') {
     return (
-       <text x={cx} y={cy + outerRadius + 40} textAnchor="middle" dominantBaseline="central" className="text-sm font-semibold fill-gray-600 dark:fill-gray-400">
+       <text x={cx} y={cy + outerRadius + 20} textAnchor="middle" dominantBaseline="central" className="text-sm font-semibold fill-gray-600 dark:fill-gray-400">
         {`30 working days`}
       </text>
     );
