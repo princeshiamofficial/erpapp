@@ -10,8 +10,12 @@ import type { TrackingLink, User, CustomStatus } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { assignDrToOrderAction } from '@/app/(app)/orders/actions'; 
 import { getUsers } from '@/lib/user-service';
-import { Loader2, AlertTriangle } from 'lucide-react';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'; // Import Avatar components
+import { Loader2, AlertTriangle, ChevronsUpDown, Check } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
+
 
 interface AssignDrDialogProps {
   isOpen: boolean;
@@ -39,6 +43,8 @@ export function AssignDrDialog({ isOpen, onOpenChange, order, currentUser, allSt
   const [isLoadingDrs, setIsLoadingDrs] = useState(true);
   const [readyForDesignStatus, setReadyForDesignStatus] = useState<CustomStatus | undefined>(undefined);
   const { toast } = useToast();
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   
   useEffect(() => {
     if (isOpen) {
@@ -57,7 +63,7 @@ export function AssignDrDialog({ isOpen, onOpenChange, order, currentUser, allSt
               title: "Configuration Alert!",
               description: `The required system status '${TARGET_READY_FOR_DESIGN_STATUS_ID}' (typically 'Ready for Design') is missing or not configured correctly. Please contact an administrator. Assignment is not possible.`,
               variant: "destructive",
-              duration: 15000, 
+              duration: 10000, 
           });
       } else {
         console.log("AssignDrDialog: Found target status object (ID: 'ready-for-design'):", JSON.stringify(foundStatus));
@@ -119,6 +125,10 @@ export function AssignDrDialog({ isOpen, onOpenChange, order, currentUser, allSt
 
   const currentReadyForDesignStatusName = readyForDesignStatus ? readyForDesignStatus.name : `Status ID '${TARGET_READY_FOR_DESIGN_STATUS_ID}' Not Found`;
 
+  const filteredDesignerReps = designerReps.filter(dr =>
+    dr.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -149,25 +159,61 @@ export function AssignDrDialog({ isOpen, onOpenChange, order, currentUser, allSt
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <Select value={selectedDrId} onValueChange={setSelectedDrId} required>
-                  <SelectTrigger id="drSelect" disabled={designerReps.length === 0 || !readyForDesignStatus}>
-                    <SelectValue placeholder={designerReps.length === 0 ? "No DRs available" : "Select a DR"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {designerReps.map(dr => (
-                      <SelectItem key={dr.id} value={dr.id}>
-                        <div className="flex items-center gap-2">
-                            <Avatar className="h-6 w-6">
+                <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={isPopoverOpen}
+                      className="w-full justify-between"
+                      disabled={designerReps.length === 0 || !readyForDesignStatus}
+                    >
+                      <span className="truncate">
+                        {selectedDrId
+                          ? designerReps.find((dr) => dr.id === selectedDrId)?.name
+                          : "Select a DR..."}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput
+                        placeholder="Search DR..."
+                        value={searchQuery}
+                        onValueChange={setSearchQuery}
+                      />
+                      <CommandList>
+                        <CommandEmpty>No DR found.</CommandEmpty>
+                        <CommandGroup>
+                          {filteredDesignerReps.map((dr) => (
+                            <CommandItem
+                              key={dr.id}
+                              value={dr.name}
+                              onSelect={() => {
+                                setSelectedDrId(dr.id);
+                                setIsPopoverOpen(false);
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              <Check
+                                className={cn(
+                                  "h-4 w-4",
+                                  selectedDrId === dr.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                               <Avatar className="h-6 w-6">
                                 <AvatarImage src={dr.avatarUrl || undefined} alt={dr.name} />
                                 <AvatarFallback className="text-xs">{getInitials(dr.name)}</AvatarFallback>
-                            </Avatar>
-                            <span>{dr.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                    {designerReps.length === 0 && <div className="p-2 text-sm text-muted-foreground text-center">No Designer Reps found. Please add users with the 'DESIGNER_REPRESENTATIVE' role.</div>}
-                  </SelectContent>
-                </Select>
+                              </Avatar>
+                              <span>{dr.name}</span>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               )}
             </div>
           </div>
