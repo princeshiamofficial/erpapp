@@ -10,7 +10,7 @@ import Image from 'next/image';
 import { AppProviders } from './AppProviders';
 import { getGlobalSettings } from '@/lib/settings-service';
 import type { User } from '@/types';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { cn } from '@/lib/utils';
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
 
@@ -34,13 +34,28 @@ export default async function AuthenticatedLayout({
 
   // Fetch settings on the server
   const globalSettings = await getGlobalSettings();
+
+  const headersList = headers();
+  const pathname = headersList.get('x-next-pathname') || '';
+  
+  const isAttendanceRoute = pathname.startsWith('/attendance');
+
+  if (isAttendanceRoute) {
+    return (
+      <AppProviders initialUser={currentUser} initialGlobalSettings={globalSettings}>
+        <main className="flex-1 bg-background">
+          {children}
+        </main>
+      </AppProviders>
+    );
+  }
   
   const isMobile = (header: string | null) => {
     if (!header) return false;
     return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(header.toLowerCase());
   };
-  const headersList = require('next/headers'); 
-  const userAgent = headersList.headers().get('user-agent');
+  
+  const userAgent = headersList.get('user-agent');
   // Always show the trigger, but only show the bottom bar for LR role
   const showBottomNav = isMobile(userAgent) && currentUser?.role === 'LR';
 
