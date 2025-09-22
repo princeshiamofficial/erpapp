@@ -52,7 +52,7 @@ export default function AttendanceLoginPage() {
         <div className="absolute inset-0 bg-[linear-gradient(to_right,theme(colors.border/0.1)_1px,transparent_1px),linear-gradient(to_bottom,theme(colors.border/0.1)_1px,transparent_1px)] bg-[size:30px_30px] opacity-50 dark:opacity-20"></div>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,theme(colors.background)_90%)]"></div>
       </div>
-      <Card className="w-full max-w-md shadow-2xl bg-card/95 backdrop-blur-md border-border/30 dark:border-border/50 rounded-xl">
+      <Card className="w-full max-w-md bg-card/95 backdrop-blur-md border-border/30 dark:border-border/50 rounded-xl">
         <CardHeader className="text-center pt-10 pb-6">
             <div className="mx-auto mb-6">
               <Image 
