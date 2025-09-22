@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -36,11 +37,20 @@ function Calendar2({
         table: "w-full border-collapse flex flex-col flex-grow",
         head_row: "flex",
         head_cell:
-          "text-muted-foreground rounded-md w-full font-semibold text-xs shadow-sm",
-        tbody: "flex-1 grid grid-cols-7 grid-rows-5 gap-px",
+          "text-muted-foreground rounded-md w-full font-semibold text-xs",
+        tbody: "flex-1 grid grid-cols-7 grid-rows-5 gap-1",
         row: "flex-1 contents",
-        day_cell: 'p-0 relative',
+        cell: "p-0 relative text-center text-sm focus-within:relative focus-within:z-20",
         day: "h-full w-full",
+        day_selected:
+          "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+        day_today: "bg-accent text-accent-foreground",
+        day_outside: "text-muted-foreground opacity-50",
+        day_disabled: "text-muted-foreground opacity-50",
+        day_range_middle:
+          "aria-selected:bg-accent aria-selected:text-accent-foreground",
+        day_hidden: "invisible",
+        ...classNames,
       }}
       formatters={{
         formatWeekdayName: (day, options) => {
@@ -64,3 +74,4 @@ function Calendar2({
 Calendar2.displayName = "Calendar"
 
 export { Calendar2 }
+
