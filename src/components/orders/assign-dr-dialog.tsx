@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { assignDrToOrderAction } from '@/app/(app)/orders/actions'; 
 import { getUsers } from '@/lib/user-service';
 import { Loader2, AlertTriangle } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'; // Import Avatar components
 
 interface AssignDrDialogProps {
   isOpen: boolean;
@@ -22,6 +23,14 @@ interface AssignDrDialogProps {
 }
 
 const TARGET_READY_FOR_DESIGN_STATUS_ID = 'ready-for-design';
+
+const getInitials = (name: string | undefined): string => {
+  if (!name) return '??';
+  const names = name.split(' ');
+  if (names.length === 1) return names[0].charAt(0).toUpperCase();
+  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+};
+
 
 export function AssignDrDialog({ isOpen, onOpenChange, order, currentUser, allStatuses, onDrAssigned }: AssignDrDialogProps) {
   const [selectedDrId, setSelectedDrId] = useState<string>('');
@@ -146,7 +155,15 @@ export function AssignDrDialog({ isOpen, onOpenChange, order, currentUser, allSt
                   </SelectTrigger>
                   <SelectContent>
                     {designerReps.map(dr => (
-                      <SelectItem key={dr.id} value={dr.id}>{dr.name} ({dr.email})</SelectItem>
+                      <SelectItem key={dr.id} value={dr.id}>
+                        <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                                <AvatarImage src={dr.avatarUrl || undefined} alt={dr.name} />
+                                <AvatarFallback className="text-xs">{getInitials(dr.name)}</AvatarFallback>
+                            </Avatar>
+                            <span>{dr.name}</span>
+                        </div>
+                      </SelectItem>
                     ))}
                     {designerReps.length === 0 && <div className="p-2 text-sm text-muted-foreground text-center">No Designer Reps found. Please add users with the 'DESIGNER_REPRESENTATIVE' role.</div>}
                   </SelectContent>
