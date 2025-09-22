@@ -39,7 +39,7 @@ export default function AttendanceHistoryPage() {
       <div className="w-full max-w-2xl mx-auto">
         <div className="flex items-center gap-2 mb-6">
             <Button variant="ghost" size="icon" className="h-9 w-9 -ml-2" asChild>
-                <Link href="/attendance/home">
+                <Link href="/attendance">
                     <ArrowLeft className="h-5 w-5"/>
                 </Link>
             </Button>
