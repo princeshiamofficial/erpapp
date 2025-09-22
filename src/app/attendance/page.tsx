@@ -1,15 +1,17 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { LogIn, LogOut, Clock, Fingerprint, Home, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInHours, differenceInMinutes } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
-import { motion } from 'framer-motion';
+import { motion, useAnimationControls } from 'framer-motion';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+
+const LONG_PRESS_DURATION = 1000; // 1 second
 
 export default function CheckInOutPage() {
   const { currentUser } = useAuth();
@@ -19,6 +21,10 @@ export default function CheckInOutPage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
+
+  const [isPressing, setIsPressing] = useState(false);
+  const progressControls = useAnimationControls();
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     setIsClient(true);
@@ -30,6 +36,38 @@ export default function CheckInOutPage() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const handleAction = () => {
+    if (status === 'Checked Out') {
+      handleCheckIn();
+    } else {
+      handleCheckOut();
+    }
+  };
+  
+  const startPress = () => {
+    setIsPressing(true);
+    progressControls.start({
+      pathLength: 1,
+      transition: { duration: LONG_PRESS_DURATION / 1000, ease: "linear" }
+    });
+    timerRef.current = setTimeout(() => {
+      handleAction();
+      setIsPressing(false); // Action triggered, reset pressing state
+    }, LONG_PRESS_DURATION);
+  };
+  
+  const stopPress = () => {
+    setIsPressing(false);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    progressControls.start({
+      pathLength: 0,
+      transition: { duration: 0.2 }
+    });
+  };
 
   const handleCheckIn = () => {
     if (status === 'Checked In') return;
@@ -103,14 +141,35 @@ export default function CheckInOutPage() {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+          className="relative"
         >
+          <motion.svg
+            className="absolute inset-0 h-full w-full"
+            viewBox="0 0 100 100"
+            style={{ transform: 'rotate(-90deg)' }}
+          >
+            <motion.circle
+              cx="50"
+              cy="50"
+              r="48"
+              stroke={status === 'Checked Out' ? 'hsl(var(--primary))' : 'hsl(var(--destructive))'}
+              strokeWidth="4"
+              fill="transparent"
+              initial={{ pathLength: 0 }}
+              animate={progressControls}
+            />
+          </motion.svg>
           <Button
             className={cn(
-              "h-48 w-48 sm:h-56 sm:w-56 rounded-full text-2xl font-bold flex flex-col items-center justify-center transition-all duration-300 transform hover:scale-105",
+              "h-48 w-48 sm:h-56 sm:w-56 rounded-full text-2xl font-bold flex flex-col items-center justify-center transition-all duration-300 transform",
               "shadow-[inset_4px_4px_8px_rgba(255,255,255,0.5),_inset_-4px_-4px_8px_rgba(0,0,0,0.1),_8px_8px_16px_rgba(0,0,0,0.2)]",
               status === 'Checked Out' ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-red-500 hover:bg-red-600 text-white'
             )}
-            onClick={status === 'Checked Out' ? handleCheckIn : handleCheckOut}
+            onMouseDown={startPress}
+            onMouseUp={stopPress}
+            onMouseLeave={stopPress}
+            onTouchStart={startPress}
+            onTouchEnd={stopPress}
           >
             <Fingerprint className="h-16 w-16 mb-2" />
             {status === 'Checked Out' ? 'Check In' : 'Check Out'}
