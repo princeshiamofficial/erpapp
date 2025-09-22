@@ -56,10 +56,10 @@ const STATUS_STYLES: Record<AttendanceStatus, { bg: string; text: string; dot: s
 
 
 const chartData = [
-  { name: 'On Time', value: 15, fill: '#A3CC39' },
-  { name: 'Late', value: 3, fill: '#F2C94C' },
-  { name: 'Working days', value: 30, fill: '#4F4F4F' },
-  { name: 'Absent', value: 4, fill: '#F2994A' },
+  { name: 'On Time', value: 10, fill: '#A3CC39' },
+  { name: 'Late', value: 10, fill: '#F2C94C' },
+  { name: 'Working days', value: 10, fill: '#4F4F4F' },
+  { name: 'Absent', value: 10, fill: '#F2994A' },
 ];
 
 const RADIAN = Math.PI / 180;
@@ -73,14 +73,14 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
   if (payload.name === 'Working days') {
     return (
        <text x={cx} y={cy + outerRadius + 20} textAnchor="middle" dominantBaseline="central" className="text-sm font-semibold fill-gray-600 dark:fill-gray-400">
-        {`${payload.value} working days`}
+        {`30 working days`}
       </text>
     );
   }
   
   return (
     <text x={x} y={y} fill="#6b7280" textAnchor={textAnchor} dominantBaseline="central" className="text-xs font-medium">
-      {`${payload.name} ${payload.value} days`}
+      {`${payload.name} 10 days`}
     </text>
   );
 };
