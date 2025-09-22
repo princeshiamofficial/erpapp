@@ -28,21 +28,25 @@ export function BottomNavigation() {
   }, []);
 
   const getTranslateX = () => {
-    // Correctly find the index of the active navigation item
+    // This logic now runs only on the client due to the isClient check below
     const itemIndex = navItems.findIndex(item => {
-      // Home is a special case that can match multiple paths
-      if (item.label === 'Home') {
-        return pathname === '/attendance' || pathname === '/attendance/home';
+      // Use exact match for home, and startsWith for others.
+      if (item.href === "/attendance") {
+        return pathname === "/attendance" || pathname === "/attendance/home";
       }
-      // For other items, check if the path starts with their href
       return pathname.startsWith(item.href);
     });
 
     switch (itemIndex) {
-      case 0: return '-80px'; // Corresponds to Home
-      case 1: return '0px';   // Corresponds to History
-      case 2: return '80px';  // Corresponds to Profile
-      default: return '-80px'; // Default to Home position if no match
+      case 0: return '-80px';
+      case 1: return '0px';
+      case 2: return '80px';
+      default:
+        // A more robust default: if we are on a sub-page of attendance, default to Home.
+        if (pathname.startsWith('/attendance')) {
+            return '-80px';
+        }
+        return '0px'; // Fallback
     }
   }
 
@@ -55,9 +59,12 @@ export function BottomNavigation() {
           }}/>
         )}
         {navItems.map((item) => {
-          const isActive = item.href === "/attendance" 
+          // This logic also only runs on the client, ensuring consistency.
+          const isActive = isClient && (
+            item.href === "/attendance" 
             ? (pathname === "/attendance" || pathname === "/attendance/home")
-            : pathname.startsWith(item.href);
+            : pathname.startsWith(item.href)
+          );
           
           return (
             <Link
@@ -70,13 +77,13 @@ export function BottomNavigation() {
               <item.icon
                 className={cn(
                   "w-6 h-6 transition-transform",
-                   isClient && isActive ? 'text-white scale-110' : 'text-white/80'
+                   isActive ? 'text-white scale-110' : 'text-white/80'
                 )}
               />
                <span
                 className={cn(
                   "text-xs font-medium",
-                  isClient && isActive ? "text-white" : "text-white/80"
+                  isActive ? "text-white" : "text-white/80"
                 )}
               >
                 {item.label}
