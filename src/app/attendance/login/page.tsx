@@ -7,13 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, LogIn, Eye, EyeOff } from 'lucide-react';
+import { Loader2, LogIn, Eye, EyeOff, Clock } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 
 export default function AttendanceLoginPage() {
-  const [employeeId, setEmployeeId] = useState('EMP-001');
+  const [email, setEmail] = useState('admin@colorhut.dev');
   const [password, setPassword] = useState('password');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,59 +24,50 @@ export default function AttendanceLoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!employeeId || !password) {
+    if (!email || !password) {
       toast({
         title: "Login Error",
-        description: "Please enter both Employee ID and password.",
+        description: "Please enter both email and password.",
         variant: "destructive",
       });
       return;
     }
     setIsLoading(true);
-    // Here you would typically have a different login function for attendance
-    // For now, we can simulate a login or use the existing one if applicable.
-    // This is a placeholder for actual attendance login logic.
-    setTimeout(() => {
-        toast({
-            title: "Attendance Logged",
-            description: `Attendance for Employee ID ${employeeId} has been logged.`,
-        });
-        setIsLoading(false);
-        router.push('/attendance/home'); // Or wherever you want to redirect after
-    }, 1500);
+    // Using main login logic, but redirecting to attendance home
+    const success = await login(email, password);
+    if (success) {
+      router.push('/attendance/home');
+    } else {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-blue-500/10 via-green-500/5 to-background p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
        <div className="absolute inset-0 -z-10 h-full w-full bg-background">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,theme(colors.border/0.1)_1px,transparent_1px),linear-gradient(to_bottom,theme(colors.border/0.1)_1px,transparent_1px)] bg-[size:30px_30px] opacity-50 dark:opacity-20"></div>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,theme(colors.background)_90%)]"></div>
       </div>
-      <Card className="w-full max-w-md bg-card/95 backdrop-blur-md border-border/30 dark:border-border/50 rounded-xl">
-        <CardHeader className="text-center pt-10 pb-6">
-            <div className="mx-auto mb-6">
-              <Image 
-                src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" 
-                alt="Color Hut Logo" 
-                width={253} 
-                height={64} 
-                priority 
-                className="object-contain"
-              />
-            </div>
-          <CardTitle className="text-2xl">Attendance Login</CardTitle>
-          <CardDescription>Log your attendance with your Employee ID.</CardDescription>
+      
+      <div className="text-center mb-8">
+        <Clock className="h-24 w-24 text-primary mx-auto opacity-80" data-ai-hint="giant clock person adjusting" />
+        <p className="text-muted-foreground mt-2">Time tracking, simplified.</p>
+      </div>
+
+      <Card className="w-full max-w-sm bg-card/95 backdrop-blur-md border-border/30 dark:border-border/50 rounded-xl">
+        <CardHeader className="text-center pt-8 pb-4">
+          <CardTitle className="text-2xl">Login</CardTitle>
         </CardHeader>
-        <CardContent className="py-6 px-8">
+        <CardContent className="py-4 px-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="employeeId">Employee ID</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="employeeId"
-                type="text"
-                placeholder="e.g., EMP-001"
-                value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="e.g., your.email@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 className="h-12 text-base"
               />
@@ -105,13 +96,16 @@ export default function AttendanceLoginPage() {
                 </Button>
               </div>
             </div>
-            <Button type="submit" className="w-full h-12 text-lg" disabled={isLoading}>
+            <Button 
+                type="submit" 
+                className="w-full h-14 text-lg font-semibold rounded-full bg-green-600 hover:bg-green-700 text-white shadow-lg" 
+                disabled={isLoading}>
               {isLoading ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               ) : (
                 <LogIn className="mr-2 h-5 w-5" />
               )}
-              Log Attendance
+              Login
             </Button>
           </form>
         </CardContent>
