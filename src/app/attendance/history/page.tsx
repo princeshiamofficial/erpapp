@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Text } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from 'recharts';
 
 type AttendanceStatus = 'On Time' | 'Late' | 'Absent' | 'On Leave' | 'Holiday' | 'Working';
 
@@ -56,31 +56,33 @@ const STATUS_STYLES: Record<AttendanceStatus, { bg: string; text: string; dot: s
 
 
 const chartData = [
-  { name: 'On Time', value: 10, fill: '#A3CC39' },
-  { name: 'Late', value: 10, fill: '#F2C94C' },
-  { name: 'Working days', value: 10, fill: '#4F4F4F' },
-  { name: 'Absent', value: 10, fill: '#F2994A' },
+  { name: 'On Time', value: 15, fill: '#A3CC39' },
+  { name: 'Late', value: 3, fill: '#F2C94C' },
+  { name: '30 working days', value: 30, fill: '#4F4F4F' },
+  { name: 'Absent', value: 4, fill: '#F2994A' },
 ];
 
 const RADIAN = Math.PI / 180;
-const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, payload }: any) => {
-  const radius = outerRadius + 25;
+const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, payload }: any) => {
+  const radius = outerRadius * 1.3;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
   const textAnchor = x > cx ? 'start' : 'end';
-
-  if (payload.name === 'Working days') {
-     return (
-       <Text x={cx} y={cy + outerRadius + 25} textAnchor="middle" dominantBaseline="central" className="text-sm font-semibold fill-gray-600 dark:fill-gray-400">
-        30 working days
-      </Text>
-     );
-  }
+  
+  const lineRadiusStart = outerRadius * 1.1;
+  const lineRadiusEnd = outerRadius * 1.25;
+  const sx = cx + lineRadiusStart * Math.cos(-midAngle * RADIAN);
+  const sy = cy + lineRadiusStart * Math.sin(-midAngle * RADIAN);
+  const ex = cx + lineRadiusEnd * Math.cos(-midAngle * RADIAN);
+  const ey = cy + lineRadiusEnd * Math.sin(-midAngle * RADIAN);
   
   return (
-    <text x={x} y={y} fill="#6b7280" textAnchor={textAnchor} dominantBaseline="central" className="text-xs font-medium">
-      {`${payload.name} 10 days`}
-    </text>
+    <g>
+      <path d={`M${sx},${sy}L${ex},${ey}`} stroke="#9ca3af" fill="none" />
+      <text x={x} y={y} fill="#6b7280" textAnchor={textAnchor} dominantBaseline="central" className="text-xs font-medium">
+        {`${payload.name} ${payload.name !== '30 working days' ? `${payload.value} days` : ''}`}
+      </text>
+    </g>
   );
 };
 
@@ -172,7 +174,7 @@ export default function AttendanceHistoryPage() {
             }}
         />
 
-        <div className="relative h-56 w-full">
+        <div className="relative h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                     <Pie 
@@ -183,7 +185,7 @@ export default function AttendanceHistoryPage() {
                         outerRadius={70} 
                         paddingAngle={2} 
                         dataKey="value"
-                        labelLine={true}
+                        labelLine={false}
                         label={renderCustomizedLabel}
                     >
                         {chartData.map((entry, index) => (
