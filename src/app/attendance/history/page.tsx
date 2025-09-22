@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Calendar2 as Calendar } from '@/components/ui/calendar2';
+import { Calendar3 as Calendar } from '@/components/ui/calendar3';
 import { format, subDays, isSameDay } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, Clock, CheckCircle2, AlertCircle, ArrowLeft, X, LogIn } from 'lucide-react';
