@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, History, type LucideIcon } from "lucide-react";
+import { Home, History, User as UserIcon, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -15,25 +15,36 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/attendance", label: "Home", icon: Home },
   { href: "/attendance/history", label: "History", icon: History },
+  { href: "/attendance/profile", label: "Profile", icon: UserIcon },
 ];
 
 export function BottomNavigation() {
   const pathname = usePathname();
 
+  const getTranslateX = () => {
+    const itemIndex = navItems.findIndex(item => pathname.startsWith(item.href));
+    switch (itemIndex) {
+      case 0: return '-80px'; // Home
+      case 1: return '0px';   // History
+      case 2: return '80px';  // Profile
+      default: return '-80px';
+    }
+  }
+
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm md:hidden z-50">
       <div className="bg-[#166534] dark:bg-green-800 text-white rounded-full shadow-lg p-2 flex justify-around items-center relative">
         <div className="absolute bottom-0 h-1 w-16 bg-white rounded-full transition-transform duration-300 ease-in-out" style={{
-            transform: `translateX(${pathname === '/attendance/history' ? '60px' : '-60px'})`
+            transform: `translateX(${getTranslateX()})`
         }}/>
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "flex flex-col items-center justify-center gap-1 p-2 rounded-full w-24 transition-all",
+                "flex flex-col items-center justify-center gap-1 p-2 rounded-full w-20 transition-all",
               )}
             >
               <item.icon
