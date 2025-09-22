@@ -29,18 +29,22 @@ export function BottomNavigation() {
 
   const getTranslateX = () => {
     const itemIndex = navItems.findIndex(item => {
-        // Special check for home, as it could be /attendance or /attendance/home
-        if (item.href === "/attendance") {
-            return pathname === "/attendance" || pathname.startsWith("/attendance/home");
-        }
-        return pathname.startsWith(item.href)
+      if (item.href === "/attendance") {
+        return pathname === "/attendance" || pathname === "/attendance/home";
+      }
+      return pathname.startsWith(item.href);
     });
-    
+
     switch (itemIndex) {
       case 0: return '-80px'; // Home
       case 1: return '0px';   // History
       case 2: return '80px';  // Profile
-      default: return '-80px';
+      default: {
+        // Fallback logic for when no item is matched (e.g. on /attendance/login)
+        // Default to home if on a sub-route of attendance that isn't history or profile
+        if(pathname.startsWith('/attendance/')) return '-80px'; 
+        return '-80px';
+      }
     }
   }
 
@@ -53,7 +57,6 @@ export function BottomNavigation() {
           }}/>
         )}
         {navItems.map((item) => {
-          // Special active check for home
           const isActive = item.href === "/attendance" 
             ? (pathname === "/attendance" || pathname === "/attendance/home")
             : pathname.startsWith(item.href);
