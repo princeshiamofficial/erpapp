@@ -171,7 +171,7 @@ export default function CheckInOutPage() {
             onTouchStart={startPress}
             onTouchEnd={stopPress}
           >
-            <Fingerprint className="h-16 w-16 mb-2" />
+            <Fingerprint className="h-20 w-20 mb-2" />
             {status === 'Checked Out' ? 'Check In' : 'Check Out'}
           </Button>
         </motion.div>
