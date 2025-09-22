@@ -28,23 +28,21 @@ export function BottomNavigation() {
   }, []);
 
   const getTranslateX = () => {
+    // Correctly find the index of the active navigation item
     const itemIndex = navItems.findIndex(item => {
-      if (item.href === "/attendance") {
-        return pathname === "/attendance" || pathname === "/attendance/home";
+      // Home is a special case that can match multiple paths
+      if (item.label === 'Home') {
+        return pathname === '/attendance' || pathname === '/attendance/home';
       }
+      // For other items, check if the path starts with their href
       return pathname.startsWith(item.href);
     });
 
     switch (itemIndex) {
-      case 0: return '-80px'; // Home
-      case 1: return '0px';   // History
-      case 2: return '80px';  // Profile
-      default: {
-        // Fallback logic for when no item is matched (e.g. on /attendance/login)
-        // Default to home if on a sub-route of attendance that isn't history or profile
-        if(pathname.startsWith('/attendance/')) return '-80px'; 
-        return '-80px';
-      }
+      case 0: return '-80px'; // Corresponds to Home
+      case 1: return '0px';   // Corresponds to History
+      case 2: return '80px';  // Corresponds to Profile
+      default: return '-80px'; // Default to Home position if no match
     }
   }
 
