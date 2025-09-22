@@ -56,11 +56,26 @@ const STATUS_STYLES: Record<AttendanceStatus, { bg: string; text: string; dot: s
 
 
 const chartData = [
-  { name: 'On Time', value: 15, fill: '#22c55e' }, // Brighter Green
-  { name: 'Late', value: 3, fill: '#f59e0b' }, // Amber
-  { name: 'Absent', value: 4, fill: '#ef4444' }, // Red
-  { name: 'Working', value: 8, fill: '#a8a29e' }, // Muted Gray
+  { name: 'On Time', value: 15, fill: '#A3CC39' },
+  { name: 'Late', value: 3, fill: '#F2C94C' },
+  { name: '30 working days', value: 8, fill: '#4F4F4F' },
+  { name: 'Absent', value: 4, fill: '#F2994A' },
 ];
+
+const RADIAN = Math.PI / 180;
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index, payload }: any) => {
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const labelRadius = outerRadius + 20;
+  const x = cx + labelRadius * Math.cos(-midAngle * RADIAN);
+  const y = cy + labelRadius * Math.sin(-midAngle * RADIAN);
+
+  return (
+    <text x={x} y={y} fill="#6b7280" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="text-xs font-medium">
+      {`${payload.name} ${payload.value > 0 ? `${payload.value} days` : ''}`}
+    </text>
+  );
+};
+
 
 // Custom Day component to render status tags
 const DayWithStatus = ({ date, selected }: { date: Date; selected: boolean | undefined }) => {
@@ -149,28 +164,26 @@ export default function AttendanceHistoryPage() {
             }}
         />
 
-        <div className="relative h-48 w-full">
+        <div className="relative h-56 w-full">
             <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                    <Pie data={chartData} cx="50%" cy="50%" innerRadius={50} outerRadius={70} paddingAngle={2} dataKey="value">
+                    <Pie 
+                        data={chartData} 
+                        cx="50%" 
+                        cy="50%" 
+                        innerRadius={50} 
+                        outerRadius={70} 
+                        paddingAngle={2} 
+                        dataKey="value"
+                        labelLine={false}
+                        label={renderCustomizedLabel}
+                    >
                         {chartData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.fill} stroke={entry.fill} />
                         ))}
                     </Pie>
                 </PieChart>
             </ResponsiveContainer>
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="text-center">
-                    <p className="text-2xl font-bold">30</p>
-                    <p className="text-xs text-muted-foreground">Working days</p>
-                </div>
-            </div>
-        </div>
-        
-        <div className="grid grid-cols-3 gap-y-2 gap-x-4 pt-4">
-            {chartData.map((item) => <LegendItem key={item.name} color={item.fill} label={`${item.name} ${item.value} days`}/>)}
-            <LegendItem color={STATUS_STYLES['On Leave'].dot} label="On Leave"/>
-            <LegendItem color={STATUS_STYLES['Holiday'].dot} label="Holiday"/>
         </div>
 
       </div>
