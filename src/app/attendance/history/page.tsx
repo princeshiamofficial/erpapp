@@ -92,6 +92,15 @@ export default function AttendanceHistoryPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900 p-4 sm:p-6 pb-28">
+         <style>{`
+            body {
+                scrollbar-width: none; /* Firefox */
+                -ms-overflow-style: none;  /* Internet Explorer 10+ */
+            }
+            body::-webkit-scrollbar {
+                display: none; /* Safari and Chrome */
+            }
+        `}</style>
       <div className="w-full max-w-4xl mx-auto">
         <div className="flex items-center gap-2 mb-6">
             <Button variant="ghost" size="icon" className="h-9 w-9 -ml-2" asChild>
