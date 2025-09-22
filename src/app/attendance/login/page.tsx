@@ -36,7 +36,7 @@ export default function AttendanceLoginPage() {
     // Using main login logic, but redirecting to attendance home
     const success = await login(email, password);
     if (success) {
-      router.push('/attendance/home');
+      router.push('/attendance');
     } else {
       setIsLoading(false);
     }
