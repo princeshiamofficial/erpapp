@@ -1,174 +1,103 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Input } from '@/components/ui/input';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Calendar, Filter, Users } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { LogIn, LogOut, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import type { User } from '@/types';
-import { getUsers } from '@/lib/user-service';
+import { format } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
-import { useRouter } from 'next/navigation';
 
-// Mock data for now
-interface AttendanceRecord {
-  id: string;
-  date: string;
-  employeeName: string;
-  employeeId: string;
-  status: 'Present' | 'Absent' | 'Leave';
-  inTime?: string;
-  outTime?: string;
-  hoursWorked?: string;
-}
-
-export default function AttendancePage() {
+export default function CheckInOutPage() {
   const { currentUser } = useAuth();
-  const router = useRouter();
+  const [status, setStatus] = useState<'Checked In' | 'Checked Out'>('Checked Out');
+  const [lastActionTime, setLastActionTime] = useState<Date | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const { toast } = useToast();
 
-  const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState<string>(new Date().toISOString().split('T')[0]);
-
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const fetchedUsers = await getUsers();
-      setAllUsers(fetchedUsers);
-      
-      // In a real implementation, you would fetch attendance data here
-      // For now, we'll use mock data.
-      const mockData: AttendanceRecord[] = fetchedUsers.map((user, i) => ({
-        id: `att-${i}`,
-        date: new Date().toISOString(),
-        employeeName: user.name,
-        employeeId: user.id,
-        status: i % 3 === 0 ? 'Absent' : (i % 3 === 1 ? 'Leave' : 'Present'),
-        inTime: i % 3 === 2 ? '09:05 AM' : undefined,
-        outTime: i % 3 === 2 ? '06:15 PM' : undefined,
-        hoursWorked: i % 3 === 2 ? '9h 10m' : undefined,
-      }));
-      setAttendanceRecords(mockData);
-
-    } catch (error) {
-      toast({ title: "Error", description: "Could not load user data.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
-  
   useEffect(() => {
-    if (currentUser) {
-        if (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') {
-            fetchData();
-        } else {
-            // Redirect non-admins as they shouldn't access this page.
-            router.replace('/dashboard');
-        }
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleCheckIn = () => {
+    if (status === 'Checked In') {
+        toast({ title: "Already Checked In", description: "You are already checked in for the day.", variant: "default" });
+        return;
     }
-  }, [currentUser, fetchData, router]);
-
-
-  const filteredRecords = useMemo(() => {
-    if (!dateFilter) return attendanceRecords;
-    return attendanceRecords.filter(record => {
-      try {
-        const recordDate = new Date(record.date).toISOString().split('T')[0];
-        return recordDate === dateFilter;
-      } catch {
-        return false;
-      }
+    setStatus('Checked In');
+    const now = new Date();
+    setLastActionTime(now);
+    toast({
+      title: "Checked In Successfully",
+      description: `You checked in at ${format(now, 'h:mm:ss a')}.`,
     });
-  }, [attendanceRecords, dateFilter]);
+  };
 
-  if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
-    return (
-        <div className="flex h-screen w-full items-center justify-center">
-            <p>Access Denied.</p>
-        </div>
-    );
-  }
+  const handleCheckOut = () => {
+     if (status === 'Checked Out') {
+        toast({ title: "Already Checked Out", description: "You have already checked out.", variant: "default" });
+        return;
+    }
+    setStatus('Checked Out');
+    const now = new Date();
+    setLastActionTime(now);
+    toast({
+      title: "Checked Out Successfully",
+      description: `You checked out at ${format(now, 'h:mm:ss a')}.`,
+    });
+  };
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Users className="h-8 w-8 text-primary"/>
-            Attendance Report
-          </h1>
-          <p className="text-base text-muted-foreground mt-1">
-            View daily attendance records for all employees.
-          </p>
-        </div>
-      </div>
-
-      <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-        <CardHeader className="border-b p-5">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <CardTitle className="text-card-foreground text-xl">Daily Report</CardTitle>
-                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <div className="relative flex-grow sm:flex-grow-0">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        placeholder="Filter by date..."
-                        className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
-                        type="date"
-                        value={dateFilter}
-                        onChange={(e) => setDateFilter(e.target.value)}
-                      />
-                    </div>
-                </div>
-            </div>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-gray-900 dark:via-gray-800 dark:to-black p-4">
+      <Card className="w-full max-w-md shadow-2xl bg-card/95 backdrop-blur-md border-border/30 dark:border-border/50 rounded-xl">
+        <CardHeader className="text-center space-y-2 pt-8">
+          <Clock className="mx-auto h-12 w-12 text-primary" />
+          <CardTitle className="text-3xl font-bold tracking-tight">Attendance</CardTitle>
+          <CardDescription>
+            {format(currentTime, "eeee, MMMM d, yyyy")}
+          </CardDescription>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="pl-6">Date</TableHead>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>In Time</TableHead>
-                  <TableHead>Out Time</TableHead>
-                  <TableHead>Hours Worked</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  [...Array(5)].map((_, i) => (
-                    <TableRow key={`skel-att-${i}`}>
-                      <TableCell colSpan={6}>
-                        <Skeleton className="h-10 w-full" />
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : filteredRecords.length > 0 ? (
-                  filteredRecords.map((record) => (
-                    <TableRow key={record.id}>
-                      <TableCell className="pl-6">{new Date(record.date).toLocaleDateString()}</TableCell>
-                      <TableCell>{record.employeeName}</TableCell>
-                      <TableCell>{record.status}</TableCell>
-                      <TableCell>{record.inTime || 'N/A'}</TableCell>
-                      <TableCell>{record.outTime || 'N/A'}</TableCell>
-                      <TableCell>{record.hoursWorked || 'N/A'}</TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
-                      No attendance records found for the selected date.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+        <CardContent className="py-8 px-6 space-y-8">
+            <div className="text-center bg-muted/50 dark:bg-muted/30 p-6 rounded-lg border border-dashed">
+                <p className="text-5xl font-mono font-bold text-foreground">
+                    {format(currentTime, 'h:mm:ss a')}
+                </p>
+            </div>
+          
+            <div className="text-center">
+                 <p className="text-sm text-muted-foreground mb-1">Your current status:</p>
+                 <p className={`text-lg font-semibold ${status === 'Checked In' ? 'text-green-600' : 'text-red-600'}`}>
+                    {status}
+                 </p>
+                 {lastActionTime && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Last action at {format(lastActionTime, 'h:mm a')}
+                    </p>
+                 )}
+            </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <Button 
+                size="lg" 
+                className="h-16 text-lg" 
+                onClick={handleCheckIn} 
+                disabled={status === 'Checked In'}
+            >
+              <LogIn className="mr-2 h-6 w-6" /> Check In
+            </Button>
+            <Button 
+                size="lg" 
+                variant="destructive" 
+                className="h-16 text-lg bg-red-600 hover:bg-red-700" 
+                onClick={handleCheckOut}
+                disabled={status === 'Checked Out'}
+            >
+              <LogOut className="mr-2 h-6 w-6" /> Check Out
+            </Button>
           </div>
         </CardContent>
       </Card>
