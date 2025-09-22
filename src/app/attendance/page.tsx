@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { LogIn, LogOut, Clock, Fingerprint, Home, History } from 'lucide-react';
+import { LogIn, LogOut, Clock, Fingerprint, Home, History, Power, Lock, ArrowDown, ArrowUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInHours, differenceInMinutes } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
@@ -11,6 +11,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
+
+const getInitials = (name: string | undefined): string => {
+  if (!name) return '??';
+  const names = name.split(' ');
+  if (names.length === 1) return names[0].charAt(0).toUpperCase();
+  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+};
+
 
 export default function CheckInOutPage() {
   const { currentUser } = useAuth();
@@ -80,29 +90,37 @@ export default function CheckInOutPage() {
   };
   
   const getGreeting = useCallback(() => {
+    if (!isClient) return 'Loading...';
     const hour = currentTime.getHours();
     if (hour < 12) return 'Good morning';
     if (hour < 18) return 'Good afternoon';
     return 'Good evening';
-  }, [currentTime]);
+  }, [currentTime, isClient]);
   
   const name = currentUser?.name.split(' ')[0] || 'User';
+  const ActionIcon = status === 'Checked Out' ? Lock : Power;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-between bg-gray-100 dark:bg-gray-900 p-4 sm:p-6 pb-28">
       {/* Header */}
-      <div className="w-full max-w-md text-left">
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
-          Hey {name}!
-        </h1>
-        {isClient && <p className="text-gray-600 dark:text-gray-400">{getGreeting()}, mark your attendance.</p>}
+      <div className="w-full max-w-md flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-200">
+            Hey {name}!
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">{getGreeting()}, mark your attendance.</p>
+        </div>
+        <Avatar className="h-12 w-12 border-2 border-primary">
+          <AvatarImage src={currentUser?.avatarUrl || undefined} alt={currentUser?.name} />
+          <AvatarFallback>{getInitials(currentUser?.name)}</AvatarFallback>
+        </Avatar>
       </div>
 
       {/* Main Content */}
       <div className="flex flex-col items-center justify-center flex-grow w-full">
         <div className="text-center mb-10">
           <p className="text-5xl sm:text-6xl font-bold text-gray-800 dark:text-gray-200 font-mono tracking-tighter">
-            {isClient ? format(currentTime, 'h:mm:ss a') : '--:--:--'}
+            {isClient ? format(currentTime, 'h:mm a') : '--:--'}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {isClient ? format(currentTime, "eeee, MMMM d, yyyy") : 'Loading...'}
@@ -121,11 +139,11 @@ export default function CheckInOutPage() {
               "h-48 w-48 sm:h-56 sm:w-56 rounded-full text-2xl font-bold flex flex-col items-center justify-center transition-all duration-300 transform",
               "shadow-[inset_4px_4px_8px_rgba(255,255,255,0.4),_inset_-4px_-4px_8px_rgba(0,0,0,0.1),_8px_8px_16px_rgba(0,0,0,0.1)]",
               "hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),_inset_-2px_-2px_4px_rgba(0,0,0,0.15),_4px_4px_8px_rgba(0,0,0,0.1)]",
-              status === 'Checked Out' ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-red-500 hover:bg-red-600 text-white'
+              status === 'Checked Out' ? 'bg-white hover:bg-gray-50 text-gray-700' : 'bg-red-500 hover:bg-red-600 text-white'
             )}
             onClick={() => setIsSheetOpen(true)}
           >
-            <Fingerprint className="h-20 w-20 mb-2" />
+            <ActionIcon className="h-20 w-20 mb-2" />
             {status === 'Checked Out' ? 'Check In' : 'Check Out'}
           </Button>
         </motion.div>
@@ -134,19 +152,25 @@ export default function CheckInOutPage() {
       {/* Bottom Panel */}
       <div className="w-full max-w-md bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-lg grid grid-cols-3 gap-2 text-center">
         <div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Check-in</p>
+          <div className="flex items-center justify-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+            <ArrowDown className="h-3 w-3" /> Check-in
+          </div>
           <p className="font-bold text-lg text-green-600">
             {checkInTime ? format(checkInTime, 'h:mm a') : '--:--'}
           </p>
         </div>
         <div className="border-l border-r border-gray-200 dark:border-gray-700">
-          <p className="text-xs text-gray-500 dark:text-gray-400">Hours</p>
+          <div className="flex items-center justify-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+            <Clock className="h-3 w-3" /> Total Hrs
+          </div>
           <p className="font-bold text-lg text-gray-800 dark:text-gray-200">
             {isClient ? calculateHoursWorked() : '--:--'}
           </p>
         </div>
         <div>
-          <p className="text-xs text-gray-500 dark:text-gray-400">Check-out</p>
+          <div className="flex items-center justify-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+             <ArrowUp className="h-3 w-3" /> Check-out
+          </div>
           <p className="font-bold text-lg text-red-600">
             {checkOutTime ? format(checkOutTime, 'h:mm a') : '--:--'}
           </p>
