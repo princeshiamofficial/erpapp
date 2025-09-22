@@ -41,7 +41,7 @@ export default function AttendanceLoginPage() {
             description: `Attendance for Employee ID ${employeeId} has been logged.`,
         });
         setIsLoading(false);
-        // router.push('/dashboard'); // Or wherever you want to redirect after
+        router.push('/attendance/home'); // Or wherever you want to redirect after
     }, 1500);
   };
 
@@ -82,15 +82,27 @@ export default function AttendanceLoginPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter your password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="h-12 text-base"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-12 text-base"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                </Button>
+              </div>
             </div>
             <Button type="submit" className="w-full h-12 text-lg" disabled={isLoading}>
               {isLoading ? (
