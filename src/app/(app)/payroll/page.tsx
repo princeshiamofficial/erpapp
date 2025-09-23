@@ -152,8 +152,6 @@ export default function PayrollPage() {
           return false;
         }
       });
-    } else if (activeTab === 'leave_management') {
-      results = results.filter(employee => employee.status === 'Active');
     }
 
 
@@ -625,79 +623,6 @@ export default function PayrollPage() {
     </Card>
   );
   
-  const leaveManagementContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-      <CardHeader className="p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl font-bold text-gray-800">Leave Management</CardTitle>
-           <div className="flex items-center gap-2 w-full sm:w-auto">
-             <div className="relative flex-grow sm:flex-grow-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-6 pt-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>SL</TableHead>
-                <TableHead>Employee ID</TableHead>
-                <TableHead>Name of Employee</TableHead>
-                <TableHead>Designation</TableHead>
-                <TableHead>Yearly Leave</TableHead>
-                <TableHead>Available</TableHead>
-                <TableHead className="text-center">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                [...Array(5)].map((_, index) => (
-                  <TableRow key={index}>
-                    <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
-                  </TableRow>
-                ))
-              ) : paginatedEmployees.length > 0 ? (
-                 paginatedEmployees.map((employee, index) => {
-                   const yearlyLeave = employee.yearlyLeave || 12;
-                   const leaveTaken = employee.leaveTaken || 0;
-                   const availableLeave = yearlyLeave - leaveTaken;
-                   return (
-                    <TableRow key={employee.id}>
-                        <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
-                        <TableCell>{employee.employeeId}</TableCell>
-                        <TableCell className="font-medium">{employee.name}</TableCell>
-                        <TableCell>{employee.designation}</TableCell>
-                        <TableCell>{yearlyLeave}</TableCell>
-                        <TableCell className="font-semibold text-green-600">{availableLeave}</TableCell>
-                        <TableCell className="text-center">
-                          <Button variant="outline" size="sm" className="h-8" onClick={() => setLeaveToManage(employee)}>Manage</Button>
-                        </TableCell>
-                    </TableRow>
-                 )})
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center h-48 text-gray-500">
-                    <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                     No employees to manage leave for.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   const incrementHistoryContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
       <CardHeader className="p-6">
@@ -790,12 +715,6 @@ export default function PayrollPage() {
         return employeeListContent;
       case 'employee_performance':
         return employeePerformanceContent;
-      case 'leave_management':
-        return leaveManagementContent;
-      case 'increment_history':
-        return incrementHistoryContent;
-      case 'fund_wallet':
-        return fundWalletContent;
       default:
         return employeeListContent;
     }
@@ -818,7 +737,6 @@ export default function PayrollPage() {
           {isPerformanceTabVisible && (
             <TabsTrigger value="employee_performance" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee Performance</TabsTrigger>
           )}
-          <TabsTrigger value="leave_management" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Leave Management</TabsTrigger>
           <TabsTrigger value="increment_history" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Increment History</TabsTrigger>
           <TabsTrigger value="fund_wallet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Fund Wallet</TabsTrigger>
         </TabsList>
