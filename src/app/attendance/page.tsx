@@ -95,12 +95,40 @@ export default function CheckInOutPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [locationStatus, setLocationStatus] = useState('Requesting location...');
 
+  // Haversine distance function
+  const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // metres
+    const φ1 = lat1 * Math.PI/180;
+    const φ2 = lat2 * Math.PI/180;
+    const Δφ = (lat2-lat1) * Math.PI/180;
+    const Δλ = (lon2-lon1) * Math.PI/180;
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+    return R * c; // in metres
+  }
+
   useEffect(() => {
     setIsClient(true);
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setLocationStatus('Location Acquired');
+          const { latitude, longitude } = position.coords;
+          // Define office location and radius
+          const officeLat = 23.7077; // Example latitude for Dhaka
+          const officeLon = 90.4503; // Example longitude for Dhaka
+          const officeRadius = 500; // 500 meters radius
+
+          const distance = getDistance(latitude, longitude, officeLat, officeLon);
+
+          if (distance <= officeRadius) {
+            setLocationStatus('Inside Office Location');
+          } else {
+            setLocationStatus('Outside Office Location');
+          }
         },
         (error) => {
           switch (error.code) {
@@ -286,3 +314,5 @@ export default function CheckInOutPage() {
     </div>
   );
 }
+
+    
