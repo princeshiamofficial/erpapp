@@ -32,6 +32,7 @@ import {
   Gift,
   Store,
   Box,
+  Shrink,
 } from "lucide-react";
 import type { UserRole, GlobalSettings } from "@/types";
 import { cn } from "@/lib/utils";
@@ -73,7 +74,7 @@ const navItems: NavItem[] = [
   { 
     isHeader: true,
     label: "HRM", 
-    icon: Users, 
+    icon: Shrink, 
     roles: ["SYSTEM_ADMIN", "ADMIN"], 
     href: "",
     subItems: [
@@ -100,6 +101,7 @@ const navItems: NavItem[] = [
       { href: "/admin/statuses", label: "Status Management", icon: ListChecks, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/service-management", label: "Service Options", icon: Settings2, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/crm-target-settings", label: "App Settings", icon: Target, roles: ["SYSTEM_ADMIN"] }, 
+      { href: "/admin/attendance", label: "Attendance", icon: Users, roles: ["SYSTEM_ADMIN", "ADMIN"] },
     ]
   },
 ];
