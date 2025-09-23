@@ -30,6 +30,7 @@ export default function AttendancePage() {
     const [employees, setEmployees] = useState<Employee[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [leaveToManage, setLeaveToManage] = useState<Employee | null>(null);
 
@@ -131,6 +132,8 @@ export default function AttendancePage() {
                         placeholder="Filter by date..."
                         className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
                         type="date"
+                        value={attendanceDateFilter}
+                        onChange={(e) => setAttendanceDateFilter(e.target.value)}
                     />
                     </div>
                     <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
