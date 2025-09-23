@@ -204,15 +204,6 @@ export default function TrackingLinksPage() {
 
   return (
     <div className="space-y-6 p-1 sm:p-0">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
-        <div>
-          <h1 className="page-title">Track Orders</h1>
-          <p className="page-description">
-            Manage and monitor public tracking links for orders.
-          </p>
-        </div>
-      </div>
-
       <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
