@@ -13,6 +13,8 @@ import type { User } from '@/types';
 import { cookies, headers } from 'next/headers';
 import { cn } from '@/lib/utils';
 import { BottomNavigation } from '@/components/layout/BottomNavigation';
+import 'leaflet/dist/leaflet.css';
+
 
 // This is now a Server Component
 export default async function AuthenticatedLayout({

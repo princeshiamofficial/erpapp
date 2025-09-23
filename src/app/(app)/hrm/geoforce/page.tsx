@@ -29,13 +29,11 @@ export default function GeoforcePage() {
     const { toast } = useToast();
 
     // Dynamically import the Map component only on the client side
+    // This is the key fix to prevent SSR issues with Leaflet.
     const AttendanceMap = useMemo(() => dynamic(() => import('@/components/hrm/AttendanceMap'), {
         loading: () => <div className="h-full w-full bg-muted animate-pulse flex items-center justify-center"><p>Loading Map...</p></div>,
         ssr: false
     }), []);
-    
-    // Using a key to force re-render if necessary, though dynamic import often solves this.
-    const [mapKey, setMapKey] = useState(Date.now()); 
     
     const handleGetLiveLocation = () => {
         setIsLoadingLocation(true);
@@ -48,8 +46,6 @@ export default function GeoforcePage() {
                     setLongitude(longitude.toString());
                     toast({ title: "Location Found", description: "Your current location has been set." });
                     setIsLoadingLocation(false);
-                    // Change map key to force re-render with new center
-                    setMapKey(Date.now());
                 },
                 (error) => {
                     toast({ title: "Location Error", description: error.message, variant: "destructive" });
@@ -152,7 +148,6 @@ export default function GeoforcePage() {
                         <CardHeader><CardTitle>Geofence Map</CardTitle></CardHeader>
                         <CardContent className="h-full w-full p-0">
                              <AttendanceMap
-                                key={mapKey}
                                 locations={companies} 
                                 liveLatitude={liveLocation?.lat} 
                                 liveLongitude={liveLocation?.lng} 
@@ -164,4 +159,3 @@ export default function GeoforcePage() {
         </div>
     );
 }
-
