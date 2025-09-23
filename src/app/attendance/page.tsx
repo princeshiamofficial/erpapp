@@ -93,9 +93,35 @@ export default function CheckInOutPage() {
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [locationStatus, setLocationStatus] = useState('Requesting location...');
 
   useEffect(() => {
     setIsClient(true);
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocationStatus('Location Acquired');
+        },
+        (error) => {
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              setLocationStatus('Location permission denied.');
+              break;
+            case error.POSITION_UNAVAILABLE:
+              setLocationStatus('Location information is unavailable.');
+              break;
+            case error.TIMEOUT:
+              setLocationStatus('Location request timed out.');
+              break;
+            default:
+              setLocationStatus('An unknown error occurred.');
+              break;
+          }
+        }
+      );
+    } else {
+      setLocationStatus('Geolocation is not supported by this browser.');
+    }
   }, []);
 
   useEffect(() => {
@@ -190,7 +216,7 @@ export default function CheckInOutPage() {
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center justify-center gap-1.5">
             <MapPin className="h-3.5 w-3.5" />
-            Inside Office Location
+            {locationStatus}
           </p>
         </div>
 
