@@ -67,6 +67,7 @@ const navItems: NavItem[] = [
     ]
   },
   { href: "/orders", label: "Orders", icon: Package, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
+  { href: "/tracking-links", label: "Tracking Links", icon: Link2, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
   { href: "/quotation", label: "Quotations", icon: ClipboardList, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
   { href: "/gifts", label: "Gifts", icon: Gift, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
   { 
@@ -80,7 +81,6 @@ const navItems: NavItem[] = [
       { href: "/payroll", label: "Payroll", icon: Landmark, roles: ["SYSTEM_ADMIN", "ADMIN"] },
     ]
   },
-  { href: "/tracking-links", label: "Tracking Links", icon: Link2, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE"] },
   { href: "/finance-manager", label: "Finance Manager", icon: DollarSign, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "LR"] },
   { href: "/purchase-request", label: "Purchase Request", icon: ShoppingCart, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "LR"] },
   { href: "/invoice", label: "Invoice", icon: FileText, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM"] },
