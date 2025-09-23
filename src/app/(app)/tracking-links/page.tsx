@@ -232,7 +232,7 @@ export default function TrackingLinksPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="pl-6">Link ID (Order)</TableHead>
+                  <TableHead className="pl-6">Order ID</TableHead>
                   <TableHead>Company</TableHead>
                   <TableHead>Visibility</TableHead>
                   <TableHead>Order Status</TableHead>
@@ -373,5 +373,3 @@ export default function TrackingLinksPage() {
     </div>
   );
 }
-
-    
