@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -28,12 +28,14 @@ export default function GeoforcePage() {
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
     const { toast } = useToast();
 
-    // Dynamically import the Map component only on the client side
-    // This is the key fix to prevent SSR issues with Leaflet.
-    const AttendanceMap = useMemo(() => dynamic(() => import('@/components/hrm/AttendanceMap'), {
-        loading: () => <div className="h-full w-full bg-muted animate-pulse flex items-center justify-center"><p>Loading Map...</p></div>,
-        ssr: false
-    }), []);
+    // Dynamically import the Map component only on the client side.
+    const Map = useMemo(() => dynamic(
+        () => import('@/components/hrm/AttendanceMap'), // This will be a "dummy" component now
+        { 
+            loading: () => <div className="h-full w-full bg-muted animate-pulse flex items-center justify-center"><p>Loading Map...</p></div>,
+            ssr: false 
+        }
+    ), []);
     
     const handleGetLiveLocation = () => {
         setIsLoadingLocation(true);
@@ -147,7 +149,7 @@ export default function GeoforcePage() {
                     <Card className="h-full min-h-[500px] flex flex-col">
                         <CardHeader><CardTitle>Geofence Map</CardTitle></CardHeader>
                         <CardContent className="h-full w-full p-0">
-                             <AttendanceMap
+                             <Map
                                 locations={companies} 
                                 liveLatitude={liveLocation?.lat} 
                                 liveLongitude={liveLocation?.lng} 
