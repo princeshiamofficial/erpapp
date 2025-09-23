@@ -100,14 +100,6 @@ export function BillDetailsClient({ bill: initialBill, vendor }: BillDetailsClie
             <p className="text-muted-foreground text-sm">Vendor information not available.</p>
           )}
         </div>
-        <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
-          <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><User className="h-4 w-4"/>Bill To:</h4>
-            <>
-              <p className="text-lg font-semibold text-foreground">Color Hut</p>
-              <p className="text-foreground/90 text-sm flex items-start gap-2"><MapPin className="h-4 w-4 mt-0.5 text-muted-foreground"/>House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</p>
-              <p className="text-foreground/90 text-sm flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground"/>+8801919-760626</p>
-            </>
-        </div>
       </div>
 
       
