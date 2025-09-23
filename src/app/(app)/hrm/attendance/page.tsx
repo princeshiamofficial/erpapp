@@ -69,10 +69,26 @@ export default function AttendancePage() {
         </Card>
     );
 
+    const leaveManagementContent = (
+      <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+          <CardHeader className="p-6">
+              <CardTitle className="text-xl font-bold text-gray-800">Leave Management</CardTitle>
+          </CardHeader>
+          <CardContent>
+              <div className="text-center py-16 text-gray-500">
+                  <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                  Leave management content will be here.
+              </div>
+          </CardContent>
+      </Card>
+    );
+
     const renderActiveTab = () => {
         switch (activeTab) {
             case 'attendees_report':
                 return attendeesReportContent;
+            case 'leave_management':
+                return leaveManagementContent;
             default:
                 return attendeesReportContent;
         }
@@ -83,6 +99,7 @@ export default function AttendancePage() {
              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
                     <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
+                    <TabsTrigger value="leave_management" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Leave Management</TabsTrigger>
                 </TabsList>
                 <div className="mt-6">
                     {renderActiveTab()}
