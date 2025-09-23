@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import './globals.css';
 import { Providers } from './providers'; // Import the new client-side provider
+import 'leaflet/dist/leaflet.css';
 
 const geistSans = GeistSans;
 
