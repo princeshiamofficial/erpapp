@@ -89,7 +89,7 @@ export function BillDetailsClient({ bill: initialBill, vendor }: BillDetailsClie
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 print:mb-4">
         <div className="space-y-1 p-4 bg-secondary/40 border border-border/20 rounded-lg shadow-sm">
-          <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Store className="h-4 w-4"/>Bill From:</h4>
+          <h4 className="text-xs uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2"><Store className="h-4 w-4"/>Bill To:</h4>
           {vendor ? (
             <>
               <p className="text-lg font-semibold text-foreground">{vendor.companyName || vendor.name}</p>
