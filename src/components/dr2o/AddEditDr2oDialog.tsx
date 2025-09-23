@@ -65,7 +65,6 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
           } else {
              setLrItems([{ id: uuidv4(), companyName: '', productName: '', productQty: 0, courierId: '', dueOrderName: '', dueOrderQty: 0 }]);
           }
-          toast({ title: "Draft Restored", description: "Your previously unsaved entry has been loaded.", duration: 3000 });
         } else {
           setLrItems([{ id: uuidv4(), companyName: '', productName: '', productQty: 0, courierId: '', dueOrderName: '', dueOrderQty: 0 }]);
         }
