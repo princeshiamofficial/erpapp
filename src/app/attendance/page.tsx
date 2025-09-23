@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { LogIn, LogOut, Clock, Fingerprint, Home, History, Power, Lock, ArrowDown, ArrowUp } from 'lucide-react';
+import { LogIn, LogOut, Clock, Fingerprint, Home, History, Power, Lock, ArrowDown, ArrowUp, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInHours, differenceInMinutes } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
@@ -187,6 +187,10 @@ export default function CheckInOutPage() {
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {isClient ? format(currentTime, "eeee, MMMM d, yyyy") : 'Loading...'}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center justify-center gap-1.5">
+            <MapPin className="h-3.5 w-3.5" />
+            Inside Office Location
           </p>
         </div>
 
