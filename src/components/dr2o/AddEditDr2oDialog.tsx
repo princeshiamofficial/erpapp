@@ -34,6 +34,8 @@ interface AddEditDr2oDialogProps {
   team: 'CR' | 'DR' | 'LR';
 }
 
+const LR_DRAFT_STORAGE_KEY = 'lrDailyEntryDraft';
+
 export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, currentUser, team }: AddEditDr2oDialogProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [newCustomer1, setNewCustomer1] = useState('');
@@ -50,6 +52,42 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
   const isEditMode = !!entry;
   const isAdmin = useMemo(() => currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN', [currentUser]);
 
+  // Load from localStorage on initial mount or when dialog opens for a new entry
+  useEffect(() => {
+    if (isOpen && !isEditMode && team === 'LR') {
+      try {
+        const savedDraft = localStorage.getItem(LR_DRAFT_STORAGE_KEY);
+        if (savedDraft) {
+          const draft = JSON.parse(savedDraft);
+          if (draft.date) setDate(new Date(draft.date));
+          if (draft.lrItems && draft.lrItems.length > 0) {
+            setLrItems(draft.lrItems);
+          } else {
+             setLrItems([{ id: uuidv4(), companyName: '', productName: '', productQty: 0, courierId: '', dueOrderName: '', dueOrderQty: 0 }]);
+          }
+          toast({ title: "Draft Restored", description: "Your previously unsaved entry has been loaded.", duration: 3000 });
+        } else {
+          setLrItems([{ id: uuidv4(), companyName: '', productName: '', productQty: 0, courierId: '', dueOrderName: '', dueOrderQty: 0 }]);
+        }
+      } catch (error) {
+        console.error("Failed to parse LR draft from localStorage", error);
+        setLrItems([{ id: uuidv4(), companyName: '', productName: '', productQty: 0, courierId: '', dueOrderName: '', dueOrderQty: 0 }]);
+      }
+    }
+  }, [isOpen, isEditMode, team, toast]);
+
+  // Save to localStorage on change for LR new entry mode
+  useEffect(() => {
+    if (isOpen && !isEditMode && team === 'LR') {
+      const draft = {
+        date: date?.toISOString(),
+        lrItems,
+      };
+      localStorage.setItem(LR_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    }
+  }, [date, lrItems, isOpen, isEditMode, team]);
+
+
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && entry) {
@@ -61,21 +99,20 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
         setOldCustomer2(entry.oldCustomer2 || '');
         setOldCustomer3(entry.oldCustomer3 || '');
         setOldCustomer4(entry.oldCustomer4 || '');
-        setLrItems(entry.lrItems && entry.lrItems.length > 0 ? entry.lrItems : [{ id: uuidv4(), companyName: '', productName: '', productQty: 0, courierId: '', dueOrderName: '', dueOrderQty: 0 }]);
+        if (team !== 'LR') { // Only reset for non-LR or if no items exist
+            setLrItems(entry.lrItems && entry.lrItems.length > 0 ? entry.lrItems : [{ id: uuidv4(), companyName: '', productName: '', productQty: 0, courierId: '', dueOrderName: '', dueOrderQty: 0 }]);
+        }
       } else {
-        setDate(new Date());
-        setNewCustomer1('');
-        setNewCustomer2('');
-        setNewCustomer3('');
-        setOldCustomer1('');
-        setOldCustomer2('');
-        setOldCustomer3('');
-        setOldCustomer4('');
-        setLrItems([{ id: uuidv4(), companyName: '', productName: '', productQty: 0, courierId: '', dueOrderName: '', dueOrderQty: 0 }]);
+        if (team !== 'LR') { // Non-LR teams always reset
+             setDate(new Date());
+             setNewCustomer1(''); setNewCustomer2(''); setNewCustomer3('');
+             setOldCustomer1(''); setOldCustomer2(''); setOldCustomer3(''); setOldCustomer4('');
+             setLrItems([{ id: uuidv4(), companyName: '', productName: '', productQty: 0, courierId: '', dueOrderName: '', dueOrderQty: 0 }]);
+        }
       }
       setIsSubmitting(false);
     }
-  }, [isOpen, entry, isEditMode]);
+  }, [isOpen, entry, isEditMode, team]);
 
   const canSelectDate = currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN';
   const canEditEntry = isEditMode ? (currentUser.id === entry?.crmId || isAdmin) : true;
@@ -128,6 +165,9 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
 
     if (result.success) {
       toast({ title: `Report ${isEditMode ? 'Updated' : 'Submitted'}`, description: "Your daily report has been saved." });
+      if (!isEditMode && team === 'LR') {
+        localStorage.removeItem(LR_DRAFT_STORAGE_KEY);
+      }
       onDr2oSaved();
     } else {
       toast({ title: "Error", description: result.error || "Failed to save the report.", variant: "destructive" });
