@@ -78,7 +78,7 @@ export default function GeoforcePage() {
     // Effect to update map when locations change, without re-initializing
     useEffect(() => {
         if (leafletMap.current && isClient) {
-             import('leaflet').then(([L]) => {
+             import('leaflet').then((L) => {
                 // Clear existing layers (except base tile layer)
                 leafletMap.current.eachLayer((layer: any) => {
                     if (!!layer.getLatLng) { // Simple check for marker/circle layers
