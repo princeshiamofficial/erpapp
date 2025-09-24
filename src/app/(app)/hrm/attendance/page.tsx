@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -151,11 +152,12 @@ export default function AttendancePage() {
                         <TableHead>In Time</TableHead>
                         <TableHead>Out Time</TableHead>
                         <TableHead>Hours Worked</TableHead>
+                        <TableHead>Location</TableHead>
                     </TableRow>
                     </TableHeader>
                     <TableBody>
                         <TableRow>
-                            <TableCell colSpan={6} className="text-center h-48 text-gray-500">
+                            <TableCell colSpan={7} className="text-center h-48 text-gray-500">
                                 <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                                 No attendance data recorded for the selected period.
                             </TableCell>
