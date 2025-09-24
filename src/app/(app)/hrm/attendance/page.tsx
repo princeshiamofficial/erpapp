@@ -19,6 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationEllipsis, PaginationPrevious, PaginationNext } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
 
@@ -33,12 +34,25 @@ const getInitials = (name: string) => {
 
 // Mock Data for Attendance Report
 const MOCK_ATTENDANCE_DATA = [
-    { id: '1', date: '2024-07-28', employeeName: 'John Doe', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', status: 'On Time', inTime: '09:01 AM', outTime: '06:05 PM', hoursWorked: '9h 4m', lateReason: '-', earlyOutReason: '-', location: 'Head Office' },
-    { id: '2', date: '2024-07-28', employeeName: 'Jane Smith', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d', status: 'Late', inTime: '09:32 AM', outTime: '06:15 PM', hoursWorked: '8h 43m', lateReason: 'Traffic Jam', earlyOutReason: '-', location: 'Head Office' },
-    { id: '3', date: '2024-07-28', employeeName: 'Mike Johnson', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d', status: 'On Time', inTime: '08:55 AM', outTime: '05:00 PM', hoursWorked: '8h 5m', lateReason: '-', earlyOutReason: 'Personal Emergency', location: 'Remote' },
-    { id: '4', date: '2024-07-27', employeeName: 'John Doe', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', status: 'On Time', inTime: '08:58 AM', outTime: '06:02 PM', hoursWorked: '9h 4m', lateReason: '-', earlyOutReason: '-', location: 'Head Office' },
-    { id: '5', date: '2024-07-27', employeeName: 'Jane Smith', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d', status: 'Absent', inTime: '-', outTime: '-', hoursWorked: '-', lateReason: '-', earlyOutReason: '-', location: '-' },
+    { id: '1', date: '2024-07-28', employeeName: 'John Doe', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', status: 'On Time' as const, inTime: '09:01 AM', outTime: '06:05 PM', hoursWorked: '9h 4m', lateReason: '-', earlyOutReason: '-', location: 'Head Office' },
+    { id: '2', date: '2024-07-28', employeeName: 'Jane Smith', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d', status: 'Late' as const, inTime: '09:32 AM', outTime: '06:15 PM', hoursWorked: '8h 43m', lateReason: 'Traffic Jam', earlyOutReason: '-', location: 'Head Office' },
+    { id: '3', date: '2024-07-28', employeeName: 'Mike Johnson', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d', status: 'On Time' as const, inTime: '08:55 AM', outTime: '05:00 PM', hoursWorked: '8h 5m', lateReason: '-', earlyOutReason: 'Personal Emergency', location: 'Remote' },
+    { id: '4', date: '2024-07-27', employeeName: 'John Doe', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', status: 'On Time' as const, inTime: '08:58 AM', outTime: '06:02 PM', hoursWorked: '9h 4m', lateReason: '-', earlyOutReason: '-', location: 'Head Office' },
+    { id: '5', date: '2024-07-27', employeeName: 'Jane Smith', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d', status: 'Absent' as const, inTime: '-', outTime: '-', hoursWorked: '-', lateReason: '-', earlyOutReason: '-', location: '-' },
 ];
+
+const getStatusBadgeClass = (status: 'On Time' | 'Late' | 'Absent') => {
+  switch (status) {
+    case 'On Time':
+      return 'bg-green-100 text-green-800 hover:bg-green-200 border-green-200';
+    case 'Late':
+      return 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 border-yellow-200';
+    case 'Absent':
+      return 'bg-red-100 text-red-800 hover:bg-red-200 border-red-200';
+    default:
+      return 'bg-gray-100 text-gray-800 hover:bg-gray-200 border-gray-200';
+  }
+};
 
 
 export default function AttendancePage() {
@@ -199,7 +213,11 @@ export default function AttendancePage() {
                                             <span className="font-medium">{entry.employeeName}</span>
                                         </div>
                                     </TableCell>
-                                    <TableCell>{entry.status}</TableCell>
+                                    <TableCell>
+                                        <Badge className={cn(getStatusBadgeClass(entry.status), 'border')}>
+                                            {entry.status}
+                                        </Badge>
+                                    </TableCell>
                                     <TableCell>{entry.inTime}</TableCell>
                                     <TableCell>{entry.outTime}</TableCell>
                                     <TableCell>{entry.hoursWorked}</TableCell>
