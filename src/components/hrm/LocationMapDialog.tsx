@@ -19,16 +19,18 @@ interface LocationMapDialogProps {
   location: { lat: number, lng: number } | null;
 }
 
-// A helper component to programmatically update the map's view.
-// This is the recommended way to handle dynamic center/zoom with react-leaflet.
+// This is the new child component that will handle map updates.
+// It uses the useMap() hook to get a reference to the parent MapContainer instance.
 function MapUpdater({ center }: { center: [number, number] }) {
     const map = useMap();
     useEffect(() => {
         if (center) {
+            // This programmatically sets the view of the existing map
+            // without trying to re-initialize it.
             map.setView(center, map.getZoom());
         }
     }, [center, map]);
-    return null;
+    return null; // This component does not render anything itself.
 }
 
 export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMapDialogProps) {
@@ -59,6 +61,7 @@ export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMa
                                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                             />
+                            {/* This component will handle all subsequent updates to the map's center */}
                             <MapUpdater center={[location.lat, location.lng]} />
                             <Marker position={[location.lat, location.lng]}>
                                 <Popup>
