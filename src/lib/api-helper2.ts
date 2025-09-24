@@ -1,5 +1,3 @@
-
-
 // NOTE: This is a new helper file for the v3 API. It is not yet used by the application.
 // To use this, you would import functions from this file instead of 'api-helper.ts'.
 
@@ -15,7 +13,15 @@ export async function fetchFromApiV3(endpoint: string, options: RequestInit = {}
         ...options.headers,
     };
 
-    const response = await fetch(`${API_V3_URL}/${endpoint}`, { ...options, headers });
+    // Add CORS headers for local development
+    const requestOptions: RequestInit = {
+        ...options,
+        headers,
+        mode: 'cors', // Explicitly set mode to cors
+    };
+
+
+    const response = await fetch(`${API_V3_URL}/${endpoint}`, requestOptions);
 
     if (!response.ok) {
         const errorText = await response.text();
@@ -76,4 +82,3 @@ export const ensureCollectionExistsV3 = async (collectionName: string) => {
         }
     }
 };
-
