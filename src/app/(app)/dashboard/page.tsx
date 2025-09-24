@@ -1231,7 +1231,7 @@ function DashboardContent() {
                       <MessageSquare className="mr-2 h-6 w-6 text-primary" />
                       Recent Feedback
                     </CardTitle>
-                    <CardDescription>Latest client feedback from tracking pages.</CardDescription>
+                    <CardDescription>Latest client feedback from tracking pages. tap here Feedback, OD & ROD</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {isLoadingContent ? (
@@ -1300,7 +1300,7 @@ function DashboardContent() {
                       <MessageSquare className="mr-2 h-6 w-6 text-primary" />
                       Recent Feedback
                     </CardTitle>
-                    <CardDescription>Latest client feedback from tracking pages.</CardDescription>
+                    <CardDescription>Latest client feedback from tracking pages. tap here Feedback, OD & ROD</CardDescription>
                   </CardHeader>
                   <CardContent>
                     {isLoadingContent ? (
