@@ -102,7 +102,7 @@ export default function GeoforcePage() {
                             Office Location
                         </h1>
                         <p className="text-base text-muted-foreground mt-1">
-                            Dashboard / Office Location
+                            Define and manage geographic boundaries for employee attendance tracking.
                         </p>
                     </div>
                      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
