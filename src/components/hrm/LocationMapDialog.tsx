@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Tooltip, useMap } from 'react-leaflet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
@@ -50,8 +50,6 @@ function MapUpdater({ center, zoom }: { center: L.LatLngExpression; zoom: number
 }
 
 export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMapDialogProps) {
-  // If the dialog is not open, render nothing.
-  // This ensures the map is completely unmounted when not in use.
   if (!isOpen || !location) {
     return null;
   }
@@ -62,10 +60,6 @@ export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMa
         <DialogHeader className="p-4 border-b">
           <DialogTitle>Attendance Location for {location.employeeName}</DialogTitle>
         </DialogHeader>
-        {/*
-          The key here is that MapContainer is rendered conditionally based on isOpen.
-          When isOpen becomes true, the entire map structure is mounted fresh.
-        */}
         <div style={{ height: '50vh', width: '100%' }}>
             <MapContainer
                 center={[location.lat, location.lng]}
@@ -79,15 +73,20 @@ export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMa
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 <Marker position={[location.lat, location.lng]}>
-                  <Popup>
-                     <div className="flex items-center gap-2">
+                  <Tooltip
+                    permanent
+                    direction="top"
+                    offset={[0, -20]}
+                    className="leaflet-tooltip-permanent"
+                  >
+                     <div className="flex items-center gap-2 p-1 bg-background rounded-full shadow-md border">
                         <Avatar className="h-8 w-8">
                             <AvatarImage src={location.employeeAvatar} alt={location.employeeName} />
                             <AvatarFallback>{getInitials(location.employeeName)}</AvatarFallback>
                         </Avatar>
-                        <span className="font-semibold">{location.employeeName}</span>
+                        <span className="font-semibold pr-2">{location.employeeName}</span>
                      </div>
-                  </Popup>
+                  </Tooltip>
                 </Marker>
                 <MapUpdater center={[location.lat, location.lng]} zoom={15} />
             </MapContainer>
