@@ -85,7 +85,7 @@ export default function GeoforcePage() {
                     }
                 });
 
-                // Add new company locations
+                // Add new company locations with their radius circle
                 companies.forEach(loc => {
                     L.marker([loc.latitude, loc.longitude]).addTo(leafletMap.current).bindPopup(loc.name);
                     L.circle([loc.latitude, loc.longitude], { radius: loc.radius, color: 'blue', fillColor: 'blue', fillOpacity: 0.2 }).addTo(leafletMap.current);
