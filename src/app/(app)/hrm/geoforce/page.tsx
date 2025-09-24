@@ -1,13 +1,12 @@
-
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, GlobeLock, Trash2, MoreVertical, Edit } from 'lucide-react';
+import { Loader2, PlusCircle, GlobeLock, Trash2, MoreVertical, Edit, MapPin } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Slider } from '@/components/ui/slider';
 import {
@@ -33,6 +32,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { MapContainer, TileLayer, Marker, Circle, useMap, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
+import "leaflet-defaulticon-compatibility";
+import { LatLngExpression, LatLng } from 'leaflet';
 
 
 interface CompanyLocation {
@@ -42,6 +46,34 @@ interface CompanyLocation {
     longitude: number;
     radius: number;
 }
+
+const DEFAULT_MAP_CENTER: LatLngExpression = [23.8103, 90.4125]; // Dhaka
+const DEFAULT_MAP_ZOOM = 12;
+
+
+function MapUpdater({ center, zoom }: { center: LatLngExpression; zoom: number; }) {
+    const map = useMap();
+    useEffect(() => {
+        // Use a short timeout to ensure the dialog animation is complete
+        // and the map container has its final size.
+        setTimeout(() => {
+            map.invalidateSize();
+            map.setView(center, zoom);
+        }, 100);
+    }, [center, zoom, map]);
+
+    return null;
+}
+
+function LocationPicker({ onLocationChange }: { onLocationChange: (lat: number, lng: number) => void; }) {
+    useMapEvents({
+        click(e) {
+            onLocationChange(e.latlng.lat, e.latlng.lng);
+        },
+    });
+    return null;
+}
+
 
 export default function GeoforcePage() {
     const [locations, setLocations] = useState<CompanyLocation[]>([]);
@@ -125,6 +157,33 @@ export default function GeoforcePage() {
         setLocations(prev => prev.filter(loc => loc.id !== locationToDelete.id));
         toast({ title: "Location Removed", description: `The location "${locationToDelete.name}" has been deleted.` });
     };
+
+    const handleGetCurrentLocation = () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const { latitude: lat, longitude: lng } = position.coords;
+                    setLatitude(lat.toFixed(6));
+                    setLongitude(lng.toFixed(6));
+                    toast({ title: "Location Fetched", description: "Your current location has been set." });
+                },
+                (error) => {
+                    toast({ title: "Location Error", description: `Could not get location: ${error.message}`, variant: "destructive" });
+                }
+            );
+        } else {
+            toast({ title: "Location Error", description: "Geolocation is not supported by your browser.", variant: "destructive" });
+        }
+    };
+    
+    const MarkerPosition = useMemo(() => {
+        const lat = parseFloat(latitude);
+        const lng = parseFloat(longitude);
+        if (!isNaN(lat) && !isNaN(lng)) {
+            return new LatLng(lat, lng);
+        }
+        return null;
+    }, [latitude, longitude]);
 
     const isEditMode = !!editingLocation;
 
@@ -217,7 +276,7 @@ export default function GeoforcePage() {
             </div>
             
              <Dialog open={isFormDialogOpen} onOpenChange={(open) => { setIsFormDialogOpen(open); if (!open) resetForm(); }}>
-                <DialogContent>
+                <DialogContent className="max-w-2xl">
                      <DialogHeader>
                         <DialogTitle>{isEditMode ? 'Edit' : 'Add New'} Office Location</DialogTitle>
                         <DialogDescription>
@@ -225,12 +284,12 @@ export default function GeoforcePage() {
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleAddOrEditLocation}>
-                        <div className="space-y-4 py-4">
-                            <div className="space-y-1">
+                        <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
+                           <div className="space-y-1">
                                 <Label htmlFor="name">Office Name</Label>
                                 <Input id="name" placeholder="e.g., Head Office" value={name} onChange={e => setName(e.target.value)} />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <Label htmlFor="latitude">Latitude</Label>
                                     <Input id="latitude" placeholder="e.g., 23.8103" value={latitude} onChange={e => setLatitude(e.target.value)} />
@@ -240,6 +299,10 @@ export default function GeoforcePage() {
                                     <Input id="longitude" placeholder="e.g., 90.4125" value={longitude} onChange={e => setLongitude(e.target.value)} />
                                 </div>
                             </div>
+                            <Button type="button" variant="outline" size="sm" onClick={handleGetCurrentLocation} className="w-full">
+                                <MapPin className="mr-2 h-4 w-4"/>
+                                Get Current Location
+                            </Button>
                             <div className="space-y-1">
                                 <Label htmlFor="radius">Radius: {radius} meters</Label>
                                 <Slider
@@ -251,11 +314,41 @@ export default function GeoforcePage() {
                                     onValueChange={(value) => setRadius(value[0])}
                                 />
                             </div>
+                            <div className="h-[300px] w-full rounded-md overflow-hidden border">
+                                <MapContainer
+                                    center={DEFAULT_MAP_CENTER}
+                                    zoom={DEFAULT_MAP_ZOOM}
+                                    scrollWheelZoom={true}
+                                    style={{ height: '100%', width: '100%' }}
+                                >
+                                    <TileLayer
+                                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                    />
+                                    {MarkerPosition && (
+                                        <>
+                                            <Marker
+                                                position={MarkerPosition}
+                                                draggable={true}
+                                                eventHandlers={{
+                                                    dragend: (e) => {
+                                                        const { lat, lng } = e.target.getLatLng();
+                                                        setLatitude(lat.toFixed(6));
+                                                        setLongitude(lng.toFixed(6));
+                                                    },
+                                                }}
+                                            />
+                                            <Circle center={MarkerPosition} radius={radius} pathOptions={{ color: 'blue', fillColor: 'blue' }} />
+                                            <MapUpdater center={MarkerPosition} zoom={15} />
+                                        </>
+                                    )}
+                                    <LocationPicker onLocationChange={(lat, lng) => { setLatitude(lat.toFixed(6)); setLongitude(lng.toFixed(6)); }} />
+                                </MapContainer>
+                            </div>
                         </div>
-                        <DialogFooter>
+                        <DialogFooter className="pt-4 border-t">
                             <Button type="button" variant="outline" onClick={() => { setIsFormDialogOpen(false); resetForm(); }}>Cancel</Button>
                             <Button type="submit">
-                                <PlusCircle className="mr-2 h-4 w-4" />
                                 {isEditMode ? 'Save Changes' : 'Add Location'}
                             </Button>
                         </DialogFooter>
@@ -264,4 +357,3 @@ export default function GeoforcePage() {
             </Dialog>
         </>
     );
-}
