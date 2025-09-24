@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX } from 'lucide-react';
+import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -205,7 +205,12 @@ export default function AttendancePage() {
                                     <TableCell>{entry.hoursWorked}</TableCell>
                                     <TableCell>{entry.lateReason}</TableCell>
                                     <TableCell>{entry.earlyOutReason}</TableCell>
-                                    <TableCell>{entry.location}</TableCell>
+                                    <TableCell>
+                                        <Button variant="outline" size="sm">
+                                            <MapPin className="mr-2 h-4 w-4" />
+                                            {entry.location}
+                                        </Button>
+                                    </TableCell>
                                 </TableRow>
                             ))
                         ) : (
