@@ -105,10 +105,16 @@ export default function GeoforcePage() {
         if ("geolocation" in navigator) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
-                    const { latitude, longitude } = position.coords;
-                    setLiveLocation({ lat: latitude, lng: longitude });
-                    setLatitude(latitude.toString());
-                    setLongitude(longitude.toString());
+                    const { latitude: lat, longitude: lng } = position.coords;
+                    setLiveLocation({ lat, lng });
+                    setLatitude(lat.toString());
+                    setLongitude(lng.toString());
+                    
+                    // Pan the map to the new location
+                    if (leafletMap.current) {
+                        leafletMap.current.setView([lat, lng], 16); // Zoom in closer
+                    }
+
                     toast({ title: "Location Found", description: "Your current location has been set." });
                     setIsLoadingLocation(false);
                 },
