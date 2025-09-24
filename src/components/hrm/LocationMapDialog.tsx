@@ -1,14 +1,14 @@
 
 "use client";
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import L from 'leaflet';
+import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
 import "leaflet-defaulticon-compatibility";
@@ -16,66 +16,63 @@ import "leaflet-defaulticon-compatibility";
 interface LocationMapDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
-  location: { lat: number, lng: number } | null;
+  location: { lat: number; lng: number } | null;
+}
+
+// A helper component that will update the map's view and size
+function MapUpdater({ center, zoom, isOpen }: { center: L.LatLngExpression; zoom: number; isOpen: boolean }) {
+    const map = useMap();
+    useEffect(() => {
+        if (isOpen) {
+            // Use a short timeout to ensure the dialog animation is complete
+            // and the map container has its final size.
+            setTimeout(() => {
+                map.invalidateSize();
+                map.setView(center, zoom);
+            }, 100);
+        }
+    }, [isOpen, center, zoom, map]);
+
+    return null;
 }
 
 export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMapDialogProps) {
-    const mapContainerRef = useRef<HTMLDivElement>(null);
-    const mapInstanceRef = useRef<L.Map | null>(null);
+  // If the dialog is not open or there's no location, render nothing.
+  // This ensures the map is completely unmounted when not in use.
+  if (!isOpen || !location) {
+    return null;
+  }
 
-    useEffect(() => {
-        // Only run this effect when the dialog is open and we have a location and a ref to the container div
-        if (isOpen && location && mapContainerRef.current) {
-            // Check if the map is NOT already initialized in this specific container
-            if (!mapInstanceRef.current) {
-                // Initialize the map
-                const map = L.map(mapContainerRef.current).setView([location.lat, location.lng], 15);
-                mapInstanceRef.current = map;
-
-                // Add the tile layer
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                }).addTo(map);
-
-                // Add a marker
-                L.marker([location.lat, location.lng]).addTo(map)
-                    .bindPopup('Attendance marked from this location.')
-                    .openPopup();
-            } else {
-                // If map instance already exists, just update its view
-                mapInstanceRef.current.setView([location.lat, location.lng], 15);
-            }
-        }
-
-        // Cleanup function: This is the crucial part.
-        // It runs when the component unmounts or BEFORE the effect runs again.
-        // When the dialog closes (isOpen becomes false), this cleanup will destroy the map.
-        return () => {
-            if (mapInstanceRef.current) {
-                mapInstanceRef.current.remove();
-                mapInstanceRef.current = null;
-            }
-        };
-    }, [isOpen, location]); // Effect dependencies
-
-    return (
-        <Dialog open={isOpen} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-xl p-0">
-                <DialogHeader className="p-4 border-b">
-                    <DialogTitle>Attendance Location</DialogTitle>
-                </DialogHeader>
-                {/* 
-                  The map container div. 
-                  Leaflet will attach the map here.
-                  It is important that this div is always present in the DOM when the dialog is open.
-                */}
-                <div 
-                    ref={mapContainerRef} 
-                    style={{ height: '50vh', width: '100%' }}
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl p-0">
+        <DialogHeader className="p-4 border-b">
+          <DialogTitle>Attendance Location</DialogTitle>
+        </DialogHeader>
+        {/*
+          The key here is that MapContainer is now being rendered conditionally based on isOpen.
+          When isOpen becomes true, the entire map structure is mounted fresh.
+        */}
+        <div style={{ height: '50vh', width: '100%' }}>
+            <MapContainer
+                center={[location.lat, location.lng]}
+                zoom={15}
+                scrollWheelZoom={false}
+                style={{ height: '100%', width: '100%' }}
+                className="rounded-b-lg"
+            >
+                <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-            </DialogContent>
-        </Dialog>
-    );
+                <Marker position={[location.lat, location.lng]} />
+                {/* This component will handle updates after the initial render */}
+                <MapUpdater center={[location.lat, location.lng]} zoom={15} isOpen={isOpen} />
+            </MapContainer>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export default LocationMapDialog;
