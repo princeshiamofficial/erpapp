@@ -20,6 +20,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { LocationMapDialog } from '@/components/hrm/LocationMapDialog';
 
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
 
@@ -34,11 +35,11 @@ const getInitials = (name: string) => {
 
 // Mock Data for Attendance Report
 const MOCK_ATTENDANCE_DATA = [
-    { id: '1', date: '2024-07-28', employeeName: 'John Doe', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', status: 'On Time' as const, inTime: '09:01 AM', outTime: '06:05 PM', hoursWorked: '9h 4m', lateReason: '-', earlyOutReason: '-', location: 'Head Office' },
-    { id: '2', date: '2024-07-28', employeeName: 'Jane Smith', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d', status: 'Late' as const, inTime: '09:32 AM', outTime: '06:15 PM', hoursWorked: '8h 43m', lateReason: 'Traffic Jam', earlyOutReason: '-', location: 'Head Office' },
-    { id: '3', date: '2024-07-28', employeeName: 'Mike Johnson', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d', status: 'On Time' as const, inTime: '08:55 AM', outTime: '05:00 PM', hoursWorked: '8h 5m', lateReason: '-', earlyOutReason: 'Personal Emergency', location: 'Remote' },
-    { id: '4', date: '2024-07-27', employeeName: 'John Doe', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', status: 'On Time' as const, inTime: '08:58 AM', outTime: '06:02 PM', hoursWorked: '9h 4m', lateReason: '-', earlyOutReason: '-', location: 'Head Office' },
-    { id: '5', date: '2024-07-27', employeeName: 'Jane Smith', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d', status: 'Absent' as const, inTime: '-', outTime: '-', hoursWorked: '-', lateReason: '-', earlyOutReason: '-', location: '-' },
+    { id: '1', date: '2024-07-28', employeeName: 'John Doe', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', status: 'On Time' as const, inTime: '09:01 AM', outTime: '06:05 PM', hoursWorked: '9h 4m', lateReason: '-', earlyOutReason: '-', location: 'Head Office', lat: 23.7077, lng: 90.4503 },
+    { id: '2', date: '2024-07-28', employeeName: 'Jane Smith', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d', status: 'Late' as const, inTime: '09:32 AM', outTime: '06:15 PM', hoursWorked: '8h 43m', lateReason: 'Traffic Jam', earlyOutReason: '-', location: 'Head Office', lat: 23.7077, lng: 90.4503 },
+    { id: '3', date: '2024-07-28', employeeName: 'Mike Johnson', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d', status: 'On Time' as const, inTime: '08:55 AM', outTime: '05:00 PM', hoursWorked: '8h 5m', lateReason: '-', earlyOutReason: 'Personal Emergency', location: 'Remote', lat: 23.8103, lng: 90.4125 },
+    { id: '4', date: '2024-07-27', employeeName: 'John Doe', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', status: 'On Time' as const, inTime: '08:58 AM', outTime: '06:02 PM', hoursWorked: '9h 4m', lateReason: '-', earlyOutReason: '-', location: 'Head Office', lat: 23.7077, lng: 90.4503 },
+    { id: '5', date: '2024-07-27', employeeName: 'Jane Smith', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d', status: 'Absent' as const, inTime: '-', outTime: '-', hoursWorked: '-', lateReason: '-', earlyOutReason: '-', location: '-', lat: null, lng: null },
 ];
 
 const getStatusBadgeClass = (status: 'On Time' | 'Late' | 'Absent') => {
@@ -66,6 +67,7 @@ export default function AttendancePage() {
     const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [leaveToManage, setLeaveToManage] = useState<Employee | null>(null);
+    const [viewingLocation, setViewingLocation] = useState<{ lat: number, lng: number } | null>(null);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -224,7 +226,16 @@ export default function AttendancePage() {
                                     <TableCell>{entry.lateReason}</TableCell>
                                     <TableCell>{entry.earlyOutReason}</TableCell>
                                     <TableCell>
-                                        <Button variant="outline" size="sm">
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm"
+                                            disabled={!entry.lat || !entry.lng}
+                                            onClick={() => {
+                                                if (entry.lat && entry.lng) {
+                                                    setViewingLocation({ lat: entry.lat, lng: entry.lng });
+                                                }
+                                            }}
+                                        >
                                             <MapPin className="mr-2 h-4 w-4" />
                                             View Map
                                         </Button>
@@ -359,6 +370,11 @@ export default function AttendancePage() {
                     onLeaveUpdated={fetchData}
                 />
             )}
+            <LocationMapDialog 
+                isOpen={!!viewingLocation}
+                onOpenChange={() => setViewingLocation(null)}
+                location={viewingLocation}
+            />
         </div>
     );
 }
