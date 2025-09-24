@@ -8,7 +8,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
 import 'leaflet-defaulticon-compatibility';
@@ -19,15 +19,22 @@ interface LocationMapDialogProps {
   location: { lat: number, lng: number } | null;
 }
 
-export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMapDialogProps) {
-    const [mapKey, setMapKey] = useState(Date.now());
-
+// A helper component to programmatically update the map's view.
+// This is the recommended way to handle dynamic center/zoom with react-leaflet.
+function MapUpdater({ center }: { center: [number, number] }) {
+    const map = useMap();
     useEffect(() => {
-        // When the dialog opens, generate a new key to force re-render
-        if (isOpen) {
-            setMapKey(Date.now());
+        if (center) {
+            map.setView(center, map.getZoom());
         }
-    }, [isOpen]);
+    }, [center, map]);
+    return null;
+}
+
+export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMapDialogProps) {
+    if (!isOpen) {
+        return null;
+    }
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -36,13 +43,23 @@ export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMa
                     <DialogTitle>Attendance Location</DialogTitle>
                 </DialogHeader>
                 <div className="h-[50vh] w-full">
-                    {/* Key change: Using the key forces React to unmount and remount the component */}
-                    {isOpen && location && (
-                        <MapContainer key={mapKey} center={[location.lat, location.lng]} zoom={15} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
+                    {/* 
+                      The MapContainer is now rendered with a static, default center.
+                      The MapUpdater component will then handle moving the map to the correct location.
+                      This avoids re-initializing the map container on the same DOM element.
+                    */}
+                    {location && (
+                        <MapContainer 
+                          center={[location.lat, location.lng]} 
+                          zoom={15} 
+                          scrollWheelZoom={false} 
+                          style={{ height: '100%', width: '100%' }}
+                        >
                             <TileLayer
                                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                             />
+                            <MapUpdater center={[location.lat, location.lng]} />
                             <Marker position={[location.lat, location.lng]}>
                                 <Popup>
                                     Attendance marked from this location.
@@ -57,3 +74,4 @@ export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMa
 }
 
 export default LocationMapDialog;
+
