@@ -1,14 +1,14 @@
 
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
 import "leaflet-defaulticon-compatibility";
@@ -19,19 +19,15 @@ interface LocationMapDialogProps {
   location: { lat: number, lng: number } | null;
 }
 
-// This child component gets access to the map instance and updates it programmatically.
-function MapUpdater({ center }: { center: [number, number] }) {
-  const map = useMap();
-  useEffect(() => {
-    map.setView(center);
-  }, [center, map]);
-  return null;
-}
-
 export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMapDialogProps) {
-    if (!isOpen || !location) {
-        return null;
-    }
+    const [mapKey, setMapKey] = useState(Date.now());
+
+    useEffect(() => {
+        // When the dialog is opened, change the key to force a remount of the map.
+        if (isOpen) {
+            setMapKey(Date.now());
+        }
+    }, [isOpen]);
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -41,26 +37,29 @@ export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMa
                 </DialogHeader>
                 <div className="h-[50vh] w-full">
                     {/* 
-                      The MapContainer is rendered with a default static center to initialize it only once.
-                      The MapUpdater component will then move the view to the correct location.
+                      Key change: By setting a new key each time the dialog opens,
+                      we ensure React treats the MapContainer as a new component,
+                      destroying the old one and preventing the initialization error.
                     */}
-                    <MapContainer 
-                      center={[23.8103, 90.4125]} // Default center, will be updated by MapUpdater
-                      zoom={15} 
-                      scrollWheelZoom={false} 
-                      style={{ height: '100%', width: '100%' }}
-                    >
-                        <TileLayer
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                        />
-                        <Marker position={[location.lat, location.lng]}>
-                            <Popup>
-                                Attendance marked from this location.
-                            </Popup>
-                        </Marker>
-                        <MapUpdater center={[location.lat, location.lng]} />
-                    </MapContainer>
+                    {isOpen && location && (
+                        <MapContainer
+                          key={mapKey}
+                          center={[location.lat, location.lng]} 
+                          zoom={15} 
+                          scrollWheelZoom={false} 
+                          style={{ height: '100%', width: '100%' }}
+                        >
+                            <TileLayer
+                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            />
+                            <Marker position={[location.lat, location.lng]}>
+                                <Popup>
+                                    Attendance marked from this location.
+                                </Popup>
+                            </Marker>
+                        </MapContainer>
+                    )}
                 </div>
             </DialogContent>
         </Dialog>
