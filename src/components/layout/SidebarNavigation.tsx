@@ -84,7 +84,7 @@ const navItems: NavItem[] = [
       { href: "/admin/service-management", label: "Service Options", icon: Settings2, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/model-management", label: "Model Management", icon: Layers, roles: ["SYSTEM_ADMIN", "ADMIN"] },
       { href: "/hrm/attendance", label: "Attendance", icon: Users, roles: ["SYSTEM_ADMIN", "ADMIN"] },
-      { href: "/hrm/geoforce", label: "Geoforce", icon: GlobeLock, roles: ["SYSTEM_ADMIN", "ADMIN"] },
+      { href: "/hrm/geoforce", label: "Geoforce", icon: MapPin, roles: ["SYSTEM_ADMIN", "ADMIN"] },
     ]
   },
   { href: "/finance-manager", label: "Finance Manager", icon: DollarSign, roles: ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "LR"] },
