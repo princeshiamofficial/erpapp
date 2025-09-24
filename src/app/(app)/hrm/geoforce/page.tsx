@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
 
-// === CORRECT DYNAMIC IMPORTS (TOP LEVEL) ===
+// === DYNAMIC IMPORTS (TOP LEVEL) ===
 // These components will be loaded only on the client-side.
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
@@ -227,11 +227,13 @@ export default function GeoforcePage() {
                     <Card className="h-full min-h-[500px] flex flex-col">
                         <CardHeader><CardTitle>Geofence Map</CardTitle></CardHeader>
                         <CardContent className="h-full w-full p-0">
-                            <GeofenceMap
-                                locations={companies} 
-                                liveLatitude={liveLocation?.lat} 
-                                liveLongitude={liveLocation?.lng} 
-                            />
+                            {isClient && (
+                                <GeofenceMap
+                                    locations={companies} 
+                                    liveLatitude={liveLocation?.lat} 
+                                    liveLongitude={liveLocation?.lng} 
+                                />
+                            )}
                         </CardContent>
                     </Card>
                 </div>
