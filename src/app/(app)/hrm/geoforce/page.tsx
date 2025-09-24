@@ -26,17 +26,21 @@ export default function GeoforcePage() {
     const [radius, setRadius] = useState('500');
     const [liveLocation, setLiveLocation] = useState<{ lat: number; lng: number } | null>(null);
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+    const [isClient, setIsClient] = useState(false);
     const { toast } = useToast();
 
-    // Dynamically import the Map component only on the client side.
-    const Map = useMemo(() => dynamic(
-        () => import('@/components/hrm/AttendanceMap'), // This will be a "dummy" component now
-        { 
-            loading: () => <div className="h-full w-full bg-muted animate-pulse flex items-center justify-center"><p>Loading Map...</p></div>,
-            ssr: false 
-        }
-    ), []);
-    
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+    // Dynamically import react-leaflet components only on the client side
+    const MapContainer = useMemo(() => dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false }), []);
+    const TileLayer = useMemo(() => dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false }), []);
+    const Marker = useMemo(() => dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false }), []);
+    const Popup = useMemo(() => dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false }), []);
+    const Circle = useMemo(() => dynamic(() => import('react-leaflet').then(mod => mod.Circle), { ssr: false }), []);
+
+
     const handleGetLiveLocation = () => {
         setIsLoadingLocation(true);
         if ("geolocation" in navigator) {
@@ -90,6 +94,28 @@ export default function GeoforcePage() {
         setRadius('500');
         setLiveLocation(null);
     };
+
+    if (!isClient) {
+        return (
+            <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
+                            <GlobeLock className="h-8 w-8 text-primary"/>
+                            Geoforce Management
+                        </h1>
+                        <p className="text-base text-muted-foreground mt-1">
+                            Define and manage geofence locations for attendance tracking.
+                        </p>
+                    </div>
+                </div>
+                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-1"><Card><CardHeader><CardTitle>Loading Form...</CardTitle></CardHeader><CardContent><div className="space-y-4"><div className="h-10 bg-muted rounded-md animate-pulse"></div><div className="h-10 bg-muted rounded-md animate-pulse"></div></div></CardContent></Card></div>
+                    <div className="lg:col-span-2"><Card className="h-full min-h-[500px]"><CardHeader><CardTitle>Loading Map...</CardTitle></CardHeader><CardContent className="h-full w-full p-0 bg-muted animate-pulse"></CardContent></Card></div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -149,11 +175,33 @@ export default function GeoforcePage() {
                     <Card className="h-full min-h-[500px] flex flex-col">
                         <CardHeader><CardTitle>Geofence Map</CardTitle></CardHeader>
                         <CardContent className="h-full w-full p-0">
-                             <Map
-                                locations={companies} 
-                                liveLatitude={liveLocation?.lat} 
-                                liveLongitude={liveLocation?.lng} 
-                            />
+                            <MapContainer
+                                center={[23.8103, 90.4125]} // Initial center for Dhaka
+                                zoom={13}
+                                style={{ height: '100%', width: '100%' }}
+                            >
+                                <TileLayer
+                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                                />
+                                {liveLocation && (
+                                    <Marker position={[liveLocation.lat, liveLocation.lng]}>
+                                        <Popup>Your current location</Popup>
+                                    </Marker>
+                                )}
+                                {companies.map(loc => (
+                                    <React.Fragment key={loc.id}>
+                                        <Marker position={[loc.latitude, loc.longitude]}>
+                                            <Popup>{loc.name}</Popup>
+                                        </Marker>
+                                        <Circle
+                                            center={[loc.latitude, loc.longitude]}
+                                            radius={loc.radius}
+                                            pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.2 }}
+                                        />
+                                    </React.Fragment>
+                                ))}
+                            </MapContainer>
                         </CardContent>
                     </Card>
                 </div>
