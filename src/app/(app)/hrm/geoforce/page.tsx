@@ -11,6 +11,7 @@ import { Loader2, MapPin, Building, PlusCircle, LocateFixed, GlobeLock } from 'l
 import { Skeleton } from '@/components/ui/skeleton';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
+import { Slider } from '@/components/ui/slider'; // Import the Slider component
 
 // Define the type for company locations.
 interface CompanyLocation {
@@ -27,7 +28,7 @@ export default function GeoforcePage() {
     const [companyName, setCompanyName] = useState('');
     const [latitude, setLatitude] = useState('');
     const [longitude, setLongitude] = useState('');
-    const [radius, setRadius] = useState('500');
+    const [radius, setRadius] = useState(500); // Changed to number
     const [liveLocation, setLiveLocation] = useState<{ lat: number; lng: number; accuracy: number; } | null>(null);
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
     const [isClient, setIsClient] = useState(false);
@@ -128,7 +129,7 @@ export default function GeoforcePage() {
                     }
 
                     // Pan the map to the new location only the first time
-                    if (leafletMap.current && !isLoadingLocation) {
+                    if (leafletMap.current && isLoadingLocation) { // Changed to check isLoadingLocation
                         leafletMap.current.setView([lat, lng], 17); // Zoom in closer
                     }
                     setIsLoadingLocation(false); // Stop showing loading state after first fix
@@ -152,7 +153,7 @@ export default function GeoforcePage() {
         e.preventDefault();
         const lat = parseFloat(latitude);
         const lng = parseFloat(longitude);
-        const rad = parseInt(radius, 10);
+        const rad = radius; // Already a number
 
         if (!companyName || isNaN(lat) || isNaN(lng) || isNaN(rad)) {
             toast({ title: "Invalid Input", description: "Please fill all fields with valid numbers.", variant: "destructive" });
@@ -174,7 +175,7 @@ export default function GeoforcePage() {
         setCompanyName('');
         setLatitude('');
         setLongitude('');
-        setRadius('500');
+        setRadius(500);
     };
     
     const isWatchingLocation = watchIdRef.current !== null;
@@ -254,8 +255,15 @@ export default function GeoforcePage() {
                                     </div>
                                 </div>
                                 <div className="space-y-1">
-                                    <Label htmlFor="radius">Radius (meters)</Label>
-                                    <Input id="radius" type="number" placeholder="e.g., 500" value={radius} onChange={e => setRadius(e.target.value)} />
+                                    <Label htmlFor="radius">Radius: {radius} meters</Label>
+                                    <Slider
+                                        id="radius"
+                                        min={50}
+                                        max={2000}
+                                        step={50}
+                                        value={[radius]}
+                                        onValueChange={(value) => setRadius(value[0])}
+                                    />
                                 </div>
                                 <Button type="submit" className="w-full">
                                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -278,3 +286,4 @@ export default function GeoforcePage() {
         </div>
     );
 }
+
