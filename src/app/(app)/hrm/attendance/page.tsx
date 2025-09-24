@@ -226,7 +226,7 @@ export default function AttendancePage() {
                                     <TableCell>
                                         <Button variant="outline" size="sm">
                                             <MapPin className="mr-2 h-4 w-4" />
-                                            {entry.location}
+                                            View Map
                                         </Button>
                                     </TableCell>
                                 </TableRow>
