@@ -18,10 +18,28 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationEllipsis, PaginationPrevious, PaginationNext } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
 
 const ITEMS_PER_PAGE = 25;
+
+const getInitials = (name: string) => {
+  if (!name) return '??';
+  const names = name.split(' ');
+  if (names.length === 1) return names[0].charAt(0).toUpperCase();
+  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+};
+
+// Mock Data for Attendance Report
+const MOCK_ATTENDANCE_DATA = [
+    { id: '1', date: '2024-07-28', employeeName: 'John Doe', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', status: 'On Time', inTime: '09:01 AM', outTime: '06:05 PM', hoursWorked: '9h 4m', location: 'Head Office' },
+    { id: '2', date: '2024-07-28', employeeName: 'Jane Smith', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d', status: 'Late', inTime: '09:32 AM', outTime: '06:15 PM', hoursWorked: '8h 43m', location: 'Head Office' },
+    { id: '3', date: '2024-07-28', employeeName: 'Mike Johnson', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d', status: 'On Time', inTime: '08:55 AM', outTime: '05:58 PM', hoursWorked: '9h 3m', location: 'Remote' },
+    { id: '4', date: '2024-07-27', employeeName: 'John Doe', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', status: 'On Time', inTime: '08:58 AM', outTime: '06:02 PM', hoursWorked: '9h 4m', location: 'Head Office' },
+    { id: '5', date: '2024-07-27', employeeName: 'Jane Smith', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d', status: 'Absent', inTime: '-', outTime: '-', hoursWorked: '-', location: '-' },
+];
+
 
 export default function AttendancePage() {
     const { currentUser } = useAuth();
@@ -69,6 +87,11 @@ export default function AttendancePage() {
         }
         return results;
     }, [employees, searchTerm]);
+    
+    const filteredAttendance = useMemo(() => {
+        if (!attendanceDateFilter) return MOCK_ATTENDANCE_DATA;
+        return MOCK_ATTENDANCE_DATA.filter(entry => entry.date === attendanceDateFilter);
+    }, [attendanceDateFilter]);
 
     const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
     const paginatedEmployees = useMemo(() => {
@@ -137,7 +160,6 @@ export default function AttendancePage() {
                         onChange={(e) => setAttendanceDateFilter(e.target.value)}
                     />
                     </div>
-                    <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
                 </div>
                 </div>
             </CardHeader>
@@ -156,12 +178,40 @@ export default function AttendancePage() {
                     </TableRow>
                     </TableHeader>
                     <TableBody>
-                        <TableRow>
-                            <TableCell colSpan={7} className="text-center h-48 text-gray-500">
-                                <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                                No attendance data recorded for the selected period.
-                            </TableCell>
-                        </TableRow>
+                         {isLoading ? (
+                            [...Array(3)].map((_, index) => (
+                                <TableRow key={index}>
+                                    <TableCell colSpan={7}><Skeleton className="h-10 w-full" /></TableCell>
+                                </TableRow>
+                            ))
+                        ) : filteredAttendance.length > 0 ? (
+                            filteredAttendance.map(entry => (
+                                <TableRow key={entry.id}>
+                                    <TableCell>{entry.date}</TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-2">
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage src={entry.employeeAvatar} alt={entry.employeeName} />
+                                                <AvatarFallback>{getInitials(entry.employeeName)}</AvatarFallback>
+                                            </Avatar>
+                                            <span className="font-medium">{entry.employeeName}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>{entry.status}</TableCell>
+                                    <TableCell>{entry.inTime}</TableCell>
+                                    <TableCell>{entry.outTime}</TableCell>
+                                    <TableCell>{entry.hoursWorked}</TableCell>
+                                    <TableCell>{entry.location}</TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                             <TableRow>
+                                <TableCell colSpan={7} className="text-center h-48 text-gray-500">
+                                    <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                                    No attendance data recorded for the selected period.
+                                </TableCell>
+                            </TableRow>
+                        )}
                     </TableBody>
                 </Table>
                 </div>
