@@ -70,7 +70,7 @@ export default function AttendancePage() {
     const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [leaveToManage, setLeaveToManage] = useState<Employee | null>(null);
-    const [viewingLocation, setViewingLocation] = useState<{ lat: number, lng: number } | null>(null);
+    const [viewingLocation, setViewingLocation] = useState<{ lat: number, lng: number, employeeName: string, employeeAvatar?: string } | null>(null);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -235,7 +235,12 @@ export default function AttendancePage() {
                                             disabled={!entry.lat || !entry.lng}
                                             onClick={() => {
                                                 if (entry.lat && entry.lng) {
-                                                    setViewingLocation({ lat: entry.lat, lng: entry.lng });
+                                                    setViewingLocation({ 
+                                                        lat: entry.lat, 
+                                                        lng: entry.lng,
+                                                        employeeName: entry.employeeName,
+                                                        employeeAvatar: entry.employeeAvatar
+                                                    });
                                                 }
                                             }}
                                         >
