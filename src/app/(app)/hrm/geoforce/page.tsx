@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
@@ -32,7 +33,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { MapContainer, TileLayer, Marker, Circle, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
 import "leaflet-defaulticon-compatibility";
@@ -50,12 +50,18 @@ interface CompanyLocation {
 const DEFAULT_MAP_CENTER: LatLngExpression = [23.8103, 90.4125]; // Dhaka
 const DEFAULT_MAP_ZOOM = 12;
 
+// Dynamically import map components to avoid SSR issues
+const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
+const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
+const Circle = dynamic(() => import('react-leaflet').then(mod => mod.Circle), { ssr: false });
+const useMap = dynamic(() => import('react-leaflet').then(mod => mod.useMap), { ssr: false });
+const useMapEvents = dynamic(() => import('react-leaflet').then(mod => mod.useMapEvents), { ssr: false });
+
 
 function MapUpdater({ center, zoom }: { center: LatLngExpression; zoom: number; }) {
     const map = useMap();
     useEffect(() => {
-        // Use a short timeout to ensure the dialog animation is complete
-        // and the map container has its final size.
         setTimeout(() => {
             map.invalidateSize();
             map.setView(center, zoom);
@@ -357,3 +363,4 @@ export default function GeoforcePage() {
             </Dialog>
         </>
     );
+}
