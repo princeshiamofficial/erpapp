@@ -42,27 +42,26 @@ export default function GeoforcePage() {
 
     useEffect(() => {
         if (isClient && mapRef.current && !leafletMap.current) {
-            Promise.all([
-                import('leaflet'),
-                import('leaflet-defaulticon-compatibility'),
-            ]).then(([L]) => {
-                // Attach the map to the ref div
-                const map = L.map(mapRef.current!).setView([23.8103, 90.4125], 13);
-                leafletMap.current = map;
+            import('leaflet').then(L => {
+                import('leaflet-defaulticon-compatibility').then(() => {
+                    // Attach the map to the ref div, with attribution control disabled
+                    const map = L.map(mapRef.current!, { attributionControl: false }).setView([23.8103, 90.4125], 13);
+                    leafletMap.current = map;
 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                }).addTo(map);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    }).addTo(map);
 
-                // Initial render of markers and circles
-                companies.forEach(loc => {
-                    L.marker([loc.latitude, loc.longitude]).addTo(map).bindPopup(loc.name);
-                    L.circle([loc.latitude, loc.longitude], { radius: loc.radius, color: 'blue', fillColor: 'blue', fillOpacity: 0.2 }).addTo(map);
+                    // Initial render of markers and circles
+                    companies.forEach(loc => {
+                        L.marker([loc.latitude, loc.longitude]).addTo(map).bindPopup(loc.name);
+                        L.circle([loc.latitude, loc.longitude], { radius: loc.radius, color: 'blue', fillColor: 'blue', fillOpacity: 0.2 }).addTo(map);
+                    });
+
+                    if (liveLocation) {
+                        L.marker([liveLocation.lat, liveLocation.lng]).addTo(map).bindPopup("Your current location");
+                    }
                 });
-
-                if (liveLocation) {
-                    L.marker([liveLocation.lat, liveLocation.lng]).addTo(map).bindPopup("Your current location");
-                }
             });
 
             // Cleanup function to destroy the map instance
@@ -73,7 +72,7 @@ export default function GeoforcePage() {
                 }
             };
         }
-    }, [isClient]); // Only run once when client is ready
+    }, [isClient, companies, liveLocation]); // Dependency array updated
 
     // Effect to update map when locations change, without re-initializing
     useEffect(() => {
