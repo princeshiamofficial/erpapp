@@ -20,9 +20,12 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { LocationMapDialog } from '@/components/hrm/LocationMapDialog';
 
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
+const LocationMapDialog = dynamic(() => import('@/components/hrm/LocationMapDialog').then(mod => mod.LocationMapDialog), {
+  ssr: false,
+});
+
 
 const ITEMS_PER_PAGE = 25;
 
