@@ -1,8 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import dynamic from 'next/dynamic';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
@@ -13,15 +12,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
 
-// === DYNAMIC IMPORTS (TOP LEVEL) ===
-// These components will be loaded only on the client-side.
-const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
-const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
-const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
-const Circle = dynamic(() => import('react-leaflet').then(mod => mod.Circle), { ssr: false });
-
-
 // Define the type for company locations.
 interface CompanyLocation {
     id: string;
@@ -31,51 +21,7 @@ interface CompanyLocation {
     radius: number;
 }
 
-// === MEMOIZED MAP COMPONENT ===
-// This prevents the map from re-rendering when the parent component's state changes.
-const GeofenceMap = React.memo(function GeofenceMap({
-  locations,
-  liveLatitude,
-  liveLongitude,
-}: {
-  locations: CompanyLocation[];
-  liveLatitude?: number;
-  liveLongitude?: number;
-}) {
-  return (
-    <MapContainer
-      center={[23.8103, 90.4125]} // Initial center for Dhaka
-      zoom={13}
-      style={{ height: '100%', width: '100%' }}
-    >
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      />
-      {liveLatitude && liveLongitude && (
-        <Marker position={[liveLatitude, liveLongitude]}>
-          <Popup>Your current location</Popup>
-        </Marker>
-      )}
-      {locations.map(loc => (
-        <React.Fragment key={loc.id}>
-          <Marker position={[loc.latitude, loc.longitude]}>
-            <Popup>{loc.name}</Popup>
-          </Marker>
-          <Circle
-            center={[loc.latitude, loc.longitude]}
-            radius={loc.radius}
-            pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.2 }}
-          />
-        </React.Fragment>
-      ))}
-    </MapContainer>
-  );
-});
-
-GeofenceMap.displayName = 'GeofenceMap';
-
-// Main Page Component
+// === MAIN PAGE COMPONENT ===
 export default function GeoforcePage() {
     const [companies, setCompanies] = useState<CompanyLocation[]>([]);
     const [companyName, setCompanyName] = useState('');
@@ -87,11 +33,73 @@ export default function GeoforcePage() {
     const [isClient, setIsClient] = useState(false);
     const { toast } = useToast();
 
+    const mapRef = useRef<HTMLDivElement>(null);
+    const leafletMap = useRef<any>(null); // To hold the map instance
+
     useEffect(() => {
         setIsClient(true);
-        // Import the compatibility package on the client side
-        import('leaflet-defaulticon-compatibility');
     }, []);
+
+    useEffect(() => {
+        if (isClient && mapRef.current && !leafletMap.current) {
+            Promise.all([
+                import('leaflet'),
+                import('leaflet-defaulticon-compatibility'),
+            ]).then(([L]) => {
+                // Attach the map to the ref div
+                const map = L.map(mapRef.current!).setView([23.8103, 90.4125], 13);
+                leafletMap.current = map;
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
+
+                // Initial render of markers and circles
+                companies.forEach(loc => {
+                    L.marker([loc.latitude, loc.longitude]).addTo(map).bindPopup(loc.name);
+                    L.circle([loc.latitude, loc.longitude], { radius: loc.radius, color: 'blue', fillColor: 'blue', fillOpacity: 0.2 }).addTo(map);
+                });
+
+                if (liveLocation) {
+                    L.marker([liveLocation.lat, liveLocation.lng]).addTo(map).bindPopup("Your current location");
+                }
+            });
+
+            // Cleanup function to destroy the map instance
+            return () => {
+                if (leafletMap.current) {
+                    leafletMap.current.remove();
+                    leafletMap.current = null;
+                }
+            };
+        }
+    }, [isClient]); // Only run once when client is ready
+
+    // Effect to update map when locations change, without re-initializing
+    useEffect(() => {
+        if (leafletMap.current && isClient) {
+             import('leaflet').then(([L]) => {
+                // Clear existing layers (except base tile layer)
+                leafletMap.current.eachLayer((layer: any) => {
+                    if (!!layer.getLatLng) { // Simple check for marker/circle layers
+                        leafletMap.current.removeLayer(layer);
+                    }
+                });
+
+                // Add new company locations
+                companies.forEach(loc => {
+                    L.marker([loc.latitude, loc.longitude]).addTo(leafletMap.current).bindPopup(loc.name);
+                    L.circle([loc.latitude, loc.longitude], { radius: loc.radius, color: 'blue', fillColor: 'blue', fillOpacity: 0.2 }).addTo(leafletMap.current);
+                });
+
+                // Add live location marker
+                if (liveLocation) {
+                    L.marker([liveLocation.lat, liveLocation.lng]).addTo(leafletMap.current).bindPopup("Your current location");
+                }
+             });
+        }
+    }, [companies, liveLocation, isClient]);
+
 
     const handleGetLiveLocation = () => {
         setIsLoadingLocation(true);
@@ -227,13 +235,7 @@ export default function GeoforcePage() {
                     <Card className="h-full min-h-[500px] flex flex-col">
                         <CardHeader><CardTitle>Geofence Map</CardTitle></CardHeader>
                         <CardContent className="h-full w-full p-0">
-                            {isClient && (
-                                <GeofenceMap
-                                    locations={companies} 
-                                    liveLatitude={liveLocation?.lat} 
-                                    liveLongitude={liveLocation?.lng} 
-                                />
-                            )}
+                            <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
                         </CardContent>
                     </Card>
                 </div>
@@ -241,3 +243,4 @@ export default function GeoforcePage() {
         </div>
     );
 }
+    
