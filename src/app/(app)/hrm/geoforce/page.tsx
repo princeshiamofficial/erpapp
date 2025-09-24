@@ -9,7 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, MapPin, Building, PlusCircle, LocateFixed, GlobeLock } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 
+// Define the type for company locations.
 interface CompanyLocation {
     id: string;
     name: string;
@@ -18,6 +20,60 @@ interface CompanyLocation {
     radius: number;
 }
 
+// Dynamically import react-leaflet components only on the client side.
+// This is crucial to prevent SSR errors with Leaflet.
+const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
+const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
+const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
+const Circle = dynamic(() => import('react-leaflet').then(mod => mod.Circle), { ssr: false });
+
+// === Create a dedicated, memoized Map Component ===
+// This prevents the map from re-rendering when the parent component's state changes,
+// which is the root cause of the "Map container is already initialized" error.
+const GeofenceMap = React.memo(function GeofenceMap({
+  locations,
+  liveLatitude,
+  liveLongitude,
+}: {
+  locations: CompanyLocation[];
+  liveLatitude?: number;
+  liveLongitude?: number;
+}) {
+  return (
+    <MapContainer
+      center={[23.8103, 90.4125]} // Initial center for Dhaka
+      zoom={13}
+      style={{ height: '100%', width: '100%' }}
+    >
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      />
+      {liveLatitude && liveLongitude && (
+        <Marker position={[liveLatitude, liveLongitude]}>
+          <Popup>Your current location</Popup>
+        </Marker>
+      )}
+      {locations.map(loc => (
+        <React.Fragment key={loc.id}>
+          <Marker position={[loc.latitude, loc.longitude]}>
+            <Popup>{loc.name}</Popup>
+          </Marker>
+          <Circle
+            center={[loc.latitude, loc.longitude]}
+            radius={loc.radius}
+            pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.2 }}
+          />
+        </React.Fragment>
+      ))}
+    </MapContainer>
+  );
+});
+
+GeofenceMap.displayName = 'GeofenceMap';
+
+// Main Page Component
 export default function GeoforcePage() {
     const [companies, setCompanies] = useState<CompanyLocation[]>([]);
     const [companyName, setCompanyName] = useState('');
@@ -32,14 +88,6 @@ export default function GeoforcePage() {
     useEffect(() => {
         setIsClient(true);
     }, []);
-
-    // Dynamically import react-leaflet components only on the client side
-    const MapContainer = useMemo(() => dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false }), []);
-    const TileLayer = useMemo(() => dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false }), []);
-    const Marker = useMemo(() => dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false }), []);
-    const Popup = useMemo(() => dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false }), []);
-    const Circle = useMemo(() => dynamic(() => import('react-leaflet').then(mod => mod.Circle), { ssr: false }), []);
-
 
     const handleGetLiveLocation = () => {
         setIsLoadingLocation(true);
@@ -97,7 +145,7 @@ export default function GeoforcePage() {
 
     if (!isClient) {
         return (
-            <div className="space-y-6">
+            <div className="space-y-6 p-4 sm:p-6 lg:p-8">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
                         <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
@@ -110,7 +158,7 @@ export default function GeoforcePage() {
                     </div>
                 </div>
                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-1"><Card><CardHeader><CardTitle>Loading Form...</CardTitle></CardHeader><CardContent><div className="space-y-4"><div className="h-10 bg-muted rounded-md animate-pulse"></div><div className="h-10 bg-muted rounded-md animate-pulse"></div></div></CardContent></Card></div>
+                    <div className="lg:col-span-1"><Card><CardHeader><CardTitle>Loading Form...</CardTitle></CardHeader><CardContent><div className="space-y-4"><Skeleton className="h-10 w-full rounded-md" /><Skeleton className="h-10 w-full rounded-md" /></div></CardContent></Card></div>
                     <div className="lg:col-span-2"><Card className="h-full min-h-[500px]"><CardHeader><CardTitle>Loading Map...</CardTitle></CardHeader><CardContent className="h-full w-full p-0 bg-muted animate-pulse"></CardContent></Card></div>
                 </div>
             </div>
@@ -118,7 +166,7 @@ export default function GeoforcePage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 p-4 sm:p-6 lg:p-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
@@ -175,33 +223,11 @@ export default function GeoforcePage() {
                     <Card className="h-full min-h-[500px] flex flex-col">
                         <CardHeader><CardTitle>Geofence Map</CardTitle></CardHeader>
                         <CardContent className="h-full w-full p-0">
-                            <MapContainer
-                                center={[23.8103, 90.4125]} // Initial center for Dhaka
-                                zoom={13}
-                                style={{ height: '100%', width: '100%' }}
-                            >
-                                <TileLayer
-                                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                />
-                                {liveLocation && (
-                                    <Marker position={[liveLocation.lat, liveLocation.lng]}>
-                                        <Popup>Your current location</Popup>
-                                    </Marker>
-                                )}
-                                {companies.map(loc => (
-                                    <React.Fragment key={loc.id}>
-                                        <Marker position={[loc.latitude, loc.longitude]}>
-                                            <Popup>{loc.name}</Popup>
-                                        </Marker>
-                                        <Circle
-                                            center={[loc.latitude, loc.longitude]}
-                                            radius={loc.radius}
-                                            pathOptions={{ color: 'blue', fillColor: 'blue', fillOpacity: 0.2 }}
-                                        />
-                                    </React.Fragment>
-                                ))}
-                            </MapContainer>
+                            <GeofenceMap
+                                locations={companies} 
+                                liveLatitude={liveLocation?.lat} 
+                                liveLongitude={liveLocation?.lng} 
+                            />
                         </CardContent>
                     </Card>
                 </div>
