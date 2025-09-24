@@ -20,6 +20,11 @@ interface LocationMapDialogProps {
 }
 
 export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMapDialogProps) {
+    // By returning null when not open, we ensure the entire component,
+    // including the MapContainer, is unmounted and destroyed.
+    if (!isOpen || !location) {
+        return null;
+    }
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -28,20 +33,17 @@ export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMa
                     <DialogTitle>Attendance Location</DialogTitle>
                 </DialogHeader>
                 <div className="h-[50vh] w-full">
-                    {/* Key change: Conditionally render MapContainer only when dialog is open and location is valid */}
-                    {isOpen && location && (
-                        <MapContainer center={[location.lat, location.lng]} zoom={15} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
-                            <TileLayer
-                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            />
-                            <Marker position={[location.lat, location.lng]}>
-                                <Popup>
-                                    Attendance marked from this location.
-                                </Popup>
-                            </Marker>
-                        </MapContainer>
-                    )}
+                    <MapContainer center={[location.lat, location.lng]} zoom={15} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
+                        <TileLayer
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        <Marker position={[location.lat, location.lng]}>
+                            <Popup>
+                                Attendance marked from this location.
+                            </Popup>
+                        </Marker>
+                    </MapContainer>
                 </div>
             </DialogContent>
         </Dialog>
