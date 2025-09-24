@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -19,8 +19,7 @@ interface LocationMapDialogProps {
   location: { lat: number, lng: number } | null;
 }
 
-// Create a child component to handle map updates.
-// This is the key to preventing the re-initialization error.
+// This child component gets access to the map instance and updates it programmatically.
 function MapUpdater({ center }: { center: [number, number] }) {
   const map = useMap();
   useEffect(() => {
@@ -30,7 +29,9 @@ function MapUpdater({ center }: { center: [number, number] }) {
 }
 
 export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMapDialogProps) {
-    // The key state is no longer needed with this new approach.
+    if (!isOpen || !location) {
+        return null;
+    }
 
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -40,29 +41,26 @@ export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMa
                 </DialogHeader>
                 <div className="h-[50vh] w-full">
                     {/* 
-                      The MapContainer is now rendered with a default static center.
-                      The actual location is passed to the MapUpdater component, which
-                      will programmatically update the view of the existing map instance.
+                      The MapContainer is rendered with a default static center to initialize it only once.
+                      The MapUpdater component will then move the view to the correct location.
                     */}
-                    {isOpen && location && (
-                        <MapContainer 
-                          center={[23.8103, 90.4125]} // Default center, will be updated by MapUpdater
-                          zoom={15} 
-                          scrollWheelZoom={false} 
-                          style={{ height: '100%', width: '100%' }}
-                        >
-                            <TileLayer
-                                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            />
-                            <Marker position={[location.lat, location.lng]}>
-                                <Popup>
-                                    Attendance marked from this location.
-                                </Popup>
-                            </Marker>
-                            <MapUpdater center={[location.lat, location.lng]} />
-                        </MapContainer>
-                    )}
+                    <MapContainer 
+                      center={[23.8103, 90.4125]} // Default center, will be updated by MapUpdater
+                      zoom={15} 
+                      scrollWheelZoom={false} 
+                      style={{ height: '100%', width: '100%' }}
+                    >
+                        <TileLayer
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        />
+                        <Marker position={[location.lat, location.lng]}>
+                            <Popup>
+                                Attendance marked from this location.
+                            </Popup>
+                        </Marker>
+                        <MapUpdater center={[location.lat, location.lng]} />
+                    </MapContainer>
                 </div>
             </DialogContent>
         </Dialog>
