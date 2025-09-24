@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
+import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.webpack.css'; // Use the webpack-compatible CSS
 import 'leaflet-defaulticon-compatibility';
 
 interface LocationMapDialogProps {
@@ -19,7 +19,7 @@ interface LocationMapDialogProps {
   location: { lat: number, lng: number } | null;
 }
 
-// This is the new child component that will handle map updates.
+// This new child component will handle map updates.
 // It uses the useMap() hook to get a reference to the parent MapContainer instance.
 function MapUpdater({ center }: { center: [number, number] }) {
     const map = useMap();
@@ -77,4 +77,3 @@ export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMa
 }
 
 export default LocationMapDialog;
-
