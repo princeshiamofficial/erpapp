@@ -20,24 +20,22 @@ interface LocationMapDialogProps {
 }
 
 // A helper component that will update the map's view and size
-function MapUpdater({ center, zoom, isOpen }: { center: L.LatLngExpression; zoom: number; isOpen: boolean }) {
+function MapUpdater({ center, zoom }: { center: L.LatLngExpression; zoom: number; }) {
     const map = useMap();
     useEffect(() => {
-        if (isOpen) {
-            // Use a short timeout to ensure the dialog animation is complete
-            // and the map container has its final size.
-            setTimeout(() => {
-                map.invalidateSize();
-                map.setView(center, zoom);
-            }, 100);
-        }
-    }, [isOpen, center, zoom, map]);
+        // Use a short timeout to ensure the dialog animation is complete
+        // and the map container has its final size.
+        setTimeout(() => {
+            map.invalidateSize();
+            map.setView(center, zoom);
+        }, 100);
+    }, [center, zoom, map]);
 
     return null;
 }
 
 export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMapDialogProps) {
-  // If the dialog is not open or there's no location, render nothing.
+  // If the dialog is not open, render nothing.
   // This ensures the map is completely unmounted when not in use.
   if (!isOpen || !location) {
     return null;
@@ -50,7 +48,7 @@ export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMa
           <DialogTitle>Attendance Location</DialogTitle>
         </DialogHeader>
         {/*
-          The key here is that MapContainer is now being rendered conditionally based on isOpen.
+          The key here is that MapContainer is rendered conditionally based on isOpen.
           When isOpen becomes true, the entire map structure is mounted fresh.
         */}
         <div style={{ height: '50vh', width: '100%' }}>
@@ -66,8 +64,7 @@ export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMa
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
                 <Marker position={[location.lat, location.lng]} />
-                {/* This component will handle updates after the initial render */}
-                <MapUpdater center={[location.lat, location.lng]} zoom={15} isOpen={isOpen} />
+                <MapUpdater center={[location.lat, location.lng]} zoom={15} />
             </MapContainer>
         </div>
       </DialogContent>
