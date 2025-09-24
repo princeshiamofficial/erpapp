@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React from 'react';
@@ -11,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.webpack.css'; // Re-uses images from ~leaflet/dist/images
+import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
 import 'leaflet-defaulticon-compatibility';
 
 interface LocationMapDialogProps {
@@ -48,4 +47,3 @@ export function LocationMapDialog({ isOpen, onOpenChange, location }: LocationMa
         </Dialog>
     );
 }
-
