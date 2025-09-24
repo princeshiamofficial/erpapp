@@ -10,6 +10,17 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, MapPin, Building, PlusCircle, LocateFixed, GlobeLock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import 'leaflet/dist/leaflet.css';
+import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
+
+// === CORRECT DYNAMIC IMPORTS (TOP LEVEL) ===
+// These components will be loaded only on the client-side.
+const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
+const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
+const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
+const Circle = dynamic(() => import('react-leaflet').then(mod => mod.Circle), { ssr: false });
+
 
 // Define the type for company locations.
 interface CompanyLocation {
@@ -20,17 +31,8 @@ interface CompanyLocation {
     radius: number;
 }
 
-// Dynamically import react-leaflet components only on the client side.
-// This is crucial to prevent SSR errors with Leaflet.
-const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
-const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
-const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
-const Circle = dynamic(() => import('react-leaflet').then(mod => mod.Circle), { ssr: false });
-
-// === Create a dedicated, memoized Map Component ===
-// This prevents the map from re-rendering when the parent component's state changes,
-// which is the root cause of the "Map container is already initialized" error.
+// === MEMOIZED MAP COMPONENT ===
+// This prevents the map from re-rendering when the parent component's state changes.
 const GeofenceMap = React.memo(function GeofenceMap({
   locations,
   liveLatitude,
@@ -87,6 +89,8 @@ export default function GeoforcePage() {
 
     useEffect(() => {
         setIsClient(true);
+        // Import the compatibility package on the client side
+        import('leaflet-defaulticon-compatibility');
     }, []);
 
     const handleGetLiveLocation = () => {
