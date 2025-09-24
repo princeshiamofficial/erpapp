@@ -149,7 +149,6 @@ export default function GeoforcePage() {
                 <Card>
                     <CardHeader>
                         <CardTitle>Defined Locations</CardTitle>
-                        <CardDescription>The list of all configured office geofence locations.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Table>
