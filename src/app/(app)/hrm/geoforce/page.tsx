@@ -7,13 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, MapPin, Building, PlusCircle, LocateFixed, GlobeLock } from 'lucide-react';
+import { Loader2, MapPin, Building, PlusCircle, LocateFixed, GlobeLock, Trash2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
-import { Slider } from '@/components/ui/slider'; // Import the Slider component
+import { Slider } from '@/components/ui/slider'; 
 
-// Define the type for company locations.
 interface CompanyLocation {
     id: string;
     name: string;
@@ -22,27 +21,27 @@ interface CompanyLocation {
     radius: number;
 }
 
-// === MAIN PAGE COMPONENT ===
 export default function GeoforcePage() {
     const [companies, setCompanies] = useState<CompanyLocation[]>([]);
     const [companyName, setCompanyName] = useState('');
     const [latitude, setLatitude] = useState('');
     const [longitude, setLongitude] = useState('');
-    const [radius, setRadius] = useState(500); // Changed to number
+    const [radius, setRadius] = useState(500); 
     const [liveLocation, setLiveLocation] = useState<{ lat: number; lng: number; accuracy: number; } | null>(null);
     const [isLoadingLocation, setIsLoadingLocation] = useState(false);
     const [isClient, setIsClient] = useState(false);
     const { toast } = useToast();
 
     const mapRef = useRef<HTMLDivElement>(null);
-    const leafletMap = useRef<any>(null); // To hold the map instance
-    const liveLocationMarker = useRef<any>(null); // To hold the live marker instance
-    const liveLocationCircle = useRef<any>(null); // To hold the live circle instance
+    const leafletMap = useRef<any>(null); 
+    const liveLocationMarker = useRef<any>(null); 
+    const liveLocationCircle = useRef<any>(null); 
+    const previewCircle = useRef<any>(null);
+    const temporaryMarker = useRef<any>(null);
     const watchIdRef = useRef<number | null>(null);
 
     useEffect(() => {
         setIsClient(true);
-        // Cleanup function to stop watching position when component unmounts
         return () => {
             if (watchIdRef.current !== null) {
                 navigator.geolocation.clearWatch(watchIdRef.current);
@@ -60,29 +59,52 @@ export default function GeoforcePage() {
                     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     }).addTo(map);
+
+                    map.on('click', (e: any) => {
+                        const { lat, lng } = e.latlng;
+                        setLatitude(lat.toString());
+                        setLongitude(lng.toString());
+                        if (temporaryMarker.current) {
+                            temporaryMarker.current.setLatLng(e.latlng);
+                        } else {
+                            temporaryMarker.current = L.marker(e.latlng).addTo(leafletMap.current).bindPopup("New Location");
+                        }
+                    });
+
+                    // Attempt to get initial location
+                     if ('geolocation' in navigator) {
+                        navigator.geolocation.getCurrentPosition(
+                            (position) => {
+                                const { latitude, longitude } = position.coords;
+                                map.setView([latitude, longitude], 15);
+                            },
+                            () => {
+                                // Fallback to default view if permission is denied or fails
+                                console.log("Could not get initial location, using default.");
+                            }
+                        );
+                    }
                 });
             });
         }
     }, [isClient]);
 
-    // Effect to update map when locations change, without re-initializing
     useEffect(() => {
         if (leafletMap.current && isClient) {
              import('leaflet').then((L) => {
                 // Clear existing company layers
                 leafletMap.current.eachLayer((layer: any) => {
-                    if (layer.options && layer.options.pane === 'markerPane' && layer !== liveLocationMarker.current) {
+                    if (layer.options && layer.options.pane === 'markerPane' && layer !== liveLocationMarker.current && layer !== temporaryMarker.current) {
                         leafletMap.current.removeLayer(layer);
                     }
-                    if (layer.options && layer.options.pane === 'overlayPane' && layer !== liveLocationCircle.current && !layer.getAttribution) {
+                    if (layer.options && layer.options.pane === 'overlayPane' && layer !== liveLocationCircle.current && layer !== previewCircle.current && !layer.getAttribution) {
                          leafletMap.current.removeLayer(layer);
                     }
                 });
 
-                // Add new company locations with their radius circle
                 companies.forEach(loc => {
                     L.marker([loc.latitude, loc.longitude]).addTo(leafletMap.current).bindPopup(loc.name);
-                    L.circle([loc.latitude, loc.longitude], { radius: loc.radius, color: 'blue', fillColor: 'blue', fillOpacity: 0.2 }).addTo(leafletMap.current);
+                    L.circle([loc.latitude, loc.longitude], { radius: loc.radius, color: 'orange', fillColor: 'orange', fillOpacity: 0.2 }).addTo(leafletMap.current);
                 });
 
                 // Update or create live location marker and circle
@@ -98,14 +120,27 @@ export default function GeoforcePage() {
                         liveLocationCircle.current.setLatLng([liveLocation.lat, liveLocation.lng]).setRadius(liveLocation.accuracy);
                     }
                 }
+                
+                // Update preview circle
+                const lat = parseFloat(latitude);
+                const lng = parseFloat(longitude);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                  if (previewCircle.current) {
+                    previewCircle.current.setLatLng([lat, lng]).setRadius(radius);
+                  } else {
+                    previewCircle.current = L.circle([lat, lng], { radius, color: 'red', dashArray: '5, 5' }).addTo(leafletMap.current);
+                  }
+                } else if(previewCircle.current) {
+                  leafletMap.current.removeLayer(previewCircle.current);
+                  previewCircle.current = null;
+                }
              });
         }
-    }, [companies, liveLocation, isClient]);
+    }, [companies, liveLocation, isClient, latitude, longitude, radius]);
 
 
     const handleGetLiveLocation = () => {
         if ("geolocation" in navigator && navigator.geolocation.watchPosition) {
-            // If already watching, clear it first.
             if (watchIdRef.current !== null) {
                 navigator.geolocation.clearWatch(watchIdRef.current);
                 watchIdRef.current = null;
@@ -121,18 +156,16 @@ export default function GeoforcePage() {
                 (position) => {
                     const { latitude: lat, longitude: lng, accuracy } = position.coords;
                     
-                    // Only update state if the location has changed significantly to avoid excessive re-renders
                     if (liveLocation?.lat !== lat || liveLocation?.lng !== lng) {
                         setLiveLocation({ lat, lng, accuracy });
                         setLatitude(lat.toString());
                         setLongitude(lng.toString());
                     }
 
-                    // Pan the map to the new location only the first time
-                    if (leafletMap.current && isLoadingLocation) { // Changed to check isLoadingLocation
-                        leafletMap.current.setView([lat, lng], 17); // Zoom in closer
+                    if (leafletMap.current && isLoadingLocation) { 
+                        leafletMap.current.setView([lat, lng], 17); 
                     }
-                    setIsLoadingLocation(false); // Stop showing loading state after first fix
+                    setIsLoadingLocation(false); 
                 },
                 (error) => {
                     toast({ title: "Location Error", description: error.message, variant: "destructive" });
@@ -153,7 +186,7 @@ export default function GeoforcePage() {
         e.preventDefault();
         const lat = parseFloat(latitude);
         const lng = parseFloat(longitude);
-        const rad = radius; // Already a number
+        const rad = radius;
 
         if (!companyName || isNaN(lat) || isNaN(lng) || isNaN(rad)) {
             toast({ title: "Invalid Input", description: "Please fill all fields with valid numbers.", variant: "destructive" });
@@ -161,21 +194,26 @@ export default function GeoforcePage() {
         }
 
         const newCompany: CompanyLocation = {
-            id: `comp-${Date.now()}`,
-            name: companyName,
-            latitude: lat,
-            longitude: lng,
-            radius: rad,
+            id: `comp-${Date.now()}`, name: companyName, latitude: lat, longitude: lng, radius: rad,
         };
 
         setCompanies(prev => [...prev, newCompany]);
         toast({ title: "Company Added", description: `${companyName} has been added to the map.` });
 
-        // Clear form
         setCompanyName('');
         setLatitude('');
         setLongitude('');
         setRadius(500);
+        handleRemoveTemporaryMarker(); // Remove temporary marker after adding
+    };
+    
+    const handleRemoveTemporaryMarker = () => {
+      if (temporaryMarker.current) {
+        leafletMap.current.removeLayer(temporaryMarker.current);
+        temporaryMarker.current = null;
+        setLatitude('');
+        setLongitude('');
+      }
     };
     
     const isWatchingLocation = watchIdRef.current !== null;
@@ -254,6 +292,11 @@ export default function GeoforcePage() {
                                         <Input id="longitude" placeholder="e.g., 90.4125" value={longitude} onChange={e => setLongitude(e.target.value)} />
                                     </div>
                                 </div>
+                                {temporaryMarker.current && (
+                                  <Button type="button" variant="outline" size="sm" className="w-full text-destructive" onClick={handleRemoveTemporaryMarker}>
+                                      <Trash2 className="mr-2 h-4 w-4"/> Remove Marker
+                                  </Button>
+                                )}
                                 <div className="space-y-1">
                                     <Label htmlFor="radius">Radius: {radius} meters</Label>
                                     <Slider
@@ -278,7 +321,12 @@ export default function GeoforcePage() {
                     <Card className="h-full min-h-[500px] flex flex-col">
                         <CardHeader><CardTitle>Geofence Map</CardTitle></CardHeader>
                         <CardContent className="h-full w-full p-0">
-                            <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
+                            <div
+                              ref={mapRef}
+                              style={{ height: '100%', width: '100%' }}
+                              data-gramm="false"
+                              data-gramm_editor="false"
+                            />
                         </CardContent>
                     </Card>
                 </div>
@@ -286,4 +334,3 @@ export default function GeoforcePage() {
         </div>
     );
 }
-
