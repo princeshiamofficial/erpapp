@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings } from 'lucide-react';
+import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -369,38 +369,70 @@ export default function AttendancePage() {
     );
 
     const settingsContent = (
-      <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="p-6 border-b">
-            <CardTitle className="text-xl font-bold text-gray-800">Weekend</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead>Days</TableHead>
-                        {WEEK_DAYS.map(day => <TableHead key={day}>{day}</TableHead>)}
-                        <TableHead className="text-right">Action</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    <TableRow>
-                        <TableCell className="font-medium">Weekend</TableCell>
-                        {WEEK_DAYS.map(day => (
-                            <TableCell key={day}>
-                                <Checkbox
-                                    checked={selectedWeekends.includes(day)}
-                                    onCheckedChange={(checked) => handleWeekendChange(day, checked)}
-                                />
+      <div className="space-y-6">
+        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+          <CardHeader className="p-6 border-b">
+              <CardTitle className="text-xl font-bold text-gray-800">Weekend</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+              <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead>Days</TableHead>
+                          {WEEK_DAYS.map(day => <TableHead key={day}>{day}</TableHead>)}
+                          <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      <TableRow>
+                          <TableCell className="font-medium">Weekend</TableCell>
+                          {WEEK_DAYS.map(day => (
+                              <TableCell key={day}>
+                                  <Checkbox
+                                      checked={selectedWeekends.includes(day)}
+                                      onCheckedChange={(checked) => handleWeekendChange(day, checked)}
+                                  />
+                              </TableCell>
+                          ))}
+                          <TableCell className="text-right">
+                              <Button size="sm" onClick={handleSaveWeekends}>Save</Button>
+                          </TableCell>
+                      </TableRow>
+                  </TableBody>
+              </Table>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+            <CardHeader className="p-6 border-b">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle className="text-xl font-bold text-gray-800">IP/Wifi</CardTitle>
+                    </div>
+                    <Button><PlusCircle className="mr-2 h-4 w-4" /> Add IP/Wifi</Button>
+                </div>
+            </CardHeader>
+            <CardContent className="p-6">
+                 <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[50px]">#</TableHead>
+                            <TableHead>IP</TableHead>
+                            <TableHead>Wifi Name</TableHead>
+                            <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell colSpan={4} className="text-center h-24 text-gray-500">
+                                No IP/Wifi details is available
                             </TableCell>
-                        ))}
-                        <TableCell className="text-right">
-                            <Button size="sm" onClick={handleSaveWeekends}>Save</Button>
-                        </TableCell>
-                    </TableRow>
-                </TableBody>
-            </Table>
-        </CardContent>
-      </Card>
+                        </TableRow>
+                    </TableBody>
+                 </Table>
+            </CardContent>
+        </Card>
+      </div>
     );
 
     const renderActiveTab = () => {
