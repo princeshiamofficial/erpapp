@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Crown, ArrowUp, ArrowDown, Award } from 'lucide-react'; // Added Award
+import { Crown, ArrowUp, ArrowDown, Award, Briefcase, CheckCircle } from 'lucide-react'; // Added Award, Briefcase, CheckCircle
 import { motion, AnimatePresence } from 'framer-motion';
 import type { User, UserRole } from '@/types';
 import { cn } from '@/lib/utils';
@@ -13,7 +13,9 @@ export interface CrmPerformanceData {
   userId: string;
   userName: string;
   userAvatar?: string;
-  ordersCompleted: number; // This is the "points"
+  ordersCompleted: number; // This is the "points" for CRs
+  designsAssigned?: number; // Specific for DRs
+  designsDone?: number; // Specific for DRs
   target: number; 
   rank?: number;
   role?: UserRole; 
@@ -40,6 +42,8 @@ const PodiumItem: React.FC<{ user: CrmPerformanceData; rank: number; isCenter?: 
     2: "bg-[hsl(var(--leaderboard-silver))]", // Silver-ish for rank 2
     3: "bg-[hsl(var(--leaderboard-bronze))]",  // Bronze-ish for rank 3
   };
+  
+  const isDR = user.role === 'DESIGNER_REPRESENTATIVE';
 
   return (
     <motion.div
@@ -68,58 +72,76 @@ const PodiumItem: React.FC<{ user: CrmPerformanceData; rank: number; isCenter?: 
       <p className="text-xs text-[hsl(var(--leaderboard-text-light))]/70 mt-0.5 truncate w-full px-1">
         {user.role?.replace(/_/g, ' ') || 'Member'}
       </p>
-      <p className="text-lg sm:text-xl font-bold mt-0.5 text-[hsl(var(--leaderboard-text-light))]">
-        {user.ordersCompleted.toLocaleString()} / <span className="text-base opacity-70">{user.target.toLocaleString()}</span>
-      </p>
+      {isDR ? (
+        <p className="text-lg sm:text-xl font-bold mt-0.5 text-[hsl(var(--leaderboard-text-light))]">
+          {user.designsDone?.toLocaleString()} / <span className="text-base opacity-70">{user.designsAssigned?.toLocaleString()}</span>
+        </p>
+      ) : (
+        <p className="text-lg sm:text-xl font-bold mt-0.5 text-[hsl(var(--leaderboard-text-light))]">
+          {user.ordersCompleted.toLocaleString()} / <span className="text-base opacity-70">{user.target.toLocaleString()}</span>
+        </p>
+      )}
     </motion.div>
   );
 };
 
-const RankListItem: React.FC<{ user: CrmPerformanceData; index: number }> = ({ user, index }) => (
-  <motion.div
-    layout
-    initial={{ opacity: 0, x: -20 }}
-    animate={{ opacity: 1, x: 0 }}
-    exit={{ opacity: 0, x: 20 }}
-    transition={{ duration: 0.3, delay: index * 0.05 }}
-    className="flex items-center py-3.5 px-3 sm:px-4 my-2 mx-2 sm:mx-3 rounded-lg shadow-md bg-[hsl(var(--leaderboard-list-item-bg))] dark:bg-[hsl(var(--leaderboard-list-item-bg-dark))] relative hover:shadow-lg transition-shadow duration-150"
-  >
-    {/* Trend Bar */}
-    {user.trend === 'up' && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[hsl(var(--leaderboard-arrow-up))] rounded-l-md"></div>}
-    {user.trend === 'down' && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[hsl(var(--leaderboard-arrow-down))] rounded-l-md"></div>}
-    {user.trend === 'same' && !user.pointChange && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gray-400 dark:bg-gray-500 rounded-l-md"></div>}
+const RankListItem: React.FC<{ user: CrmPerformanceData; index: number }> = ({ user, index }) => {
+  const isDR = user.role === 'DESIGNER_REPRESENTATIVE';
+  
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      transition={{ duration: 0.3, delay: index * 0.05 }}
+      className="flex items-center py-3.5 px-3 sm:px-4 my-2 mx-2 sm:mx-3 rounded-lg shadow-md bg-[hsl(var(--leaderboard-list-item-bg))] dark:bg-[hsl(var(--leaderboard-list-item-bg-dark))] relative hover:shadow-lg transition-shadow duration-150"
+    >
+      {/* Trend Bar */}
+      {user.trend === 'up' && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[hsl(var(--leaderboard-arrow-up))] rounded-l-md"></div>}
+      {user.trend === 'down' && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[hsl(var(--leaderboard-arrow-down))] rounded-l-md"></div>}
+      {user.trend === 'same' && !user.pointChange && <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gray-400 dark:bg-gray-500 rounded-l-md"></div>}
 
-    <div className="flex items-center justify-center h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-[hsl(var(--leaderboard-gold))] text-[hsl(var(--leaderboard-rank-badge-text))] font-bold text-sm shadow-sm ml-2 mr-2 sm:mr-3 shrink-0">
-      {user.rank}
-    </div>
-    
-    <Avatar className="h-10 w-10 sm:h-11 sm:w-11 border-2 border-gray-200 dark:border-gray-700 shrink-0">
-      <AvatarImage src={user.userAvatar || `https://placehold.co/48x48.png?text=${getInitials(user.userName)}`} alt={user.userName} data-ai-hint="list user avatar" />
-      <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{getInitials(user.userName)}</AvatarFallback>
-    </Avatar>
+      <div className="flex items-center justify-center h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-[hsl(var(--leaderboard-gold))] text-[hsl(var(--leaderboard-rank-badge-text))] font-bold text-sm shadow-sm ml-2 mr-2 sm:mr-3 shrink-0">
+        {user.rank}
+      </div>
+      
+      <Avatar className="h-10 w-10 sm:h-11 sm:w-11 border-2 border-gray-200 dark:border-gray-700 shrink-0">
+        <AvatarImage src={user.userAvatar || `https://placehold.co/48x48.png?text=${getInitials(user.userName)}`} alt={user.userName} data-ai-hint="list user avatar" />
+        <AvatarFallback className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{getInitials(user.userName)}</AvatarFallback>
+      </Avatar>
 
-    <div className="flex-1 min-w-0 ml-3">
-      <p className="font-semibold truncate text-sm text-[hsl(var(--leaderboard-list-text))] dark:text-[hsl(var(--leaderboard-list-text-dark))]">{user.userName}</p>
-       <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-        {user.role?.replace(/_/g, ' ') || 'Member'}
-      </p>
-      <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-        <Award className="h-3.5 w-3.5 mr-1 text-[hsl(var(--leaderboard-gold))]" />
-        {user.ordersCompleted.toLocaleString()} / {user.target.toLocaleString()} Sales
+      <div className="flex-1 min-w-0 ml-3">
+        <p className="font-semibold truncate text-sm text-[hsl(var(--leaderboard-list-text))] dark:text-[hsl(var(--leaderboard-list-text-dark))]">{user.userName}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+          {user.role?.replace(/_/g, ' ') || 'Member'}
+        </p>
+        {isDR ? (
+          <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            <CheckCircle className="h-3.5 w-3.5 mr-1 text-green-500" /> Done: {user.designsDone?.toLocaleString()}
+            <span className="mx-1.5">|</span>
+            <Briefcase className="h-3.5 w-3.5 mr-1 text-blue-500" /> Assigned: {user.designsAssigned?.toLocaleString()}
+          </div>
+        ) : (
+          <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            <Award className="h-3.5 w-3.5 mr-1 text-[hsl(var(--leaderboard-gold))]" />
+            {user.ordersCompleted.toLocaleString()} / {user.target.toLocaleString()} Sales
+          </div>
+        )}
       </div>
-    </div>
-    {user.pointChange !== undefined && user.pointChange !== 0 && (
-      <div className={cn(
-        "flex items-center text-sm font-semibold ml-2 shrink-0",
-        user.trend === 'up' ? "text-[hsl(var(--leaderboard-arrow-up))]" : "text-[hsl(var(--leaderboard-arrow-down))]"
-      )}>
-        {user.trend === 'up' ? "+" : "-"}
-        {user.pointChange}
-        {user.trend === 'up' ? <ArrowUp className="h-4 w-4 ml-0.5" /> : <ArrowDown className="h-4 w-4 ml-0.5" />}
-      </div>
-    )}
-  </motion.div>
-);
+      {user.pointChange !== undefined && user.pointChange !== 0 && (
+        <div className={cn(
+          "flex items-center text-sm font-semibold ml-2 shrink-0",
+          user.trend === 'up' ? "text-[hsl(var(--leaderboard-arrow-up))]" : "text-[hsl(var(--leaderboard-arrow-down))]"
+        )}>
+          {user.trend === 'up' ? "+" : "-"}
+          {user.pointChange}
+          {user.trend === 'up' ? <ArrowUp className="h-4 w-4 ml-0.5" /> : <ArrowDown className="h-4 w-4 ml-0.5" />}
+        </div>
+      )}
+    </motion.div>
+  );
+};
 
 export function LeaderboardDisplay({ performanceData, currentUser, timePeriodLabel }: LeaderboardDisplayProps) {
   if (!performanceData || performanceData.length === 0) {

@@ -22,14 +22,17 @@ import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/da
 import type { DateRange } from "react-day-picker";
 import { SalesPerformanceClient } from '@/components/leaderboard/SalesPerformanceClient';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LOGISTICS_STATUS_ID } from '@/lib/status-service';
 
 // CrmPerformanceData type might be better defined within LeaderboardDisplay or a shared types file if complex
 export interface CrmPerformanceData {
   userId: string;
   userName: string;
   userAvatar?: string;
-  ordersCompleted: number; // This is the "points"
+  ordersCompleted: number; // This is the "points" for CRs
   target: number;
+  designsAssigned?: number; // Specific for DRs
+  designsDone?: number; // Specific for DRs
   rank?: number;
   role?: UserRole;
   trend?: 'up' | 'down' | 'same';
@@ -81,11 +84,26 @@ export default function LeaderboardPage() {
     const roleFilteredUsers = users.filter(user => user.role === roleToCalculate);
 
     const performanceDataList = roleFilteredUsers.map(user => {
-      const ordersCreatedInPeriod = orders.filter(order => 
-        (roleToCalculate === 'CRM' ? order.crmUserId === user.id : order.designerRepresentativeId === user.id) &&
-        order.createdAt && 
-        isWithinInterval(parseISO(order.createdAt), { start: periodStart, end: periodEnd })
-      ).length;
+      let ordersCreatedInPeriod = 0;
+      let designsAssigned = 0;
+      let designsDone = 0;
+
+      if (roleToCalculate === 'CRM') {
+        ordersCreatedInPeriod = orders.filter(order => 
+          order.crmUserId === user.id &&
+          order.createdAt && 
+          isWithinInterval(parseISO(order.createdAt), { start: periodStart, end: periodEnd })
+        ).length;
+      } else if (roleToCalculate === 'DESIGNER_REPRESENTATIVE') {
+          designsAssigned = orders.filter(order =>
+              order.designerRepresentativeId === user.id &&
+              order.statusHistory.some(h => h.status === 'ready-for-design' && isWithinInterval(parseISO(h.timestamp), { start: periodStart, end: periodEnd }))
+          ).length;
+          designsDone = orders.filter(order =>
+              order.designerRepresentativeId === user.id &&
+              order.statusHistory.some(h => h.status === LOGISTICS_STATUS_ID && isWithinInterval(parseISO(h.timestamp), { start: periodStart, end: periodEnd }))
+          ).length;
+      }
       
       const roleBasedTargets = globalSettings.roleBasedTargets || {};
       const monthlyTarget = (user.monthlyOrderTarget ?? roleBasedTargets[roleToCalculate as keyof typeof roleBasedTargets] ?? 0);
@@ -97,14 +115,18 @@ export default function LeaderboardPage() {
         userName: user.name,
         userAvatar: user.avatarUrl || undefined,
         ordersCompleted: ordersCreatedInPeriod,
+        designsAssigned,
+        designsDone,
         target: target,
         role: user.role,
         trend: 'same',
         pointChange: 0,
       };
     });
+    
+    const sortKey = roleToCalculate === 'DESIGNER_REPRESENTATIVE' ? 'designsDone' : 'ordersCompleted';
 
-    performanceDataList.sort((a, b) => b.ordersCompleted - a.ordersCompleted || a.userName.localeCompare(b.userName));
+    performanceDataList.sort((a, b) => (b[sortKey] ?? 0) - (a[sortKey] ?? 0) || a.userName.localeCompare(b.userName));
     performanceDataList.forEach((user, index) => {
       user.rank = index + 1;
     });
