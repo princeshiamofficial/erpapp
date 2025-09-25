@@ -34,6 +34,7 @@ const LocationMapDialog = dynamic(() => import('@/components/hrm/LocationMapDial
 });
 const AttendanceTypeDialog = dynamic(() => import('@/components/hrm/AttendanceTypeDialog').then(mod => mod.AttendanceTypeDialog));
 const AddEditHolidayDialog = dynamic(() => import('@/components/hrm/AddEditHolidayDialog').then(mod => mod.AddEditHolidayDialog));
+const AddEditOfficeTimeDialog = dynamic(() => import('@/components/hrm/AddEditOfficeTimeDialog').then(mod => mod.AddEditOfficeTimeDialog));
 
 
 const ITEMS_PER_PAGE = 25;
@@ -89,6 +90,10 @@ export default function AttendancePage() {
     const [isHolidayDialogOpen, setIsHolidayDialogOpen] = useState(false);
     const [holidayToEdit, setHolidayToEdit] = useState(null); // Will hold holiday data for editing
     const [holidays, setHolidays] = useState([{id: '1', title: 'National Mourning Day', date: '19 Nov 2006'}]); // Mock data
+
+    // State for Office Time Dialog
+    const [isOfficeTimeDialogOpen, setIsOfficeTimeDialogOpen] = useState(false);
+    const [officeTimeToEdit, setOfficeTimeToEdit] = useState(null);
 
 
     const fetchData = useCallback(async () => {
@@ -180,6 +185,19 @@ export default function AttendancePage() {
         setHolidayToEdit(holiday);
         setIsHolidayDialogOpen(true);
     };
+
+    const handleOfficeTimeSaved = () => {
+      // Refetch office times data
+      toast({ title: "Success", description: "Office time settings have been updated." });
+      setIsOfficeTimeDialogOpen(false);
+      setOfficeTimeToEdit(null);
+    };
+
+    const openAddOfficeTimeDialog = () => {
+      setOfficeTimeToEdit(null);
+      setIsOfficeTimeDialogOpen(true);
+    };
+
 
     const renderPagination = () => {
         const pageNumbers = [];
@@ -544,7 +562,7 @@ export default function AttendancePage() {
               <CardTitle className="text-xl font-bold text-gray-800">Office Time Settings</CardTitle>
               <CardDescription>Manage office hours, shifts, and grace periods.</CardDescription>
             </div>
-            <Button>
+            <Button onClick={openAddOfficeTimeDialog}>
               <PlusCircle className="mr-2 h-4 w-4" /> Add New Time
             </Button>
         </CardHeader>
@@ -636,6 +654,12 @@ export default function AttendancePage() {
                 onOpenChange={setIsHolidayDialogOpen}
                 onHolidaySaved={handleHolidaySaved}
                 holiday={holidayToEdit}
+             />
+             <AddEditOfficeTimeDialog
+                isOpen={isOfficeTimeDialogOpen}
+                onOpenChange={setIsOfficeTimeDialogOpen}
+                onOfficeTimeSaved={handleOfficeTimeSaved}
+                officeTime={officeTimeToEdit}
              />
         </div>
     );
