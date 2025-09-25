@@ -63,7 +63,7 @@ export function AttendanceTypeDialog({ isOpen, onOpenChange }: AttendanceTypeDia
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[200px]">Types</TableHead>
+                                
                                 <TableHead>Location Based</TableHead>
                                 <TableHead>Remote</TableHead>
                                 <TableHead>Wifi Based</TableHead>
@@ -73,7 +73,7 @@ export function AttendanceTypeDialog({ isOpen, onOpenChange }: AttendanceTypeDia
                         </TableHeader>
                         <TableBody>
                             <TableRow>
-                                <TableCell className="font-medium">Active Attendance Type</TableCell>
+                                
                                 <TableCell>
                                     <Checkbox 
                                         checked={activeType === 'location'}
