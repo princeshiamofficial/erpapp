@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -416,7 +417,7 @@ export default function AttendancePage() {
                           onClick={() => setIsAttendanceTypeDialogOpen(true)}
                           className="bg-black text-white hover:bg-gray-800"
                         >
-                          <PlusCircle className="mr-2 h-4 w-4" /> Attendance Type
+                          Attendance Type
                         </Button>
                         <Button>
                           <PlusCircle className="mr-2 h-4 w-4" /> Add IP/Wifi
@@ -468,7 +469,7 @@ export default function AttendancePage() {
                         <TableRow>
                             <TableCell>1</TableCell>
                             <TableCell>National Mourning Day</TableCell>
-                            <TableCell>["2024-08-15"]</TableCell>
+                            <TableCell>e.g., 19 Nov 2006</TableCell>
                             <TableCell className="text-right">...</TableCell>
                         </TableRow>
                     </TableBody>
@@ -533,5 +534,7 @@ export default function AttendancePage() {
         </div>
     );
 }
+
+    
 
     
