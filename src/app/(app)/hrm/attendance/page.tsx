@@ -198,6 +198,11 @@ export default function AttendancePage() {
       setIsOfficeTimeDialogOpen(true);
     };
 
+    const openEditOfficeTimeDialog = (officeTime: any) => {
+        setOfficeTimeToEdit(officeTime);
+        setIsOfficeTimeDialogOpen(true);
+    };
+
 
     const renderPagination = () => {
         const pageNumbers = [];
@@ -593,7 +598,7 @@ export default function AttendancePage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => openEditOfficeTimeDialog({id: '1', name: 'Regular', startTime: '09:00', endTime: '18:00', graceTime: 15, shift: 'Day'})}>
                             <Edit className="mr-2 h-4 w-4" />
                             Edit
                           </DropdownMenuItem>
@@ -633,9 +638,9 @@ export default function AttendancePage() {
     }
 
     return (
-        <div className="min-h-screen">
+        <div className="min-h-screen p-4 sm:p-6 lg:p-8">
              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
+                <TabsList className="sticky top-20 z-30 bg-white p-1 rounded-full shadow-sm border border-gray-200">
                     <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
                     <TabsTrigger value="leave_management" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Leave Management</TabsTrigger>
                     <TabsTrigger value="settings" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Settings</TabsTrigger>
