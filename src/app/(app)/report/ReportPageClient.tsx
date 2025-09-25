@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -66,7 +65,7 @@ const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
   const names = name.split(' ');
   if (names.length === 1) return names[0].charAt(0).toUpperCase();
-  return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
+  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
 
@@ -423,73 +422,6 @@ export function ReportPageClient() {
                         <TableCell colSpan={3} className="h-24 text-center">
                           <Package className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
                           No sales data available for the selected period.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            <Card className="w-full lg:flex-1">
-              <CardHeader>
-                <CardTitle>Designer&apos;s Performance</CardTitle>
-                <CardDescription>
-                  Tasks assigned vs completed by each designer in the selected period.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Designer</TableHead>
-                      <TableHead className="text-center">Designs Assigned</TableHead>
-                      <TableHead className="text-center">Designs Done</TableHead>
-                      <TableHead className="w-[30%] text-center">Completion Rate</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      [...Array(3)].map((_, i) => (
-                        <TableRow key={`skel-designer-${i}`}>
-                          <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-24" /></div></TableCell>
-                          <TableCell className="text-center"><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
-                          <TableCell className="text-center"><Skeleton className="h-5 w-12 mx-auto" /></TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-center gap-4">
-                              <Skeleton className="h-2.5 w-2/3" />
-                              <Skeleton className="h-6 w-16" />
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : designerPerformanceData.length > 0 ? (
-                      designerPerformanceData.map((item) => (
-                        <TableRow key={item.designerId}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                                <Avatar className="h-8 w-8 border">
-                                    <AvatarImage src={item.avatarUrl || undefined} alt={item.designerName} />
-                                    <AvatarFallback>{getInitials(item.designerName)}</AvatarFallback>
-                                </Avatar>
-                                <span>{item.designerName}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center font-mono">{item.designsAssigned}</TableCell>
-                          <TableCell className="text-center font-mono">{item.designsDone}</TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-4">
-                              <Progress value={Math.min(100, item.completionRate)} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
-                              <Badge variant="outline" className="w-16 justify-center">{item.completionRate.toFixed(1)}%</Badge>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">
-                          <UsersIcon className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
-                          No designer performance data available for this period.
                         </TableCell>
                       </TableRow>
                     )}
