@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -8,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle } from 'lucide-react';
+import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -372,7 +371,7 @@ export default function AttendancePage() {
       <div className="space-y-6">
         <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
           <CardHeader className="p-6 border-b">
-              <CardTitle className="text-xl font-bold text-gray-800">Weekend</CardTitle>
+              <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><CalendarDays className="mr-2 h-5 w-5" />Weekend</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
               <Table>
