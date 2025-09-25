@@ -409,7 +409,14 @@ export default function AttendancePage() {
                     <div>
                         <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><Wifi className="mr-2 h-5 w-5" />IP/Wifi</CardTitle>
                     </div>
-                    <Button><PlusCircle className="mr-2 h-4 w-4" /> Add IP/Wifi</Button>
+                    <div className="flex items-center gap-2">
+                        <Button>
+                          <PlusCircle className="mr-2 h-4 w-4" /> Attendance Type
+                        </Button>
+                        <Button>
+                          <PlusCircle className="mr-2 h-4 w-4" /> Add IP/Wifi
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="p-6">
@@ -511,3 +518,4 @@ export default function AttendancePage() {
 }
 
     
+
