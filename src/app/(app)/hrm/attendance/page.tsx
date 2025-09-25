@@ -87,7 +87,7 @@ export default function AttendancePage() {
     // State for Holiday Dialog
     const [isHolidayDialogOpen, setIsHolidayDialogOpen] = useState(false);
     const [holidayToEdit, setHolidayToEdit] = useState(null); // Will hold holiday data for editing
-    const [holidays, setHolidays] = useState([{id: '1', title: 'National Mourning Day', date: '2006-11-19'}]); // Mock data
+    const [holidays, setHolidays] = useState([{id: '1', title: 'National Mourning Day', date: '19 Nov 2006'}]); // Mock data
 
 
     const fetchData = useCallback(async () => {
@@ -540,9 +540,35 @@ export default function AttendancePage() {
       <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
         <CardHeader className="p-6">
           <CardTitle className="text-xl font-bold text-gray-800">Office Time Settings</CardTitle>
+           <CardDescription>Manage office hours, shifts, and grace periods.</CardDescription>
         </CardHeader>
-        <CardContent className="p-6 text-center text-gray-500">
-          <p>Office time management features will be available here soon.</p>
+        <CardContent className="p-6 pt-0">
+          <Table>
+            <TableHeader>
+                <TableRow>
+                    <TableHead>Office Hour</TableHead>
+                    <TableHead>Start Time</TableHead>
+                    <TableHead>End Time</TableHead>
+                    <TableHead>Grace Time</TableHead>
+                    <TableHead>Shift</TableHead>
+                    <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                <TableRow>
+                    <TableCell>Regular</TableCell>
+                    <TableCell>09:00 AM</TableCell>
+                    <TableCell>06:00 PM</TableCell>
+                    <TableCell>15 minutes</TableCell>
+                    <TableCell>Day</TableCell>
+                    <TableCell className="text-right">
+                        <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                        </Button>
+                    </TableCell>
+                </TableRow>
+            </TableBody>
+        </Table>
         </CardContent>
       </Card>
     );
