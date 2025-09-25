@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -431,6 +432,38 @@ export default function AttendancePage() {
                  </Table>
             </CardContent>
         </Card>
+        
+        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+            <CardHeader className="p-6 border-b">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><CalendarDays className="mr-2 h-5 w-5" />Holidays</CardTitle>
+                    </div>
+                    <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Holiday</Button>
+                </div>
+            </CardHeader>
+            <CardContent className="p-6">
+                 <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[50px]">#</TableHead>
+                            <TableHead>Title</TableHead>
+                            <TableHead>Holiday Date</TableHead>
+                            <TableHead className="text-right">Action</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell>1</TableCell>
+                            <TableCell>National Mourning Day</TableCell>
+                            <TableCell>["2024-08-15"]</TableCell>
+                            <TableCell className="text-right">...</TableCell>
+                        </TableRow>
+                    </TableBody>
+                 </Table>
+            </CardContent>
+        </Card>
+
       </div>
     );
 
@@ -448,7 +481,7 @@ export default function AttendancePage() {
     };
 
     return (
-        <div className="space-y-6 bg-gray-50 min-h-screen">
+        <div className="min-h-screen">
              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
                     <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
