@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -538,9 +539,14 @@ export default function AttendancePage() {
     
     const officeTimeContent = (
       <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="p-6">
-          <CardTitle className="text-xl font-bold text-gray-800">Office Time Settings</CardTitle>
-           <CardDescription>Manage office hours, shifts, and grace periods.</CardDescription>
+        <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+            <div>
+              <CardTitle className="text-xl font-bold text-gray-800">Office Time Settings</CardTitle>
+              <CardDescription>Manage office hours, shifts, and grace periods.</CardDescription>
+            </div>
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add New Time
+            </Button>
         </CardHeader>
         <CardContent className="p-6 pt-0">
           <Table>
