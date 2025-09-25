@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -413,7 +412,10 @@ export default function AttendancePage() {
                         <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><Wifi className="mr-2 h-5 w-5" />IP/Wifi</CardTitle>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button onClick={() => setIsAttendanceTypeDialogOpen(true)}>
+                        <Button
+                          onClick={() => setIsAttendanceTypeDialogOpen(true)}
+                          className="bg-black text-white hover:bg-gray-800"
+                        >
                           <PlusCircle className="mr-2 h-4 w-4" /> Attendance Type
                         </Button>
                         <Button>
@@ -490,6 +492,14 @@ export default function AttendancePage() {
         }
     };
 
+    if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
+        return (
+            <div className="flex h-screen w-full items-center justify-center">
+                <p>Access Denied. You must be an Administrator to view this page.</p>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen">
              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -525,5 +535,3 @@ export default function AttendancePage() {
 }
 
     
-
-
