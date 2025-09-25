@@ -24,20 +24,20 @@ interface AttendanceTypeDialogProps {
 }
 
 export function AttendanceTypeDialog({ isOpen, onOpenChange }: AttendanceTypeDialogProps) {
-  const [activeType, setActiveType] = useState<AttendanceType>('location');
+  const [activeTypes, setActiveTypes] = useState<AttendanceType[]>(['location']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   const handleSave = () => {
     setIsSubmitting(true);
     // Here you would typically call a server action to save the setting
-    console.log("Saving active attendance type:", activeType);
+    console.log("Saving active attendance types:", activeTypes);
     
     // Simulate API call
     setTimeout(() => {
         toast({
             title: "Settings Saved",
-            description: `Active attendance type has been set to "${activeType}".`
+            description: `Active attendance types have been updated.`
         });
         setIsSubmitting(false);
         onOpenChange(false);
@@ -45,7 +45,11 @@ export function AttendanceTypeDialog({ isOpen, onOpenChange }: AttendanceTypeDia
   };
   
   const handleCheckboxChange = (type: AttendanceType) => {
-    setActiveType(type);
+    setActiveTypes(prev => 
+      prev.includes(type)
+        ? prev.filter(t => t !== type)
+        : [...prev, type]
+    );
   };
 
   return (
@@ -54,7 +58,7 @@ export function AttendanceTypeDialog({ isOpen, onOpenChange }: AttendanceTypeDia
         <DialogHeader>
           <DialogTitle>Attendance Type</DialogTitle>
           <DialogDescription>
-            Select the active attendance tracking method for employees.
+            Select active attendance tracking methods for employees.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
@@ -76,25 +80,25 @@ export function AttendanceTypeDialog({ isOpen, onOpenChange }: AttendanceTypeDia
                                 
                                 <TableCell>
                                     <Checkbox 
-                                        checked={activeType === 'location'}
+                                        checked={activeTypes.includes('location')}
                                         onCheckedChange={() => handleCheckboxChange('location')}
                                     />
                                 </TableCell>
                                  <TableCell>
                                     <Checkbox 
-                                        checked={activeType === 'remote'}
+                                        checked={activeTypes.includes('remote')}
                                         onCheckedChange={() => handleCheckboxChange('remote')}
                                     />
                                 </TableCell>
                                  <TableCell>
                                     <Checkbox 
-                                        checked={activeType === 'wifi'}
+                                        checked={activeTypes.includes('wifi')}
                                         onCheckedChange={() => handleCheckboxChange('wifi')}
                                     />
                                 </TableCell>
                                  <TableCell>
                                     <Checkbox 
-                                        checked={activeType === 'iot'}
+                                        checked={activeTypes.includes('iot')}
                                         onCheckedChange={() => handleCheckboxChange('iot')}
                                     />
                                 </TableCell>
