@@ -25,7 +25,7 @@ import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service'; // Import getUsers
 import { useToast } from '@/hooks/use-toast';
-import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon } from 'lucide-react'; // Import UsersIcon
+import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon, BarChart3 } from 'lucide-react'; // Import UsersIcon
 import { useAuth } from '@/contexts/auth-context'; // Corrected import path
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -38,6 +38,8 @@ import type { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay, getYear } from 'date-fns';
 import { READY_FOR_DESIGN_STATUS_ID, LOGISTICS_STATUS_ID } from '@/lib/status-service'; // Import status IDs
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Import Avatar components
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-BD', {
@@ -52,21 +54,19 @@ interface ProductSalesData {
   percentage: number;
 }
 
-interface DesignerPerformanceData {
-  designerId: string;
-  designerName: string;
-  designsAssigned: number;
-  designsDone: number;
-  completionRate: number;
-  avatarUrl?: string | null; // Added avatarUrl
+interface CrmSalesData {
+  crmId: string;
+  crmName: string;
+  totalSales: number;
+  avatarUrl?: string | null;
 }
 
-const getInitials = (name: string | undefined): string => {
-  if (!name) return '??';
-  const names = name.split(' ');
-  if (names.length === 1) return names[0].charAt(0).toUpperCase();
-  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
-};
+const salesBreakdownChartConfig = {
+  totalSales: {
+    label: "Total Sales",
+    color: "hsl(var(--chart-1))",
+  },
+} satisfies ChartConfig;
 
 
 interface ReportFilterSettingsDialogProps {
@@ -293,64 +293,36 @@ export function ReportPageClient() {
       .sort((a, b) => b.sales - a.sales);
   }, [filteredOrdersByDate, globalSettings]);
   
-  const designerPerformanceData: DesignerPerformanceData[] = useMemo(() => {
-    if (orders.length === 0 || allUsers.length === 0 || !selectedDateRange?.from) {
+  const crmSalesData: CrmSalesData[] = useMemo(() => {
+    if (filteredOrdersByDate.length === 0 || allUsers.length === 0) {
       return [];
     }
   
-    const startDate = startOfDay(selectedDateRange.from);
-    const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
+    const salesByCrm: Record<string, { totalSales: number }> = {};
   
-    const designerMap = new Map<string, { name: string; avatarUrl?: string | null; assigned: Set<string>; done: Set<string>; }>();
-    allUsers
-      .filter(user => user.role === 'DESIGNER_REPRESENTATIVE')
-      .forEach(dr => {
-        designerMap.set(dr.id, { name: dr.name, avatarUrl: dr.avatarUrl, assigned: new Set(), done: new Set() });
-      });
-  
-    orders.forEach(order => {
-      if (!order.designerRepresentativeId) return;
-  
-      const designer = designerMap.get(order.designerRepresentativeId);
-      if (!designer) return;
-      
-      const lastAssignmentLog = [...order.statusHistory]
-        .filter(h => h.status === READY_FOR_DESIGN_STATUS_ID)
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-  
-      if (lastAssignmentLog && isWithinInterval(parseISO(lastAssignmentLog.timestamp), { start: startDate, end: endDate })) {
-        designer.assigned.add(order.id);
+    filteredOrdersByDate.forEach(order => {
+      if (order.crmUserId) {
+        if (!salesByCrm[order.crmUserId]) {
+          salesByCrm[order.crmUserId] = { totalSales: 0 };
+        }
+        const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+        salesByCrm[order.crmUserId].totalSales += orderTotal;
       }
-      
-      const lastLogisticsLog = [...order.statusHistory]
-        .filter(h => h.status === LOGISTICS_STATUS_ID)
-        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
-  
-      if (lastLogisticsLog && isWithinInterval(parseISO(lastLogisticsLog.timestamp), { start: startDate, end: endDate })) {
-        designer.done.add(order.id);
-      }
-      
-      designerMap.set(order.designerRepresentativeId, designer);
     });
-    
-    const designersWithData = Array.from(designerMap.entries()).map(([id, data]) => ({
-        designerId: id,
-        designerName: data.name,
-        avatarUrl: data.avatarUrl,
-        designsAssigned: data.assigned.size,
-        designsDone: data.done.size,
-    }));
-    
-    const totalDesignsDone = designersWithData.reduce((sum, data) => sum + data.designsDone, 0);
-
-    return designersWithData
-      .map(data => ({
-        ...data,
-        completionRate: totalDesignsDone > 0 ? (data.designsDone / totalDesignsDone) * 100 : 0,
-      }))
-      .sort((a, b) => b.designsDone - a.designsDone);
   
-  }, [orders, allUsers, selectedDateRange]);
+    const crmUsers = allUsers.filter(u => u.role === 'CRM');
+  
+    return crmUsers
+      .map(crm => ({
+        crmId: crm.id,
+        crmName: crm.name,
+        avatarUrl: crm.avatarUrl,
+        totalSales: salesByCrm[crm.id]?.totalSales || 0,
+      }))
+      .filter(data => data.totalSales > 0) // Only show CRMs with sales in the period
+      .sort((a, b) => b.totalSales - a.totalSales);
+  
+  }, [filteredOrdersByDate, allUsers]);
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
 
@@ -358,8 +330,8 @@ export function ReportPageClient() {
   return (
     <>
       <div className="space-y-6 p-1 sm:p-0">
-        <div className="flex flex-col lg:flex-row gap-6">
-            <Card className="w-full lg:flex-1">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="w-full">
               <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <CardTitle>Product Sales Performance</CardTitle>
@@ -428,6 +400,49 @@ export function ReportPageClient() {
                   </TableBody>
                 </Table>
               </CardContent>
+            </Card>
+
+            <Card className="w-full">
+                <CardHeader>
+                    <CardTitle>Sales Breakdown by CRM</CardTitle>
+                    <CardDescription>Visualizing sales contribution by each CRM user.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="h-[400px] w-full">
+                      {isLoading ? (
+                        <Skeleton className="h-full w-full" />
+                      ) : crmSalesData.length > 0 ? (
+                         <ChartContainer config={salesBreakdownChartConfig} className="w-full h-full">
+                            <ResponsiveContainer>
+                                <BarChart data={crmSalesData} layout="vertical" margin={{ left: 10, right: 30 }}>
+                                    <XAxis type="number" hide />
+                                    <YAxis 
+                                      dataKey="crmName" 
+                                      type="category" 
+                                      tickLine={false} 
+                                      axisLine={false} 
+                                      width={80}
+                                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} 
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: 'hsl(var(--muted))' }}
+                                        content={<ChartTooltipContent 
+                                            formatter={(value) => formatCurrency(value as number)}
+                                            indicator="dot" 
+                                        />}
+                                    />
+                                    <Bar dataKey="totalSales" layout="vertical" radius={5} fill="hsl(var(--chart-1))" />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </ChartContainer>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                            <UsersIcon className="h-12 w-12 opacity-30 mb-4"/>
+                            <p>No CRM sales data for this period.</p>
+                        </div>
+                      )}
+                    </div>
+                </CardContent>
             </Card>
         </div>
       </div>
