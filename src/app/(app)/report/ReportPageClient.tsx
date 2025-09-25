@@ -40,6 +40,13 @@ import { READY_FOR_DESIGN_STATUS_ID, LOGISTICS_STATUS_ID } from '@/lib/status-se
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Import Avatar components
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import dynamic from 'next/dynamic';
+
+
+const OrderAnalysisClient = dynamic(() => import('@/components/dashboard/OrderAnalysisClient').then(mod => mod.OrderAnalysisClient), {
+  ssr: false,
+  loading: () => <Skeleton className="h-[400px] w-full" />
+});
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-BD', {
@@ -401,49 +408,51 @@ export function ReportPageClient() {
                 </Table>
               </CardContent>
             </Card>
-
-            <Card className="w-full">
-                <CardHeader>
-                    <CardTitle>Sales Breakdown by CRM</CardTitle>
-                    <CardDescription>Visualizing sales contribution by each CRM user.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="h-[400px] w-full">
-                      {isLoading ? (
-                        <Skeleton className="h-full w-full" />
-                      ) : crmSalesData.length > 0 ? (
-                         <ChartContainer config={salesBreakdownChartConfig} className="w-full h-full">
-                            <ResponsiveContainer>
-                                <BarChart data={crmSalesData} layout="vertical" margin={{ left: 10, right: 30 }}>
-                                    <XAxis type="number" hide />
-                                    <YAxis 
-                                      dataKey="crmName" 
-                                      type="category" 
-                                      tickLine={false} 
-                                      axisLine={false} 
-                                      width={80}
-                                      tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} 
-                                    />
-                                    <Tooltip
-                                        cursor={{ fill: 'hsl(var(--muted))' }}
-                                        content={<ChartTooltipContent 
-                                            formatter={(value) => formatCurrency(value as number)}
-                                            indicator="dot" 
-                                        />}
-                                    />
-                                    <Bar dataKey="totalSales" layout="vertical" radius={5} fill="hsl(var(--chart-1))" />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </ChartContainer>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                            <UsersIcon className="h-12 w-12 opacity-30 mb-4"/>
-                            <p>No CRM sales data for this period.</p>
-                        </div>
-                      )}
-                    </div>
-                </CardContent>
-            </Card>
+            <OrderAnalysisClient allOrders={orders} />
+        </div>
+        <div className="grid grid-cols-1 gap-6">
+          <Card className="w-full">
+              <CardHeader>
+                  <CardTitle>Sales Breakdown by CRM</CardTitle>
+                  <CardDescription>Visualizing sales contribution by each CRM user.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                  <div className="h-[400px] w-full">
+                    {isLoading ? (
+                      <Skeleton className="h-full w-full" />
+                    ) : crmSalesData.length > 0 ? (
+                       <ChartContainer config={salesBreakdownChartConfig} className="w-full h-full">
+                          <ResponsiveContainer>
+                              <BarChart data={crmSalesData} layout="vertical" margin={{ left: 10, right: 30 }}>
+                                  <XAxis type="number" hide />
+                                  <YAxis 
+                                    dataKey="crmName" 
+                                    type="category" 
+                                    tickLine={false} 
+                                    axisLine={false} 
+                                    width={80}
+                                    tick={{ fontSize: 12, fill: 'hsl(var(--muted-foreground))' }} 
+                                  />
+                                  <Tooltip
+                                      cursor={{ fill: 'hsl(var(--muted))' }}
+                                      content={<ChartTooltipContent 
+                                          formatter={(value) => formatCurrency(value as number)}
+                                          indicator="dot" 
+                                      />}
+                                  />
+                                  <Bar dataKey="totalSales" layout="vertical" radius={5} fill="hsl(var(--chart-1))" />
+                              </BarChart>
+                          </ResponsiveContainer>
+                      </ChartContainer>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                          <UsersIcon className="h-12 w-12 opacity-30 mb-4"/>
+                          <p>No CRM sales data for this period.</p>
+                      </div>
+                    )}
+                  </div>
+              </CardContent>
+          </Card>
         </div>
       </div>
 
