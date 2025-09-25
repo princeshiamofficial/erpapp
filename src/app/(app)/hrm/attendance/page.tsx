@@ -20,6 +20,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
 const LocationMapDialog = dynamic(() => import('@/components/hrm/LocationMapDialog').then(mod => mod.LocationMapDialog), {
@@ -58,6 +59,8 @@ const getStatusBadgeClass = (status: 'On Time' | 'Late' | 'Absent') => {
   }
 };
 
+const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 
 export default function AttendancePage() {
     const { currentUser } = useAuth();
@@ -71,6 +74,7 @@ export default function AttendancePage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [leaveToManage, setLeaveToManage] = useState<Employee | null>(null);
     const [viewingLocation, setViewingLocation] = useState<{ lat: number, lng: number, employeeName: string, employeeAvatar?: string } | null>(null);
+    const [selectedWeekends, setSelectedWeekends] = useState<string[]>(["Friday", "Saturday"]);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -122,6 +126,23 @@ export default function AttendancePage() {
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, activeTab]);
+    
+    const handleWeekendChange = (day: string, checked: boolean | 'indeterminate') => {
+        if (checked) {
+            setSelectedWeekends(prev => [...prev, day]);
+        } else {
+            setSelectedWeekends(prev => prev.filter(d => d !== day));
+        }
+    };
+    
+    const handleSaveWeekends = () => {
+        // Here you would typically call a server action to save the `selectedWeekends` state
+        console.log("Saving weekends:", selectedWeekends);
+        toast({
+            title: "Settings Saved",
+            description: "Weekend days have been updated.",
+        });
+    };
 
     const renderPagination = () => {
         const pageNumbers = [];
@@ -349,12 +370,36 @@ export default function AttendancePage() {
 
     const settingsContent = (
       <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="p-6">
-            <CardTitle className="text-xl font-bold text-gray-800">Attendance Settings</CardTitle>
-            <CardDescription>Configure attendance related settings for your organization.</CardDescription>
+        <CardHeader className="p-6 border-b">
+            <CardTitle className="text-xl font-bold text-gray-800">Weekend</CardTitle>
+            <CardDescription>Dashboard / Weekend</CardDescription>
         </CardHeader>
-        <CardContent className="p-6 pt-0 text-center text-gray-500 min-h-48 flex items-center justify-center">
-            <p>Settings will be available here soon.</p>
+        <CardContent className="p-6">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Days</TableHead>
+                        {WEEK_DAYS.map(day => <TableHead key={day}>{day}</TableHead>)}
+                        <TableHead className="text-right">Action</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    <TableRow>
+                        <TableCell className="font-medium">Weekend</TableCell>
+                        {WEEK_DAYS.map(day => (
+                            <TableCell key={day}>
+                                <Checkbox
+                                    checked={selectedWeekends.includes(day)}
+                                    onCheckedChange={(checked) => handleWeekendChange(day, checked)}
+                                />
+                            </TableCell>
+                        ))}
+                        <TableCell className="text-right">
+                            <Button size="sm" onClick={handleSaveWeekends}>Save</Button>
+                        </TableCell>
+                    </TableRow>
+                </TableBody>
+            </Table>
         </CardContent>
       </Card>
     );
