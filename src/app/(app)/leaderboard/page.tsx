@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -70,6 +71,8 @@ export default function LeaderboardPage() {
     if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
       setActiveTab('dr_board');
     } else if (currentUser?.role === 'CRM') {
+      setActiveTab('cr_board');
+    } else if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
       setActiveTab('cr_board');
     }
   }, [currentUser]);
@@ -249,7 +252,8 @@ export default function LeaderboardPage() {
   };
   
   const showTabs = useMemo(() => {
-    return currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
+    if (!currentUser) return false;
+    return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
   }, [currentUser]);
 
   const isLoadingContent = isAuthLoading || isLoadingData || !selectedDateRange;
