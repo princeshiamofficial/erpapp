@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin } from 'lucide-react';
+import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -347,12 +347,26 @@ export default function AttendancePage() {
       </Card>
     );
 
+    const settingsContent = (
+      <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+        <CardHeader className="p-6">
+            <CardTitle className="text-xl font-bold text-gray-800">Attendance Settings</CardTitle>
+            <CardDescription>Configure attendance related settings for your organization.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 pt-0 text-center text-gray-500 min-h-48 flex items-center justify-center">
+            <p>Settings will be available here soon.</p>
+        </CardContent>
+      </Card>
+    );
+
     const renderActiveTab = () => {
         switch (activeTab) {
             case 'attendees_report':
                 return attendeesReportContent;
             case 'leave_management':
                 return leaveManagementContent;
+            case 'settings':
+                return settingsContent;
             default:
                 return attendeesReportContent;
         }
@@ -364,6 +378,7 @@ export default function AttendancePage() {
                 <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
                     <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
                     <TabsTrigger value="leave_management" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Leave Management</TabsTrigger>
+                    <TabsTrigger value="settings" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Settings</TabsTrigger>
                 </TabsList>
                 <div className="mt-6">
                     {renderActiveTab()}
