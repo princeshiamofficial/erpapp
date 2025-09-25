@@ -535,6 +535,17 @@ export default function AttendancePage() {
 
       </div>
     );
+    
+    const officeTimeContent = (
+      <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+        <CardHeader className="p-6">
+          <CardTitle className="text-xl font-bold text-gray-800">Office Time Settings</CardTitle>
+        </CardHeader>
+        <CardContent className="p-6 text-center text-gray-500">
+          <p>Office time management features will be available here soon.</p>
+        </CardContent>
+      </Card>
+    );
 
     const renderActiveTab = () => {
         switch (activeTab) {
@@ -542,6 +553,8 @@ export default function AttendancePage() {
                 return leaveManagementContent;
             case 'settings':
                 return settingsContent;
+            case 'office_time':
+                return officeTimeContent;
             default:
                 return attendeesReportContent;
         }
@@ -562,6 +575,7 @@ export default function AttendancePage() {
                     <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
                     <TabsTrigger value="leave_management" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Leave Management</TabsTrigger>
                     <TabsTrigger value="settings" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Settings</TabsTrigger>
+                    <TabsTrigger value="office_time" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Office Time</TabsTrigger>
                 </TabsList>
                 <div className="mt-6">
                     {renderActiveTab()}
