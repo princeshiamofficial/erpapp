@@ -7,14 +7,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getUsers } from '@/lib/user-service';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
-import { ChevronLeft, Crown } from 'lucide-react';
-import Link from 'next/link';
+import { Crown } from 'lucide-react';
 import { LeaderboardDisplay } from '@/components/leaderboard/LeaderboardDisplay';
 import type { User, TrackingLink, GlobalSettings, UserRole } from '@/types';
 import {
   isWithinInterval,
   parseISO,
-  subDays,
   differenceInDays,
   startOfDay,
   endOfDay,
@@ -23,6 +21,7 @@ import { useToast } from '@/hooks/use-toast';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { SalesPerformanceClient } from '@/components/leaderboard/SalesPerformanceClient';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // CrmPerformanceData type might be better defined within LeaderboardDisplay or a shared types file if complex
 export interface CrmPerformanceData {
@@ -57,14 +56,17 @@ export default function LeaderboardPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
+  const [activeTab, setActiveTab] = useState<'cr_board' | 'dr_board'>('cr_board');
+
 
   const [currentLeaderboardBackground, setCurrentLeaderboardBackground] = useState<string | null | undefined>(undefined);
 
   const calculatePerformance = useCallback((
-    crmUsers: User[],
+    users: User[],
     orders: TrackingLink[],
     globalSettings: GlobalSettings,
-    dateRange: DateRange | undefined
+    dateRange: DateRange | undefined,
+    roleToCalculate: UserRole
   ): CrmPerformanceData[] => {
     if (!dateRange?.from || !dateRange?.to) {
         return [];
@@ -74,30 +76,29 @@ export default function LeaderboardPage() {
     periodStart.setHours(0,0,0,0);
     periodEnd.setHours(23,59,59,999);
     
-    // The metric is now the number of orders created in the date range.
-    // The crmCompletionStatusIds are no longer needed for this calculation.
-
     const numDaysInRange = differenceInDays(periodEnd, periodStart) + 1;
 
-    const performanceDataList = crmUsers.map(crmUser => {
-      // Filter orders created by this CRM within the date range
+    const roleFilteredUsers = users.filter(user => user.role === roleToCalculate);
+
+    const performanceDataList = roleFilteredUsers.map(user => {
       const ordersCreatedInPeriod = orders.filter(order => 
-        order.crmUserId === crmUser.id &&
+        (roleToCalculate === 'CRM' ? order.crmUserId === user.id : order.designerRepresentativeId === user.id) &&
         order.createdAt && 
         isWithinInterval(parseISO(order.createdAt), { start: periodStart, end: periodEnd })
       ).length;
       
-      const monthlyTarget = (crmUser.monthlyOrderTarget ?? globalSettings.globalMonthlyOrderTarget ?? 0);
-      const dailyTarget = monthlyTarget / 30; // Assume 30 days in a month for simplicity
+      const roleBasedTargets = globalSettings.roleBasedTargets || {};
+      const monthlyTarget = (user.monthlyOrderTarget ?? roleBasedTargets[roleToCalculate as keyof typeof roleBasedTargets] ?? 0);
+      const dailyTarget = monthlyTarget / 30;
       const target = Math.round(dailyTarget * numDaysInRange);
 
       return {
-        userId: crmUser.id,
-        userName: crmUser.name,
-        userAvatar: crmUser.avatarUrl || undefined,
-        ordersCompleted: ordersCreatedInPeriod, // This now represents orders CREATED
+        userId: user.id,
+        userName: user.name,
+        userAvatar: user.avatarUrl || undefined,
+        ordersCompleted: ordersCreatedInPeriod,
         target: target,
-        role: crmUser.role,
+        role: user.role,
         trend: 'same',
         pointChange: 0,
       };
@@ -149,13 +150,11 @@ export default function LeaderboardPage() {
   useEffect(() => {
     if (isLoadingData || !allUsers.length || !globalSettings || !selectedDateRange) return;
 
-    const crmUsers = allUsers.filter(user => user.role === 'CRM');
+    const roleToCalculate = activeTab === 'cr_board' ? 'CRM' : 'DESIGNER_REPRESENTATIVE';
 
-    // This function will now be called inside the useEffect hook to avoid hydration mismatch
     const generateAndSetPerformanceData = () => {
-        let data = calculatePerformance(crmUsers, allOrders, globalSettings, selectedDateRange);
+        let data = calculatePerformance(allUsers, allOrders, globalSettings, selectedDateRange, roleToCalculate);
         
-        // Add trend and point change logic here, on the client-side
         data = data.map(d => {
             const pointChange = Math.floor(Math.random() * 5) - 2;
             const trend = pointChange > 0 ? 'up' : pointChange < 0 ? 'down' : 'same';
@@ -166,7 +165,6 @@ export default function LeaderboardPage() {
             };
         });
 
-        // Highlight current user
         data = data.map(d =>
             currentUser && d.userId === currentUser.id
             ? { ...d, userName: "You", role: currentUser.role as UserRole, userAvatar: currentUser.avatarUrl || d.userAvatar }
@@ -178,7 +176,7 @@ export default function LeaderboardPage() {
 
     generateAndSetPerformanceData();
 
-  }, [isLoadingData, allUsers, allOrders, globalSettings, selectedDateRange, currentUser, calculatePerformance]);
+  }, [isLoadingData, allUsers, allOrders, globalSettings, selectedDateRange, currentUser, calculatePerformance, activeTab]);
   
 
   const handleDateRangeChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
@@ -198,9 +196,6 @@ export default function LeaderboardPage() {
           data-ai-hint="abstract orange fire particles"
         ></div>
         <header className="relative z-10 flex items-center justify-between py-3 px-2 mb-6">
-            <Link href="/dashboard" className="p-2 -ml-2">
-                <ChevronLeft className="h-6 w-6" />
-            </Link>
             <h1 className="text-xl font-semibold tracking-wider">LEADERBOARD</h1>
             <Skeleton className="h-9 w-36 rounded-md bg-white/10" />
         </header>
@@ -254,12 +249,26 @@ export default function LeaderboardPage() {
         )}
       </header>
 
-      <LeaderboardDisplay
-        performanceData={performanceData}
-        currentUser={currentUser}
-        timePeriodLabel={currentDateRangeLabel}
-      />
-
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'cr_board' | 'dr_board')} className="w-full relative z-10">
+        <TabsList className="grid w-full grid-cols-2 max-w-sm mx-auto bg-black/30 border-none text-white/80">
+          <TabsTrigger value="cr_board">CR Board</TabsTrigger>
+          <TabsTrigger value="dr_board">DR Board</TabsTrigger>
+        </TabsList>
+        <TabsContent value="cr_board" className="mt-4">
+            <LeaderboardDisplay
+                performanceData={performanceData}
+                currentUser={currentUser}
+                timePeriodLabel={currentDateRangeLabel}
+            />
+        </TabsContent>
+        <TabsContent value="dr_board" className="mt-4">
+            <LeaderboardDisplay
+                performanceData={performanceData}
+                currentUser={currentUser}
+                timePeriodLabel={currentDateRangeLabel}
+            />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
