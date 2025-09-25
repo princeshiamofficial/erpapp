@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -33,6 +32,7 @@ const LocationMapDialog = dynamic(() => import('@/components/hrm/LocationMapDial
   ssr: false,
 });
 const AttendanceTypeDialog = dynamic(() => import('@/components/hrm/AttendanceTypeDialog').then(mod => mod.AttendanceTypeDialog));
+const AddEditHolidayDialog = dynamic(() => import('@/components/hrm/AddEditHolidayDialog').then(mod => mod.AddEditHolidayDialog));
 
 
 const ITEMS_PER_PAGE = 25;
@@ -83,6 +83,11 @@ export default function AttendancePage() {
     const [viewingLocation, setViewingLocation] = useState<{ lat: number, lng: number, employeeName: string, employeeAvatar?: string } | null>(null);
     const [selectedWeekends, setSelectedWeekends] = useState<string[]>(["Friday", "Saturday"]);
     const [isAttendanceTypeDialogOpen, setIsAttendanceTypeDialogOpen] = useState(false);
+    
+    // State for Holiday Dialog
+    const [isHolidayDialogOpen, setIsHolidayDialogOpen] = useState(false);
+    const [holidayToEdit, setHolidayToEdit] = useState(null); // Will hold holiday data for editing
+    const [holidays, setHolidays] = useState([{id: '1', title: 'National Mourning Day', date: '2006-11-19'}]); // Mock data
 
 
     const fetchData = useCallback(async () => {
@@ -90,6 +95,7 @@ export default function AttendancePage() {
         try {
           const fetchedEmployees = await getEmployees();
           setEmployees(fetchedEmployees);
+          // In a real app, you would fetch holidays here too.
         } catch (error) {
           console.error("Failed to fetch employees:", error);
           toast({ title: "Error", description: "Could not load employee data.", variant: "destructive" });
@@ -151,6 +157,27 @@ export default function AttendancePage() {
             title: "Settings Saved",
             description: "Weekend days have been updated.",
         });
+    };
+
+    const handleHolidaySaved = () => {
+        // In a real app, you would refetch the holidays list
+        toast({
+            title: "Success",
+            description: "Holiday list has been updated."
+        });
+        fetchData(); // Re-fetch all data, including holidays
+        setIsHolidayDialogOpen(false);
+        setHolidayToEdit(null);
+    }
+    
+    const openAddHolidayDialog = () => {
+        setHolidayToEdit(null);
+        setIsHolidayDialogOpen(true);
+    };
+
+    const openEditHolidayDialog = (holiday: any) => {
+        setHolidayToEdit(holiday);
+        setIsHolidayDialogOpen(true);
     };
 
     const renderPagination = () => {
@@ -419,10 +446,7 @@ export default function AttendancePage() {
                         <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><Wifi className="mr-2 h-5 w-5" />IP/Wifi</CardTitle>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button
-                          onClick={() => setIsAttendanceTypeDialogOpen(true)}
-                          className="bg-black text-white hover:bg-gray-800"
-                        >
+                        <Button className="bg-black text-white hover:bg-gray-800" onClick={() => setIsAttendanceTypeDialogOpen(true)}>
                           Attendance Type
                         </Button>
                         <Button>
@@ -458,7 +482,7 @@ export default function AttendancePage() {
                     <div>
                         <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><CalendarDays className="mr-2 h-5 w-5" />Holidays</CardTitle>
                     </div>
-                    <Button><PlusCircle className="mr-2 h-4 w-4" /> Add Holiday</Button>
+                    <Button onClick={openAddHolidayDialog}><PlusCircle className="mr-2 h-4 w-4" /> Add Holiday</Button>
                 </div>
             </CardHeader>
             <CardContent className="p-6">
@@ -472,10 +496,11 @@ export default function AttendancePage() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        <TableRow>
-                            <TableCell>1</TableCell>
-                            <TableCell>National Mourning Day</TableCell>
-                            <TableCell>19 Nov 2006</TableCell>
+                        {holidays.length > 0 ? holidays.map((holiday, index) => (
+                           <TableRow key={holiday.id}>
+                            <TableCell>{index + 1}</TableCell>
+                            <TableCell>{holiday.title}</TableCell>
+                            <TableCell>{holiday.date}</TableCell>
                             <TableCell className="text-right">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -484,7 +509,7 @@ export default function AttendancePage() {
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem>
+                                  <DropdownMenuItem onSelect={() => openEditHolidayDialog(holiday)}>
                                     <Edit className="mr-2 h-4 w-4" />
                                     Edit
                                   </DropdownMenuItem>
@@ -496,6 +521,13 @@ export default function AttendancePage() {
                               </DropdownMenu>
                             </TableCell>
                         </TableRow>
+                        )) : (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center h-24 text-gray-500">
+                                No holidays defined yet.
+                            </TableCell>
+                          </TableRow>
+                        )}
                     </TableBody>
                  </Table>
             </CardContent>
@@ -506,8 +538,6 @@ export default function AttendancePage() {
 
     const renderActiveTab = () => {
         switch (activeTab) {
-            case 'attendees_report':
-                return attendeesReportContent;
             case 'leave_management':
                 return leaveManagementContent;
             case 'settings':
@@ -555,12 +585,12 @@ export default function AttendancePage() {
                 isOpen={isAttendanceTypeDialogOpen}
                 onOpenChange={setIsAttendanceTypeDialogOpen}
              />
+             <AddEditHolidayDialog
+                isOpen={isHolidayDialogOpen}
+                onOpenChange={setIsHolidayDialogOpen}
+                onHolidaySaved={handleHolidaySaved}
+                holiday={holidayToEdit}
+             />
         </div>
     );
 }
-
-    
-
-    
-
-
