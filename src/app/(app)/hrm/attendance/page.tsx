@@ -586,9 +586,23 @@ export default function AttendancePage() {
                     <TableCell>15 minutes</TableCell>
                     <TableCell>Day</TableCell>
                     <TableCell className="text-right">
-                        <Button variant="ghost" size="icon">
+                       <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
                             <MoreVertical className="h-4 w-4" />
-                        </Button>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                 </TableRow>
             </TableBody>
