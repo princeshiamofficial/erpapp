@@ -16,6 +16,7 @@ import {
   differenceInDays,
   startOfDay,
   endOfDay,
+  sub,
 } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
@@ -182,7 +183,7 @@ export default function LeaderboardPage() {
 
 
   useEffect(() => {
-    if (isLoadingData || !allUsers.length || !globalSettings || !selectedDateRange) return;
+    if (isLoadingData || !allUsers.length || !globalSettings || !selectedDateRange?.from || !selectedDateRange?.to) return;
 
     let roleToCalculate: UserRole | null = null;
     if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
@@ -199,25 +200,42 @@ export default function LeaderboardPage() {
     }
 
     const generateAndSetPerformanceData = () => {
-        let data = calculatePerformance(allUsers, allOrders, globalSettings, selectedDateRange, roleToCalculate!);
+        // Calculate current period performance
+        let currentPeriodData = calculatePerformance(allUsers, allOrders, globalSettings!, selectedDateRange, roleToCalculate!);
+
+        // Calculate previous period performance for trend
+        const rangeDuration = differenceInDays(selectedDateRange.to!, selectedDateRange.from!);
+        const previousPeriodStart = sub(selectedDateRange.from!, { days: rangeDuration + 1 });
+        const previousPeriodEnd = sub(selectedDateRange.to!, { days: rangeDuration + 1 });
+        const previousPeriodRange = { from: previousPeriodStart, to: previousPeriodEnd };
+        const previousPeriodData = calculatePerformance(allUsers, allOrders, globalSettings!, previousPeriodRange, roleToCalculate!);
+
+        const previousPeriodMap = new Map(previousPeriodData.map(d => [d.userId, d]));
         
-        data = data.map(d => {
-            const pointChange = Math.floor(Math.random() * 5) - 2;
+        // Add trend and point change logic
+        currentPeriodData = currentPeriodData.map(currentData => {
+            const previousData = previousPeriodMap.get(currentData.userId);
+            const currentScore = roleToCalculate === 'CRM' ? currentData.ordersCompleted : currentData.designsDone || 0;
+            const previousScore = roleToCalculate === 'CRM' ? previousData?.ordersCompleted || 0 : previousData?.designsDone || 0;
+
+            const pointChange = currentScore - previousScore;
             const trend = pointChange > 0 ? 'up' : pointChange < 0 ? 'down' : 'same';
+            
             return {
-                ...d,
+                ...currentData,
                 trend,
                 pointChange: Math.abs(pointChange)
             };
         });
 
-        data = data.map(d =>
+        // Highlight current user
+        currentPeriodData = currentPeriodData.map(d =>
             currentUser && d.userId === currentUser.id
             ? { ...d, userName: "You", role: currentUser.role as UserRole, userAvatar: currentUser.avatarUrl || d.userAvatar }
             : d
         );
         
-        setPerformanceData(data);
+        setPerformanceData(currentPeriodData);
     };
 
     generateAndSetPerformanceData();
