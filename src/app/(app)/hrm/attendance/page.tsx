@@ -372,7 +372,6 @@ export default function AttendancePage() {
       <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
         <CardHeader className="p-6 border-b">
             <CardTitle className="text-xl font-bold text-gray-800">Weekend</CardTitle>
-            <CardDescription>Dashboard / Weekend</CardDescription>
         </CardHeader>
         <CardContent className="p-6">
             <Table>
