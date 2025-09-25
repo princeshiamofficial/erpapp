@@ -23,6 +23,7 @@ import type { DateRange } from "react-day-picker";
 import { SalesPerformanceClient } from '@/components/leaderboard/SalesPerformanceClient';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LOGISTICS_STATUS_ID } from '@/lib/status-service';
+import { cn } from '@/lib/utils';
 
 // CrmPerformanceData type might be better defined within LeaderboardDisplay or a shared types file if complex
 export interface CrmPerformanceData {
@@ -59,7 +60,18 @@ export default function LeaderboardPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
-  const [activeTab, setActiveTab] = useState<'cr_board' | 'dr_board'>('cr_board');
+  
+  const [activeTab, setActiveTab] = useState<'cr_board' | 'dr_board'>(
+    currentUser?.role === 'DESIGNER_REPRESENTATIVE' ? 'dr_board' : 'cr_board'
+  );
+
+  useEffect(() => {
+    if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
+      setActiveTab('dr_board');
+    } else if (currentUser?.role === 'CRM') {
+      setActiveTab('cr_board');
+    }
+  }, [currentUser]);
 
 
   const [currentLeaderboardBackground, setCurrentLeaderboardBackground] = useState<string | null | undefined>(undefined);
@@ -172,10 +184,22 @@ export default function LeaderboardPage() {
   useEffect(() => {
     if (isLoadingData || !allUsers.length || !globalSettings || !selectedDateRange) return;
 
-    const roleToCalculate = activeTab === 'cr_board' ? 'CRM' : 'DESIGNER_REPRESENTATIVE';
+    let roleToCalculate: UserRole | null = null;
+    if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
+      roleToCalculate = activeTab === 'cr_board' ? 'CRM' : 'DESIGNER_REPRESENTATIVE';
+    } else if (currentUser?.role === 'CRM') {
+      roleToCalculate = 'CRM';
+    } else if (currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
+      roleToCalculate = 'DESIGNER_REPRESENTATIVE';
+    }
+    
+    if (!roleToCalculate) {
+      setPerformanceData([]);
+      return;
+    }
 
     const generateAndSetPerformanceData = () => {
-        let data = calculatePerformance(allUsers, allOrders, globalSettings, selectedDateRange, roleToCalculate);
+        let data = calculatePerformance(allUsers, allOrders, globalSettings, selectedDateRange, roleToCalculate!);
         
         data = data.map(d => {
             const pointChange = Math.floor(Math.random() * 5) - 2;
@@ -205,6 +229,10 @@ export default function LeaderboardPage() {
     setSelectedDateRange(range);
     setCurrentDateRangeLabel(displayLabel);
   };
+  
+  const showTabs = useMemo(() => {
+    return currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
+  }, [currentUser]);
 
   const isLoadingContent = isAuthLoading || isLoadingData || !selectedDateRange;
 
@@ -270,27 +298,38 @@ export default function LeaderboardPage() {
           </div>
         )}
       </header>
+      
+      {showTabs ? (
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'cr_board' | 'dr_board')} className="w-full relative z-10">
+            <TabsList className="grid w-full grid-cols-2 max-w-sm mx-auto bg-black/30 border-none text-white/80">
+              <TabsTrigger value="cr_board">CR Board</TabsTrigger>
+              <TabsTrigger value="dr_board">DR Board</TabsTrigger>
+            </TabsList>
+            <TabsContent value="cr_board" className="mt-4">
+                <LeaderboardDisplay
+                    performanceData={performanceData}
+                    currentUser={currentUser}
+                    timePeriodLabel={currentDateRangeLabel}
+                />
+            </TabsContent>
+            <TabsContent value="dr_board" className="mt-4">
+                <LeaderboardDisplay
+                    performanceData={performanceData}
+                    currentUser={currentUser}
+                    timePeriodLabel={currentDateRangeLabel}
+                />
+            </TabsContent>
+          </Tabs>
+      ) : (
+          <div className="mt-4">
+              <LeaderboardDisplay
+                  performanceData={performanceData}
+                  currentUser={currentUser}
+                  timePeriodLabel={currentDateRangeLabel}
+              />
+          </div>
+      )}
 
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'cr_board' | 'dr_board')} className="w-full relative z-10">
-        <TabsList className="grid w-full grid-cols-2 max-w-sm mx-auto bg-black/30 border-none text-white/80">
-          <TabsTrigger value="cr_board">CR Board</TabsTrigger>
-          <TabsTrigger value="dr_board">DR Board</TabsTrigger>
-        </TabsList>
-        <TabsContent value="cr_board" className="mt-4">
-            <LeaderboardDisplay
-                performanceData={performanceData}
-                currentUser={currentUser}
-                timePeriodLabel={currentDateRangeLabel}
-            />
-        </TabsContent>
-        <TabsContent value="dr_board" className="mt-4">
-            <LeaderboardDisplay
-                performanceData={performanceData}
-                currentUser={currentUser}
-                timePeriodLabel={currentDateRangeLabel}
-            />
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }
