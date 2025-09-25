@@ -469,7 +469,7 @@ export default function AttendancePage() {
                         <TableRow>
                             <TableCell>1</TableCell>
                             <TableCell>National Mourning Day</TableCell>
-                            <TableCell>e.g., 19 Nov 2006</TableCell>
+                            <TableCell>19 Nov 2006</TableCell>
                             <TableCell className="text-right">...</TableCell>
                         </TableRow>
                     </TableBody>
