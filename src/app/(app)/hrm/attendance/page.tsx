@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays } from 'lucide-react';
+import { Calendar, Filter, BarChartHorizontal, Search, UserRoundX, MapPin, Settings, Wifi, PlusCircle, CalendarDays, MoreVertical } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -470,7 +470,11 @@ export default function AttendancePage() {
                             <TableCell>1</TableCell>
                             <TableCell>National Mourning Day</TableCell>
                             <TableCell>19 Nov 2006</TableCell>
-                            <TableCell className="text-right">...</TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
                         </TableRow>
                     </TableBody>
                  </Table>
@@ -538,3 +542,4 @@ export default function AttendancePage() {
     
 
     
+
