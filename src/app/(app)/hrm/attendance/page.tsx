@@ -26,6 +26,7 @@ const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeave
 const LocationMapDialog = dynamic(() => import('@/components/hrm/LocationMapDialog').then(mod => mod.LocationMapDialog), {
   ssr: false,
 });
+const AttendanceTypeDialog = dynamic(() => import('@/components/hrm/AttendanceTypeDialog').then(mod => mod.AttendanceTypeDialog));
 
 
 const ITEMS_PER_PAGE = 25;
@@ -75,6 +76,8 @@ export default function AttendancePage() {
     const [leaveToManage, setLeaveToManage] = useState<Employee | null>(null);
     const [viewingLocation, setViewingLocation] = useState<{ lat: number, lng: number, employeeName: string, employeeAvatar?: string } | null>(null);
     const [selectedWeekends, setSelectedWeekends] = useState<string[]>(["Friday", "Saturday"]);
+    const [isAttendanceTypeDialogOpen, setIsAttendanceTypeDialogOpen] = useState(false);
+
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -410,7 +413,7 @@ export default function AttendancePage() {
                         <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><Wifi className="mr-2 h-5 w-5" />IP/Wifi</CardTitle>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button>
+                        <Button onClick={() => setIsAttendanceTypeDialogOpen(true)}>
                           <PlusCircle className="mr-2 h-4 w-4" /> Attendance Type
                         </Button>
                         <Button>
@@ -513,9 +516,14 @@ export default function AttendancePage() {
                 onOpenChange={() => setViewingLocation(null)}
                 location={viewingLocation}
             />
+             <AttendanceTypeDialog
+                isOpen={isAttendanceTypeDialogOpen}
+                onOpenChange={setIsAttendanceTypeDialogOpen}
+             />
         </div>
     );
 }
 
     
+
 
