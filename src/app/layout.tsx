@@ -5,8 +5,6 @@ import './globals.css';
 import { Providers } from './providers'; // Import the new client-side provider
 import 'leaflet/dist/leaflet.css';
 
-const geistSans = GeistSans;
-
 export const metadata: Metadata = {
   title: 'Color Hut',
   description: 'Seamless Order Tracking and Management',
@@ -26,8 +24,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} font-sans antialiased`}>
+    <html lang="en" suppressHydrationWarning style={GeistSans.style}>
+      <body className='font-sans antialiased'>
         <Providers>
           {children}
         </Providers>
