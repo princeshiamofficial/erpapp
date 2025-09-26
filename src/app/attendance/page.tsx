@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { LogIn, LogOut, Clock, Fingerprint, Home, History, Power, Lock, ArrowDown, ArrowUp, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { format, differenceInHours, differenceInMinutes } from 'date-fns';
+import { format, differenceInHours, differenceInMinutes, parse } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import Link from 'next/link';
@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getOfficeLocations, type CompanyLocation } from '@/lib/office-location-service';
+import { getOfficeTimes, type OfficeTime } from '@/lib/office-time-service'; // Import office time service
 
 
 const getInitials = (name: string | undefined): string => {
@@ -96,6 +97,7 @@ export default function CheckInOutPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [locationStatus, setLocationStatus] = useState('Requesting location...');
   const [officeLocations, setOfficeLocations] = useState<CompanyLocation[]>([]);
+  const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]); // New state for office times
 
   // Haversine distance function
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -115,10 +117,14 @@ export default function CheckInOutPage() {
 
   useEffect(() => {
     setIsClient(true);
-    const fetchLocationsAndCheck = async () => {
+    const fetchInitialData = async () => {
       try {
-        const locations = await getOfficeLocations();
+        const [locations, times] = await Promise.all([
+          getOfficeLocations(),
+          getOfficeTimes()
+        ]);
         setOfficeLocations(locations);
+        setOfficeTimes(times);
         
         if ('geolocation' in navigator) {
           navigator.geolocation.getCurrentPosition(
@@ -149,11 +155,11 @@ export default function CheckInOutPage() {
           setLocationStatus('Geolocation is not supported by this browser.');
         }
       } catch (error) {
-        setLocationStatus('Could not load office locations.');
-        console.error("Failed to fetch office locations:", error);
+        setLocationStatus('Could not load office locations or times.');
+        console.error("Failed to fetch office data:", error);
       }
     };
-    fetchLocationsAndCheck();
+    fetchInitialData();
   }, []);
 
   useEffect(() => {
@@ -169,19 +175,41 @@ export default function CheckInOutPage() {
     } else {
       handleCheckOut();
     }
-    // The slider handles its own visual state, but we close the sheet after a short delay
     setTimeout(() => setIsSheetOpen(false), 500);
   };
-
+  
   const handleCheckIn = () => {
     if (status === 'Checked In') return;
     const now = new Date();
+    
+    // Determine if late
+    let isLate = false;
+    let checkInMessage = 'You checked in on time.';
+    if (officeTimes.length > 0) {
+      // Find the relevant office time (for simplicity, we'll use the first one, e.g., 'Day' shift)
+      const dayShift = officeTimes.find(t => t.shift === 'Day');
+      if (dayShift) {
+        const [hours, minutes] = dayShift.startTime.split(':').map(Number);
+        const officeStartTime = new Date(now);
+        officeStartTime.setHours(hours, minutes, 0, 0);
+
+        const gracePeriodMinutes = dayShift.graceTime || 0;
+        const graceEndTime = new Date(officeStartTime.getTime() + gracePeriodMinutes * 60000);
+
+        if (now > graceEndTime) {
+          isLate = true;
+          checkInMessage = `You are late. Check-in was at ${format(now, 'h:mm:ss a')}.`;
+        }
+      }
+    }
+
     setStatus('Checked In');
     setCheckInTime(now);
-    setCheckOutTime(null); // Reset checkout time on new check-in
+    setCheckOutTime(null);
     toast({
-      title: "Checked In Successfully",
-      description: `You checked in at ${format(now, 'h:mm:ss a')}.`,
+      title: isLate ? "Checked In (Late)" : "Checked In Successfully",
+      description: checkInMessage,
+      variant: isLate ? "destructive" : "default",
     });
   };
 
