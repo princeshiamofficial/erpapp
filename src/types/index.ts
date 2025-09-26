@@ -554,3 +554,12 @@ export interface CaseStudyMessage {
   } | null;
   timestamp: string; // ISO string
 }
+
+export interface OfficeTime {
+    id: string;
+    name: string;
+    startTime: string;
+    endTime: string;
+    graceTime: number; // in minutes
+    shift: 'Day' | 'Night';
+}

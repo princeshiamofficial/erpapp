@@ -16,15 +16,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-interface OfficeTime {
-    id: string;
-    name: string;
-    startTime: string;
-    endTime: string;
-    graceTime: number; // in minutes
-    shift: 'Day' | 'Night';
-}
+import { addOfficeTimeAction, updateOfficeTimeAction } from '@/app/(app)/hrm/attendance/actions';
+import type { OfficeTime } from '@/types';
 
 interface AddEditOfficeTimeDialogProps {
   isOpen: boolean;
@@ -75,16 +68,32 @@ export function AddEditOfficeTimeDialog({ isOpen, onOpenChange, onOfficeTimeSave
     
     setIsSubmitting(true);
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const data = {
+        name: name.trim(),
+        startTime,
+        endTime,
+        graceTime: parseInt(graceTime, 10),
+        shift,
+    };
     
+    let result;
+    if (isEditMode && officeTime) {
+        result = await updateOfficeTimeAction(officeTime.id, data);
+    } else {
+        result = await addOfficeTimeAction(data);
+    }
+
     setIsSubmitting(false);
 
-    toast({
-        title: `Office Time ${isEditMode ? 'Updated' : 'Added'}`,
-        description: `The office time configuration has been saved.`
-    });
-    onOfficeTimeSaved();
+    if (result.success) {
+        toast({
+            title: `Office Time ${isEditMode ? 'Updated' : 'Added'}`,
+            description: `The office time configuration has been saved.`
+        });
+        onOfficeTimeSaved();
+    } else {
+        toast({ title: "Error", description: result.error || "Failed to save office time.", variant: "destructive" });
+    }
   };
 
   return (

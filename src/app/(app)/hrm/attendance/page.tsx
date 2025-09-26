@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { getEmployees } from '@/lib/employee-service';
-import type { Employee, User } from '@/types';
+import type { Employee, User, OfficeTime } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationEllipsis, PaginationPrevious, PaginationNext } from '@/components/ui/pagination';
@@ -27,6 +27,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getOfficeLocations } from '@/lib/office-location-service';
+import { getOfficeTimes, deleteOfficeTime } from '@/lib/office-time-service';
 
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
 const LocationMapDialog = dynamic(() => import('@/components/hrm/LocationMapDialog').then(mod => mod.LocationMapDialog), {
@@ -93,18 +95,23 @@ export default function AttendancePage() {
 
     // State for Office Time Dialog
     const [isOfficeTimeDialogOpen, setIsOfficeTimeDialogOpen] = useState(false);
-    const [officeTimeToEdit, setOfficeTimeToEdit] = useState(null);
+    const [officeTimeToEdit, setOfficeTimeToEdit] = useState<OfficeTime | null>(null);
+    const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]);
 
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-          const fetchedEmployees = await getEmployees();
+          const [fetchedEmployees, fetchedOfficeTimes] = await Promise.all([
+            getEmployees(),
+            getOfficeTimes()
+          ]);
           setEmployees(fetchedEmployees);
+          setOfficeTimes(fetchedOfficeTimes);
           // In a real app, you would fetch holidays here too.
         } catch (error) {
-          console.error("Failed to fetch employees:", error);
-          toast({ title: "Error", description: "Could not load employee data.", variant: "destructive" });
+          console.error("Failed to fetch page data:", error);
+          toast({ title: "Error", description: "Could not load page data.", variant: "destructive" });
         } finally {
           setIsLoading(false);
         }
@@ -187,8 +194,7 @@ export default function AttendancePage() {
     };
 
     const handleOfficeTimeSaved = () => {
-      // Refetch office times data
-      toast({ title: "Success", description: "Office time settings have been updated." });
+      fetchData(); // Refetch all data including office times
       setIsOfficeTimeDialogOpen(false);
       setOfficeTimeToEdit(null);
     };
@@ -201,6 +207,18 @@ export default function AttendancePage() {
     const openEditOfficeTimeDialog = (officeTime: any) => {
         setOfficeTimeToEdit(officeTime);
         setIsOfficeTimeDialogOpen(true);
+    };
+
+    const handleDeleteOfficeTime = async (officeTime: OfficeTime) => {
+        if (!confirm(`Are you sure you want to delete the office time "${officeTime.name}"?`)) return;
+        
+        const success = await deleteOfficeTime(officeTime.id);
+        if (success) {
+            toast({ title: "Success", description: "Office time has been deleted." });
+            fetchData();
+        } else {
+            toast({ title: "Error", description: "Failed to delete office time.", variant: "destructive" });
+        }
     };
 
 
@@ -584,32 +602,40 @@ export default function AttendancePage() {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                <TableRow>
-                    <TableCell>Regular</TableCell>
-                    <TableCell>09:00 AM</TableCell>
-                    <TableCell>06:00 PM</TableCell>
-                    <TableCell>15 minutes</TableCell>
-                    <TableCell>Day</TableCell>
-                    <TableCell className="text-right">
-                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onSelect={() => openEditOfficeTimeDialog({id: '1', name: 'Regular', startTime: '09:00', endTime: '18:00', graceTime: 15, shift: 'Day'})}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive focus:text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                </TableRow>
+                {isLoading ? (
+                    <TableRow><TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
+                ) : officeTimes.length > 0 ? (
+                    officeTimes.map(time => (
+                      <TableRow key={time.id}>
+                        <TableCell>{time.name}</TableCell>
+                        <TableCell>{time.startTime}</TableCell>
+                        <TableCell>{time.endTime}</TableCell>
+                        <TableCell>{time.graceTime} minutes</TableCell>
+                        <TableCell>{time.shift}</TableCell>
+                        <TableCell className="text-right">
+                           <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onSelect={() => openEditOfficeTimeDialog(time)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteOfficeTime(time)}>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                    </TableRow>
+                    ))
+                ) : (
+                  <TableRow><TableCell colSpan={6} className="text-center h-24 text-gray-500">No office time configurations found.</TableCell></TableRow>
+                )}
             </TableBody>
         </Table>
         </CardContent>
