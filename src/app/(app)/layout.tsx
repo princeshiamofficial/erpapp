@@ -1,4 +1,5 @@
 
+
 import { Suspense } from 'react';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
@@ -40,7 +41,7 @@ export default async function AuthenticatedLayout({
   const headersList = headers();
   const pathname = headersList.get('x-next-pathname') || '';
   
-  // This logic is now handled by moving the attendance routes out of the (app) group.
+  // This logic is now handled by moving the attendance routes out of the (app-router) group.
   // We keep the rest of the layout logic.
   
   const isMobile = (header: string | null) => {
