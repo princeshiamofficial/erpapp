@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -37,15 +38,8 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
 import "leaflet-defaulticon-compatibility";
 import { LatLngExpression, LatLng } from 'leaflet';
+import { getOfficeLocations, addOfficeLocation, updateOfficeLocation, deleteOfficeLocation, type CompanyLocation } from '@/lib/office-location-service';
 
-
-interface CompanyLocation {
-    id: string;
-    name: string;
-    latitude: number;
-    longitude: number;
-    radius: number;
-}
 
 const DEFAULT_MAP_CENTER: LatLngExpression = [23.8103, 90.4125]; // Dhaka
 const DEFAULT_MAP_ZOOM = 12;
@@ -96,16 +90,27 @@ export default function GeoforcePage() {
     const [radius, setRadius] = useState(500);
     
     const { toast } = useToast();
-
-    // Mock loading and initial data
-    useEffect(() => {
-        setTimeout(() => {
-            setLocations([
-                { id: '1', name: 'Color Hut', latitude: 23.7120822, longitude: 90.4526046, radius: 1000 }
-            ]);
+    
+    const fetchLocations = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const fetchedLocations = await getOfficeLocations();
+            setLocations(fetchedLocations);
+        } catch (error) {
+            console.error("Failed to fetch office locations:", error);
+            toast({
+                title: "Error",
+                description: "Could not load office locations.",
+                variant: "destructive"
+            });
+        } finally {
             setIsLoading(false);
-        }, 1000);
-    }, []);
+        }
+    }, [toast]);
+
+    useEffect(() => {
+        fetchLocations();
+    }, [fetchLocations]);
 
     const resetForm = () => {
         setName('');
@@ -130,7 +135,7 @@ export default function GeoforcePage() {
     };
 
 
-    const handleAddOrEditLocation = (e: React.FormEvent) => {
+    const handleAddOrEditLocation = async (e: React.FormEvent) => {
         e.preventDefault();
         const lat = parseFloat(latitude);
         const lng = parseFloat(longitude);
@@ -140,28 +145,38 @@ export default function GeoforcePage() {
             return;
         }
 
+        const locationData = { name, latitude: lat, longitude: lng, radius };
+
         if (editingLocation) {
-            // Update existing location
-            setLocations(prev => prev.map(loc => 
-                loc.id === editingLocation.id ? { ...loc, name, latitude: lat, longitude: lng, radius } : loc
-            ));
-            toast({ title: "Location Updated", description: `${name} has been updated.` });
+            const success = await updateOfficeLocation(editingLocation.id, locationData);
+            if (success) {
+                toast({ title: "Location Updated", description: `${name} has been updated.` });
+                fetchLocations();
+            } else {
+                toast({ title: "Error", description: "Failed to update location.", variant: "destructive" });
+            }
         } else {
-            // Add new location
-            const newLocation: CompanyLocation = {
-                id: `comp-${Date.now()}`, name, latitude: lat, longitude: lng, radius,
-            };
-            setLocations(prev => [...prev, newLocation]);
-            toast({ title: "Location Added", description: `${name} has been added.` });
+            const newLocation = await addOfficeLocation(locationData);
+            if (newLocation) {
+                toast({ title: "Location Added", description: `${name} has been added.` });
+                fetchLocations();
+            } else {
+                toast({ title: "Error", description: "Failed to add location.", variant: "destructive" });
+            }
         }
 
         setIsFormDialogOpen(false);
         resetForm();
     };
     
-    const handleDeleteLocation = (locationToDelete: CompanyLocation) => {
-        setLocations(prev => prev.filter(loc => loc.id !== locationToDelete.id));
-        toast({ title: "Location Removed", description: `The location "${locationToDelete.name}" has been deleted.` });
+    const handleDeleteLocation = async (locationToDelete: CompanyLocation) => {
+        const success = await deleteOfficeLocation(locationToDelete.id);
+        if (success) {
+            toast({ title: "Location Removed", description: `The location "${locationToDelete.name}" has been deleted.` });
+            fetchLocations();
+        } else {
+            toast({ title: "Error", description: "Failed to delete location.", variant: "destructive" });
+        }
     };
 
     const handleGetCurrentLocation = () => {
