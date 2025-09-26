@@ -51,7 +51,7 @@ export function BottomNavigation() {
     // The active styles will be applied on the client after hydration.
     return (
        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm md:hidden z-50">
-         <div className="bg-[#166534] dark:bg-green-800 text-white rounded-full shadow-lg p-2 flex justify-around items-center relative">
+         <div className="bg-[#166534] dark:bg-green-800 text-white rounded-full shadow-lg p-1 flex justify-around items-center relative">
           {navItems.map((item) => (
             <Link
               key={item.href}
@@ -69,7 +69,7 @@ export function BottomNavigation() {
 
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm md:hidden z-50">
-      <div className="bg-[#166534] dark:bg-green-800 text-white rounded-full shadow-lg p-2 flex justify-around items-center relative">
+      <div className="bg-[#166534] dark:bg-green-800 text-white rounded-full shadow-lg p-1 flex justify-around items-center relative">
         <div
           className="absolute bottom-0 h-1 w-16 bg-white rounded-full transition-transform duration-300 ease-in-out"
           style={{
