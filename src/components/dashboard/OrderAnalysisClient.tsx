@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { BarChart, LineChart, AreaChart, Layers, Download, Repeat, TrendingUp } from 'lucide-react';
 import { Bar, BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
-import { parseISO, format, getYear, getMonth, startOfMonth, endOfMonth } from 'date-fns';
+import { parseISO, format, getYear, getMonth } from 'date-fns';
 import type { TrackingLink } from '@/types';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
