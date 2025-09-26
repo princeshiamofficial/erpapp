@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getOfficeLocations, type CompanyLocation } from '@/lib/office-location-service';
 
 
 const getInitials = (name: string | undefined): string => {
@@ -94,6 +95,7 @@ export default function CheckInOutPage() {
   const [isClient, setIsClient] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [locationStatus, setLocationStatus] = useState('Requesting location...');
+  const [officeLocations, setOfficeLocations] = useState<CompanyLocation[]>([]);
 
   // Haversine distance function
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -113,43 +115,45 @@ export default function CheckInOutPage() {
 
   useEffect(() => {
     setIsClient(true);
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          // Define office location and radius
-          const officeLat = 23.7077; // Example latitude for Dhaka
-          const officeLon = 90.4503; // Example longitude for Dhaka
-          const officeRadius = 500; // 500 meters radius
-
-          const distance = getDistance(latitude, longitude, officeLat, officeLon);
-
-          if (distance <= officeRadius) {
-            setLocationStatus('Inside Office Location');
-          } else {
-            setLocationStatus('Outside Office Location');
-          }
-        },
-        (error) => {
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              setLocationStatus('Location permission denied.');
-              break;
-            case error.POSITION_UNAVAILABLE:
-              setLocationStatus('Location information is unavailable.');
-              break;
-            case error.TIMEOUT:
-              setLocationStatus('Location request timed out.');
-              break;
-            default:
-              setLocationStatus('An unknown error occurred.');
-              break;
-          }
+    const fetchLocationsAndCheck = async () => {
+      try {
+        const locations = await getOfficeLocations();
+        setOfficeLocations(locations);
+        
+        if ('geolocation' in navigator) {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              const { latitude, longitude } = position.coords;
+              let isInside = false;
+              if (locations.length > 0) {
+                for (const office of locations) {
+                  const distance = getDistance(latitude, longitude, office.latitude, office.longitude);
+                  if (distance <= office.radius) {
+                    isInside = true;
+                    break;
+                  }
+                }
+              }
+              setLocationStatus(isInside ? 'Inside Office Location' : 'Outside Office Location');
+            },
+            (error) => {
+              switch (error.code) {
+                case error.PERMISSION_DENIED: setLocationStatus('Location permission denied.'); break;
+                case error.POSITION_UNAVAILABLE: setLocationStatus('Location information is unavailable.'); break;
+                case error.TIMEOUT: setLocationStatus('Location request timed out.'); break;
+                default: setLocationStatus('An unknown error occurred.'); break;
+              }
+            }
+          );
+        } else {
+          setLocationStatus('Geolocation is not supported by this browser.');
         }
-      );
-    } else {
-      setLocationStatus('Geolocation is not supported by this browser.');
-    }
+      } catch (error) {
+        setLocationStatus('Could not load office locations.');
+        console.error("Failed to fetch office locations:", error);
+      }
+    };
+    fetchLocationsAndCheck();
   }, []);
 
   useEffect(() => {
@@ -314,5 +318,3 @@ export default function CheckInOutPage() {
     </div>
   );
 }
-
-    
