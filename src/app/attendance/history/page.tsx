@@ -58,6 +58,8 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, payload }: any) 
 // Custom Day component to render status tags
 const DayWithStatus = ({ date, selected, event }: { date: Date; selected: boolean | undefined, event: AttendanceRecord | undefined }) => {
     
+    const checkInTime = event?.checkInTime ? format(parseISO(event.checkInTime), 'h:mm a') : '';
+
     return (
         <div className={cn(
             "relative flex flex-col items-center justify-between p-1 w-full h-full rounded-md transition-colors",
@@ -75,7 +77,7 @@ const DayWithStatus = ({ date, selected, event }: { date: Date; selected: boolea
                     STATUS_STYLES[event.status].bg,
                     STATUS_STYLES[event.status].text
                 )}>
-                    {event.status}
+                    {checkInTime}
                 </div>
             )}
         </div>
@@ -166,7 +168,7 @@ export default function AttendanceHistoryPage() {
                 <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
                     <ChevronLeft className="h-5 w-5" />
                 </Button>
-                <h1 className="text-xl font-bold text-foreground w-32 text-center">{format(currentMonth, 'MMMM yyyy')}</h1>
+                <h1 className="text-xl font-bold text-foreground w-32 text-center">{format(currentMonth, 'MMMM')}</h1>
                 <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
                     <ChevronRight className="h-5 w-5" />
                 </Button>
