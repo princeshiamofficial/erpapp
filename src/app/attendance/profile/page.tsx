@@ -5,17 +5,12 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import {
   ChevronRight,
   LogOut,
-  Shield,
-  LifeBuoy,
   Bell,
-  Settings,
   User as UserIcon,
-  Palette,
-  CalendarPlus,
   Loader2,
   MapPin,
   ArrowDownLeft,
@@ -85,9 +80,36 @@ export default function ProfilePage() {
   const { currentUser, logout, isLoading } = useAuth();
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState('');
+  const [locationAddress, setLocationAddress] = useState('Loading location...');
   
   useEffect(() => {
     setCurrentDate(format(new Date(), "eeee, d MMMM yyyy"));
+    
+    // Fetch and display location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          // Use OpenStreetMap's Nominatim for reverse geocoding
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+          if (!response.ok) {
+            throw new Error('Failed to fetch address');
+          }
+          const data = await response.json();
+          const address = data.display_name;
+          setLocationAddress(address || `Lat: ${latitude.toFixed(2)}, Lon: ${longitude.toFixed(2)}`);
+        } catch (error) {
+          console.error("Reverse geocoding error:", error);
+          setLocationAddress("Could not determine address");
+        }
+      }, (error) => {
+        console.error("Geolocation error:", error);
+        setLocationAddress("Location permission denied");
+      });
+    } else {
+      setLocationAddress("Geolocation not supported");
+    }
+
   }, []);
 
   useEffect(() => {
@@ -138,9 +160,9 @@ export default function ProfilePage() {
         <div className="space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <p className="text-sm text-muted-foreground">{currentDate}</p>
-                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-200/50 py-1.5 px-3">
-                    <MapPin className="h-4 w-4 mr-2"/>
-                    West Jakarta, Indonesia
+                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-200/50 py-1.5 px-3 max-w-full">
+                  <MapPin className="h-4 w-4 mr-2"/>
+                  <span className="truncate">{locationAddress}</span>
                 </Badge>
             </div>
             <div className="grid grid-cols-2 gap-4">
