@@ -25,9 +25,8 @@ function Calendar2({
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-3 flex flex-col flex-grow",
-        caption: "flex justify-center pt-1 relative items-center",
+        caption: "hidden", // We use a custom header outside the calendar
         caption_label: "text-base font-semibold",
-        nav: "space-x-1 flex items-center",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
           "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
