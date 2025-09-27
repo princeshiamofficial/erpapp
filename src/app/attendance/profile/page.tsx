@@ -1,14 +1,34 @@
 
 "use client";
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronRight, LogOut, Shield, LifeBuoy, Bell, Settings, User as UserIcon, Palette, CalendarPlus, Loader2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  ChevronRight,
+  LogOut,
+  Shield,
+  LifeBuoy,
+  Bell,
+  Settings,
+  User as UserIcon,
+  Palette,
+  CalendarPlus,
+  Loader2,
+  MapPin,
+  ArrowDownLeft,
+  ArrowUpRight,
+  ArrowUp,
+  RefreshCw
+} from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+
 
 const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
@@ -34,10 +54,41 @@ const ProfileLink: React.FC<ProfileLinkProps> = ({ href, icon: Icon, label, isEx
   </Link>
 );
 
+interface StatCardProps {
+    icon: React.ElementType;
+    title: string;
+    subtitle: string;
+    value: string;
+    isFaded?: boolean;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ icon: Icon, title, subtitle, value, isFaded }) => (
+    <Card className={cn("bg-card shadow-sm transition-all", isFaded && "opacity-40")}>
+        <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+                <div className={cn("h-10 w-10 rounded-full flex items-center justify-center shrink-0", 
+                    isFaded ? "bg-gray-200 dark:bg-gray-700" : "bg-green-100 dark:bg-green-900"
+                )}>
+                    <Icon className={cn("h-5 w-5", isFaded ? "text-gray-400 dark:text-gray-500" : "text-green-600 dark:text-green-300")} />
+                </div>
+                <div>
+                    <p className="text-sm font-medium text-foreground">{title}</p>
+                    <p className="text-xs text-muted-foreground">{subtitle}</p>
+                </div>
+            </div>
+            <p className="text-3xl font-bold text-foreground mt-3">{value}</p>
+        </CardContent>
+    </Card>
+);
 
 export default function ProfilePage() {
   const { currentUser, logout, isLoading } = useAuth();
   const router = useRouter();
+  const [currentDate, setCurrentDate] = useState('');
+  
+  useEffect(() => {
+    setCurrentDate(format(new Date(), "eeee, d MMMM yyyy"));
+  }, []);
 
   useEffect(() => {
     if (!isLoading && !currentUser) {
@@ -76,6 +127,23 @@ export default function ProfilePage() {
             <h1 className="text-2xl font-bold text-foreground">{currentUser?.name}</h1>
             <p className="text-md text-muted-foreground">{currentUser?.email}</p>
           </div>
+        </div>
+
+        {/* New Attendance Summary Section */}
+        <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <p className="text-sm text-muted-foreground">{currentDate}</p>
+                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-200/50 py-1.5 px-3">
+                    <MapPin className="h-4 w-4 mr-2"/>
+                    West Jakarta, Indonesia
+                </Badge>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <StatCard icon={ArrowDownLeft} title="Check In" subtitle="Early" value="07:58" />
+                <StatCard icon={ArrowUpRight} title="Check Out" subtitle="Not Yet" value="17:00" isFaded />
+                <StatCard icon={ArrowUp} title="Absence" subtitle="November" value="3 Day" />
+                <StatCard icon={RefreshCw} title="Total Attended" subtitle="November" value="15 Day" />
+            </div>
         </div>
 
         {/* Account Section */}
