@@ -5,7 +5,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, ChevronDown, Plus, Heart, Sun, Check, Loader2, ChevronRight, ChevronLeft as ChevronLeftIcon } from 'lucide-react'; // Renamed ChevronLeft to avoid conflict
-import { format, getDaysInMonth, getDay, startOfMonth, addMonths, subMonths, isSameDay, isSameMonth, parseISO, isToday } from 'date-fns';
+import { format, getDaysInMonth, getDay, startOfMonth, addMonths, subMonths, isToday, isSameDay, isSameMonth, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar2 as Calendar } from '@/components/ui/calendar2';
 import { useAuth } from '@/contexts/auth-context';
@@ -13,6 +13,8 @@ import type { AttendanceRecord } from '@/types';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+
 
 const WEEK_DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 
@@ -97,26 +99,44 @@ export default function AttendanceHistoryPage() {
             isSameMonth(parseISO(record.date), currentMonth)
         );
         return recordsForMonth.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [monthlyRecords, currentMonth]);
+      }, [monthlyRecords, currentMonth]);
 
-    const calendarDays = useMemo(() => {
-        const days = [];
+    const calendarGrid = useMemo(() => {
         const start = startOfMonth(currentMonth);
         const totalDays = getDaysInMonth(currentMonth);
+        const startingDayOfWeek = (getDay(start) + 6) % 7; // Monday is 0
+        const grid = [];
 
-        for (let i = 0; i < totalDays; i++) {
-            const date = new Date(start.getFullYear(), start.getMonth(), i + 1);
-            const record = sortedRecords.find(r => isSameDay(parseISO(r.date), date));
-            let status: 'present' | 'late' | 'absent' | undefined;
-            if (record) {
-                if (record.status === 'On Time') status = 'present';
-                else if (record.status === 'Late') status = 'late';
-                else if (record.status === 'Absent') status = 'absent';
-            }
-            days.push({ date, status });
+        // Add blank cells for days before the start of the month
+        for (let i = 0; i < startingDayOfWeek; i++) {
+            grid.push({ day: null });
         }
-        return days;
-    }, [currentMonth, sortedRecords]);
+
+        // Add days of the month
+        for (let i = 1; i <= totalDays; i++) {
+            const date = new Date(start.getFullYear(), start.getMonth(), i);
+            const record = sortedRecords.find(r => isSameDay(parseISO(r.date), date));
+            let status: 'leave' | 'present' | 'holiday' | 'selected' | 'today' | 'late' | undefined;
+            
+            if (isToday(date)) status = 'today';
+            
+            if (record) {
+                if (record.status === 'Late') status = 'late';
+                else if (record.status) status = 'present';
+            }
+            
+            if (selectedDay && isSameDay(date, selectedDay)) {
+                status = 'selected';
+            }
+
+            grid.push({
+                day: i,
+                date: date,
+                data: { status }
+            });
+        }
+        return grid;
+    }, [currentMonth, sortedRecords, selectedDay]);
 
     const { workedHours, totalBreaks, overTime } = useMemo(() => {
         let totalSeconds = 0;
@@ -168,38 +188,37 @@ export default function AttendanceHistoryPage() {
                         </Button>
                     </div>
                     
-                    <Calendar
-                        mode="single"
-                        selected={selectedDay}
-                        onSelect={setSelectedDay}
-                        month={currentMonth}
-                        onMonthChange={setCurrentMonth}
-                        className="w-full"
-                        classNames={{
-                            day_today: "bg-primary/20 text-primary-foreground",
-                            day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary",
-                        }}
-                        components={{
-                            Day: ({ date }) => {
-                                const dayData = calendarDays.find(d => d.date && isSameDay(d.date, date));
-                                return (
-                                    <div className="relative h-full w-full">
-                                        <span className={cn(isToday(date) && "font-bold")}>{format(date, 'd')}</span>
-                                        {dayData?.status && (
-                                            <div className={cn(
-                                                "absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full",
-                                                dayData.status === 'present' && 'bg-green-500',
-                                                dayData.status === 'late' && 'bg-yellow-500',
-                                                dayData.status === 'absent' && 'bg-red-500'
-                                            )}></div>
-                                        )}
-                                    </div>
-                                );
-                            },
-                        }}
-                    />
+                    <div className="grid grid-cols-7 gap-2 text-center text-xs font-bold text-muted-foreground mb-3">
+                      {WEEK_DAYS.map(day => <div key={day}>{day}</div>)}
+                    </div>
+                    <div className="grid grid-cols-7 gap-2">
+                        {calendarGrid.map((dayInfo, index) => (
+                           <div key={index} onClick={() => dayInfo.date && setSelectedDay(dayInfo.date)}>
+                             <CalendarDay day={dayInfo.day} data={dayInfo.data} />
+                           </div>
+                        ))}
+                    </div>
 
-                    <h3 className="font-semibold text-lg mt-6 mb-4">Your Attendance</h3>
+                    <div className="mt-6 grid grid-cols-3 gap-4 text-center">
+                        <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">
+                            <p className="text-xs text-muted-foreground">Worked hours</p>
+                            <p className="font-bold text-lg">{workedHours}h</p>
+                        </div>
+                         <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">
+                            <p className="text-xs text-muted-foreground">Breaks</p>
+                            <p className="font-bold text-lg">{totalBreaks}h</p>
+                        </div>
+                         <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">
+                            <p className="text-xs text-muted-foreground">Over time</p>
+                            <p className="font-bold text-lg">{overTime}h</p>
+                        </div>
+                    </div>
+
+
+                    <div className="flex justify-between items-center mt-6 mb-4">
+                      <h3 className="font-semibold text-lg">Your Attendance</h3>
+                      <Button variant="link" size="sm" className="text-primary">Show more</Button>
+                    </div>
                     
                     <div className="space-y-3">
                     {isLoadingData ? (
@@ -248,4 +267,3 @@ export default function AttendanceHistoryPage() {
         </div>
     );
 }
-
