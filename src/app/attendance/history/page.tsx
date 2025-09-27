@@ -58,8 +58,6 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, payload }: any) 
 // Custom Day component to render status tags
 const DayWithStatus = ({ date, selected, event }: { date: Date; selected: boolean | undefined, event: AttendanceRecord | undefined }) => {
     
-    const checkInTime = event?.checkInTime ? format(parseISO(event.checkInTime), 'h:mm a') : '';
-
     return (
         <div className={cn(
             "relative flex flex-col items-center justify-between p-1 w-full h-full rounded-md transition-colors",
@@ -77,7 +75,7 @@ const DayWithStatus = ({ date, selected, event }: { date: Date; selected: boolea
                     STATUS_STYLES[event.status].bg,
                     STATUS_STYLES[event.status].text
                 )}>
-                    {checkInTime}
+                    {event.status}
                 </div>
             )}
         </div>
