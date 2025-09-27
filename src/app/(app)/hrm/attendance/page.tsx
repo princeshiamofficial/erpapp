@@ -302,7 +302,7 @@ export default function AttendancePage() {
                             ))
                         ) : filteredAttendance.length > 0 ? (
                             filteredAttendance.map(entry => {
-                                const employee = employees.find(e => e.id === entry.employeeId);
+                                const employee = employees.find(e => e.userId === entry.employeeId);
                                 return (
                                 <TableRow key={entry.id}>
                                     <TableCell>
