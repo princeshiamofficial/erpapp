@@ -28,6 +28,7 @@ export function BottomNavigation() {
   }, []);
 
   const getTranslateX = () => {
+    if (!isClient) return '-80px'; // Default position for server render
     if (pathname.startsWith('/attendance/history')) return '0px';
     if (pathname.startsWith('/attendance/profile')) return '80px';
     // Default to 'Home' for /attendance or /attendance/home
@@ -35,6 +36,7 @@ export function BottomNavigation() {
   };
   
   const isNavItemActive = (itemHref: string) => {
+    if (!isClient) return false; // No active item on server
     if (itemHref === "/attendance") {
         return pathname === "/attendance" || pathname === "/attendance/home";
     }
@@ -46,12 +48,13 @@ export function BottomNavigation() {
     return null;
   }
   
+  // Render a static, non-interactive version on the server to prevent hydration errors.
+  const baseContainerClass = "bg-black dark:bg-gray-950 text-white rounded-full shadow-lg p-1 flex justify-around items-center relative";
+  
   if (!isClient) {
-    // Render a static, non-interactive version on the server to prevent hydration errors.
-    // The active styles will be applied on the client after hydration.
     return (
        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm md:hidden z-50">
-         <div className="bg-black dark:bg-gray-950 text-white rounded-full shadow-lg p-1 flex justify-around items-center relative">
+         <div className={baseContainerClass}>
           {navItems.map((item) => (
             <Link
               key={item.href}
@@ -67,9 +70,10 @@ export function BottomNavigation() {
     );
   }
 
+  // Client-side render with dynamic styles
   return (
     <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm md:hidden z-50">
-      <div className="bg-black dark:bg-gray-950 text-white rounded-full shadow-lg p-1 flex justify-around items-center relative">
+      <div className={baseContainerClass}>
         <div
           className="absolute bottom-0 h-1 w-16 bg-white rounded-full transition-transform duration-300 ease-in-out"
           style={{
