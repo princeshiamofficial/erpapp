@@ -1,14 +1,15 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { LogIn, LogOut, Clock, Fingerprint, Home, History, Power, Lock, ArrowDown, ArrowUp, MapPin } from 'lucide-react';
+import { LogIn, LogOut, Clock, Fingerprint, Home, History, Power, Lock, ArrowDown, ArrowUp, MapPin, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, differenceInHours, differenceInMinutes, parse, differenceInSeconds, parseISO, isToday } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,7 +30,7 @@ const ATTENDANCE_STORAGE_KEY = 'colorHutAttendanceMark';
 const SlideToConfirm = ({ onConfirm, status, disabled, disabledReason }: { onConfirm: () => void, status: 'Checked In' | 'Checked Out', disabled: boolean, disabledReason: string }) => {
     const [unlocked, setUnlocked] = useState(false);
     const x = useMotionValue(0);
-    const sliderRef = useRef<HTMLDivElement>(null);
+    const sliderRef = React.useRef<HTMLDivElement>(null);
     const [sliderWidth, setSliderWidth] = useState(0);
     const handleSize = 64; // Corresponds to h-16, w-16
     
@@ -97,7 +98,8 @@ const SlideToConfirm = ({ onConfirm, status, disabled, disabledReason }: { onCon
 
 
 export default function CheckInOutPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, isLoading: isAuthLoading } = useAuth();
+  const router = useRouter();
   const [status, setStatus] = useState<'Checked In' | 'Checked Out'>('Checked Out');
   const [checkInTime, setCheckInTime] = useState<Date | null>(null);
   const [checkOutTime, setCheckOutTime] = useState<Date | null>(null);
@@ -110,18 +112,23 @@ export default function CheckInOutPage() {
   const [officeLocations, setOfficeLocations] = useState<CompanyLocation[]>([]);
   const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]);
   
+  useEffect(() => {
+    if (!isAuthLoading && !currentUser) {
+      router.replace('/attendance/login');
+    }
+  }, [currentUser, isAuthLoading, router]);
+
   const canPerformAction = useMemo(() => {
-    // If the user has already checked out for the day, no more actions are allowed.
     if (checkOutTime && isToday(checkOutTime)) {
         return false;
     }
     const isLocationOkForCheckIn = locationStatus === 'Inside Office Location';
     const isLocationPermissionGranted = !locationStatus.includes('denied') && !locationStatus.includes('unavailable') && !locationStatus.includes('timed out');
     
-    if (status === 'Checked Out') { // Trying to check in
+    if (status === 'Checked Out') {
         return isLocationOkForCheckIn;
     }
-    if (status === 'Checked In') { // Trying to check out
+    if (status === 'Checked In') {
         return isLocationPermissionGranted;
     }
     return false;
@@ -190,14 +197,16 @@ export default function CheckInOutPage() {
         if (currentUser) {
             const mark = await getAttendanceMark(currentUser.id);
             if (mark) {
-                setStatus(mark.status);
-                if (mark.lastCheckInTime) setCheckInTime(parseISO(mark.lastCheckInTime));
-                if (mark.lastCheckOutTime) setCheckOutTime(parseISO(mark.lastCheckOutTime));
-                saveStateToLocalStorage({
-                  status: mark.status,
-                  checkInTime: mark.lastCheckInTime,
-                  checkOutTime: mark.lastCheckOutTime,
-                });
+                if (isToday(parseISO(mark.date))) {
+                    setStatus(mark.status);
+                    if (mark.lastCheckInTime) setCheckInTime(parseISO(mark.lastCheckInTime));
+                    if (mark.lastCheckOutTime) setCheckOutTime(parseISO(mark.lastCheckOutTime));
+                    saveStateToLocalStorage({
+                      status: mark.status,
+                      checkInTime: mark.lastCheckInTime,
+                      checkOutTime: mark.lastCheckOutTime,
+                    });
+                }
             }
         }
 
@@ -236,7 +245,9 @@ export default function CheckInOutPage() {
         console.error("Failed to fetch office data:", error);
       }
     };
-    fetchInitialData();
+    if (currentUser) {
+        fetchInitialData();
+    }
   }, [currentUser]);
 
   useEffect(() => {
@@ -367,6 +378,14 @@ export default function CheckInOutPage() {
   const ActionIcon = status === 'Checked Out' ? Lock : Power;
   
   const isActionDisabled = !canPerformAction;
+
+  if (isAuthLoading || !currentUser) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-between bg-gray-100 dark:bg-gray-900 p-4 sm:p-6 pb-28">

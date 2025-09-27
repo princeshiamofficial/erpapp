@@ -1,15 +1,17 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Calendar3 as Calendar } from '@/components/ui/calendar3'; // Using the new calendar
 import { format, subDays, startOfMonth, addMonths, subMonths } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from 'recharts';
+import { useAuth } from '@/contexts/auth-context';
+import { useRouter } from 'next/navigation';
 
 type AttendanceStatus = 'On Time' | 'Late' | 'Absent' | 'On Leave' | 'Holiday' | 'Working';
 
@@ -124,8 +126,24 @@ const LegendItem = ({ color, label }: { color: string, label: string }) => (
 
 
 export default function AttendanceHistoryPage() {
+  const { currentUser, isLoading } = useAuth();
+  const router = useRouter();
   const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date(2024, 8, 22));
   const [currentMonth, setCurrentMonth] = useState(new Date(2024, 8, 1)); // September 2024 for mock data
+
+  useEffect(() => {
+    if (!isLoading && !currentUser) {
+      router.replace('/attendance/login');
+    }
+  }, [currentUser, isLoading, router]);
+
+  if (isLoading || !currentUser) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-black p-4 pb-28">

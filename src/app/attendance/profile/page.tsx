@@ -1,13 +1,14 @@
 
 "use client";
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronRight, LogOut, Shield, LifeBuoy, Bell, Settings, User as UserIcon, Palette, CalendarPlus } from 'lucide-react';
+import { ChevronRight, LogOut, Shield, LifeBuoy, Bell, Settings, User as UserIcon, Palette, CalendarPlus, Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
@@ -35,7 +36,22 @@ const ProfileLink: React.FC<ProfileLinkProps> = ({ href, icon: Icon, label, isEx
 
 
 export default function ProfilePage() {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isLoading && !currentUser) {
+      router.replace('/attendance/login');
+    }
+  }, [currentUser, isLoading, router]);
+
+  if (isLoading || !currentUser) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-100 dark:bg-gray-900">
