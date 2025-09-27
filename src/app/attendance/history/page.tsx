@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/auth-context';
 import type { AttendanceRecord } from '@/types';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 
 const WEEK_DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 
@@ -69,6 +70,7 @@ export default function AttendanceHistoryPage() {
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [monthlyRecords, setMonthlyRecords] = useState<AttendanceRecord[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(true);
+    const [selectedDay, setSelectedDay] = useState<Date | null>(new Date());
 
     const fetchAttendanceData = useCallback(async (month: Date) => {
       if (!currentUser) return;
@@ -89,37 +91,32 @@ export default function AttendanceHistoryPage() {
         }
     }, [currentMonth, currentUser, isAuthLoading, fetchAttendanceData]);
 
-    const calendarGrid = useMemo(() => {
-        const firstDayOfMonth = startOfMonth(currentMonth);
+    const sortedRecords = useMemo(() => {
+        // Filter records for the current month being viewed
+        const recordsForMonth = monthlyRecords.filter(record => 
+            isSameMonth(parseISO(record.date), currentMonth)
+        );
+        return recordsForMonth.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [monthlyRecords, currentMonth]);
+
+    const calendarDays = useMemo(() => {
+        const days = [];
+        const start = startOfMonth(currentMonth);
         const totalDays = getDaysInMonth(currentMonth);
-        const startDayOfWeek = (getDay(firstDayOfMonth) + 6) % 7; 
 
-        const days = Array.from({ length: totalDays }, (_, i) => i + 1);
-        const emptyStartCells = Array.from({ length: startDayOfWeek }, () => null);
-        const allCells = [...emptyStartCells, ...days];
-
-        return allCells.map(day => {
-            if (!day) return { day: null, data: undefined };
-
-            const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-            const record = monthlyRecords.find(r => isSameDay(parseISO(r.date), date));
-            
-            let status: 'leave' | 'present' | 'holiday' | 'selected' | 'today' | 'late' | undefined;
-            
-            if (isToday(date)) status = 'today';
-            
+        for (let i = 0; i < totalDays; i++) {
+            const date = new Date(start.getFullYear(), start.getMonth(), i + 1);
+            const record = sortedRecords.find(r => isSameDay(parseISO(r.date), date));
+            let status: 'present' | 'late' | 'absent' | undefined;
             if (record) {
-                if (record.status === 'Late') status = 'late';
-                else if (record.status === 'On Time') status = 'present';
+                if (record.status === 'On Time') status = 'present';
+                else if (record.status === 'Late') status = 'late';
+                else if (record.status === 'Absent') status = 'absent';
             }
-            // Add holiday/leave logic here if available in your data
-            // Example:
-            // if (isHoliday(date)) status = 'holiday';
-            // if (isLeave(date)) status = 'leave';
-            
-            return { day, data: status ? { status } : undefined };
-        });
-    }, [currentMonth, monthlyRecords]);
+            days.push({ date, status });
+        }
+        return days;
+    }, [currentMonth, sortedRecords]);
 
     const { workedHours, totalBreaks, overTime } = useMemo(() => {
         let totalSeconds = 0;
@@ -147,7 +144,7 @@ export default function AttendanceHistoryPage() {
 
     return (
         <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
-            <header className="relative h-48 w-full bg-gradient-to-br from-pink-300 via-purple-300 to-indigo-400 p-6 text-white text-center flex flex-col justify-end items-center">
+            <header className="relative h-48 w-full bg-gradient-to-br from-pink-300 via-purple-300 to-indigo-400 p-6 text-white text-center flex flex-col justify-end items-center rounded-b-3xl">
                  <div className="absolute top-4 left-4">
                     <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" asChild>
                       <Link href="/attendance">
@@ -171,52 +168,84 @@ export default function AttendanceHistoryPage() {
                         </Button>
                     </div>
                     
+                    <Calendar
+                        mode="single"
+                        selected={selectedDay}
+                        onSelect={setSelectedDay}
+                        month={currentMonth}
+                        onMonthChange={setCurrentMonth}
+                        className="w-full"
+                        classNames={{
+                            day_today: "bg-primary/20 text-primary-foreground",
+                            day_selected: "bg-primary text-primary-foreground hover:bg-primary/90 focus:bg-primary",
+                        }}
+                        components={{
+                            Day: ({ date }) => {
+                                const dayData = calendarDays.find(d => d.date && isSameDay(d.date, date));
+                                return (
+                                    <div className="relative h-full w-full">
+                                        <span className={cn(isToday(date) && "font-bold")}>{format(date, 'd')}</span>
+                                        {dayData?.status && (
+                                            <div className={cn(
+                                                "absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full",
+                                                dayData.status === 'present' && 'bg-green-500',
+                                                dayData.status === 'late' && 'bg-yellow-500',
+                                                dayData.status === 'absent' && 'bg-red-500'
+                                            )}></div>
+                                        )}
+                                    </div>
+                                );
+                            },
+                        }}
+                    />
+
+                    <h3 className="font-semibold text-lg mt-6 mb-4">Your Attendance</h3>
+                    
+                    <div className="space-y-3">
                     {isLoadingData ? (
-                        <div className="grid grid-cols-7 gap-2">
-                           {Array.from({ length: 35 }).map((_, index) => (
-                              <Skeleton key={index} className="w-10 h-10 rounded-full" />
-                           ))}
-                        </div>
+                        [...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)
+                    ) : sortedRecords.length > 0 ? (
+                       sortedRecords.map(record => {
+                        const isSelected = selectedDay && isSameDay(parseISO(record.date), selectedDay);
+                        const checkInTime = record.checkInTime ? format(parseISO(record.checkInTime), 'HH:mm') : '-';
+                        const checkOutTime = record.checkOutTime ? format(parseISO(record.checkOutTime), 'HH:mm') : '-';
+                        const totalHours = record.hoursWorked || '-';
+                        
+                        return (
+                            <Card key={record.id} className={cn("transition-all", isSelected && "ring-2 ring-primary bg-primary/5")}>
+                                <CardContent className="p-3 flex items-center gap-3">
+                                    <div className="text-center w-12 flex-shrink-0">
+                                        <p className="font-bold text-lg">{format(parseISO(record.date), 'dd')}</p>
+                                        <p className="text-xs text-muted-foreground">{format(parseISO(record.date), 'EEE')}</p>
+                                    </div>
+                                    <div className="border-l pl-3 flex-1 grid grid-cols-3 items-center text-center text-sm">
+                                        <div className="flex flex-col items-center justify-center">
+                                            <Badge className={cn(
+                                                record.status === 'On Time' && 'bg-green-100 text-green-800',
+                                                record.status === 'Late' && 'bg-yellow-100 text-yellow-800',
+                                                record.status === 'Absent' && 'bg-red-100 text-red-800'
+                                            )}>{record.status}</Badge>
+                                        </div>
+                                        <div className="flex flex-col items-center justify-center">
+                                            <p className="font-semibold text-foreground">{checkInTime} - {checkOutTime}</p>
+                                            <p className="text-xs text-muted-foreground">Check-in/out</p>
+                                        </div>
+                                        <div className="flex flex-col items-center justify-center">
+                                            <p className="font-semibold text-foreground">{totalHours}h</p>
+                                            <p className="text-xs text-muted-foreground">Working Hours</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )
+                       })
                     ) : (
-                        <div className="grid grid-cols-7 gap-2">
-                            {WEEK_DAYS.map(day => (
-                                <div key={day} className="text-center text-xs font-semibold text-muted-foreground">{day}</div>
-                            ))}
-                            {calendarGrid.map((item, index) => (
-                                <CalendarDay key={index} day={item.day} data={item.data} />
-                            ))}
-                        </div>
+                      <p className="text-center text-muted-foreground py-8">No attendance records for this month.</p>
                     )}
-
-                    <div className="text-center mt-4">
-                        <Button variant="ghost" size="sm" className="text-muted-foreground">
-                            Show more <ChevronDown className="ml-1 h-4 w-4" />
-                        </Button>
-                    </div>
-
-                    <div className="mt-6 flex items-center justify-between rounded-lg bg-red-100 p-4 text-red-700">
-                        <p className="font-semibold text-sm">2 attendance are missing</p>
-                        <button className="h-7 w-7 rounded-full bg-red-500 text-white flex items-center justify-center">
-                            <Plus className="h-5 w-5" />
-                        </button>
-                    </div>
-
-                    <div className="mt-6 space-y-3">
-                        <div className="flex justify-between items-center text-foreground">
-                            <span className="font-medium">Worked hours</span>
-                            <span className="font-bold text-lg">{workedHours} h</span>
-                        </div>
-                         <div className="flex justify-between items-center text-foreground">
-                            <span className="font-medium">Breaks</span>
-                            <span className="font-bold text-lg">{totalBreaks} h</span>
-                        </div>
-                         <div className="flex justify-between items-center text-foreground">
-                            <span className="font-medium">Over time</span>
-                            <span className="font-bold text-lg">{overTime} h</span>
-                        </div>
                     </div>
                 </div>
             </main>
         </div>
     );
 }
+
