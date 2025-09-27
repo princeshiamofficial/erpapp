@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { LogIn, LogOut, Clock, Fingerprint, Home, History, Power, Lock, ArrowDown, ArrowUp, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +14,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFo
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getOfficeLocations, type CompanyLocation } from '@/lib/office-location-service';
 import { getOfficeTimes, type OfficeTime } from '@/lib/office-time-service';
-import { saveAttendanceAction } from '../(app)/hrm/attendance/actions';
+import { saveAttendanceAction } from '@/app/(app)/hrm/attendance/actions';
 import { getAttendanceMark } from '@/lib/attendance-service';
 
 const getInitials = (name: string | undefined): string => {
