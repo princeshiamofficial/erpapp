@@ -1,231 +1,151 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Calendar3 as Calendar } from '@/components/ui/calendar3'; // Using the new calendar
-import { format, subDays, startOfMonth, addMonths, subMonths, isSameDay, parseISO } from 'date-fns';
-import { cn } from '@/lib/utils';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from 'recharts';
-import { useAuth } from '@/contexts/auth-context';
-import { useRouter } from 'next/navigation';
-import { getAttendanceForMonth } from '@/lib/attendance-service';
-import type { AttendanceRecord } from '@/types';
-import { Skeleton } from '@/components/ui/skeleton';
+import { ArrowLeft, ChevronDown, Plus } from 'lucide-react';
+import { format, getDaysInMonth, getDay, startOfMonth } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Heart, Sun, Check } from 'lucide-react';
 
+const WEEK_DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 
-type AttendanceStatus = 'On Time' | 'Late' | 'Absent' | 'On Leave' | 'Holiday' | 'Working';
+const CalendarDay = ({ day, data }: { day: number | null; data?: { status: 'leave' | 'present' | 'holiday' | 'selected' | 'today' } }) => {
+    if (!day) {
+        return <div className="w-10 h-10"></div>;
+    }
 
+    const baseClasses = "w-10 h-10 flex items-center justify-center rounded-full transition-all duration-200";
+    const iconClasses = "h-4 w-4";
 
-const STATUS_STYLES: Record<AttendanceStatus, { bg: string; text: string; dot: string }> = {
-  'On Time': { bg: 'bg-lime-100 dark:bg-lime-900/40', text: 'text-lime-700 dark:text-lime-300', dot: '#84cc16' },
-  'Late': { bg: 'bg-yellow-100 dark:bg-yellow-900/40', text: 'text-yellow-700 dark:text-yellow-400', dot: '#f59e0b' },
-  'Absent': { bg: 'bg-orange-100 dark:bg-orange-900/40', text: 'text-orange-700 dark:text-orange-400', dot: '#f97316' },
-  'On Leave': { bg: 'bg-violet-100 dark:bg-violet-900/40', text: 'text-violet-700 dark:text-violet-400', dot: '#8b5cf6' },
-  'Holiday': { bg: 'bg-rose-100 dark:bg-rose-900/40', text: 'text-rose-700 dark:text-rose-400', dot: '#f43f5e' },
-  'Working': { bg: 'bg-gray-200 dark:bg-gray-700/40', text: 'text-gray-700 dark:text-gray-300', dot: '#a1a1aa' },
-};
-
-
-const RADIAN = Math.PI / 180;
-const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, payload }: any) => {
-  const radius = outerRadius * 1.3;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  const textAnchor = x > cx ? 'start' : 'end';
-  
-  const lineRadiusStart = outerRadius * 1.1;
-  const lineRadiusEnd = outerRadius * 1.25;
-  const sx = cx + lineRadiusStart * Math.cos(-midAngle * RADIAN);
-  const sy = cy + lineRadiusStart * Math.sin(-midAngle * RADIAN);
-  const ex = cx + lineRadiusEnd * Math.cos(-midAngle * RADIAN);
-  const ey = cy + lineRadiusEnd * Math.sin(-midAngle * RADIAN);
-  
-  return (
-    <g>
-      <path d={`M${sx},${sy}L${ex},${ey}`} stroke="#9ca3af" fill="none" />
-      <text x={x} y={y} fill="#6b7280" textAnchor={textAnchor} dominantBaseline="central" className="text-xs font-medium">
-        {`${payload.name} ${payload.name !== '30 working days' ? `${payload.value} days` : ''}`}
-      </text>
-    </g>
-  );
-};
-
-
-// Custom Day component to render status tags
-const DayWithStatus = ({ date, selected, event }: { date: Date; selected: boolean | undefined, event: AttendanceRecord | undefined }) => {
+    const styles = {
+        leave: {
+            container: "border-2 border-dashed border-red-400 bg-red-50 text-red-500",
+            icon: <Heart className={cn(iconClasses, "text-red-500")} />
+        },
+        present: {
+            container: "bg-transparent text-foreground",
+            icon: <Check className={cn(iconClasses, "text-blue-500")} />
+        },
+        holiday: {
+            container: "bg-yellow-100 text-yellow-600",
+            icon: <Sun className={cn(iconClasses, "text-yellow-600")} />
+        },
+        selected: {
+            container: "bg-blue-600 text-white font-bold shadow-lg",
+            icon: null
+        },
+        today: {
+            container: "bg-green-100 border-2 border-green-400 text-green-700",
+            icon: null
+        },
+        default: {
+            container: "bg-gray-100 dark:bg-gray-800 text-muted-foreground",
+            icon: null
+        }
+    };
     
+    const style = data ? styles[data.status] : styles.default;
+
     return (
-        <div className={cn(
-            "relative flex flex-col items-center justify-between p-1 w-full h-full rounded-md transition-colors",
-            selected && "bg-primary/10 ring-2 ring-primary"
-        )}>
-            <span className={cn(
-                "text-xs font-medium",
-                selected ? "text-primary font-semibold" : "text-muted-foreground"
-            )}>
-                {date.getDate()}
-            </span>
-            {event && (
-                <div className={cn(
-                    "text-[10px] font-semibold px-1.5 py-0.5 rounded-full w-full text-center truncate",
-                    STATUS_STYLES[event.status].bg,
-                    STATUS_STYLES[event.status].text
-                )}>
-                    {event.status}
-                </div>
-            )}
+        <div className={cn(baseClasses, style.container)}>
+            {style.icon ? style.icon : <span>{day}</span>}
         </div>
     );
 };
-
-const LegendItem = ({ color, label }: { color: string, label: string }) => (
-    <div className="flex items-center gap-2">
-        <div className="h-3 w-3 rounded-full" style={{ backgroundColor: color }}></div>
-        <span className="text-xs text-muted-foreground">{label}</span>
-    </div>
-);
 
 
 export default function AttendanceHistoryPage() {
-  const { currentUser, isLoading: isAuthLoading } = useAuth();
-  const router = useRouter();
-  const [selectedDay, setSelectedDay] = useState<Date | undefined>(new Date());
-  const [currentMonth, setCurrentMonth] = useState(new Date()); 
-  const [monthlyRecords, setMonthlyRecords] = useState<AttendanceRecord[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(true);
+    const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const fetchAttendance = useCallback(async (month: Date) => {
-    setIsLoadingData(true);
-    try {
-      const records = await getAttendanceForMonth(month);
-      setMonthlyRecords(records);
-    } catch (e) {
-      console.error("Failed to fetch attendance:", e);
-    } finally {
-      setIsLoadingData(false);
-    }
-  }, []);
+    const calendarGrid = useMemo(() => {
+        const firstDayOfMonth = startOfMonth(currentMonth);
+        const totalDays = getDaysInMonth(currentMonth);
+        // getDay returns 0 for Sunday, 1 for Monday, ..., 6 for Saturday. We adjust to have Monday as 0.
+        const startDayOfWeek = (getDay(firstDayOfMonth) + 6) % 7; 
 
-  useEffect(() => {
-    if (!isAuthLoading && !currentUser) {
-      router.replace('/attendance/login');
-    } else if (currentUser) {
-       fetchAttendance(currentMonth);
-    }
-  }, [currentUser, isAuthLoading, router, currentMonth, fetchAttendance]);
+        const days = Array.from({ length: totalDays }, (_, i) => i + 1);
+        const emptyStartCells = Array.from({ length: startDayOfWeek }, () => null);
+        const allCells = [...emptyStartCells, ...days];
 
-  const userAttendanceEvents = useMemo(() => {
-    if (!currentUser) return [];
-    return monthlyRecords.filter(record => record.employeeId === currentUser.id);
-  }, [monthlyRecords, currentUser]);
+        // This is where you would map your actual data to the day
+        const mockData: { [key: number]: { status: 'leave' | 'present' | 'holiday' | 'selected' | 'today' } } = {
+            3: { status: 'leave' }, 4: { status: 'leave' }, 5: { status: 'leave' }, 6: { status: 'leave' },
+            7: { status: 'present' },
+            10: { status: 'leave' }, 11: { status: 'leave' },
+            12: { status: 'present' },
+            13: { status: 'selected' },
+            17: { status: 'today' },
+            20: { status: 'holiday' }, 21: { status: 'holiday' },
+        };
 
-  const chartData = useMemo(() => {
-    const summary = userAttendanceEvents.reduce((acc, record) => {
-      acc[record.status] = (acc[record.status] || 0) + 1;
-      return acc;
-    }, {} as Record<AttendanceStatus, number>);
+        return allCells.map((day, index) => ({
+            day,
+            data: day ? mockData[day] : undefined
+        }));
+    }, [currentMonth]);
 
-    return [
-      { name: 'On Time', value: summary['On Time'] || 0, fill: STATUS_STYLES['On Time'].dot },
-      { name: 'Late', value: summary['Late'] || 0, fill: STATUS_STYLES['Late'].dot },
-      { name: 'Absent', value: summary['Absent'] || 0, fill: STATUS_STYLES['Absent'].dot },
-    ];
-  }, [userAttendanceEvents]);
-
-  if (isAuthLoading || !currentUser) {
     return (
-      <div className="flex h-screen w-full items-center justify-center bg-background">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
+        <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
+            <header className="relative h-48 w-full bg-gradient-to-br from-pink-300 via-purple-300 to-indigo-400 p-6 text-white text-center flex flex-col justify-end items-center">
+                 <div className="absolute top-4 left-4">
+                    <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" asChild>
+                      <Link href="/attendance">
+                        <ArrowLeft className="h-5 w-5" />
+                      </Link>
+                    </Button>
+                </div>
+                <p className="text-sm opacity-80">Monthly worked hours</p>
+                <h1 className="text-5xl font-bold tracking-tighter">172,50 h</h1>
+            </header>
 
-  return (
-    <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-black p-4 pb-28">
-        <style>{`
-            body {
-                scrollbar-width: none; /* Firefox */
-                -ms-overflow-style: none;  /* Internet Explorer 10+ */
-            }
-            body::-webkit-scrollbar {
-                display: none; /* Safari and Chrome */
-            }
-        `}</style>
-      <div className="w-full max-w-md mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-            <Button variant="ghost" size="icon" className="h-10 w-10" asChild>
-                <Link href="/attendance">
-                    <ArrowLeft className="h-5 w-5"/>
-                </Link>
-            </Button>
-            <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-                    <ChevronLeft className="h-5 w-5" />
-                </Button>
-                <h1 className="text-xl font-bold text-foreground w-32 text-center">{format(currentMonth, 'MMMM')}</h1>
-                <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-                    <ChevronRight className="h-5 w-5" />
-                </Button>
-            </div>
-            <div className="w-10"></div>
+            <main className="flex-1 -mt-8">
+                <div className="bg-background rounded-t-3xl shadow-2xl p-6">
+                    <h2 className="text-lg font-bold text-foreground mb-4">{format(currentMonth, "MMMM yyyy")} Overview</h2>
+                    
+                    {/* Calendar Grid */}
+                    <div className="grid grid-cols-7 gap-2">
+                        {WEEK_DAYS.map(day => (
+                            <div key={day} className="text-center text-xs font-semibold text-muted-foreground">{day}</div>
+                        ))}
+                        {calendarGrid.map((item, index) => (
+                            <CalendarDay key={index} day={item.day} data={item.data} />
+                        ))}
+                    </div>
+
+                    <div className="text-center mt-4">
+                        <Button variant="ghost" size="sm" className="text-muted-foreground">
+                            Show more <ChevronDown className="ml-1 h-4 w-4" />
+                        </Button>
+                    </div>
+
+                    {/* Attendance Missing Banner */}
+                    <div className="mt-6 flex items-center justify-between rounded-lg bg-red-100 p-4 text-red-700">
+                        <p className="font-semibold text-sm">2 attendance are missing</p>
+                        <button className="h-7 w-7 rounded-full bg-red-500 text-white flex items-center justify-center">
+                            <Plus className="h-5 w-5" />
+                        </button>
+                    </div>
+
+                    {/* Stats List */}
+                    <div className="mt-6 space-y-3">
+                        <div className="flex justify-between items-center text-foreground">
+                            <span className="font-medium">Worked hours</span>
+                            <span className="font-bold text-lg">172,50 h</span>
+                        </div>
+                         <div className="flex justify-between items-center text-foreground">
+                            <span className="font-medium">Breaks</span>
+                            <span className="font-bold text-lg">12,00 h</span>
+                        </div>
+                         <div className="flex justify-between items-center text-foreground">
+                            <span className="font-medium">Over time</span>
+                            <span className="font-bold text-lg">3,40 h</span>
+                        </div>
+                    </div>
+                </div>
+            </main>
         </div>
-        
-        {isLoadingData ? (
-          <Skeleton className="w-full h-[400px] rounded-lg" />
-        ) : (
-          <Calendar
-              mode="single"
-              month={currentMonth}
-              onMonthChange={setCurrentMonth}
-              selected={selectedDay}
-              onSelect={setSelectedDay}
-              className="w-full p-0 bg-transparent"
-              components={{
-                  Day: (props) => {
-                      const eventForDay = userAttendanceEvents.find(e => isSameDay(parseISO(e.date), props.date));
-                      return (
-                          <DayWithStatus 
-                              date={props.date} 
-                              selected={props.selected}
-                              event={eventForDay}
-                          />
-                      );
-                  },
-              }}
-          />
-        )}
-        
-        {isLoadingData ? (
-           <Skeleton className="w-full h-64 rounded-lg" />
-        ) : (
-          <div className="relative h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                      <Pie 
-                          data={chartData} 
-                          cx="50%" 
-                          cy="50%" 
-                          innerRadius={50} 
-                          outerRadius={70} 
-                          paddingAngle={2} 
-                          dataKey="value"
-                          labelLine={false}
-                          label={renderCustomizedLabel}
-                      >
-                          {chartData.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.fill} stroke={entry.fill} />
-                          ))}
-                      </Pie>
-                  </PieChart>
-              </ResponsiveContainer>
-          </div>
-        )}
-
-      </div>
-    </div>
-  );
+    );
 }
+
