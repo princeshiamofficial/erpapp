@@ -4,8 +4,8 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, ChevronDown, Plus, Heart, Sun, Check, Loader2 } from 'lucide-react';
-import { format, getDaysInMonth, getDay, startOfMonth, addMonths, subMonths, isSameDay, isSameMonth, parseISO } from 'date-fns';
+import { ArrowLeft, ChevronDown, Plus, Heart, Sun, Check, Loader2, ChevronRight, ChevronLeft as ChevronLeftIcon } from 'lucide-react'; // Renamed ChevronLeft to avoid conflict
+import { format, getDaysInMonth, getDay, startOfMonth, addMonths, subMonths, isSameDay, isSameMonth, parseISO, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar2 as Calendar } from '@/components/ui/calendar2';
 import { useAuth } from '@/contexts/auth-context';
@@ -163,7 +163,7 @@ export default function AttendanceHistoryPage() {
                 <div className="bg-background rounded-t-3xl shadow-2xl p-6">
                     <div className="flex justify-between items-center mb-4">
                         <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-                            <ChevronLeft className="h-5 w-5" />
+                            <ChevronLeftIcon className="h-5 w-5" />
                         </Button>
                         <h2 className="text-lg font-bold text-foreground">{format(currentMonth, "MMMM yyyy")}</h2>
                         <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
