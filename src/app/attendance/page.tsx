@@ -24,7 +24,7 @@ const getInitials = (name: string | undefined): string => {
   return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
-const SlideToConfirm = ({ onConfirm, status }: { onConfirm: () => void, status: 'Checked In' | 'Checked Out' }) => {
+const SlideToConfirm = ({ onConfirm, status, disabled }: { onConfirm: () => void, status: 'Checked In' | 'Checked Out', disabled: boolean }) => {
     const [unlocked, setUnlocked] = useState(false);
     const x = useMotionValue(0);
     const sliderRef = useRef<HTMLDivElement>(null);
@@ -38,6 +38,10 @@ const SlideToConfirm = ({ onConfirm, status }: { onConfirm: () => void, status: 
     }, [sliderRef]);
 
     const handleDragEnd = () => {
+        if (disabled) {
+            x.set(0);
+            return;
+        }
         if (x.get() > sliderWidth - handleSize - 20) { // A bit of tolerance
             setUnlocked(true);
             onConfirm();
@@ -52,16 +56,19 @@ const SlideToConfirm = ({ onConfirm, status }: { onConfirm: () => void, status: 
     
     const isCheckIn = status === 'Checked Out';
     const text = isCheckIn ? "Slide to Check In" : "Slide to Check Out";
-    const bgColor = isCheckIn ? "bg-green-600" : "bg-red-600";
-    const handleColor = isCheckIn ? "bg-green-700" : "bg-red-700";
+    const bgColor = isCheckIn ? (disabled ? "bg-gray-400" : "bg-green-600") : (disabled ? "bg-gray-400" : "bg-red-600");
+    const handleColor = isCheckIn ? (disabled ? "bg-gray-500" : "bg-green-700") : (disabled ? "bg-gray-500" : "bg-red-700");
 
     return (
         <div 
           ref={sliderRef}
-          className={cn("relative w-full h-20 rounded-full text-white font-semibold text-lg flex items-center justify-center overflow-hidden", bgColor)}
+          className={cn(
+            "relative w-full h-20 rounded-full text-white font-semibold text-lg flex items-center justify-center overflow-hidden transition-colors", 
+            bgColor
+          )}
         >
             <motion.div
-                className={cn("absolute left-1 top-1 h-16 w-16 rounded-full flex items-center justify-center cursor-grab active:cursor-grabbing", handleColor)}
+                className={cn("absolute left-1 top-1 h-16 w-16 rounded-full flex items-center justify-center", handleColor, disabled ? "cursor-not-allowed" : "cursor-grab active:cursor-grabbing")}
                 style={{ x }}
                 drag="x"
                 dragConstraints={{ left: 0, right: sliderWidth - handleSize }}
@@ -78,7 +85,7 @@ const SlideToConfirm = ({ onConfirm, status }: { onConfirm: () => void, status: 
                     exit={{ opacity: 0 }}
                     className="select-none pointer-events-none"
                 >
-                    {text}
+                    {disabled ? (isCheckIn ? 'Check-in unavailable' : 'Check-out unavailable') : text}
                 </motion.span>
               )}
             </AnimatePresence>
@@ -100,6 +107,20 @@ export default function CheckInOutPage() {
   const [currentLocation, setCurrentLocation] = useState<{ lat: number, lng: number } | null>(null);
   const [officeLocations, setOfficeLocations] = useState<CompanyLocation[]>([]);
   const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]);
+  
+  const canPerformAction = useMemo(() => {
+    const isLocationOkForCheckIn = locationStatus === 'Inside Office Location';
+    const isLocationPermissionGranted = !locationStatus.includes('denied') && !locationStatus.includes('unavailable') && !locationStatus.includes('timed out');
+    
+    if (status === 'Checked Out') { // Trying to check in
+        return isLocationOkForCheckIn;
+    }
+    if (status === 'Checked In') { // Trying to check out
+        return isLocationPermissionGranted;
+    }
+    return false;
+  }, [status, locationStatus]);
+
 
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3; // metres
@@ -178,7 +199,18 @@ export default function CheckInOutPage() {
   };
   
   const handleCheckIn = async () => {
+    if (!canPerformAction) {
+        let errorMsg = 'Check-in is currently unavailable.';
+        if (locationStatus === 'Outside Office Location') errorMsg = "You must be inside an office location to check in.";
+        else if (locationStatus.includes('denied')) errorMsg = "Location permission is required to check in.";
+        else if (locationStatus !== 'Inside Office Location') errorMsg = "Could not verify your location. Please ensure location services are enabled and you are at the office.";
+        
+        toast({ title: "Check-in Failed", description: errorMsg, variant: "destructive" });
+        setIsSheetOpen(false);
+        return;
+    }
     if (status === 'Checked In' || !currentUser) return;
+
     const now = new Date();
     
     let isLate = false;
@@ -217,6 +249,11 @@ export default function CheckInOutPage() {
   };
 
   const handleCheckOut = async () => {
+    if (!canPerformAction) {
+        toast({ title: "Check-out Failed", description: "Location permission is required to check out.", variant: "destructive" });
+        setIsSheetOpen(false);
+        return;
+    }
     if (status === 'Checked Out' || !checkInTime || !currentUser) return;
     const now = new Date();
     
@@ -359,7 +396,7 @@ export default function CheckInOutPage() {
             </SheetDescription>
           </SheetHeader>
           <div className="py-8 text-center">
-            <SlideToConfirm onConfirm={handleActionConfirm} status={status} />
+            <SlideToConfirm onConfirm={handleActionConfirm} status={status} disabled={!canPerformAction} />
           </div>
         </SheetContent>
       </Sheet>
