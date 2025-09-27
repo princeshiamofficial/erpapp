@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from 'react';
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,11 +16,16 @@ export default function AttendanceLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
-  const { login } = useAuth();
+  const { login, currentUser, isLoading: isAuthLoading } = useAuth();
   const router = useRouter();
 
+  useEffect(() => {
+    if (!isAuthLoading && currentUser) {
+      router.replace('/attendance');
+    }
+  }, [currentUser, isAuthLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,15 +37,22 @@ export default function AttendanceLoginPage() {
       });
       return;
     }
-    setIsLoading(true);
-    // Using main login logic, but redirecting to attendance home
+    setIsSubmitting(true);
     const success = await login(email, password);
     if (success) {
       router.push('/attendance');
     } else {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
+  
+  if (isAuthLoading || currentUser) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
@@ -99,8 +111,8 @@ export default function AttendanceLoginPage() {
             <Button 
                 type="submit" 
                 className="w-full h-14 text-lg font-semibold rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg" 
-                disabled={isLoading}>
-              {isLoading ? (
+                disabled={isSubmitting}>
+              {isSubmitting ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               ) : (
                 <LogIn className="mr-2 h-5 w-5" />
