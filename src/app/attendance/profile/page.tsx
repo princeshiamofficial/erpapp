@@ -118,15 +118,20 @@ export default function ProfilePage() {
       <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 space-y-6 pb-28">
         
         {/* User Info Header */}
-        <div className="flex items-center gap-4">
-          <Avatar className="h-20 w-20 border-4 border-background shadow-md">
-            <AvatarImage src={currentUser?.avatarUrl || undefined} alt={currentUser?.name} />
-            <AvatarFallback className="text-2xl bg-muted">{getInitials(currentUser?.name)}</AvatarFallback>
-          </Avatar>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{currentUser?.name}</h1>
-            <p className="text-md text-muted-foreground">{currentUser?.email}</p>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+              <Avatar className="h-20 w-20 border-4 border-background shadow-md">
+                <AvatarImage src={currentUser?.avatarUrl || undefined} alt={currentUser?.name} />
+                <AvatarFallback className="text-2xl bg-muted">{getInitials(currentUser?.name)}</AvatarFallback>
+              </Avatar>
+              <div>
+                <h1 className="text-2xl font-bold text-foreground">{currentUser?.name}</h1>
+                <p className="text-md text-muted-foreground">{currentUser?.email}</p>
+              </div>
           </div>
+          <Button variant="ghost" size="icon" onClick={logout} className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+            <LogOut className="h-5 w-5" />
+          </Button>
         </div>
 
         {/* New Attendance Summary Section */}
