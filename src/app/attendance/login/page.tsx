@@ -98,7 +98,7 @@ export default function AttendanceLoginPage() {
             </div>
             <Button 
                 type="submit" 
-                className="w-full h-14 text-lg font-semibold rounded-full bg-green-600 hover:bg-green-700 text-white shadow-lg" 
+                className="w-full h-14 text-lg font-semibold rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg" 
                 disabled={isLoading}>
               {isLoading ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
