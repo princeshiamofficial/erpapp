@@ -16,7 +16,6 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   ArrowUp,
-  RefreshCw,
   CalendarPlus
 } from 'lucide-react';
 import Link from 'next/link';
@@ -108,7 +107,13 @@ export default function ProfilePage() {
   const [monthlyRecords, setMonthlyRecords] = useState<AttendanceRecord[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
   
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+    setSelectedDate(new Date());
+  }, []);
 
   const fetchAttendanceData = useCallback(async (month: Date) => {
     if (!currentUser) return;
@@ -124,31 +129,35 @@ export default function ProfilePage() {
   }, [currentUser]);
 
   useEffect(() => {
-    setCurrentDate(format(new Date(), "eeee, d MMMM yyyy"));
-    
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(async (position) => {
-        const { latitude, longitude } = position.coords;
-        try {
-          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-          if (!response.ok) throw new Error('Failed to fetch address');
-          const data = await response.json();
-          setLocationAddress(data.display_name || `Lat: ${latitude.toFixed(2)}, Lon: ${longitude.toFixed(2)}`);
-        } catch (error) {
-          setLocationAddress("Could not determine address");
-        }
-      }, () => {
-        setLocationAddress("Location permission denied");
-      });
-    } else {
-      setLocationAddress("Geolocation not supported");
+    if (isClient) {
+      setCurrentDate(format(new Date(), "eeee, d MMMM yyyy"));
+      
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          const { latitude, longitude } = position.coords;
+          try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+            if (!response.ok) throw new Error('Failed to fetch address');
+            const data = await response.json();
+            setLocationAddress(data.display_name || `Lat: ${latitude.toFixed(2)}, Lon: ${longitude.toFixed(2)}`);
+          } catch (error) {
+            setLocationAddress("Could not determine address");
+          }
+        }, () => {
+          setLocationAddress("Location permission denied");
+        });
+      } else {
+        setLocationAddress("Geolocation not supported");
+      }
     }
+  }, [isClient]);
 
-    if (currentUser) {
+  useEffect(() => {
+    if (currentUser && selectedDate) {
         fetchAttendanceData(selectedDate);
     }
+  }, [currentUser, selectedDate, fetchAttendanceData]);
 
-  }, [currentUser, fetchAttendanceData, selectedDate]);
 
   useEffect(() => {
     if (!isAuthLoading && !currentUser) {
@@ -157,6 +166,7 @@ export default function ProfilePage() {
   }, [currentUser, isAuthLoading, router]);
 
   const attendanceStats = useMemo(() => {
+    if (!selectedDate) return { checkIn: '--:--', checkOut: '--:--', workedHours: '0,00', absenceDays: 0, attendedDays: 0 };
     const today = new Date();
     const recordsForSelectedMonth = monthlyRecords.filter(r => isSameMonth(parseISO(r.date), selectedDate));
     const todaysRecord = recordsForSelectedMonth.find(r => isSameMonth(parseISO(r.date), today) && new Date(r.date).getDate() === today.getDate());
@@ -194,15 +204,19 @@ export default function ProfilePage() {
   }, [monthlyRecords, selectedDate]);
 
   const handleMonthChange = (monthIndex: string) => {
-    const newDate = new Date(selectedDate);
-    newDate.setMonth(parseInt(monthIndex, 10));
-    setSelectedDate(newDate);
+    if (selectedDate) {
+      const newDate = new Date(selectedDate);
+      newDate.setMonth(parseInt(monthIndex, 10));
+      setSelectedDate(newDate);
+    }
   };
 
   const handleYearChange = (year: string) => {
-    const newDate = new Date(selectedDate);
-    newDate.setFullYear(parseInt(year, 10));
-    setSelectedDate(newDate);
+    if (selectedDate) {
+      const newDate = new Date(selectedDate);
+      newDate.setFullYear(parseInt(year, 10));
+      setSelectedDate(newDate);
+    }
   };
 
   const availableYears = useMemo(() => {
@@ -220,7 +234,7 @@ export default function ProfilePage() {
   })), []);
 
 
-  if (isAuthLoading || !currentUser) {
+  if (isAuthLoading || !currentUser || !selectedDate) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -284,7 +298,7 @@ export default function ProfilePage() {
                 <StatCard icon={ArrowDownLeft} title="Check In" subtitle="Today" value={attendanceStats.checkIn} isLoading={isDataLoading} />
                 <StatCard icon={ArrowUpRight} title="Check Out" subtitle="Today" value={attendanceStats.checkOut} isFaded={attendanceStats.checkOut === '--:--'} isLoading={isDataLoading} />
                 <StatCard icon={ArrowUp} title="Absence" subtitle="This Month" value={`${attendanceStats.absenceDays} Days`} isLoading={isDataLoading}/>
-                <StatCard icon={RefreshCw} title="Total Attended" subtitle="This Month" value={`${attendanceStats.attendedDays} Days`} isLoading={isDataLoading}/>
+                <StatCard icon={ArrowUp} title="Attended" subtitle="This Month" value={`${attendanceStats.attendedDays} Days`} isLoading={isDataLoading}/>
             </div>
         </div>
 
