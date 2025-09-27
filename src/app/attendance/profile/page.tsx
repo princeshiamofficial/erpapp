@@ -157,16 +157,6 @@ export default function ProfilePage() {
             <ProfileLink href="#" icon={CalendarPlus} label="Leave Request" />
           </CardContent>
         </Card>
-
-        {/* Support Section */}
-        <Card className="bg-card shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Support</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            <ProfileLink href="https://colorhutbd.xyz" icon={LifeBuoy} label="Help & Support Center" isExternal />
-          </CardContent>
-        </Card>
         
         {/* Logout Button */}
         <div className="pt-4">
