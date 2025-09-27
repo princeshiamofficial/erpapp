@@ -563,3 +563,21 @@ export interface OfficeTime {
     graceTime: number; // in minutes
     shift: 'Day' | 'Night';
 }
+
+export type AttendanceStatus = 'On Time' | 'Late' | 'Absent';
+
+export interface AttendanceRecord {
+    id: string; // Composite key: `${employeeId}_${YYYY-MM-DD}`
+    employeeId: string;
+    employeeName: string;
+    date: string; // YYYY-MM-DD
+    status: AttendanceStatus;
+    checkInTime: string; // ISO String
+    checkOutTime?: string | null; // ISO String
+    hoursWorked?: string | null; // e.g., "8h 15m"
+    lateReason?: string | null;
+    earlyOutReason?: string | null;
+    location: string; // "Head Office", "Remote", etc.
+    checkInLocation?: { lat: number; lng: number };
+    checkOutLocation?: { lat: number; lng: number };
+}

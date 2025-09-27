@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { getEmployees } from '@/lib/employee-service';
-import type { Employee, User, OfficeTime } from '@/types';
+import type { Employee, User, OfficeTime, AttendanceRecord } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationEllipsis, PaginationPrevious, PaginationNext } from '@/components/ui/pagination';
@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getOfficeLocations } from '@/lib/office-location-service';
 import { getOfficeTimes, deleteOfficeTime } from '@/lib/office-time-service';
+import { getAttendanceForMonth } from '@/lib/attendance-service';
+import { format } from 'date-fns';
 
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
 const LocationMapDialog = dynamic(() => import('@/components/hrm/LocationMapDialog').then(mod => mod.LocationMapDialog), {
@@ -47,15 +49,6 @@ const getInitials = (name: string) => {
   if (names.length === 1) return names[0].charAt(0).toUpperCase();
   return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
-
-// Mock Data for Attendance Report
-const MOCK_ATTENDANCE_DATA = [
-    { id: '1', date: '2024-07-28', employeeName: 'John Doe', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', status: 'On Time' as const, inTime: '09:01 AM', outTime: '06:05 PM', hoursWorked: '9h 4m', lateReason: '-', earlyOutReason: '-', location: 'Head Office', lat: 23.7077, lng: 90.4503 },
-    { id: '2', date: '2024-07-28', employeeName: 'Jane Smith', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d', status: 'Late' as const, inTime: '09:32 AM', outTime: '06:15 PM', hoursWorked: '8h 43m', lateReason: 'Traffic Jam', earlyOutReason: '-', location: 'Head Office', lat: 23.7077, lng: 90.4503 },
-    { id: '3', date: '2024-07-28', employeeName: 'Mike Johnson', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026706d', status: 'On Time' as const, inTime: '08:55 AM', outTime: '05:00 PM', hoursWorked: '8h 5m', lateReason: '-', earlyOutReason: 'Personal Emergency', location: 'Remote', lat: 23.8103, lng: 90.4125 },
-    { id: '4', date: '2024-07-27', employeeName: 'John Doe', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026704d', status: 'On Time' as const, inTime: '08:58 AM', outTime: '06:02 PM', hoursWorked: '9h 4m', lateReason: '-', earlyOutReason: '-', location: 'Head Office', lat: 23.7077, lng: 90.4503 },
-    { id: '5', date: '2024-07-27', employeeName: 'Jane Smith', employeeAvatar: 'https://i.pravatar.cc/150?u=a042581f4e29026705d', status: 'Absent' as const, inTime: '-', outTime: '-', hoursWorked: '-', lateReason: '-', earlyOutReason: '-', location: '-', lat: null, lng: null },
-];
 
 const getStatusBadgeClass = (status: 'On Time' | 'Late' | 'Absent') => {
   switch (status) {
@@ -98,16 +91,20 @@ export default function AttendancePage() {
     const [officeTimeToEdit, setOfficeTimeToEdit] = useState<OfficeTime | null>(null);
     const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]);
 
+    const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
+
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-          const [fetchedEmployees, fetchedOfficeTimes] = await Promise.all([
+          const [fetchedEmployees, fetchedOfficeTimes, fetchedAttendance] = await Promise.all([
             getEmployees(),
-            getOfficeTimes()
+            getOfficeTimes(),
+            getAttendanceForMonth(new Date()) // Fetch for the current month
           ]);
           setEmployees(fetchedEmployees);
           setOfficeTimes(fetchedOfficeTimes);
+          setAttendanceData(fetchedAttendance);
           // In a real app, you would fetch holidays here too.
         } catch (error) {
           console.error("Failed to fetch page data:", error);
@@ -140,9 +137,9 @@ export default function AttendancePage() {
     }, [employees, searchTerm]);
     
     const filteredAttendance = useMemo(() => {
-        if (!attendanceDateFilter) return MOCK_ATTENDANCE_DATA;
-        return MOCK_ATTENDANCE_DATA.filter(entry => entry.date === attendanceDateFilter);
-    }, [attendanceDateFilter]);
+        if (!attendanceDateFilter) return attendanceData;
+        return attendanceData.filter(entry => entry.date === attendanceDateFilter);
+    }, [attendanceData, attendanceDateFilter]);
 
     const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
     const paginatedEmployees = useMemo(() => {
@@ -286,7 +283,6 @@ export default function AttendancePage() {
                 <Table>
                     <TableHeader>
                     <TableRow>
-                        
                         <TableHead>Employee</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>In Time</TableHead>
@@ -305,13 +301,14 @@ export default function AttendancePage() {
                                 </TableRow>
                             ))
                         ) : filteredAttendance.length > 0 ? (
-                            filteredAttendance.map(entry => (
+                            filteredAttendance.map(entry => {
+                                const employee = employees.find(e => e.id === entry.employeeId);
+                                return (
                                 <TableRow key={entry.id}>
-                                    
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <Avatar className="h-8 w-8">
-                                                <AvatarImage src={entry.employeeAvatar} alt={entry.employeeName} />
+                                                <AvatarImage src={employee?.avatarUrl || undefined} alt={entry.employeeName} />
                                                 <AvatarFallback>{getInitials(entry.employeeName)}</AvatarFallback>
                                             </Avatar>
                                             <span className="font-medium">{entry.employeeName}</span>
@@ -322,23 +319,23 @@ export default function AttendancePage() {
                                             {entry.status}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell>{entry.inTime}</TableCell>
-                                    <TableCell>{entry.outTime}</TableCell>
-                                    <TableCell>{entry.hoursWorked}</TableCell>
-                                    <TableCell>{entry.lateReason}</TableCell>
-                                    <TableCell>{entry.earlyOutReason}</TableCell>
+                                    <TableCell>{format(new Date(entry.checkInTime), 'h:mm a')}</TableCell>
+                                    <TableCell>{entry.checkOutTime ? format(new Date(entry.checkOutTime), 'h:mm a') : '-'}</TableCell>
+                                    <TableCell>{entry.hoursWorked || '-'}</TableCell>
+                                    <TableCell>{entry.lateReason || '-'}</TableCell>
+                                    <TableCell>{entry.earlyOutReason || '-'}</TableCell>
                                     <TableCell>
                                         <Button 
                                             variant="outline" 
                                             size="sm"
-                                            disabled={!entry.lat || !entry.lng}
+                                            disabled={!entry.checkInLocation?.lat || !entry.checkInLocation?.lng}
                                             onClick={() => {
-                                                if (entry.lat && entry.lng) {
+                                                if (entry.checkInLocation?.lat && entry.checkInLocation?.lng) {
                                                     setViewingLocation({ 
-                                                        lat: entry.lat, 
-                                                        lng: entry.lng,
+                                                        lat: entry.checkInLocation.lat, 
+                                                        lng: entry.checkInLocation.lng,
                                                         employeeName: entry.employeeName,
-                                                        employeeAvatar: entry.employeeAvatar
+                                                        employeeAvatar: employee?.avatarUrl || undefined
                                                     });
                                                 }
                                             }}
@@ -348,7 +345,7 @@ export default function AttendancePage() {
                                         </Button>
                                     </TableCell>
                                 </TableRow>
-                            ))
+                            )})
                         ) : (
                              <TableRow>
                                 <TableCell colSpan={8} className="text-center h-48 text-gray-500">
