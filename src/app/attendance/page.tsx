@@ -26,7 +26,7 @@ const getInitials = (name: string | undefined): string => {
 
 const ATTENDANCE_STORAGE_KEY = 'colorHutAttendanceMark';
 
-const SlideToConfirm = ({ onConfirm, status, disabled }: { onConfirm: () => void, status: 'Checked In' | 'Checked Out', disabled: boolean }) => {
+const SlideToConfirm = ({ onConfirm, status, disabled, disabledReason }: { onConfirm: () => void, status: 'Checked In' | 'Checked Out', disabled: boolean, disabledReason: string }) => {
     const [unlocked, setUnlocked] = useState(false);
     const x = useMotionValue(0);
     const sliderRef = useRef<HTMLDivElement>(null);
@@ -85,9 +85,9 @@ const SlideToConfirm = ({ onConfirm, status, disabled }: { onConfirm: () => void
                     initial={{ opacity: 1, x: 0 }}
                     animate={{ opacity: 1 - (x.get() / (sliderWidth * 0.5)), x: x.get() * 0.1 }}
                     exit={{ opacity: 0 }}
-                    className="select-none pointer-events-none"
+                    className="select-none pointer-events-none text-center px-20"
                 >
-                    {disabled ? (isCheckIn ? 'Check-in unavailable' : 'Check-out unavailable') : text}
+                    {disabled ? disabledReason : text}
                 </motion.span>
               )}
             </AnimatePresence>
@@ -111,6 +111,10 @@ export default function CheckInOutPage() {
   const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]);
   
   const canPerformAction = useMemo(() => {
+    // If the user has already checked out for the day, no more actions are allowed.
+    if (checkOutTime && isToday(checkOutTime)) {
+        return false;
+    }
     const isLocationOkForCheckIn = locationStatus === 'Inside Office Location';
     const isLocationPermissionGranted = !locationStatus.includes('denied') && !locationStatus.includes('unavailable') && !locationStatus.includes('timed out');
     
@@ -121,7 +125,23 @@ export default function CheckInOutPage() {
         return isLocationPermissionGranted;
     }
     return false;
-  }, [status, locationStatus]);
+  }, [status, locationStatus, checkOutTime]);
+
+  const disabledReason = useMemo(() => {
+    if (checkOutTime && isToday(checkOutTime)) {
+        return 'Attendance complete for today';
+    }
+    if (status === 'Checked Out' && locationStatus !== 'Inside Office Location') {
+        return 'Must be inside office to check in';
+    }
+    if (status === 'Checked In' && !(!locationStatus.includes('denied') && !locationStatus.includes('unavailable') && !locationStatus.includes('timed out'))) {
+        return 'Location permission required';
+    }
+    if (status === 'Checked Out') return 'Check-in unavailable';
+    if (status === 'Checked In') return 'Check-out unavailable';
+    return 'Action unavailable';
+  }, [status, locationStatus, checkOutTime]);
+
 
   const saveStateToLocalStorage = (newState: any) => {
     if (currentUser) {
@@ -148,18 +168,16 @@ export default function CheckInOutPage() {
   useEffect(() => {
     setIsClient(true);
 
-    // 1. Try to load from localStorage first
     const storedMark = localStorage.getItem(ATTENDANCE_STORAGE_KEY);
     if (storedMark) {
         try {
             const mark = JSON.parse(storedMark);
-            // Check if the stored data is for the current user and is for today
             if (mark.userId === currentUser?.id && isToday(parseISO(mark.date))) {
                 setStatus(mark.status);
                 if (mark.checkInTime) setCheckInTime(parseISO(mark.checkInTime));
                 if (mark.checkOutTime) setCheckOutTime(parseISO(mark.checkOutTime));
             } else {
-                localStorage.removeItem(ATTENDANCE_STORAGE_KEY); // Clear stale data
+                localStorage.removeItem(ATTENDANCE_STORAGE_KEY);
             }
         } catch (e) {
             console.error("Failed to parse attendance mark from localStorage", e);
@@ -167,7 +185,6 @@ export default function CheckInOutPage() {
         }
     }
     
-    // 2. Then, fetch initial data from the database
     const fetchInitialData = async () => {
       try {
         if (currentUser) {
@@ -238,12 +255,7 @@ export default function CheckInOutPage() {
   
   const handleCheckIn = async () => {
     if (!canPerformAction) {
-        let errorMsg = 'Check-in is currently unavailable.';
-        if (locationStatus === 'Outside Office Location') errorMsg = "You must be inside an office location to check in.";
-        else if (locationStatus.includes('denied')) errorMsg = "Location permission is required to check in.";
-        else if (locationStatus !== 'Inside Office Location') errorMsg = "Could not verify your location. Please ensure location services are enabled and you are at the office.";
-        
-        toast({ title: "Check-in Failed", description: errorMsg, variant: "destructive" });
+        toast({ title: "Check-in Failed", description: disabledReason, variant: "destructive" });
         setIsSheetOpen(false);
         return;
     }
@@ -293,7 +305,7 @@ export default function CheckInOutPage() {
 
   const handleCheckOut = async () => {
     if (!canPerformAction) {
-        toast({ title: "Check-out Failed", description: "Location permission is required to check out.", variant: "destructive" });
+        toast({ title: "Check-out Failed", description: disabledReason, variant: "destructive" });
         setIsSheetOpen(false);
         return;
     }
@@ -306,7 +318,7 @@ export default function CheckInOutPage() {
     const hoursWorked = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 
     const recordData = {
-      checkInTime: checkInTime.toISOString(), // Required for document ID
+      checkInTime: checkInTime.toISOString(),
       checkOutTime: now.toISOString(),
       hoursWorked: hoursWorked,
       checkOutLocation: currentLocation,
@@ -353,6 +365,8 @@ export default function CheckInOutPage() {
   
   const name = currentUser?.name.split(' ')[0] || 'User';
   const ActionIcon = status === 'Checked Out' ? Lock : Power;
+  
+  const isActionDisabled = !canPerformAction;
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-between bg-gray-100 dark:bg-gray-900 p-4 sm:p-6 pb-28">
@@ -396,10 +410,12 @@ export default function CheckInOutPage() {
             className={cn(
               "h-48 w-48 sm:h-56 sm:w-56 rounded-full text-2xl font-bold flex flex-col items-center justify-center transition-all duration-300 transform",
               "shadow-[inset_4px_4px_8px_rgba(255,255,255,0.4),_inset_-4px_-4px_8px_rgba(0,0,0,0.1),_8px_8px_16px_rgba(0,0,0,0.1)]",
-              "hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),_inset_-2px_-2px_4px_rgba(0,0,0,0.15),_4px_4px_8px_rgba(0,0,0,0.1)]",
+              "disabled:opacity-50 disabled:shadow-none",
+              !isActionDisabled && "hover:shadow-[inset_2px_2px_4px_rgba(255,255,255,0.3),_inset_-2px_-2px_4px_rgba(0,0,0,0.15),_4px_4px_8px_rgba(0,0,0,0.1)]",
               status === 'Checked Out' ? 'bg-white hover:bg-gray-50 text-gray-700' : 'bg-red-500 hover:bg-red-600 text-white'
             )}
-            onClick={() => setIsSheetOpen(true)}
+            onClick={() => { if(!isActionDisabled) setIsSheetOpen(true) }}
+            disabled={isActionDisabled}
           >
             <ActionIcon className="h-20 w-20 mb-2" />
             {status === 'Checked Out' ? 'Check In' : 'Check Out'}
@@ -444,7 +460,7 @@ export default function CheckInOutPage() {
             </SheetDescription>
           </SheetHeader>
           <div className="py-8 text-center">
-            <SlideToConfirm onConfirm={handleActionConfirm} status={status} disabled={!canPerformAction} />
+            <SlideToConfirm onConfirm={handleActionConfirm} status={status} disabled={isActionDisabled} disabledReason={disabledReason} />
           </div>
         </SheetContent>
       </Sheet>
