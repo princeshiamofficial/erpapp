@@ -158,14 +158,6 @@ export default function ProfilePage() {
           </CardContent>
         </Card>
         
-        {/* Logout Button */}
-        <div className="pt-4">
-            <Button variant="destructive" className="w-full h-12 text-md" onClick={logout}>
-                <LogOut className="mr-2 h-5 w-5" />
-                Logout
-            </Button>
-        </div>
-
       </div>
     </div>
   );
