@@ -3,7 +3,8 @@
 
 import { revalidatePath } from "next/cache";
 import { addOfficeTime, updateOfficeTime, deleteOfficeTime } from "@/lib/office-time-service";
-import type { OfficeTime } from "@/types";
+import type { OfficeTime, User, AttendanceRecord } from "@/types";
+import { saveAttendanceAction as saveAttendanceServiceAction } from '@/lib/attendance-service';
 
 export async function addOfficeTimeAction(
   officeTimeData: Omit<OfficeTime, 'id'>
@@ -50,4 +51,13 @@ export async function deleteOfficeTimeAction(officeTimeId: string): Promise<{ su
         console.error("Error in deleteOfficeTimeAction:", error);
         return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
     }
+}
+
+// Renaming the function from the old attendance/actions.ts to avoid conflict
+export async function saveAttendanceAction(
+  currentUser: User,
+  recordData: Partial<Omit<AttendanceRecord, 'id' | 'employeeId' | 'employeeName'>> & { checkInTime: string }
+): Promise<{ success: boolean; error?: string }> {
+    // This function now calls the central service function
+    return saveAttendanceServiceAction(currentUser, recordData);
 }

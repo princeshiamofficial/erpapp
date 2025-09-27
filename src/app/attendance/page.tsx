@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { LogIn, LogOut, Clock, Fingerprint, Home, History, Power, Lock, ArrowDown, ArrowUp, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { format, differenceInHours, differenceInMinutes, parse, differenceInSeconds } from 'date-fns';
+import { format, differenceInHours, differenceInMinutes, parse, differenceInSeconds, parseISO } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import Link from 'next/link';
@@ -14,7 +14,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFo
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getOfficeLocations, type CompanyLocation } from '@/lib/office-location-service';
 import { getOfficeTimes, type OfficeTime } from '@/lib/office-time-service';
-import { saveAttendanceAction } from './actions'; // Import the new action
+import { saveAttendanceAction } from '../(app)/hrm/attendance/actions';
+import { getAttendanceMark } from '@/lib/attendance-service';
 
 const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
@@ -115,6 +116,15 @@ export default function CheckInOutPage() {
     setIsClient(true);
     const fetchInitialData = async () => {
       try {
+        if (currentUser) {
+            const mark = await getAttendanceMark(currentUser.id);
+            if (mark) {
+                setStatus(mark.status);
+                if (mark.lastCheckInTime) setCheckInTime(parseISO(mark.lastCheckInTime));
+                if (mark.lastCheckOutTime) setCheckOutTime(parseISO(mark.lastCheckOutTime));
+            }
+        }
+
         const [locations, times] = await Promise.all([getOfficeLocations(), getOfficeTimes()]);
         setOfficeLocations(locations);
         setOfficeTimes(times);
@@ -151,7 +161,7 @@ export default function CheckInOutPage() {
       }
     };
     fetchInitialData();
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
