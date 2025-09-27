@@ -1,11 +1,11 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { LogIn, LogOut, Clock, Fingerprint, Home, History, Power, Lock, ArrowDown, ArrowUp, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { format, differenceInHours, differenceInMinutes, parse, differenceInSeconds, parseISO } from 'date-fns';
+import { format, differenceInHours, differenceInMinutes, parse, differenceInSeconds, parseISO, isToday } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import Link from 'next/link';
@@ -23,6 +23,8 @@ const getInitials = (name: string | undefined): string => {
   if (names.length === 1) return names[0].charAt(0).toUpperCase();
   return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
+
+const ATTENDANCE_STORAGE_KEY = 'colorHutAttendanceMark';
 
 const SlideToConfirm = ({ onConfirm, status, disabled }: { onConfirm: () => void, status: 'Checked In' | 'Checked Out', disabled: boolean }) => {
     const [unlocked, setUnlocked] = useState(false);
@@ -121,6 +123,16 @@ export default function CheckInOutPage() {
     return false;
   }, [status, locationStatus]);
 
+  const saveStateToLocalStorage = (newState: any) => {
+    if (currentUser) {
+      const dataToStore = {
+        userId: currentUser.id,
+        date: new Date().toISOString().split('T')[0],
+        ...newState,
+      };
+      localStorage.setItem(ATTENDANCE_STORAGE_KEY, JSON.stringify(dataToStore));
+    }
+  };
 
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3; // metres
@@ -135,6 +147,27 @@ export default function CheckInOutPage() {
 
   useEffect(() => {
     setIsClient(true);
+
+    // 1. Try to load from localStorage first
+    const storedMark = localStorage.getItem(ATTENDANCE_STORAGE_KEY);
+    if (storedMark) {
+        try {
+            const mark = JSON.parse(storedMark);
+            // Check if the stored data is for the current user and is for today
+            if (mark.userId === currentUser?.id && isToday(parseISO(mark.date))) {
+                setStatus(mark.status);
+                if (mark.checkInTime) setCheckInTime(parseISO(mark.checkInTime));
+                if (mark.checkOutTime) setCheckOutTime(parseISO(mark.checkOutTime));
+            } else {
+                localStorage.removeItem(ATTENDANCE_STORAGE_KEY); // Clear stale data
+            }
+        } catch (e) {
+            console.error("Failed to parse attendance mark from localStorage", e);
+            localStorage.removeItem(ATTENDANCE_STORAGE_KEY);
+        }
+    }
+    
+    // 2. Then, fetch initial data from the database
     const fetchInitialData = async () => {
       try {
         if (currentUser) {
@@ -143,6 +176,11 @@ export default function CheckInOutPage() {
                 setStatus(mark.status);
                 if (mark.lastCheckInTime) setCheckInTime(parseISO(mark.lastCheckInTime));
                 if (mark.lastCheckOutTime) setCheckOutTime(parseISO(mark.lastCheckOutTime));
+                saveStateToLocalStorage({
+                  status: mark.status,
+                  checkInTime: mark.lastCheckInTime,
+                  checkOutTime: mark.lastCheckOutTime,
+                });
             }
         }
 
@@ -238,6 +276,11 @@ export default function CheckInOutPage() {
         setStatus('Checked In');
         setCheckInTime(now);
         setCheckOutTime(null);
+        saveStateToLocalStorage({
+          status: 'Checked In',
+          checkInTime: now.toISOString(),
+          checkOutTime: null,
+        });
         toast({
           title: isLate ? "Checked In (Late)" : "Checked In Successfully",
           description: checkInMessage,
@@ -272,6 +315,11 @@ export default function CheckInOutPage() {
     if(result.success) {
         setStatus('Checked Out');
         setCheckOutTime(now);
+        saveStateToLocalStorage({
+          status: 'Checked Out',
+          checkInTime: checkInTime.toISOString(),
+          checkOutTime: now.toISOString(),
+        });
         toast({
           title: "Checked Out Successfully",
           description: `You checked out at ${format(now, 'h:mm:ss a')}. Total hours: ${hoursWorked}.`,
