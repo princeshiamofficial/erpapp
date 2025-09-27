@@ -72,6 +72,7 @@ export default function AttendancePage() {
     const { toast } = useToast();
     const [activeTab, setActiveTab] = useState("attendees_report");
     const [employees, setEmployees] = useState<Employee[]>([]);
+    const [allUsers, setAllUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
@@ -97,14 +98,16 @@ export default function AttendancePage() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-          const [fetchedEmployees, fetchedOfficeTimes, fetchedAttendance] = await Promise.all([
+          const [fetchedEmployees, fetchedOfficeTimes, fetchedAttendance, fetchedUsers] = await Promise.all([
             getEmployees(),
             getOfficeTimes(),
-            getAttendanceForMonth(new Date()) // Fetch for the current month
+            getAttendanceForMonth(new Date()), // Fetch for the current month
+            getUsers()
           ]);
           setEmployees(fetchedEmployees);
           setOfficeTimes(fetchedOfficeTimes);
           setAttendanceData(fetchedAttendance);
+          setAllUsers(fetchedUsers);
           // In a real app, you would fetch holidays here too.
         } catch (error) {
           console.error("Failed to fetch page data:", error);
@@ -302,13 +305,13 @@ export default function AttendancePage() {
                             ))
                         ) : filteredAttendance.length > 0 ? (
                             filteredAttendance.map(entry => {
-                                const employee = employees.find(e => e.userId === entry.employeeId);
+                                const user = allUsers.find(u => u.id === entry.employeeId);
                                 return (
                                 <TableRow key={entry.id}>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <Avatar className="h-8 w-8">
-                                                <AvatarImage src={employee?.avatarUrl || undefined} alt={entry.employeeName} />
+                                                <AvatarImage src={user?.avatarUrl || undefined} alt={entry.employeeName} />
                                                 <AvatarFallback>{getInitials(entry.employeeName)}</AvatarFallback>
                                             </Avatar>
                                             <span className="font-medium">{entry.employeeName}</span>
@@ -335,7 +338,7 @@ export default function AttendancePage() {
                                                         lat: entry.checkInLocation.lat, 
                                                         lng: entry.checkInLocation.lng,
                                                         employeeName: entry.employeeName,
-                                                        employeeAvatar: employee?.avatarUrl || undefined
+                                                        employeeAvatar: user?.avatarUrl || undefined
                                                     });
                                                 }
                                             }}
