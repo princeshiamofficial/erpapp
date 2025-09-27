@@ -157,7 +157,7 @@ export default function ProfilePage() {
             <CardTitle className="text-lg">Account</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            <ProfileLink href="#" icon={UserIcon} label="Edit Profile Information" />
+            
             <ProfileLink href="#" icon={Bell} label="Notifications" />
             <ProfileLink href="#" icon={CalendarPlus} label="Leave Request" />
           </CardContent>
