@@ -161,7 +161,7 @@ export default function ProfilePage() {
         <div className="space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <p className="text-sm text-muted-foreground">{currentDate}</p>
-                <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border-green-200/50 py-1.5 px-3 max-w-full">
+                <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 border-orange-200/50 py-1.5 px-3 max-w-full">
                   <MapPin className="h-4 w-4 mr-2"/>
                   <span className="truncate">{locationAddress}</span>
                 </Badge>
