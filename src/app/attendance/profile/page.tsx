@@ -1,10 +1,11 @@
+
 "use client";
 
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import {
   ChevronRight,
   LogOut,
@@ -223,9 +224,6 @@ export default function ProfilePage() {
         <div className="space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                 <p className="text-sm text-muted-foreground">{currentDate}</p>
-                 <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => fetchAttendanceData()} disabled={isDataLoading}>
-                  <RefreshCw className={cn("h-3 w-3", isDataLoading && "animate-spin")} />
-                </Button>
             </div>
             <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 border-orange-200/50 py-1.5 px-3 max-w-full">
               <MapPin className="h-4 w-4 mr-2"/>
