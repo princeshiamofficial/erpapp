@@ -21,12 +21,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { format, parseISO, isSameMonth, getDaysInMonth, startOfMonth, getDay } from 'date-fns';
+import { format, parseISO, isSameMonth, getDaysInMonth, startOfMonth, getDay, subMonths, addMonths, getYear } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
 import type { AttendanceRecord } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
@@ -106,12 +107,14 @@ export default function ProfilePage() {
   
   const [monthlyRecords, setMonthlyRecords] = useState<AttendanceRecord[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
+  
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
-  const fetchAttendanceData = useCallback(async () => {
+  const fetchAttendanceData = useCallback(async (month: Date) => {
     if (!currentUser) return;
     setIsDataLoading(true);
     try {
-        const records = await getAttendanceForMonth(new Date());
+        const records = await getAttendanceForMonth(month);
         setMonthlyRecords(records.filter(r => r.employeeId === currentUser.id));
     } catch (error) {
         console.error("Failed to fetch attendance:", error);
@@ -142,10 +145,10 @@ export default function ProfilePage() {
     }
 
     if (currentUser) {
-        fetchAttendanceData();
+        fetchAttendanceData(selectedDate);
     }
 
-  }, [currentUser, fetchAttendanceData]);
+  }, [currentUser, fetchAttendanceData, selectedDate]);
 
   useEffect(() => {
     if (!isAuthLoading && !currentUser) {
@@ -155,13 +158,14 @@ export default function ProfilePage() {
 
   const attendanceStats = useMemo(() => {
     const today = new Date();
-    const todaysRecord = monthlyRecords.find(r => isSameMonth(parseISO(r.date), today) && new Date(r.date).getDate() === today.getDate());
+    const recordsForSelectedMonth = monthlyRecords.filter(r => isSameMonth(parseISO(r.date), selectedDate));
+    const todaysRecord = recordsForSelectedMonth.find(r => isSameMonth(parseISO(r.date), today) && new Date(r.date).getDate() === today.getDate());
 
     const checkIn = todaysRecord ? format(parseISO(todaysRecord.checkInTime), 'HH:mm') : '--:--';
     const checkOut = todaysRecord?.checkOutTime ? format(parseISO(todaysRecord.checkOutTime), 'HH:mm') : '--:--';
 
     let totalSeconds = 0;
-    monthlyRecords.forEach(record => {
+    recordsForSelectedMonth.forEach(record => {
       if (record.hoursWorked) {
         const parts = record.hoursWorked.split(':').map(Number);
         if (parts.length === 2) {
@@ -173,22 +177,47 @@ export default function ProfilePage() {
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const workedHours = `${hours},${String(minutes).padStart(2, '0')}`;
     
-    // Calculate total working days in month (e.g., Mon-Fri)
-    const monthStart = startOfMonth(today);
-    const totalDaysInMonth = getDaysInMonth(today);
+    const monthStart = startOfMonth(selectedDate);
+    const totalDaysInMonth = getDaysInMonth(selectedDate);
     let workingDays = 0;
     for (let i = 1; i <= totalDaysInMonth; i++) {
-        const day = getDay(new Date(today.getFullYear(), today.getMonth(), i));
+        const day = getDay(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i));
         if (day !== 5 && day !== 6) { // Not Friday or Saturday
             workingDays++;
         }
     }
     
-    const attendedDays = monthlyRecords.length;
+    const attendedDays = recordsForSelectedMonth.length;
     const absenceDays = Math.max(0, workingDays - attendedDays);
 
     return { checkIn, checkOut, workedHours, absenceDays, attendedDays };
-  }, [monthlyRecords]);
+  }, [monthlyRecords, selectedDate]);
+
+  const handleMonthChange = (monthIndex: string) => {
+    const newDate = new Date(selectedDate);
+    newDate.setMonth(parseInt(monthIndex, 10));
+    setSelectedDate(newDate);
+  };
+
+  const handleYearChange = (year: string) => {
+    const newDate = new Date(selectedDate);
+    newDate.setFullYear(parseInt(year, 10));
+    setSelectedDate(newDate);
+  };
+
+  const availableYears = useMemo(() => {
+      const currentYear = new Date().getFullYear();
+      const years = [];
+      for (let i = currentYear - 5; i <= currentYear + 1; i++) {
+          years.push(i);
+      }
+      return years.reverse();
+  }, []);
+
+  const months = useMemo(() => Array.from({ length: 12 }, (_, i) => ({
+      value: i.toString(),
+      label: format(new Date(0, i), 'MMMM'),
+  })), []);
 
 
   if (isAuthLoading || !currentUser) {
@@ -223,7 +252,29 @@ export default function ProfilePage() {
         {/* Attendance Summary Section */}
         <div className="space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <p className="text-sm text-muted-foreground">{currentDate}</p>
+                <div className="flex items-center gap-2">
+                    <Select value={selectedDate.getMonth().toString()} onValueChange={handleMonthChange}>
+                        <SelectTrigger className="w-full sm:w-[150px] h-9 rounded-md border-gray-200 bg-white">
+                            <SelectValue placeholder="Select Month" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {months.map(month => (
+                                <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                    <Select value={selectedDate.getFullYear().toString()} onValueChange={handleYearChange}>
+                        <SelectTrigger className="w-full sm:w-[120px] h-9 rounded-md border-gray-200 bg-white">
+                            <SelectValue placeholder="Select Year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {availableYears.map(year => (
+                                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <p className="text-sm text-muted-foreground text-right">{currentDate}</p>
             </div>
             <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 border-orange-200/50 py-1.5 px-3 max-w-full">
               <MapPin className="h-4 w-4 mr-2"/>
