@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { LogIn, LogOut, Clock, Fingerprint, Home, History, Power, Lock, ArrowDown, ArrowUp, MapPin } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { format, differenceInHours, differenceInMinutes, parse } from 'date-fns';
+import { format, differenceInHours, differenceInMinutes, parse, differenceInSeconds } from 'date-fns';
 import { useAuth } from '@/contexts/auth-context';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import Link from 'next/link';
@@ -13,8 +13,8 @@ import { cn } from '@/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getOfficeLocations, type CompanyLocation } from '@/lib/office-location-service';
-import { getOfficeTimes, type OfficeTime } from '@/lib/office-time-service'; // Import office time service
-
+import { getOfficeTimes, type OfficeTime } from '@/lib/office-time-service';
+import { saveAttendanceAction } from './actions'; // Import the new action
 
 const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
@@ -96,22 +96,18 @@ export default function CheckInOutPage() {
   const [isClient, setIsClient] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [locationStatus, setLocationStatus] = useState('Requesting location...');
+  const [currentLocation, setCurrentLocation] = useState<{ lat: number, lng: number } | null>(null);
   const [officeLocations, setOfficeLocations] = useState<CompanyLocation[]>([]);
-  const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]); // New state for office times
+  const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]);
 
-  // Haversine distance function
   const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3; // metres
     const φ1 = lat1 * Math.PI/180;
     const φ2 = lat2 * Math.PI/180;
     const Δφ = (lat2-lat1) * Math.PI/180;
     const Δλ = (lon2-lon1) * Math.PI/180;
-
-    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-              Math.cos(φ1) * Math.cos(φ2) *
-              Math.sin(Δλ/2) * Math.sin(Δλ/2);
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
     return R * c; // in metres
   }
 
@@ -119,10 +115,7 @@ export default function CheckInOutPage() {
     setIsClient(true);
     const fetchInitialData = async () => {
       try {
-        const [locations, times] = await Promise.all([
-          getOfficeLocations(),
-          getOfficeTimes()
-        ]);
+        const [locations, times] = await Promise.all([getOfficeLocations(), getOfficeTimes()]);
         setOfficeLocations(locations);
         setOfficeTimes(times);
         
@@ -130,14 +123,12 @@ export default function CheckInOutPage() {
           navigator.geolocation.getCurrentPosition(
             (position) => {
               const { latitude, longitude } = position.coords;
+              setCurrentLocation({ lat: latitude, lng: longitude });
               let isInside = false;
               if (locations.length > 0) {
                 for (const office of locations) {
                   const distance = getDistance(latitude, longitude, office.latitude, office.longitude);
-                  if (distance <= office.radius) {
-                    isInside = true;
-                    break;
-                  }
+                  if (distance <= office.radius) { isInside = true; break; }
                 }
               }
               setLocationStatus(isInside ? 'Inside Office Location' : 'Outside Office Location');
@@ -163,12 +154,10 @@ export default function CheckInOutPage() {
   }, []);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
-
+  
   const handleActionConfirm = () => {
     if (status === 'Checked Out') {
       handleCheckIn();
@@ -178,50 +167,71 @@ export default function CheckInOutPage() {
     setTimeout(() => setIsSheetOpen(false), 500);
   };
   
-  const handleCheckIn = () => {
-    if (status === 'Checked In') return;
+  const handleCheckIn = async () => {
+    if (status === 'Checked In' || !currentUser) return;
     const now = new Date();
     
-    // Determine if late
     let isLate = false;
     let checkInMessage = 'You checked in on time.';
     if (officeTimes.length > 0) {
-      // Find the relevant office time (for simplicity, we'll use the first one, e.g., 'Day' shift)
       const dayShift = officeTimes.find(t => t.shift === 'Day');
       if (dayShift) {
         const [hours, minutes] = dayShift.startTime.split(':').map(Number);
         const officeStartTime = new Date(now);
         officeStartTime.setHours(hours, minutes, 0, 0);
-
         const gracePeriodMinutes = dayShift.graceTime || 0;
         const graceEndTime = new Date(officeStartTime.getTime() + gracePeriodMinutes * 60000);
-
-        if (now > graceEndTime) {
-          isLate = true;
-          checkInMessage = `You are late. Check-in was at ${format(now, 'h:mm:ss a')}.`;
-        }
+        if (now > graceEndTime) { isLate = true; checkInMessage = `You are late. Check-in was at ${format(now, 'h:mm:ss a')}.`; }
       }
     }
 
-    setStatus('Checked In');
-    setCheckInTime(now);
-    setCheckOutTime(null);
-    toast({
-      title: isLate ? "Checked In (Late)" : "Checked In Successfully",
-      description: checkInMessage,
-      variant: isLate ? "destructive" : "default",
-    });
+    const recordData = {
+      checkInTime: now.toISOString(),
+      status: isLate ? 'Late' as const : 'On Time' as const,
+      location: locationStatus,
+      checkInLocation: currentLocation,
+    };
+    const result = await saveAttendanceAction(currentUser, recordData);
+    if (result.success) {
+        setStatus('Checked In');
+        setCheckInTime(now);
+        setCheckOutTime(null);
+        toast({
+          title: isLate ? "Checked In (Late)" : "Checked In Successfully",
+          description: checkInMessage,
+          variant: isLate ? "destructive" : "default",
+        });
+    } else {
+        toast({ title: "Check-in Failed", description: result.error, variant: "destructive" });
+    }
   };
 
-  const handleCheckOut = () => {
-    if (status === 'Checked Out' || !checkInTime) return;
+  const handleCheckOut = async () => {
+    if (status === 'Checked Out' || !checkInTime || !currentUser) return;
     const now = new Date();
-    setStatus('Checked Out');
-    setCheckOutTime(now);
-    toast({
-      title: "Checked Out Successfully",
-      description: `You checked out at ${format(now, 'h:mm:ss a')}.`,
-    });
+    
+    const workedSeconds = differenceInSeconds(now, checkInTime);
+    const hours = Math.floor(workedSeconds / 3600);
+    const minutes = Math.floor((workedSeconds % 3600) / 60);
+    const hoursWorked = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+
+    const recordData = {
+      checkInTime: checkInTime.toISOString(), // Required for document ID
+      checkOutTime: now.toISOString(),
+      hoursWorked: hoursWorked,
+      checkOutLocation: currentLocation,
+    };
+    const result = await saveAttendanceAction(currentUser, recordData);
+    if(result.success) {
+        setStatus('Checked Out');
+        setCheckOutTime(now);
+        toast({
+          title: "Checked Out Successfully",
+          description: `You checked out at ${format(now, 'h:mm:ss a')}. Total hours: ${hoursWorked}.`,
+        });
+    } else {
+        toast({ title: "Check-out Failed", description: result.error, variant: "destructive" });
+    }
   };
 
   const calculateHoursWorked = () => {
