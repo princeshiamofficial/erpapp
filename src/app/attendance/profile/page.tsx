@@ -16,7 +16,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   ArrowUp,
-  CalendarPlus
+  CalendarClock,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -309,7 +309,7 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-1">
             <ProfileLink href="#" icon={Bell} label="Notifications" />
-            <ProfileLink href="/attendance/history" icon={CalendarPlus} label="Leave History" />
+            <ProfileLink href="/attendance/history" icon={CalendarClock} label="Leave History" />
           </CardContent>
         </Card>
         
