@@ -289,7 +289,7 @@ export default function AttendanceHistoryPage() {
                       <p className="text-center text-muted-foreground py-8">No attendance records for this month.</p>
                     )}
                     </div>
-                    <div className="h-[380px] w-full">
+                    <div className="h-[500px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                             <Pie
@@ -298,8 +298,8 @@ export default function AttendanceHistoryPage() {
                             cy="50%"
                             labelLine={false}
                             label={(props) => renderCustomizedLabel({...props, isMobile: isMobileView})}
-                            outerRadius={isMobileView ? 60 : 80}
-                            innerRadius={isMobileView ? 45 : 60}
+                            outerRadius={isMobileView ? 80 : 150}
+                            innerRadius={isMobileView ? 60 : 120}
                             fill="#8884d8"
                             dataKey="value"
                             >
