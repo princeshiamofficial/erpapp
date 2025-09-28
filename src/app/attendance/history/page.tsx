@@ -289,7 +289,7 @@ export default function AttendanceHistoryPage() {
                       <p className="text-center text-muted-foreground py-8">No attendance records for this month.</p>
                     )}
                     </div>
-                    <div className="mt-6 border-t flex flex-col items-center justify-center h-96">
+                    <div className="mt-6 border-t flex flex-col items-center justify-center h-[380px]">
                         <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                             <Pie
