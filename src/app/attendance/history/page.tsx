@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
@@ -225,7 +226,7 @@ export default function AttendanceHistoryPage() {
         if (isSameMonth(currentMonth, new Date())) {
             const todayDate = new Date().getDate();
             let pastWorkingDays = 0;
-            for (let i = 1; i < todayDate; i++) {
+            for (let i = 1; i <= todayDate; i++) { // Changed from i < todayDate to i <= todayDate
                 const dayOfWeek = getDay(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i));
                 if (!weekendDayIndexes.includes(dayOfWeek)) {
                     pastWorkingDays++;
