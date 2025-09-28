@@ -173,7 +173,7 @@ export default function AttendanceHistoryPage() {
                     </Button>
                 </div>
                 <p className="text-sm opacity-80">Monthly worked hours</p>
-                <h1 className="text-5xl font-bold tracking-tighter">{workedHours} h</h1>
+                
             </header>
 
             <main className="flex-1 -mt-8">
