@@ -8,7 +8,9 @@ import {
     BarChart3, 
     User as UserIcon,
     History,
-    Fingerprint
+    Fingerprint,
+    Bell,
+    CalendarPlus
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
@@ -17,10 +19,10 @@ import { useAuth } from '@/contexts/auth-context';
 
 
 const navItems = [
-  { href: "/attendance/home", label: "Home", icon: Home },
+  { href: "/attendance/notice", label: "Notice", icon: Bell },
   { href: "/attendance/history", label: "History", icon: History },
   { href: "/attendance", label: "Attendance", icon: Fingerprint, isCentral: true },
-  { href: "/attendance/report", label: "Report", icon: BarChart3 },
+  { href: "/attendance/leave", label: "Leave", icon: CalendarPlus },
   { href: "/attendance/profile", label: "Profile", icon: UserIcon },
 ];
 
@@ -61,7 +63,7 @@ export function BottomNavigation() {
               <div key={item.href} className="relative w-16 h-16">
                 <Link
                   href={item.href}
-                  className="absolute -top-6 left-1/2 -translate-x-1/2 flex items-center justify-center h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/40 transform hover:scale-110 transition-transform"
+                  className="absolute -top-6 left-1/2 -translate-x-1/2 flex items-center justify-center h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40 transform hover:scale-110 transition-transform"
                   aria-label={item.label}
                 >
                   <item.icon className="h-7 w-7" />
