@@ -256,8 +256,6 @@ export default function AttendanceHistoryPage() {
                     )}
                     </div>
                      <div className="mt-6 border-t pt-4 flex flex-col items-center justify-center">
-                        <h3 className="text-lg font-semibold mb-1">Monthly Summary</h3>
-                        <p className="text-sm text-muted-foreground mb-2">Your attendance overview for {format(currentMonth, "MMMM yyyy")}.</p>
                         <div className="h-48 w-48">
                             <ChartContainer config={chartConfig} className="mx-auto aspect-square h-full">
                                 <PieChart>
