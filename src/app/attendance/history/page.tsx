@@ -97,11 +97,12 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, pay
     labelText = `${payload.value} Working Days`;
   }
 
+
   return (
     <g>
       <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={"#8884d8"} fill="none" />
       <circle cx={ex} cy={ey} r={2} fill={"#8884d8"} stroke="none" />
-      <text x={ex + (cos >= 0 ? 1 : -1) * (isMobile ? 4 : 6)} y={ey} textAnchor={textAnchor} fill="#333" dy={'.35em'} fontSize={isMobile ? 14 : 16} fontWeight="bold">{labelText}</text>
+      <text x={ex + (cos >= 0 ? 1 : -1) * (isMobile ? 4 : 6)} y={ey} textAnchor={textAnchor} fill="#333" dy={'.35em'} fontSize={isMobile ? 12 : 16} fontWeight="bold">{labelText}</text>
     </g>
   );
 };
@@ -350,7 +351,7 @@ export default function AttendanceHistoryPage() {
                         )}
                         </div>
                     )}
-                    <div className={cn("w-full -mt-8", isMobileView ? "h-[380px]" : "h-[450px]")}>
+                    <div className={cn("w-full h-[380px] sm:h-[450px]")}>
                         <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                             <Pie
@@ -359,8 +360,8 @@ export default function AttendanceHistoryPage() {
                             cy="50%"
                             labelLine={false}
                             label={(props) => renderCustomizedLabel({...props, isMobile: isMobileView})}
-                            outerRadius={isMobileView ? 80 : 120}
-                            innerRadius={isMobileView ? 60 : 90}
+                            outerRadius={isMobileView ? 70 : 120}
+                            innerRadius={isMobileView ? 50 : 90}
                             fill="#8884d8"
                             dataKey="value"
                             >
@@ -376,4 +377,3 @@ export default function AttendanceHistoryPage() {
         </div>
     );
 }
-
