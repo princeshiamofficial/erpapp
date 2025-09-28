@@ -194,19 +194,48 @@ export default function AttendanceHistoryPage() {
     }, [currentMonth, sortedRecords, selectedDay]);
     
     const chartData = useMemo(() => {
-        const onTime = sortedRecords.filter(r => r.status === 'On Time').length;
-        const late = sortedRecords.filter(r => r.status === 'Late').length;
-        const absent = 4; // Mock data from image
-        const totalWorkingDays = 30; // Mock data from image
-        const remainingWorkingDays = totalWorkingDays - onTime - late - absent;
+        if (!isClient) return [];
+        const records = sortedRecords;
+        
+        const onTime = records.filter(r => r.status === 'On Time').length;
+        const late = records.filter(r => r.status === 'Late').length;
+        const attended = onTime + late;
 
-        return [
-            { name: 'On Time', value: 15, color: '#a3be8c' },
-            { name: 'Late', value: 3, color: '#ebcb8b' },
-            { name: 'Absent', value: 4, color: '#d08770' },
-            { name: 'Working Days', value: 8, color: '#4c566a' },
-        ];
-    }, [sortedRecords]);
+        const totalDaysInMonth = getDaysInMonth(currentMonth);
+        let workingDaysInMonth = 0;
+        for (let i = 1; i <= totalDaysInMonth; i++) {
+            const dayOfWeek = getDay(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i));
+            if (dayOfWeek !== 5 && dayOfWeek !== 6) { // Not Friday or Saturday
+                workingDaysInMonth++;
+            }
+        }
+        
+        let remainingWorkingDays = 0;
+        let absenceDays = 0;
+        
+        if (isSameMonth(currentMonth, new Date())) {
+            const todayDate = new Date().getDate();
+            let pastWorkingDays = 0;
+            for (let i = 1; i < todayDate; i++) {
+                const dayOfWeek = getDay(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i));
+                if (dayOfWeek !== 5 && dayOfWeek !== 6) {
+                    pastWorkingDays++;
+                }
+            }
+            absenceDays = Math.max(0, pastWorkingDays - attended);
+            remainingWorkingDays = Math.max(0, workingDaysInMonth - attended - absenceDays);
+        } else {
+            absenceDays = Math.max(0, workingDaysInMonth - attended);
+        }
+
+        const data = [];
+        if (onTime > 0) data.push({ name: 'On Time', value: onTime, color: '#a3be8c' });
+        if (late > 0) data.push({ name: 'Late', value: late, color: '#ebcb8b' });
+        if (absenceDays > 0) data.push({ name: 'Absent', value: absenceDays, color: '#d08770' });
+        if (remainingWorkingDays > 0) data.push({ name: 'Working Days', value: remainingWorkingDays, color: '#4c566a' });
+
+        return data;
+    }, [sortedRecords, currentMonth, isClient]);
 
     const handleLongPressStart = () => {
         longPressTimer.current = setTimeout(() => {
@@ -321,7 +350,7 @@ export default function AttendanceHistoryPage() {
                         )}
                         </div>
                     )}
-                    <div className="w-full h-[550px]">
+                    <div className="w-full h-[550px] -mt-8">
                         <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                             <Pie
