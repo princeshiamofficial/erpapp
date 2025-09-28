@@ -83,9 +83,9 @@ const StatCard: React.FC<StatCardProps> = ({ icon: Icon, title, subtitle, value,
             <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                     <div className={cn("h-10 w-10 rounded-full flex items-center justify-center shrink-0", 
-                        isFaded ? "bg-gray-200 dark:bg-gray-700" : "bg-green-100 dark:bg-green-900"
+                        isFaded ? "bg-gray-200 dark:bg-gray-700" : "bg-orange-100 dark:bg-orange-900"
                     )}>
-                        <Icon className={cn("h-5 w-5", isFaded ? "text-gray-400 dark:text-gray-500" : "text-green-600 dark:text-green-300")} />
+                        <Icon className={cn("h-5 w-5", isFaded ? "text-gray-400 dark:text-gray-500" : "text-orange-600 dark:text-orange-300")} />
                     </div>
                     <div>
                         <p className="text-sm font-medium text-foreground">{title}</p>
