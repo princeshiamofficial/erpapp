@@ -10,7 +10,14 @@ import {
     History,
     Fingerprint,
     Bell,
-    CalendarPlus
+    CalendarPlus,
+    Plane,
+    HeartPulse,
+    Baby,
+    Split,
+    Stethoscope,
+    Star,
+    Hourglass,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
@@ -43,13 +50,13 @@ const notifications = [
 ];
 
 const leaveTypes = [
-  "Annual Leave",
-  "Sick Leave",
-  "Parental Leave",
-  "Half-day Leave",
-  "Medical Leave",
-  "Privilege Leave",
-  "Probationary Leave",
+  { label: "Annual Leave", icon: Plane },
+  { label: "Sick Leave", icon: HeartPulse },
+  { label: "Parental Leave", icon: Baby },
+  { label: "Half-day Leave", icon: Split },
+  { label: "Medical Leave", icon: Stethoscope },
+  { label: "Privilege Leave", icon: Star },
+  { label: "Probationary Leave", icon: Hourglass },
 ];
 
 
@@ -200,7 +207,12 @@ export function BottomNavigation() {
                             </SelectTrigger>
                             <SelectContent>
                                 {leaveTypes.map(type => (
-                                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                                    <SelectItem key={type.label} value={type.label}>
+                                        <div className="flex items-center gap-2">
+                                            <type.icon className="h-4 w-4 text-muted-foreground" />
+                                            <span>{type.label}</span>
+                                        </div>
+                                    </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
