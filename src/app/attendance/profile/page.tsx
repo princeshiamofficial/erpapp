@@ -13,20 +13,20 @@ import {
   User as UserIcon,
   Loader2,
   MapPin,
-  ArrowDownLeft,
-  ArrowUpRight,
+  ArrowDown,
   ArrowUp,
   CalendarClock,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { format, parseISO, isSameMonth, getDaysInMonth, startOfMonth, getDay, subMonths, addMonths, getYear } from 'date-fns';
+import { format, parseISO, isSameMonth, getDaysInMonth, startOfMonth, getDay, subMonths, addMonths, getYear, isToday, isSameDay } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
 import type { AttendanceRecord } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getWeekendSettings } from '@/lib/weekend-service';
 
 const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
@@ -109,6 +109,7 @@ export default function ProfilePage() {
   
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [weekendDays, setWeekendDays] = useState<string[]>([]);
 
   useEffect(() => {
     setIsClient(true);
@@ -119,10 +120,14 @@ export default function ProfilePage() {
     if (!currentUser) return;
     setIsDataLoading(true);
     try {
-        const records = await getAttendanceForMonth(month);
+        const [records, weekendSettings] = await Promise.all([
+            getAttendanceForMonth(month),
+            getWeekendSettings(),
+        ]);
         setMonthlyRecords(records.filter(r => r.employeeId === currentUser.id));
+        setWeekendDays(weekendSettings.days || []);
     } catch (error) {
-        console.error("Failed to fetch attendance:", error);
+        console.error("Failed to fetch attendance or weekend settings:", error);
     } finally {
         setIsDataLoading(false);
     }
@@ -166,42 +171,38 @@ export default function ProfilePage() {
   }, [currentUser, isAuthLoading, router]);
 
   const attendanceStats = useMemo(() => {
-    if (!selectedDate) return { checkIn: '--:--', checkOut: '--:--', workedHours: '0,00', absenceDays: 0, attendedDays: 0 };
-    const today = new Date();
+    if (isDataLoading || !selectedDate || !currentUser) {
+        return { checkIn: '--:--', checkOut: '--:--', absenceDays: 0, attendedDays: 0 };
+    }
+    
     const recordsForSelectedMonth = monthlyRecords.filter(r => isSameMonth(parseISO(r.date), selectedDate));
-    const todaysRecord = recordsForSelectedMonth.find(r => isSameMonth(parseISO(r.date), today) && new Date(r.date).getDate() === today.getDate());
-
+    
+    // Calculate today's check-in/out based on all records, not just selected month
+    const today = new Date();
+    const todaysRecord = monthlyRecords.find(r => isSameDay(parseISO(r.date), today));
     const checkIn = todaysRecord ? format(parseISO(todaysRecord.checkInTime), 'HH:mm') : '--:--';
     const checkOut = todaysRecord?.checkOutTime ? format(parseISO(todaysRecord.checkOutTime), 'HH:mm') : '--:--';
 
-    let totalSeconds = 0;
-    recordsForSelectedMonth.forEach(record => {
-      if (record.hoursWorked) {
-        const parts = record.hoursWorked.split(':').map(Number);
-        if (parts.length === 2) {
-          totalSeconds += parts[0] * 3600 + parts[1] * 60;
-        }
-      }
-    });
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const workedHours = `${hours},${String(minutes).padStart(2, '0')}`;
+    const attendedDays = recordsForSelectedMonth.length;
     
-    const monthStart = startOfMonth(selectedDate);
     const totalDaysInMonth = getDaysInMonth(selectedDate);
-    let workingDays = 0;
-    for (let i = 1; i <= totalDaysInMonth; i++) {
-        const day = getDay(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i));
-        if (day !== 5 && day !== 6) { // Not Friday or Saturday
-            workingDays++;
+    let workingDaysSoFar = 0;
+    const weekendDayIndexes = weekendDays.map(day => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(day));
+
+    // Determine the loop end date: today if current month, else end of the month
+    const loopEndDate = isSameMonth(selectedDate, today) ? today.getDate() : totalDaysInMonth;
+
+    for (let i = 1; i <= loopEndDate; i++) {
+        const dayOfWeek = getDay(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i));
+        if (!weekendDayIndexes.includes(dayOfWeek)) { 
+            workingDaysSoFar++;
         }
     }
     
-    const attendedDays = recordsForSelectedMonth.length;
-    const absenceDays = Math.max(0, workingDays - attendedDays);
+    const absenceDays = Math.max(0, workingDaysSoFar - attendedDays);
 
-    return { checkIn, checkOut, workedHours, absenceDays, attendedDays };
-  }, [monthlyRecords, selectedDate]);
+    return { checkIn, checkOut, absenceDays, attendedDays };
+  }, [monthlyRecords, selectedDate, weekendDays, isDataLoading, currentUser]);
 
   const handleMonthChange = (monthIndex: string) => {
     if (selectedDate) {
@@ -295,8 +296,8 @@ export default function ProfilePage() {
               <span className="truncate">{locationAddress}</span>
             </Badge>
             <div className="grid grid-cols-2 gap-4">
-                <StatCard icon={ArrowDownLeft} title="Check In" subtitle="Today" value={attendanceStats.checkIn} isLoading={isDataLoading} />
-                <StatCard icon={ArrowUpRight} title="Check Out" subtitle="Today" value={attendanceStats.checkOut} isFaded={attendanceStats.checkOut === '--:--'} isLoading={isDataLoading} />
+                <StatCard icon={ArrowDown} title="Check In" subtitle="Today" value={attendanceStats.checkIn} isLoading={isDataLoading} />
+                <StatCard icon={ArrowUp} title="Check Out" subtitle="Today" value={attendanceStats.checkOut} isFaded={attendanceStats.checkOut === '--:--'} isLoading={isDataLoading} />
                 <StatCard icon={ArrowUp} title="Absence" subtitle="This Month" value={`${attendanceStats.absenceDays} Days`} isLoading={isDataLoading}/>
                 <StatCard icon={ArrowUp} title="Attended" subtitle="This Month" value={`${attendanceStats.attendedDays} Days`} isLoading={isDataLoading}/>
             </div>
