@@ -255,46 +255,40 @@ export default function AttendanceHistoryPage() {
                       <p className="text-center text-muted-foreground py-8">No attendance records for this month.</p>
                     )}
                     </div>
-                     <div className="mt-6 border-t pt-4">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Monthly Summary</CardTitle>
-                                <CardDescription>Your attendance overview for {format(currentMonth, "MMMM yyyy")}.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="flex items-center justify-center">
-                                <div className="h-48 w-48">
-                                    <ChartContainer config={chartConfig} className="mx-auto aspect-square h-full">
-                                        <PieChart>
-                                            <ChartTooltip
-                                                cursor={false}
-                                                content={<ChartTooltipContent hideLabel />}
-                                            />
-                                            <Pie
-                                                data={chartData}
-                                                dataKey="value"
-                                                nameKey="name"
-                                                innerRadius={60}
-                                                strokeWidth={5}
-                                            >
-                                                {chartData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                                                ))}
-                                            </Pie>
-                                            <RechartsLegend content={({ payload }) => (
-                                                <ul className="flex flex-wrap gap-x-4 justify-center mt-4 text-sm">
-                                                    {payload?.map((entry, index) => (
-                                                        <li key={`item-${index}`} className="flex items-center gap-1.5">
-                                                            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }}/>
-                                                            <span className="text-muted-foreground">{entry.value}</span>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            )}/>
-                                        </PieChart>
-                                    </ChartContainer>
-                                </div>
-                            </CardContent>
-                        </Card>
+                     <div className="mt-6 border-t pt-4 flex flex-col items-center justify-center">
+                        <h3 className="text-lg font-semibold mb-1">Monthly Summary</h3>
+                        <p className="text-sm text-muted-foreground mb-2">Your attendance overview for {format(currentMonth, "MMMM yyyy")}.</p>
+                        <div className="h-48 w-48">
+                            <ChartContainer config={chartConfig} className="mx-auto aspect-square h-full">
+                                <PieChart>
+                                    <ChartTooltip
+                                        cursor={false}
+                                        content={<ChartTooltipContent hideLabel />}
+                                    />
+                                    <Pie
+                                        data={chartData}
+                                        dataKey="value"
+                                        nameKey="name"
+                                        innerRadius={60}
+                                        strokeWidth={5}
+                                    >
+                                        {chartData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                                        ))}
+                                    </Pie>
+                                    <RechartsLegend content={({ payload }) => (
+                                        <ul className="flex flex-wrap gap-x-4 justify-center mt-4 text-sm">
+                                            {payload?.map((entry, index) => (
+                                                <li key={`item-${index}`} className="flex items-center gap-1.5">
+                                                    <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }}/>
+                                                    <span className="text-muted-foreground">{entry.value}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}/>
+                                </PieChart>
+                            </ChartContainer>
+                        </div>
                      </div>
                 </div>
             </main>
