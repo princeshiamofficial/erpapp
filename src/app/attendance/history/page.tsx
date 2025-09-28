@@ -91,12 +91,17 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, pay
   const ex = mx + (cos >= 0 ? 1 : -1) * lineLength2;
   const ey = my;
   const textAnchor = cos >= 0 ? 'start' : 'end';
+  
+  let labelText = `${payload.name} ${payload.value} days`;
+  if (payload.name === 'Working Days') {
+    labelText = `${payload.value} Working Days`;
+  }
 
   return (
     <g>
       <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={"#8884d8"} fill="none" />
       <circle cx={ex} cy={ey} r={2} fill={"#8884d8"} stroke="none" />
-      <text x={ex + (cos >= 0 ? 1 : -1) * (isMobile ? 4 : 6)} y={ey} textAnchor={textAnchor} fill="#333" dy={'.35em'} fontSize={isMobile ? 12 : 14} fontWeight="bold">{`${payload.name} ${payload.value} days`}</text>
+      <text x={ex + (cos >= 0 ? 1 : -1) * (isMobile ? 4 : 6)} y={ey} textAnchor={textAnchor} fill="#333" dy={'.35em'} fontSize={isMobile ? 10 : 12} fontWeight="bold">{labelText}</text>
     </g>
   );
 };
@@ -316,7 +321,7 @@ export default function AttendanceHistoryPage() {
                         )}
                         </div>
                     )}
-                     <div className="mt-4 flex flex-col items-center justify-center h-[500px] w-full p-0">
+                    <div className="flex flex-col items-center justify-center h-[500px] w-full p-0">
                         <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                             <Pie
