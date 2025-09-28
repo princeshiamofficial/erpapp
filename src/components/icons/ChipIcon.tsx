@@ -15,18 +15,24 @@ export function ChipIcon({ className, ...props }: ChipIconProps) {
       className={cn("h-auto", className)}
       {...props}
     >
-      <rect width="32" height="24" rx="3" fill="currentColor" />
+        <defs>
+            <linearGradient id="chipGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style={{ stopColor: "hsl(var(--chart-2))" }} />
+            <stop offset="100%" style={{ stopColor: "hsl(var(--chart-3))" }} />
+            </linearGradient>
+        </defs>
+      <rect width="32" height="24" rx="3" fill="url(#chipGradient)" />
       <path
         d="M9 12H23"
-        stroke="#202124"
-        strokeOpacity="0.5"
+        stroke="#FFFFFF"
+        strokeOpacity="0.7"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
       <path
         d="M16 5V19"
-        stroke="#202124"
-        strokeOpacity="0.5"
+        stroke="#FFFFFF"
+        strokeOpacity="0.7"
         strokeWidth="1.5"
         strokeLinecap="round"
       />
@@ -36,8 +42,8 @@ export function ChipIcon({ className, ...props }: ChipIconProps) {
         width="8"
         height="8"
         rx="1.5"
-        stroke="#202124"
-        strokeOpacity="0.5"
+        stroke="#FFFFFF"
+        strokeOpacity="0.7"
         strokeWidth="1.5"
       />
     </svg>

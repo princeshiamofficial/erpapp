@@ -50,8 +50,8 @@ export default async function AuthenticatedLayout({
   };
   
   const userAgent = headersList.get('user-agent');
-  // Always show the trigger, but only show the bottom bar for LR role
-  const showBottomNav = isMobile(userAgent) && currentUser?.role === 'LR';
+  // Always show the navigation bar on mobile
+  const showBottomNav = isMobile(userAgent);
 
   return (
     <AppProviders initialUser={currentUser} initialGlobalSettings={globalSettings}>
@@ -96,7 +96,7 @@ export default async function AuthenticatedLayout({
             <main
               className={cn(
                 "flex-1 p-4 sm:p-6 lg:p-8 bg-background selection:bg-primary/20 selection:text-primary",
-                showBottomNav && "pb-20" // Add padding only if bottom nav is shown
+                showBottomNav && "pb-24" // Add more padding to avoid overlap
               )}
             >
               {children}
