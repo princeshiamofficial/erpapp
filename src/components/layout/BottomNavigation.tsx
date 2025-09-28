@@ -61,7 +61,7 @@ export function BottomNavigation() {
               <div key={item.href} className="relative w-16 h-16">
                 <Link
                   href={item.href}
-                  className="absolute -top-6 left-1/2 -translate-x-1/2 flex items-center justify-center h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg transform hover:scale-110 transition-transform"
+                  className="absolute -top-6 left-1/2 -translate-x-1/2 flex items-center justify-center h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-xl shadow-primary/40 transform hover:scale-110 transition-transform"
                   aria-label={item.label}
                 >
                   <item.icon className="h-7 w-7" />
