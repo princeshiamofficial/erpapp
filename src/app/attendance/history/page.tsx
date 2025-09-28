@@ -13,7 +13,13 @@ import type { AttendanceRecord } from '@/types';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend as RechartsLegend } from 'recharts';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 
 
 const WEEK_DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
@@ -143,6 +149,25 @@ export default function AttendanceHistoryPage() {
         return grid;
     }, [currentMonth, sortedRecords, selectedDay]);
 
+    const chartData = useMemo(() => {
+        const onTime = sortedRecords.filter(r => r.status === 'On Time').length;
+        const late = sortedRecords.filter(r => r.status === 'Late').length;
+        const absent = 0; // Assuming 'Absent' status exists, if not, this will be 0.
+        
+        return [
+            { name: 'On Time', value: onTime, fill: 'hsl(var(--chart-2))' },
+            { name: 'Late', value: late, fill: 'hsl(var(--chart-4))' },
+            { name: 'Absent', value: absent, fill: 'hsl(var(--destructive))' },
+        ].filter(item => item.value > 0);
+    }, [sortedRecords]);
+
+    const chartConfig = {
+        'On Time': { label: 'On Time', color: 'hsl(var(--chart-2))' },
+        'Late': { label: 'Late', color: 'hsl(var(--chart-4))' },
+        'Absent': { label: 'Absent', color: 'hsl(var(--destructive))' },
+    };
+
+
     if (isAuthLoading || !currentUser) {
         return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
     }
@@ -194,8 +219,8 @@ export default function AttendanceHistoryPage() {
                     ) : sortedRecords.length > 0 ? (
                        sortedRecords.map(record => {
                         const isSelected = selectedDay && isSameDay(parseISO(record.date), selectedDay);
-                        const checkInTime = record.checkInTime ? format(parseISO(record.checkInTime), 'h:mm a') : '-';
-                        const checkOutTime = record.checkOutTime ? format(parseISO(record.checkOutTime), 'h:mm a') : '-';
+                        const checkInTime = record.checkInTime ? format(parseISO(record.checkInTime), 'p') : '-';
+                        const checkOutTime = record.checkOutTime ? format(parseISO(record.checkOutTime), 'p') : '-';
                         const totalHours = record.hoursWorked || '-';
                         
                         return (
@@ -231,7 +256,45 @@ export default function AttendanceHistoryPage() {
                     )}
                     </div>
                      <div className="mt-6 border-t pt-4">
-                        {/* This is the new div you requested */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Monthly Summary</CardTitle>
+                                <CardDescription>Your attendance overview for {format(currentMonth, "MMMM yyyy")}.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex items-center justify-center">
+                                <div className="h-48 w-48">
+                                    <ChartContainer config={chartConfig} className="mx-auto aspect-square h-full">
+                                        <PieChart>
+                                            <ChartTooltip
+                                                cursor={false}
+                                                content={<ChartTooltipContent hideLabel />}
+                                            />
+                                            <Pie
+                                                data={chartData}
+                                                dataKey="value"
+                                                nameKey="name"
+                                                innerRadius={60}
+                                                strokeWidth={5}
+                                            >
+                                                {chartData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                ))}
+                                            </Pie>
+                                            <RechartsLegend content={({ payload }) => (
+                                                <ul className="flex flex-wrap gap-x-4 justify-center mt-4 text-sm">
+                                                    {payload?.map((entry, index) => (
+                                                        <li key={`item-${index}`} className="flex items-center gap-1.5">
+                                                            <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }}/>
+                                                            <span className="text-muted-foreground">{entry.value}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}/>
+                                        </PieChart>
+                                    </ChartContainer>
+                                </div>
+                            </CardContent>
+                        </Card>
                      </div>
                 </div>
             </main>
