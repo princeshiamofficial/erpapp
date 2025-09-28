@@ -256,7 +256,7 @@ export default function AttendanceHistoryPage() {
                     )}
                     </div>
                      <div className="mt-6 border-t pt-4 flex flex-col items-center justify-center">
-                        <div className="h-48 w-48">
+                        <div className="h-64 w-64">
                             <ChartContainer config={chartConfig} className="mx-auto aspect-square h-full">
                                 <PieChart>
                                     <ChartTooltip
