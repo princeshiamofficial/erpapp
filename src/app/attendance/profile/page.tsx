@@ -309,7 +309,7 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-1">
             <ProfileLink href="#" icon={Bell} label="Notifications" />
-            <ProfileLink href="#" icon={CalendarPlus} label="Leave Request" />
+            <ProfileLink href="/attendance/history" icon={CalendarPlus} label="Leave History" />
           </CardContent>
         </Card>
         
