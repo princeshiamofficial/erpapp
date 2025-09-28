@@ -74,17 +74,21 @@ const CalendarDay = ({ day, data }: { day: number | null; data?: { status: 'leav
 };
 
 const RADIAN = Math.PI / 180;
-const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, payload, index }: any) => {
-  const radius = innerRadius + (outerRadius - innerRadius) * 1.25;
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, payload, index, isMobile }: any) => {
+  const labelRadiusMultiplier = isMobile ? 1.4 : 1.25;
+  const lineLength1 = isMobile ? 10 : 15;
+  const lineLength2 = isMobile ? 12 : 22;
+
+  const radius = innerRadius + (outerRadius - innerRadius) * labelRadiusMultiplier;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
   const sin = Math.sin(-midAngle * RADIAN);
   const cos = Math.cos(-midAngle * RADIAN);
-  const sx = cx + (outerRadius + 5) * cos;
-  const sy = cy + (outerRadius + 5) * sin;
-  const mx = cx + (outerRadius + 15) * cos;
-  const my = cy + (outerRadius + 15) * sin;
-  const ex = mx + (cos >= 0 ? 1 : -1) * 12;
+  const sx = cx + (outerRadius + (isMobile ? 3 : 5)) * cos;
+  const sy = cy + (outerRadius + (isMobile ? 3 : 5)) * sin;
+  const mx = cx + (outerRadius + lineLength1) * cos;
+  const my = cy + (outerRadius + lineLength1) * sin;
+  const ex = mx + (cos >= 0 ? 1 : -1) * lineLength2;
   const ey = my;
   const textAnchor = cos >= 0 ? 'start' : 'end';
 
@@ -92,7 +96,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, pay
     <g>
       <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={"#8884d8"} fill="none" />
       <circle cx={ex} cy={ey} r={2} fill={"#8884d8"} stroke="none" />
-      <text x={ex + (cos >= 0 ? 1 : -1) * 6} y={ey} textAnchor={textAnchor} fill="#333" dy={'.35em'}>{`${payload.name} ${payload.value} days`}</text>
+      <text x={ex + (cos >= 0 ? 1 : -1) * (isMobile ? 4 : 6)} y={ey} textAnchor={textAnchor} fill="#333" dy={'.35em'} fontSize={isMobile ? 10 : 12}>{`${payload.name} ${payload.value} days`}</text>
     </g>
   );
 };
@@ -105,9 +109,17 @@ export default function AttendanceHistoryPage() {
     const [isLoadingData, setIsLoadingData] = useState(true);
     const [selectedDay, setSelectedDay] = useState<Date | null>(new Date());
     const [isClient, setIsClient] = useState(false);
+    const [isMobileView, setIsMobileView] = useState(false);
+
 
     useEffect(() => {
         setIsClient(true);
+        const checkMobile = () => {
+            setIsMobileView(window.innerWidth < 768);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
     const fetchAttendanceData = useCallback(async (month: Date) => {
@@ -277,27 +289,27 @@ export default function AttendanceHistoryPage() {
                       <p className="text-center text-muted-foreground py-8">No attendance records for this month.</p>
                     )}
                     </div>
-                     <div className="mt-6 border-t pt-4 flex flex-col items-center justify-center h-96">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                              <Pie
-                                data={chartData}
-                                cx="50%"
-                                cy="50%"
-                                labelLine={false}
-                                label={renderCustomizedLabel}
-                                outerRadius={80}
-                                innerRadius={60}
-                                fill="#8884d8"
-                                dataKey="value"
-                              >
-                                {chartData.map((entry, index) => (
-                                  <Cell key={`cell-${index}`} fill={entry.color} />
-                                ))}
-                              </Pie>
-                            </PieChart>
-                          </ResponsiveContainer>
-                     </div>
+                    <div className="mt-6 border-t pt-4 flex flex-col items-center justify-center h-96">
+                        <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                            data={chartData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={(props) => renderCustomizedLabel({...props, isMobile: isMobileView})}
+                            outerRadius={isMobileView ? 60 : 80}
+                            innerRadius={isMobileView ? 45 : 60}
+                            fill="#8884d8"
+                            dataKey="value"
+                            >
+                            {chartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                            </Pie>
+                        </PieChart>
+                        </ResponsiveContainer>
+                    </div>
                 </div>
             </main>
         </div>
