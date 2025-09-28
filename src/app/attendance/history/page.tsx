@@ -69,10 +69,15 @@ const CalendarDay = ({ day, data }: { day: number | null; data?: { status: 'leav
 
 export default function AttendanceHistoryPage() {
     const { currentUser, isLoading: isAuthLoading } = useAuth();
-    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
     const [monthlyRecords, setMonthlyRecords] = useState<AttendanceRecord[]>([]);
     const [isLoadingData, setIsLoadingData] = useState(true);
     const [selectedDay, setSelectedDay] = useState<Date | null>(new Date());
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     const fetchAttendanceData = useCallback(async (month: Date) => {
       if (!currentUser) return;
@@ -144,19 +149,19 @@ export default function AttendanceHistoryPage() {
 
     return (
         <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
-            <header className="relative h-48 w-full bg-gradient-to-br from-pink-300 via-purple-300 to-indigo-400 p-6 text-white text-center flex flex-col justify-end items-center rounded-b-3xl">
-                 <div className="absolute top-4 left-4">
+            <header className="relative h-20 w-full bg-gradient-to-br from-pink-300 via-purple-300 to-indigo-400 p-4 text-white text-center flex flex-col justify-center items-center rounded-b-xl">
+                 <div className="absolute top-1/2 -translate-y-1/2 left-4">
                     <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" asChild>
                       <Link href="/attendance">
                         <ArrowLeft className="h-5 w-5" />
                       </Link>
                     </Button>
                 </div>
-                
+                <h1 className="text-xl font-bold">Attendance History</h1>
             </header>
 
-            <main className="flex-1 -mt-8">
-                <div className="bg-background rounded-t-3xl shadow-2xl p-6">
+            <main className="flex-1 p-4 sm:p-6">
+                <div className="bg-background rounded-xl shadow-lg p-4 sm:p-6">
                     <div className="flex justify-between items-center mb-4">
                         <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
                             <ChevronLeftIcon className="h-5 w-5" />
