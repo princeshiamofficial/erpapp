@@ -194,8 +194,8 @@ export default function AttendanceHistoryPage() {
                     ) : sortedRecords.length > 0 ? (
                        sortedRecords.map(record => {
                         const isSelected = selectedDay && isSameDay(parseISO(record.date), selectedDay);
-                        const checkInTime = record.checkInTime ? format(parseISO(record.checkInTime), 'HH:mm') : '-';
-                        const checkOutTime = record.checkOutTime ? format(parseISO(record.checkOutTime), 'HH:mm') : '-';
+                        const checkInTime = record.checkInTime ? format(parseISO(record.checkInTime), 'h:mm a') : '-';
+                        const checkOutTime = record.checkOutTime ? format(parseISO(record.checkOutTime), 'h:mm a') : '-';
                         const totalHours = record.hoursWorked || '-';
                         
                         return (
@@ -230,6 +230,9 @@ export default function AttendanceHistoryPage() {
                       <p className="text-center text-muted-foreground py-8">No attendance records for this month.</p>
                     )}
                     </div>
+                     <div className="mt-6 border-t pt-4">
+                        {/* This is the new div you requested */}
+                     </div>
                 </div>
             </main>
         </div>
