@@ -17,6 +17,7 @@ import { getOfficeLocations, type CompanyLocation } from '@/lib/office-location-
 import { getOfficeTimes, type OfficeTime } from '@/lib/office-time-service';
 import { saveAttendanceAction } from '@/app/(app)/hrm/attendance/actions';
 import { getAttendanceMark } from '@/lib/attendance-service';
+import { getWeekendSettings } from '@/lib/weekend-service';
 
 const getInitials = (name: string | undefined): string => {
   if (!name) return '??';
@@ -111,6 +112,7 @@ export default function CheckInOutPage() {
   const [currentLocation, setCurrentLocation] = useState<{ lat: number, lng: number } | null>(null);
   const [officeLocations, setOfficeLocations] = useState<CompanyLocation[]>([]);
   const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]);
+  const [weekendDays, setWeekendDays] = useState<string[]>([]);
   
   useEffect(() => {
     if (!isAuthLoading && !currentUser) {
@@ -118,7 +120,16 @@ export default function CheckInOutPage() {
     }
   }, [currentUser, isAuthLoading, router]);
 
+  const isTodayWeekend = useMemo(() => {
+    if (!isClient) return false;
+    const today = format(new Date(), 'EEEE');
+    return weekendDays.includes(today);
+  }, [isClient, weekendDays]);
+
   const canPerformAction = useMemo(() => {
+    if (isTodayWeekend) {
+        return false;
+    }
     if (checkOutTime && isToday(checkOutTime)) {
         return false;
     }
@@ -132,9 +143,12 @@ export default function CheckInOutPage() {
         return isLocationPermissionGranted;
     }
     return false;
-  }, [status, locationStatus, checkOutTime]);
+  }, [status, locationStatus, checkOutTime, isTodayWeekend]);
 
   const disabledReason = useMemo(() => {
+    if (isTodayWeekend) {
+        return 'Today is a weekend';
+    }
     if (checkOutTime && isToday(checkOutTime)) {
         return 'Attendance complete for today';
     }
@@ -147,7 +161,7 @@ export default function CheckInOutPage() {
     if (status === 'Checked Out') return 'Check-in unavailable';
     if (status === 'Checked In') return 'Check-out unavailable';
     return 'Action unavailable';
-  }, [status, locationStatus, checkOutTime]);
+  }, [status, locationStatus, checkOutTime, isTodayWeekend]);
 
 
   const saveStateToLocalStorage = (newState: any) => {
@@ -210,9 +224,10 @@ export default function CheckInOutPage() {
             }
         }
 
-        const [locations, times] = await Promise.all([getOfficeLocations(), getOfficeTimes()]);
+        const [locations, times, weekendSettings] = await Promise.all([getOfficeLocations(), getOfficeTimes(), getWeekendSettings()]);
         setOfficeLocations(locations);
         setOfficeTimes(times);
+        setWeekendDays(weekendSettings.days);
         
         if ('geolocation' in navigator) {
           navigator.geolocation.getCurrentPosition(
@@ -486,3 +501,5 @@ export default function CheckInOutPage() {
     </div>
   );
 }
+
+    
