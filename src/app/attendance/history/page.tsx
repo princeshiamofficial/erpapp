@@ -101,7 +101,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, pay
     <g>
       <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={"#8884d8"} fill="none" />
       <circle cx={ex} cy={ey} r={2} fill={"#8884d8"} stroke="none" />
-      <text x={ex + (cos >= 0 ? 1 : -1) * (isMobile ? 4 : 6)} y={ey} textAnchor={textAnchor} fill="#333" dy={'.35em'} fontSize={isMobile ? 10 : 12} fontWeight="bold">{labelText}</text>
+      <text x={ex + (cos >= 0 ? 1 : -1) * (isMobile ? 4 : 6)} y={ey} textAnchor={textAnchor} fill="#333" dy={'.35em'} fontSize={isMobile ? 14 : 16} fontWeight="bold">{labelText}</text>
     </g>
   );
 };
@@ -204,7 +204,7 @@ export default function AttendanceHistoryPage() {
             { name: 'On Time', value: 15, color: '#a3be8c' },
             { name: 'Late', value: 3, color: '#ebcb8b' },
             { name: 'Absent', value: 4, color: '#d08770' },
-            { name: 'Working Days', value: 30 - 15 - 3 - 4, color: '#4c566a' },
+            { name: 'Working Days', value: 8, color: '#4c566a' },
         ];
     }, [sortedRecords]);
 
@@ -321,7 +321,7 @@ export default function AttendanceHistoryPage() {
                         )}
                         </div>
                     )}
-                    <div className="flex flex-col items-center justify-center h-[500px] w-full p-0">
+                    <div className="w-full h-[550px]">
                         <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                             <Pie
@@ -330,8 +330,8 @@ export default function AttendanceHistoryPage() {
                             cy="50%"
                             labelLine={false}
                             label={(props) => renderCustomizedLabel({...props, isMobile: isMobileView})}
-                            outerRadius={isMobileView ? 80 : 150}
-                            innerRadius={isMobileView ? 60 : 120}
+                            outerRadius={isMobileView ? 80 : 200}
+                            innerRadius={isMobileView ? 60 : 160}
                             fill="#8884d8"
                             dataKey="value"
                             >
