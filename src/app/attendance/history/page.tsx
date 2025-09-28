@@ -138,26 +138,6 @@ export default function AttendanceHistoryPage() {
         return grid;
     }, [currentMonth, sortedRecords, selectedDay]);
 
-    const { workedHours, totalBreaks, overTime } = useMemo(() => {
-        let totalSeconds = 0;
-        monthlyRecords.forEach(record => {
-            if (record.hoursWorked) {
-                const parts = record.hoursWorked.split(':').map(Number);
-                if (parts.length === 2) {
-                    totalSeconds += parts[0] * 3600 + parts[1] * 60;
-                }
-            }
-        });
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-
-        return {
-            workedHours: `${hours},${String(minutes).padStart(2, '0')}`,
-            totalBreaks: "0,00", // Placeholder
-            overTime: "0,00" // Placeholder
-        };
-    }, [monthlyRecords]);
-    
     if (isAuthLoading || !currentUser) {
         return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
     }
@@ -172,7 +152,6 @@ export default function AttendanceHistoryPage() {
                       </Link>
                     </Button>
                 </div>
-                <p className="text-sm opacity-80">Monthly worked hours</p>
                 
             </header>
 
