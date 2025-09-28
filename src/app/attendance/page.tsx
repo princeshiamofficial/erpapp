@@ -407,7 +407,7 @@ export default function CheckInOutPage() {
       <div className="flex flex-col items-center justify-center flex-grow w-full">
         <div className="text-center mb-10">
           <p className="text-5xl sm:text-6xl font-bold text-gray-800 dark:text-gray-200 font-mono tracking-tighter">
-            {isClient ? format(currentTime, 'h:mm a') : '--:--'}
+            {isClient ? format(currentTime, 'h:mm:ss a') : '--:--'}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {isClient ? format(currentTime, "eeee, MMMM d, yyyy") : 'Loading...'}
