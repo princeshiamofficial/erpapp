@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowLeft, ChevronDown, Plus, Heart, Sun, Check, Loader2, ChevronRight, ChevronLeft as ChevronLeftIcon } from 'lucide-react'; // Renamed ChevronLeft to avoid conflict
@@ -110,6 +110,8 @@ export default function AttendanceHistoryPage() {
     const [selectedDay, setSelectedDay] = useState<Date | null>(new Date());
     const [isClient, setIsClient] = useState(false);
     const [isMobileView, setIsMobileView] = useState(false);
+    const [isAttendanceListVisible, setIsAttendanceListVisible] = useState(false);
+    const longPressTimer = useRef<NodeJS.Timeout | null>(null);
 
 
     useEffect(() => {
@@ -201,6 +203,19 @@ export default function AttendanceHistoryPage() {
         ];
     }, [sortedRecords]);
 
+    const handleLongPressStart = () => {
+        longPressTimer.current = setTimeout(() => {
+            setIsAttendanceListVisible(true);
+        }, 500); // 500ms for a long press
+    };
+
+    const handleLongPressEnd = () => {
+        if (longPressTimer.current) {
+            clearTimeout(longPressTimer.current);
+            longPressTimer.current = null;
+        }
+    };
+
 
     if (isAuthLoading || !currentUser) {
         return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
@@ -244,52 +259,64 @@ export default function AttendanceHistoryPage() {
 
                     <div className="flex justify-between items-center mt-6 mb-4">
                       <h3 className="font-semibold text-lg">Your Attendance</h3>
-                      <Button variant="link" size="sm" className="text-primary">Show more</Button>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        className="text-primary"
+                        onMouseDown={handleLongPressStart}
+                        onMouseUp={handleLongPressEnd}
+                        onTouchStart={handleLongPressStart}
+                        onTouchEnd={handleLongPressEnd}
+                      >
+                        Show more
+                      </Button>
                     </div>
                     
-                    <div className="space-y-3">
-                    {isLoadingData ? (
-                        [...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)
-                    ) : sortedRecords.length > 0 ? (
-                       sortedRecords.map(record => {
-                        const isSelected = selectedDay && isSameDay(parseISO(record.date), selectedDay);
-                        const checkInTime = record.checkInTime ? format(parseISO(record.checkInTime), 'p') : '-';
-                        const checkOutTime = record.checkOutTime ? format(parseISO(record.checkOutTime), 'p') : '-';
-                        const totalHours = record.hoursWorked || '-';
-                        
-                        return (
-                            <Card key={record.id} className={cn("transition-all", isSelected && "ring-2 ring-primary bg-primary/5")}>
-                                <CardContent className="p-3 flex items-center gap-3">
-                                    <div className="text-center w-12 flex-shrink-0">
-                                        <p className="font-bold text-lg">{format(parseISO(record.date), 'dd')}</p>
-                                        <p className="text-xs text-muted-foreground">{format(parseISO(record.date), 'EEE')}</p>
-                                    </div>
-                                    <div className="border-l pl-3 flex-1 grid grid-cols-3 items-center text-center text-sm">
-                                        <div className="flex flex-col items-center justify-center">
-                                            <Badge className={cn(
-                                                record.status === 'On Time' && 'bg-green-100 text-green-800',
-                                                record.status === 'Late' && 'bg-yellow-100 text-yellow-800',
-                                                record.status === 'Absent' && 'bg-red-100 text-red-800'
-                                            )}>{record.status}</Badge>
+                    {isAttendanceListVisible && (
+                        <div className="space-y-3">
+                        {isLoadingData ? (
+                            [...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-lg" />)
+                        ) : sortedRecords.length > 0 ? (
+                        sortedRecords.map(record => {
+                            const isSelected = selectedDay && isSameDay(parseISO(record.date), selectedDay);
+                            const checkInTime = record.checkInTime ? format(parseISO(record.checkInTime), 'p') : '-';
+                            const checkOutTime = record.checkOutTime ? format(parseISO(record.checkOutTime), 'p') : '-';
+                            const totalHours = record.hoursWorked || '-';
+                            
+                            return (
+                                <Card key={record.id} className={cn("transition-all", isSelected && "ring-2 ring-primary bg-primary/5")}>
+                                    <CardContent className="p-3 flex items-center gap-3">
+                                        <div className="text-center w-12 flex-shrink-0">
+                                            <p className="font-bold text-lg">{format(parseISO(record.date), 'dd')}</p>
+                                            <p className="text-xs text-muted-foreground">{format(parseISO(record.date), 'EEE')}</p>
                                         </div>
-                                        <div className="flex flex-col items-center justify-center">
-                                            <p className="font-semibold text-foreground">{checkInTime} - {checkOutTime}</p>
-                                            <p className="text-xs text-muted-foreground">Check-in/out</p>
+                                        <div className="border-l pl-3 flex-1 grid grid-cols-3 items-center text-center text-sm">
+                                            <div className="flex flex-col items-center justify-center">
+                                                <Badge className={cn(
+                                                    record.status === 'On Time' && 'bg-green-100 text-green-800',
+                                                    record.status === 'Late' && 'bg-yellow-100 text-yellow-800',
+                                                    record.status === 'Absent' && 'bg-red-100 text-red-800'
+                                                )}>{record.status}</Badge>
+                                            </div>
+                                            <div className="flex flex-col items-center justify-center">
+                                                <p className="font-semibold text-foreground">{checkInTime} - {checkOutTime}</p>
+                                                <p className="text-xs text-muted-foreground">Check-in/out</p>
+                                            </div>
+                                            <div className="flex flex-col items-center justify-center">
+                                                <p className="font-semibold text-foreground">{totalHours}h</p>
+                                                <p className="text-xs text-muted-foreground">Working Hours</p>
+                                            </div>
                                         </div>
-                                        <div className="flex flex-col items-center justify-center">
-                                            <p className="font-semibold text-foreground">{totalHours}h</p>
-                                            <p className="text-xs text-muted-foreground">Working Hours</p>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )
-                       })
-                    ) : (
-                      <p className="text-center text-muted-foreground py-8">No attendance records for this month.</p>
+                                    </CardContent>
+                                </Card>
+                            )
+                        })
+                        ) : (
+                        <p className="text-center text-muted-foreground py-8">No attendance records for this month.</p>
+                        )}
+                        </div>
                     )}
-                    </div>
-                    <div className="h-[500px] w-full">
+                    <div className="mt-4 flex flex-col items-center justify-center h-[500px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                             <Pie
