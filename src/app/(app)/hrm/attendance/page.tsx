@@ -76,7 +76,7 @@ export default function AttendancePage() {
     const [allUsers, setAllUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
+    const [attendanceDateFilter, setAttendanceDateFilter] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [currentPage, setCurrentPage] = useState(1);
     const [leaveToManage, setLeaveToManage] = useState<Employee | null>(null);
     const [viewingLocation, setViewingLocation] = useState<{ lat: number, lng: number, employeeName: string, employeeAvatar?: string } | null>(null);
