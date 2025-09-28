@@ -199,22 +199,6 @@ export default function AttendanceHistoryPage() {
                         ))}
                     </div>
 
-                    <div className="mt-6 grid grid-cols-3 gap-4 text-center">
-                        <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">
-                            <p className="text-xs text-muted-foreground">Worked hours</p>
-                            <p className="font-bold text-lg">{workedHours}h</p>
-                        </div>
-                         <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">
-                            <p className="text-xs text-muted-foreground">Breaks</p>
-                            <p className="font-bold text-lg">{totalBreaks}h</p>
-                        </div>
-                         <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">
-                            <p className="text-xs text-muted-foreground">Over time</p>
-                            <p className="font-bold text-lg">{overTime}h</p>
-                        </div>
-                    </div>
-
-
                     <div className="flex justify-between items-center mt-6 mb-4">
                       <h3 className="font-semibold text-lg">Your Attendance</h3>
                       <Button variant="link" size="sm" className="text-primary">Show more</Button>
