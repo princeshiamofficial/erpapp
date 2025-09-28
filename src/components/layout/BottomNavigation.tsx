@@ -23,6 +23,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 const navItems = [
@@ -41,12 +42,24 @@ const notifications = [
     { id: 5, user: "Admin", message: "Welcome to the new attendance system!", time: "3d ago", avatar: "https://i.pravatar.cc/150?u=admin" },
 ];
 
+const leaveTypes = [
+  "Annual Leave",
+  "Sick Leave",
+  "Parental Leave",
+  "Half-day Leave",
+  "Medical Leave",
+  "Privilege Leave",
+  "Probationary Leave",
+];
+
+
 export function BottomNavigation() {
   const pathname = usePathname();
   const [isClient, setIsClient] = useState(false);
   const { currentUser, isLoading } = useAuth();
   const [isNoticeSheetOpen, setIsNoticeSheetOpen] = useState(false);
   const [isLeaveSheetOpen, setIsLeaveSheetOpen] = useState(false);
+  const [selectedLeaveType, setSelectedLeaveType] = useState("");
 
 
   useEffect(() => {
@@ -181,7 +194,16 @@ export function BottomNavigation() {
                 <div className="space-y-4 flex-1 px-2">
                     <div className="space-y-1">
                         <Label htmlFor="leave-type">Leave Type</Label>
-                        <Input id="leave-type" placeholder="e.g., Sick Leave, Vacation" />
+                        <Select value={selectedLeaveType} onValueChange={setSelectedLeaveType}>
+                            <SelectTrigger id="leave-type">
+                                <SelectValue placeholder="Select a leave type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {leaveTypes.map(type => (
+                                    <SelectItem key={type} value={type}>{type}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1">
