@@ -233,7 +233,7 @@ export function BottomNavigation() {
                     </div>
                 </div>
                 <SheetFooter className="p-4 mt-auto">
-                    <Button type="submit" className="w-full">Submit Request</Button>
+                    <Button type="submit" className="w-full" disabled>Submit Request</Button>
                 </SheetFooter>
             </form>
           </SheetContent>
