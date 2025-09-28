@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend as RechartsLegend } from 'recharts';
+import { getWeekendSettings } from '@/lib/weekend-service';
 import {
   ChartContainer,
   ChartTooltip,
@@ -118,6 +119,7 @@ export default function AttendanceHistoryPage() {
     const [isMobileView, setIsMobileView] = useState(false);
     const [isAttendanceListVisible, setIsAttendanceListVisible] = useState(false);
     const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+    const [weekendDays, setWeekendDays] = useState<string[]>([]);
 
 
     useEffect(() => {
@@ -134,8 +136,12 @@ export default function AttendanceHistoryPage() {
       if (!currentUser) return;
       setIsLoadingData(true);
       try {
-        const records = await getAttendanceForMonth(month);
+        const [records, weekendSettings] = await Promise.all([
+          getAttendanceForMonth(month),
+          getWeekendSettings(),
+        ]);
         setMonthlyRecords(records.filter(r => r.employeeId === currentUser.id));
+        setWeekendDays(weekendSettings.days || []);
       } catch (error) {
         console.error("Failed to fetch attendance:", error);
       } finally {
@@ -204,9 +210,11 @@ export default function AttendanceHistoryPage() {
 
         const totalDaysInMonth = getDaysInMonth(currentMonth);
         let workingDaysInMonth = 0;
+        const weekendDayIndexes = weekendDays.map(day => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(day));
+        
         for (let i = 1; i <= totalDaysInMonth; i++) {
             const dayOfWeek = getDay(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i));
-            if (dayOfWeek !== 5 && dayOfWeek !== 6) { // Not Friday or Saturday
+            if (!weekendDayIndexes.includes(dayOfWeek)) { 
                 workingDaysInMonth++;
             }
         }
@@ -219,7 +227,7 @@ export default function AttendanceHistoryPage() {
             let pastWorkingDays = 0;
             for (let i = 1; i < todayDate; i++) {
                 const dayOfWeek = getDay(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i));
-                if (dayOfWeek !== 5 && dayOfWeek !== 6) {
+                if (!weekendDayIndexes.includes(dayOfWeek)) {
                     pastWorkingDays++;
                 }
             }
@@ -236,7 +244,7 @@ export default function AttendanceHistoryPage() {
         if (remainingWorkingDays > 0) data.push({ name: 'Working Days', value: remainingWorkingDays, color: '#4c566a' });
 
         return data;
-    }, [sortedRecords, currentMonth, isClient]);
+    }, [sortedRecords, currentMonth, isClient, weekendDays]);
 
     const handleLongPressStart = () => {
         longPressTimer.current = setTimeout(() => {
@@ -377,3 +385,5 @@ export default function AttendanceHistoryPage() {
         </div>
     );
 }
+
+    
