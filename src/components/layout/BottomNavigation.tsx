@@ -16,17 +16,20 @@ import { cn } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from '@/contexts/auth-context';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Label } from "../ui/label";
+import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
 
 
 const navItems = [
   // Notice is now handled separately to trigger a sheet
   { href: "/attendance/history", label: "History", icon: History },
   { href: "/attendance", label: "Attendance", icon: Fingerprint, isCentral: true },
-  { href: "/attendance/leave", label: "Leave", icon: CalendarPlus },
+  // Leave is now handled separately to trigger a sheet
   { href: "/attendance/profile", label: "Profile", icon: UserIcon },
 ];
 
@@ -43,6 +46,7 @@ export function BottomNavigation() {
   const [isClient, setIsClient] = useState(false);
   const { currentUser, isLoading } = useAuth();
   const [isNoticeSheetOpen, setIsNoticeSheetOpen] = useState(false);
+  const [isLeaveSheetOpen, setIsLeaveSheetOpen] = useState(false);
 
 
   useEffect(() => {
@@ -66,6 +70,7 @@ export function BottomNavigation() {
   }
   
   const noticeItem = { href: "#", label: "Notice", icon: Bell };
+  const leaveItem = { href: "#", label: "Leave", icon: CalendarPlus };
   const isActive = (href: string) => pathname === href;
 
 
@@ -77,10 +82,7 @@ export function BottomNavigation() {
             <Button
                 variant="ghost"
                 onClick={() => setIsNoticeSheetOpen(true)}
-                className={cn(
-                    "relative flex flex-col items-center justify-center w-14 h-14 text-muted-foreground transition-colors p-0 hover:bg-transparent",
-                    "hover:text-primary/80"
-                )}
+                className="relative flex flex-col items-center justify-center w-14 h-14 text-muted-foreground transition-colors p-0 hover:bg-transparent hover:text-primary/80"
                 aria-label={noticeItem.label}
             >
                 <noticeItem.icon className="h-6 w-6 mb-0.5" />
@@ -130,6 +132,16 @@ export function BottomNavigation() {
                 </Link>
             );
             })}
+             {/* Leave Button */}
+            <Button
+                variant="ghost"
+                onClick={() => setIsLeaveSheetOpen(true)}
+                className="relative flex flex-col items-center justify-center w-14 h-14 text-muted-foreground transition-colors p-0 hover:bg-transparent hover:text-primary/80"
+                aria-label={leaveItem.label}
+            >
+                <leaveItem.icon className="h-6 w-6 mb-0.5" />
+                <span className="text-xs font-medium">{leaveItem.label}</span>
+            </Button>
         </div>
       </div>
       
@@ -156,6 +168,40 @@ export function BottomNavigation() {
                     ))}
                 </div>
             </ScrollArea>
+          </SheetContent>
+      </Sheet>
+      
+      <Sheet open={isLeaveSheetOpen} onOpenChange={setIsLeaveSheetOpen}>
+          <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl flex flex-col">
+            <SheetHeader className="text-left px-2">
+              <SheetTitle className="flex items-center gap-2"><CalendarPlus className="h-5 w-5 text-primary"/>Leave Request</SheetTitle>
+              <SheetDescription>Submit a new leave request for approval.</SheetDescription>
+            </SheetHeader>
+            <form className="flex-1 flex flex-col pt-4">
+                <div className="space-y-4 flex-1 px-2">
+                    <div className="space-y-1">
+                        <Label htmlFor="leave-type">Leave Type</Label>
+                        <Input id="leave-type" placeholder="e.g., Sick Leave, Vacation" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <Label htmlFor="start-date">Start Date</Label>
+                            <Input id="start-date" type="date" />
+                        </div>
+                         <div className="space-y-1">
+                            <Label htmlFor="end-date">End Date</Label>
+                            <Input id="end-date" type="date" />
+                        </div>
+                    </div>
+                    <div className="space-y-1">
+                        <Label htmlFor="reason">Reason</Label>
+                        <Textarea id="reason" placeholder="Please provide a brief reason for your leave..." className="min-h-[100px]" />
+                    </div>
+                </div>
+                <SheetFooter className="p-4 mt-auto">
+                    <Button type="submit" className="w-full">Submit Request</Button>
+                </SheetFooter>
+            </form>
           </SheetContent>
       </Sheet>
     </>
