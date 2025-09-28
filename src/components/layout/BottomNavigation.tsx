@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Layers, BarChart3, Settings } from "lucide-react";
+import { BarChart3, Settings, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,16 +19,10 @@ const PostsIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-const LinksIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
-        <path d="M9.87868 14.1213L14.1213 9.87868M9.87868 9.87868L14.1213 14.1213M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-);
-
 const navItems = [
   { href: "/themes", label: "Themes", icon: ChipIcon },
   { href: "/posts", label: "Posts", icon: PostsIcon },
-  { href: "/links", label: "Links", icon: LinksIcon, isCentral: true },
+  { href: "/attendance", label: "Attendance", icon: Clock, isCentral: true },
   { href: "/stats", label: "Stats", icon: BarChart3 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -76,7 +70,7 @@ export function BottomNavigation() {
         </div>
         <div className="relative flex justify-around items-center h-full">
           {navItems.map((item) => {
-            const isActive = pathname === item.href;
+            const isActive = pathname.startsWith(item.href);
             if (item.isCentral) {
               return (
                 <div key={item.href} className="relative w-16 h-16">
