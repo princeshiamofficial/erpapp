@@ -350,7 +350,7 @@ export default function AttendanceHistoryPage() {
                         )}
                         </div>
                     )}
-                    <div className="w-full h-[550px] -mt-8">
+                    <div className={cn("w-full -mt-8", isMobileView ? "h-[380px]" : "h-[450px]")}>
                         <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                             <Pie
@@ -359,8 +359,8 @@ export default function AttendanceHistoryPage() {
                             cy="50%"
                             labelLine={false}
                             label={(props) => renderCustomizedLabel({...props, isMobile: isMobileView})}
-                            outerRadius={isMobileView ? 80 : 200}
-                            innerRadius={isMobileView ? 60 : 160}
+                            outerRadius={isMobileView ? 80 : 120}
+                            innerRadius={isMobileView ? 60 : 90}
                             fill="#8884d8"
                             dataKey="value"
                             >
@@ -376,3 +376,4 @@ export default function AttendanceHistoryPage() {
         </div>
     );
 }
+
