@@ -1,10 +1,12 @@
 
+
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { addOfficeTime, updateOfficeTime, deleteOfficeTime } from "@/lib/office-time-service";
 import type { OfficeTime, User, AttendanceRecord } from "@/types";
 import { saveAttendanceAction as saveAttendanceServiceAction } from '@/lib/attendance-service';
+import { saveWeekendSettings } from "@/lib/weekend-service"; // Import the new service
 
 export async function addOfficeTimeAction(
   officeTimeData: Omit<OfficeTime, 'id'>
@@ -60,4 +62,19 @@ export async function saveAttendanceAction(
 ): Promise<{ success: boolean; error?: string }> {
     // This function now calls the central service function
     return saveAttendanceServiceAction(currentUser, recordData);
+}
+
+// New action to save weekend settings
+export async function saveWeekendSettingsAction(days: string[]): Promise<{ success: boolean; error?: string }> {
+    try {
+        const success = await saveWeekendSettings(days);
+        if (success) {
+            revalidatePath("/(app)/hrm/attendance");
+            return { success: true };
+        }
+        return { success: false, error: "Failed to save weekend settings to the database." };
+    } catch (error) {
+        console.error("Error in saveWeekendSettingsAction:", error);
+        return { success: false, error: "An unexpected error occurred while saving weekend settings." };
+    }
 }

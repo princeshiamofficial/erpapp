@@ -32,6 +32,8 @@ import { getOfficeTimes, deleteOfficeTime } from '@/lib/office-time-service';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
 import { format } from 'date-fns';
 import { getUsers } from '@/lib/user-service';
+import { getWeekendSettings } from '@/lib/weekend-service';
+import { saveWeekendSettingsAction } from './actions';
 
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
 const LocationMapDialog = dynamic(() => import('@/components/hrm/LocationMapDialog').then(mod => mod.LocationMapDialog), {
@@ -80,7 +82,7 @@ export default function AttendancePage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [leaveToManage, setLeaveToManage] = useState<Employee | null>(null);
     const [viewingLocation, setViewingLocation] = useState<{ lat: number, lng: number, employeeName: string, employeeAvatar?: string } | null>(null);
-    const [selectedWeekends, setSelectedWeekends] = useState<string[]>(["Friday", "Saturday"]);
+    const [selectedWeekends, setSelectedWeekends] = useState<string[]>([]);
     const [isAttendanceTypeDialogOpen, setIsAttendanceTypeDialogOpen] = useState(false);
     
     // State for Holiday Dialog
@@ -99,16 +101,18 @@ export default function AttendancePage() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-          const [fetchedEmployees, fetchedOfficeTimes, fetchedAttendance, fetchedUsers] = await Promise.all([
+          const [fetchedEmployees, fetchedOfficeTimes, fetchedAttendance, fetchedUsers, fetchedWeekendSettings] = await Promise.all([
             getEmployees(),
             getOfficeTimes(),
             getAttendanceForMonth(new Date()), // Fetch for the current month
-            getUsers()
+            getUsers(),
+            getWeekendSettings(),
           ]);
           setEmployees(fetchedEmployees);
           setOfficeTimes(fetchedOfficeTimes);
           setAttendanceData(fetchedAttendance);
           setAllUsers(fetchedUsers);
+          setSelectedWeekends(fetchedWeekendSettings.days);
           // In a real app, you would fetch holidays here too.
         } catch (error) {
           console.error("Failed to fetch page data:", error);
@@ -164,13 +168,20 @@ export default function AttendancePage() {
         }
     };
     
-    const handleSaveWeekends = () => {
-        // Here you would typically call a server action to save the `selectedWeekends` state
-        console.log("Saving weekends:", selectedWeekends);
-        toast({
-            title: "Settings Saved",
-            description: "Weekend days have been updated.",
-        });
+    const handleSaveWeekends = async () => {
+        const result = await saveWeekendSettingsAction(selectedWeekends);
+        if (result.success) {
+            toast({
+                title: "Settings Saved",
+                description: "Weekend days have been updated.",
+            });
+        } else {
+             toast({
+                title: "Error",
+                description: result.error || "Failed to save weekend settings.",
+                variant: "destructive",
+            });
+        }
     };
 
     const handleHolidaySaved = () => {
