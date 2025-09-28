@@ -16,20 +16,33 @@ import { cn } from "@/lib/utils";
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from '@/contexts/auth-context';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const navItems = [
-  { href: "/attendance/notice", label: "Notice", icon: Bell },
+  // Notice is now handled separately to trigger a sheet
   { href: "/attendance/history", label: "History", icon: History },
   { href: "/attendance", label: "Attendance", icon: Fingerprint, isCentral: true },
   { href: "/attendance/leave", label: "Leave", icon: CalendarPlus },
   { href: "/attendance/profile", label: "Profile", icon: UserIcon },
 ];
 
+const notifications = [
+    { id: 1, user: "Admin", message: "System maintenance is scheduled for tonight at 2 AM.", time: "1h ago", avatar: "https://i.pravatar.cc/150?u=admin" },
+    { id: 2, user: "HR Department", message: "Reminder: Please complete your quarterly self-assessment by Friday.", time: "4h ago", avatar: "https://i.pravatar.cc/150?u=hr" },
+    { id: 3, user: "Project Manager", message: "The project deadline for 'Phoenix' has been extended by two days.", time: "1d ago", avatar: "https://i.pravatar.cc/150?u=pm" },
+    { id: 4, user: "IT Support", message: "A new security update has been applied. No action is required.", time: "2d ago", avatar: "https://i.pravatar.cc/150?u=it" },
+    { id: 5, user: "Admin", message: "Welcome to the new attendance system!", time: "3d ago", avatar: "https://i.pravatar.cc/150?u=admin" },
+];
+
 export function BottomNavigation() {
   const pathname = usePathname();
   const [isClient, setIsClient] = useState(false);
   const { currentUser, isLoading } = useAuth();
+  const [isNoticeSheetOpen, setIsNoticeSheetOpen] = useState(false);
 
 
   useEffect(() => {
@@ -51,54 +64,100 @@ export function BottomNavigation() {
   if (!pathname.startsWith('/attendance')) {
     return null;
   }
+  
+  const noticeItem = { href: "#", label: "Notice", icon: Bell };
+  const isActive = (href: string) => pathname === href;
 
 
   return (
-    <div className="fixed bottom-0 left-0 w-full h-16 bg-background/95 backdrop-blur-md border-t border-border/40 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:hidden z-50">
-      <div className="flex justify-around items-center h-full max-w-md mx-auto">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-          if (item.isCentral) {
-            return (
-              <div key={item.href} className="relative w-16 h-16">
-                <Link
-                  href={item.href}
-                  className="absolute -top-6 left-1/2 -translate-x-1/2 flex items-center justify-center h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40 transform hover:scale-110 transition-transform"
-                  aria-label={item.label}
-                >
-                  <item.icon className="h-7 w-7" />
-                </Link>
-              </div>
-            );
-          }
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                "relative flex flex-col items-center justify-center w-14 h-14 text-muted-foreground transition-colors",
-                isActive ? "text-primary" : "hover:text-primary/80"
-              )}
-              aria-label={item.label}
-            >
-              <AnimatePresence>
-                {isActive && (
-                  <motion.div
-                    layoutId="active-nav-indicator"
-                    className="absolute inset-x-0 bottom-0 h-1 bg-primary rounded-t-full"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 20 }}
-                  />
+    <>
+      <div className="fixed bottom-0 left-0 w-full h-16 bg-background/95 backdrop-blur-md border-t border-border/40 shadow-[0_-2px_10px_rgba(0,0,0,0.05)] md:hidden z-50">
+        <div className="flex justify-around items-center h-full max-w-md mx-auto">
+            {/* Notice Button */}
+            <Button
+                variant="ghost"
+                onClick={() => setIsNoticeSheetOpen(true)}
+                className={cn(
+                    "relative flex flex-col items-center justify-center w-14 h-14 text-muted-foreground transition-colors p-0 hover:bg-transparent",
+                    "hover:text-primary/80"
                 )}
-              </AnimatePresence>
-              <item.icon className="h-6 w-6 mb-0.5" />
-              <span className="text-xs font-medium">{item.label}</span>
-            </Link>
-          );
-        })}
+                aria-label={noticeItem.label}
+            >
+                <noticeItem.icon className="h-6 w-6 mb-0.5" />
+                <span className="text-xs font-medium">{noticeItem.label}</span>
+            </Button>
+
+            {/* Other Nav Items */}
+            {navItems.map((item) => {
+            const active = isActive(item.href);
+            if (item.isCentral) {
+                return (
+                <div key={item.href} className="relative w-16 h-16">
+                    <Link
+                    href={item.href}
+                    className="absolute -top-6 left-1/2 -translate-x-1/2 flex items-center justify-center h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/40 transform hover:scale-110 transition-transform"
+                    aria-label={item.label}
+                    >
+                    <item.icon className="h-7 w-7" />
+                    </Link>
+                </div>
+                );
+            }
+            return (
+                <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                    "relative flex flex-col items-center justify-center w-14 h-14 text-muted-foreground transition-colors",
+                    active ? "text-primary" : "hover:text-primary/80"
+                )}
+                aria-label={item.label}
+                >
+                <AnimatePresence>
+                    {active && (
+                    <motion.div
+                        layoutId="active-nav-indicator"
+                        className="absolute inset-x-0 bottom-0 h-1 bg-primary rounded-t-full"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                    />
+                    )}
+                </AnimatePresence>
+                <item.icon className="h-6 w-6 mb-0.5" />
+                <span className="text-xs font-medium">{item.label}</span>
+                </Link>
+            );
+            })}
+        </div>
       </div>
-    </div>
+      
+       <Sheet open={isNoticeSheetOpen} onOpenChange={setIsNoticeSheetOpen}>
+          <SheetContent side="bottom" className="h-[80vh] rounded-t-2xl flex flex-col">
+            <SheetHeader className="text-left px-2">
+              <SheetTitle className="flex items-center gap-2"><Bell className="h-5 w-5 text-primary"/>Notifications</SheetTitle>
+              <SheetDescription>Recent updates and announcements.</SheetDescription>
+            </SheetHeader>
+            <ScrollArea className="flex-1 -mx-6 px-6">
+                <div className="space-y-4 py-4">
+                    {notifications.map(notif => (
+                        <div key={notif.id} className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50">
+                             <Avatar className="h-9 w-9 border">
+                                <AvatarImage src={notif.avatar} alt={notif.user}/>
+                                <AvatarFallback>{notif.user.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                                <p className="text-sm font-medium">{notif.user}</p>
+                                <p className="text-sm text-muted-foreground">{notif.message}</p>
+                                <p className="text-xs text-muted-foreground/70 mt-1">{notif.time}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </ScrollArea>
+          </SheetContent>
+      </Sheet>
+    </>
   );
 }
