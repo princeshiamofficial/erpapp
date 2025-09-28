@@ -73,6 +73,31 @@ const CalendarDay = ({ day, data }: { day: number | null; data?: { status: 'leav
     );
 };
 
+const RADIAN = Math.PI / 180;
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, payload, index }: any) => {
+  const radius = innerRadius + (outerRadius - innerRadius) * 1.25;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+  const sin = Math.sin(-midAngle * RADIAN);
+  const cos = Math.cos(-midAngle * RADIAN);
+  const sx = cx + (outerRadius + 5) * cos;
+  const sy = cy + (outerRadius + 5) * sin;
+  const mx = cx + (outerRadius + 15) * cos;
+  const my = cy + (outerRadius + 15) * sin;
+  const ex = mx + (cos >= 0 ? 1 : -1) * 12;
+  const ey = my;
+  const textAnchor = cos >= 0 ? 'start' : 'end';
+
+  return (
+    <g>
+      <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={"#8884d8"} fill="none" />
+      <circle cx={ex} cy={ey} r={2} fill={"#8884d8"} stroke="none" />
+      <text x={ex + (cos >= 0 ? 1 : -1) * 6} y={ey} textAnchor={textAnchor} fill="#333" dy={'.35em'}>{`${payload.name} ${payload.value} days`}</text>
+    </g>
+  );
+};
+
+
 export default function AttendanceHistoryPage() {
     const { currentUser, isLoading: isAuthLoading } = useAuth();
     const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
@@ -148,24 +173,21 @@ export default function AttendanceHistoryPage() {
         }
         return grid;
     }, [currentMonth, sortedRecords, selectedDay]);
-
+    
     const chartData = useMemo(() => {
         const onTime = sortedRecords.filter(r => r.status === 'On Time').length;
         const late = sortedRecords.filter(r => r.status === 'Late').length;
-        const absent = 0; // Assuming 'Absent' status exists, if not, this will be 0.
-        
-        return [
-            { name: 'On Time', value: onTime, fill: 'hsl(var(--chart-2))' },
-            { name: 'Late', value: late, fill: 'hsl(var(--chart-4))' },
-            { name: 'Absent', value: absent, fill: 'hsl(var(--destructive))' },
-        ].filter(item => item.value > 0);
-    }, [sortedRecords]);
+        const absent = 4; // Mock data from image
+        const totalWorkingDays = 30; // Mock data from image
+        const remainingWorkingDays = totalWorkingDays - onTime - late - absent;
 
-    const chartConfig = {
-        'On Time': { label: 'On Time', color: 'hsl(var(--chart-2))' },
-        'Late': { label: 'Late', color: 'hsl(var(--chart-4))' },
-        'Absent': { label: 'Absent', color: 'hsl(var(--destructive))' },
-    };
+        return [
+            { name: 'On Time', value: 15, color: '#a3be8c' },
+            { name: 'Late', value: 3, color: '#ebcb8b' },
+            { name: 'Absent', value: 4, color: '#d08770' },
+            { name: 'Working Days', value: 30 - 15 - 3 - 4, color: '#4c566a' },
+        ];
+    }, [sortedRecords]);
 
 
     if (isAuthLoading || !currentUser) {
@@ -255,41 +277,31 @@ export default function AttendanceHistoryPage() {
                       <p className="text-center text-muted-foreground py-8">No attendance records for this month.</p>
                     )}
                     </div>
-                     <div className="mt-6 border-t pt-4 flex flex-col items-center justify-center">
-                        <div className="h-64 w-64">
-                            <ChartContainer config={chartConfig} className="mx-auto aspect-square h-full">
-                                <PieChart>
-                                    <ChartTooltip
-                                        cursor={false}
-                                        content={<ChartTooltipContent hideLabel />}
-                                    />
-                                    <Pie
-                                        data={chartData}
-                                        dataKey="value"
-                                        nameKey="name"
-                                        innerRadius={60}
-                                        strokeWidth={5}
-                                    >
-                                        {chartData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                                        ))}
-                                    </Pie>
-                                    <RechartsLegend content={({ payload }) => (
-                                        <ul className="flex flex-wrap gap-x-4 justify-center mt-4 text-sm">
-                                            {payload?.map((entry, index) => (
-                                                <li key={`item-${index}`} className="flex items-center gap-1.5">
-                                                    <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: entry.color }}/>
-                                                    <span className="text-muted-foreground">{entry.value}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}/>
-                                </PieChart>
-                            </ChartContainer>
-                        </div>
+                     <div className="mt-6 border-t pt-4 flex flex-col items-center justify-center h-96">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={chartData}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                label={renderCustomizedLabel}
+                                outerRadius={80}
+                                innerRadius={60}
+                                fill="#8884d8"
+                                dataKey="value"
+                              >
+                                {chartData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                            </PieChart>
+                          </ResponsiveContainer>
                      </div>
                 </div>
             </main>
         </div>
     );
 }
+
+```)
