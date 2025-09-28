@@ -15,7 +15,6 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/attendance", label: "Home", icon: Home },
-  { href: "/attendance/history", label: "History", icon: History },
   { href: "/attendance/profile", label: "Profile", icon: UserIcon },
 ];
 
@@ -28,11 +27,10 @@ export function BottomNavigation() {
   }, []);
 
   const getTranslateX = () => {
-    if (!isClient) return '-80px'; // Default position for server render
-    if (pathname.startsWith('/attendance/history')) return '0px';
-    if (pathname.startsWith('/attendance/profile')) return '80px';
+    if (!isClient) return '-55px'; // Default position for server render
+    if (pathname.startsWith('/attendance/profile')) return '55px';
     // Default to 'Home' for /attendance or /attendance/home
-    return '-80px';
+    return '-55px';
   };
   
   const isNavItemActive = (itemHref: string) => {
@@ -53,7 +51,7 @@ export function BottomNavigation() {
   
   if (!isClient) {
     return (
-       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm md:hidden z-50">
+       <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-[220px] md:hidden z-50">
          <div className={baseContainerClass}>
           {navItems.map((item) => (
             <Link
@@ -72,7 +70,7 @@ export function BottomNavigation() {
 
   // Client-side render with dynamic styles
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm md:hidden z-50">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-[220px] md:hidden z-50">
       <div className={baseContainerClass}>
         <div
           className="absolute bottom-0 h-1 w-16 bg-white rounded-full transition-transform duration-300 ease-in-out"
