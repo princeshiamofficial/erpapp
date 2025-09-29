@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -49,6 +48,7 @@ import {
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
 import Image from 'next/image';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
@@ -77,7 +77,7 @@ export default function PayrollPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [attendanceDateFilter, setAttendanceDateFilter] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isPerformanceTabVisible, setIsPerformanceTabVisible] = useState(false);
 
