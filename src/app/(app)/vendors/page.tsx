@@ -422,7 +422,9 @@ export default function VendorsPage() {
                         <TableCell>{vendor.companyName || 'N/A'}</TableCell>
                         <TableCell>{vendor.phone || 'N/A'}</TableCell>
                         <TableCell>{vendor.address || 'N/A'}</TableCell>
-                        <TableCell>{vendor.category || 'N/A'}</TableCell>
+                        <TableCell>
+                          {vendor.category ? <Badge variant="secondary">{vendor.category}</Badge> : 'N/A'}
+                        </TableCell>
                         <TableCell className="pr-6 text-right">
                             <DropdownMenu>
                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
@@ -774,4 +776,3 @@ export default function VendorsPage() {
     
 
     
-
