@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -293,6 +292,9 @@ export default function PayrollPage() {
       return acc;
     }, { totalPaid: 0, totalUnpaid: 0 });
   }, [paginatedEmployees, selectedDate]);
+  
+  const totalPayableAmount = totalPaid + totalUnpaid;
+
 
   const handleMonthChange = (monthIndex: string) => {
     const newDate = new Date(selectedDate);
@@ -560,8 +562,9 @@ export default function PayrollPage() {
 
 
                   const perDaySalary = effectiveSalary / (daysInMonth > 0 ? daysInMonth : 30);
-                  const presentDays = payslip?.presentDays ?? 30;
                   const providentFund = effectiveSalary * 0.07;
+                  
+                  const presentDays = payslip?.presentDays ?? 30;
                   const lateDays = payslip?.lateDays ?? 0;
                   const incentive = payslip?.incentive ?? 0;
                   const fine = payslip?.fine ?? 0;
@@ -856,7 +859,7 @@ export default function PayrollPage() {
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2">
                 <AlertTriangle className="h-6 w-6 text-destructive" />
-                Are you absolutely sure?
+                Are you sure?
               </AlertDialogTitle>
               <AlertDialogDescription>
                 This will delete the salary increment from <span className="font-semibold">{format(new Date(incrementToDelete.increment.date), 'd MMM, yyyy')}</span> for <span className="font-semibold">{incrementToDelete.employeeName}</span>. This action cannot be undone.
@@ -874,3 +877,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
