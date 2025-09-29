@@ -267,7 +267,7 @@ export default function AttendanceHistoryPage() {
 
     return (
         <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
-            <header className="relative h-20 w-full bg-gradient-to-br from-pink-300 via-purple-300 to-indigo-400 p-4 text-white text-center flex flex-col justify-center items-center rounded-b-xl">
+            <header className="relative h-20 w-full bg-gradient-to-br from-orange-500 to-black p-4 text-white text-center flex flex-col justify-center items-center rounded-b-xl">
                  <div className="absolute top-1/2 -translate-y-1/2 left-4">
                     <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" asChild>
                       <Link href="/attendance">
