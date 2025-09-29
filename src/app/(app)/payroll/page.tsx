@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -76,6 +75,7 @@ export default function PayrollPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isPerformanceTabVisible, setIsPerformanceTabVisible] = useState(false);
 
@@ -601,7 +601,7 @@ export default function PayrollPage() {
             </TableBody>
             <TableFooter>
                 <TableRow>
-                    <TableCell colSpan={10} className="text-right font-bold">
+                    <TableCell colSpan={9} className="text-right font-bold">
                         <div className="flex justify-end items-center gap-4">
                             <span>Total Paid: <span className="text-green-600">{formatCurrency(totalPaid)}</span></span>
                             <span>Total Unpaid: <span className="text-red-600">{formatCurrency(totalUnpaid)}</span></span>
@@ -856,4 +856,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
