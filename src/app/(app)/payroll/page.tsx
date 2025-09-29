@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -18,7 +19,7 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark } from 'lucide-react';
 import type { Employee, User, SalaryIncrement } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
@@ -601,12 +602,8 @@ export default function PayrollPage() {
             </TableBody>
             <TableFooter>
                 <TableRow>
-                    <TableCell colSpan={9} className="text-right font-bold">
-                        <div className="flex justify-end items-center gap-4">
-                            <span>Total Paid: <span className="text-green-600">{formatCurrency(totalPaid)}</span></span>
-                            <span>Total Unpaid: <span className="text-red-600">{formatCurrency(totalUnpaid)}</span></span>
-                        </div>
-                    </TableCell>
+                    <TableCell colSpan={9} className="text-right font-bold">Total Payable</TableCell>
+                    <TableCell className="font-bold text-right">{formatCurrency(totalPayableAmount)}</TableCell>
                 </TableRow>
             </TableFooter>
           </Table>
@@ -756,7 +753,28 @@ export default function PayrollPage() {
     </Card>
   );
 
-  const fundWalletContent = employeeListContent;
+  const fundWalletContent = (
+    <div className="space-y-6">
+        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+            <CardHeader className="p-6 flex flex-row items-center justify-between">
+                <div className="space-y-0.5">
+                    <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
+                        <Landmark className="mr-3 h-6 w-6 text-primary"/>
+                        Total Fund
+                    </CardTitle>
+                    <CardDescription>
+                        Overall balance available for payroll and expenses.
+                    </CardDescription>
+                </div>
+                <Button variant="outline">Add Fund</Button>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+                <p className="text-4xl font-bold text-gray-900">{formatCurrency(0.00)}</p>
+                <p className="text-xs text-gray-500 mt-1">This is a placeholder value. Integration with finance is pending.</p>
+            </CardContent>
+        </Card>
+    </div>
+  );
 
   const renderActiveTab = () => {
     switch (activeTab) {
