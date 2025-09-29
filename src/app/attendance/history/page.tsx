@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, ChevronDown, Plus, Heart, Sun, Check, Loader2, ChevronRight, ChevronLeft as ChevronLeftIcon } from 'lucide-react'; // Renamed ChevronLeft to avoid conflict
+import { ArrowLeft, ChevronDown, Plus, Heart, Sun, Check, Loader2, ChevronRight, ChevronLeft as ChevronLeftIcon, AlertTriangle, Clock } from 'lucide-react'; // Renamed ChevronLeft to avoid conflict
 import { format, getDaysInMonth, getDay, startOfMonth, addMonths, subMonths, isToday, isSameDay, isSameMonth, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Calendar2 as Calendar } from '@/components/ui/calendar2';
@@ -26,7 +26,7 @@ import {
 
 const WEEK_DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 
-const CalendarDay = ({ day, data }: { day: number | null; data?: { status: 'leave' | 'present' | 'holiday' | 'selected' | 'today' | 'late' } }) => {
+const CalendarDay = ({ day, data }: { day: number | null; data?: { status: 'leave' | 'present' | 'holiday' | 'selected' | 'today' | 'late' | 'absent' } }) => {
     if (!day) {
         return <div className="w-10 h-10"></div>;
     }
@@ -41,11 +41,15 @@ const CalendarDay = ({ day, data }: { day: number | null; data?: { status: 'leav
         },
         present: {
             container: "bg-transparent text-foreground",
-            icon: <Check className={cn(iconClasses, "text-blue-500")} />
+            icon: <Check className={cn(iconClasses, "text-green-500")} />
         },
-        late: { // New style for Late
+        late: {
             container: "bg-transparent text-foreground",
             icon: <Check className={cn(iconClasses, "text-yellow-500")} />
+        },
+         absent: {
+            container: "border-2 border-dashed border-red-400 bg-red-50 text-red-500",
+            icon: <AlertTriangle className={cn(iconClasses, "text-red-500")} />
         },
         holiday: {
             container: "bg-yellow-100 text-yellow-600",
@@ -164,28 +168,47 @@ export default function AttendanceHistoryPage() {
         return recordsForMonth.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       }, [monthlyRecords, currentMonth]);
 
-    const calendarGrid = useMemo(() => {
+    const { calendarGrid, absenceDates } = useMemo(() => {
         const start = startOfMonth(currentMonth);
         const totalDays = getDaysInMonth(currentMonth);
-        const startingDayOfWeek = (getDay(start) + 6) % 7; // Monday is 0
+        const startingDayOfWeek = (getDay(start) + 6) % 7;
         const grid = [];
+        const absences: string[] = [];
 
-        // Add blank cells for days before the start of the month
+        const today = new Date();
+        const loopEndDate = isSameMonth(currentMonth, today) ? today.getDate() : totalDays;
+
+        const attendedDates = new Set(sortedRecords.map(r => format(parseISO(r.date), 'yyyy-MM-dd')));
+        const weekendDayIndexes = weekendDays.map(day => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(day));
+
+        // Mark absences for past working days
+        for (let i = 1; i <= loopEndDate; i++) {
+            const date = new Date(start.getFullYear(), start.getMonth(), i);
+            const dateKey = format(date, 'yyyy-MM-dd');
+            const dayOfWeek = getDay(date);
+
+            if (!attendedDates.has(dateKey) && !weekendDayIndexes.includes(dayOfWeek)) {
+                absences.push(dateKey);
+            }
+        }
+        
+        // Build calendar grid
         for (let i = 0; i < startingDayOfWeek; i++) {
             grid.push({ day: null });
         }
 
-        // Add days of the month
         for (let i = 1; i <= totalDays; i++) {
             const date = new Date(start.getFullYear(), start.getMonth(), i);
+            const dateKey = format(date, 'yyyy-MM-dd');
             const record = sortedRecords.find(r => isSameDay(parseISO(r.date), date));
-            let status: 'leave' | 'present' | 'holiday' | 'selected' | 'today' | 'late' | undefined;
-            
+            let status: 'leave' | 'present' | 'holiday' | 'selected' | 'today' | 'late' | 'absent' | undefined;
+
             if (isToday(date)) status = 'today';
             
             if (record) {
-                if (record.status === 'Late') status = 'late';
-                else if (record.status) status = 'present';
+                status = record.status === 'Late' ? 'late' : 'present';
+            } else if (absences.includes(dateKey)) {
+                status = 'absent';
             }
             
             if (selectedDay && isSameDay(date, selectedDay)) {
@@ -198,16 +221,15 @@ export default function AttendanceHistoryPage() {
                 data: { status }
             });
         }
-        return grid;
-    }, [currentMonth, sortedRecords, selectedDay]);
+        return { calendarGrid: grid, absenceDates: absences };
+    }, [currentMonth, sortedRecords, selectedDay, weekendDays]);
     
     const chartData = useMemo(() => {
         if (!isClient) return [];
-        const records = sortedRecords;
         
-        const onTime = records.filter(r => r.status === 'On Time').length;
-        const late = records.filter(r => r.status === 'Late').length;
-        const attended = onTime + late;
+        const onTime = sortedRecords.filter(r => r.status === 'On Time').length;
+        const late = sortedRecords.filter(r => r.status === 'Late').length;
+        const absenceDaysCount = absenceDates.length;
 
         const totalDaysInMonth = getDaysInMonth(currentMonth);
         let workingDaysInMonth = 0;
@@ -220,32 +242,32 @@ export default function AttendanceHistoryPage() {
             }
         }
         
+        const attended = onTime + late;
         let remainingWorkingDays = 0;
-        let absenceDays = 0;
-        
+
         if (isSameMonth(currentMonth, new Date())) {
+            let workingDaysSoFar = 0;
             const todayDate = new Date().getDate();
-            let pastWorkingDays = 0;
             for (let i = 1; i <= todayDate; i++) {
-                const dayOfWeek = getDay(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i));
-                if (!weekendDayIndexes.includes(dayOfWeek)) {
-                    pastWorkingDays++;
-                }
+                 const dayOfWeek = getDay(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i));
+                 if (!weekendDayIndexes.includes(dayOfWeek)) {
+                     workingDaysSoFar++;
+                 }
             }
-            absenceDays = Math.max(0, pastWorkingDays - attended);
-            remainingWorkingDays = Math.max(0, workingDaysInMonth - attended - absenceDays);
+            // Absence is already calculated, so remaining is total minus what has happened
+            remainingWorkingDays = Math.max(0, workingDaysInMonth - workingDaysSoFar);
         } else {
-            absenceDays = Math.max(0, workingDaysInMonth - attended);
+             remainingWorkingDays = Math.max(0, workingDaysInMonth - attended - absenceDaysCount);
         }
 
         const data = [];
         if (onTime > 0) data.push({ name: 'On Time', value: onTime, color: '#a3be8c' });
         if (late > 0) data.push({ name: 'Late', value: late, color: '#ebcb8b' });
-        if (absenceDays > 0) data.push({ name: 'Absent', value: absenceDays, color: '#d08770' });
+        if (absenceDaysCount > 0) data.push({ name: 'Absent', value: absenceDaysCount, color: '#d08770' });
         if (remainingWorkingDays > 0) data.push({ name: 'Working Days', value: remainingWorkingDays, color: '#4c566a' });
 
         return data;
-    }, [sortedRecords, currentMonth, isClient, weekendDays]);
+    }, [sortedRecords, currentMonth, isClient, weekendDays, absenceDates]);
 
     const handleLongPressStart = () => {
         longPressTimer.current = setTimeout(() => {
@@ -387,4 +409,3 @@ export default function AttendanceHistoryPage() {
     );
 }
 
-    
