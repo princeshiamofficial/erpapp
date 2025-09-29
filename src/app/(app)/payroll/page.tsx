@@ -636,6 +636,8 @@ export default function PayrollPage() {
                 placeholder="Filter by date..."
                 className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
                 type="date"
+                value={attendanceDateFilter}
+                onChange={(e) => setAttendanceDateFilter(e.target.value)}
               />
             </div>
             <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
@@ -754,17 +756,7 @@ export default function PayrollPage() {
     </Card>
   );
 
-  const fundWalletContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-      <CardHeader className="p-6">
-        <CardTitle className="text-xl font-bold text-gray-800">Fund Wallet</CardTitle>
-        <p className="text-sm text-gray-500">This section is under construction.</p>
-      </CardHeader>
-      <CardContent className="p-6 pt-0 text-center text-gray-500">
-        <p>Functionality to fund employee wallets will be available here soon.</p>
-      </CardContent>
-    </Card>
-  );
+  const fundWalletContent = employeeListContent;
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -864,3 +856,4 @@ export default function PayrollPage() {
     </div>
   );
 }
+
