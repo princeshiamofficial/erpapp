@@ -763,28 +763,7 @@ export default function PayrollPage() {
     </Card>
   );
 
-  const fundWalletContent = (
-    <div className="space-y-6">
-        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-            <CardHeader className="p-6 flex flex-row items-center justify-between">
-                <div className="space-y-0.5">
-                    <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
-                        <Landmark className="mr-3 h-6 w-6 text-primary"/>
-                        Total Provident Fund
-                    </CardTitle>
-                    <CardDescription>
-                        Total PF contribution for the selected period.
-                    </CardDescription>
-                </div>
-                <Button variant="outline">Add Fund</Button>
-            </CardHeader>
-            <CardContent className="p-6 pt-0">
-                <p className="text-4xl font-bold text-gray-900">{formatCurrency(totalProvidentFund)}</p>
-                <p className="text-xs text-gray-500 mt-1">This value is the sum of all employees' provident fund contributions for the currently displayed salary sheet.</p>
-            </CardContent>
-        </Card>
-    </div>
-  );
+  const fundWalletContent = employeeListContent;
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -884,5 +863,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
-    
