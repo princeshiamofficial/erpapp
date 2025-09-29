@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -295,6 +294,13 @@ export default function PayrollPage() {
   }, [paginatedEmployees, selectedDate]);
   
   const totalPayableAmount = totalPaid + totalUnpaid;
+
+  const totalProvidentFund = useMemo(() => {
+    return paginatedEmployees.reduce((total, employee) => {
+      const providentFund = (employee.salary || 0) * 0.07;
+      return total + providentFund;
+    }, 0);
+  }, [paginatedEmployees]);
 
 
   const handleMonthChange = (monthIndex: string) => {
@@ -764,17 +770,17 @@ export default function PayrollPage() {
                 <div className="space-y-0.5">
                     <CardTitle className="text-xl font-bold text-gray-800 flex items-center">
                         <Landmark className="mr-3 h-6 w-6 text-primary"/>
-                        Total Fund
+                        Total Provident Fund
                     </CardTitle>
                     <CardDescription>
-                        Overall balance available for payroll and expenses.
+                        Total PF contribution for the selected period.
                     </CardDescription>
                 </div>
                 <Button variant="outline">Add Fund</Button>
             </CardHeader>
             <CardContent className="p-6 pt-0">
-                <p className="text-4xl font-bold text-gray-900">{formatCurrency(totalPayableAmount)}</p>
-                <p className="text-xs text-gray-500 mt-1">This value reflects the total payable amount from the salary sheet for the selected period.</p>
+                <p className="text-4xl font-bold text-gray-900">{formatCurrency(totalProvidentFund)}</p>
+                <p className="text-xs text-gray-500 mt-1">This value is the sum of all employees' provident fund contributions for the currently displayed salary sheet.</p>
             </CardContent>
         </Card>
     </div>
@@ -880,4 +886,3 @@ export default function PayrollPage() {
 }
 
     
-
