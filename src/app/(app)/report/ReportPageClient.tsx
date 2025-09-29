@@ -42,12 +42,6 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recha
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
 import dynamic from 'next/dynamic';
 
-
-const OrderAnalysisClient = dynamic(() => import('@/components/dashboard/OrderAnalysisClient').then(mod => mod.OrderAnalysisClient), {
-  ssr: false,
-  loading: () => <Skeleton className="h-[400px] w-full" />
-});
-
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-BD', {
         style: 'currency',
@@ -337,7 +331,7 @@ export function ReportPageClient() {
   return (
     <>
       <div className="space-y-6 p-1 sm:p-0">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
             <Card className="w-full">
               <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
@@ -408,7 +402,6 @@ export function ReportPageClient() {
                 </Table>
               </CardContent>
             </Card>
-            <OrderAnalysisClient allOrders={orders} />
         </div>
       </div>
 
