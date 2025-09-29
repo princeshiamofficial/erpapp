@@ -24,7 +24,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, differenceInMonths } from 'date-fns';
 import { deleteEmployeeAction, deleteSalaryIncrementAction } from './actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -47,6 +47,7 @@ import {
   AlertDialogHeader, 
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
+import Image from 'next/image';
 
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
@@ -90,6 +91,7 @@ export default function PayrollPage() {
   const [isDeletingIncrement, setIsDeletingIncrement] = useState(false);
 
   const [leaveToManage, setLeaveToManage] = useState<Employee | null>(null);
+  const [visibleFunds, setVisibleFunds] = useState<Record<string, boolean>>({});
 
 
   const [selectedDate, setSelectedDate] = useState(subMonths(new Date(), 1));
@@ -122,7 +124,7 @@ export default function PayrollPage() {
   const filteredEmployees = useMemo(() => {
     let results = employees;
 
-    if (activeTab === 'salary_sheet') {
+    if (activeTab === 'salary_sheet' || activeTab === 'fund_wallet') {
       const selectedMonthStart = startOfMonth(selectedDate);
       
       results = results.filter(employee => {
@@ -258,9 +260,9 @@ export default function PayrollPage() {
     return allUsers.filter(u => !employeeUserIds.has(u.id));
   }, [employees, allUsers]);
   
-  const { totalPaid, totalUnpaid } = useMemo(() => {
+  const { totalPaid, totalUnpaid, totalPayableAmount } = useMemo(() => {
     const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
-    return paginatedEmployees.reduce((acc, employee) => {
+    const totals = paginatedEmployees.reduce((acc, employee) => {
       const payslip = employee.payslips?.[monthYearId];
       let payable = 0;
       if (payslip) {
@@ -291,10 +293,10 @@ export default function PayrollPage() {
 
       return acc;
     }, { totalPaid: 0, totalUnpaid: 0 });
+    
+    return { ...totals, totalPayableAmount: totals.totalPaid + totals.totalUnpaid };
   }, [paginatedEmployees, selectedDate]);
   
-  const totalPayableAmount = totalPaid + totalUnpaid;
-
   const totalProvidentFund = useMemo(() => {
     return paginatedEmployees.reduce((total, employee) => {
       const providentFund = (employee.salary || 0) * 0.07;
@@ -328,6 +330,10 @@ export default function PayrollPage() {
       value: i.toString(),
       label: format(new Date(0, i), 'MMMM'),
   })), []);
+  
+  const toggleFundVisibility = (employeeId: string) => {
+    setVisibleFunds(prev => ({ ...prev, [employeeId]: !prev[employeeId] }));
+  };
 
   const employeeListContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
@@ -763,7 +769,53 @@ export default function PayrollPage() {
     </Card>
   );
 
-  const fundWalletContent = employeeListContent;
+  const fundWalletContent = (
+    <div className="space-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {isLoading ? (
+                [...Array(8)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-2xl" />)
+            ) : filteredEmployees.length > 0 ? (
+                filteredEmployees.map(employee => {
+                    const monthsWithCompany = differenceInMonths(new Date(), new Date(employee.joiningDate));
+                    const providentFund = (employee.salary || 0) * 0.07 * monthsWithCompany;
+                    const isVisible = !!visibleFunds[employee.id];
+
+                    return (
+                        <Card key={employee.id} className="shadow-lg border-none rounded-2xl bg-white overflow-hidden p-4 flex flex-col justify-between">
+                            <div className="flex items-center gap-4">
+                                <Image
+                                    src={employee.avatarUrl || `https://picsum.photos/seed/${employee.id}/64/64`}
+                                    alt={employee.name}
+                                    width={56}
+                                    height={56}
+                                    className="rounded-full object-cover border-2 border-gray-200"
+                                />
+                                <div>
+                                    <h3 className="font-bold text-gray-800 text-base">{employee.name}</h3>
+                                    <p className="text-sm text-gray-500">Provident Fund</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center justify-between mt-4">
+                                <Button
+                                    onClick={() => toggleFundVisibility(employee.id)}
+                                    className="bg-[#D18247] hover:bg-[#b56e39] text-white rounded-full text-xs h-8 px-4 shadow-md"
+                                >
+                                    {isVisible ? formatCurrency(providentFund) : 'Tap To See Amount'}
+                                </Button>
+                                <p className="text-sm text-gray-500 font-medium">{monthsWithCompany} Month</p>
+                            </div>
+                        </Card>
+                    );
+                })
+            ) : (
+                <div className="col-span-full text-center py-16 text-gray-500">
+                    <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                    No employees found for provident fund calculation.
+                </div>
+            )}
+        </div>
+    </div>
+  );
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -863,3 +915,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
