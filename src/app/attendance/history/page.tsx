@@ -226,7 +226,7 @@ export default function AttendanceHistoryPage() {
         if (isSameMonth(currentMonth, new Date())) {
             const todayDate = new Date().getDate();
             let pastWorkingDays = 0;
-            for (let i = 1; i <= todayDate; i++) { // Changed from i < todayDate to i <= todayDate
+            for (let i = 1; i <= todayDate; i++) {
                 const dayOfWeek = getDay(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i));
                 if (!weekendDayIndexes.includes(dayOfWeek)) {
                     pastWorkingDays++;
@@ -267,7 +267,7 @@ export default function AttendanceHistoryPage() {
 
     return (
         <div className="flex min-h-screen flex-col bg-gray-50 dark:bg-gray-900">
-            <header className="relative h-20 w-full bg-gradient-to-br from-orange-500 to-black p-4 text-white text-center flex flex-col justify-center items-center rounded-b-xl">
+            <header className="relative h-20 w-full bg-gradient-to-br from-orange-500 to-black p-4 text-white text-center flex-col justify-center items-center rounded-b-xl hidden">
                  <div className="absolute top-1/2 -translate-y-1/2 left-4">
                     <Button variant="ghost" size="icon" className="text-white hover:bg-white/20" asChild>
                       <Link href="/attendance">
