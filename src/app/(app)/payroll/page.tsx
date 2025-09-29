@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -772,8 +773,8 @@ export default function PayrollPage() {
                 <Button variant="outline">Add Fund</Button>
             </CardHeader>
             <CardContent className="p-6 pt-0">
-                <p className="text-4xl font-bold text-gray-900">{formatCurrency(0.00)}</p>
-                <p className="text-xs text-gray-500 mt-1">This is a placeholder value. Integration with finance is pending.</p>
+                <p className="text-4xl font-bold text-gray-900">{formatCurrency(totalPayableAmount)}</p>
+                <p className="text-xs text-gray-500 mt-1">This value reflects the total payable amount from the salary sheet for the selected period.</p>
             </CardContent>
         </Card>
     </div>
@@ -879,3 +880,4 @@ export default function PayrollPage() {
 }
 
     
+
