@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -76,7 +77,7 @@ export default function PayrollPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
+  const [attendanceDateFilter, setAttendanceDateFilter] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [currentPage, setCurrentPage] = useState(1);
   const [isPerformanceTabVisible, setIsPerformanceTabVisible] = useState(false);
 
@@ -776,6 +777,7 @@ export default function PayrollPage() {
                 [...Array(8)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-2xl" />)
             ) : filteredEmployees.length > 0 ? (
                 filteredEmployees.map(employee => {
+                    const user = allUsers.find(u => u.id === employee.userId);
                     const monthsWithCompany = differenceInMonths(new Date(), new Date(employee.joiningDate));
                     const providentFund = (employee.salary || 0) * 0.07 * monthsWithCompany;
                     const isVisible = !!visibleFunds[employee.id];
@@ -783,13 +785,10 @@ export default function PayrollPage() {
                     return (
                         <Card key={employee.id} className="shadow-lg border-none rounded-2xl bg-white overflow-hidden p-4 flex flex-col justify-between">
                             <div className="flex items-center gap-4">
-                                <Image
-                                    src={employee.avatarUrl || `https://picsum.photos/seed/${employee.id}/64/64`}
-                                    alt={employee.name}
-                                    width={56}
-                                    height={56}
-                                    className="rounded-full object-cover border-2 border-gray-200"
-                                />
+                                <Avatar className="h-14 w-14 border-2 border-gray-200">
+                                  <AvatarImage src={user?.avatarUrl || undefined} alt={employee.name} />
+                                  <AvatarFallback>{(employee.name || '??').charAt(0)}</AvatarFallback>
+                                </Avatar>
                                 <div>
                                     <h3 className="font-bold text-gray-800 text-base">{employee.name}</h3>
                                     <p className="text-sm text-gray-500">Provident Fund</p>
@@ -915,5 +914,7 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
 
     
