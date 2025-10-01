@@ -113,6 +113,7 @@ export default function CheckInOutPage() {
   const [officeLocations, setOfficeLocations] = useState<CompanyLocation[]>([]);
   const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]);
   const [weekendDays, setWeekendDays] = useState<string[]>([]);
+  const [attendanceStatus, setAttendanceStatus] = useState<'On Time' | 'Late' | 'Absent'>('On Time');
   
   useEffect(() => {
     if (!isAuthLoading && !currentUser) {
@@ -197,6 +198,7 @@ export default function CheckInOutPage() {
                 setStatus(mark.status);
                 if (mark.checkInTime) setCheckInTime(parseISO(mark.checkInTime));
                 if (mark.checkOutTime) setCheckOutTime(parseISO(mark.checkOutTime));
+                if (mark.attendanceStatus) setAttendanceStatus(mark.attendanceStatus);
             } else {
                 localStorage.removeItem(ATTENDANCE_STORAGE_KEY);
             }
@@ -215,10 +217,12 @@ export default function CheckInOutPage() {
                     setStatus(mark.status);
                     if (mark.lastCheckInTime) setCheckInTime(parseISO(mark.lastCheckInTime));
                     if (mark.lastCheckOutTime) setCheckOutTime(parseISO(mark.lastCheckOutTime));
+                    if (mark.attendanceStatus) setAttendanceStatus(mark.attendanceStatus);
                     saveStateToLocalStorage({
                       status: mark.status,
                       checkInTime: mark.lastCheckInTime,
                       checkOutTime: mark.lastCheckOutTime,
+                      attendanceStatus: mark.attendanceStatus,
                     });
                 }
             }
@@ -295,7 +299,7 @@ export default function CheckInOutPage() {
     // Find the applicable office time for the current user's role
     const userRole = currentUser.role;
     const applicableOfficeTime = officeTimes.find(time => 
-        time.applicableRoles === 'all' || (Array.isArray(time.applicableRoles) && time.applicableRoles.includes(userRole))
+        (Array.isArray(time.applicableRoles) && time.applicableRoles.includes(userRole)) || time.applicableRoles === 'all'
     );
 
     if (applicableOfficeTime) {
@@ -311,10 +315,13 @@ export default function CheckInOutPage() {
             checkInMessage = `You are late. Check-in was at ${format(now, 'h:mm:ss a')}.`;
         }
     }
+    
+    const newAttendanceStatus = isLate ? 'Late' as const : 'On Time' as const;
+    setAttendanceStatus(newAttendanceStatus);
 
     const recordData = {
       checkInTime: now.toISOString(),
-      status: isLate ? 'Late' as const : 'On Time' as const,
+      status: newAttendanceStatus,
       location: locationStatus,
       checkInLocation: currentLocation,
     };
@@ -327,6 +334,7 @@ export default function CheckInOutPage() {
           status: 'Checked In',
           checkInTime: now.toISOString(),
           checkOutTime: null,
+          attendanceStatus: newAttendanceStatus,
         });
         toast({
           title: isLate ? "Checked In (Late)" : "Checked In Successfully",
@@ -357,6 +365,7 @@ export default function CheckInOutPage() {
       checkOutTime: now.toISOString(),
       hoursWorked: hoursWorked,
       checkOutLocation: currentLocation,
+      status: attendanceStatus, // Preserve the status from check-in
     };
     const result = await saveAttendanceAction(currentUser, recordData);
     if(result.success) {
@@ -366,6 +375,7 @@ export default function CheckInOutPage() {
           status: 'Checked Out',
           checkInTime: checkInTime.toISOString(),
           checkOutTime: now.toISOString(),
+          attendanceStatus: attendanceStatus, // Preserve status
         });
         toast({
           title: "Checked Out Successfully",

@@ -2,7 +2,7 @@
 "use server";
 
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
-import type { AttendanceRecord, User } from '@/types';
+import type { AttendanceRecord, User, AttendanceStatus } from '@/types';
 import { format, isToday, parseISO } from 'date-fns';
 
 const getCollectionNameForDate = (date: Date): string => {
@@ -63,7 +63,7 @@ export const addOrUpdateAttendanceRecord = async (recordData: Omit<AttendanceRec
 };
 
 
-export const getAttendanceMark = async (userId: string): Promise<any | null> => {
+export const getAttendanceMark = async (userId: string): Promise<{ status: 'Checked In' | 'Checked Out', lastCheckInTime: string | null, lastCheckOutTime: string | null, attendanceStatus: AttendanceStatus } | null> => {
     if (!userId) return null;
     try {
         await ensureCollectionExistsV3(MARK_COLLECTION_NAME);
@@ -145,7 +145,8 @@ export const saveAttendanceAction = async (
     const markData = {
         status: recordData.checkOutTime ? 'Checked Out' : 'Checked In',
         lastCheckInTime: recordData.checkInTime,
-        lastCheckOutTime: recordData.checkOutTime || null
+        lastCheckOutTime: recordData.checkOutTime || null,
+        attendanceStatus: recordData.status || 'On Time', // Persist the status
     };
     const markResult = await setAttendanceMark(currentUser.id, markData);
     if (!markResult) {
