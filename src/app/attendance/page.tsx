@@ -369,11 +369,11 @@ export default function CheckInOutPage() {
 
     const recordData = {
       checkInTime: checkInTime.toISOString(),
-      checkInLocation: checkInLocation, // Pass the preserved check-in location
+      checkInLocation: checkInLocation,
       checkOutTime: now.toISOString(),
       hoursWorked: hoursWorked,
-      checkOutLocation: currentLocation,
-      status: attendanceStatus, // Preserve the status from check-in
+      checkOutLocation: currentLocation, // Add the check-out location
+      status: attendanceStatus,
     };
     const result = await saveAttendanceAction(currentUser, recordData);
     if(result.success) {

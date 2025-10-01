@@ -582,3 +582,5 @@ export interface AttendanceRecord {
     checkInLocation?: { lat: number; lng: number };
     checkOutLocation?: { lat: number; lng: number };
 }
+
+  

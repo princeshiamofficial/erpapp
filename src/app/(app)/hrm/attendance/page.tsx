@@ -340,24 +340,44 @@ export default function AttendancePage() {
                                     <TableCell>{entry.lateReason || '-'}</TableCell>
                                     <TableCell>{entry.earlyOutReason || '-'}</TableCell>
                                     <TableCell>
-                                        <Button 
-                                            variant="outline" 
-                                            size="sm"
-                                            disabled={!entry.checkInLocation?.lat || !entry.checkInLocation?.lng}
-                                            onClick={() => {
-                                                if (entry.checkInLocation?.lat && entry.checkInLocation?.lng) {
-                                                    setViewingLocation({ 
-                                                        lat: entry.checkInLocation.lat, 
-                                                        lng: entry.checkInLocation.lng,
-                                                        employeeName: entry.employeeName,
-                                                        employeeAvatar: user?.avatarUrl || undefined
-                                                    });
-                                                }
-                                            }}
-                                        >
-                                            <MapPin className="mr-2 h-4 w-4" />
-                                            View Map
-                                        </Button>
+                                        <div className="flex items-center gap-2">
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm"
+                                                disabled={!entry.checkInLocation?.lat || !entry.checkInLocation?.lng}
+                                                onClick={() => {
+                                                    if (entry.checkInLocation?.lat && entry.checkInLocation?.lng) {
+                                                        setViewingLocation({ 
+                                                            lat: entry.checkInLocation.lat, 
+                                                            lng: entry.checkInLocation.lng,
+                                                            employeeName: entry.employeeName,
+                                                            employeeAvatar: user?.avatarUrl || undefined
+                                                        });
+                                                    }
+                                                }}
+                                            >
+                                                <MapPin className="mr-2 h-4 w-4" />
+                                                In
+                                            </Button>
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm"
+                                                disabled={!entry.checkOutLocation?.lat || !entry.checkOutLocation?.lng}
+                                                onClick={() => {
+                                                    if (entry.checkOutLocation?.lat && entry.checkOutLocation?.lng) {
+                                                        setViewingLocation({ 
+                                                            lat: entry.checkOutLocation.lat, 
+                                                            lng: entry.checkOutLocation.lng,
+                                                            employeeName: entry.employeeName,
+                                                            employeeAvatar: user?.avatarUrl || undefined
+                                                        });
+                                                    }
+                                                }}
+                                            >
+                                                <MapPin className="mr-2 h-4 w-4" />
+                                                Out
+                                            </Button>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             )})

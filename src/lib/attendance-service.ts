@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
@@ -63,7 +64,7 @@ export const addOrUpdateAttendanceRecord = async (recordData: Omit<AttendanceRec
 };
 
 
-export const getAttendanceMark = async (userId: string): Promise<{ status: 'Checked In' | 'Checked Out', lastCheckInTime: string | null, lastCheckOutTime: string | null, attendanceStatus: AttendanceStatus } | null> => {
+export const getAttendanceMark = async (userId: string): Promise<{ status: 'Checked In' | 'Checked Out', lastCheckInTime: string | null, lastCheckOutTime: string | null, attendanceStatus: AttendanceStatus, checkInLocation?: { lat: number; lng: number; } } | null> => {
     if (!userId) return null;
     try {
         await ensureCollectionExistsV3(MARK_COLLECTION_NAME);
@@ -147,6 +148,7 @@ export const saveAttendanceAction = async (
         lastCheckInTime: recordData.checkInTime,
         lastCheckOutTime: recordData.checkOutTime || null,
         attendanceStatus: recordData.status || 'On Time', // Persist the status
+        checkInLocation: recordData.checkInLocation,
     };
     const markResult = await setAttendanceMark(currentUser.id, markData);
     if (!markResult) {
