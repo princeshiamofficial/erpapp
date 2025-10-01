@@ -110,6 +110,7 @@ export default function CheckInOutPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [locationStatus, setLocationStatus] = useState('Requesting location...');
   const [currentLocation, setCurrentLocation] = useState<{ lat: number, lng: number } | null>(null);
+  const [checkInLocation, setCheckInLocation] = useState<{ lat: number, lng: number } | undefined>(undefined);
   const [officeLocations, setOfficeLocations] = useState<CompanyLocation[]>([]);
   const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]);
   const [weekendDays, setWeekendDays] = useState<string[]>([]);
@@ -197,6 +198,7 @@ export default function CheckInOutPage() {
             if (mark.userId === currentUser?.id && isToday(parseISO(mark.date))) {
                 setStatus(mark.status);
                 if (mark.checkInTime) setCheckInTime(parseISO(mark.checkInTime));
+                if (mark.checkInLocation) setCheckInLocation(mark.checkInLocation); // Load check-in location
                 if (mark.checkOutTime) setCheckOutTime(parseISO(mark.checkOutTime));
                 if (mark.attendanceStatus) setAttendanceStatus(mark.attendanceStatus);
             } else {
@@ -216,11 +218,14 @@ export default function CheckInOutPage() {
                 if (isToday(parseISO(mark.date))) {
                     setStatus(mark.status);
                     if (mark.lastCheckInTime) setCheckInTime(parseISO(mark.lastCheckInTime));
+                    // Assuming checkInLocation is now part of the mark from the DB
+                    if (mark.checkInLocation) setCheckInLocation(mark.checkInLocation);
                     if (mark.lastCheckOutTime) setCheckOutTime(parseISO(mark.lastCheckOutTime));
                     if (mark.attendanceStatus) setAttendanceStatus(mark.attendanceStatus);
                     saveStateToLocalStorage({
                       status: mark.status,
                       checkInTime: mark.lastCheckInTime,
+                      checkInLocation: mark.checkInLocation,
                       checkOutTime: mark.lastCheckOutTime,
                       attendanceStatus: mark.attendanceStatus,
                     });
@@ -318,6 +323,7 @@ export default function CheckInOutPage() {
     
     const newAttendanceStatus = isLate ? 'Late' as const : 'On Time' as const;
     setAttendanceStatus(newAttendanceStatus);
+    setCheckInLocation(currentLocation || undefined); // Set the check-in location
 
     const recordData = {
       checkInTime: now.toISOString(),
@@ -333,6 +339,7 @@ export default function CheckInOutPage() {
         saveStateToLocalStorage({
           status: 'Checked In',
           checkInTime: now.toISOString(),
+          checkInLocation: currentLocation,
           checkOutTime: null,
           attendanceStatus: newAttendanceStatus,
         });
@@ -362,6 +369,7 @@ export default function CheckInOutPage() {
 
     const recordData = {
       checkInTime: checkInTime.toISOString(),
+      checkInLocation: checkInLocation, // Pass the preserved check-in location
       checkOutTime: now.toISOString(),
       hoursWorked: hoursWorked,
       checkOutLocation: currentLocation,
@@ -374,6 +382,7 @@ export default function CheckInOutPage() {
         saveStateToLocalStorage({
           status: 'Checked Out',
           checkInTime: checkInTime.toISOString(),
+          checkInLocation: checkInLocation,
           checkOutTime: now.toISOString(),
           attendanceStatus: attendanceStatus, // Preserve status
         });
