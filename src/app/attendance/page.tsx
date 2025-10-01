@@ -291,16 +291,25 @@ export default function CheckInOutPage() {
     
     let isLate = false;
     let checkInMessage = 'You checked in on time.';
-    if (officeTimes.length > 0) {
-      const dayShift = officeTimes.find(t => t.shift === 'Day');
-      if (dayShift) {
-        const [hours, minutes] = dayShift.startTime.split(':').map(Number);
+    
+    // Find the applicable office time for the current user's role
+    const userRole = currentUser.role;
+    const applicableOfficeTime = officeTimes.find(time => 
+        time.applicableRoles === 'all' || (Array.isArray(time.applicableRoles) && time.applicableRoles.includes(userRole))
+    );
+
+    if (applicableOfficeTime) {
+        const [hours, minutes] = applicableOfficeTime.startTime.split(':').map(Number);
         const officeStartTime = new Date(now);
         officeStartTime.setHours(hours, minutes, 0, 0);
-        const gracePeriodMinutes = dayShift.graceTime || 0;
+        
+        const gracePeriodMinutes = applicableOfficeTime.graceTime || 0;
         const graceEndTime = new Date(officeStartTime.getTime() + gracePeriodMinutes * 60000);
-        if (now > graceEndTime) { isLate = true; checkInMessage = `You are late. Check-in was at ${format(now, 'h:mm:ss a')}.`; }
-      }
+
+        if (now > graceEndTime) {
+            isLate = true;
+            checkInMessage = `You are late. Check-in was at ${format(now, 'h:mm:ss a')}.`;
+        }
     }
 
     const recordData = {
@@ -501,5 +510,3 @@ export default function CheckInOutPage() {
     </div>
   );
 }
-
-    
