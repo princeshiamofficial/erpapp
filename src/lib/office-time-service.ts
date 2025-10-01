@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
@@ -13,7 +14,8 @@ export const getOfficeTimes = async (): Promise<OfficeTime[]> => {
     if (response && Array.isArray(response.documents)) {
       return response.documents.map((doc: { id: string, data: any }) => ({
         id: doc.id,
-        ...doc.data
+        ...doc.data,
+        applicableRoles: doc.data.applicableRoles || 'all', // Default to 'all' if not present
       } as OfficeTime));
     }
     return [];
@@ -26,9 +28,13 @@ export const getOfficeTimes = async (): Promise<OfficeTime[]> => {
 export const addOfficeTime = async (officeTimeData: Omit<OfficeTime, 'id'>): Promise<OfficeTime | null> => {
     try {
         await ensureCollectionExistsV3(COLLECTION_NAME);
+        const dataWithDefaults = {
+            ...officeTimeData,
+            applicableRoles: officeTimeData.applicableRoles || 'all',
+        };
         const newDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
             method: 'POST',
-            body: JSON.stringify({ data: officeTimeData }),
+            body: JSON.stringify({ data: dataWithDefaults }),
         });
         return { id: newDoc.id, ...newDoc.data } as OfficeTime;
     } catch (error) {

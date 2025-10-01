@@ -4,7 +4,7 @@
 
 import { revalidatePath } from "next/cache";
 import { addOfficeTime, updateOfficeTime, deleteOfficeTime } from "@/lib/office-time-service";
-import type { OfficeTime, User, AttendanceRecord } from "@/types";
+import type { OfficeTime, User, AttendanceRecord, UserRole } from "@/types";
 import { saveAttendanceAction as saveAttendanceServiceAction } from '@/lib/attendance-service';
 import { saveWeekendSettings } from "@/lib/weekend-service"; // Import the new service
 

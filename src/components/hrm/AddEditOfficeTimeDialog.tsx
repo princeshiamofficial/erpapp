@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -14,10 +15,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronsUpDown, Check } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { addOfficeTimeAction, updateOfficeTimeAction } from '@/app/(app)/hrm/attendance/actions';
-import type { OfficeTime } from '@/types';
+import type { OfficeTime, UserRole } from '@/types';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { X } from 'lucide-react';
 
 interface AddEditOfficeTimeDialogProps {
   isOpen: boolean;
@@ -26,13 +32,17 @@ interface AddEditOfficeTimeDialogProps {
   officeTime?: OfficeTime | null;
 }
 
+const ALL_ROLES: UserRole[] = ["ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "SYSTEM_ADMIN"];
+
 export function AddEditOfficeTimeDialog({ isOpen, onOpenChange, onOfficeTimeSaved, officeTime }: AddEditOfficeTimeDialogProps) {
   const [name, setName] = useState('');
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
   const [graceTime, setGraceTime] = useState('');
   const [shift, setShift] = useState<'Day' | 'Night'>('Day');
+  const [applicableRoles, setApplicableRoles] = useState<UserRole[] | 'all'>('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isRolePopoverOpen, setIsRolePopoverOpen] = useState(false);
   const { toast } = useToast();
 
   const isEditMode = !!officeTime;
@@ -45,15 +55,30 @@ export function AddEditOfficeTimeDialog({ isOpen, onOpenChange, onOfficeTimeSave
         setEndTime(officeTime.endTime);
         setGraceTime(officeTime.graceTime.toString());
         setShift(officeTime.shift);
+        setApplicableRoles(officeTime.applicableRoles || 'all');
       } else {
         setName('');
         setStartTime('');
         setEndTime('');
         setGraceTime('');
         setShift('Day');
+        setApplicableRoles('all');
       }
     }
   }, [isOpen, officeTime, isEditMode]);
+
+  const handleRoleToggle = (role: UserRole) => {
+    setApplicableRoles(prev => {
+        if (prev === 'all') {
+            return [role];
+        }
+        if (prev.includes(role)) {
+            const nextRoles = prev.filter(r => r !== role);
+            return nextRoles.length === 0 ? 'all' : nextRoles;
+        }
+        return [...prev, role];
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,6 +99,7 @@ export function AddEditOfficeTimeDialog({ isOpen, onOpenChange, onOfficeTimeSave
         endTime,
         graceTime: parseInt(graceTime, 10),
         shift,
+        applicableRoles,
     };
     
     let result;
@@ -98,7 +124,7 @@ export function AddEditOfficeTimeDialog({ isOpen, onOpenChange, onOfficeTimeSave
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{isEditMode ? 'Edit' : 'Add New'} Office Time</DialogTitle>
           <DialogDescription>
@@ -138,6 +164,57 @@ export function AddEditOfficeTimeDialog({ isOpen, onOpenChange, onOfficeTimeSave
                 </Select>
               </div>
           </div>
+
+          <div className="space-y-2">
+            <Label>Applicable Roles</Label>
+            <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[40px] bg-background">
+                {applicableRoles === 'all' ? (
+                    <Badge variant="secondary">All Roles</Badge>
+                ) : (
+                    applicableRoles.map(role => (
+                        <Badge key={role} variant="secondary" className="gap-1.5 py-1">
+                            {role.replace(/_/g, ' ')}
+                            <button type="button" onClick={() => handleRoleToggle(role)} className="rounded-full hover:bg-destructive/20 p-0.5 transition-colors">
+                                <X className="h-3 w-3 text-destructive" />
+                            </button>
+                        </Badge>
+                    ))
+                )}
+            </div>
+            <Popover open={isRolePopoverOpen} onOpenChange={setIsRolePopoverOpen}>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between"
+                    >
+                        {applicableRoles === 'all' ? 'All Roles (Click to specify)' : 'Add/Remove Roles...'}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                        <CommandInput placeholder="Search role..." />
+                        <CommandList>
+                            <CommandEmpty>No role found.</CommandEmpty>
+                            <CommandGroup>
+                                <CommandItem onSelect={() => setApplicableRoles('all')} className="cursor-pointer">
+                                    <Check className={cn("mr-2 h-4 w-4", applicableRoles === 'all' ? "opacity-100" : "opacity-0")} />
+                                    All Roles
+                                </CommandItem>
+                                {ALL_ROLES.map(role => (
+                                    <CommandItem key={role} onSelect={() => handleRoleToggle(role)} className="cursor-pointer">
+                                        <Check className={cn("mr-2 h-4 w-4", Array.isArray(applicableRoles) && applicableRoles.includes(role) ? "opacity-100" : "opacity-0")} />
+                                        {role.replace(/_/g, ' ')}
+                                    </CommandItem>
+                                ))}
+                            </CommandGroup>
+                        </CommandList>
+                    </Command>
+                </PopoverContent>
+            </Popover>
+          </div>
+
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>

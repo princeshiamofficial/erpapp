@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import { getEmployees } from '@/lib/employee-service';
-import type { Employee, User, OfficeTime, AttendanceRecord } from '@/types';
+import type { Employee, User, OfficeTime, AttendanceRecord, UserRole } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationEllipsis, PaginationPrevious, PaginationNext } from '@/components/ui/pagination';
@@ -478,7 +478,7 @@ export default function AttendancePage() {
                           <TableCell className="font-medium">Weekend</TableCell>
                           {WEEK_DAYS.map(day => (
                               <TableCell key={day}>
-                                  <Checkbox
+                                  <Checkbox 
                                       checked={selectedWeekends.includes(day)}
                                       onCheckedChange={(checked) => handleWeekendChange(day, checked)}
                                   />
@@ -610,12 +610,13 @@ export default function AttendancePage() {
                     <TableHead>End Time</TableHead>
                     <TableHead>Grace Time</TableHead>
                     <TableHead>Shift</TableHead>
+                    <TableHead>Applicable Roles</TableHead>
                     <TableHead className="text-right">Action</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
                 {isLoading ? (
-                    <TableRow><TableCell colSpan={6}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
+                    <TableRow><TableCell colSpan={7}><Skeleton className="h-10 w-full" /></TableCell></TableRow>
                 ) : officeTimes.length > 0 ? (
                     officeTimes.map(time => (
                       <TableRow key={time.id}>
@@ -624,6 +625,17 @@ export default function AttendancePage() {
                         <TableCell>{time.endTime}</TableCell>
                         <TableCell>{time.graceTime} minutes</TableCell>
                         <TableCell>{time.shift}</TableCell>
+                        <TableCell>
+                          {time.applicableRoles === 'all' ? (
+                            <Badge variant="secondary">All Roles</Badge>
+                          ) : (
+                            <div className="flex flex-wrap gap-1">
+                              {(time.applicableRoles || []).map(role => (
+                                <Badge key={role} variant="outline">{role.replace(/_/g, ' ')}</Badge>
+                              ))}
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell className="text-right">
                            <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -646,7 +658,7 @@ export default function AttendancePage() {
                     </TableRow>
                     ))
                 ) : (
-                  <TableRow><TableCell colSpan={6} className="text-center h-24 text-gray-500">No office time configurations found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center h-24 text-gray-500">No office time configurations found.</TableCell></TableRow>
                 )}
             </TableBody>
         </Table>

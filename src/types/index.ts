@@ -558,10 +558,11 @@ export interface CaseStudyMessage {
 export interface OfficeTime {
     id: string;
     name: string;
-    startTime: string;
-    endTime: string;
+    startTime: string; // "HH:mm"
+    endTime: string; // "HH:mm"
     graceTime: number; // in minutes
     shift: 'Day' | 'Night';
+    applicableRoles?: UserRole[] | 'all';
 }
 
 export type AttendanceStatus = 'On Time' | 'Late' | 'Absent';
