@@ -410,14 +410,14 @@ export default function LeaderboardPage() {
                       <TableHead>Name</TableHead>
                       <TableHead className="text-center">Sales</TableHead>
                       <TableHead className="text-center">Target</TableHead>
-                      <TableHead className="text-center">ROD(Re-orders)</TableHead>
+                      <TableHead className="text-center">ROD</TableHead>
                       <TableHead className="text-center">Total</TableHead>
                       <TableHead className="text-center">Trend</TableHead>
                   </TableRow>
               </TableHeader>
               <TableBody>
                   {performanceData.map(user => {
-                    const performanceValue = user.target > 0 ? Math.min(100, (user.ordersCompleted / user.target) * 100) : 0;
+                    const totalPoints = user.ordersCompleted + user.reorderCount;
                     return (
                       <TableRow key={`print-cr-${user.userId}`}>
                           <TableCell className="font-bold text-lg">{user.rank}</TableCell>
@@ -425,7 +425,7 @@ export default function LeaderboardPage() {
                           <TableCell className="text-center font-mono">{user.ordersCompleted}</TableCell>
                           <TableCell className="text-center font-mono">{user.target}</TableCell>
                           <TableCell className="text-center font-mono">{user.reorderCount}</TableCell>
-                          <TableCell className="text-center font-mono">{user.ordersCompleted + user.reorderCount}</TableCell>
+                          <TableCell className="text-center font-mono">{totalPoints}</TableCell>
                           <TableCell className={cn(
                             "text-center font-semibold flex items-center justify-center gap-1",
                             user.trend === 'up' && 'text-green-600',
@@ -486,3 +486,5 @@ export default function LeaderboardPage() {
     </>
   );
 }
+
+    
