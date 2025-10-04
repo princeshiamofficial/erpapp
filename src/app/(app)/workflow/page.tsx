@@ -185,6 +185,15 @@ export default function DR2OPage() {
   const renderActiveTabContent = () => {
     switch (activeTab) {
       case 'CR':
+        const entriesByUser = userEntries.reduce((acc, entry) => {
+            const userId = entry.crmId;
+            if (!acc[userId]) {
+                acc[userId] = [];
+            }
+            acc[userId].push(entry);
+            return acc;
+        }, {} as Record<string, Dr2oEntry[]>);
+
         return (
           <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
             <CardHeader className="border-b p-5">
@@ -205,14 +214,13 @@ export default function DR2OPage() {
                 <div className="space-y-3">
                   {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
                 </div>
-              ) : userEntries.length > 0 ? (
+              ) : Object.keys(entriesByUser).length > 0 ? (
                 <Accordion type="single" collapsible className="w-full space-y-3">
-                  {userEntries.map((row, index) => {
-                    const crUser = allUsers.find(u => u.id === row.crmId);
-                    const canEdit = currentUser?.id === row.crmId || isAdmin;
+                  {Object.entries(entriesByUser).map(([userId, entries], userIndex) => {
+                    const crUser = allUsers.find(u => u.id === userId);
                     return (
-                      <div key={row.id} className="group relative bg-muted/30 rounded-lg shadow-sm border">
-                        <AccordionItem value={`item-${index}`} className="border-b-0">
+                      <div key={userId} className="group relative bg-muted/30 rounded-lg shadow-sm border">
+                        <AccordionItem value={`user-${userIndex}`} className="border-b-0">
                           <AccordionTrigger className="px-4 py-3 text-left font-semibold text-foreground hover:no-underline">
                             <div className="flex items-center gap-4 flex-1">
                                 {isAdmin && crUser && (
@@ -222,24 +230,27 @@ export default function DR2OPage() {
                                     </Avatar>
                                 )}
                                 <div className="flex-1">
-                                    <p className="text-sm font-medium">{isAdmin ? crUser?.name : row.companyName}</p>
-                                    <p className="text-xs text-muted-foreground">{format(parseISO(row.date), 'd MMM, yyyy')}</p>
+                                    <p className="text-sm font-medium">{isAdmin ? crUser?.name : "My Reports"}</p>
+                                    <p className="text-xs text-muted-foreground">{entries.length} report(s)</p>
                                 </div>
                             </div>
                           </AccordionTrigger>
-                          <AccordionContent className="px-6 pt-0 pb-4">
+                          <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
                             <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Company Name</TableHead>
-                                    <TableHead>Company Number</TableHead>
-                                    <TableHead>Payment Company</TableHead>
-                                    <TableHead>Payment Number</TableHead>
-                                    <TableHead className="text-right">Action</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    <TableRow>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Date</TableHead>
+                                  <TableHead>Company Name</TableHead>
+                                  <TableHead>Company Number</TableHead>
+                                  <TableHead>Payment Company</TableHead>
+                                  <TableHead>Payment Number</TableHead>
+                                  <TableHead className="text-right">Action</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {entries.map(row => (
+                                    <TableRow key={row.id}>
+                                      <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
                                       <TableCell>{row.companyName || 'N/A'}</TableCell>
                                       <TableCell>{row.companyNumber || 'N/A'}</TableCell>
                                       <TableCell>{row.paymentCompanyName || 'N/A'}</TableCell>
@@ -252,7 +263,7 @@ export default function DR2OPage() {
                                               </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} disabled={!canEdit} className="cursor-pointer">
+                                                <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} disabled={!(currentUser?.id === row.crmId || isAdmin)} className="cursor-pointer">
                                                     <Edit className="mr-2 h-4 w-4" /> Edit
                                                 </DropdownMenuItem>
                                                 {isAdmin && (
@@ -264,7 +275,8 @@ export default function DR2OPage() {
                                           </DropdownMenu>
                                       </TableCell>
                                     </TableRow>
-                                </TableBody>
+                                ))}
+                              </TableBody>
                             </Table>
                           </AccordionContent>
                         </AccordionItem>
