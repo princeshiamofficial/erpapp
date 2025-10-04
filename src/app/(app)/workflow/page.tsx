@@ -510,61 +510,64 @@ export default function DR2OPage() {
                 </div>
               ) : Object.keys(entriesByDate).length > 0 ? (
                 <Accordion type="single" collapsible className="w-full space-y-3">
-                  {Object.entries(entriesByDate).map(([date, entries], dateIndex) => (
-                    <div key={date} className="group relative bg-muted/30 rounded-lg shadow-sm border">
-                      <AccordionItem value={`date-${dateIndex}`} className="border-b-0">
-                        <AccordionTrigger className="px-4 py-3 text-left font-semibold text-foreground hover:no-underline">
-                          <div className="flex items-center gap-4 flex-1">
-                            <p className="text-sm font-medium">{format(parseISO(date), 'PPP')}</p>
-                            <p className="text-xs text-muted-foreground">{entries.length} user(s) submitted</p>
-                          </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
-                          <Table>
-                             <TableHeader>
-                               <TableRow>
-                                <TableHead>Company</TableHead>
-                                <TableHead>Product</TableHead>
-                                <TableHead>Qty</TableHead>
-                                <TableHead>Courier ID</TableHead>
-                                <TableHead>Due Order</TableHead>
-                                <TableHead>Due Qty</TableHead>
-                                {isAdmin && <TableHead className="text-right">Actions</TableHead>}
-                               </TableRow>
-                             </TableHeader>
-                             <TableBody>
-                               {entries.flatMap(entry =>
-                                 entry.lrItems?.map(item => {
-                                   const lrUser = allUsers.find(u => u.id === entry.crmId);
-                                   return (
-                                     <TableRow key={item.id}>
-                                       <TableCell>{item.companyName}</TableCell>
-                                       <TableCell>{item.productName}</TableCell>
-                                       <TableCell>{item.productQty}</TableCell>
-                                       <TableCell>{item.courierId}</TableCell>
-                                       <TableCell>{item.dueOrderName}</TableCell>
-                                       <TableCell>{item.dueOrderQty}</TableCell>
-                                       {isAdmin && (
-                                         <TableCell className="text-right">
-                                           <DropdownMenu>
-                                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                             <DropdownMenuContent align="end">
-                                               <DropdownMenuItem onSelect={() => handleOpenEditDialog(entry)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" /> Edit Entry</DropdownMenuItem>
-                                               <DropdownMenuItem onSelect={() => setEntryToDelete(entry)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete Entry</DropdownMenuItem>
-                                             </DropdownMenuContent>
-                                           </DropdownMenu>
-                                         </TableCell>
-                                       )}
-                                     </TableRow>
-                                   );
-                                 })
-                               )}
-                             </TableBody>
-                           </Table>
-                        </AccordionContent>
-                      </AccordionItem>
-                    </div>
-                  ))}
+                  {Object.entries(entriesByDate).map(([date, entries], dateIndex) => {
+                    const totalItems = entries.reduce((sum, entry) => sum + (entry.lrItems?.length || 0), 0);
+                    return (
+                      <div key={date} className="group relative bg-muted/30 rounded-lg shadow-sm border">
+                        <AccordionItem value={`date-${dateIndex}`} className="border-b-0">
+                          <AccordionTrigger className="px-4 py-3 text-left font-semibold text-foreground hover:no-underline">
+                            <div className="flex items-center gap-4 flex-1">
+                              <p className="text-sm font-medium">{format(parseISO(date), 'PPP')}</p>
+                              <p className="text-xs text-muted-foreground">{totalItems} row(s) submitted</p>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
+                            <Table>
+                               <TableHeader>
+                                 <TableRow>
+                                  <TableHead>Company</TableHead>
+                                  <TableHead>Product</TableHead>
+                                  <TableHead>Qty</TableHead>
+                                  <TableHead>Courier ID</TableHead>
+                                  <TableHead>Due Order</TableHead>
+                                  <TableHead>Due Qty</TableHead>
+                                  {isAdmin && <TableHead className="text-right">Actions</TableHead>}
+                                 </TableRow>
+                               </TableHeader>
+                               <TableBody>
+                                 {entries.flatMap(entry =>
+                                   entry.lrItems?.map(item => {
+                                     const lrUser = allUsers.find(u => u.id === entry.crmId);
+                                     return (
+                                       <TableRow key={item.id}>
+                                         <TableCell>{item.companyName}</TableCell>
+                                         <TableCell>{item.productName}</TableCell>
+                                         <TableCell>{item.productQty}</TableCell>
+                                         <TableCell>{item.courierId}</TableCell>
+                                         <TableCell>{item.dueOrderName}</TableCell>
+                                         <TableCell>{item.dueOrderQty}</TableCell>
+                                         {isAdmin && (
+                                           <TableCell className="text-right">
+                                             <DropdownMenu>
+                                               <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                               <DropdownMenuContent align="end">
+                                                 <DropdownMenuItem onSelect={() => handleOpenEditDialog(entry)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" /> Edit Entry</DropdownMenuItem>
+                                                 <DropdownMenuItem onSelect={() => setEntryToDelete(entry)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete Entry</DropdownMenuItem>
+                                               </DropdownMenuContent>
+                                             </DropdownMenu>
+                                           </TableCell>
+                                         )}
+                                       </TableRow>
+                                     );
+                                   })
+                                 )}
+                               </TableBody>
+                             </Table>
+                          </AccordionContent>
+                        </AccordionItem>
+                      </div>
+                    )
+                  })}
                 </Accordion>
               ) : (
                 <div className="text-center py-12 text-muted-foreground">No reports found.</div>
