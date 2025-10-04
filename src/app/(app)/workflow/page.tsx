@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -230,11 +229,21 @@ export default function DR2OPage() {
                           </AccordionTrigger>
                           <AccordionContent className="px-6 pt-0 pb-4">
                             <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Company Name</TableHead>
+                                    <TableHead>Company Number</TableHead>
+                                    <TableHead>Payment Company</TableHead>
+                                    <TableHead>Payment Number</TableHead>
+                                  </TableRow>
+                                </TableHeader>
                                 <TableBody>
-                                    <TableRow><TableHead className="font-semibold text-foreground">Company Name</TableHead><TableCell>{row.companyName || 'N/A'}</TableCell></TableRow>
-                                    <TableRow><TableHead className="font-semibold text-foreground">Company Number</TableHead><TableCell>{row.companyNumber || 'N/A'}</TableCell></TableRow>
-                                    <TableRow><TableHead className="font-semibold text-foreground">Payment Company</TableHead><TableCell>{row.paymentCompanyName || 'N/A'}</TableCell></TableRow>
-                                    <TableRow><TableHead className="font-semibold text-foreground">Payment Number</TableHead><TableCell>{row.paymentNumber || 'N/A'}</TableCell></TableRow>
+                                    <TableRow>
+                                      <TableCell>{row.companyName || 'N/A'}</TableCell>
+                                      <TableCell>{row.companyNumber || 'N/A'}</TableCell>
+                                      <TableCell>{row.paymentCompanyName || 'N/A'}</TableCell>
+                                      <TableCell>{row.paymentNumber || 'N/A'}</TableCell>
+                                    </TableRow>
                                 </TableBody>
                             </Table>
                           </AccordionContent>
