@@ -186,7 +186,91 @@ export default function DR2OPage() {
   const renderActiveTabContent = () => {
     switch (activeTab) {
       case 'CR':
-        return <PlaceholderContent teamName="CR Team" />;
+        return (
+          <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
+            <CardHeader className="border-b p-5">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-card-foreground text-xl">CR Team Daily Reports</CardTitle>
+                    <CardDescription className="text-muted-foreground text-sm mt-0.5">
+                        Daily reports for customer relations and payments.
+                    </CardDescription>
+                  </div>
+                  <Button onClick={handleOpenAddDialog} disabled={!canAddNew && currentUser?.role !== 'ADMIN' && currentUser?.role !== 'SYSTEM_ADMIN'}>
+                      <PlusCircle className="mr-2 h-4 w-4" /> Add New
+                  </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+               <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      {(isAdmin) && <TableHead>CR Name</TableHead>}
+                      <TableHead>Company Name</TableHead>
+                      <TableHead>Number</TableHead>
+                      <TableHead>Payment Company</TableHead>
+                      <TableHead>Payment Number</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                     {isLoading ? [...Array(5)].map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell colSpan={(isAdmin) ? 7 : 6}><Skeleton className="h-8 w-full" /></TableCell>
+                      </TableRow>
+                    )) : userEntries.length > 0 ? userEntries.map((row) => {
+                        const crUser = allUsers.find(u => u.id === row.crmId);
+                        const canEdit = currentUser?.id === row.crmId || isAdmin;
+                        return(
+                        <TableRow key={row.id}>
+                          <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
+                           {(isAdmin) && (
+                              <TableCell>
+                                  <div className="flex items-center gap-2">
+                                      <Avatar className="h-8 w-8">
+                                          <AvatarImage src={crUser?.avatarUrl || undefined} alt={row.crmName} />
+                                          <AvatarFallback>{getInitials(row.crmName)}</AvatarFallback>
+                                      </Avatar>
+                                      <span>{row.crmName}</span>
+                                  </div>
+                              </TableCell>
+                            )}
+                          <TableCell>{row.companyName || 'N/A'}</TableCell>
+                          <TableCell>{row.companyNumber || 'N/A'}</TableCell>
+                          <TableCell>{row.paymentCompanyName || 'N/A'}</TableCell>
+                          <TableCell>{row.paymentNumber || 'N/A'}</TableCell>
+                          <TableCell className="text-right">
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} disabled={!canEdit} className="cursor-pointer">
+                                        <Edit className="mr-2 h-4 w-4" /> Edit
+                                    </DropdownMenuItem>
+                                    {isAdmin && (
+                                        <DropdownMenuItem onSelect={() => setEntryToDelete(row)} className="cursor-pointer text-destructive focus:text-destructive">
+                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                        )
+                    }) : (
+                        <TableRow><TableCell colSpan={(isAdmin) ? 7 : 6} className="text-center h-48">No reports found.</TableCell></TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        );
       case 'DR':
         return (
           <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
