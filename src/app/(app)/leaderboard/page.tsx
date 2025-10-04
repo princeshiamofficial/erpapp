@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getUsers } from '@/lib/user-service';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
-import { Crown, Printer, CheckCircle, Briefcase } from 'lucide-react';
+import { Crown, Printer, CheckCircle, Briefcase, ArrowUp, ArrowDown } from 'lucide-react';
 import { LeaderboardDisplay } from '@/components/leaderboard/LeaderboardDisplay';
 import type { User, TrackingLink, GlobalSettings, UserRole } from '@/types';
 import {
@@ -373,6 +373,7 @@ export default function LeaderboardPage() {
                         <TableHead className="text-center">Sales</TableHead>
                         <TableHead className="text-center">Target</TableHead>
                         <TableHead className="w-48 text-center">Performance</TableHead>
+                        <TableHead className="text-center">Trend</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -386,6 +387,15 @@ export default function LeaderboardPage() {
                             <TableCell className="text-center font-mono">{user.target}</TableCell>
                             <TableCell>
                                 <Progress value={Math.min(100, performanceValue)} indicatorClassName="bg-primary" />
+                            </TableCell>
+                            <TableCell className={cn(
+                              "text-center font-semibold flex items-center justify-center gap-1",
+                              user.trend === 'up' && 'text-green-600',
+                              user.trend === 'down' && 'text-red-600',
+                            )}>
+                              {user.trend === 'up' && <ArrowUp className="h-4 w-4" />}
+                              {user.trend === 'down' && <ArrowDown className="h-4 w-4" />}
+                              {user.pointChange !== 0 ? user.pointChange : '-'}
                             </TableCell>
                         </TableRow>
                       );
@@ -405,6 +415,7 @@ export default function LeaderboardPage() {
                         <TableHead className="text-center">Designs Done</TableHead>
                         <TableHead className="text-center">Designs Assigned</TableHead>
                          <TableHead className="w-48 text-center">Performance</TableHead>
+                         <TableHead className="text-center">Trend</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -418,6 +429,15 @@ export default function LeaderboardPage() {
                                 <TableCell className="text-center font-mono">{user.designsAssigned}</TableCell>
                                 <TableCell>
                                     <Progress value={Math.min(100, performanceValue)} indicatorClassName="bg-green-500" />
+                                </TableCell>
+                                <TableCell className={cn(
+                                  "text-center font-semibold flex items-center justify-center gap-1",
+                                  user.trend === 'up' && 'text-green-600',
+                                  user.trend === 'down' && 'text-red-600',
+                                )}>
+                                  {user.trend === 'up' && <ArrowUp className="h-4 w-4" />}
+                                  {user.trend === 'down' && <ArrowDown className="h-4 w-4" />}
+                                  {user.pointChange !== 0 ? user.pointChange : '-'}
                                 </TableCell>
                             </TableRow>
                         );
