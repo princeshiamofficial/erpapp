@@ -523,10 +523,13 @@ export default function DR2OPage() {
                                 {uniqueUsers.slice(0, 3).map(userId => {
                                   const user = allUsers.find(u => u.id === userId);
                                   return (
-                                    <Avatar key={userId} className="h-6 w-6 border-2 border-background">
-                                      <AvatarImage src={user?.avatarUrl || undefined} />
-                                      <AvatarFallback className="text-xs">{getInitials(user?.name)}</AvatarFallback>
-                                    </Avatar>
+                                    <div key={userId} className="flex items-center gap-2">
+                                      <Avatar className="h-6 w-6 border-2 border-background">
+                                          <AvatarImage src={user?.avatarUrl || undefined} />
+                                          <AvatarFallback className="text-xs">{getInitials(user?.name || '')}</AvatarFallback>
+                                      </Avatar>
+                                      {isAdmin && <span className="text-xs font-medium text-muted-foreground">{user?.name}</span>}
+                                    </div>
                                   )
                                 })}
                                 {uniqueUsers.length > 3 && <div className="h-6 w-6 rounded-full bg-muted-foreground text-background text-xs flex items-center justify-center border-2 border-background">+{uniqueUsers.length - 3}</div>}
