@@ -380,10 +380,10 @@ export default function DR2OPage() {
                                     <TableHead>New Customer 1</TableHead>
                                     <TableHead>New Customer 2</TableHead>
                                     <TableHead>New Customer 3</TableHead>
-                                    <TableHead>Old Customer Follow-up 1</TableHead>
-                                    <TableHead>Old Customer Follow-up 2</TableHead>
-                                    <TableHead>Old Customer Follow-up 3</TableHead>
-                                    <TableHead>Old Customer Follow-up 4</TableHead>
+                                    <TableHead>Follow-Up 1</TableHead>
+                                    <TableHead>Follow-Up 2</TableHead>
+                                    <TableHead>Follow-Up 3</TableHead>
+                                    <TableHead>Follow-Up 4</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
                                   </TableRow>
                                 </TableHeader>
@@ -435,10 +435,10 @@ export default function DR2OPage() {
                         <TableHead>New Customer 1</TableHead>
                         <TableHead>New Customer 2</TableHead>
                         <TableHead>New Customer 3</TableHead>
-                        <TableHead>Old Customer Follow-up 1</TableHead>
-                        <TableHead>Old Customer Follow-up 2</TableHead>
-                        <TableHead>Old Customer Follow-up 3</TableHead>
-                        <TableHead>Old Customer Follow-up 4</TableHead>
+                        <TableHead>Follow-Up 1</TableHead>
+                        <TableHead>Follow-Up 2</TableHead>
+                        <TableHead>Follow-Up 3</TableHead>
+                        <TableHead>Follow-Up 4</TableHead>
                         <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
