@@ -309,9 +309,9 @@ export default function LeaderboardPage() {
         style={bgStyle}
         data-ai-hint={currentLeaderboardBackground ? "" : "abstract orange fire particles"}
       ></div>
-      <header className="relative z-10 flex items-center justify-between py-4 px-4 sm:px-6 mb-4 sm:mb-6">
+      <header className="relative z-10 flex items-center justify-center text-center py-4 px-4 sm:px-6 mb-4 sm:mb-6">
         <h1 className="text-lg sm:text-xl font-semibold tracking-wider text-[hsl(var(--leaderboard-text-light))]">LEADERBOARD</h1>
-        <div className="flex items-center gap-2">
+        <div className="absolute right-4 sm:right-6 flex items-center gap-2">
             <Button
               variant="outline"
               size="icon"
