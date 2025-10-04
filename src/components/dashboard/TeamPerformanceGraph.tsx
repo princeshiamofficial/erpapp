@@ -249,20 +249,18 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                  {isInputVisible && (
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                         {!hasSubmittedToday && currentUser?.role === 'CRM' && (
-                          <>
-                            <div className="relative">
-                               <Label htmlFor="likelihood-customers-input" className="sr-only">Likely Customers</Label>
-                               <Input
-                                id="likelihood-customers-input"
-                                type="number"
-                                placeholder="Likely Customers..."
-                                value={likelihoodCustomers}
-                                onChange={(e) => setLikelihoodCustomers(e.target.value)}
-                                className="h-10 w-full sm:w-32"
-                                min="0"
-                               />
-                            </div>
-                          </>
+                          <div className="relative">
+                             <Label htmlFor="likelihood-customers-input" className="sr-only">Likely Customers</Label>
+                             <Input
+                              id="likelihood-customers-input"
+                              type="number"
+                              placeholder="Likely Customers..."
+                              value={likelihoodCustomers}
+                              onChange={(e) => setLikelihoodCustomers(e.target.value)}
+                              className="h-10 w-full sm:w-32"
+                              min="0"
+                             />
+                          </div>
                         )}
                         <Label htmlFor="tasks-done-input" className="text-xs text-muted-foreground mr-1 whitespace-nowrap sr-only">{inputLabel}</Label>
                         {!hasSubmittedToday ? (
