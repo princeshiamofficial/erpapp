@@ -132,9 +132,8 @@ export async function addTaskEntryAction(
     return { success: false, error: "Task count must be a non-negative number." };
   }
   
-  // Only validate likelihood if the user role is CRM
   if (user.role === 'CRM' && (likelihood === undefined || isNaN(likelihood) || likelihood < 0)) {
-    return { success: false, error: "Likelihood must be a non-negative number for CRM users." };
+    return { success: false, error: "Likely Customers must be a non-negative number." };
   }
 
   try {
