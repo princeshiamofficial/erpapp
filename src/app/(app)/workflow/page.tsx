@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -518,7 +517,7 @@ export default function DR2OPage() {
                           <AccordionTrigger className="px-4 py-3 text-left font-semibold text-foreground hover:no-underline">
                             <div className="flex items-center gap-4 flex-1">
                               <p className="text-sm font-medium">{format(parseISO(date), 'PPP')}</p>
-                              <p className="text-xs text-muted-foreground">{totalItems} row(s) submitted</p>
+                              <p className="text-xs text-muted-foreground">{totalItems} Reports</p>
                             </div>
                           </AccordionTrigger>
                           <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
@@ -637,3 +636,5 @@ export default function DR2OPage() {
     </>
   );
 }
+
+    
