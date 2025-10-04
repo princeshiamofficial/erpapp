@@ -370,7 +370,8 @@ export default function LeaderboardPage() {
                     <TableRow>
                         <TableHead className="w-16">Rank</TableHead>
                         <TableHead>Name</TableHead>
-                        <TableHead className="text-center">Sales/Target</TableHead>
+                        <TableHead className="text-center">Sales</TableHead>
+                        <TableHead className="text-center">Target</TableHead>
                         <TableHead className="w-48 text-center">Performance</TableHead>
                     </TableRow>
                 </TableHeader>
@@ -381,7 +382,8 @@ export default function LeaderboardPage() {
                         <TableRow key={`print-cr-${user.userId}`}>
                             <TableCell className="font-bold text-lg">{user.rank}</TableCell>
                             <TableCell>{user.userName}</TableCell>
-                            <TableCell className="text-center font-mono">{user.ordersCompleted}/{user.target}</TableCell>
+                            <TableCell className="text-center font-mono">{user.ordersCompleted}</TableCell>
+                            <TableCell className="text-center font-mono">{user.target}</TableCell>
                             <TableCell>
                                 <Progress value={Math.min(100, performanceValue)} indicatorClassName="bg-primary" />
                             </TableCell>
