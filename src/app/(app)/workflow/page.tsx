@@ -377,8 +377,13 @@ export default function DR2OPage() {
                                 <TableHeader>
                                   <TableRow>
                                     <TableHead>Date</TableHead>
-                                    <TableHead>New Customers</TableHead>
-                                    <TableHead>Old Customer Follow-ups</TableHead>
+                                    <TableHead>New Customer 1</TableHead>
+                                    <TableHead>New Customer 2</TableHead>
+                                    <TableHead>New Customer 3</TableHead>
+                                    <TableHead>Old Customer Follow-up 1</TableHead>
+                                    <TableHead>Old Customer Follow-up 2</TableHead>
+                                    <TableHead>Old Customer Follow-up 3</TableHead>
+                                    <TableHead>Old Customer Follow-up 4</TableHead>
                                     <TableHead className="text-right">Action</TableHead>
                                   </TableRow>
                                 </TableHeader>
@@ -386,8 +391,13 @@ export default function DR2OPage() {
                                   {entries.map(row => (
                                       <TableRow key={row.id}>
                                         <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
-                                        <TableCell>{[row.newCustomer1, row.newCustomer2, row.newCustomer3].filter(Boolean).join(', ') || 'N/A'}</TableCell>
-                                        <TableCell>{[row.oldCustomer1, row.oldCustomer2, row.oldCustomer3, row.oldCustomer4].filter(Boolean).join(', ') || 'N/A'}</TableCell>
+                                        <TableCell>{row.newCustomer1 || 'N/A'}</TableCell>
+                                        <TableCell>{row.newCustomer2 || 'N/A'}</TableCell>
+                                        <TableCell>{row.newCustomer3 || 'N/A'}</TableCell>
+                                        <TableCell>{row.oldCustomer1 || 'N/A'}</TableCell>
+                                        <TableCell>{row.oldCustomer2 || 'N/A'}</TableCell>
+                                        <TableCell>{row.oldCustomer3 || 'N/A'}</TableCell>
+                                        <TableCell>{row.oldCustomer4 || 'N/A'}</TableCell>
                                         <TableCell className="text-right">
                                            <DropdownMenu>
                                               <DropdownMenuTrigger asChild>
@@ -422,8 +432,13 @@ export default function DR2OPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Date</TableHead>
-                        <TableHead>New Customers</TableHead>
-                        <TableHead>Old Customer Follow-ups</TableHead>
+                        <TableHead>New Customer 1</TableHead>
+                        <TableHead>New Customer 2</TableHead>
+                        <TableHead>New Customer 3</TableHead>
+                        <TableHead>Old Customer Follow-up 1</TableHead>
+                        <TableHead>Old Customer Follow-up 2</TableHead>
+                        <TableHead>Old Customer Follow-up 3</TableHead>
+                        <TableHead>Old Customer Follow-up 4</TableHead>
                         <TableHead className="text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -431,8 +446,13 @@ export default function DR2OPage() {
                       {userEntries.map(row => (
                           <TableRow key={row.id}>
                             <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
-                            <TableCell>{[row.newCustomer1, row.newCustomer2, row.newCustomer3].filter(Boolean).join(', ') || 'N/A'}</TableCell>
-                            <TableCell>{[row.oldCustomer1, row.oldCustomer2, row.oldCustomer3, row.oldCustomer4].filter(Boolean).join(', ') || 'N/A'}</TableCell>
+                            <TableCell>{row.newCustomer1 || 'N/A'}</TableCell>
+                            <TableCell>{row.newCustomer2 || 'N/A'}</TableCell>
+                            <TableCell>{row.newCustomer3 || 'N/A'}</TableCell>
+                            <TableCell>{row.oldCustomer1 || 'N/A'}</TableCell>
+                            <TableCell>{row.oldCustomer2 || 'N/A'}</TableCell>
+                            <TableCell>{row.oldCustomer3 || 'N/A'}</TableCell>
+                            <TableCell>{row.oldCustomer4 || 'N/A'}</TableCell>
                             <TableCell className="text-right">
                                <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
