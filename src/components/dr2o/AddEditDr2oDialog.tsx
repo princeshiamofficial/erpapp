@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -38,6 +37,12 @@ const LR_DRAFT_STORAGE_KEY = 'lrDailyEntryDraft';
 
 export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, currentUser, team }: AddEditDr2oDialogProps) {
   const [date, setDate] = useState<Date | undefined>(new Date());
+  // CR Fields
+  const [companyName, setCompanyName] = useState('');
+  const [companyNumber, setCompanyNumber] = useState('');
+  const [paymentCompanyName, setPaymentCompanyName] = useState('');
+  const [paymentNumber, setPaymentNumber] = useState('');
+  // DR Fields
   const [newCustomer1, setNewCustomer1] = useState('');
   const [newCustomer2, setNewCustomer2] = useState('');
   const [newCustomer3, setNewCustomer3] = useState('');
@@ -45,6 +50,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
   const [oldCustomer2, setOldCustomer2] = useState('');
   const [oldCustomer3, setOldCustomer3] = useState('');
   const [oldCustomer4, setOldCustomer4] = useState('');
+  // LR Fields
   const [lrItems, setLrItems] = useState<LrEntryItem[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -98,6 +104,10 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
         setOldCustomer2(entry.oldCustomer2 || '');
         setOldCustomer3(entry.oldCustomer3 || '');
         setOldCustomer4(entry.oldCustomer4 || '');
+        setCompanyName(entry.companyName || '');
+        setCompanyNumber(entry.companyNumber || '');
+        setPaymentCompanyName(entry.paymentCompanyName || '');
+        setPaymentNumber(entry.paymentNumber || '');
         if (team !== 'LR') { // Only reset for non-LR or if no items exist
             setLrItems(entry.lrItems && entry.lrItems.length > 0 ? entry.lrItems : [{ id: uuidv4(), companyName: '', productName: '', productQty: 0, courierId: '', dueOrderName: '', dueOrderQty: 0 }]);
         }
@@ -106,6 +116,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
              setDate(new Date());
              setNewCustomer1(''); setNewCustomer2(''); setNewCustomer3('');
              setOldCustomer1(''); setOldCustomer2(''); setOldCustomer3(''); setOldCustomer4('');
+             setCompanyName(''); setCompanyNumber(''); setPaymentCompanyName(''); setPaymentNumber('');
              setLrItems([{ id: uuidv4(), companyName: '', productName: '', productQty: 0, courierId: '', dueOrderName: '', dueOrderQty: 0 }]);
         }
       }
@@ -150,6 +161,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
       crmName: isEditMode && entry ? entry.crmName : currentUser.name,
       newCustomer1, newCustomer2, newCustomer3,
       oldCustomer1, oldCustomer2, oldCustomer3, oldCustomer4,
+      companyName, companyNumber, paymentCompanyName, paymentNumber,
       lrItems: team === 'LR' ? lrItems.filter(item => item.companyName.trim() !== '' || item.productName.trim() !== '') : [],
     };
 
@@ -284,8 +296,29 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
         </div>
       );
     }
+
+    if (team === 'CR') {
+      return (
+        <div className="space-y-4">
+          <fieldset className="border p-4 rounded-md">
+            <legend className="text-sm font-medium px-1">Customer Info</legend>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+              <Input value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="Company Name" />
+              <Input value={companyNumber} onChange={e => setCompanyNumber(e.target.value)} placeholder="Number" />
+            </div>
+          </fieldset>
+          <fieldset className="border p-4 rounded-md">
+            <legend className="text-sm font-medium px-1">Payment Info</legend>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+              <Input value={paymentCompanyName} onChange={e => setPaymentCompanyName(e.target.value)} placeholder="Payment Company Name" />
+              <Input value={paymentNumber} onChange={e => setPaymentNumber(e.target.value)} placeholder="Payment Number" />
+            </div>
+          </fieldset>
+        </div>
+      );
+    }
     
-    // Default fields for CR and DR
+    // Default fields for DR
     return (
       <>
         <fieldset className="border p-4 rounded-md">

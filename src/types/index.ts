@@ -529,6 +529,12 @@ export interface Dr2oEntry {
     date: string; // ISO string
     crmId: string;
     crmName: string;
+    // CR Fields
+    companyName?: string;
+    companyNumber?: string;
+    paymentCompanyName?: string;
+    paymentNumber?: string;
+    // DR Fields
     newCustomer1?: string;
     newCustomer2?: string;
     newCustomer3?: string;
@@ -536,7 +542,8 @@ export interface Dr2oEntry {
     oldCustomer2?: string;
     oldCustomer3?: string;
     oldCustomer4?: string;
-    lrItems?: LrEntryItem[]; // New field for LR team entries
+    // LR Fields
+    lrItems?: LrEntryItem[];
 }
 
 export interface CaseStudyMessage {
