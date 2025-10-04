@@ -215,75 +215,115 @@ export default function DR2OPage() {
                   {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
                 </div>
               ) : Object.keys(entriesByUser).length > 0 ? (
-                <Accordion type="single" collapsible className="w-full space-y-3">
-                  {Object.entries(entriesByUser).map(([userId, entries], userIndex) => {
-                    const crUser = allUsers.find(u => u.id === userId);
-                    return (
-                      <div key={userId} className="group relative bg-muted/30 rounded-lg shadow-sm border">
-                        <AccordionItem value={`user-${userIndex}`} className="border-b-0">
-                          <AccordionTrigger className="px-4 py-3 text-left font-semibold text-foreground hover:no-underline">
-                            <div className="flex items-center gap-4 flex-1">
-                                {isAdmin && crUser && (
-                                    <Avatar className="h-9 w-9">
-                                        <AvatarImage src={crUser.avatarUrl || undefined} alt={crUser.name} />
-                                        <AvatarFallback>{getInitials(crUser.name)}</AvatarFallback>
-                                    </Avatar>
-                                )}
-                                <div className="flex-1">
-                                    <p className="text-sm font-medium">{isAdmin ? crUser?.name : "My Reports"}</p>
-                                    <p className="text-xs text-muted-foreground">{entries.length} report(s)</p>
-                                </div>
-                            </div>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Date</TableHead>
-                                  <TableHead>Company Name</TableHead>
-                                  <TableHead>Company Number</TableHead>
-                                  <TableHead>Payment Company</TableHead>
-                                  <TableHead>Payment Number</TableHead>
-                                  <TableHead className="text-right">Action</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {entries.map(row => (
-                                    <TableRow key={row.id}>
-                                      <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
-                                      <TableCell>{row.companyName || 'N/A'}</TableCell>
-                                      <TableCell>{row.companyNumber || 'N/A'}</TableCell>
-                                      <TableCell>{row.paymentCompanyName || 'N/A'}</TableCell>
-                                      <TableCell>{row.paymentNumber || 'N/A'}</TableCell>
-                                      <TableCell className="text-right">
-                                         <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                <MoreVertical className="h-4 w-4" />
-                                              </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} disabled={!(currentUser?.id === row.crmId || isAdmin)} className="cursor-pointer">
-                                                    <Edit className="mr-2 h-4 w-4" /> Edit
-                                                </DropdownMenuItem>
-                                                {isAdmin && (
-                                                    <DropdownMenuItem onSelect={() => setEntryToDelete(row)} className="cursor-pointer text-destructive focus:text-destructive">
-                                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                                    </DropdownMenuItem>
-                                                )}
-                                            </DropdownMenuContent>
-                                          </DropdownMenu>
-                                      </TableCell>
-                                    </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </AccordionContent>
-                        </AccordionItem>
-                      </div>
-                    )
-                  })}
-                </Accordion>
+                isAdmin ? (
+                  <Accordion type="single" collapsible className="w-full space-y-3">
+                    {Object.entries(entriesByUser).map(([userId, entries], userIndex) => {
+                      const crUser = allUsers.find(u => u.id === userId);
+                      return (
+                        <div key={userId} className="group relative bg-muted/30 rounded-lg shadow-sm border">
+                          <AccordionItem value={`user-${userIndex}`} className="border-b-0">
+                            <AccordionTrigger className="px-4 py-3 text-left font-semibold text-foreground hover:no-underline">
+                              <div className="flex items-center gap-4 flex-1">
+                                  {crUser && (
+                                      <Avatar className="h-9 w-9">
+                                          <AvatarImage src={crUser.avatarUrl || undefined} alt={crUser.name} />
+                                          <AvatarFallback>{getInitials(crUser.name)}</AvatarFallback>
+                                      </Avatar>
+                                  )}
+                                  <div className="flex-1">
+                                      <p className="text-sm font-medium">{crUser?.name || 'Unknown User'}</p>
+                                      <p className="text-xs text-muted-foreground">{entries.length} report(s)</p>
+                                  </div>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Company Name</TableHead>
+                                    <TableHead>Company Number</TableHead>
+                                    <TableHead>Payment Company</TableHead>
+                                    <TableHead>Payment Number</TableHead>
+                                    <TableHead className="text-right">Action</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {entries.map(row => (
+                                      <TableRow key={row.id}>
+                                        <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
+                                        <TableCell>{row.companyName || 'N/A'}</TableCell>
+                                        <TableCell>{row.companyNumber || 'N/A'}</TableCell>
+                                        <TableCell>{row.paymentCompanyName || 'N/A'}</TableCell>
+                                        <TableCell>{row.paymentNumber || 'N/A'}</TableCell>
+                                        <TableCell className="text-right">
+                                           <DropdownMenu>
+                                              <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                  <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                              </DropdownMenuTrigger>
+                                              <DropdownMenuContent align="end">
+                                                  <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} disabled={!(currentUser?.id === row.crmId || isAdmin)} className="cursor-pointer">
+                                                      <Edit className="mr-2 h-4 w-4" /> Edit
+                                                  </DropdownMenuItem>
+                                                  {isAdmin && (
+                                                      <DropdownMenuItem onSelect={() => setEntryToDelete(row)} className="cursor-pointer text-destructive focus:text-destructive">
+                                                          <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                      </DropdownMenuItem>
+                                                  )}
+                                              </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                      </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </div>
+                      )
+                    })}
+                  </Accordion>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Company Name</TableHead>
+                        <TableHead>Company Number</TableHead>
+                        <TableHead>Payment Company</TableHead>
+                        <TableHead>Payment Number</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {userEntries.map(row => (
+                          <TableRow key={row.id}>
+                            <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
+                            <TableCell>{row.companyName || 'N/A'}</TableCell>
+                            <TableCell>{row.companyNumber || 'N/A'}</TableCell>
+                            <TableCell>{row.paymentCompanyName || 'N/A'}</TableCell>
+                            <TableCell>{row.paymentNumber || 'N/A'}</TableCell>
+                            <TableCell className="text-right">
+                               <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} disabled={!(currentUser?.id === row.crmId || isAdmin)} className="cursor-pointer">
+                                          <Edit className="mr-2 h-4 w-4" /> Edit
+                                      </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )
               ) : (
                 <div className="text-center py-12 text-muted-foreground">No reports found.</div>
               )}
@@ -522,3 +562,5 @@ export default function DR2OPage() {
     </>
   );
 }
+
+    
