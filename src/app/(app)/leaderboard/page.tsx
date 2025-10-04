@@ -102,6 +102,8 @@ export default function LeaderboardPage() {
     const numDaysInRange = differenceInDays(periodEnd, periodStart) + 1;
 
     const roleFilteredUsers = users.filter(user => user.role === roleToCalculate);
+    
+    const sortedAllOrders = [...orders].sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
     const performanceDataList = roleFilteredUsers.map(user => {
       let ordersCreatedInPeriod = 0;
@@ -110,44 +112,32 @@ export default function LeaderboardPage() {
       let designsDone = 0;
 
       if (roleToCalculate === 'CRM') {
-        const userOrdersInPeriod = orders.filter(order => 
-          order.crmUserId === user.id &&
-          order.createdAt && 
-          isWithinInterval(parseISO(order.createdAt), { start: periodStart, end: periodEnd })
-        ).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        const userOrders = sortedAllOrders.filter(order => order.crmUserId === user.id);
+        const jobFirstSeenDate = new Map<string, Date>();
 
-        ordersCreatedInPeriod = userOrdersInPeriod.length;
-        
-        // Build a set of all job IDs for this user from *before* the current period.
-        const historicalJobIds = new Set<string>();
-        orders.forEach(order => {
-          if (order.crmUserId === user.id && new Date(order.createdAt) < periodStart) {
-            const companyNameParts = (order.companyName || '').split('•');
-            if (companyNameParts.length > 1) {
-              const jobId = companyNameParts[0].trim();
-              if (jobId) {
-                historicalJobIds.add(jobId.toLowerCase());
-              }
-            }
-          }
-        });
-
-        // Now iterate through the current period's orders to check for reorders
-        userOrdersInPeriod.forEach(order => {
+        userOrders.forEach(order => {
           const companyNameParts = (order.companyName || '').split('•');
-          if (companyNameParts.length > 1) {
-            const jobId = companyNameParts[0].trim();
-            if (jobId) {
-              // A reorder is one where the job ID was seen *before* this period.
-              // Also add the current period's job IDs to the set as we go
-              // to correctly count multiple reorders of the same job ID within the period.
-              if (historicalJobIds.has(jobId.toLowerCase())) {
-                reorderCount++;
-              }
-              // Add the current order's job ID to the historical set so subsequent orders
-              // in the same period for the same job are also counted as reorders.
-              historicalJobIds.add(jobId.toLowerCase());
+          const jobId = companyNameParts.length > 1 ? companyNameParts[0].trim().toLowerCase() : null;
+          const orderDate = new Date(order.createdAt);
+
+          if (jobId) {
+            if (jobFirstSeenDate.has(jobId)) {
+                // This is a reorder
+                if (isWithinInterval(orderDate, { start: periodStart, end: periodEnd })) {
+                    reorderCount++;
+                }
+            } else {
+                // This is the first time we see this job ID for this user
+                jobFirstSeenDate.set(jobId, orderDate);
+                if (isWithinInterval(orderDate, { start: periodStart, end: periodEnd })) {
+                    ordersCreatedInPeriod++;
+                }
             }
+          } else {
+             // Treat orders without a job-id as new orders if they are in the period
+             if (isWithinInterval(orderDate, { start: periodStart, end: periodEnd })) {
+                ordersCreatedInPeriod++;
+             }
           }
         });
 
