@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { getUsers } from '@/lib/user-service';
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
-import { Crown } from 'lucide-react';
+import { Crown, Printer } from 'lucide-react';
 import { LeaderboardDisplay } from '@/components/leaderboard/LeaderboardDisplay';
 import type { User, TrackingLink, GlobalSettings, UserRole } from '@/types';
 import {
@@ -26,6 +26,7 @@ import { SalesPerformanceClient } from '@/components/leaderboard/SalesPerformanc
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LOGISTICS_STATUS_ID } from '@/lib/status-service';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 // CrmPerformanceData type might be better defined within LeaderboardDisplay or a shared types file if complex
 export interface CrmPerformanceData {
@@ -309,16 +310,25 @@ export default function LeaderboardPage() {
         data-ai-hint={currentLeaderboardBackground ? "" : "abstract orange fire particles"}
       ></div>
       <header className="relative z-10 flex items-center justify-between py-4 px-4 sm:px-6 mb-4 sm:mb-6">
-        <h1 className="text-lg sm:text-xl font-semibold tracking-wider text-[hsl(var(--leaderboard-text-light))] flex-grow text-center">LEADERBOARD</h1>
-        {selectedDateRange && (
-          <div className="absolute right-4 sm:right-6">
-            <DateRangePicker 
-              initialRange={selectedDateRange} 
-              onDateRangeChange={handleDateRangeChange}
-              className="w-auto bg-black/40 border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))] hover:bg-black/60 focus:ring-[hsl(var(--leaderboard-gold))] h-9 text-xs sm:text-sm"
-            />
-          </div>
-        )}
+        <h1 className="text-lg sm:text-xl font-semibold tracking-wider text-[hsl(var(--leaderboard-text-light))]">LEADERBOARD</h1>
+        <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              className="bg-black/40 border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))] hover:bg-black/60 focus:ring-[hsl(var(--leaderboard-gold))] h-9 w-9"
+              title="Print Leaderboard"
+              onClick={() => window.print()}
+            >
+              <Printer className="h-4 w-4" />
+            </Button>
+            {selectedDateRange && (
+                <DateRangePicker 
+                  initialRange={selectedDateRange} 
+                  onDateRangeChange={handleDateRangeChange}
+                  className="w-auto bg-black/40 border-[hsl(var(--leaderboard-subtle-border))] text-[hsl(var(--leaderboard-text-light))] hover:bg-black/60 focus:ring-[hsl(var(--leaderboard-gold))] h-9 text-xs sm:text-sm"
+                />
+            )}
+        </div>
       </header>
       
       {showTabs ? (
