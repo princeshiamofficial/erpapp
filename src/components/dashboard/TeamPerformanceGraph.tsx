@@ -264,7 +264,6 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                              />
                           </div>
                         )}
-                        <Label htmlFor="tasks-done-input" className="text-xs text-muted-foreground mr-1 whitespace-nowrap sr-only">{inputLabel}</Label>
                         {!hasSubmittedToday ? (
                           <>
                             <Input 
