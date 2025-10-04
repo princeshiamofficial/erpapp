@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -240,7 +241,6 @@ export default function DR2OPage() {
                               <Table>
                                 <TableHeader>
                                   <TableRow>
-                                    <TableHead>Date</TableHead>
                                     <TableHead>Company Name</TableHead>
                                     <TableHead>Company Number</TableHead>
                                     <TableHead>Payment Company</TableHead>
@@ -251,7 +251,6 @@ export default function DR2OPage() {
                                 <TableBody>
                                   {entries.map(row => (
                                       <TableRow key={row.id}>
-                                        <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
                                         <TableCell>{row.companyName || 'N/A'}</TableCell>
                                         <TableCell>{row.companyNumber || 'N/A'}</TableCell>
                                         <TableCell>{row.paymentCompanyName || 'N/A'}</TableCell>
@@ -475,68 +474,108 @@ export default function DR2OPage() {
                   </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-0">
-               <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>LR Name</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? [...Array(5)].map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell colSpan={3}><Skeleton className="h-8 w-full" /></TableCell>
-                      </TableRow>
-                    )) : userEntries.length === 0 ? (
-                        <TableRow>
-                            <TableCell colSpan={3} className="text-center h-48 text-muted-foreground">No entries found for the LR Team.</TableCell>
-                        </TableRow>
-                    ) : userEntries.map((row) => {
-                      const lrUser = allUsers.find(u => u.id === row.crmId);
-                      const canEdit = currentUser?.id === row.crmId || isAdmin;
+            <CardContent className="p-4">
+               {isLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
+                </div>
+              ) : Object.keys(entriesByUser).length > 0 ? (
+                isAdmin ? (
+                  <Accordion type="single" collapsible className="w-full space-y-3">
+                    {Object.entries(entriesByUser).map(([userId, entries], userIndex) => {
+                      const lrUser = allUsers.find(u => u.id === userId);
                       return (
-                        <TableRow key={row.id}>
-                          <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
-                          <TableCell>
-                             <div className="flex items-center gap-2">
-                                <Avatar className="h-8 w-8">
+                        <div key={userId} className="group relative bg-muted/30 rounded-lg shadow-sm border">
+                          <AccordionItem value={`user-${userIndex}`} className="border-b-0">
+                            <AccordionTrigger className="px-4 py-3 text-left font-semibold text-foreground hover:no-underline">
+                              <div className="flex items-center gap-4 flex-1">
+                                  {lrUser && (
+                                      <Avatar className="h-9 w-9">
+                                          <AvatarImage src={lrUser.avatarUrl || undefined} alt={lrUser.name} />
+                                          <AvatarFallback>{getInitials(lrUser.name)}</AvatarFallback>
+                                      </Avatar>
+                                  )}
+                                  <div className="flex-1">
+                                      <p className="text-sm font-medium">{lrUser?.name || 'Unknown User'}</p>
+                                      <p className="text-xs text-muted-foreground">{entries.length} report(s)</p>
+                                  </div>
+                              </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
+                               <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {entries.map(row => (
+                                      <TableRow key={row.id}>
+                                        <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
+                                        <TableCell className="text-right">
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                              <DropdownMenuItem onSelect={() => handleOpenViewDialog(row)} className="cursor-pointer"><Eye className="mr-2 h-4 w-4" /> View Items</DropdownMenuItem>
+                                              <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} className="cursor-pointer" disabled={!isAdmin}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                                              {isAdmin && <DropdownMenuItem onSelect={() => setEntryToDelete(row)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>}
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        </TableCell>
+                                      </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </div>
+                      )
+                    })}
+                  </Accordion>
+                ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>LR Name</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {userEntries.map((row) => {
+                          const lrUser = allUsers.find(u => u.id === row.crmId);
+                          const canEdit = currentUser?.id === row.crmId || isAdmin;
+                          return (
+                            <TableRow key={row.id}>
+                              <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-8 w-8">
                                     <AvatarImage src={lrUser?.avatarUrl || undefined} alt={row.crmName} />
                                     <AvatarFallback>{getInitials(row.crmName)}</AvatarFallback>
-                                </Avatar>
-                                <span>{row.crmName}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                        <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onSelect={() => handleOpenViewDialog(row)} className="cursor-pointer">
-                                        <Eye className="mr-2 h-4 w-4" /> View Items
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} className="cursor-pointer" disabled={!canEdit}>
-                                        <Edit className="mr-2 h-4 w-4" /> Edit
-                                    </DropdownMenuItem>
-                                    {isAdmin && (
-                                        <DropdownMenuItem onSelect={() => setEntryToDelete(row)} className="cursor-pointer text-destructive focus:text-destructive">
-                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                        </DropdownMenuItem>
-                                    )}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                                  </Avatar>
+                                  <span>{row.crmName}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onSelect={() => handleOpenViewDialog(row)} className="cursor-pointer"><Eye className="mr-2 h-4 w-4" /> View Items</DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} className="cursor-pointer" disabled={!canEdit}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                )
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">No reports found.</div>
+              )}
             </CardContent>
           </Card>
         );
