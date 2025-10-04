@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -715,11 +714,11 @@ function DashboardContent() {
     const monthlyTotalTarget = totalTarget;
     totalTarget = Math.round((monthlyTotalTarget / getDaysInMonth(startDate)) * numDaysInRange);
   
-    const dateMap = new Map<string, { totalDone: number; userData: { [userId: string]: { done: number; role: UserRole } } }>();
+    const dateMap = new Map<string, { totalDone: number; totalLikelihood: number; userData: { [userId: string]: { done: number; likelihood: number; role: UserRole } } }>();
   
     let currentDate = startDate;
     while (currentDate <= endDate) {
-      dateMap.set(format(currentDate, 'd MMM'), { totalDone: 0, userData: {} });
+      dateMap.set(format(currentDate, 'd MMM'), { totalDone: 0, totalLikelihood: 0, userData: {} });
       currentDate = addDays(currentDate, 1);
     }
   
@@ -731,10 +730,12 @@ function DashboardContent() {
           const dayData = dateMap.get(dateKey);
           if (dayData) {
             dayData.totalDone += entry.taskCount;
+            dayData.totalLikelihood += entry.likelihood || 0;
             if (!dayData.userData[entry.userId]) {
-              dayData.userData[entry.userId] = { done: 0, role: entry.role };
+              dayData.userData[entry.userId] = { done: 0, likelihood: 0, role: entry.role };
             }
             dayData.userData[entry.userId].done += entry.taskCount;
+            dayData.userData[entry.userId].likelihood += entry.likelihood || 0;
           }
         }
       } catch (e) { /* ignore invalid dates */ }
