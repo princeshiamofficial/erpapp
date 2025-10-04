@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -511,20 +512,32 @@ export default function DR2OPage() {
                 <Accordion type="single" collapsible className="w-full space-y-3">
                   {Object.entries(entriesByDate).map(([date, entries], dateIndex) => {
                     const totalItems = entries.reduce((sum, entry) => sum + (entry.lrItems?.length || 0), 0);
+                    const uniqueUsers = Array.from(new Set(entries.map(e => e.crmId)));
                     return (
                       <div key={date} className="group relative bg-muted/30 rounded-lg shadow-sm border">
                         <AccordionItem value={`date-${dateIndex}`} className="border-b-0">
                           <AccordionTrigger className="px-4 py-3 text-left font-semibold text-foreground hover:no-underline">
                             <div className="flex items-center gap-4 flex-1">
                               <p className="text-sm font-medium">{format(parseISO(date), 'PPP')}</p>
-                              <p className="text-xs text-muted-foreground">{totalItems} Reports</p>
+                              <div className="flex items-center -space-x-2">
+                                {uniqueUsers.slice(0, 3).map(userId => {
+                                  const user = allUsers.find(u => u.id === userId);
+                                  return (
+                                    <Avatar key={userId} className="h-6 w-6 border-2 border-background">
+                                      <AvatarImage src={user?.avatarUrl || undefined} />
+                                      <AvatarFallback className="text-xs">{getInitials(user?.name)}</AvatarFallback>
+                                    </Avatar>
+                                  )
+                                })}
+                                {uniqueUsers.length > 3 && <div className="h-6 w-6 rounded-full bg-muted-foreground text-background text-xs flex items-center justify-center border-2 border-background">+{uniqueUsers.length - 3}</div>}
+                              </div>
+                              <p className="text-xs text-muted-foreground ml-auto">{totalItems} Reports</p>
                             </div>
                           </AccordionTrigger>
                           <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
                             <Table>
                                <TableHeader>
                                  <TableRow>
-                                  <TableHead>User</TableHead>
                                   <TableHead>Company</TableHead>
                                   <TableHead>Product</TableHead>
                                   <TableHead>Qty</TableHead>
@@ -536,21 +549,8 @@ export default function DR2OPage() {
                                </TableHeader>
                                <TableBody>
                                  {entries.flatMap(entry =>
-                                   entry.lrItems?.map(item => {
-                                     const lrUser = allUsers.find(u => u.id === entry.crmId);
-                                     return (
+                                   entry.lrItems?.map(item => (
                                        <TableRow key={item.id}>
-                                         <TableCell>
-                                           <div className="flex items-center gap-2">
-                                             {lrUser && (
-                                                <Avatar className="h-6 w-6">
-                                                  <AvatarImage src={lrUser.avatarUrl || undefined} alt={lrUser.name} />
-                                                  <AvatarFallback>{getInitials(lrUser.name)}</AvatarFallback>
-                                                </Avatar>
-                                             )}
-                                             <span className="text-xs">{entry.crmName}</span>
-                                           </div>
-                                         </TableCell>
                                          <TableCell>{item.companyName}</TableCell>
                                          <TableCell>{item.productName}</TableCell>
                                          <TableCell>{item.productQty}</TableCell>
@@ -569,8 +569,7 @@ export default function DR2OPage() {
                                            </TableCell>
                                          )}
                                        </TableRow>
-                                     );
-                                   })
+                                   ))
                                  )}
                                </TableBody>
                              </Table>
