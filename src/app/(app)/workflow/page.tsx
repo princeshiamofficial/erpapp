@@ -228,13 +228,15 @@ export default function DR2OPage() {
                                 </div>
                             </div>
                           </AccordionTrigger>
-                          <AccordionContent className="px-6 pt-0 pb-4 text-sm text-muted-foreground">
-                            <div className="space-y-2">
-                              <p><strong className="text-foreground">Company Name:</strong> {row.companyName || 'N/A'}</p>
-                              <p><strong className="text-foreground">Company Number:</strong> {row.companyNumber || 'N/A'}</p>
-                              <p><strong className="text-foreground">Payment Company:</strong> {row.paymentCompanyName || 'N/A'}</p>
-                              <p><strong className="text-foreground">Payment Number:</strong> {row.paymentNumber || 'N/A'}</p>
-                            </div>
+                          <AccordionContent className="px-6 pt-0 pb-4">
+                            <Table>
+                                <TableBody>
+                                    <TableRow><TableHead className="font-semibold text-foreground">Company Name</TableHead><TableCell>{row.companyName || 'N/A'}</TableCell></TableRow>
+                                    <TableRow><TableHead className="font-semibold text-foreground">Company Number</TableHead><TableCell>{row.companyNumber || 'N/A'}</TableCell></TableRow>
+                                    <TableRow><TableHead className="font-semibold text-foreground">Payment Company</TableHead><TableCell>{row.paymentCompanyName || 'N/A'}</TableCell></TableRow>
+                                    <TableRow><TableHead className="font-semibold text-foreground">Payment Number</TableHead><TableCell>{row.paymentNumber || 'N/A'}</TableCell></TableRow>
+                                </TableBody>
+                            </Table>
                           </AccordionContent>
                         </AccordionItem>
                         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
