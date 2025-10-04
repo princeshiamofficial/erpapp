@@ -235,6 +235,7 @@ export default function DR2OPage() {
                                     <TableHead>Company Number</TableHead>
                                     <TableHead>Payment Company</TableHead>
                                     <TableHead>Payment Number</TableHead>
+                                    <TableHead className="text-right">Action</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -243,30 +244,30 @@ export default function DR2OPage() {
                                       <TableCell>{row.companyNumber || 'N/A'}</TableCell>
                                       <TableCell>{row.paymentCompanyName || 'N/A'}</TableCell>
                                       <TableCell>{row.paymentNumber || 'N/A'}</TableCell>
+                                      <TableCell className="text-right">
+                                         <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <MoreVertical className="h-4 w-4" />
+                                              </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} disabled={!canEdit} className="cursor-pointer">
+                                                    <Edit className="mr-2 h-4 w-4" /> Edit
+                                                </DropdownMenuItem>
+                                                {isAdmin && (
+                                                    <DropdownMenuItem onSelect={() => setEntryToDelete(row)} className="cursor-pointer text-destructive focus:text-destructive">
+                                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                    </DropdownMenuItem>
+                                                )}
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                      </TableCell>
                                     </TableRow>
                                 </TableBody>
                             </Table>
                           </AccordionContent>
                         </AccordionItem>
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} disabled={!canEdit} className="cursor-pointer">
-                                    <Edit className="mr-2 h-4 w-4" /> Edit
-                                </DropdownMenuItem>
-                                {isAdmin && (
-                                    <DropdownMenuItem onSelect={() => setEntryToDelete(row)} className="cursor-pointer text-destructive focus:text-destructive">
-                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                    </DropdownMenuItem>
-                                )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
                       </div>
                     )
                   })}
