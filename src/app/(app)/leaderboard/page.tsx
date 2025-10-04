@@ -102,19 +102,15 @@ export default function LeaderboardPage() {
 
     const roleFilteredUsers = users.filter(user => user.role === roleToCalculate);
     
-    const sortedAllOrders = [...orders].sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-
-    // First pass: find the first time each job ID appears across ALL orders
     const jobFirstSeenDate = new Map<string, Date>();
-    sortedAllOrders.forEach(order => {
-        const companyNameParts = (order.companyName || '').split('•');
-        const jobId = companyNameParts.length > 1 ? companyNameParts[0].trim().toLowerCase() : null;
-        const orderDate = new Date(order.createdAt);
-        
-        if (jobId && !jobFirstSeenDate.has(jobId)) {
-            jobFirstSeenDate.set(jobId, orderDate);
-        }
-    });
+    [...orders].sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+        .forEach(order => {
+            const companyNameParts = (order.companyName || '').split('•');
+            const jobId = companyNameParts.length > 1 ? companyNameParts[0].trim().toLowerCase() : null;
+            if (jobId && !jobFirstSeenDate.has(jobId)) {
+                jobFirstSeenDate.set(jobId, new Date(order.createdAt));
+            }
+        });
 
     const performanceDataList = roleFilteredUsers.map(user => {
       let newSalesCount = 0;
@@ -123,7 +119,7 @@ export default function LeaderboardPage() {
       let designsDone = 0;
 
       if (roleToCalculate === 'CRM') {
-        const userOrdersInPeriod = sortedAllOrders.filter(order => 
+        const userOrdersInPeriod = orders.filter(order => 
             order.crmUserId === user.id &&
             isWithinInterval(new Date(order.createdAt), { start: periodStart, end: periodEnd })
         );
@@ -135,14 +131,12 @@ export default function LeaderboardPage() {
           
           if (jobId) {
             const firstSeen = jobFirstSeenDate.get(jobId);
-            // It's a re-order if its creation date is strictly after the first time we saw this job ID
             if (firstSeen && orderDate.getTime() > firstSeen.getTime()) {
                 reorderCount++;
             } else {
                 newSalesCount++;
             }
           } else {
-             // Treat orders without a job-id as new orders
              newSalesCount++;
           }
         });
@@ -451,22 +445,17 @@ export default function LeaderboardPage() {
                       <TableHead>Name</TableHead>
                       <TableHead className="text-center">Designs Done</TableHead>
                       <TableHead className="text-center">Designs Assigned</TableHead>
-                      <TableHead className="w-48 text-center">Performance</TableHead>
                       <TableHead className="text-center">Trend</TableHead>
                   </TableRow>
               </TableHeader>
               <TableBody>
                   {drPerformanceData.map(user => {
-                      const performanceValue = (user.designsAssigned || 0) > 0 ? Math.min(100, ((user.designsDone || 0) / (user.designsAssigned || 1)) * 100) : 0;
                       return (
                           <TableRow key={`print-dr-${user.userId}`}>
                               <TableCell className="font-bold text-lg">{user.rank}</TableCell>
                               <TableCell>{user.userName}</TableCell>
                               <TableCell className="text-center font-mono">{user.designsDone}</TableCell>
                               <TableCell className="text-center font-mono">{user.designsAssigned}</TableCell>
-                              <TableCell>
-                                <Progress value={performanceValue} indicatorClassName="bg-green-500" />
-                              </TableCell>
                               <TableCell className={cn(
                                 "text-center font-semibold flex items-center justify-center gap-1",
                                 user.trend === 'up' && 'text-green-600',
@@ -486,5 +475,3 @@ export default function LeaderboardPage() {
     </>
   );
 }
-
-    
