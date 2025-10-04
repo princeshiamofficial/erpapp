@@ -479,120 +479,92 @@ export default function DR2OPage() {
           </Card>
         );
       case 'LR':
+        const entriesByDate = userEntries.reduce((acc, entry) => {
+            const dateKey = format(parseISO(entry.date), 'yyyy-MM-dd');
+            if (!acc[dateKey]) {
+                acc[dateKey] = [];
+            }
+            acc[dateKey].push(entry);
+            return acc;
+        }, {} as Record<string, Dr2oEntry[]>);
+
         return (
           <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
             <CardHeader className="border-b p-5">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
-                    <CardTitle className="text-card-foreground text-xl">LR Team Daily Tasks</CardTitle>
-                    <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                        Logistics and fulfillment team daily entries.
-                    </CardDescription>
-                  </div>
-                  <Button onClick={handleOpenAddDialog} disabled={!canAddNew && currentUser?.role !== 'ADMIN' && currentUser?.role !== 'SYSTEM_ADMIN'}>
-                      <PlusCircle className="mr-2 h-4 w-4" /> Add New
-                  </Button>
+                <div>
+                  <CardTitle className="text-card-foreground text-xl">LR Team Daily Tasks</CardTitle>
+                  <CardDescription className="text-muted-foreground text-sm mt-0.5">
+                    Logistics and fulfillment team daily entries.
+                  </CardDescription>
+                </div>
+                <Button onClick={handleOpenAddDialog} disabled={!canAddNew && !isAdmin}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Add New
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="p-4">
-               {isLoading ? (
+              {isLoading ? (
                 <div className="space-y-3">
                   {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
                 </div>
-              ) : Object.keys(entriesByUser).length > 0 ? (
-                isAdmin ? (
-                  <Accordion type="single" collapsible className="w-full space-y-3">
-                    {Object.entries(entriesByUser).map(([userId, entries], userIndex) => {
-                      const lrUser = allUsers.find(u => u.id === userId);
-                      return (
-                        <div key={userId} className="group relative bg-muted/30 rounded-lg shadow-sm border">
-                          <AccordionItem value={`user-${userIndex}`} className="border-b-0">
-                            <AccordionTrigger className="px-4 py-3 text-left font-semibold text-foreground hover:no-underline">
-                              <div className="flex items-center gap-4 flex-1">
-                                  {lrUser && (
-                                      <Avatar className="h-9 w-9">
-                                          <AvatarImage src={lrUser.avatarUrl || undefined} alt={lrUser.name} />
-                                          <AvatarFallback>{getInitials(lrUser.name)}</AvatarFallback>
-                                      </Avatar>
-                                  )}
-                                  <div className="flex-1">
-                                      <p className="text-sm font-medium">{lrUser?.name || 'Unknown User'}</p>
-                                      <p className="text-xs text-muted-foreground">{entries.length} report(s)</p>
-                                  </div>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
-                               <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
+              ) : Object.keys(entriesByDate).length > 0 ? (
+                <Accordion type="single" collapsible className="w-full space-y-3">
+                  {Object.entries(entriesByDate).map(([date, entries], dateIndex) => (
+                    <div key={date} className="group relative bg-muted/30 rounded-lg shadow-sm border">
+                      <AccordionItem value={`date-${dateIndex}`} className="border-b-0">
+                        <AccordionTrigger className="px-4 py-3 text-left font-semibold text-foreground hover:no-underline">
+                          <div className="flex items-center gap-4 flex-1">
+                            <p className="text-sm font-medium">{format(parseISO(date), 'PPP')}</p>
+                            <p className="text-xs text-muted-foreground">{entries.length} user(s) submitted</p>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>User</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {entries.map(row => {
+                                const lrUser = allUsers.find(u => u.id === row.crmId);
+                                return (
+                                  <TableRow key={row.id}>
+                                    <TableCell>
+                                      <div className="flex items-center gap-2">
+                                        <Avatar className="h-8 w-8">
+                                          <AvatarImage src={lrUser?.avatarUrl || undefined} alt={row.crmName} />
+                                          <AvatarFallback>{getInitials(row.crmName)}</AvatarFallback>
+                                        </Avatar>
+                                        <span>{row.crmName}</span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                          <DropdownMenuItem onSelect={() => handleOpenViewDialog(row)} className="cursor-pointer"><Eye className="mr-2 h-4 w-4" /> View Items</DropdownMenuItem>
+                                          {isAdmin && (
+                                            <>
+                                              <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
+                                              <DropdownMenuItem onSelect={() => setEntryToDelete(row)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
+                                            </>
+                                          )}
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </TableCell>
                                   </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {entries.map(row => (
-                                      <TableRow key={row.id}>
-                                        <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
-                                        <TableCell className="text-right">
-                                          <DropdownMenu>
-                                            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                              <DropdownMenuItem onSelect={() => handleOpenViewDialog(row)} className="cursor-pointer"><Eye className="mr-2 h-4 w-4" /> View Items</DropdownMenuItem>
-                                              <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} className="cursor-pointer" disabled={!isAdmin}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                                              {isAdmin && <DropdownMenuItem onSelect={() => setEntryToDelete(row)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>}
-                                            </DropdownMenuContent>
-                                          </DropdownMenu>
-                                        </TableCell>
-                                      </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </AccordionContent>
-                          </AccordionItem>
-                        </div>
-                      )
-                    })}
-                  </Accordion>
-                ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>LR Name</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {userEntries.map((row) => {
-                          const lrUser = allUsers.find(u => u.id === row.crmId);
-                          const canEdit = currentUser?.id === row.crmId || isAdmin;
-                          return (
-                            <TableRow key={row.id}>
-                              <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarImage src={lrUser?.avatarUrl || undefined} alt={row.crmName} />
-                                    <AvatarFallback>{getInitials(row.crmName)}</AvatarFallback>
-                                  </Avatar>
-                                  <span>{row.crmName}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onSelect={() => handleOpenViewDialog(row)} className="cursor-pointer"><Eye className="mr-2 h-4 w-4" /> View Items</DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} className="cursor-pointer" disabled={!canEdit}><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                      </TableBody>
-                    </Table>
-                )
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </div>
+                  ))}
+                </Accordion>
               ) : (
                 <div className="text-center py-12 text-muted-foreground">No reports found.</div>
               )}
