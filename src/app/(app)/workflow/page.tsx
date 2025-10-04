@@ -521,45 +521,53 @@ export default function DR2OPage() {
                         </AccordionTrigger>
                         <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
                           <Table>
-                            <TableHeader>
-                              <TableRow>
+                             <TableHeader>
+                               <TableRow>
                                 <TableHead>User</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {entries.map(row => {
-                                const lrUser = allUsers.find(u => u.id === row.crmId);
-                                return (
-                                  <TableRow key={row.id}>
-                                    <TableCell>
-                                      <div className="flex items-center gap-2">
-                                        <Avatar className="h-8 w-8">
-                                          <AvatarImage src={lrUser?.avatarUrl || undefined} alt={row.crmName} />
-                                          <AvatarFallback>{getInitials(row.crmName)}</AvatarFallback>
-                                        </Avatar>
-                                        <span>{row.crmName}</span>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                      <DropdownMenu>
-                                        <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                          <DropdownMenuItem onSelect={() => handleOpenViewDialog(row)} className="cursor-pointer"><Eye className="mr-2 h-4 w-4" /> View Items</DropdownMenuItem>
-                                          {isAdmin && (
-                                            <>
-                                              <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" /> Edit</DropdownMenuItem>
-                                              <DropdownMenuItem onSelect={() => setEntryToDelete(row)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete</DropdownMenuItem>
-                                            </>
-                                          )}
-                                        </DropdownMenuContent>
-                                      </DropdownMenu>
-                                    </TableCell>
-                                  </TableRow>
-                                );
-                              })}
-                            </TableBody>
-                          </Table>
+                                <TableHead>Company</TableHead>
+                                <TableHead>Product</TableHead>
+                                <TableHead>Qty</TableHead>
+                                <TableHead>Courier ID</TableHead>
+                                <TableHead>Due Order</TableHead>
+                                <TableHead>Due Qty</TableHead>
+                                {isAdmin && <TableHead className="text-right">Actions</TableHead>}
+                               </TableRow>
+                             </TableHeader>
+                             <TableBody>
+                               {entries.flatMap(entry =>
+                                 entry.lrItems?.map(item => {
+                                   const lrUser = allUsers.find(u => u.id === entry.crmId);
+                                   return (
+                                     <TableRow key={item.id}>
+                                       <TableCell>
+                                         <div className="flex items-center gap-2">
+                                           <Avatar className="h-8 w-8"><AvatarImage src={lrUser?.avatarUrl || undefined} /><AvatarFallback>{getInitials(entry.crmName)}</AvatarFallback></Avatar>
+                                           <span>{entry.crmName}</span>
+                                         </div>
+                                       </TableCell>
+                                       <TableCell>{item.companyName}</TableCell>
+                                       <TableCell>{item.productName}</TableCell>
+                                       <TableCell>{item.productQty}</TableCell>
+                                       <TableCell>{item.courierId}</TableCell>
+                                       <TableCell>{item.dueOrderName}</TableCell>
+                                       <TableCell>{item.dueOrderQty}</TableCell>
+                                       {isAdmin && (
+                                         <TableCell className="text-right">
+                                           <DropdownMenu>
+                                             <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                             <DropdownMenuContent align="end">
+                                               <DropdownMenuItem onSelect={() => handleOpenEditDialog(entry)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" /> Edit Entry</DropdownMenuItem>
+                                               <DropdownMenuItem onSelect={() => setEntryToDelete(entry)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Delete Entry</DropdownMenuItem>
+                                             </DropdownMenuContent>
+                                           </DropdownMenu>
+                                         </TableCell>
+                                       )}
+                                     </TableRow>
+                                   );
+                                 })
+                               )}
+                             </TableBody>
+                           </Table>
                         </AccordionContent>
                       </AccordionItem>
                     </div>
