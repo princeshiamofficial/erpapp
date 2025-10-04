@@ -361,90 +361,92 @@ export default function LeaderboardPage() {
         <p className="text-center text-muted-foreground text-sm mb-6">
           Date Range: {currentDateRangeLabel} ({format(selectedDateRange?.from || new Date(), 'd MMM yyyy')} - {format(selectedDateRange?.to || new Date(), 'd MMM yyyy')})
         </p>
-
-        {/* CR Table */}
-        <section className="mb-8">
-            <h2 className="text-lg font-semibold mb-2">CR Performance</h2>
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead className="w-16">Rank</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead className="text-center">Sales</TableHead>
-                        <TableHead className="text-center">Target</TableHead>
-                        <TableHead className="w-48 text-center">Performance</TableHead>
-                        <TableHead className="text-center">Trend</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {performanceData.map(user => {
-                      const performanceValue = user.target > 0 ? (user.ordersCompleted / user.target) * 100 : 0;
-                      return (
-                        <TableRow key={`print-cr-${user.userId}`}>
-                            <TableCell className="font-bold text-lg">{user.rank}</TableCell>
-                            <TableCell>{user.userName}</TableCell>
-                            <TableCell className="text-center font-mono">{user.ordersCompleted}</TableCell>
-                            <TableCell className="text-center font-mono">{user.target}</TableCell>
-                            <TableCell>
-                                <Progress value={Math.min(100, performanceValue)} indicatorClassName="bg-primary" />
-                            </TableCell>
-                            <TableCell className={cn(
-                              "text-center font-semibold flex items-center justify-center gap-1",
-                              user.trend === 'up' && 'text-green-600',
-                              user.trend === 'down' && 'text-red-600',
-                            )}>
-                              {user.trend === 'up' && <ArrowUp className="h-4 w-4" />}
-                              {user.trend === 'down' && <ArrowDown className="h-4 w-4" />}
-                              {user.pointChange !== 0 ? user.pointChange : '-'}
-                            </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                </TableBody>
-            </Table>
-        </section>
-
-        {/* DR Table */}
-        <section>
-            <h2 className="text-lg font-semibold mb-2">Designer Representative Performance</h2>
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        <TableHead className="w-16">Rank</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead className="text-center">Designs Done</TableHead>
-                        <TableHead className="text-center">Designs Assigned</TableHead>
-                         <TableHead className="w-48 text-center">Performance</TableHead>
-                         <TableHead className="text-center">Trend</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {drPerformanceData.map(user => {
-                        const performanceValue = (user.designsAssigned || 0) > 0 ? ((user.designsDone || 0) / (user.designsAssigned || 1)) * 100 : 0;
+        
+        {activeTab === 'cr_board' && (
+          <section className="mb-8">
+              <h2 className="text-lg font-semibold mb-2">CR Performance</h2>
+              <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead className="w-16">Rank</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead className="text-center">Sales</TableHead>
+                          <TableHead className="text-center">Target</TableHead>
+                          <TableHead className="w-48 text-center">Performance</TableHead>
+                          <TableHead className="text-center">Trend</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {performanceData.map(user => {
+                        const performanceValue = user.target > 0 ? Math.min(100, (user.ordersCompleted / user.target) * 100) : 0;
                         return (
-                            <TableRow key={`print-dr-${user.userId}`}>
-                                <TableCell className="font-bold text-lg">{user.rank}</TableCell>
-                                <TableCell>{user.userName}</TableCell>
-                                <TableCell className="text-center font-mono">{user.designsDone}</TableCell>
-                                <TableCell className="text-center font-mono">{user.designsAssigned}</TableCell>
-                                <TableCell>
-                                    <Progress value={Math.min(100, performanceValue)} indicatorClassName="bg-green-500" />
-                                </TableCell>
-                                <TableCell className={cn(
-                                  "text-center font-semibold flex items-center justify-center gap-1",
-                                  user.trend === 'up' && 'text-green-600',
-                                  user.trend === 'down' && 'text-red-600',
-                                )}>
-                                  {user.trend === 'up' && <ArrowUp className="h-4 w-4" />}
-                                  {user.trend === 'down' && <ArrowDown className="h-4 w-4" />}
-                                  {user.pointChange !== 0 ? user.pointChange : '-'}
-                                </TableCell>
-                            </TableRow>
+                          <TableRow key={`print-cr-${user.userId}`}>
+                              <TableCell className="font-bold text-lg">{user.rank}</TableCell>
+                              <TableCell>{user.userName}</TableCell>
+                              <TableCell className="text-center font-mono">{user.ordersCompleted}</TableCell>
+                              <TableCell className="text-center font-mono">{user.target}</TableCell>
+                              <TableCell>
+                                  <Progress value={performanceValue} indicatorClassName="bg-primary" />
+                              </TableCell>
+                              <TableCell className={cn(
+                                "text-center font-semibold flex items-center justify-center gap-1",
+                                user.trend === 'up' && 'text-green-600',
+                                user.trend === 'down' && 'text-red-600',
+                              )}>
+                                {user.trend === 'up' && <ArrowUp className="h-4 w-4" />}
+                                {user.trend === 'down' && <ArrowDown className="h-4 w-4" />}
+                                {user.pointChange !== 0 ? user.pointChange : '-'}
+                              </TableCell>
+                          </TableRow>
                         );
-                    })}
-                </TableBody>
-            </Table>
-        </section>
+                      })}
+                  </TableBody>
+              </Table>
+          </section>
+        )}
+
+        {activeTab === 'dr_board' && (
+          <section>
+              <h2 className="text-lg font-semibold mb-2">Designer Representative Performance</h2>
+              <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead className="w-16">Rank</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead className="text-center">Designs Done</TableHead>
+                          <TableHead className="text-center">Designs Assigned</TableHead>
+                           <TableHead className="w-48 text-center">Performance</TableHead>
+                           <TableHead className="text-center">Trend</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                      {drPerformanceData.map(user => {
+                          const performanceValue = (user.designsAssigned || 0) > 0 ? Math.min(100, ((user.designsDone || 0) / (user.designsAssigned || 1)) * 100) : 0;
+                          return (
+                              <TableRow key={`print-dr-${user.userId}`}>
+                                  <TableCell className="font-bold text-lg">{user.rank}</TableCell>
+                                  <TableCell>{user.userName}</TableCell>
+                                  <TableCell className="text-center font-mono">{user.designsDone}</TableCell>
+                                  <TableCell className="text-center font-mono">{user.designsAssigned}</TableCell>
+                                  <TableCell>
+                                      <Progress value={performanceValue} indicatorClassName="bg-green-500" />
+                                  </TableCell>
+                                  <TableCell className={cn(
+                                    "text-center font-semibold flex items-center justify-center gap-1",
+                                    user.trend === 'up' && 'text-green-600',
+                                    user.trend === 'down' && 'text-red-600',
+                                  )}>
+                                    {user.trend === 'up' && <ArrowUp className="h-4 w-4" />}
+                                    {user.trend === 'down' && <ArrowDown className="h-4 w-4" />}
+                                    {user.pointChange !== 0 ? user.pointChange : '-'}
+                                  </TableCell>
+                              </TableRow>
+                          );
+                      })}
+                  </TableBody>
+              </Table>
+          </section>
+        )}
       </div>
     </>
   );
