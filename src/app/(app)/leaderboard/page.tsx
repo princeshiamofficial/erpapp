@@ -116,9 +116,38 @@ export default function LeaderboardPage() {
           order.crmUserId === user.id &&
           order.createdAt && 
           isWithinInterval(parseISO(order.createdAt), { start: periodStart, end: periodEnd })
-        );
+        ).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()); // Sort chronologically
+
         ordersCreatedInPeriod = userOrdersInPeriod.length;
-        reorderCount = userOrdersInPeriod.filter(o => o.orderNotes?.toLowerCase().includes('re-order')).length;
+
+        // New re-order logic based on job ID history
+        const historicalJobIds = new Set<string>();
+        // Process orders created *before* the current period to build up a history of job IDs for this user
+        orders.forEach(order => {
+          if (order.crmUserId === user.id && new Date(order.createdAt) < periodStart) {
+            const companyNameParts = (order.companyName || '').split('•');
+            if (companyNameParts.length > 1) {
+              const jobId = companyNameParts[0].trim();
+              if (jobId) historicalJobIds.add(jobId);
+            }
+          }
+        });
+        
+        userOrdersInPeriod.forEach(order => {
+          const companyNameParts = (order.companyName || '').split('•');
+          if (companyNameParts.length > 1) {
+            const jobId = companyNameParts[0].trim();
+            if (jobId) {
+              if (historicalJobIds.has(jobId)) {
+                // This is a reorder
+                reorderCount++;
+              }
+              // Add the current order's job ID to the set for subsequent checks within the same period
+              historicalJobIds.add(jobId);
+            }
+          }
+        });
+
       } else if (roleToCalculate === 'DESIGNER_REPRESENTATIVE') {
           designsAssigned = orders.filter(order =>
               order.designerRepresentativeId === user.id &&
@@ -374,8 +403,7 @@ export default function LeaderboardPage() {
                   <TableRow>
                       <TableHead className="w-16">Rank</TableHead>
                       <TableHead>Name</TableHead>
-                      <TableHead className="text-center">Sales</TableHead>
-                      <TableHead className="text-center">Target</TableHead>
+                      <TableHead className="text-center">Sales/Target</TableHead>
                       <TableHead className="text-center">ROD(Re-orders)</TableHead>
                       <TableHead className="text-center">Total</TableHead>
                       <TableHead className="text-center">Trend</TableHead>
@@ -388,8 +416,7 @@ export default function LeaderboardPage() {
                       <TableRow key={`print-cr-${user.userId}`}>
                           <TableCell className="font-bold text-lg">{user.rank}</TableCell>
                           <TableCell>{user.userName}</TableCell>
-                          <TableCell className="text-center font-mono">{user.ordersCompleted}</TableCell>
-                          <TableCell className="text-center font-mono">{user.target}</TableCell>
+                          <TableCell className="text-center font-mono">{user.ordersCompleted}/{user.target}</TableCell>
                           <TableCell className="text-center font-mono">{user.reorderCount}</TableCell>
                           <TableCell className="text-center font-mono">{user.ordersCompleted + user.reorderCount}</TableCell>
                           <TableCell className={cn(
