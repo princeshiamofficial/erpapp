@@ -1,5 +1,4 @@
 
-
 "use server";
 
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
@@ -114,7 +113,7 @@ export const setAttendanceMark = async (userId: string, data: any): Promise<bool
 
 export const saveAttendanceAction = async (
   currentUser: User,
-  recordData: Partial<Omit<AttendanceRecord, 'id' | 'employeeId' | 'employeeName'>> & { checkInTime: string }
+  recordData: Partial<Omit<AttendanceRecord, 'id' | 'employeeId' | 'employeeName' | 'status'>> & { checkInTime: string; status?: AttendanceStatus }
 ): Promise<{ success: boolean; error?: string }> => {
   if (!currentUser?.id) {
     return { success: false, error: "User not authenticated." };

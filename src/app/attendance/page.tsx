@@ -304,7 +304,7 @@ export default function CheckInOutPage() {
     // Find the applicable office time for the current user's role
     const userRole = currentUser.role;
     const applicableOfficeTime = officeTimes.find(time => 
-        (Array.isArray(time.applicableRoles) && time.applicableRoles.includes(userRole)) || time.applicableRoles === 'all'
+      (Array.isArray(time.applicableRoles) && time.applicableRoles.includes(userRole)) || time.applicableRoles === 'all'
     );
 
     if (applicableOfficeTime) {
@@ -372,8 +372,7 @@ export default function CheckInOutPage() {
       checkInLocation: checkInLocation,
       checkOutTime: now.toISOString(),
       hoursWorked: hoursWorked,
-      checkOutLocation: currentLocation, // Add the check-out location
-      status: attendanceStatus,
+      checkOutLocation: currentLocation,
     };
     const result = await saveAttendanceAction(currentUser, recordData);
     if(result.success) {
