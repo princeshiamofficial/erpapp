@@ -130,15 +130,17 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
         return;
     }
     const taskCount = parseInt(tasksDone, 10);
-    const likelihoodCount = parseInt(likelihoodCustomers, 10);
-
+    const likelihoodCount = currentUser.role === 'CRM' ? parseInt(likelihoodCustomers, 10) : undefined;
+  
     if (isNaN(taskCount) || taskCount < 0) {
-        toast({ title: "Invalid Input", description: "Please enter a valid non-negative number of tasks.", variant: "destructive" });
-        return;
+      toast({ title: "Invalid Input", description: "Please enter a valid non-negative number of tasks.", variant: "destructive" });
+      return;
     }
-    if (currentUser.role === 'CRM' && (isNaN(likelihoodCount) || likelihoodCount < 0)) {
-        toast({ title: "Invalid Input", description: "Please enter a valid non-negative number for likely customers.", variant: "destructive" });
-        return;
+  
+    // Validate likelihood only for CRM role
+    if (currentUser.role === 'CRM' && (likelihoodCount === undefined || isNaN(likelihoodCount) || likelihoodCount < 0)) {
+      toast({ title: "Invalid Input", description: "Please enter a valid non-negative number for likely customers.", variant: "destructive" });
+      return;
     }
     
     setIsSubmitting(true);

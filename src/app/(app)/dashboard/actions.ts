@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { getOrderById, updateOrdersBatch, deleteShippedOrderEntry, autoSettleOrderIfDelivered } from '@/lib/order-service'; 
 import { DELIVERED_STATUS_ID, SHIPPED_STATUS_ID } from '@/lib/status-service'; 
 import { getUsers } from '@/lib/user-service';
-import { OrderLogEntry, TrackingLink, User } from '@/types'; 
+import { OrderLogEntry, TrackingLink, User, UserRole } from '@/types'; 
 import { v4 as uuidv4 } from 'uuid';
 import { fetchFromApiV3 } from '@/lib/api-helper2'; 
 import { addTaskEntry } from '@/lib/team-performance-service'; // Import new service
@@ -131,8 +131,10 @@ export async function addTaskEntryAction(
   if (isNaN(taskCount) || taskCount < 0) {
     return { success: false, error: "Task count must be a non-negative number." };
   }
-  if (likelihood !== undefined && (isNaN(likelihood) || likelihood < 0)) {
-      return { success: false, error: "Likelihood must be a non-negative number." };
+  
+  // Only validate likelihood if the user role is CRM
+  if (user.role === 'CRM' && (likelihood === undefined || isNaN(likelihood) || likelihood < 0)) {
+    return { success: false, error: "Likelihood must be a non-negative number for CRM users." };
   }
 
   try {
@@ -143,7 +145,7 @@ export async function addTaskEntryAction(
       userName: user.name,
       role: user.role,
       taskCount: taskCount,
-      likelihood: likelihood,
+      likelihood: user.role === 'CRM' ? likelihood : undefined, // Only save likelihood for CRM
     };
     
     const result = await addTaskEntry(entryData);
