@@ -524,6 +524,7 @@ export default function DR2OPage() {
                             <Table>
                                <TableHeader>
                                  <TableRow>
+                                  <TableHead>User</TableHead>
                                   <TableHead>Company</TableHead>
                                   <TableHead>Product</TableHead>
                                   <TableHead>Qty</TableHead>
@@ -539,6 +540,17 @@ export default function DR2OPage() {
                                      const lrUser = allUsers.find(u => u.id === entry.crmId);
                                      return (
                                        <TableRow key={item.id}>
+                                         <TableCell>
+                                           <div className="flex items-center gap-2">
+                                             {lrUser && (
+                                                <Avatar className="h-6 w-6">
+                                                  <AvatarImage src={lrUser.avatarUrl || undefined} alt={lrUser.name} />
+                                                  <AvatarFallback>{getInitials(lrUser.name)}</AvatarFallback>
+                                                </Avatar>
+                                             )}
+                                             <span className="text-xs">{entry.crmName}</span>
+                                           </div>
+                                         </TableCell>
                                          <TableCell>{item.companyName}</TableCell>
                                          <TableCell>{item.productName}</TableCell>
                                          <TableCell>{item.productQty}</TableCell>
@@ -636,5 +648,3 @@ export default function DR2OPage() {
     </>
   );
 }
-
-    
