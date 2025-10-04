@@ -190,6 +190,15 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
     return { totalDone: doneCount };
   }, [monthlyTargetData, isAdminView, currentUser]);
 
+  const showLikelihoodChart = useMemo(() => {
+    if (!currentUser) return false;
+    if (isAdminView) {
+        // In admin view, show if "All Teams" or "CRM" is selected
+        return selectedTeam === 'all' || selectedTeam === 'CRM';
+    }
+    // In non-admin view, only show for CRM users
+    return currentUser.role === 'CRM';
+  }, [currentUser, isAdminView, selectedTeam]);
 
   const renderChart = () => {
     switch (chartType) {
@@ -205,7 +214,9 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
             <Line type="monotone" dataKey="totalDone" name="Tasks Done" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
             <Line type="monotone" dataKey="totalTarget" name="Target" stroke="hsl(var(--chart-4))" strokeWidth={2} strokeDasharray="5 5" dot={{r:4}} activeDot={{r:6}}/>
-            <Line type="monotone" dataKey="totalLikelihood" name="Likely Customers" stroke="hsl(var(--chart-5))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
+            {showLikelihoodChart && (
+              <Line type="monotone" dataKey="totalLikelihood" name="Likely Customers" stroke="hsl(var(--chart-5))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
+            )}
           </RechartsLineChart>
         );
       default:
@@ -220,7 +231,9 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
             <Bar dataKey="totalDone" name="Tasks Done" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
             <Bar dataKey="totalTarget" name="Target" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="totalLikelihood" name="Likely Customers" fill="hsl(var(--chart-5))" radius={[4, 4, 0, 0]} />
+            {showLikelihoodChart && (
+              <Bar dataKey="totalLikelihood" name="Likely Customers" fill="hsl(var(--chart-5))" radius={[4, 4, 0, 0]} />
+            )}
           </RechartsBarChart>
         );
     }
