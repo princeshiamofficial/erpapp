@@ -20,7 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { deleteDr2oEntryAction } from './actions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 const AddEditDr2oDialog = dynamic(() => import('@/components/dr2o/AddEditDr2oDialog').then(mod => mod.AddEditDr2oDialog));
 const ViewLrEntryDialog = dynamic(() => import('@/components/dr2o/ViewLrEntryDialog').then(mod => mod.ViewLrEntryDialog));
@@ -201,73 +201,68 @@ export default function DR2OPage() {
                   </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-0">
-               <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      {(isAdmin) && <TableHead>CR Name</TableHead>}
-                      <TableHead>Company Name</TableHead>
-                      <TableHead>Number</TableHead>
-                      <TableHead>Payment Company</TableHead>
-                      <TableHead>Payment Number</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                     {isLoading ? [...Array(5)].map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell colSpan={(isAdmin) ? 7 : 6}><Skeleton className="h-8 w-full" /></TableCell>
-                      </TableRow>
-                    )) : userEntries.length > 0 ? userEntries.map((row) => {
-                        const crUser = allUsers.find(u => u.id === row.crmId);
-                        const canEdit = currentUser?.id === row.crmId || isAdmin;
-                        return(
-                        <TableRow key={row.id}>
-                          <TableCell>{format(parseISO(row.date), 'd MMM, yyyy')}</TableCell>
-                           {(isAdmin) && (
-                              <TableCell>
-                                  <div className="flex items-center gap-2">
-                                      <Avatar className="h-8 w-8">
-                                          <AvatarImage src={crUser?.avatarUrl || undefined} alt={row.crmName} />
-                                          <AvatarFallback>{getInitials(row.crmName)}</AvatarFallback>
-                                      </Avatar>
-                                      <span>{row.crmName}</span>
-                                  </div>
-                              </TableCell>
-                            )}
-                          <TableCell>{row.companyName || 'N/A'}</TableCell>
-                          <TableCell>{row.companyNumber || 'N/A'}</TableCell>
-                          <TableCell>{row.paymentCompanyName || 'N/A'}</TableCell>
-                          <TableCell>{row.paymentNumber || 'N/A'}</TableCell>
-                          <TableCell className="text-right">
-                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                        <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} disabled={!canEdit} className="cursor-pointer">
-                                        <Edit className="mr-2 h-4 w-4" /> Edit
+            <CardContent className="p-4">
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
+                </div>
+              ) : userEntries.length > 0 ? (
+                <Accordion type="single" collapsible className="w-full space-y-3">
+                  {userEntries.map((row, index) => {
+                    const crUser = allUsers.find(u => u.id === row.crmId);
+                    const canEdit = currentUser?.id === row.crmId || isAdmin;
+                    return (
+                      <div key={row.id} className="group relative bg-muted/30 rounded-lg shadow-sm border">
+                        <AccordionItem value={`item-${index}`} className="border-b-0">
+                          <AccordionTrigger className="px-4 py-3 text-left font-semibold text-foreground hover:no-underline">
+                            <div className="flex items-center gap-4 flex-1">
+                                {isAdmin && crUser && (
+                                    <Avatar className="h-9 w-9">
+                                        <AvatarImage src={crUser.avatarUrl || undefined} alt={crUser.name} />
+                                        <AvatarFallback>{getInitials(crUser.name)}</AvatarFallback>
+                                    </Avatar>
+                                )}
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium">{isAdmin ? crUser?.name : row.companyName}</p>
+                                    <p className="text-xs text-muted-foreground">{format(parseISO(row.date), 'd MMM, yyyy')}</p>
+                                </div>
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-6 pt-0 pb-4 text-sm text-muted-foreground">
+                            <div className="space-y-2">
+                              <p><strong className="text-foreground">Company Name:</strong> {row.companyName || 'N/A'}</p>
+                              <p><strong className="text-foreground">Company Number:</strong> {row.companyNumber || 'N/A'}</p>
+                              <p><strong className="text-foreground">Payment Company:</strong> {row.paymentCompanyName || 'N/A'}</p>
+                              <p><strong className="text-foreground">Payment Number:</strong> {row.paymentNumber || 'N/A'}</p>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={() => handleOpenEditDialog(row)} disabled={!canEdit} className="cursor-pointer">
+                                    <Edit className="mr-2 h-4 w-4" /> Edit
+                                </DropdownMenuItem>
+                                {isAdmin && (
+                                    <DropdownMenuItem onSelect={() => setEntryToDelete(row)} className="cursor-pointer text-destructive focus:text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
                                     </DropdownMenuItem>
-                                    {isAdmin && (
-                                        <DropdownMenuItem onSelect={() => setEntryToDelete(row)} className="cursor-pointer text-destructive focus:text-destructive">
-                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                        </DropdownMenuItem>
-                                    )}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                        )
-                    }) : (
-                        <TableRow><TableCell colSpan={(isAdmin) ? 7 : 6} className="text-center h-48">No reports found.</TableCell></TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                                )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </Accordion>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">No reports found.</div>
+              )}
             </CardContent>
           </Card>
         );
@@ -289,7 +284,7 @@ export default function DR2OPage() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <Table className="min-w-full divide-y divide-gray-200">
+                <Table className="min-w-full divide-y divide-gray-200 dark:divide-border/50">
                   <TableHeader className="bg-gray-50 dark:bg-muted/30">
                     <TableRow>
                       <TableHead className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 dark:bg-muted/30 z-10">Date</TableHead>
