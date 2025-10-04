@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -105,39 +104,46 @@ export default function LeaderboardPage() {
     
     const sortedAllOrders = [...orders].sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
+    // First pass: find the first time each job ID appears across ALL orders
+    const jobFirstSeenDate = new Map<string, Date>();
+    sortedAllOrders.forEach(order => {
+        const companyNameParts = (order.companyName || '').split('•');
+        const jobId = companyNameParts.length > 1 ? companyNameParts[0].trim().toLowerCase() : null;
+        const orderDate = new Date(order.createdAt);
+        
+        if (jobId && !jobFirstSeenDate.has(jobId)) {
+            jobFirstSeenDate.set(jobId, orderDate);
+        }
+    });
+
     const performanceDataList = roleFilteredUsers.map(user => {
-      let ordersCreatedInPeriod = 0;
+      let newSalesCount = 0;
       let reorderCount = 0;
       let designsAssigned = 0;
       let designsDone = 0;
 
       if (roleToCalculate === 'CRM') {
-        const userOrders = sortedAllOrders.filter(order => order.crmUserId === user.id);
-        const jobFirstSeenDate = new Map<string, Date>();
+        const userOrdersInPeriod = sortedAllOrders.filter(order => 
+            order.crmUserId === user.id &&
+            isWithinInterval(new Date(order.createdAt), { start: periodStart, end: periodEnd })
+        );
 
-        userOrders.forEach(order => {
+        userOrdersInPeriod.forEach(order => {
           const companyNameParts = (order.companyName || '').split('•');
           const jobId = companyNameParts.length > 1 ? companyNameParts[0].trim().toLowerCase() : null;
           const orderDate = new Date(order.createdAt);
-
+          
           if (jobId) {
-            if (jobFirstSeenDate.has(jobId)) {
-                // This is a reorder
-                if (isWithinInterval(orderDate, { start: periodStart, end: periodEnd })) {
-                    reorderCount++;
-                }
+            const firstSeen = jobFirstSeenDate.get(jobId);
+            // It's a re-order if its creation date is strictly after the first time we saw this job ID
+            if (firstSeen && orderDate.getTime() > firstSeen.getTime()) {
+                reorderCount++;
             } else {
-                // This is the first time we see this job ID for this user
-                jobFirstSeenDate.set(jobId, orderDate);
-                if (isWithinInterval(orderDate, { start: periodStart, end: periodEnd })) {
-                    ordersCreatedInPeriod++;
-                }
+                newSalesCount++;
             }
           } else {
-             // Treat orders without a job-id as new orders if they are in the period
-             if (isWithinInterval(orderDate, { start: periodStart, end: periodEnd })) {
-                ordersCreatedInPeriod++;
-             }
+             // Treat orders without a job-id as new orders
+             newSalesCount++;
           }
         });
 
@@ -161,7 +167,7 @@ export default function LeaderboardPage() {
         userId: user.id,
         userName: user.name,
         userAvatar: user.avatarUrl || undefined,
-        ordersCompleted: ordersCreatedInPeriod,
+        ordersCompleted: newSalesCount,
         reorderCount: reorderCount,
         designsAssigned,
         designsDone,
@@ -174,7 +180,11 @@ export default function LeaderboardPage() {
     
     const sortKey = roleToCalculate === 'DESIGNER_REPRESENTATIVE' ? 'designsDone' : 'ordersCompleted';
 
-    performanceDataList.sort((a, b) => (b[sortKey] ?? 0) - (a[sortKey] ?? 0) || a.userName.localeCompare(b.userName));
+    performanceDataList.sort((a, b) => {
+        const aTotal = (a[sortKey] ?? 0) + (a.reorderCount ?? 0);
+        const bTotal = (b[sortKey] ?? 0) + (b.reorderCount ?? 0);
+        return bTotal - aTotal || a.userName.localeCompare(b.userName);
+    });
     performanceDataList.forEach((user, index) => {
       user.rank = index + 1;
     });
