@@ -37,7 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import {
   Pagination,
   PaginationContent,
@@ -47,13 +47,15 @@ import {
   PaginationPrevious,
   PaginationEllipsis
 } from "@/components/ui/pagination";
+import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
+import type { DateRange } from "react-day-picker";
 
 const CreateOrderDialog = dynamic(() => import('@/components/orders/create-order-dialog').then(mod => mod.CreateOrderDialog));
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
 const EditOrderDialog = dynamic(() => import('@/components/orders/edit-order-dialog').then(mod => mod.EditOrderDialog));
 
 
-const formatDate = (dateString: string | undefined) => {
+const formatDate = (dateString?: string) => {
   if (!dateString) return "N/A";
   try {
     return format(parseISO(dateString), 'd MMM yyyy');
@@ -87,6 +89,8 @@ export default function OrdersPage() {
   const [isEditOrderDialogOpen, setIsEditOrderDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewType, setViewType] = useState<'orders' | 'reorders'>('orders');
+
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
 
 
   const fetchOrderData = useCallback(async () => {
@@ -136,6 +140,10 @@ export default function OrdersPage() {
   const memoizedAvailableStatusesForDialog = useMemo(() => {
     return allStatuses.filter(s => s.isVisible !== false);
   }, [allStatuses]);
+  
+  const handleDateRangeChange = (range: DateRange | undefined, label: string, predefined: PredefinedRange | "custom" | null) => {
+    setSelectedDateRange(range);
+  };
 
   const filteredOrders = useMemo(() => {
     let result = orders;
@@ -145,6 +153,19 @@ export default function OrdersPage() {
       result = result.filter(order => order.designerRepresentativeId === currentUser.id);
     }
     
+    if (selectedDateRange?.from) {
+      const startDate = startOfDay(selectedDateRange.from);
+      const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
+      result = result.filter(order => {
+        try {
+          const orderDate = parseISO(order.createdAt);
+          return isWithinInterval(orderDate, { start: startDate, end: endDate });
+        } catch {
+          return false;
+        }
+      });
+    }
+
     if (viewType === 'reorders') {
         const jobCounts = result.reduce((acc, order) => {
             const jobId = (order.companyName || '').split(' • ')[0].trim();
@@ -172,7 +193,7 @@ export default function OrdersPage() {
       order.crmUserName.toLowerCase().includes(lowerSearchTerm) ||
       (order.designerRepresentativeName && order.designerRepresentativeName.toLowerCase().includes(lowerSearchTerm))
     ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [orders, searchTerm, currentUser, viewType]);
+  }, [orders, searchTerm, currentUser, viewType, selectedDateRange]);
 
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
 
@@ -183,7 +204,7 @@ export default function OrdersPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, viewType]);
+  }, [searchTerm, viewType, selectedDateRange]);
 
   const [orderStatusDisplay, setOrderStatusDisplay] = useState<Record<string, { name: string; color: string; textColor: string }>>({});
 
@@ -430,14 +451,21 @@ export default function OrdersPage() {
                 Reorders
               </Button>
             </div>
-            <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search orders..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-background h-10 rounded-md w-full"
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <DateRangePicker 
+                initialRange={selectedDateRange} 
+                onDateRangeChange={handleDateRangeChange}
+                className="h-10"
               />
+              <div className="relative flex-grow sm:flex-grow-0 sm:max-w-xs w-full sm:w-auto">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search orders..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-background h-10 rounded-md w-full"
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
