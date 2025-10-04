@@ -383,7 +383,7 @@ export default function LeaderboardPage() {
                             <TableCell>{user.userName}</TableCell>
                             <TableCell className="text-center font-mono">{user.ordersCompleted}/{user.target}</TableCell>
                             <TableCell>
-                                <Progress value={performanceValue} indicatorClassName="bg-primary" />
+                                <Progress value={Math.min(100, performanceValue)} indicatorClassName="bg-primary" />
                             </TableCell>
                         </TableRow>
                       );
@@ -415,7 +415,7 @@ export default function LeaderboardPage() {
                                 <TableCell className="text-center font-mono">{user.designsDone}</TableCell>
                                 <TableCell className="text-center font-mono">{user.designsAssigned}</TableCell>
                                 <TableCell>
-                                    <Progress value={performanceValue} indicatorClassName="bg-green-500" />
+                                    <Progress value={Math.min(100, performanceValue)} indicatorClassName="bg-green-500" />
                                 </TableCell>
                             </TableRow>
                         );
