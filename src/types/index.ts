@@ -1,5 +1,4 @@
 
-
 export type UserRole = "ADMIN" | "CRM" | "DESIGNER_REPRESENTATIVE" | "SYSTEM_ADMIN" | "VENDOR" | "LR";
 
 export interface User {
@@ -590,4 +589,22 @@ export interface AttendanceRecord {
     checkOutLocation?: { lat: number; lng: number };
 }
 
-  
+export interface TaskEntry {
+  id: string;
+  date: string; // YYYY-MM-DD format
+  userId: string;
+  userName: string;
+  role: UserRole;
+  taskCount: number;
+  likelihood?: number;
+  createdAt: string; // ISO string
+}
+
+export interface MonthlyTargetHistory {
+    id: string; // e.g., 'CRM-2024-06'
+    team: UserRole | 'all';
+    month: string; // YYYY-MM
+    target: number;
+    achieved: number;
+    undone: number;
+}

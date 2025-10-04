@@ -14,6 +14,7 @@ export interface TaskEntry {
   userName: string;
   role: UserRole;
   taskCount: number;
+  likelihood?: number;
   createdAt: string; // ISO string
 }
 
@@ -123,4 +124,3 @@ export const setMonthlyTargetHistory = async (entry: Omit<MonthlyTargetHistory, 
         return null;
     }
 };
-

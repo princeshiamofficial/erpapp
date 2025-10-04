@@ -122,13 +122,17 @@ export async function settleAllDeliveredOrdersAction(): Promise<{ success: boole
 // New action to add a task entry for team performance
 export async function addTaskEntryAction(
   user: User,
-  taskCount: number
+  taskCount: number,
+  likelihood?: number
 ): Promise<{ success: boolean; error?: string }> {
   if (!user || !user.id || !user.role) {
     return { success: false, error: "Invalid user data provided." };
   }
   if (isNaN(taskCount) || taskCount < 0) {
     return { success: false, error: "Task count must be a non-negative number." };
+  }
+  if (likelihood !== undefined && (isNaN(likelihood) || likelihood < 0)) {
+      return { success: false, error: "Likelihood must be a non-negative number." };
   }
 
   try {
@@ -139,6 +143,7 @@ export async function addTaskEntryAction(
       userName: user.name,
       role: user.role,
       taskCount: taskCount,
+      likelihood: likelihood,
     };
     
     const result = await addTaskEntry(entryData);

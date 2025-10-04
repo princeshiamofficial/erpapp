@@ -38,10 +38,12 @@ import Link from 'next/link';
 interface DailyTargetData {
     name: string;
     totalDone: number;
+    totalLikelihood: number;
     totalTarget: number;
     userData: {
         [userId: string]: {
             done: number;
+            likelihood: number;
             role: UserRole;
         };
     };
@@ -128,18 +130,25 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
         return;
     }
     const taskCount = parseInt(tasksDone, 10);
+    const likelihoodCount = parseInt(likelihoodCustomers, 10);
+
     if (isNaN(taskCount) || taskCount < 0) {
         toast({ title: "Invalid Input", description: "Please enter a valid non-negative number of tasks.", variant: "destructive" });
+        return;
+    }
+    if (currentUser.role === 'CRM' && (isNaN(likelihoodCount) || likelihoodCount < 0)) {
+        toast({ title: "Invalid Input", description: "Please enter a valid non-negative number for likely customers.", variant: "destructive" });
         return;
     }
     
     setIsSubmitting(true);
     
-    const result = await addTaskEntryAction(currentUser, taskCount);
+    const result = await addTaskEntryAction(currentUser, taskCount, likelihoodCount);
     
     if (result.success) {
         toast({ title: "Tasks Submitted", description: `Your ${taskCount} completed tasks have been recorded.` });
         setTasksDone('');
+        setLikelihoodCustomers('');
         setHasSubmittedToday(true); 
         refetchData(); // Call parent refetch
     } else {
@@ -194,6 +203,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
             <Line type="monotone" dataKey="totalDone" name="Tasks Done" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
             <Line type="monotone" dataKey="totalTarget" name="Target" stroke="hsl(var(--chart-4))" strokeWidth={2} strokeDasharray="5 5" dot={{r:4}} activeDot={{r:6}}/>
+            <Line type="monotone" dataKey="totalLikelihood" name="Likely Customers" stroke="hsl(var(--chart-3))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
           </RechartsLineChart>
         );
       default:
@@ -208,6 +218,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
             <Bar dataKey="totalDone" name="Tasks Done" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
             <Bar dataKey="totalTarget" name="Target" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="totalLikelihood" name="Likely Customers" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
           </RechartsBarChart>
         );
     }
@@ -323,6 +334,7 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     if (active && payload && payload.length) {
         const donePayload = payload.find((p: any) => p.dataKey === 'totalDone');
         const targetPayload = payload.find((p: any) => p.dataKey === 'totalTarget');
+        const likelihoodPayload = payload.find((p: any) => p.dataKey === 'totalLikelihood');
         const userData = donePayload?.payload?.userData || {};
         
         let userBreakdown: { user: UserType, done: number }[] = [];
@@ -356,6 +368,13 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
                         <span className="text-sm text-muted-foreground">Target:</span>
                         <span className="text-sm font-medium ml-auto">{targetPayload.value}</span>
                     </div>}
+                    {likelihoodPayload && likelihoodPayload.value > 0 && (
+                        <div className="flex items-center gap-2">
+                            <div className="h-2.5 w-2.5 rounded-full" style={{backgroundColor: likelihoodPayload.color}}></div>
+                            <span className="text-sm text-muted-foreground">Likely Customers:</span>
+                            <span className="text-sm font-medium ml-auto">{likelihoodPayload.value}</span>
+                        </div>
+                    )}
                 </div>
                  {userBreakdown.length > 0 && (
                     <>
