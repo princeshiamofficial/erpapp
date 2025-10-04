@@ -375,16 +375,19 @@ export default function LeaderboardPage() {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {performanceData.map(user => (
+                    {performanceData.map(user => {
+                      const performanceValue = user.target > 0 ? (user.ordersCompleted / user.target) * 100 : 0;
+                      return (
                         <TableRow key={`print-cr-${user.userId}`}>
                             <TableCell className="font-bold text-lg">{user.rank}</TableCell>
                             <TableCell>{user.userName}</TableCell>
                             <TableCell className="text-center font-mono">{user.ordersCompleted}/{user.target}</TableCell>
                             <TableCell>
-                                <Progress value={(user.ordersCompleted / user.target) * 100} indicatorClassName="bg-primary" />
+                                <Progress value={performanceValue} indicatorClassName="bg-primary" />
                             </TableCell>
                         </TableRow>
-                    ))}
+                      );
+                    })}
                 </TableBody>
             </Table>
         </section>
@@ -399,21 +402,24 @@ export default function LeaderboardPage() {
                         <TableHead>Name</TableHead>
                         <TableHead className="text-center">Designs Done</TableHead>
                         <TableHead className="text-center">Designs Assigned</TableHead>
-                        <TableHead className="w-48 text-center">Performance</TableHead>
+                         <TableHead className="w-48 text-center">Performance</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {drPerformanceData.map(user => (
-                        <TableRow key={`print-dr-${user.userId}`}>
-                            <TableCell className="font-bold text-lg">{user.rank}</TableCell>
-                            <TableCell>{user.userName}</TableCell>
-                            <TableCell className="text-center font-mono">{user.designsDone}</TableCell>
-                            <TableCell className="text-center font-mono">{user.designsAssigned}</TableCell>
-                             <TableCell>
-                                <Progress value={((user.designsDone || 0) / (user.designsAssigned || 1)) * 100} indicatorClassName="bg-green-500" />
-                            </TableCell>
-                        </TableRow>
-                    ))}
+                    {drPerformanceData.map(user => {
+                        const performanceValue = (user.designsAssigned || 0) > 0 ? ((user.designsDone || 0) / (user.designsAssigned || 1)) * 100 : 0;
+                        return (
+                            <TableRow key={`print-dr-${user.userId}`}>
+                                <TableCell className="font-bold text-lg">{user.rank}</TableCell>
+                                <TableCell>{user.userName}</TableCell>
+                                <TableCell className="text-center font-mono">{user.designsDone}</TableCell>
+                                <TableCell className="text-center font-mono">{user.designsAssigned}</TableCell>
+                                <TableCell>
+                                    <Progress value={performanceValue} indicatorClassName="bg-green-500" />
+                                </TableCell>
+                            </TableRow>
+                        );
+                    })}
                 </TableBody>
             </Table>
         </section>
