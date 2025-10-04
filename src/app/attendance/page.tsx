@@ -369,6 +369,7 @@ export default function CheckInOutPage() {
 
     const recordData = {
       checkInTime: checkInTime.toISOString(),
+      status: attendanceStatus, // Pass the preserved status
       checkInLocation: checkInLocation,
       checkOutTime: now.toISOString(),
       hoursWorked: hoursWorked,
