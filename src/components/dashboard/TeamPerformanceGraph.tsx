@@ -203,7 +203,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
             <Line type="monotone" dataKey="totalDone" name="Tasks Done" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
             <Line type="monotone" dataKey="totalTarget" name="Target" stroke="hsl(var(--chart-4))" strokeWidth={2} strokeDasharray="5 5" dot={{r:4}} activeDot={{r:6}}/>
-            <Line type="monotone" dataKey="totalLikelihood" name="Likely Customers" stroke="hsl(var(--chart-3))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
+            <Line type="monotone" dataKey="totalLikelihood" name="Likely Customers" stroke="hsl(var(--chart-5))" strokeWidth={2} dot={{r:4}} activeDot={{r:6}} />
           </RechartsLineChart>
         );
       default:
@@ -218,7 +218,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
             <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
             <Bar dataKey="totalDone" name="Tasks Done" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
             <Bar dataKey="totalTarget" name="Target" fill="hsl(var(--chart-4))" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="totalLikelihood" name="Likely Customers" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="totalLikelihood" name="Likely Customers" fill="hsl(var(--chart-5))" radius={[4, 4, 0, 0]} />
           </RechartsBarChart>
         );
     }
