@@ -96,10 +96,8 @@ export default function LeaderboardPage() {
     if (!dateRange?.from || !dateRange?.to) {
         return [];
     }
-    const periodStart = new Date(dateRange.from);
-    const periodEnd = new Date(dateRange.to);
-    periodStart.setHours(0,0,0,0);
-    periodEnd.setHours(23,59,59,999);
+    const periodStart = startOfDay(dateRange.from);
+    const periodEnd = endOfDay(dateRange.to);
     
     const numDaysInRange = differenceInDays(periodEnd, periodStart) + 1;
 
@@ -116,34 +114,39 @@ export default function LeaderboardPage() {
           order.crmUserId === user.id &&
           order.createdAt && 
           isWithinInterval(parseISO(order.createdAt), { start: periodStart, end: periodEnd })
-        ).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()); // Sort chronologically
+        ).sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
 
         ordersCreatedInPeriod = userOrdersInPeriod.length;
-
-        // New re-order logic based on job ID history
+        
+        // Build a set of all job IDs for this user from *before* the current period.
         const historicalJobIds = new Set<string>();
-        // Process orders created *before* the current period to build up a history of job IDs for this user
         orders.forEach(order => {
           if (order.crmUserId === user.id && new Date(order.createdAt) < periodStart) {
             const companyNameParts = (order.companyName || '').split('•');
             if (companyNameParts.length > 1) {
               const jobId = companyNameParts[0].trim();
-              if (jobId) historicalJobIds.add(jobId);
+              if (jobId) {
+                historicalJobIds.add(jobId.toLowerCase());
+              }
             }
           }
         });
-        
+
+        // Now iterate through the current period's orders to check for reorders
         userOrdersInPeriod.forEach(order => {
           const companyNameParts = (order.companyName || '').split('•');
           if (companyNameParts.length > 1) {
             const jobId = companyNameParts[0].trim();
             if (jobId) {
-              if (historicalJobIds.has(jobId)) {
-                // This is a reorder
+              // A reorder is one where the job ID was seen *before* this period.
+              // Also add the current period's job IDs to the set as we go
+              // to correctly count multiple reorders of the same job ID within the period.
+              if (historicalJobIds.has(jobId.toLowerCase())) {
                 reorderCount++;
               }
-              // Add the current order's job ID to the set for subsequent checks within the same period
-              historicalJobIds.add(jobId);
+              // Add the current order's job ID to the historical set so subsequent orders
+              // in the same period for the same job are also counted as reorders.
+              historicalJobIds.add(jobId.toLowerCase());
             }
           }
         });
@@ -238,7 +241,9 @@ export default function LeaderboardPage() {
     const prevCrMap = new Map(prevCrData.map(d => [d.userId, d]));
     crData = crData.map(currentData => {
         const prevData = prevCrMap.get(currentData.userId);
-        const pointChange = currentData.ordersCompleted - (prevData?.ordersCompleted || 0);
+        const prevPoints = (prevData?.ordersCompleted || 0) + (prevData?.reorderCount || 0);
+        const currentPoints = currentData.ordersCompleted + currentData.reorderCount;
+        const pointChange = currentPoints - prevPoints;
         return {
             ...currentData,
             trend: pointChange > 0 ? 'up' : pointChange < 0 ? 'down' : 'same',
@@ -287,9 +292,9 @@ export default function LeaderboardPage() {
           style={{backgroundImage: "url('https://i.ibb.co/PGBMbxBc/360-F-338486227-q-Qit-Uvh3n-ILq-Yiu-QOUGxdfindo-NMbtp-H.jpg')"}}
           data-ai-hint="abstract orange fire particles"
         ></div>
-        <header className="relative z-10 flex items-center justify-between py-3 px-2 mb-6">
+        <header className="relative z-10 flex items-center justify-center text-center py-3 px-2 mb-6">
             <h1 className="text-xl font-semibold tracking-wider">LEADERBOARD</h1>
-            <Skeleton className="h-9 w-36 rounded-md bg-white/10" />
+            <div className="absolute right-4"><Skeleton className="h-9 w-36 rounded-md bg-white/10" /></div>
         </header>
         <div className="relative z-10 text-center mb-8">
           <Crown className="h-10 w-10 text-[hsl(var(--leaderboard-gold))] mx-auto mb-2 opacity-50" />
@@ -403,7 +408,8 @@ export default function LeaderboardPage() {
                   <TableRow>
                       <TableHead className="w-16">Rank</TableHead>
                       <TableHead>Name</TableHead>
-                      <TableHead className="text-center">Sales/Target</TableHead>
+                      <TableHead className="text-center">Sales</TableHead>
+                      <TableHead className="text-center">Target</TableHead>
                       <TableHead className="text-center">ROD(Re-orders)</TableHead>
                       <TableHead className="text-center">Total</TableHead>
                       <TableHead className="text-center">Trend</TableHead>
@@ -416,7 +422,8 @@ export default function LeaderboardPage() {
                       <TableRow key={`print-cr-${user.userId}`}>
                           <TableCell className="font-bold text-lg">{user.rank}</TableCell>
                           <TableCell>{user.userName}</TableCell>
-                          <TableCell className="text-center font-mono">{user.ordersCompleted}/{user.target}</TableCell>
+                          <TableCell className="text-center font-mono">{user.ordersCompleted}</TableCell>
+                          <TableCell className="text-center font-mono">{user.target}</TableCell>
                           <TableCell className="text-center font-mono">{user.reorderCount}</TableCell>
                           <TableCell className="text-center font-mono">{user.ordersCompleted + user.reorderCount}</TableCell>
                           <TableCell className={cn(
