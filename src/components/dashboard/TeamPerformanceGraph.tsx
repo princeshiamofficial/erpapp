@@ -72,6 +72,7 @@ const getInitials = (name: string | undefined): string => {
 export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonthlyTargetData, totalPerformanceTarget: initialTotalPerformanceTarget, selectedDateRange, userMap, globalSettings, onDateRangeChange, onTeamChange, selectedTeam, isAdminView, refetchData }: TeamPerformanceGraphProps) {
   const [chartType, setChartType] = useState<'line'>('line');
   const [tasksDone, setTasksDone] = useState('');
+  const [likelihoodCustomers, setLikelihoodCustomers] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmittedToday, setHasSubmittedToday] = useState(false);
   const { currentUser } = useAuth();
@@ -235,7 +236,23 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
                  {isInputVisible && (
-                    <div className="flex items-center gap-1 w-full sm:w-auto">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        {!hasSubmittedToday && currentUser?.role === 'CRM' && (
+                          <>
+                            <div className="relative">
+                               <Label htmlFor="likelihood-customers-input" className="sr-only">Likely Customers</Label>
+                               <Input
+                                id="likelihood-customers-input"
+                                type="number"
+                                placeholder="Likely Customers..."
+                                value={likelihoodCustomers}
+                                onChange={(e) => setLikelihoodCustomers(e.target.value)}
+                                className="h-10 w-full sm:w-32"
+                                min="0"
+                               />
+                            </div>
+                          </>
+                        )}
                         <Label htmlFor="tasks-done-input" className="text-xs text-muted-foreground mr-1 whitespace-nowrap sr-only">{inputLabel}</Label>
                         {!hasSubmittedToday ? (
                           <>
