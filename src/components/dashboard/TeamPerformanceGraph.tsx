@@ -225,10 +225,11 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
       });
 
       // Aggregate targets
-      Object.entries(day.userData).forEach(([userId, data]) => {
-        if (aggregatedData[userId]) {
-            aggregatedData[userId].target += day.totalTarget / Object.keys(day.userData).length; // simple average distribution
-        }
+      const dailyTargetPerUser = Object.keys(day.userData).length > 0 ? day.totalTarget / Object.keys(day.userData).length : 0;
+      Object.keys(day.userData).forEach(userId => {
+          if (aggregatedData[userId]) {
+              aggregatedData[userId].target += dailyTargetPerUser;
+          }
       });
     });
 
@@ -372,8 +373,9 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                     variant="outline"
                     size="icon"
                     onClick={() => window.print()}
-                    className="h-10 w-10"
+                    className="h-10 w-10 print-hide"
                     title="Print Report"
+                    disabled={selectedTeam === 'all'}
                   >
                     <Printer className="h-5 w-5" />
                   </Button>
@@ -421,7 +423,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
        <style jsx global>{`
         @media print {
           .print-hide {
-            display: none;
+            display: none !important;
           }
           .print-only {
             display: block;
@@ -513,3 +515,5 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
+    
