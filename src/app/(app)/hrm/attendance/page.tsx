@@ -30,10 +30,14 @@ import {
 import { getOfficeLocations } from '@/lib/office-location-service';
 import { getOfficeTimes, deleteOfficeTime } from '@/lib/office-time-service';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
-import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay } from 'date-fns';
+import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays, differenceInDays } from 'date-fns';
 import { getUsers } from '@/lib/user-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import { saveWeekendSettingsAction } from './actions';
+import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
+import type { DateRange } from "react-day-picker";
+import { parseISO, isWithinInterval } from 'date-fns';
+
 
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
 const LocationMapDialog = dynamic(() => import('@/components/hrm/LocationMapDialog').then(mod => mod.LocationMapDialog), {
@@ -96,6 +100,11 @@ export default function AttendancePage() {
     const [officeTimes, setOfficeTimes] = useState<OfficeTime[]>([]);
 
     const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
+    
+    const [reportDateRange, setReportDateRange] = useState<DateRange | undefined>({
+      from: startOfDay(subDays(new Date(), 29)),
+      to: endOfDay(new Date()),
+    });
 
 
     const fetchData = useCallback(async () => {
@@ -104,13 +113,20 @@ export default function AttendancePage() {
           const [fetchedEmployees, fetchedOfficeTimes, fetchedAttendance, fetchedUsers, fetchedWeekendSettings] = await Promise.all([
             getEmployees(),
             getOfficeTimes(),
-            getAttendanceForMonth(new Date()), // Fetch for the current month
+            // Fetch a larger range initially, e.g., last 3 months, to support date range changes without re-fetching
+            getAttendanceForMonth(new Date()), 
+            getAttendanceForMonth(subDays(new Date(), 30)),
+            getAttendanceForMonth(subDays(new Date(), 60)),
             getUsers(),
             getWeekendSettings(),
           ]);
+
+          const allAttendance = [...fetchedAttendance[0], ...fetchedAttendance[1], ...fetchedAttendance[2]];
+          const uniqueAttendance = Array.from(new Map(allAttendance.map(item => [item.id, item])).values());
+          
           setEmployees(fetchedEmployees);
           setOfficeTimes(fetchedOfficeTimes);
-          setAttendanceData(fetchedAttendance);
+          setAttendanceData(uniqueAttendance);
           setAllUsers(fetchedUsers);
           setSelectedWeekends(fetchedWeekendSettings.days);
           // In a real app, you would fetch holidays here too.
@@ -234,31 +250,36 @@ export default function AttendancePage() {
     };
 
     const attendanceReportData = useMemo(() => {
-        const today = new Date();
-        const daysInMonth = getDaysInMonth(today);
-        const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
+        if (!reportDateRange?.from) return [];
+        const startDate = startOfDay(reportDateRange.from);
+        const endDate = endOfDay(reportDateRange.to || reportDateRange.from);
         
         let totalWorkingDays = 0;
-        for (let i = 1; i <= daysInMonth; i++) {
-            const date = new Date(today.getFullYear(), today.getMonth(), i);
-            if (!weekendDayIndexes.includes(getDay(date))) {
-                totalWorkingDays++;
-            }
+        const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
+        const numDays = differenceInDays(endDate, startDate) + 1;
+
+        for (let i = 0; i < numDays; i++) {
+          const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + i);
+          if (!weekendDayIndexes.includes(getDay(currentDate))) {
+            totalWorkingDays++;
+          }
         }
         
         return allUsers.map(user => {
             const employeeDetails = employees.find(e => e.userId === user.id);
             if (!employeeDetails) return null;
 
-            const userAttendance = attendanceData.filter(att => att.employeeId === user.id);
-            const totalPresentDays = userAttendance.length;
-            const totalAbsentDays = totalWorkingDays - totalPresentDays;
-            const ontimeCheckInDays = userAttendance.filter(att => att.status === 'On Time').length;
-            const lateCheckInDays = userAttendance.filter(att => att.status === 'Late').length;
+            const userAttendanceInRange = attendanceData.filter(att => 
+                att.employeeId === user.id && isWithinInterval(parseISO(att.date), { start: startDate, end: endDate })
+            );
             
-            // Dummy data for checkout as it's not tracked yet
-            const ontimeCheckoutDays = Math.floor(Math.random() * (totalPresentDays + 1));
-            const earlyCheckoutDays = totalPresentDays - ontimeCheckoutDays;
+            const totalPresentDays = userAttendanceInRange.length;
+            const totalAbsentDays = totalWorkingDays - totalPresentDays;
+            const ontimeCheckInDays = userAttendanceInRange.filter(att => att.status === 'On Time').length;
+            const lateCheckInDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
+            
+            const ontimeCheckoutDays = userAttendanceInRange.filter(att => att.checkOutTime && !att.earlyOutReason).length;
+            const earlyCheckoutDays = userAttendanceInRange.filter(att => att.earlyOutReason).length;
 
             return {
                 employeeId: user.id,
@@ -266,14 +287,14 @@ export default function AttendancePage() {
                 designation: employeeDetails.designation,
                 totalWorkingDay: totalWorkingDays,
                 totalPresentDays,
-                totalAbsentDays: Math.max(0, totalAbsentDays), // Ensure non-negative
+                totalAbsentDays: Math.max(0, totalAbsentDays),
                 ontimeCheckInDays,
                 lateCheckInDays,
                 ontimeCheckoutDays,
                 earlyCheckoutDays
             };
         }).filter(Boolean);
-    }, [allUsers, employees, attendanceData, selectedWeekends]);
+    }, [allUsers, employees, attendanceData, selectedWeekends, reportDateRange]);
 
 
     const renderPagination = () => {
@@ -731,8 +752,16 @@ export default function AttendancePage() {
     const attendanceReportContent = (
       <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
         <CardHeader className="p-6">
-          <CardTitle className="text-xl font-bold text-gray-800">Attendance Report</CardTitle>
-          <CardDescription>A full month summary of attendance.</CardDescription>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <CardTitle className="text-xl font-bold text-gray-800">Attendance Report</CardTitle>
+              <CardDescription>A full month summary of attendance.</CardDescription>
+            </div>
+            <DateRangePicker 
+                initialRange={reportDateRange} 
+                onDateRangeChange={(range) => setReportDateRange(range)} 
+            />
+          </div>
         </CardHeader>
         <CardContent className="p-6 pt-0">
           <div className="overflow-x-auto">
