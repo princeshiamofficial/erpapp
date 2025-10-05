@@ -8,10 +8,10 @@ import type {
   ToastActionElement,
   ToastProps,
 } from "@/components/ui/toast"
+import { getGlobalSettings } from "@/lib/settings-service"
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 10000 
-const TOAST_SOUND_STORAGE_KEY = 'colorHutToastSoundUrl'; // Key for localStorage
 const DEFAULT_TOAST_SOUND_URL = 'https://audio-previews.elements.envatousercontent.com/files/500391660/preview.mp3';
 
 
@@ -146,6 +146,29 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
+async function playToastSound() {
+  if (typeof window === 'undefined') return;
+
+  try {
+    const settings = await getGlobalSettings();
+    const soundUrlToPlay = settings.toastSoundUrl ?? DEFAULT_TOAST_SOUND_URL;
+
+    if (soundUrlToPlay && soundUrlToPlay.trim() !== '') {
+      console.log(`Toast sound: Attempting to play sound from URL: ${soundUrlToPlay}`);
+      const audio = new Audio(soundUrlToPlay);
+      audio.play()
+        .then(() => console.log("Toast sound: Playback initiated."))
+        .catch(error => {
+          console.warn("Toast sound: Playback failed.", error, "URL:", soundUrlToPlay);
+        });
+    } else {
+      console.log("Toast sound: No sound URL configured or sound disabled.");
+    }
+  } catch (error) {
+    console.error("Toast sound: Error initializing or playing.", error);
+  }
+}
+
 function toast({ ...props }: Toast) {
   const id = genId()
 
@@ -166,7 +189,6 @@ function toast({ ...props }: Toast) {
     }
   }
 
-
   dispatch({
     type: "ADD_TOAST",
     toast: {
@@ -179,26 +201,7 @@ function toast({ ...props }: Toast) {
     },
   })
 
-  if (typeof window !== 'undefined') {
-    try {
-      const storedSoundUrl = localStorage.getItem(TOAST_SOUND_STORAGE_KEY);
-      const soundUrlToPlay = storedSoundUrl !== null ? storedSoundUrl : DEFAULT_TOAST_SOUND_URL;
-      
-      if (soundUrlToPlay && soundUrlToPlay.trim() !== '') {
-        console.log(`Toast sound: Attempting to play sound from URL: ${soundUrlToPlay}`);
-        const audio = new Audio(soundUrlToPlay);
-        audio.play()
-          .then(() => console.log("Toast sound: Playback initiated."))
-          .catch(error => {
-            console.warn("Toast sound: Playback failed.", error, "URL:", soundUrlToPlay);
-          });
-      } else {
-        console.log("Toast sound: No sound URL configured or sound disabled.");
-      }
-    } catch (error) {
-      console.error("Toast sound: Error initializing or playing.", error);
-    }
-  }
+  playToastSound();
 
   return {
     id: id,

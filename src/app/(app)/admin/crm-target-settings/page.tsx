@@ -42,7 +42,6 @@ import NextImage from 'next/image';
 
 const NOTIFICATION_TARGET_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR'];
 const EXPENSE_LOGGING_TARGET_ROLES: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR']; 
-const TOAST_SOUND_STORAGE_KEY = 'colorHutToastSoundUrl';
 const DEFAULT_LEADERBOARD_BACKGROUND_PLACEHOLDER = 'https://i.ibb.co/PGBMbxBc/360-F-338486227-q-Qit-Uvh3n-ILq-Yiu-QOUGxdfindo-NMbtp-H.jpg';
 
 
@@ -174,9 +173,6 @@ export default function CrmTargetSettingsPage() {
     const urlToSave = toastSoundUrl.trim() === '' ? null : toastSoundUrl.trim();
     const result = await updateToastSoundUrlAction(urlToSave);
     if (result.success) {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(TOAST_SOUND_STORAGE_KEY, urlToSave ?? '');
-      }
       toast({ title: "Settings Updated", description: "Toast notification sound URL has been saved." });
     } else {
       toast({ title: "Update Failed", description: result.error || "Could not save toast sound URL.", variant: "destructive" });
