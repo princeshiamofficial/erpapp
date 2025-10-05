@@ -73,7 +73,7 @@ const getInitials = (name: string | undefined): string => {
 };
 
 
-export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonthlyTargetData, totalPerformanceTarget: initialTotalPerformanceTarget, selectedDateRange, userMap, globalSettings, onDateRangeChange, onTeamChange, selectedTeam, isAdminView, refetchData }: TeamPerformanceGraphProps) {
+export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonthlyTargetData, totalPerformanceTarget: initialTotalPerformanceTarget, selectedDateRange, userMap, globalSettings, onDateRangeChange, onTeamChange, selectedTeam = 'all', isAdminView, refetchData }: TeamPerformanceGraphProps) {
   const [chartType, setChartType] = useState<'line'>('line');
   const [tasksDone, setTasksDone] = useState('');
   const [likelihoodCustomers, setLikelihoodCustomers] = useState('');
@@ -406,7 +406,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                 width={200}
                 height={50}
                 priority
-                className="object-contain"
+                className="object-contain rounded-md"
             />
         </div>
         <h2 className="text-2xl font-bold text-center mb-2">Team Performance Report ({selectedTeam})</h2>
