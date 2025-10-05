@@ -12,7 +12,7 @@ import type {
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 10000 
 const TOAST_SOUND_STORAGE_KEY = 'colorHutToastSoundUrl'; // Key for localStorage
-const DEFAULT_TOAST_SOUND_URL = 'https://audio-previews.elements.envatousercontent.com/files/225140761/preview.mp3';
+const DEFAULT_TOAST_SOUND_URL = 'https://audio-previews.elements.envatousercontent.com/files/500391660/preview.mp3';
 
 
 type ToasterToast = ToastProps & {
