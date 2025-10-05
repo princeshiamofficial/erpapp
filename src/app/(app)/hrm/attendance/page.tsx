@@ -592,7 +592,7 @@ export default function AttendancePage() {
                         <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><Wifi className="mr-2 h-5 w-5" />IP/Wifi</CardTitle>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button className="bg-black text-white hover:bg-gray-800" onClick={() => setIsAttendanceTypeDialogOpen(true)}>
+                        <Button className="bg-black text-white hover:bg-gray-800" onClick={() => setIsAttendanceTypeDialogOpen(true)} disabled>
                           Attendance Type
                         </Button>
                         <Button>
@@ -899,3 +899,4 @@ export default function AttendancePage() {
 }
 
     
+
