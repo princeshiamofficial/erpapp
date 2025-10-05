@@ -389,7 +389,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
         </div>
       </CardContent>
 
-      <div className="print-only">
+      <div className="hidden print:block">
         <h2 className="text-2xl font-bold text-center mb-2">Team Performance Report</h2>
         <p className="text-center text-sm text-gray-600 mb-4">
           Date Range: {selectedDateRange?.from ? format(selectedDateRange.from, 'd MMM, yyyy') : 'N/A'} - {selectedDateRange?.to ? format(selectedDateRange.to, 'd MMM, yyyy') : 'N/A'}
