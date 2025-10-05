@@ -4,7 +4,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart, LineChart, AreaChart, Target, Users, CalendarDays, TrendingUp } from 'lucide-react';
+import { BarChart, LineChart, AreaChart, Target, Users, CalendarDays, TrendingUp, Printer } from 'lucide-react';
 import { Bar, BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import type { User as UserType, UserRole } from '@/types';
 import { cn } from '@/lib/utils';
@@ -327,6 +327,17 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                   onDateRangeChange={handleDateChange}
                   className="w-full sm:w-auto"
                 />}
+                {isAdminView && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => window.print()}
+                    className="h-10 w-10"
+                    title="Print Report"
+                  >
+                    <Printer className="h-5 w-5" />
+                  </Button>
+                )}
             </div>
         </div>
       </CardHeader>
