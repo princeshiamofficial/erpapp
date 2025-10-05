@@ -202,43 +202,49 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
   }, [currentUser, isAdminView, selectedTeam]);
 
   const printableReportData = useMemo(() => {
-    if (!monthlyTargetData || monthlyTargetData.length === 0) {
+    if (!monthlyTargetData || monthlyTargetData.length === 0 || !selectedDateRange?.from) {
       return [];
     }
-
+  
     const aggregatedData: { [userId: string]: { name: string, role: UserRole, tasksDone: number, likelihood: number, target: number } } = {};
-
+  
+    const startDate = startOfDay(selectedDateRange.from);
+    const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
+    const numDaysInRange = differenceInDays(endDate, startDate) + 1;
+    const daysInMonthOfStart = getDaysInMonth(startDate);
+  
     monthlyTargetData.forEach(day => {
       Object.entries(day.userData).forEach(([userId, data]) => {
         if (!aggregatedData[userId]) {
           const user = userMap.get(userId);
+          const roleBasedTargets = globalSettings?.roleBasedTargets || {};
+          let monthlyTargetForUser = 0;
+          if (user?.role && roleBasedTargets[user.role as keyof typeof roleBasedTargets]) {
+            monthlyTargetForUser = roleBasedTargets[user.role as keyof typeof roleBasedTargets];
+          }
+          if (user?.role === 'LR') {
+             monthlyTargetForUser = roleBasedTargets.LR;
+          }
+
           aggregatedData[userId] = {
             name: user?.name || 'Unknown User',
             role: data.role,
             tasksDone: 0,
             likelihood: 0,
-            target: 0
+            target: Math.round((monthlyTargetForUser / daysInMonthOfStart) * numDaysInRange)
           };
         }
         aggregatedData[userId].tasksDone += data.done;
         aggregatedData[userId].likelihood += data.likelihood;
       });
-
-      // Aggregate targets
-      const dailyTargetPerUser = Object.keys(day.userData).length > 0 ? day.totalTarget / Object.keys(day.userData).length : 0;
-      Object.keys(day.userData).forEach(userId => {
-          if (aggregatedData[userId]) {
-              aggregatedData[userId].target += dailyTargetPerUser;
-          }
-      });
     });
-
+  
     return Object.values(aggregatedData)
       .filter(d => selectedTeam === 'all' || d.role === selectedTeam)
       .sort((a, b) => b.tasksDone - a.tasksDone)
       .map((d, index) => ({ ...d, rank: index + 1 }));
-
-  }, [monthlyTargetData, userMap, selectedTeam]);
+  
+  }, [monthlyTargetData, userMap, selectedTeam, globalSettings, selectedDateRange]);
 
 
   const renderChart = () => {
@@ -515,5 +521,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
-
-    
