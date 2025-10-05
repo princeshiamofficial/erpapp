@@ -236,7 +236,7 @@ export default function AttendancePage() {
     const attendanceReportData = useMemo(() => {
         const today = new Date();
         const daysInMonth = getDaysInMonth(today);
-        const weekendDayIndexes = weekendDays.map(day => WEEK_DAYS.indexOf(day));
+        const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
         
         let totalWorkingDays = 0;
         for (let i = 1; i <= daysInMonth; i++) {
@@ -274,7 +274,7 @@ export default function AttendancePage() {
                 earlyCheckoutDays
             };
         }).filter(Boolean);
-    }, [allUsers, employees, attendanceData, weekendDays]);
+    }, [allUsers, employees, attendanceData, selectedWeekends]);
 
 
     const renderPagination = () => {
@@ -862,3 +862,4 @@ export default function AttendancePage() {
         </div>
     );
 }
+
