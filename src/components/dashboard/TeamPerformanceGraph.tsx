@@ -398,7 +398,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
       </CardContent>
 
       <div className="hidden print:block">
-        <h2 className="text-2xl font-bold text-center mb-2">Team Performance Report</h2>
+        <h2 className="text-2xl font-bold text-center mb-2">Team Performance Report ({selectedTeam})</h2>
         <p className="text-center text-sm text-gray-600 mb-4">
           Date Range: {selectedDateRange?.from ? format(selectedDateRange.from, 'd MMM, yyyy') : 'N/A'} - {selectedDateRange?.to ? format(selectedDateRange.to, 'd MMM, yyyy') : 'N/A'}
         </p>
@@ -406,10 +406,10 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
             <TableHeader>
                 <TableRow className="bg-black text-white hover:bg-black">
                     <TableHead className="text-white">Rank</TableHead>
-                    <TableHead className="text-white">CR Name</TableHead>
+                    <TableHead className="text-white">Name</TableHead>
                     <TableHead className="text-white text-center">Tasks Done</TableHead>
-                    <TableHead className="text-white text-center">Targets</TableHead>
-                    <TableHead className="text-white text-center">Likely Customers</TableHead>
+                    <TableHead className="text-white text-center">Target</TableHead>
+                    {selectedTeam === 'CRM' && <TableHead className="text-white text-center">Likely Customers</TableHead>}
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -419,7 +419,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                         <TableCell>{data.name}</TableCell>
                         <TableCell className="text-center">{data.tasksDone}</TableCell>
                         <TableCell className="text-center">{Math.round(data.target)}</TableCell>
-                        <TableCell className="text-center">{data.likelihood}</TableCell>
+                        {selectedTeam === 'CRM' && <TableCell className="text-center">{data.likelihood}</TableCell>}
                     </TableRow>
                 ))}
             </TableBody>
@@ -430,6 +430,10 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
         @media print {
           .print-hide {
             display: none !important;
+          }
+          .print-container {
+            box-shadow: none !important;
+            border: none !important;
           }
           .print-only {
             display: block;
