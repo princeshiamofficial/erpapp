@@ -132,27 +132,33 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
     const taskCount = parseInt(tasksDone, 10);
     const likelihoodCount = currentUser.role === 'CRM' ? parseInt(likelihoodCustomers, 10) : undefined;
     
-    const isCrmLikelihoodSubmission = currentUser.role === 'CRM' && submissionsTodayCount < 2;
-    const isCrmTaskSubmission = currentUser.role === 'CRM' && submissionsTodayCount === 1;
+    const isCrmFirstSubmission = currentUser.role === 'CRM' && submissionsTodayCount === 0;
+    const isCrmSecondSubmission = currentUser.role === 'CRM' && submissionsTodayCount === 1;
 
-    if (isCrmLikelihoodSubmission && (likelihoodCount === undefined || isNaN(likelihoodCount) || likelihoodCount < 0)) {
+    if (isCrmFirstSubmission && (likelihoodCount === undefined || isNaN(likelihoodCount) || likelihoodCount < 0)) {
         toast({ title: "Invalid Input", description: "Please enter a valid non-negative number for likely customers.", variant: "destructive" });
         return;
     }
 
-    if (isCrmTaskSubmission && (isNaN(taskCount) || taskCount < 0)) {
-        toast({ title: "Invalid Input", description: "Please enter a valid non-negative number of tasks.", variant: "destructive" });
+    if (isCrmSecondSubmission && (isNaN(taskCount) || taskCount < 0 || likelihoodCount === undefined || isNaN(likelihoodCount) || likelihoodCount < 0)) {
+        toast({ title: "Invalid Input", description: "Please enter valid numbers for both tasks and likely customers.", variant: "destructive" });
         return;
     }
     
+    if (currentUser.role !== 'CRM' && (isNaN(taskCount) || taskCount < 0)) {
+        toast({ title: "Invalid Input", description: "Please enter a valid non-negative number of tasks.", variant: "destructive" });
+        return;
+    }
+
     setIsSubmitting(true);
     
-    const finalTaskCount = isCrmTaskSubmission ? taskCount : (isCrmLikelihoodSubmission ? 0 : taskCount);
+    // CRM submits likelihood first, then tasks + likelihood. Other roles submit tasks once.
+    const finalTaskCount = isCrmFirstSubmission ? 0 : taskCount;
 
     const result = await addTaskEntryAction(currentUser, finalTaskCount, likelihoodCount);
     
     if (result.success) {
-        toast({ title: "Tasks Submitted", description: `Your entry has been recorded.` });
+        toast({ title: "Entry Submitted", description: `Your entry has been recorded.` });
         setTasksDone('');
         setLikelihoodCustomers('');
         refetchData(); // Call parent refetch
@@ -184,17 +190,18 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
     return false;
   }, [currentUser, submissionsTodayCount]);
   
-  const canSubmitLikelihood = useMemo(() => {
-    return currentUser?.role === 'CRM' && submissionsTodayCount < 2;
+  const canSubmitFirstLikelihood = useMemo(() => {
+    return currentUser?.role === 'CRM' && submissionsTodayCount === 0;
+  }, [currentUser, submissionsTodayCount]);
+
+  const canSubmitSecondEntry = useMemo(() => {
+    return currentUser?.role === 'CRM' && submissionsTodayCount === 1;
   }, [currentUser, submissionsTodayCount]);
 
   const canSubmitTasks = useMemo(() => {
     if (!currentUser) return false;
     if (currentUser.role === 'DESIGNER_REPRESENTATIVE' || currentUser.role === 'LR') {
       return submissionsTodayCount === 0;
-    }
-    if (currentUser.role === 'CRM') {
-      return submissionsTodayCount === 1;
     }
     return false;
   }, [currentUser, submissionsTodayCount]);
@@ -336,7 +343,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
             <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
                  {isInputVisible && (
                     <div className="flex items-center gap-2 w-full sm:w-auto">
-                        {canSubmitLikelihood && (
+                        {canSubmitFirstLikelihood && (
                           <div className="relative">
                              <Label htmlFor="likelihood-customers-input" className="sr-only">Likely Customers</Label>
                              <Input
@@ -345,13 +352,26 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                               placeholder="Likely Customers..."
                               value={likelihoodCustomers}
                               onChange={(e) => setLikelihoodCustomers(e.target.value)}
-                              className="h-10 w-full sm:w-32"
+                              className="h-10 w-full sm:w-40"
                               min="0"
                              />
                           </div>
                         )}
-                        {canSubmitTasks && (
-                          <Input 
+                        {canSubmitSecondEntry && (
+                          <>
+                           <div className="relative">
+                             <Label htmlFor="likelihood-customers-input-2" className="sr-only">Likely Customers</Label>
+                             <Input
+                              id="likelihood-customers-input-2"
+                              type="number"
+                              placeholder="Likely Customers..."
+                              value={likelihoodCustomers}
+                              onChange={(e) => setLikelihoodCustomers(e.target.value)}
+                              className="h-10 w-full sm:w-40"
+                              min="0"
+                             />
+                           </div>
+                           <Input 
                               id="tasks-done-input"
                               type="number" 
                               placeholder={`${inputLabel}...`}
@@ -359,11 +379,23 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                               onChange={(e) => setTasksDone(e.target.value)} 
                               className="h-10 w-full sm:w-32"
                               min="0"
-                          />
+                           />
+                          </>
+                        )}
+                        {canSubmitTasks && (
+                           <Input 
+                              id="tasks-done-input-single"
+                              type="number" 
+                              placeholder={`${inputLabel}...`}
+                              value={tasksDone} 
+                              onChange={(e) => setTasksDone(e.target.value)} 
+                              className="h-10 w-full sm:w-32"
+                              min="0"
+                           />
                         )}
 
-                        {(canSubmitLikelihood || canSubmitTasks) && (
-                          <Button onClick={handleDoneClick} disabled={isSubmitting || (canSubmitLikelihood && likelihoodCustomers.trim() === '') || (canSubmitTasks && tasksDone.trim() === '')} className="h-10">
+                        {(canSubmitFirstLikelihood || canSubmitSecondEntry || canSubmitTasks) && (
+                          <Button onClick={handleDoneClick} disabled={isSubmitting || (canSubmitFirstLikelihood && likelihoodCustomers.trim() === '') || (canSubmitSecondEntry && (likelihoodCustomers.trim() === '' || tasksDone.trim() === '')) || (canSubmitTasks && tasksDone.trim() === '')} className="h-10">
                               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Done"}
                           </Button>
                         )}
@@ -447,7 +479,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                     <TableHead className="text-white">Name</TableHead>
                     <TableHead className="text-white text-center">Tasks Done</TableHead>
                     <TableHead className="text-white text-center">Target</TableHead>
-                    {selectedTeam !== 'DR' && selectedTeam !== 'LR' && <TableHead className="text-white text-center">Likely Customers</TableHead>}
+                    {(selectedTeam !== 'DR' && selectedTeam !== 'LR') && <TableHead className="text-white text-center">Likely Customers</TableHead>}
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -457,7 +489,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                         <TableCell>{data.name}</TableCell>
                         <TableCell className="text-center">{data.tasksDone}</TableCell>
                         <TableCell className="text-center">{Math.round(data.target)}</TableCell>
-                         {selectedTeam !== 'DR' && selectedTeam !== 'LR' && <TableCell className="text-center">{data.likelihood}</TableCell>}
+                         {(selectedTeam !== 'DR' && selectedTeam !== 'LR') && <TableCell className="text-center">{data.likelihood}</TableCell>}
                     </TableRow>
                 ))}
             </TableBody>
@@ -488,20 +520,20 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
         const likelihoodPayload = payload.find((p: any) => p.dataKey === 'totalLikelihood');
         const userData = donePayload?.payload?.userData || {};
         
-        let userBreakdown: { user: UserType, done: number }[] = [];
+        let userBreakdown: { user: UserType, done: number, likelihood: number }[] = [];
         
         if (currentUser) {
             if (currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'ADMIN') {
                 userBreakdown = Object.entries(userData)
-                    .map(([userId, data]: [string, any]) => ({ user: userMap.get(userId), done: data.done }))
-                    .filter(item => item.user && item.done >= 0) // Show users with 0 tasks as well
-                    .sort((a,b) => b.done - a.done) as { user: UserType, done: number }[];
+                    .map(([userId, data]: [string, any]) => ({ user: userMap.get(userId), done: data.done, likelihood: data.likelihood }))
+                    .filter(item => item.user && (item.done >= 0 || item.likelihood >= 0))
+                    .sort((a,b) => b.done - a.done) as { user: UserType, done: number, likelihood: number }[];
             } else {
                  userBreakdown = Object.entries(userData)
-                    .filter(([userId, data]: [string, any]) => data.role === currentUser.role && data.done >= 0) // Show users with 0 tasks as well
-                    .map(([userId, data]: [string, any]) => ({ user: userMap.get(userId), done: data.done }))
+                    .filter(([userId, data]: [string, any]) => data.role === currentUser.role && (data.done >= 0 || data.likelihood >= 0))
+                    .map(([userId, data]: [string, any]) => ({ user: userMap.get(userId), done: data.done, likelihood: data.likelihood }))
                     .filter(item => item.user)
-                    .sort((a,b) => b.done - a.done) as { user: UserType, done: number }[];
+                    .sort((a,b) => b.done - a.done) as { user: UserType, done: number, likelihood: number }[];
             }
         }
         
@@ -533,14 +565,15 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
                         <p className="font-semibold text-xs text-muted-foreground mt-1">Contributors:</p>
                         <ScrollArea className="max-h-32 pr-2 -mr-2">
                             <div className="space-y-1.5 mt-1">
-                                {userBreakdown.map(({ user, done }) => (
+                                {userBreakdown.map(({ user, done, likelihood }) => (
                                     <div key={user.id} className="flex items-center gap-2 text-xs">
                                         <Avatar className="h-5 w-5 border">
                                             <AvatarImage src={user.avatarUrl || undefined} alt={user.name} />
                                             <AvatarFallback className="text-[9px] bg-muted">{getInitials(user.name)}</AvatarFallback>
                                         </Avatar>
                                         <span className="text-muted-foreground truncate flex-1">{user.name}</span>
-                                        <span className="font-medium text-foreground">{done}</span>
+                                        <span className="font-medium text-foreground">{done} tasks</span>
+                                        {likelihood > 0 && <span className="font-medium text-purple-600">({likelihood} likely)</span>}
                                     </div>
                                 ))}
                             </div>
@@ -552,5 +585,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
-
-    
