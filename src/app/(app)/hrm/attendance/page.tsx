@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -109,10 +108,17 @@ export default function AttendancePage() {
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         try {
-          const [fetchedEmployees, fetchedOfficeTimes, fetchedAttendance, fetchedUsers, fetchedWeekendSettings] = await Promise.all([
+          const [
+            fetchedEmployees, 
+            fetchedOfficeTimes, 
+            attendanceMonth1, 
+            attendanceMonth2, 
+            attendanceMonth3, 
+            fetchedUsers, 
+            fetchedWeekendSettings
+          ] = await Promise.all([
             getEmployees(),
             getOfficeTimes(),
-            // Fetch a larger range initially, e.g., last 3 months, to support date range changes without re-fetching
             getAttendanceForMonth(new Date()), 
             getAttendanceForMonth(subDays(new Date(), 30)),
             getAttendanceForMonth(subDays(new Date(), 60)),
@@ -120,7 +126,7 @@ export default function AttendancePage() {
             getWeekendSettings(),
           ]);
 
-          const allAttendance = [...fetchedAttendance[0], ...fetchedAttendance[1], ...fetchedAttendance[2]];
+          const allAttendance = [...(attendanceMonth1 || []), ...(attendanceMonth2 || []), ...(attendanceMonth3 || [])];
           const uniqueAttendance = Array.from(new Map(allAttendance.map(item => [item.id, item])).values());
           
           setEmployees(fetchedEmployees);
@@ -887,3 +893,5 @@ export default function AttendancePage() {
         </div>
     );
 }
+
+    
