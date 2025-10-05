@@ -78,7 +78,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
   const [tasksDone, setTasksDone] = useState('');
   const [likelihoodCustomers, setLikelihoodCustomers] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasSubmittedToday, setHasSubmittedToday] = useState(false);
+  const [submissionsTodayCount, setSubmissionsTodayCount] = useState(0);
   const { currentUser } = useAuth();
   const { toast } = useToast();
 
@@ -105,19 +105,17 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
     
     const today = new Date();
     
-    let hasEntry = false;
+    let count = 0;
     if (currentUser.role === 'LR') {
-      // For LR role, check if ANY LR user has submitted today
-      hasEntry = allTasks.some(entry => 
-        entry.role === 'LR' && isSameDay(parseISO(entry.date), today)
-      );
+      // For LR role, it's a team submission, so count any LR entry as one for the day.
+      count = allTasks.some(entry => entry.role === 'LR' && isSameDay(parseISO(entry.date), today)) ? 1 : 0;
     } else {
-      // For other roles, check if the current user has submitted
-      hasEntry = allTasks.some(entry => 
+      // For other roles, count submissions by the current user for today.
+      count = allTasks.filter(entry => 
         entry.userId === currentUser.id && isSameDay(parseISO(entry.date), today)
-      );
+      ).length;
     }
-    setHasSubmittedToday(hasEntry);
+    setSubmissionsTodayCount(count);
     
   }, [currentUser, allTasks]);
 
@@ -139,8 +137,8 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
       return;
     }
   
-    // Validate likelihood only for CRM role
-    if (currentUser.role === 'CRM' && (likelihoodCount === undefined || isNaN(likelihoodCount) || likelihoodCount < 0)) {
+    // Validate likelihood only for CRM role, and only if it's being submitted
+    if (currentUser.role === 'CRM' && likelihoodCustomers.trim() !== '' && (likelihoodCount === undefined || isNaN(likelihoodCount) || likelihoodCount < 0)) {
       toast({ title: "Invalid Input", description: "Please enter a valid non-negative number for likely customers.", variant: "destructive" });
       return;
     }
@@ -150,10 +148,9 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
     const result = await addTaskEntryAction(currentUser, taskCount, likelihoodCount);
     
     if (result.success) {
-        toast({ title: "Tasks Submitted", description: `Your ${taskCount} completed tasks have been recorded.` });
+        toast({ title: "Tasks Submitted", description: `Your entry has been recorded.` });
         setTasksDone('');
         setLikelihoodCustomers('');
-        setHasSubmittedToday(true); 
         refetchData(); // Call parent refetch
     } else {
         toast({ title: "Submission Failed", description: result.error, variant: "destructive" });
@@ -173,6 +170,21 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
       return "My Tasks Done";
   }, [currentUser?.role]);
   
+  const hasSubmittedTasksToday = useMemo(() => {
+    if (currentUser?.role === 'CRM' || currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
+      return submissionsTodayCount > 0;
+    }
+    if (currentUser?.role === 'LR') {
+      return submissionsTodayCount > 0;
+    }
+    return false;
+  }, [currentUser, submissionsTodayCount]);
+  
+  const canSubmitLikelihood = useMemo(() => {
+    return currentUser?.role === 'CRM' && submissionsTodayCount < 2;
+  }, [currentUser, submissionsTodayCount]);
+
+
   const totals = useMemo(() => {
     if (!monthlyTargetData || monthlyTargetData.length === 0) {
       return { totalDone: 0 };
@@ -311,7 +323,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
             <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
                  {isInputVisible && (
                     <div className="flex items-center gap-2 w-full sm:w-auto">
-                        {!hasSubmittedToday && currentUser?.role === 'CRM' && (
+                        {currentUser?.role === 'CRM' && canSubmitLikelihood && (
                           <div className="relative">
                              <Label htmlFor="likelihood-customers-input" className="sr-only">Likely Customers</Label>
                              <Input
@@ -325,7 +337,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                              />
                           </div>
                         )}
-                        {!hasSubmittedToday ? (
+                        {!hasSubmittedTasksToday ? (
                           <>
                             <Input 
                                 id="tasks-done-input"
@@ -335,19 +347,24 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                                 onChange={(e) => setTasksDone(e.target.value)} 
                                 className="h-10 w-full sm:w-32"
                                 min="0"
-                                disabled={hasSubmittedToday}
                             />
-                            <Button onClick={handleDoneClick} disabled={isSubmitting || tasksDone.trim() === '' || hasSubmittedToday} className="h-10">
+                            <Button onClick={handleDoneClick} disabled={isSubmitting || tasksDone.trim() === ''} className="h-10">
                                 {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Done"}
                             </Button>
                           </>
                         ) : (
+                          (currentUser?.role !== 'CRM' || !canSubmitLikelihood) &&
                           <Button asChild className="h-10 w-full sm:w-auto">
                             <Link href="/workflow">
                               Open Desk
                             </Link>
                           </Button>
                         )}
+                         {currentUser?.role === 'CRM' && canSubmitLikelihood && hasSubmittedTasksToday && (
+                             <Button onClick={handleDoneClick} disabled={isSubmitting || likelihoodCustomers.trim() === ''} className="h-10">
+                                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Submit Likely"}
+                            </Button>
+                         )}
                     </div>
                  )}
                  {isAdminView && (
@@ -537,3 +554,5 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
+    
