@@ -962,8 +962,8 @@ function DashboardContent() {
 
   return (
     <>
-      <div className="space-y-6 p-4 sm:p-6 lg:p-8 custom-scrollbar-hidden">
-        <div className="bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--primary))] text-primary-foreground p-6 sm:p-8 rounded-xl shadow-xl">
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8 custom-scrollbar-hidden print:p-0">
+        <div className="bg-gradient-to-r from-[hsl(var(--sidebar-background))] to-[hsl(var(--primary))] text-primary-foreground p-6 sm:p-8 rounded-xl shadow-xl print:hidden">
           <h1 className="text-3xl sm:text-4xl font-bold flex items-center">
             Welcome {currentUser?.name.split(' ')[0] || 'User'}
             <Hand className="ml-2 h-8 w-8 transform rotate-[20deg] text-yellow-300" />
@@ -975,7 +975,7 @@ function DashboardContent() {
 
         {!isDesignerRepOrLr && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 print:hidden">
               <Card className="shadow-sm bg-card">
                 <CardContent className="p-3 sm:p-4 flex items-center justify-between">
                   <div className="flex items-center text-sm text-muted-foreground">
@@ -1022,7 +1022,7 @@ function DashboardContent() {
               </Card>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 print:hidden">
               {summaryCardData.map((card) => (
                 <SummaryCard
                   key={card.title}
@@ -1036,7 +1036,7 @@ function DashboardContent() {
               ))}
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 print:hidden">
               <Card className="shadow-xl bg-card lg:col-span-3">
                 <CardHeader className="border-b">
                   <CardTitle className="flex items-center text-xl text-foreground">
@@ -1069,7 +1069,7 @@ function DashboardContent() {
                           tickMargin={8}
                           tickFormatter={(value) => {
                             if (chartGranularity === 'hourly') {
-                              const hour = parseInt(value);
+                              const hour = parseInt(label); 
                               if (isNaN(hour)) return value; 
                               if (hour === 0) return '12 AM';
                               if (hour === 12) return '12 PM';
@@ -1094,7 +1094,7 @@ function DashboardContent() {
                           cursor={false}
                           content={<CustomTooltipContent />}
                         />
-                        <RechartsLegend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{paddingBottom: '10px'}} />
+                        <RechartsLegend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{padding: '10px'}} />
                         <Line
                           dataKey={chartDataKey}
                           type="monotone"
@@ -1229,7 +1229,7 @@ function DashboardContent() {
         </div>
         
         {!isDesignerRepOrLr && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 print:hidden">
               <SalesPerformanceClient
                 allOrders={salesPerformanceOrders}
                 allCrmUsers={allCrmUsers}
@@ -1237,7 +1237,7 @@ function DashboardContent() {
               <OrderAnalysisClient allOrders={allOrders} />
             </div>
         )}
-         <div className={cn("grid grid-cols-1 gap-6 mt-6", !isDesignerRepOrLr ? "lg:grid-cols-2" : "")}>
+         <div className={cn("grid grid-cols-1 gap-6 mt-6 print:hidden", !isDesignerRepOrLr ? "lg:grid-cols-2" : "")}>
            <Card className="shadow-xl bg-card">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl text-foreground">
@@ -1300,7 +1300,7 @@ function DashboardContent() {
             {isDesignerRepOrLr && ( <div className="lg:col-span-1"></div>)}
         </div>
         
-        <div className={cn("grid grid-cols-1 gap-6 mt-6", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
+        <div className={cn("grid grid-cols-1 gap-6 mt-6 print:hidden", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
           
           <Card className="shadow-xl bg-card">
             <CardHeader>
