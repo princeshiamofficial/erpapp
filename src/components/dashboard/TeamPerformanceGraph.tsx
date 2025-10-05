@@ -33,6 +33,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area'; 
 import type { GlobalSettings } from '@/types';
 import Link from 'next/link';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 
 interface DailyTargetData {
@@ -200,6 +201,45 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
     return currentUser.role === 'CRM';
   }, [currentUser, isAdminView, selectedTeam]);
 
+  const printableReportData = useMemo(() => {
+    if (!monthlyTargetData || monthlyTargetData.length === 0) {
+      return [];
+    }
+
+    const aggregatedData: { [userId: string]: { name: string, role: UserRole, tasksDone: number, likelihood: number, target: number } } = {};
+
+    monthlyTargetData.forEach(day => {
+      Object.entries(day.userData).forEach(([userId, data]) => {
+        if (!aggregatedData[userId]) {
+          const user = userMap.get(userId);
+          aggregatedData[userId] = {
+            name: user?.name || 'Unknown User',
+            role: data.role,
+            tasksDone: 0,
+            likelihood: 0,
+            target: 0
+          };
+        }
+        aggregatedData[userId].tasksDone += data.done;
+        aggregatedData[userId].likelihood += data.likelihood;
+      });
+
+      // Aggregate targets
+      Object.entries(day.userData).forEach(([userId, data]) => {
+        if (aggregatedData[userId]) {
+            aggregatedData[userId].target += day.totalTarget / Object.keys(day.userData).length; // simple average distribution
+        }
+      });
+    });
+
+    return Object.values(aggregatedData)
+      .filter(d => selectedTeam === 'all' || d.role === selectedTeam)
+      .sort((a, b) => b.tasksDone - a.tasksDone)
+      .map((d, index) => ({ ...d, rank: index + 1 }));
+
+  }, [monthlyTargetData, userMap, selectedTeam]);
+
+
   const renderChart = () => {
     switch (chartType) {
       case 'line':
@@ -240,8 +280,8 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
   };
 
   return (
-    <Card className="bg-white/95 dark:bg-card/80 backdrop-blur-sm border-border/30 shadow-xl">
-      <CardHeader>
+    <Card className="bg-white/95 dark:bg-card/80 backdrop-blur-sm border-border/30 shadow-xl print-container">
+      <CardHeader className="print-hide">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
                 <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>{performanceTitle}</CardTitle>
@@ -341,13 +381,62 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
             </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="print-hide">
         <div className="h-[400px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             {renderChart()}
           </ResponsiveContainer>
         </div>
       </CardContent>
+
+      <div className="print-only">
+        <h2 className="text-2xl font-bold text-center mb-2">Team Performance Report</h2>
+        <p className="text-center text-sm text-gray-600 mb-4">
+          Date Range: {selectedDateRange?.from ? format(selectedDateRange.from, 'd MMM, yyyy') : 'N/A'} - {selectedDateRange?.to ? format(selectedDateRange.to, 'd MMM, yyyy') : 'N/A'}
+        </p>
+        <Table>
+            <TableHeader>
+                <TableRow className="bg-black text-white hover:bg-black">
+                    <TableHead className="text-white">Rank</TableHead>
+                    <TableHead className="text-white">CR Name</TableHead>
+                    <TableHead className="text-white text-center">Tasks Done</TableHead>
+                    <TableHead className="text-white text-center">Targets</TableHead>
+                    <TableHead className="text-white text-center">Likely Customers</TableHead>
+                </TableRow>
+            </TableHeader>
+            <TableBody>
+                {printableReportData.map((data) => (
+                    <TableRow key={data.name}>
+                        <TableCell className="font-semibold text-center">{data.rank}</TableCell>
+                        <TableCell>{data.name}</TableCell>
+                        <TableCell className="text-center">{data.tasksDone}</TableCell>
+                        <TableCell className="text-center">{Math.round(data.target)}</TableCell>
+                        <TableCell className="text-center">{data.likelihood}</TableCell>
+                    </TableRow>
+                ))}
+            </TableBody>
+        </Table>
+      </div>
+
+       <style jsx global>{`
+        @media print {
+          .print-hide {
+            display: none;
+          }
+          .print-only {
+            display: block;
+          }
+          body {
+            -webkit-print-color-adjust: exact; /* Chrome, Safari */
+            color-adjust: exact; /* Firefox */
+          }
+        }
+        @media screen {
+          .print-only {
+            display: none;
+          }
+        }
+      `}</style>
     </Card>
   );
 }
