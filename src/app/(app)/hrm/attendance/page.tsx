@@ -711,7 +711,7 @@ export default function AttendancePage() {
         <div className="min-h-screen p-4 sm:p-6 lg:p-8">
              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="sticky top-20 z-30 bg-white p-1 rounded-full shadow-sm border border-gray-200">
-                    <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
+                    <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendance History</TabsTrigger>
                     <TabsTrigger value="leave_management" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Leave Management</TabsTrigger>
                     <TabsTrigger value="settings" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Settings</TabsTrigger>
                     <TabsTrigger value="office_time" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Office Time</TabsTrigger>
