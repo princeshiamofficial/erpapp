@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -133,9 +132,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
     const taskCount = parseInt(tasksDone, 10);
     const likelihoodCount = currentUser.role === 'CRM' ? parseInt(likelihoodCustomers, 10) : undefined;
     
-    // For CRM, if it's the first or second submission, likelihood is what we are submitting
     const isCrmLikelihoodSubmission = currentUser.role === 'CRM' && submissionsTodayCount < 2;
-    // For CRM, tasks are submitted with the second likelihood submission
     const isCrmTaskSubmission = currentUser.role === 'CRM' && submissionsTodayCount === 1;
 
     if (isCrmLikelihoodSubmission && (likelihoodCount === undefined || isNaN(likelihoodCount) || likelihoodCount < 0)) {
@@ -143,7 +140,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
         return;
     }
 
-    if (!isCrmLikelihoodSubmission && (isNaN(taskCount) || taskCount < 0)) {
+    if (isCrmTaskSubmission && (isNaN(taskCount) || taskCount < 0)) {
         toast({ title: "Invalid Input", description: "Please enter a valid non-negative number of tasks.", variant: "destructive" });
         return;
     }
@@ -188,17 +185,14 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
   }, [currentUser, submissionsTodayCount]);
   
   const canSubmitLikelihood = useMemo(() => {
-    // CRM can submit likelihood if they have made 0 or 1 submissions today
     return currentUser?.role === 'CRM' && submissionsTodayCount < 2;
   }, [currentUser, submissionsTodayCount]);
 
   const canSubmitTasks = useMemo(() => {
     if (!currentUser) return false;
-    // DR and LR can submit tasks if they haven't submitted today
     if (currentUser.role === 'DESIGNER_REPRESENTATIVE' || currentUser.role === 'LR') {
       return submissionsTodayCount === 0;
     }
-    // CRM can submit tasks if they have made exactly 1 submission (the first likelihood one)
     if (currentUser.role === 'CRM') {
       return submissionsTodayCount === 1;
     }
@@ -228,10 +222,8 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
   const showLikelihoodChart = useMemo(() => {
     if (!currentUser) return false;
     if (isAdminView) {
-        // In admin view, show if "All Teams" or "CRM" is selected
         return selectedTeam === 'all' || selectedTeam === 'CRM';
     }
-    // In non-admin view, only show for CRM users
     return currentUser.role === 'CRM';
   }, [currentUser, isAdminView, selectedTeam]);
 
@@ -455,7 +447,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                     <TableHead className="text-white">Name</TableHead>
                     <TableHead className="text-white text-center">Tasks Done</TableHead>
                     <TableHead className="text-white text-center">Target</TableHead>
-                    {(selectedTeam === 'all' || selectedTeam === 'CRM') && <TableHead className="text-white text-center">Likely Customers</TableHead>}
+                    {selectedTeam !== 'DR' && selectedTeam !== 'LR' && <TableHead className="text-white text-center">Likely Customers</TableHead>}
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -465,7 +457,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                         <TableCell>{data.name}</TableCell>
                         <TableCell className="text-center">{data.tasksDone}</TableCell>
                         <TableCell className="text-center">{Math.round(data.target)}</TableCell>
-                        {(selectedTeam === 'all' || selectedTeam === 'CRM') && <TableCell className="text-center">{data.likelihood}</TableCell>}
+                         {selectedTeam !== 'DR' && selectedTeam !== 'LR' && <TableCell className="text-center">{data.likelihood}</TableCell>}
                     </TableRow>
                 ))}
             </TableBody>
@@ -560,3 +552,5 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
+    
