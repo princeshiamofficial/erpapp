@@ -263,7 +263,6 @@ export default function AttendancePage() {
             return {
                 employeeId: user.id,
                 employeeName: user.name,
-                department: user.role.replace(/_/g, ' '),
                 designation: employeeDetails.designation,
                 totalWorkingDay: totalWorkingDays,
                 totalPresentDays,
@@ -742,7 +741,6 @@ export default function AttendancePage() {
                     <TableRow className="hover:bg-gray-800">
                         <TableHead className="text-white">#</TableHead>
                         <TableHead className="text-white">Employee Name</TableHead>
-                        <TableHead className="text-white">Department</TableHead>
                         <TableHead className="text-white">Designation</TableHead>
                         <TableHead className="text-white">Total Working Day</TableHead>
                         <TableHead className="text-white">Total Present Days</TableHead>
@@ -757,7 +755,7 @@ export default function AttendancePage() {
                   {isLoading ? (
                       [...Array(5)].map((_, i) => (
                           <TableRow key={`skel-report-${i}`}>
-                              <TableCell colSpan={11}><Skeleton className="h-8 w-full"/></TableCell>
+                              <TableCell colSpan={10}><Skeleton className="h-8 w-full"/></TableCell>
                           </TableRow>
                       ))
                   ) : attendanceReportData.length > 0 ? (
@@ -765,7 +763,6 @@ export default function AttendancePage() {
                           <TableRow key={data.employeeId} className="odd:bg-white even:bg-gray-50">
                               <TableCell>{index + 1}</TableCell>
                               <TableCell className="font-medium">{data.employeeName}</TableCell>
-                              <TableCell>{data.department}</TableCell>
                               <TableCell>{data.designation}</TableCell>
                               <TableCell>{data.totalWorkingDay}</TableCell>
                               <TableCell>{data.totalPresentDays}</TableCell>
@@ -778,7 +775,7 @@ export default function AttendancePage() {
                       ))
                   ) : (
                        <TableRow>
-                          <TableCell colSpan={11} className="text-center h-48 text-gray-500">
+                          <TableCell colSpan={10} className="text-center h-48 text-gray-500">
                               <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
                               No attendance summary data available for this month.
                           </TableCell>
@@ -862,4 +859,3 @@ export default function AttendancePage() {
         </div>
     );
 }
-
