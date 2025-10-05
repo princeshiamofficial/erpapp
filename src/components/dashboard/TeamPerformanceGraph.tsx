@@ -420,7 +420,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                     <TableHead className="text-white">Name</TableHead>
                     <TableHead className="text-white text-center">Tasks Done</TableHead>
                     <TableHead className="text-white text-center">Target</TableHead>
-                    {(selectedTeam === 'all' || selectedTeam === 'CRM') && (!isAdminView || (isAdminView && (selectedTeam === 'CRM'))) && <TableHead className="text-white text-center">Likely Customers</TableHead>}
+                    {selectedTeam === 'CRM' && <TableHead className="text-white text-center">Likely Customers</TableHead>}
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -430,7 +430,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                         <TableCell>{data.name}</TableCell>
                         <TableCell className="text-center">{data.tasksDone}</TableCell>
                         <TableCell className="text-center">{Math.round(data.target)}</TableCell>
-                        {(selectedTeam === 'all' || selectedTeam === 'CRM') && (!isAdminView || (isAdminView && (selectedTeam === 'CRM'))) && <TableCell className="text-center">{data.likelihood}</TableCell>}
+                        {selectedTeam === 'CRM' && <TableCell className="text-center">{data.likelihood}</TableCell>}
                     </TableRow>
                 ))}
             </TableBody>
@@ -537,5 +537,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
-
-```
