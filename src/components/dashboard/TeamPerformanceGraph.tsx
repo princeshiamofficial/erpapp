@@ -132,25 +132,25 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
     }
     const taskCount = parseInt(tasksDone, 10);
     const likelihoodCount = currentUser.role === 'CRM' ? parseInt(likelihoodCustomers, 10) : undefined;
-  
-    // For CRM, if it's the first submission, only likelihood is submitted, tasks are not.
-    const isCrmFirstSubmission = currentUser.role === 'CRM' && submissionsTodayCount === 0;
+    
+    // For CRM, if it's the first or second submission, likelihood is what we are submitting
+    const isCrmLikelihoodSubmission = currentUser.role === 'CRM' && submissionsTodayCount < 2;
+    // For CRM, tasks are submitted with the second likelihood submission
+    const isCrmTaskSubmission = currentUser.role === 'CRM' && submissionsTodayCount === 1;
 
-    if (!isCrmFirstSubmission && (isNaN(taskCount) || taskCount < 0)) {
-        toast({ title: "Invalid Input", description: "Please enter a valid non-negative number of tasks.", variant: "destructive" });
+    if (isCrmLikelihoodSubmission && (likelihoodCount === undefined || isNaN(likelihoodCount) || likelihoodCount < 0)) {
+        toast({ title: "Invalid Input", description: "Please enter a valid non-negative number for likely customers.", variant: "destructive" });
         return;
     }
-  
-    // Validate likelihood only for CRM role, and only if it's being submitted
-    if (isCrmFirstSubmission && (likelihoodCount === undefined || isNaN(likelihoodCount) || likelihoodCount < 0)) {
-      toast({ title: "Invalid Input", description: "Please enter a valid non-negative number for likely customers.", variant: "destructive" });
-      return;
+
+    if (!isCrmLikelihoodSubmission && (isNaN(taskCount) || taskCount < 0)) {
+        toast({ title: "Invalid Input", description: "Please enter a valid non-negative number of tasks.", variant: "destructive" });
+        return;
     }
     
     setIsSubmitting(true);
     
-    // For CRM's first submission of the day, taskCount is 0.
-    const finalTaskCount = isCrmFirstSubmission ? 0 : taskCount;
+    const finalTaskCount = isCrmTaskSubmission ? taskCount : (isCrmLikelihoodSubmission ? 0 : taskCount);
 
     const result = await addTaskEntryAction(currentUser, finalTaskCount, likelihoodCount);
     
@@ -177,19 +177,19 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
       return "My Tasks Done";
   }, [currentUser?.role]);
   
-  const hasSubmittedTasksToday = useMemo(() => {
-    if (currentUser?.role === 'CRM' || currentUser?.role === 'DESIGNER_REPRESENTATIVE') {
-      return submissionsTodayCount > 1; // CRM can submit twice (likely + tasks)
+  const hasCompletedDailySubmissions = useMemo(() => {
+    if (currentUser?.role === 'CRM') {
+      return submissionsTodayCount >= 2; 
     }
-    if (currentUser?.role === 'LR') {
+    if (currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR') {
       return submissionsTodayCount > 0;
     }
     return false;
   }, [currentUser, submissionsTodayCount]);
   
   const canSubmitLikelihood = useMemo(() => {
-    // CRM can submit likelihood if they have made 0 submissions today
-    return currentUser?.role === 'CRM' && submissionsTodayCount === 0;
+    // CRM can submit likelihood if they have made 0 or 1 submissions today
+    return currentUser?.role === 'CRM' && submissionsTodayCount < 2;
   }, [currentUser, submissionsTodayCount]);
 
   const canSubmitTasks = useMemo(() => {
@@ -198,7 +198,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
     if (currentUser.role === 'DESIGNER_REPRESENTATIVE' || currentUser.role === 'LR') {
       return submissionsTodayCount === 0;
     }
-    // CRM can submit tasks if they have made exactly 1 submission (the likelihood one)
+    // CRM can submit tasks if they have made exactly 1 submission (the first likelihood one)
     if (currentUser.role === 'CRM') {
       return submissionsTodayCount === 1;
     }
@@ -376,7 +376,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                           </Button>
                         )}
                         
-                        {hasSubmittedTasksToday &&
+                        {hasCompletedDailySubmissions &&
                           <Button asChild className="h-10 w-full sm:w-auto">
                             <Link href="/workflow">
                               Open Desk
@@ -560,5 +560,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
-
-    
