@@ -278,7 +278,7 @@ export default function AttendancePage() {
         <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
             <CardHeader className="p-6">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <CardTitle className="text-xl font-bold text-gray-800">Attendees Report</CardTitle>
+                <CardTitle className="text-xl font-bold text-gray-800">Attendance History</CardTitle>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                     <div className="relative flex-grow sm:flex-grow-0">
                     <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
