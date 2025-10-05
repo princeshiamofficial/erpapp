@@ -34,6 +34,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import type { GlobalSettings } from '@/types';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import Image from 'next/image';
 
 
 interface DailyTargetData {
@@ -397,7 +398,17 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
         </div>
       </CardContent>
 
-      <div className="hidden print:block">
+      <div className="hidden print:block p-4">
+        <div className="flex justify-center mb-4">
+            <Image
+                src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+                alt="Color Hut Logo"
+                width={200}
+                height={50}
+                priority
+                className="object-contain"
+            />
+        </div>
         <h2 className="text-2xl font-bold text-center mb-2">Team Performance Report ({selectedTeam})</h2>
         <p className="text-center text-sm text-gray-600 mb-4">
           Date Range: {selectedDateRange?.from ? format(selectedDateRange.from, 'd MMM, yyyy') : 'N/A'} - {selectedDateRange?.to ? format(selectedDateRange.to, 'd MMM, yyyy') : 'N/A'}
@@ -409,7 +420,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                     <TableHead className="text-white">Name</TableHead>
                     <TableHead className="text-white text-center">Tasks Done</TableHead>
                     <TableHead className="text-white text-center">Target</TableHead>
-                    {selectedTeam === 'CRM' && <TableHead className="text-white text-center">Likely Customers</TableHead>}
+                    {(selectedTeam === 'all' || selectedTeam === 'CRM') && <TableHead className="text-white text-center">Likely Customers</TableHead>}
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -419,7 +430,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                         <TableCell>{data.name}</TableCell>
                         <TableCell className="text-center">{data.tasksDone}</TableCell>
                         <TableCell className="text-center">{Math.round(data.target)}</TableCell>
-                        {selectedTeam === 'CRM' && <TableCell className="text-center">{data.likelihood}</TableCell>}
+                        {(selectedTeam === 'all' || selectedTeam === 'CRM') && <TableCell className="text-center">{data.likelihood}</TableCell>}
                     </TableRow>
                 ))}
             </TableBody>
@@ -434,6 +445,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
           .print-container {
             box-shadow: none !important;
             border: none !important;
+            padding: 0 !important;
           }
           .print-only {
             display: block;
@@ -525,3 +537,5 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
+    
