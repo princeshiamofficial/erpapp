@@ -238,4 +238,3 @@ export function DateRangePicker({
     </DropdownMenu>
   );
 }
-

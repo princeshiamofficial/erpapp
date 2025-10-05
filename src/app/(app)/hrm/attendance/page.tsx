@@ -33,7 +33,7 @@ import { format, getDaysInMonth, getDay, isAfter, isBefore, startOfDay, subDays,
 import { getUsers } from '@/lib/user-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import { saveWeekendSettingsAction } from './actions';
-import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
+import { DateRangePicker2 } from '@/components/dashboard/date-range-picker2';
 import type { DateRange } from "react-day-picker";
 
 
@@ -126,7 +126,11 @@ export default function AttendancePage() {
             getWeekendSettings(),
           ]);
 
-          const allAttendance = [...(attendanceMonth1 || []), ...(attendanceMonth2 || []), ...(attendanceMonth3 || [])];
+          const allAttendance = [
+            ...(attendanceMonth1 || []), 
+            ...(attendanceMonth2 || []), 
+            ...(attendanceMonth3 || [])
+          ];
           const uniqueAttendance = Array.from(new Map(allAttendance.map(item => [item.id, item])).values());
           
           setEmployees(fetchedEmployees);
@@ -762,7 +766,7 @@ export default function AttendancePage() {
               <CardTitle className="text-xl font-bold text-gray-800">Attendance Report</CardTitle>
               <CardDescription>A full month summary of attendance.</CardDescription>
             </div>
-            <DateRangePicker 
+            <DateRangePicker2 
                 initialRange={reportDateRange} 
                 onDateRangeChange={(range) => setReportDateRange(range)} 
             />
@@ -793,7 +797,7 @@ export default function AttendancePage() {
                           </TableRow>
                       ))
                   ) : attendanceReportData.length > 0 ? (
-                      attendanceReportData.map((data, index) => (
+                      (attendanceReportData as any[]).map((data, index) => (
                           <TableRow key={data.employeeId} className="odd:bg-white even:bg-gray-50">
                               <TableCell>{index + 1}</TableCell>
                               <TableCell className="font-medium">{data.employeeName}</TableCell>
