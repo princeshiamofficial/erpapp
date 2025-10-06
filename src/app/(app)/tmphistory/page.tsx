@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -129,10 +130,10 @@ const TeamPerformanceReport = () => {
     
     const { users, data, totals } = teamReportData;
 
-    // Chunk data into 3-day segments
+    // Chunk data into 30-day segments
     const dataChunks = [];
-    for (let i = 0; i < data.length; i += 3) {
-        dataChunks.push(data.slice(i, i + 3));
+    for (let i = 0; i < data.length; i += 30) {
+        dataChunks.push(data.slice(i, i + 30));
     }
 
     return (
