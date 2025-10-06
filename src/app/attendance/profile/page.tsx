@@ -39,6 +39,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { Separator } from '@/components/ui/separator';
 
 
 const getInitials = (name: string | undefined): string => {
@@ -321,36 +322,6 @@ export default function ProfilePage() {
           </Button>
         </div>
 
-        {/* Task Submission for LR */}
-        {currentUser.role === 'LR' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-primary" />Daily Task Submission
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {isLrTaskSubmitted ? (
-                <div className="flex flex-col items-center gap-4 text-center">
-                  <p className="text-green-600 font-semibold">Your tasks for today have been submitted!</p>
-                  <Button asChild>
-                    <Link href="/workflow">Open Desk</Link>
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-end gap-2">
-                  <div className="flex-1 space-y-1">
-                    <Label htmlFor="lr-tasks">Team Tasks Done</Label>
-                    <Input id="lr-tasks" type="number" value={lrTaskCount} onChange={e => setLrTaskCount(e.target.value)} placeholder="Enter task count" />
-                  </div>
-                  <Button onClick={handleLrTaskSubmit} disabled={isSubmittingTask || !lrTaskCount}>
-                    {isSubmittingTask ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Submit'}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
         
         {/* Attendance Summary Section */}
         <div className="space-y-4">
@@ -391,7 +362,7 @@ export default function ProfilePage() {
             </div>
         </div>
 
-        {/* Account Section */}
+        {/* More Options Section */}
         <Card className="bg-card shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">More Options</CardTitle>
@@ -401,6 +372,36 @@ export default function ProfilePage() {
             {isAdminOrLr && (
               <ProfileLink href="/projects" icon={Briefcase} label="Projects" />
             )}
+            
+            {currentUser.role === 'LR' && (
+              <>
+                <Separator className="my-2" />
+                <div className="p-3">
+                  <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                    <Target className="h-5 w-5 text-primary" /> Daily Task Submission
+                  </h4>
+                  {isLrTaskSubmitted ? (
+                    <div className="flex flex-col items-center gap-4 text-center py-2">
+                      <p className="text-green-600 font-semibold">Your tasks for today have been submitted!</p>
+                      <Button asChild>
+                        <Link href="/workflow">Open Desk</Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-end gap-2">
+                      <div className="flex-1 space-y-1">
+                        <Label htmlFor="lr-tasks" className="sr-only">Team Tasks Done</Label>
+                        <Input id="lr-tasks" type="number" value={lrTaskCount} onChange={e => setLrTaskCount(e.target.value)} placeholder="Enter task count" />
+                      </div>
+                      <Button onClick={handleLrTaskSubmit} disabled={isSubmittingTask || !lrTaskCount}>
+                        {isSubmittingTask ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Submit'}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
           </CardContent>
         </Card>
         
