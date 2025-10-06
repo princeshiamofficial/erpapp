@@ -73,7 +73,7 @@ export async function deleteEmployeeAction(employeeId: string): Promise<{ succes
 }
 
 export async function updatePayslipAction(
-  payslipId: string, // e.g., '2024-07'
+  payslipId: string, // e.g., '2024-07-employeeId'
   payslipData: Omit<Payslip, 'id' | 'updatedAt' | 'employeeId'>
 ): Promise<{ success: boolean; error?: string }> {
   try {
@@ -176,4 +176,6 @@ export async function deleteLeaveRecordAction(employeeId: string, leaveRecordId:
     return { success: false, error: "Failed to delete leave record from database." };
   } catch (error) {
     console.error("Error in deleteLeaveRecordAction:", error);
-    return { success: false
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
