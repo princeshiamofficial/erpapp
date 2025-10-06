@@ -501,28 +501,31 @@ export function TeamPerformanceGraph({
       </Card>
       
       <div className="printable-report-area">
-        <div className="flex justify-center mb-4">
+        <div className="report-header">
             <Image
                 src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
                 alt="Color Hut Logo"
                 width={200}
                 height={50}
                 priority
-                className="object-contain rounded-md"
+                className="logo"
             />
+            <div className="report-titles">
+              <h2 className="report-main-title">
+                  Daily Performance Report for {userMap.get(specificUserId)?.name}
+              </h2>
+              <p className="report-sub-title">
+                Date Range: {selectedDateRange?.from ? format(selectedDateRange.from, 'd MMM, yyyy') : 'N/A'} - {selectedDateRange?.to ? format(selectedDateRange.to, 'd MMM, yyyy') : 'N/A'}
+              </p>
+            </div>
+            <div className="report-logo-placeholder"></div>
         </div>
-        <h2 className="text-2xl font-bold text-center mb-2">
-            Daily Performance Report for {userMap.get(specificUserId)?.name}
-        </h2>
-        <p className="text-center text-sm text-gray-600 mb-4">
-          Date Range: {selectedDateRange?.from ? format(selectedDateRange.from, 'd MMM, yyyy') : 'N/A'} - {selectedDateRange?.to ? format(selectedDateRange.to, 'd MMM, yyyy') : 'N/A'}
-        </p>
         <Table>
             <TableHeader>
-                <TableRow className="bg-black text-white hover:bg-black">
-                    <TableHead className="text-white">Date</TableHead>
-                    <TableHead className="text-white text-center">Tasks Done</TableHead>
-                    {userMap.get(specificUserId)?.role === 'CRM' && <TableHead className="text-white text-center">Likely Customers</TableHead>}
+                <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead className="text-center">Tasks Done</TableHead>
+                    {userMap.get(specificUserId)?.role === 'CRM' && <TableHead className="text-center">Likely Customers</TableHead>}
                 </TableRow>
             </TableHeader>
             <TableBody>
@@ -542,21 +545,81 @@ export function TeamPerformanceGraph({
                 )}
             </TableBody>
         </Table>
+        <div className="report-footer">
+          <p>&copy; {new Date().getFullYear()} Color Hut. All Rights Reserved.</p>
+        </div>
       </div>
 
        <style jsx global>{`
         @media print {
-          body * {
-            visibility: hidden;
+          body {
+            background-color: white !important;
+            -webkit-print-color-adjust: exact; 
+            print-color-adjust: exact;
           }
-          .printable-report-area, .printable-report-area * {
-            visibility: visible;
+          .print-hide {
+            display: none !important;
           }
           .printable-report-area {
+            display: block !important;
             position: absolute;
             left: 0;
             top: 0;
             width: 100%;
+            padding: 2rem;
+            font-family: sans-serif;
+          }
+          .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 1rem;
+          }
+          .report-titles {
+            text-align: center;
+          }
+          .report-main-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111827;
+          }
+          .report-sub-title {
+            font-size: 0.875rem;
+            color: #6b7280;
+          }
+          .logo {
+            object-fit: contain;
+          }
+          .report-logo-placeholder {
+            width: 200px; /* To balance the header */
+          }
+          .printable-report-area table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+          }
+          .printable-report-area th, .printable-report-area td {
+            border: 1px solid #e5e7eb;
+            padding: 0.75rem;
+            text-align: left;
+          }
+          .printable-report-area th {
+            background-color: #f9fafb;
+            font-weight: 600;
+            color: #374151;
+          }
+          .printable-report-area .text-center {
+            text-align: center;
+          }
+          .report-footer {
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #9ca3af;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 1rem;
           }
         }
         @media not print {
