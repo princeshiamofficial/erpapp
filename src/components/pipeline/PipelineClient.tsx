@@ -455,7 +455,7 @@ export function PipelineClient() {
               </DropdownMenu>
             )}
             
-            {viewMode === 'list' && !isSelectionMode && (
+            {isAdmin && viewMode === 'list' && !isSelectionMode && (
               <Button onClick={() => setIsSelectionMode(true)} variant="outline" className="w-full sm:w-auto h-10">
                 <Check className="mr-2 h-4 w-4" /> Select to Transfer
               </Button>
@@ -551,5 +551,3 @@ export function PipelineClient() {
     </DndContext>
   );
 }
-
-    
