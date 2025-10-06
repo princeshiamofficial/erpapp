@@ -4,7 +4,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart, LineChart, AreaChart, Target, Users, CalendarDays, TrendingUp, Printer, User as UserIcon } from 'lucide-react';
+import { BarChart, LineChart, AreaChart, Target, Users, CalendarDays, TrendingUp, Printer, User as UserIcon, Download } from 'lucide-react';
 import { Bar, BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import type { User as UserType, UserRole } from '@/types';
 import { cn } from '@/lib/utils';
@@ -41,6 +41,7 @@ import type { GlobalSettings } from '@/types';
 import Link from 'next/link';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import Image from 'next/image';
+import Papa from 'papaparse';
 
 
 interface DailyTargetData {
@@ -355,6 +356,59 @@ export function TeamPerformanceGraph({
 
   }, [allTasks, selectedDateRange, specificUserId, selectedTeam, userMap]);
 
+  const handleExport = () => {
+    if (!teamReportData) {
+      toast({ title: "Export Not Available", description: "Please select a specific team to export data.", variant: "destructive" });
+      return;
+    }
+
+    const { users, data, totals } = teamReportData;
+
+    // Create Headers
+    const headers = ["Date"];
+    users.forEach(user => {
+      headers.push(`${user.name} (Tasks)`, `${user.name} (Likely)`);
+    });
+
+    // Create Rows
+    const rows = data.map(row => {
+      const rowData: Record<string, any> = { 'Date': format(parseISO(row.date), 'd MMM, yyyy') };
+      users.forEach(user => {
+        const userTasks = row[user.id] || { tasks: 0, likelihood: 0 };
+        rowData[`${user.name} (Tasks)`] = userTasks.tasks;
+        rowData[`${user.name} (Likely)`] = userTasks.likelihood;
+      });
+      return rowData;
+    });
+
+    // Add Totals Row
+    const totalsRow: Record<string, any> = { 'Date': 'Total' };
+    users.forEach(user => {
+      const userTotal = totals.find(t => t.userId === user.id) || { totalTasks: 0, totalLikelihood: 0 };
+      totalsRow[`${user.name} (Tasks)`] = userTotal.totalTasks;
+      totalsRow[`${user.name} (Likely)`] = userTotal.totalLikelihood;
+    });
+    rows.push(totalsRow);
+
+    const csv = Papa.unparse({
+      fields: headers,
+      data: rows,
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    const safeTeamName = selectedTeam.replace(/[^a-zA-Z0-9]/g, '_');
+    link.setAttribute('download', `team_performance_${safeTeamName}_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast({ title: "Export Successful", description: "Team performance data has been downloaded." });
+  };
+
 
   const renderChart = () => {
     switch (chartType) {
@@ -547,16 +601,28 @@ export function TeamPerformanceGraph({
                     className="w-full sm:w-auto h-10"
                   />}
                   {isAdminView && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => window.print()}
-                      className="h-10 w-10 print-hide"
-                      title="Print Report"
-                      disabled={specificUserId === 'all' && selectedTeam === 'all'}
-                    >
-                      <Printer className="h-5 w-5" />
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleExport}
+                        className="h-10 w-10 print-hide"
+                        title="Export Team Data to CSV"
+                        disabled={selectedTeam === 'all' || specificUserId !== 'all'}
+                      >
+                        <Download className="h-5 w-5" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => window.print()}
+                        className="h-10 w-10 print-hide"
+                        title="Print Report"
+                        disabled={specificUserId === 'all' && selectedTeam === 'all'}
+                      >
+                        <Printer className="h-5 w-5" />
+                      </Button>
+                    </>
                   )}
               </div>
           </div>
@@ -593,25 +659,25 @@ export function TeamPerformanceGraph({
         <Table>
             <TableHeader>
                 {teamReportData ? (
-                    <TableRow>
-                        <TableHead rowSpan={2} className="align-bottom">Date</TableHead>
-                        {teamReportData.users.map(user => <TableHead key={user.id} colSpan={2} className="text-center">{user.name}</TableHead>)}
-                    </TableRow>
+                    <>
+                        <TableRow>
+                            <TableHead rowSpan={2} className="align-bottom">Date</TableHead>
+                            {teamReportData.users.map(user => <TableHead key={user.id} colSpan={2} className="text-center">{user.name}</TableHead>)}
+                        </TableRow>
+                        <TableRow>
+                            {teamReportData.users.map(user => (
+                                <React.Fragment key={user.id}>
+                                    <TableHead className="text-center text-xs font-medium">Tasks</TableHead>
+                                    <TableHead className="text-center text-xs font-medium border-r">Likely</TableHead>
+                                </React.Fragment>
+                            ))}
+                        </TableRow>
+                    </>
                 ) : (
                     <TableRow>
                         <TableHead>{specificUserId !== 'all' ? 'Date' : 'User Name'}</TableHead>
                         <TableHead className="text-center">Tasks Done</TableHead>
                         {(showLikelihoodChart || selectedTeam === 'all') && <TableHead className="text-center">Likely Customers</TableHead>}
-                    </TableRow>
-                )}
-                 {teamReportData && (
-                    <TableRow>
-                        {teamReportData.users.map(user => (
-                            <React.Fragment key={user.id}>
-                                <TableHead className="text-center text-xs font-medium">Tasks</TableHead>
-                                <TableHead className="text-center text-xs font-medium border-r">Likely</TableHead>
-                            </React.Fragment>
-                        ))}
                     </TableRow>
                 )}
             </TableHeader>
@@ -730,7 +796,7 @@ export function TeamPerformanceGraph({
           }
           .logo {
             object-fit: contain;
-            border-radius: 8px; /* Added border-radius */
+            border-radius: 8px;
           }
           .report-logo-placeholder {
             width: 200px; /* To balance the header */
