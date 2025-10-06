@@ -4,7 +4,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { BarChart, LineChart, AreaChart, Target, Users, CalendarDays, TrendingUp, Printer } from 'lucide-react';
+import { BarChart, LineChart, AreaChart, Target, Users, CalendarDays, TrendingUp, Printer, User as UserIcon } from 'lucide-react';
 import { Bar, BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend } from 'recharts';
 import type { User as UserType, UserRole } from '@/types';
 import { cn } from '@/lib/utils';
@@ -16,6 +16,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandInput, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import {
     ChartTooltip,
     ChartTooltipContent,
   } from "@/components/ui/chart"
@@ -23,7 +29,7 @@ import { parseISO, startOfDay, isSameDay, getDaysInMonth, startOfMonth, subMonth
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronsUpDown, Check } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { Label } from "@/components/ui/label";
 import { addTaskEntryAction } from '@/app/(app)/dashboard/actions';
@@ -60,9 +66,12 @@ interface TeamPerformanceGraphProps {
   globalSettings: GlobalSettings | null;
   onDateRangeChange: (range: DateRange | undefined, label: string, predefinedValue: PredefinedRange | "custom" | null) => void;
   onTeamChange?: (team: UserRole | 'all') => void; // Optional for admin
+  onSpecificUserChange?: (userId: string) => void; // New optional prop for specific user
   selectedTeam?: UserRole | 'all'; // Optional for admin
+  specificUserId?: string; // New optional prop
   isAdminView?: boolean; // To show the dropdown
   refetchData: () => void;
+  specificUserOptions: UserType[]; // New prop
 }
 
 const getInitials = (name: string | undefined): string => {
@@ -73,7 +82,22 @@ const getInitials = (name: string | undefined): string => {
 };
 
 
-export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonthlyTargetData, totalPerformanceTarget: initialTotalPerformanceTarget, selectedDateRange, userMap, globalSettings, onDateRangeChange, onTeamChange, selectedTeam = 'all', isAdminView, refetchData }: TeamPerformanceGraphProps) {
+export function TeamPerformanceGraph({ 
+    allTasks, 
+    monthlyTargetData: initialMonthlyTargetData, 
+    totalPerformanceTarget: initialTotalPerformanceTarget, 
+    selectedDateRange, 
+    userMap, 
+    globalSettings, 
+    onDateRangeChange, 
+    onTeamChange, 
+    onSpecificUserChange,
+    selectedTeam = 'all', 
+    specificUserId = 'all',
+    isAdminView, 
+    refetchData,
+    specificUserOptions = [],
+}: TeamPerformanceGraphProps) {
   const [chartType, setChartType] = useState<'line'>('line');
   const [tasksDone, setTasksDone] = useState('');
   const [likelihoodCustomers, setLikelihoodCustomers] = useState('');
@@ -81,6 +105,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
   const [submissionsTodayCount, setSubmissionsTodayCount] = useState(0);
   const { currentUser } = useAuth();
   const { toast } = useToast();
+  const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false);
 
   const [monthlyTargetData, setMonthlyTargetData] = useState(initialMonthlyTargetData);
   const [totalPerformanceTarget, setTotalPerformanceTarget] = useState(initialTotalPerformanceTarget);
@@ -229,10 +254,14 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
   const showLikelihoodChart = useMemo(() => {
     if (!currentUser) return false;
     if (isAdminView) {
+        if (specificUserId !== 'all') {
+            const user = userMap.get(specificUserId);
+            return user?.role === 'CRM';
+        }
         return selectedTeam === 'all' || selectedTeam === 'CRM';
     }
     return currentUser.role === 'CRM';
-  }, [currentUser, isAdminView, selectedTeam]);
+  }, [currentUser, isAdminView, selectedTeam, specificUserId, userMap]);
 
   const printableReportData = useMemo(() => {
     if (!monthlyTargetData || monthlyTargetData.length === 0 || !selectedDateRange?.from) {
@@ -318,6 +347,11 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
         );
     }
   };
+
+  const selectedSpecificUserName = useMemo(() => {
+    if (specificUserId === 'all') return 'Specific User';
+    return userMap.get(specificUserId)?.name || 'Select User';
+  }, [specificUserId, userMap]);
 
   return (
     <Card className="bg-white/95 dark:bg-card/80 backdrop-blur-sm border-border/30 shadow-xl print-container">
@@ -418,7 +452,7 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                  )}
                 {isAdminView && onTeamChange && (
                   <Select value={selectedTeam} onValueChange={(value) => onTeamChange(value as UserRole | 'all')}>
-                    <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectTrigger className="w-full sm:w-[150px] h-10">
                       <SelectValue placeholder="Select Team" />
                     </SelectTrigger>
                     <SelectContent>
@@ -429,10 +463,40 @@ export function TeamPerformanceGraph({ allTasks, monthlyTargetData: initialMonth
                     </SelectContent>
                   </Select>
                 )}
+                 {isAdminView && onSpecificUserChange && (
+                    <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" role="combobox" aria-expanded={isUserPopoverOpen} className="w-full sm:w-[180px] justify-between h-10">
+                                <span className="truncate">{selectedSpecificUserName}</span>
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                            <Command>
+                                <CommandInput placeholder="Search user..." />
+                                <CommandList>
+                                    <CommandEmpty>No user found.</CommandEmpty>
+                                    <CommandGroup>
+                                        <CommandItem onSelect={() => onSpecificUserChange('all')} className="cursor-pointer">
+                                            <Check className={cn("mr-2 h-4 w-4", specificUserId === 'all' ? "opacity-100" : "opacity-0")} />
+                                            All Users
+                                        </CommandItem>
+                                        {specificUserOptions.map(user => (
+                                            <CommandItem key={user.id} onSelect={() => onSpecificUserChange(user.id)} className="cursor-pointer">
+                                                <Check className={cn("mr-2 h-4 w-4", specificUserId === user.id ? "opacity-100" : "opacity-0")} />
+                                                {user.name} ({user.role})
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+                 )}
                 {selectedDateRange && <DateRangePicker 
                   initialRange={selectedDateRange} 
                   onDateRangeChange={handleDateChange}
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto h-10"
                 />}
                 {isAdminView && (
                   <Button

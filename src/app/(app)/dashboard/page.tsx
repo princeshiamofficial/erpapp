@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -666,11 +667,16 @@ function DashboardContent() {
     };
   });
   const [selectedTeam, setSelectedTeam] = useState<UserRole | 'all'>('all');
+  const [specificUserId, setSpecificUserId] = useState<string | 'all'>('all'); // New state for specific user filter
   
   const isAdminView = useMemo(() => {
     if (!currentUser) return false;
     return ['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role);
   }, [currentUser]);
+
+  const specificUserOptions = useMemo(() => {
+    return allUsers.filter(u => u.role === 'CRM' || u.role === 'DESIGNER_REPRESENTATIVE');
+  }, [allUsers]);
   
   const { teamPerformanceData, totalPerformanceTarget } = useMemo(() => {
     if (!teamPerformanceDateRange?.from || !globalSettings?.roleBasedTargets) {
@@ -683,7 +689,9 @@ function DashboardContent() {
   
     let usersToInclude = allUsers;
     if (isAdminView) {
-      if (selectedTeam !== 'all') {
+      if (specificUserId !== 'all') {
+        usersToInclude = allUsers.filter(u => u.id === specificUserId);
+      } else if (selectedTeam !== 'all') {
         usersToInclude = allUsers.filter(u => u.role === selectedTeam);
       }
     } else if (currentUser) {
@@ -694,7 +702,13 @@ function DashboardContent() {
     let totalTarget = 0;
   
     if (isAdminView) {
-      if (selectedTeam === 'all') {
+      if (specificUserId !== 'all') {
+        const user = usersToInclude[0];
+        if (user) {
+          const monthlyTarget = roleBasedTargets[user.role as keyof typeof roleBasedTargets] || 0;
+          totalTarget = (monthlyTarget / getDaysInMonth(startDate)) * numDaysInRange;
+        }
+      } else if (selectedTeam === 'all') {
         totalTarget = (allUsers.filter(u => u.role === 'CRM').length * roleBasedTargets.CRM) + 
                       (allUsers.filter(u => u.role === 'DESIGNER_REPRESENTATIVE').length * roleBasedTargets.DESIGNER_REPRESENTATIVE) +
                       roleBasedTargets.LR;
@@ -749,7 +763,7 @@ function DashboardContent() {
   
     return { teamPerformanceData: finalData, totalPerformanceTarget: totalTarget };
   
-  }, [allTasks, allUsers, teamPerformanceDateRange, globalSettings, selectedTeam, currentUser, isAdminView]);
+  }, [allTasks, allUsers, teamPerformanceDateRange, globalSettings, selectedTeam, specificUserId, currentUser, isAdminView]);
 
 
   useEffect(() => {
@@ -772,7 +786,20 @@ function DashboardContent() {
   
   const handleTeamChange = (team: UserRole | 'all') => {
     setSelectedTeam(team);
+    setSpecificUserId('all'); // Reset specific user when team changes
   };
+
+  const handleSpecificUserChange = (userId: string) => {
+    setSpecificUserId(userId);
+    if(userId !== 'all') {
+        const user = allUsers.find(u => u.id === userId);
+        if (user) {
+            setSelectedTeam(user.role);
+        }
+    } else {
+        setSelectedTeam('all');
+    }
+  }
 
 
   const summaryCardDefinitions = useMemo(() => {
@@ -825,14 +852,11 @@ function DashboardContent() {
                   chartGranularity === 'hourly' ? 
                   (() => {
                       const hour = parseInt(label); 
-                      const nextHour = (hour + 1) % 24;
-                      const formatHour = (h: number) => {
-                          if (h === 0) return '12 AM';
-                          if (h === 12) return '12 PM';
-                          if (h < 12) return `${h} AM`;
-                          return `${h - 12} PM`;
-                      };
-                      return `${formatHour(hour)} - ${formatHour(nextHour).replace(/\s(A|P)M/, '')}${nextHour === 0 ? ' AM' : ''}`;
+                      if (isNaN(hour)) return value; 
+                      if (hour === 0) return '12 AM';
+                      if (hour === 12) return '12 PM';
+                      if (hour < 12) return `${hour} AM`;
+                      return `${hour - 12} PM`;
                   })()
                   : format(parseISO(label), 'd MMM, yyyy')
                 ) : 'N/A'}
@@ -1220,9 +1244,12 @@ function DashboardContent() {
               userMap={userMap}
               globalSettings={globalSettings}
               onTeamChange={handleTeamChange}
+              onSpecificUserChange={handleSpecificUserChange}
               selectedTeam={selectedTeam}
+              specificUserId={specificUserId}
               isAdminView={isAdminView}
               refetchData={refetch}
+              specificUserOptions={specificUserOptions}
             />
           </div>
           
