@@ -289,7 +289,7 @@ export function TeamPerformanceGraph({
       const singleUserData = filteredTasks.map(task => ({
         ...task,
         userName: userMap.get(task.userId)?.name || task.userName,
-      }));
+      })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
       return { 
         printableReportData: singleUserData, 
@@ -309,7 +309,7 @@ export function TeamPerformanceGraph({
             .filter((u): u is UserType => !!u)
             .sort((a, b) => a.name.localeCompare(b.name));
 
-        const tasksByDate = new Map<string, Record<string, number>>();
+        const tasksByDate = new Map<string, Record<string, { tasks: number; likelihood: number }>>();
 
         filteredTasks.forEach(task => {
             const dateStr = format(parseISO(task.date), 'yyyy-MM-dd');
@@ -317,7 +317,11 @@ export function TeamPerformanceGraph({
                 tasksByDate.set(dateStr, {});
             }
             const dayEntry = tasksByDate.get(dateStr)!;
-            dayEntry[task.userId] = (dayEntry[task.userId] || 0) + task.taskCount;
+            if (!dayEntry[task.userId]) {
+                dayEntry[task.userId] = { tasks: 0, likelihood: 0 };
+            }
+            dayEntry[task.userId].tasks += task.taskCount;
+            dayEntry[task.userId].likelihood += task.likelihood || 0;
         });
 
         const pivotedData = Array.from(tasksByDate.entries())
@@ -325,14 +329,18 @@ export function TeamPerformanceGraph({
             .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         
         const userTotals = teamUsers.map(user => {
-            const total = filteredTasks.filter(t => t.userId === user.id).reduce((sum, t) => sum + t.taskCount, 0);
-            return { userId: user.id, total };
+            const totalTasks = filteredTasks.filter(t => t.userId === user.id).reduce((sum, t) => sum + t.taskCount, 0);
+            const totalLikelihood = filteredTasks.filter(t => t.userId === user.id).reduce((sum, t) => sum + (t.likelihood || 0), 0);
+            return { userId: user.id, totalTasks, totalLikelihood };
         });
+        
+        const grandTotalTasks = userTotals.reduce((sum, t) => sum + t.totalTasks, 0);
+        const grandTotalLikelihood = userTotals.reduce((sum, t) => sum + t.totalLikelihood, 0);
 
         return {
             printableReportData: [],
-            totalTasksDone: filteredTasks.reduce((sum, t) => sum + t.taskCount, 0),
-            totalLikelyCustomers: 0,
+            totalTasksDone: grandTotalTasks,
+            totalLikelyCustomers: grandTotalLikelihood,
             reportTitle: `Team Performance Report: ${selectedTeam}`,
             teamReportData: {
                 users: teamUsers,
@@ -524,7 +532,7 @@ export function TeamPerformanceGraph({
                                           {specificUserOptions.map(user => (
                                               <CommandItem key={user.id} onSelect={() => { if (onSpecificUserChange) { onSpecificUserChange(user.id); setIsUserPopoverOpen(false); } }} className="cursor-pointer">
                                                   <Check className={cn("mr-2 h-4 w-4", specificUserId === user.id ? "opacity-100" : "opacity-0")} />
-                                                  {user.name} ({user.role})
+                                                  {user.name} ({user.role === 'DESIGNER_REPRESENTATIVE' ? 'DR' : user.role})
                                               </CommandItem>
                                           ))}
                                       </CommandGroup>
@@ -586,14 +594,24 @@ export function TeamPerformanceGraph({
             <TableHeader>
                 {teamReportData ? (
                     <TableRow>
-                        <TableHead>Date</TableHead>
-                        {teamReportData.users.map(user => <TableHead key={user.id} className="text-center">{user.name}</TableHead>)}
+                        <TableHead rowSpan={2} className="align-bottom">Date</TableHead>
+                        {teamReportData.users.map(user => <TableHead key={user.id} colSpan={2} className="text-center">{user.name}</TableHead>)}
                     </TableRow>
                 ) : (
                     <TableRow>
                         <TableHead>{specificUserId !== 'all' ? 'Date' : 'User Name'}</TableHead>
                         <TableHead className="text-center">Tasks Done</TableHead>
                         {(showLikelihoodChart || selectedTeam === 'all') && <TableHead className="text-center">Likely Customers</TableHead>}
+                    </TableRow>
+                )}
+                 {teamReportData && (
+                    <TableRow>
+                        {teamReportData.users.map(user => (
+                            <React.Fragment key={user.id}>
+                                <TableHead className="text-center text-xs font-medium">Tasks</TableHead>
+                                <TableHead className="text-center text-xs font-medium border-r">Likely</TableHead>
+                            </React.Fragment>
+                        ))}
                     </TableRow>
                 )}
             </TableHeader>
@@ -603,15 +621,20 @@ export function TeamPerformanceGraph({
                         <TableRow key={row.date}>
                             <TableCell>{format(parseISO(row.date), 'PPP')}</TableCell>
                             {teamReportData.users.map(user => (
-                                <TableCell key={user.id} className="text-center">
-                                    {row[user.id] || 0}
-                                </TableCell>
+                                <React.Fragment key={user.id}>
+                                    <TableCell className="text-center">
+                                        {row[user.id]?.tasks || 0}
+                                    </TableCell>
+                                    <TableCell className="text-center border-r">
+                                        {row[user.id]?.likelihood || 0}
+                                    </TableCell>
+                                </React.Fragment>
                             ))}
                         </TableRow>
                     ))
                 ) : (
                     printableReportData.map((data, index) => (
-                        <TableRow key={'date' in data ? data.id : data.userName}>
+                        <TableRow key={'id' in data ? data.id : index}>
                             <TableCell className="font-medium">{'date' in data ? format(parseISO(data.date), 'PPP') : data.userName}</TableCell>
                             <TableCell className="text-center">{'taskCount' in data ? data.taskCount : 0}</TableCell>
                             {(showLikelihoodChart || selectedTeam === 'all') && (
@@ -629,7 +652,7 @@ export function TeamPerformanceGraph({
                 )}
                 {teamReportData && teamReportData.data.length === 0 && (
                     <TableRow>
-                        <TableCell colSpan={teamReportData.users.length + 1} className="h-24 text-center">
+                        <TableCell colSpan={teamReportData.users.length * 2 + 1} className="h-24 text-center">
                             No data for this period.
                         </TableCell>
                     </TableRow>
@@ -640,9 +663,14 @@ export function TeamPerformanceGraph({
                     <TableRow>
                         <TableCell className="font-bold">Total</TableCell>
                         {teamReportData.users.map(user => (
-                            <TableCell key={user.id} className="text-center font-bold">
-                                {teamReportData.totals.find(t => t.userId === user.id)?.total || 0}
-                            </TableCell>
+                            <React.Fragment key={user.id}>
+                                <TableCell className="text-center font-bold">
+                                    {teamReportData.totals.find(t => t.userId === user.id)?.totalTasks || 0}
+                                </TableCell>
+                                 <TableCell className="text-center font-bold border-r">
+                                    {teamReportData.totals.find(t => t.userId === user.id)?.totalLikelihood || 0}
+                                </TableCell>
+                            </React.Fragment>
                         ))}
                     </TableRow>
                 ) : (
@@ -677,7 +705,7 @@ export function TeamPerformanceGraph({
             left: 0;
             top: 0;
             width: 100%;
-            padding: 2rem;
+            padding: 1.5rem;
             font-family: sans-serif;
           }
           .report-header {
@@ -710,11 +738,11 @@ export function TeamPerformanceGraph({
           .printable-report-area table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.875rem;
+            font-size: 0.8rem;
           }
           .printable-report-area th, .printable-report-area td {
             border: 1px solid #e5e7eb;
-            padding: 0.75rem;
+            padding: 0.5rem;
             text-align: left;
           }
           .printable-report-area th {
