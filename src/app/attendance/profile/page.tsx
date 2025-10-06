@@ -313,11 +313,10 @@ export default function ProfilePage() {
         {/* Account Section */}
         <Card className="bg-card shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg">Account</CardTitle>
+            <CardTitle className="text-lg">More Options</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
             <ProfileLink href="/attendance/history" icon={CalendarClock} label="Leave History" />
-            <ProfileLink href="#" icon={Bell} label="Notifications" />
             {currentUser?.role === 'LR' && (
               <ProfileLink href="/projects" icon={Briefcase} label="Projects" />
             )}
