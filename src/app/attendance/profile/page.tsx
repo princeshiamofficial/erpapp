@@ -317,7 +317,7 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-1">
             <ProfileLink href="/attendance/history" icon={CalendarClock} label="Leave History" />
-            {currentUser?.role === 'LR' && (
+            {(currentUser?.role === 'LR' || currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && (
               <ProfileLink href="/projects" icon={Briefcase} label="Projects" />
             )}
           </CardContent>
