@@ -367,16 +367,18 @@ export function TeamPerformanceGraph({
     // Create Headers
     const headers = ["Date"];
     users.forEach(user => {
-      headers.push(`${user.name} (Tasks)`, `${user.name} (Likely)`);
+      const firstName = user.name.split(' ')[0]; // Get first name
+      headers.push(`${firstName} (Tasks)`, `${firstName} (Likely)`);
     });
 
     // Create Rows
     const rows = data.map(row => {
       const rowData: Record<string, any> = { 'Date': format(parseISO(row.date), 'd MMM, yyyy') };
       users.forEach(user => {
+        const firstName = user.name.split(' ')[0];
         const userTasks = row[user.id] || { tasks: 0, likelihood: 0 };
-        rowData[`${user.name} (Tasks)`] = userTasks.tasks;
-        rowData[`${user.name} (Likely)`] = userTasks.likelihood;
+        rowData[`${firstName} (Tasks)`] = userTasks.tasks;
+        rowData[`${firstName} (Likely)`] = userTasks.likelihood;
       });
       return rowData;
     });
@@ -384,9 +386,10 @@ export function TeamPerformanceGraph({
     // Add Totals Row
     const totalsRow: Record<string, any> = { 'Date': 'Total' };
     users.forEach(user => {
+      const firstName = user.name.split(' ')[0];
       const userTotal = totals.find(t => t.userId === user.id) || { totalTasks: 0, totalLikelihood: 0 };
-      totalsRow[`${user.name} (Tasks)`] = userTotal.totalTasks;
-      totalsRow[`${user.name} (Likely)`] = userTotal.totalLikelihood;
+      totalsRow[`${firstName} (Tasks)`] = userTotal.totalTasks;
+      totalsRow[`${firstName} (Likely)`] = userTotal.totalLikelihood;
     });
     rows.push(totalsRow);
 
@@ -662,7 +665,7 @@ export function TeamPerformanceGraph({
                     <>
                         <TableRow>
                             <TableHead rowSpan={2} className="align-bottom">Date</TableHead>
-                            {teamReportData.users.map(user => <TableHead key={user.id} colSpan={2} className="text-center">{user.name}</TableHead>)}
+                            {teamReportData.users.map(user => <TableHead key={user.id} colSpan={2} className="text-center">{user.name.split(' ')[0]}</TableHead>)}
                         </TableRow>
                         <TableRow>
                             {teamReportData.users.map(user => (
