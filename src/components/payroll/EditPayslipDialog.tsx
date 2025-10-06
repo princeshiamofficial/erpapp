@@ -28,7 +28,7 @@ const formatCurrency = (value?: number | null): string => {
 };
 
 interface EditPayslipDialogProps {
-  employee: Employee;
+  employee: Employee & { presentDays?: number; absentDays?: number; lateDays?: number; };
   onSave: () => void;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -53,9 +53,9 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
   useEffect(() => {
     if (isOpen) {
       const payslipData = existingPayslip;
-      setPresent(payslipData?.presentDays.toString() || '30');
-      setAbsent(payslipData?.absentDays.toString() || '0');
-      setLate(payslipData?.lateDays.toString() || '0');
+      setPresent(payslipData?.presentDays.toString() || employee.presentDays?.toString() || '30');
+      setAbsent(payslipData?.absentDays.toString() || employee.absentDays?.toString() || '0');
+      setLate(payslipData?.lateDays.toString() || employee.lateDays?.toString() || '0');
       setFine(payslipData?.fine.toString() || '0');
       setIncentive(payslipData?.incentive.toString() || '0');
       setPaymentStatus(payslipData?.paymentStatus || 'Unpaid');
