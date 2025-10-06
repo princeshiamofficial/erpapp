@@ -7,7 +7,7 @@ import type { Lead, User, LeadCategory, LeadStatusType, GlobalSettings } from '@
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { DndContext, MouseSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent, type DragCancelEvent, closestCorners, DragOverlay } from '@dnd-kit/core';
-import { getLeads, updateLeadAction, deleteLeadAction } from '@/app/(app)/pipeline/actions';
+import { getLeads, updateLeadAction, deleteLeadAction, transferSelectedLeadsAction } from '@/app/(app)/pipeline/actions';
 import { getUsers } from '@/lib/user-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { Button } from '@/components/ui/button';
@@ -149,9 +149,14 @@ export function PipelineClient() {
   }, [allUsers]);
 
   const sourceCrmOptions = useMemo(() => {
-    const allCrmsOption = { id: 'all', name: 'All CRMs', role: 'SYSTEM_ADMIN' as const, email: '' };
-    return [allCrmsOption, ...allUsers.filter(u => u.role === 'CRM')];
+    return allUsers.filter(u => u.role === 'CRM');
   }, [allUsers]);
+
+  useEffect(() => {
+    if (currentUser?.role === 'CRM') {
+      setSelectedCrmId(currentUser.id);
+    }
+  }, [currentUser]);
 
 
   const filteredLeads = useMemo(() => {
@@ -208,12 +213,14 @@ export function PipelineClient() {
   
   const selectedCrmName = useMemo(() => {
     if (selectedCrmId === 'all') return 'All CRMs';
-    return sourceCrmOptions.find(u => u.id === selectedCrmId)?.name || "Select CRM";
-  }, [selectedCrmId, sourceCrmOptions]);
+    return allCrmUsers.find(u => u.id === selectedCrmId)?.name || "Select CRM";
+  }, [selectedCrmId, allCrmUsers]);
   
   const filteredCrmUsersForDropdown = useMemo(() => {
-    if (!crmSearchQuery) return sourceCrmOptions;
-    return sourceCrmOptions.filter(user =>
+    const allCrmsOption = { id: 'all', name: 'All CRMs', role: 'SYSTEM_ADMIN' as const, email: '' };
+    const baseUsers = [allCrmsOption, ...sourceCrmOptions];
+    if (!crmSearchQuery) return baseUsers;
+    return baseUsers.filter(user =>
       user.name.toLowerCase().includes(crmSearchQuery.toLowerCase())
     );
   }, [sourceCrmOptions, crmSearchQuery]);
@@ -544,3 +551,5 @@ export function PipelineClient() {
     </DndContext>
   );
 }
+
+    
