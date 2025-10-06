@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -173,11 +172,8 @@ export function PipelineClient() {
   const filteredLeads = useMemo(() => {
     let baseLeads = [...leads];
 
-    // Show all leads for any CRM user
-    if (currentUser?.role === 'CRM') {
-      // No filtering is applied, so all leads are visible to any CRM
-    } else if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
-        // Admin filtering logic
+    // CRM users can see all leads, admins can filter
+    if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
         if (selectedCrmId === 'unassigned') {
           baseLeads = baseLeads.filter(lead => !lead.crmId);
         } else if (selectedCrmId.startsWith('[Deleted User:')) {
@@ -186,9 +182,9 @@ export function PipelineClient() {
         } else if (selectedCrmId !== 'all') {
           baseLeads = baseLeads.filter(lead => lead.crmId === selectedCrmId);
         }
-    } else {
-        // Default for any other role (e.g., if a DR gets access somehow): show only their own
-        baseLeads = baseLeads.filter(lead => lead.crmId === currentUser?.id);
+    } else if (currentUser?.role !== 'CRM') {
+      // Non-admin, non-CRM roles see only their own leads if any
+       baseLeads = baseLeads.filter(lead => lead.crmId === currentUser?.id);
     }
     
     // Date filter
@@ -444,15 +440,13 @@ export function PipelineClient() {
         <div className="flex flex-col lg:flex-row gap-4 mb-4 px-4 sm:px-0">
           <Input placeholder="Search leads..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="bg-card border-border/50 focus:border-primary lg:max-w-xs" />
           <div className="flex-grow flex flex-col sm:flex-row items-center gap-2">
-            {(currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && (
-              <Popover open={isCrmFilterOpen} onOpenChange={setIsCrmFilterOpen}><PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={isCrmFilterOpen} className="w-full sm:w-auto justify-between bg-card border-border/50 focus:border-primary h-10"><span className="truncate">{selectedCrmName}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button>
-              </PopoverTrigger><PopoverContent className="w-[--radix-popover-trigger-width)] p-0"><Command><CommandInput placeholder="Search CRM..." value={crmSearchQuery} onValueChange={setCrmSearchQuery} />
-                <CommandList><CommandEmpty>No CRM found.</CommandEmpty><CommandGroup>
-                  {filteredCrmUsersForDropdown.map(crm => (<CommandItem key={crm.id} value={crm.name} onSelect={() => { setSelectedCrmId(crm.id); setIsCrmFilterOpen(false); }}><Check className={cn("mr-2 h-4 w-4", crm.id === selectedCrmId ? "opacity-100" : "opacity-0")} />{crm.name}</CommandItem>))}
-                </CommandGroup></CommandList></Command></PopoverContent>
-              </Popover>
-            )}
+            <Popover open={isCrmFilterOpen} onOpenChange={setIsCrmFilterOpen}><PopoverTrigger asChild>
+              <Button variant="outline" role="combobox" aria-expanded={isCrmFilterOpen} className="w-full sm:w-auto justify-between bg-card border-border/50 focus:border-primary h-10"><span className="truncate">{selectedCrmName}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button>
+            </PopoverTrigger><PopoverContent className="w-[--radix-popover-trigger-width)] p-0"><Command><CommandInput placeholder="Search CRM..." value={crmSearchQuery} onValueChange={setCrmSearchQuery} />
+              <CommandList><CommandEmpty>No CRM found.</CommandEmpty><CommandGroup>
+                {filteredCrmUsersForDropdown.map(crm => (<CommandItem key={crm.id} value={crm.name} onSelect={() => { setSelectedCrmId(crm.id); setIsCrmFilterOpen(false); }}><Check className={cn("mr-2 h-4 w-4", crm.id === selectedCrmId ? "opacity-100" : "opacity-0")} />{crm.name}</CommandItem>))}
+              </CommandGroup></CommandList></Command></PopoverContent>
+            </Popover>
             {viewMode !== 'calendar' && (
               <DateRangePicker initialRange={selectedDateRange} onDateRangeChange={handleDateRangeChange} />
             )}
