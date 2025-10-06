@@ -25,7 +25,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, startOfDay, endOfDay, differenceInDays, isWithinInterval } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, startOfDay, endOfDay, differenceInDays, isWithinInterval, getDay } from 'date-fns';
 import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from './actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -52,6 +52,9 @@ import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
+import { saveWeekendSettingsAction } from '@/app/(app)/hrm/attendance/actions';
+import { DateRangePicker2 } from '@/components/dashboard/date-range-picker2';
+import type { DateRange } from "react-day-picker";
 
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
@@ -585,22 +588,22 @@ export default function PayrollPage() {
              <TableFooter>
                 <TableRow>
                     <TableCell colSpan={9} className="text-right font-bold">Total</TableCell>
-                    <TableCell className="font-bold">{formatCurrency(totalPayableAmount)}</TableCell>
+                    <TableCell className="font-bold text-right">{formatCurrency(totalPayableAmount)}</TableCell>
                     <TableCell colSpan={2}></TableCell>
                 </TableRow>
                  <TableRow>
                     <TableCell colSpan={9} className="text-right font-bold text-green-600">Total Paid</TableCell>
-                    <TableCell className="font-bold text-green-600">{formatCurrency(totalPaid)}</TableCell>
+                    <TableCell className="font-bold text-right text-green-600">{formatCurrency(totalPaid)}</TableCell>
                     <TableCell colSpan={2}></TableCell>
                 </TableRow>
                  <TableRow>
                     <TableCell colSpan={9} className="text-right font-bold text-red-600">Total Unpaid</TableCell>
-                    <TableCell className="font-bold text-red-600">{formatCurrency(totalUnpaid)}</TableCell>
+                    <TableCell className="font-bold text-right text-red-600">{formatCurrency(totalUnpaid)}</TableCell>
                     <TableCell colSpan={2}></TableCell>
                 </TableRow>
                   <TableRow>
                     <TableCell colSpan={9} className="text-right font-bold text-blue-600">Total Provident Fund</TableCell>
-                    <TableCell className="font-bold text-blue-600">{formatCurrency(totalProvidentFund)}</TableCell>
+                    <TableCell className="font-bold text-right text-blue-600">{formatCurrency(totalProvidentFund)}</TableCell>
                     <TableCell colSpan={2}></TableCell>
                 </TableRow>
             </TableFooter>
@@ -610,6 +613,70 @@ export default function PayrollPage() {
     </Card>
   );
   
+  const employeePerformanceContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+      <CardHeader className="p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <CardTitle className="text-xl font-bold text-gray-800">Employee Performance</CardTitle>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-grow sm:flex-grow-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+            </div>
+            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-6 pt-0">
+        <div className="space-y-3">
+            <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
+                <span>Employee</span>
+                <span>Designation</span>
+                <span className="text-center">Completed Orders</span>
+                <span className="text-center">Efficiency Score</span>
+                <span className="text-center">Revenue Generated</span>
+                <span className="text-center">Rating</span>
+            </div>
+            {isLoading ? (
+                Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+                        <div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-4 w-24" /></div>
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-4 w-12 mx-auto" />
+                        <div className="w-full"><Skeleton className="h-2 w-full rounded-full" /></div>
+                        <Skeleton className="h-4 w-16 mx-auto" />
+                        <Skeleton className="h-4 w-12 mx-auto" />
+                    </div>
+                ))
+            ) : paginatedEmployees.length > 0 ? (
+                paginatedEmployees.map((employee) => (
+                    <div key={employee.id} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
+                        <div className="flex items-center gap-3">
+                            {/* Avatar placeholder */}
+                            <div className="h-10 w-10 rounded-full bg-gray-200 flex-shrink-0"></div>
+                            <span className="font-medium text-gray-800">{employee.name}</span>
+                        </div>
+                        <span>{employee.designation}</span>
+                        <span className="text-center font-medium">120</span> {/* Placeholder Data */}
+                        <div className="flex items-center gap-2">
+                           <Progress value={85} className="h-2" indicatorClassName="bg-green-500"/>
+                           <span className="text-xs font-semibold">85%</span>
+                        </div>
+                        <span className="text-center font-medium">{formatCurrency(250000)}</span> {/* Placeholder Data */}
+                        <div className="flex justify-center items-center gap-1 text-yellow-500">
+                          <Star className="h-4 w-4 fill-current"/>
+                          <span className="font-bold text-sm">4.8</span>
+                        </div>
+                    </div>
+                ))
+            ) : (
+                <div className="text-center py-16 text-gray-500">No performance data available.</div>
+            )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   const attendeesReportContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
       <CardHeader className="p-6">
@@ -676,6 +743,8 @@ export default function PayrollPage() {
         return salarySheetContent;
       case 'employee_list':
         return employeeListContent;
+      case 'employee_performance':
+        return employeePerformanceContent;
       case 'attendees_report':
         return attendeesReportContent;
       default:
@@ -697,6 +766,7 @@ export default function PayrollPage() {
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
           <TabsTrigger value="employee_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee List</TabsTrigger>
+          <TabsTrigger value="employee_performance" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee Performance</TabsTrigger>
           <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
         </TabsList>
         <div className="mt-6">
@@ -718,44 +788,227 @@ export default function PayrollPage() {
           existingPayslip={salarySheetData.find(p => p.employeeId === payslipToEdit.id && p.id === `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`)}
         />
       )}
-      {employeeToIncrement && (
-        <IncrementSalaryDialog
-          isOpen={!!employeeToIncrement}
-          onOpenChange={(open) => !open && setEmployeeToIncrement(null)}
-          employee={employeeToIncrement}
-          onSalaryIncremented={fetchData}
-        />
-      )}
-      {leaveToManage && currentUser && (
-        <ManageLeaveDialog
-            isOpen={!!leaveToManage}
-            onOpenChange={(open) => !open && setLeaveToManage(null)}
-            employee={leaveToManage}
-            currentUser={currentUser}
-            onLeaveUpdated={fetchData}
-        />
-      )}
-      {incrementToDelete && (
-        <AlertDialog open={!!incrementToDelete} onOpenChange={() => setIncrementToDelete(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-6 w-6 text-destructive" />
-                Are you sure?
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                This will delete the salary increment from <span className="font-semibold">{format(new Date(incrementToDelete.increment.date), 'd MMM, yyyy')}</span> for <span className="font-semibold">{incrementToDelete.employeeName}</span>. This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setIncrementToDelete(null)} disabled={isDeletingIncrement}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleConfirmDeleteIncrement} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground" disabled={isDeletingIncrement}>
-                {isDeletingIncrement ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</> : "Yes, delete"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
     </div>
   );
 }
+
+```
+- src/hooks/use-local-storage-state.tsx:
+```ts
+import { useState, useEffect } from 'react';
+
+// A custom hook to manage state with localStorage persistence
+export function useLocalStorageState<T>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const [state, setState] = useState<T>(() => {
+    // This function is only executed on the initial render on the client side
+    if (typeof window === 'undefined') {
+      return defaultValue;
+    }
+    try {
+      const storedValue = window.localStorage.getItem(key);
+      return storedValue ? JSON.parse(storedValue) : defaultValue;
+    } catch (error) {
+      console.warn(`Error reading localStorage key “${key}”:`, error);
+      return defaultValue;
+    }
+  });
+
+  useEffect(() => {
+    // This effect runs only on the client side
+    try {
+      const serializedState = JSON.stringify(state);
+      window.localStorage.setItem(key, serializedState);
+    } catch (error) {
+      console.error(`Error writing to localStorage key “${key}”:`, error);
+    }
+  }, [key, state]);
+
+  return [state, setState];
+}
+
+```
+- src/hooks/use-media-query.tsx:
+```ts
+import * as React from "react"
+
+export function useMediaQuery(query: string) {
+  const [value, setValue] = React.useState(false)
+
+  React.useEffect(() => {
+    function onChange(event: MediaQueryListEvent) {
+      setValue(event.matches)
+    }
+
+    const result = window.matchMedia(query)
+    result.addEventListener("change", onChange)
+    setValue(result.matches)
+
+    return () => result.removeEventListener("change", onChange)
+  }, [query])
+
+  return value
+}
+
+```
+- src/hooks/use-scroll-to-bottom.tsx:
+```ts
+import React from 'react';
+
+export function useScrollToBottom(elementRef: React.RefObject<HTMLElement>, dependency: any[]) {
+    React.useEffect(() => {
+        if (elementRef.current) {
+            elementRef.current.scrollTo({
+                top: elementRef.current.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, dependency);
+}
+
+```
+- public/firebase-messaging-sw.js:
+```js
+// /public/firebase-messaging-sw.js
+
+// This file must be in the public directory
+
+// Import and initialize the Firebase SDK
+importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/9.15.0/firebase-messaging-compat.js');
+
+// IMPORTANT: Replace this with your own Firebase configuration object
+const firebaseConfig = {
+  apiKey: "AIzaSyA-OULKM7hL85JFSGlNs0BHdIuTOVN73-I",
+  authDomain: "colorhut-57f5a.firebaseapp.com",
+  projectId: "colorhut-57f5a",
+  storageBucket: "colorhut-57f5a.firebasestorage.app",
+  messagingSenderId: "282903959856",
+  appId: "1:282903959856:web:287ace0c706eb0b11990f5",
+  measurementId: "G-57S6VYXE7H"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const messaging = firebase.messaging();
+
+messaging.onBackgroundMessage((payload) => {
+  console.log('[firebase-messaging-sw.js] Received background message. Payload:', JSON.stringify(payload, null, 2));
+
+  // Customize notification here
+  const notificationData = payload.data || {};
+  const fcmNotification = payload.notification || {};
+  
+  const notificationTitle = notificationData.title || fcmNotification.title || "Color Hut Update";
+  const notificationBody = notificationData.body || fcmNotification.body || "You have a new message.";
+
+  let notificationIcon = notificationData.iconUrl || notificationData.icon || fcmNotification.icon || '/icons/icon-192x192.png';
+  // Ensure the icon path is absolute
+  if (!notificationIcon.startsWith('http') && !notificationIcon.startsWith('/')) {
+      notificationIcon = self.location.origin + '/' + notificationIcon;
+  } else if (!notificationIcon.startsWith('http')) {
+      notificationIcon = self.location.origin + notificationIcon;
+  }
+  
+  const notificationOptions = {
+    body: notificationBody,
+    icon: notificationIcon,
+    badge: '/icons/icon-72x72.png',
+    data: { 
+        click_action: notificationData.click_action || notificationData.targetUrl || self.location.origin,
+        ...notificationData
+    },
+    tag: notificationData.tag || payload.fcmOptions?.messageId || 'colorhut-notif-' + Date.now(),
+    renotify: true,
+    requireInteraction: true,
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+
+// Optional: Add event listener for notification click
+self.addEventListener('notificationclick', function(event) {
+  console.log('[firebase-messaging-sw.js] Notification click Received. Event:', event);
+
+  event.notification.close();
+
+  // This looks for an open window matching the click URL and focuses it.
+  // If no window is found, it opens a new one.
+  const clickAction = event.notification.data?.click_action || self.location.origin;
+
+  event.waitUntil(
+    clients.matchAll({
+      type: "window"
+    }).then(function(clientList) {
+      for (var i = 0; i < clientList.length; i++) {
+        var client = clientList[i];
+        // Use endsWith to handle cases where the client URL might have a trailing slash
+        if (client.url === clickAction || (client.url + '/') === clickAction) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(clickAction);
+      }
+    })
+  );
+});
+
+```
+- public/manifest.json:
+```json
+{
+    "name": "ColorHut - Office",
+    "short_name": "ColorHut",
+    "description": "Office management application for ColorHut",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#EF6C00",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/icons/icon-72x72.png",
+            "sizes": "72x72",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/icon-96x96.png",
+            "sizes": "96x96",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/icon-128x128.png",
+            "sizes": "128x128",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/icon-144x144.png",
+            "sizes": "144x144",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/icon-152x152.png",
+            "sizes": "152x152",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-384x384.png",
+            "sizes": "384x384",
+            "type": "image/png"
+        },
+        {
+            "src": "/icons/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
+```
