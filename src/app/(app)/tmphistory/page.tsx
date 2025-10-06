@@ -130,10 +130,10 @@ const TeamPerformanceReport = () => {
     
     const { users, data, totals } = teamReportData;
 
-    // Chunk data into 30-day segments
+    // Chunk data into 7-day segments for weekly pages
     const dataChunks = [];
-    for (let i = 0; i < data.length; i += 30) {
-        dataChunks.push(data.slice(i, i + 30));
+    for (let i = 0; i < data.length; i += 7) {
+        dataChunks.push(data.slice(i, i + 7));
     }
 
     return (
@@ -237,14 +237,27 @@ const TeamPerformanceReport = () => {
                 .report-titles { text-align: center; }
                 .report-main-title { font-size: 1.5rem; font-weight: 700; color: #111827; }
                 .report-sub-title { font-size: 0.875rem; color: #6b7280; }
-                .logo { object-fit: contain; border-radius: 0.5rem; }
+                .logo { 
+                  object-fit: contain;
+                  border-radius: 8px; /* Rounded corners for the logo */
+                }
                 .report-logo-placeholder { width: 200px; }
                 table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
                 th, td { border: 1px solid #e5e7eb; padding: 0.5rem; text-align: left; }
-                th { background-color: #f9fafb; font-weight: 600; color: #374151; }
+                thead th { 
+                  background-color: #111827; /* Black background */
+                  color: #ffffff; /* White text */
+                  font-weight: 600; 
+                }
                 .text-center { text-align: center; }
-                tfoot { background-color: #f9fafb; font-weight: 700; }
-                tfoot td { font-weight: 700; }
+                tfoot { 
+                  background-color: #f9fafb; 
+                  font-weight: 700;
+                  color: #111827;
+                }
+                tfoot td { 
+                  font-weight: 700;
+                }
                 .border-r { border-right: 1px solid #e5e7eb; }
                 .report-footer { margin-top: 2rem; text-align: center; font-size: 0.75rem; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 1rem; }
                 
