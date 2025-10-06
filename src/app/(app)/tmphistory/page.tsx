@@ -130,96 +130,83 @@ const TeamPerformanceReport = () => {
     
     const { users, data, totals } = teamReportData;
 
-    // Chunk data into 7-day segments for weekly pages
-    const dataChunks = [];
-    for (let i = 0; i < data.length; i += 7) {
-        dataChunks.push(data.slice(i, i + 7));
-    }
-
     return (
         <>
-            {dataChunks.map((chunk, chunkIndex) => (
-                <div key={chunkIndex} className="printable-report-area printable-page">
-                    <div className="report-header">
-                        <Image
-                            src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
-                            alt="Color Hut Logo"
-                            width={200}
-                            height={50}
-                            priority
-                            className="logo"
-                        />
-                        <div className="report-titles">
-                            <h2 className="report-main-title">{reportTitle}</h2>
-                            <p className="report-sub-title">
-                                Date Range: {dateFrom ? format(parseISO(dateFrom), 'd MMM, yyyy') : 'N/A'} - {dateTo ? format(parseISO(dateTo), 'd MMM, yyyy') : 'N/A'}
-                            </p>
-                        </div>
-                        <div className="report-logo-placeholder"></div>
+            <div className="printable-report-area">
+                <div className="report-header">
+                    <Image
+                        src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+                        alt="Color Hut Logo"
+                        width={200}
+                        height={50}
+                        priority
+                        className="logo"
+                    />
+                    <div className="report-titles">
+                        <h2 className="report-main-title">{reportTitle}</h2>
+                        <p className="report-sub-title">
+                            Date Range: {dateFrom ? format(parseISO(dateFrom), 'd MMM, yyyy') : 'N/A'} - {dateTo ? format(parseISO(dateTo), 'd MMM, yyyy') : 'N/A'}
+                        </p>
                     </div>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead rowSpan={2} className="align-bottom">Date</TableHead>
-                                {users.map(user => <TableHead key={user.id} colSpan={2} className="text-center">{user.name.split(' ')[0]}</TableHead>)}
-                            </TableRow>
-                            <TableRow>
+                    <div className="report-logo-placeholder"></div>
+                </div>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead rowSpan={2} className="align-bottom">Date</TableHead>
+                            {users.map(user => <TableHead key={user.id} colSpan={2} className="text-center">{user.name.split(' ')[0]}</TableHead>)}
+                        </TableRow>
+                        <TableRow>
+                            {users.map(user => (
+                                <React.Fragment key={user.id}>
+                                    <TableHead className="text-center text-xs font-medium">Tasks</TableHead>
+                                    <TableHead className="text-center text-xs font-medium border-r">Likely</TableHead>
+                                </React.Fragment>
+                            ))}
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {data.map(row => (
+                            <TableRow key={row.date}>
+                                <TableCell>{format(parseISO(row.date), 'PPP')}</TableCell>
                                 {users.map(user => (
                                     <React.Fragment key={user.id}>
-                                        <TableHead className="text-center text-xs font-medium">Tasks</TableHead>
-                                        <TableHead className="text-center text-xs font-medium border-r">Likely</TableHead>
+                                        <TableCell className="text-center">
+                                            {(row[user.id] as { tasks: number })?.tasks || 0}
+                                        </TableCell>
+                                        <TableCell className="text-center border-r">
+                                            {(row[user.id] as { likelihood: number })?.likelihood || 0}
+                                        </TableCell>
                                     </React.Fragment>
                                 ))}
                             </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {chunk.map(row => (
-                                <TableRow key={row.date}>
-                                    <TableCell>{format(parseISO(row.date), 'PPP')}</TableCell>
-                                    {users.map(user => (
-                                        <React.Fragment key={user.id}>
-                                            <TableCell className="text-center">
-                                                {(row[user.id] as { tasks: number })?.tasks || 0}
-                                            </TableCell>
-                                            <TableCell className="text-center border-r">
-                                                {(row[user.id] as { likelihood: number })?.likelihood || 0}
-                                            </TableCell>
-                                        </React.Fragment>
-                                    ))}
-                                </TableRow>
+                        ))}
+                    </TableBody>
+                    <TableFooter>
+                        <TableRow>
+                            <TableCell className="font-bold">Total</TableCell>
+                            {users.map(user => (
+                                <React.Fragment key={user.id}>
+                                    <TableCell className="text-center font-bold">
+                                        {totals.find(t => t.userId === user.id)?.totalTasks || 0}
+                                    </TableCell>
+                                    <TableCell className="text-center font-bold border-r">
+                                        {totals.find(t => t.userId === user.id)?.totalLikelihood || 0}
+                                    </TableCell>
+                                </React.Fragment>
                             ))}
-                        </TableBody>
-                        {/* Render footer only on the last page */}
-                        {chunkIndex === dataChunks.length - 1 && (
-                            <TableFooter>
-                                <TableRow>
-                                    <TableCell className="font-bold">Total</TableCell>
-                                    {users.map(user => (
-                                        <React.Fragment key={user.id}>
-                                            <TableCell className="text-center font-bold">
-                                                {totals.find(t => t.userId === user.id)?.totalTasks || 0}
-                                            </TableCell>
-                                            <TableCell className="text-center font-bold border-r">
-                                                {totals.find(t => t.userId === user.id)?.totalLikelihood || 0}
-                                            </TableCell>
-                                        </React.Fragment>
-                                    ))}
-                                </TableRow>
-                            </TableFooter>
-                        )}
-                    </Table>
-                    <div className="report-footer">
-                        <p>&copy; {new Date().getFullYear()} Color Hut. All Rights Reserved.</p>
-                    </div>
+                        </TableRow>
+                    </TableFooter>
+                </Table>
+                <div className="report-footer">
+                    <p>&copy; {new Date().getFullYear()} Color Hut. All Rights Reserved.</p>
                 </div>
-            ))}
+            </div>
 
             <style jsx global>{`
-                .printable-page {
-                    page-break-after: always;
-                }
-                .printable-page:last-child {
-                    page-break-after: avoid;
+                @page {
+                    size: A4 landscape;
+                    margin: 0.5cm;
                 }
                 .printable-report-area {
                     display: block;
@@ -235,15 +222,15 @@ const TeamPerformanceReport = () => {
                     padding-bottom: 1rem;
                 }
                 .report-titles { text-align: center; }
-                .report-main-title { font-size: 1.5rem; font-weight: 700; color: #111827; }
-                .report-sub-title { font-size: 0.875rem; color: #6b7280; }
+                .report-main-title { font-size: 1.25rem; font-weight: 700; color: #111827; }
+                .report-sub-title { font-size: 0.75rem; color: #6b7280; }
                 .logo { 
                   object-fit: contain;
                   border-radius: 8px; /* Rounded corners for the logo */
                 }
                 .report-logo-placeholder { width: 200px; }
-                table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-                th, td { border: 1px solid #e5e7eb; padding: 0.5rem; text-align: left; }
+                table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
+                th, td { border: 1px solid #e5e7eb; padding: 0.4rem; text-align: left; }
                 thead th { 
                   background-color: #111827; /* Black background */
                   color: #ffffff; /* White text */
@@ -259,12 +246,8 @@ const TeamPerformanceReport = () => {
                   font-weight: 700;
                 }
                 .border-r { border-right: 1px solid #e5e7eb; }
-                .report-footer { margin-top: 2rem; text-align: center; font-size: 0.75rem; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 1rem; }
+                .report-footer { margin-top: 2rem; text-align: center; font-size: 0.65rem; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 1rem; }
                 
-                @page {
-                    size: A4 landscape;
-                    margin: 1cm;
-                }
                 @media print {
                     body {
                         background-color: white !important;
