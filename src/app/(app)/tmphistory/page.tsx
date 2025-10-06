@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -92,8 +91,7 @@ const TeamPerformanceReport = () => {
         const userTotals = teamUsers.map(user => {
             const totalTasks = filteredTasks.filter(t => t.userId === user.id).reduce((sum, t) => sum + t.taskCount, 0);
             const totalLikelihood = filteredTasks.filter(t => t.userId === user.id).reduce((sum, t) => sum + (t.likelihood || 0), 0);
-            const monthlyTarget = user.monthlyOrderTarget || globalSettings?.roleBasedTargets?.[user.role as keyof typeof globalSettings.roleBasedTargets] || 0;
-            return { userId: user.id, totalTasks, totalLikelihood, monthlyTarget };
+            return { userId: user.id, totalTasks, totalLikelihood };
         });
 
         return {
@@ -109,7 +107,6 @@ const TeamPerformanceReport = () => {
 
     useEffect(() => {
         if (!isLoading && teamReportData) {
-            // Give a short delay for rendering before printing
             const timer = setTimeout(() => {
                 window.print();
             }, 500);
@@ -132,80 +129,97 @@ const TeamPerformanceReport = () => {
     
     const { users, data, totals } = teamReportData;
 
+    // Chunk data into 3-day segments
+    const dataChunks = [];
+    for (let i = 0; i < data.length; i += 3) {
+        dataChunks.push(data.slice(i, i + 3));
+    }
+
     return (
         <>
-            <div className="printable-report-area">
-                <div className="report-header">
-                    <Image
-                        src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
-                        alt="Color Hut Logo"
-                        width={200}
-                        height={50}
-                        priority
-                        className="logo"
-                    />
-                    <div className="report-titles">
-                        <h2 className="report-main-title">{reportTitle}</h2>
-                        <p className="report-sub-title">
-                            Date Range: {dateFrom ? format(parseISO(dateFrom), 'd MMM, yyyy') : 'N/A'} - {dateTo ? format(parseISO(dateTo), 'd MMM, yyyy') : 'N/A'}
-                        </p>
+            {dataChunks.map((chunk, chunkIndex) => (
+                <div key={chunkIndex} className="printable-report-area printable-page">
+                    <div className="report-header">
+                        <Image
+                            src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
+                            alt="Color Hut Logo"
+                            width={200}
+                            height={50}
+                            priority
+                            className="logo"
+                        />
+                        <div className="report-titles">
+                            <h2 className="report-main-title">{reportTitle}</h2>
+                            <p className="report-sub-title">
+                                Date Range: {dateFrom ? format(parseISO(dateFrom), 'd MMM, yyyy') : 'N/A'} - {dateTo ? format(parseISO(dateTo), 'd MMM, yyyy') : 'N/A'}
+                            </p>
+                        </div>
+                        <div className="report-logo-placeholder"></div>
                     </div>
-                    <div className="report-logo-placeholder"></div>
-                </div>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead rowSpan={2} className="align-bottom">Date</TableHead>
-                            {users.map(user => <TableHead key={user.id} colSpan={2} className="text-center">{user.name.split(' ')[0]}</TableHead>)}
-                        </TableRow>
-                        <TableRow>
-                            {users.map(user => (
-                                <React.Fragment key={user.id}>
-                                    <TableHead className="text-center text-xs font-medium">Tasks</TableHead>
-                                    <TableHead className="text-center text-xs font-medium border-r">Likely</TableHead>
-                                </React.Fragment>
-                            ))}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {data.map(row => (
-                            <TableRow key={row.date}>
-                                <TableCell>{format(parseISO(row.date), 'PPP')}</TableCell>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead rowSpan={2} className="align-bottom">Date</TableHead>
+                                {users.map(user => <TableHead key={user.id} colSpan={2} className="text-center">{user.name.split(' ')[0]}</TableHead>)}
+                            </TableRow>
+                            <TableRow>
                                 {users.map(user => (
                                     <React.Fragment key={user.id}>
-                                        <TableCell className="text-center">
-                                            {row[user.id]?.tasks || 0}
-                                        </TableCell>
-                                        <TableCell className="text-center border-r">
-                                            {row[user.id]?.likelihood || 0}
-                                        </TableCell>
+                                        <TableHead className="text-center text-xs font-medium">Tasks</TableHead>
+                                        <TableHead className="text-center text-xs font-medium border-r">Likely</TableHead>
                                     </React.Fragment>
                                 ))}
                             </TableRow>
-                        ))}
-                    </TableBody>
-                    <TableFooter>
-                        <TableRow>
-                            <TableCell className="font-bold">Total</TableCell>
-                            {users.map(user => (
-                                <React.Fragment key={user.id}>
-                                    <TableCell className="text-center font-bold">
-                                        {totals.find(t => t.userId === user.id)?.totalTasks || 0}
-                                    </TableCell>
-                                    <TableCell className="text-center font-bold border-r">
-                                        {totals.find(t => t.userId === user.id)?.totalLikelihood || 0}
-                                    </TableCell>
-                                </React.Fragment>
+                        </TableHeader>
+                        <TableBody>
+                            {chunk.map(row => (
+                                <TableRow key={row.date}>
+                                    <TableCell>{format(parseISO(row.date), 'PPP')}</TableCell>
+                                    {users.map(user => (
+                                        <React.Fragment key={user.id}>
+                                            <TableCell className="text-center">
+                                                {(row[user.id] as { tasks: number })?.tasks || 0}
+                                            </TableCell>
+                                            <TableCell className="text-center border-r">
+                                                {(row[user.id] as { likelihood: number })?.likelihood || 0}
+                                            </TableCell>
+                                        </React.Fragment>
+                                    ))}
+                                </TableRow>
                             ))}
-                        </TableRow>
-                    </TableFooter>
-                </Table>
-                <div className="report-footer">
-                    <p>&copy; {new Date().getFullYear()} Color Hut. All Rights Reserved.</p>
+                        </TableBody>
+                        {/* Render footer only on the last page */}
+                        {chunkIndex === dataChunks.length - 1 && (
+                            <TableFooter>
+                                <TableRow>
+                                    <TableCell className="font-bold">Total</TableCell>
+                                    {users.map(user => (
+                                        <React.Fragment key={user.id}>
+                                            <TableCell className="text-center font-bold">
+                                                {totals.find(t => t.userId === user.id)?.totalTasks || 0}
+                                            </TableCell>
+                                            <TableCell className="text-center font-bold border-r">
+                                                {totals.find(t => t.userId === user.id)?.totalLikelihood || 0}
+                                            </TableCell>
+                                        </React.Fragment>
+                                    ))}
+                                </TableRow>
+                            </TableFooter>
+                        )}
+                    </Table>
+                    <div className="report-footer">
+                        <p>&copy; {new Date().getFullYear()} Color Hut. All Rights Reserved.</p>
+                    </div>
                 </div>
-            </div>
+            ))}
 
             <style jsx global>{`
+                .printable-page {
+                    page-break-after: always;
+                }
+                .printable-page:last-child {
+                    page-break-after: avoid;
+                }
                 .printable-report-area {
                     display: block;
                     padding: 1.5rem;
@@ -242,6 +256,9 @@ const TeamPerformanceReport = () => {
                         background-color: white !important;
                         -webkit-print-color-adjust: exact; 
                         print-color-adjust: exact;
+                    }
+                    .printable-report-area {
+                        display: block; /* Ensure it is block for printing */
                     }
                 }
             `}</style>
