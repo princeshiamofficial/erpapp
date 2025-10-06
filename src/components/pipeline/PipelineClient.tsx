@@ -150,47 +150,21 @@ export function PipelineClient() {
 
   const sourceCrmOptions = useMemo(() => {
     const allCrmsOption = { id: 'all', name: 'All CRMs', role: 'SYSTEM_ADMIN' as const, email: '' };
-    const unassignedOption = { id: 'unassigned', name: 'Unassigned Leads', role: 'SYSTEM_ADMIN' as const, email: '' };
-    
-    const deletedUsers = new Set<string>();
-    leads.forEach(lead => {
-      if(lead.crmId && !allUsers.some(user => user.id === lead.crmId)){
-        deletedUsers.add(lead.crmId);
-      }
-    });
-    const deletedUserOptions = Array.from(deletedUsers).map(id => ({
-      id: `[Deleted User: ${id}]`,
-      name: `[Deleted User: ${id.substring(0, 5)}...]`,
-      role: 'SYSTEM_ADMIN' as const,
-      email: ''
-    }));
-
-    return [allCrmsOption, unassignedOption, ...allUsers.filter(u => u.role === 'CRM'), ...deletedUserOptions];
-  }, [allUsers, leads]);
+    return [allCrmsOption, ...allUsers.filter(u => u.role === 'CRM')];
+  }, [allUsers]);
 
 
   const filteredLeads = useMemo(() => {
     let baseLeads = [...leads];
 
-    // CRM users can see all leads, admins can filter
-    if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
-        if (selectedCrmId === 'unassigned') {
-          baseLeads = baseLeads.filter(lead => !lead.crmId);
-        } else if (selectedCrmId.startsWith('[Deleted User:')) {
-          const deletedUserId = selectedCrmId.substring(15, selectedCrmId.length - 1);
-          baseLeads = baseLeads.filter(lead => lead.crmId === deletedUserId);
-        } else if (selectedCrmId !== 'all') {
-          baseLeads = baseLeads.filter(lead => lead.crmId === selectedCrmId);
-        }
-    } else if (currentUser?.role !== 'CRM') {
-      // Non-admin, non-CRM roles see only their own leads if any
-       baseLeads = baseLeads.filter(lead => lead.crmId === currentUser?.id);
+    if (selectedCrmId !== 'all') {
+      baseLeads = baseLeads.filter(lead => lead.crmId === selectedCrmId);
     }
     
     // Date filter
     if (selectedDateRange?.from && viewMode !== 'calendar') { // Calendar view handles its own date range
       const startDate = startOfDay(selectedDateRange.from);
-      const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
+      const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
       baseLeads = baseLeads.filter(lead => {
         try {
           const leadDate = parseISO(lead.date);
@@ -219,7 +193,7 @@ export function PipelineClient() {
     }
 
     return baseLeads;
-  }, [leads, searchTerm, currentUser, selectedCrmId, selectedDateRange, categoryFilter, viewMode, globalSettings]);
+  }, [leads, searchTerm, selectedCrmId, selectedDateRange, categoryFilter, viewMode, globalSettings]);
   
   const totalPages = Math.ceil(filteredLeads.length / ITEMS_PER_PAGE);
 
@@ -341,7 +315,7 @@ export function PipelineClient() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast({ title: "Export Successful", description: "Lead data has been downloaded as a CSV file." });
+    toast({ title: "Export Successful", description: "Lead data has been downloaded." });
   };
 
   const handleDragStart = (event: DragStartEvent) => { setActiveLead(event.active.data.current?.lead as Lead); };
