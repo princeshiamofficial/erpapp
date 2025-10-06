@@ -20,7 +20,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandInput, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import {
     ChartTooltip,
     ChartTooltipContent,
@@ -263,50 +263,27 @@ export function TeamPerformanceGraph({
     return currentUser.role === 'CRM';
   }, [currentUser, isAdminView, selectedTeam, specificUserId, userMap]);
 
-  const printableReportData = useMemo(() => {
-    if (!monthlyTargetData || monthlyTargetData.length === 0 || !selectedDateRange?.from) {
+ const printableReportData = useMemo(() => {
+    if (!allTasks || !selectedDateRange?.from || specificUserId === 'all') {
       return [];
     }
-  
-    const aggregatedData: { [userId: string]: { name: string, role: UserRole, tasksDone: number, likelihood: number, target: number } } = {};
-  
+
     const startDate = startOfDay(selectedDateRange.from);
     const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
-    const numDaysInRange = differenceInDays(endDate, startDate) + 1;
-    const daysInMonthOfStart = getDaysInMonth(startDate);
-  
-    monthlyTargetData.forEach(day => {
-      Object.entries(day.userData).forEach(([userId, data]) => {
-        if (!aggregatedData[userId]) {
-          const user = userMap.get(userId);
-          const roleBasedTargets = globalSettings?.roleBasedTargets || {};
-          let monthlyTargetForUser = 0;
-          if (user?.role && roleBasedTargets[user.role as keyof typeof roleBasedTargets]) {
-            monthlyTargetForUser = roleBasedTargets[user.role as keyof typeof roleBasedTargets];
-          }
-          if (user?.role === 'LR') {
-             monthlyTargetForUser = roleBasedTargets.LR;
-          }
 
-          aggregatedData[userId] = {
-            name: user?.name || 'Unknown User',
-            role: data.role,
-            tasksDone: 0,
-            likelihood: 0,
-            target: Math.round((monthlyTargetForUser / daysInMonthOfStart) * numDaysInRange)
-          };
+    return allTasks
+      .filter(task => {
+        if (task.userId !== specificUserId) return false;
+        try {
+          const taskDate = parseISO(task.date);
+          return isWithinInterval(taskDate, { start: startDate, end: endDate });
+        } catch {
+          return false;
         }
-        aggregatedData[userId].tasksDone += data.done;
-        aggregatedData[userId].likelihood += data.likelihood;
-      });
-    });
-  
-    return Object.values(aggregatedData)
-      .filter(d => selectedTeam === 'all' || d.role === selectedTeam)
-      .sort((a, b) => b.tasksDone - a.tasksDone)
-      .map((d, index) => ({ ...d, rank: index + 1 }));
-  
-  }, [monthlyTargetData, userMap, selectedTeam, globalSettings, selectedDateRange]);
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
+  }, [allTasks, selectedDateRange, specificUserId]);
 
 
   const renderChart = () => {
@@ -477,12 +454,12 @@ export function TeamPerformanceGraph({
                                 <CommandList>
                                     <CommandEmpty>No user found.</CommandEmpty>
                                     <CommandGroup>
-                                        <CommandItem onSelect={() => onSpecificUserChange('all')} className="cursor-pointer">
+                                        <CommandItem onSelect={() => { if (onSpecificUserChange) { onSpecificUserChange('all'); setIsUserPopoverOpen(false); } }} className="cursor-pointer">
                                             <Check className={cn("mr-2 h-4 w-4", specificUserId === 'all' ? "opacity-100" : "opacity-0")} />
                                             All Users
                                         </CommandItem>
                                         {specificUserOptions.map(user => (
-                                            <CommandItem key={user.id} onSelect={() => onSpecificUserChange(user.id)} className="cursor-pointer">
+                                            <CommandItem key={user.id} onSelect={() => { if (onSpecificUserChange) { onSpecificUserChange(user.id); setIsUserPopoverOpen(false); } }} className="cursor-pointer">
                                                 <Check className={cn("mr-2 h-4 w-4", specificUserId === user.id ? "opacity-100" : "opacity-0")} />
                                                 {user.name} ({user.role})
                                             </CommandItem>
@@ -505,7 +482,7 @@ export function TeamPerformanceGraph({
                     onClick={() => window.print()}
                     className="h-10 w-10 print-hide"
                     title="Print Report"
-                    disabled={selectedTeam === 'all'}
+                    disabled={specificUserId === 'all'}
                   >
                     <Printer className="h-5 w-5" />
                   </Button>
@@ -532,28 +509,26 @@ export function TeamPerformanceGraph({
                 className="object-contain rounded-md"
             />
         </div>
-        <h2 className="text-2xl font-bold text-center mb-2">Team Performance Report ({selectedTeam})</h2>
+        <h2 className="text-2xl font-bold text-center mb-2">
+            Daily Performance Report for {userMap.get(specificUserId)?.name}
+        </h2>
         <p className="text-center text-sm text-gray-600 mb-4">
           Date Range: {selectedDateRange?.from ? format(selectedDateRange.from, 'd MMM, yyyy') : 'N/A'} - {selectedDateRange?.to ? format(selectedDateRange.to, 'd MMM, yyyy') : 'N/A'}
         </p>
         <Table>
             <TableHeader>
                 <TableRow className="bg-black text-white hover:bg-black">
-                    <TableHead className="text-white">Rank</TableHead>
-                    <TableHead className="text-white">Name</TableHead>
+                    <TableHead className="text-white">Date</TableHead>
                     <TableHead className="text-white text-center">Tasks Done</TableHead>
-                    <TableHead className="text-white text-center">Target</TableHead>
-                    {(selectedTeam !== 'DR' && selectedTeam !== 'LR') && <TableHead className="text-white text-center">Likely Customers</TableHead>}
+                    {userMap.get(specificUserId)?.role === 'CRM' && <TableHead className="text-white text-center">Likely Customers</TableHead>}
                 </TableRow>
             </TableHeader>
             <TableBody>
                 {printableReportData.map((data) => (
-                    <TableRow key={data.name}>
-                        <TableCell className="font-semibold text-center">{data.rank}</TableCell>
-                        <TableCell>{data.name}</TableCell>
-                        <TableCell className="text-center">{data.tasksDone}</TableCell>
-                        <TableCell className="text-center">{Math.round(data.target)}</TableCell>
-                         {(selectedTeam !== 'DR' && selectedTeam !== 'LR') && <TableCell className="text-center">{data.likelihood}</TableCell>}
+                    <TableRow key={data.id}>
+                        <TableCell className="font-medium">{format(parseISO(data.date), 'PPP')}</TableCell>
+                        <TableCell className="text-center">{data.taskCount}</TableCell>
+                        {userMap.get(specificUserId)?.role === 'CRM' && <TableCell className="text-center">{data.likelihood || 0}</TableCell>}
                     </TableRow>
                 ))}
             </TableBody>
