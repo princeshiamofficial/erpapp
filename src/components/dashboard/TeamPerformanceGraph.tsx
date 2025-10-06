@@ -265,7 +265,7 @@ export function TeamPerformanceGraph({
   }, [currentUser, isAdminView, selectedTeam, specificUserId, userMap]);
   
   const { printableReportData, totalTasksDone, totalLikelyCustomers, reportTitle, teamReportData } = useMemo(() => {
-    if (!allTasks || !selectedDateRange?.from) {
+    if (!allTasks || !selectedDateRange?.from || !globalSettings) {
       return { printableReportData: [], totalTasksDone: 0, totalLikelyCustomers: 0, reportTitle: 'Performance Report', teamReportData: null };
     }
   
@@ -332,7 +332,8 @@ export function TeamPerformanceGraph({
         const userTotals = teamUsers.map(user => {
             const totalTasks = filteredTasks.filter(t => t.userId === user.id).reduce((sum, t) => sum + t.taskCount, 0);
             const totalLikelihood = filteredTasks.filter(t => t.userId === user.id).reduce((sum, t) => sum + (t.likelihood || 0), 0);
-            return { userId: user.id, totalTasks, totalLikelihood };
+            const monthlyTarget = user.monthlyOrderTarget || globalSettings?.roleBasedTargets?.[user.role as keyof typeof globalSettings.roleBasedTargets] || 0;
+            return { userId: user.id, totalTasks, totalLikelihood, monthlyTarget };
         });
         
         const grandTotalTasks = userTotals.reduce((sum, t) => sum + t.totalTasks, 0);
@@ -354,50 +355,39 @@ export function TeamPerformanceGraph({
     // Default empty state
     return { printableReportData: [], totalTasksDone: 0, totalLikelyCustomers: 0, reportTitle: 'Performance Report', teamReportData: null };
 
-  }, [allTasks, selectedDateRange, specificUserId, selectedTeam, userMap]);
+  }, [allTasks, selectedDateRange, specificUserId, selectedTeam, userMap, globalSettings]);
 
   const handleExport = () => {
     if (!teamReportData) {
       toast({ title: "Export Not Available", description: "Please select a specific team to export data.", variant: "destructive" });
       return;
     }
-
+  
     const { users, data, totals } = teamReportData;
-
+  
     // Create Headers
     const headers = ["Date"];
     users.forEach(user => {
-      const firstName = user.name.split(' ')[0]; // Get first name
-      headers.push(`${firstName} (Tasks)`, `${firstName} (Likely)`);
+      const userMonthlyTarget = totals.find(t => t.userId === user.id)?.monthlyTarget || 0;
+      headers.push(`${user.name.split(' ')[0]} (Target: ${userMonthlyTarget})`);
     });
-
+  
     // Create Rows
     const rows = data.map(row => {
-      const rowData: Record<string, any> = { 'Date': format(parseISO(row.date), 'd MMM, yyyy') };
+      const rowData: Record<string, any> = { 'Date': format(parseISO(row.date), 'd-MMM-yy') };
       users.forEach(user => {
-        const firstName = user.name.split(' ')[0];
+        const userMonthlyTarget = totals.find(t => t.userId === user.id)?.monthlyTarget || 0;
         const userTasks = row[user.id] || { tasks: 0, likelihood: 0 };
-        rowData[`${firstName} (Tasks)`] = userTasks.tasks;
-        rowData[`${firstName} (Likely)`] = userTasks.likelihood;
+        rowData[`${user.name.split(' ')[0]} (Target: ${userMonthlyTarget})`] = `tasks: ${userTasks.tasks} / Likely: ${userTasks.likelihood}`;
       });
       return rowData;
     });
-
-    // Add Totals Row
-    const totalsRow: Record<string, any> = { 'Date': 'Total' };
-    users.forEach(user => {
-      const firstName = user.name.split(' ')[0];
-      const userTotal = totals.find(t => t.userId === user.id) || { totalTasks: 0, totalLikelihood: 0 };
-      totalsRow[`${firstName} (Tasks)`] = userTotal.totalTasks;
-      totalsRow[`${firstName} (Likely)`] = userTotal.totalLikelihood;
-    });
-    rows.push(totalsRow);
-
+  
     const csv = Papa.unparse({
       fields: headers,
       data: rows,
     });
-
+  
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -694,7 +684,7 @@ export function TeamPerformanceGraph({
                                     <TableCell className="text-center">
                                         {row[user.id]?.tasks || 0}
                                     </TableCell>
-                                    <TableCell className="text-center border-r">
+                                     <TableCell className="text-center border-r">
                                         {row[user.id]?.likelihood || 0}
                                     </TableCell>
                                 </React.Fragment>
@@ -918,3 +908,4 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
