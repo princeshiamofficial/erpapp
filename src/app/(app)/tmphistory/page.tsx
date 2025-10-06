@@ -155,13 +155,13 @@ const TeamPerformanceReport = () => {
                     <TableHeader>
                         <TableRow>
                             <TableHead rowSpan={2} className="align-bottom py-1">Date</TableHead>
-                            {users.map(user => <TableHead key={user.id} colSpan={2} className="text-center py-1">{user.name.split(' ')[0]}</TableHead>)}
+                            {users.map(user => <TableHead key={user.id} colSpan={2} className="text-center text-white font-bold py-1">{user.name.split(' ')[0]}</TableHead>)}
                         </TableRow>
                         <TableRow>
                             {users.map(user => (
                                 <React.Fragment key={user.id}>
-                                    <TableHead className="text-center text-xs font-medium py-1">Tasks</TableHead>
-                                    <TableHead className="text-center text-xs font-medium border-r py-1">Likely</TableHead>
+                                    <TableHead className="text-center text-xs font-medium text-white py-1">Tasks</TableHead>
+                                    <TableHead className="text-center text-xs font-medium border-r text-white py-1">Likely</TableHead>
                                 </React.Fragment>
                             ))}
                         </TableRow>
@@ -264,6 +264,7 @@ const TeamPerformanceReport = () => {
 };
 
 export default TeamPerformanceReport;
+
 
 
 
