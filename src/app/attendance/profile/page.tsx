@@ -321,10 +321,13 @@ export default function ProfilePage() {
           </Button>
         </div>
 
+        {/* Task Submission for LR */}
         {currentUser.role === 'LR' && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary" />Daily Task Submission</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-primary" />Daily Task Submission
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {isLrTaskSubmitted ? (
@@ -348,7 +351,7 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
         )}
-
+        
         {/* Attendance Summary Section */}
         <div className="space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -391,11 +394,13 @@ export default function ProfilePage() {
         {/* Account Section */}
         <Card className="bg-card shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg">Account</CardTitle>
+            <CardTitle className="text-lg">More Options</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
             <ProfileLink href="/attendance/history" icon={CalendarClock} label="Leave History" />
-            <ProfileLink href="#" icon={Bell} label="Notifications" />
+            {isAdminOrLr && (
+              <ProfileLink href="/projects" icon={Briefcase} label="Projects" />
+            )}
           </CardContent>
         </Card>
         
@@ -403,3 +408,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
