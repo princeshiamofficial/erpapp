@@ -33,6 +33,7 @@ import { getTaskEntries } from '@/lib/team-performance-service';
 import { addTaskEntryAction } from '@/app/(app)/dashboard/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   ChartContainer,
   ChartTooltip,
@@ -117,7 +118,7 @@ export default function ProfilePage() {
   const [locationAddress, setLocationAddress] = useState('Loading location...');
   
   const [monthlyRecords, setMonthlyRecords] = useState<AttendanceRecord[]>([]);
-  const [allTasks, setAllTasks] = useState<TaskEntry[]>(([]);
+  const [allTasks, setAllTasks] = useState<TaskEntry[]>([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
   
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -390,13 +391,11 @@ export default function ProfilePage() {
         {/* Account Section */}
         <Card className="bg-card shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg">More Options</CardTitle>
+            <CardTitle className="text-lg">Account</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
             <ProfileLink href="/attendance/history" icon={CalendarClock} label="Leave History" />
-            {isAdminOrLr && (
-              <ProfileLink href="/projects" icon={Briefcase} label="Projects" />
-            )}
+            <ProfileLink href="#" icon={Bell} label="Notifications" />
           </CardContent>
         </Card>
         
@@ -404,5 +403,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-    
