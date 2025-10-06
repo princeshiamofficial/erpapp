@@ -19,7 +19,7 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings } from 'lucide-react';
 import type { Employee, User, SalaryIncrement, Payslip, AttendanceRecord } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
@@ -55,6 +55,7 @@ import { getAttendanceForMonth } from '@/lib/attendance-service';
 import { saveWeekendSettingsAction } from '@/app/(app)/hrm/attendance/actions';
 import { DateRangePicker2 } from '@/components/dashboard/date-range-picker2';
 import type { DateRange } from "react-day-picker";
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
@@ -71,6 +72,9 @@ const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
+
+
+const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 
 export default function PayrollPage() {
@@ -390,6 +394,29 @@ export default function PayrollPage() {
   const toggleFundVisibility = (employeeId: string) => {
     setVisibleFunds(prev => ({ ...prev, [employeeId]: !prev[employeeId] }));
   };
+  
+    const handleWeekendChange = (day: string, checked: boolean | 'indeterminate') => {
+        setWeekendDays(prev => 
+            checked ? [...prev, day] : prev.filter(d => d !== day)
+        );
+    };
+
+    const handleSaveWeekends = async () => {
+        const result = await saveWeekendSettingsAction(weekendDays);
+        if (result.success) {
+            toast({
+                title: "Settings Saved",
+                description: "Weekend days have been updated.",
+            });
+        } else {
+             toast({
+                title: "Error",
+                description: result.error || "Failed to save weekend settings.",
+                variant: "destructive",
+            });
+        }
+    };
+
 
   const employeeListContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
@@ -495,258 +522,132 @@ export default function PayrollPage() {
     </Card>
   );
 
-  const employeePerformanceContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-      <CardHeader className="p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl font-bold text-gray-800">Employee Performance</CardTitle>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-grow sm:flex-grow-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
-            </div>
-            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-6 pt-0">
-        <div className="space-y-3">
-            <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
-                <span>Employee</span>
-                <span>Designation</span>
-                <span className="text-center">Completed Orders</span>
-                <span className="text-center">Efficiency Score</span>
-                <span className="text-center">Revenue Generated</span>
-                <span className="text-center">Rating</span>
-            </div>
-            {isLoading ? (
-                Array.from({ length: 4 }).map((_, index) => (
-                    <div key={index} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
-                        <div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-4 w-24" /></div>
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-4 w-12 mx-auto" />
-                        <div className="w-full"><Skeleton className="h-2 w-full rounded-full" /></div>
-                        <Skeleton className="h-4 w-16 mx-auto" />
-                        <Skeleton className="h-4 w-12 mx-auto" />
-                    </div>
-                ))
-            ) : paginatedEmployees.length > 0 ? (
-                paginatedEmployees.map((employee) => (
-                    <div key={employee.id} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
-                        <div className="flex items-center gap-3">
-                            {/* Avatar placeholder */}
-                            <div className="h-10 w-10 rounded-full bg-gray-200 flex-shrink-0"></div>
-                            <span className="font-medium text-gray-800">{employee.name}</span>
-                        </div>
-                        <span>{employee.designation}</span>
-                        <span className="text-center font-medium">120</span> {/* Placeholder Data */}
-                        <div className="flex items-center gap-2">
-                           <Progress value={85} className="h-2" indicatorClassName="bg-green-500"/>
-                           <span className="text-xs font-semibold">85%</span>
-                        </div>
-                        <span className="text-center font-medium">{formatCurrency(250000)}</span> {/* Placeholder Data */}
-                        <div className="flex justify-center items-center gap-1 text-yellow-500">
-                          <Star className="h-4 w-4 fill-current"/>
-                          <span className="font-bold text-sm">4.8</span>
-                        </div>
-                    </div>
-                ))
-            ) : (
-                <div className="text-center py-16 text-gray-500">No performance data available.</div>
-            )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-  
-  const attendeesReportContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-      <CardHeader className="p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl font-bold text-gray-800">Attendees Report</CardTitle>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-grow sm:flex-grow-0">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Filter by date..."
-                className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
-                type="date"
-                value={attendanceDateFilter}
-                onChange={(e) => setAttendanceDateFilter(e.target.value)}
-              />
-            </div>
-            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-6 pt-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Employee</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>In Time</TableHead>
-                <TableHead>Out Time</TableHead>
-                <TableHead>Hours Worked</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                [...Array(5)].map((_, index) => (
-                  <TableRow key={index}>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-20" /></div></TableCell>
-                    <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center h-48 text-gray-500">
-                    <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                    No attendance data recorded for the selected period.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   const salarySheetContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-      <CardHeader className="p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl font-bold text-gray-800">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
-           <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
-            <div className="relative flex-grow sm:flex-grow-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
-            </div>
-            <Select value={selectedDate.getMonth().toString()} onValueChange={handleMonthChange}>
-              <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-full border-gray-200 bg-white">
-                  <SelectValue placeholder="Select Month" />
-              </SelectTrigger>
-              <SelectContent>
-                  {months.map(month => (
-                      <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-             <Select value={selectedDate.getFullYear().toString()} onValueChange={handleYearChange}>
-              <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-full border-gray-200 bg-white">
-                  <SelectValue placeholder="Select Year" />
-              </SelectTrigger>
-              <SelectContent>
-                  {availableYears.map(year => (
-                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+        <CardHeader className="p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <CardTitle className="text-xl font-bold text-gray-800">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
+              <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+                  <div className="relative flex-grow sm:flex-grow-0">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+                  </div>
+                  <Select value={selectedDate.getMonth().toString()} onValueChange={handleMonthChange}>
+                      <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-full border-gray-200 bg-white">
+                          <SelectValue placeholder="Select Month" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {months.map(month => (
+                              <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+                  <Select value={selectedDate.getFullYear().toString()} onValueChange={handleYearChange}>
+                      <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-full border-gray-200 bg-white">
+                          <SelectValue placeholder="Select Year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                          {availableYears.map(year => (
+                              <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                          ))}
+                      </SelectContent>
+                  </Select>
+              </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-6 pt-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-gray-800">
-              <TableRow className="hover:bg-gray-800">
-                  <TableHead className="text-white">#</TableHead>
-                  <TableHead className="text-white">Employee Name</TableHead>
-                  <TableHead className="text-white">Designation</TableHead>
-                  <TableHead className="text-white">Present</TableHead>
-                  <TableHead className="text-white">Absent</TableHead>
-                  <TableHead className="text-white">Late</TableHead>
-                  <TableHead className="text-white">Provident Fund</TableHead>
-                  <TableHead className="text-white">Fine</TableHead>
-                  <TableHead className="text-white">Incentive</TableHead>
-                  <TableHead className="text-white">Payable Amount</TableHead>
-                  <TableHead className="text-white">Status</TableHead>
-                  <TableHead className="text-center text-white">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                [...Array(5)].map((_, index) => (
-                  <TableRow key={index}>
-                    <TableCell colSpan={12}><Skeleton className="h-8 w-full" /></TableCell>
-                  </TableRow>
-                ))
-              ) : salarySheetCalculatedData.length > 0 ? (
-                salarySheetCalculatedData.map((data, index) => (
-                  <TableRow key={data.id} className="odd:bg-white even:bg-gray-50">
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell className="font-medium">{data.name}</TableCell>
-                    <TableCell>{data.designation}</TableCell>
-                    <TableCell>{data.presentDays}</TableCell>
-                    <TableCell>{data.absentDays}</TableCell>
-                    <TableCell>{data.lateDays}</TableCell>
-                    <TableCell>{formatCurrency(data.providentFund)}</TableCell>
-                    <TableCell>{formatCurrency(data.fine)}</TableCell>
-                    <TableCell>{formatCurrency(data.incentive)}</TableCell>
-                    <TableCell className="font-semibold">{formatCurrency(data.payableAmount)}</TableCell>
-                    <TableCell>
-                      <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button variant="outline" size="sm" className="h-8" onClick={() => setPayslipToEdit(data)}>
-                        Edit
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={12} className="h-48 text-center text-gray-500">
-                    No salary sheet data available for the selected period.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-             <TableFooter>
-                <TableRow>
-                    <TableCell colSpan={9} className="text-right font-bold">Total</TableCell>
-                    <TableCell className="font-bold text-right">{formatCurrency(totalPayableAmount)}</TableCell>
-                    <TableCell colSpan={2}></TableCell>
-                </TableRow>
-                 <TableRow>
-                    <TableCell colSpan={9} className="text-right font-bold text-green-600">Total Paid</TableCell>
-                    <TableCell className="font-bold text-right text-green-600">{formatCurrency(totalPaid)}</TableCell>
-                    <TableCell colSpan={2}></TableCell>
-                </TableRow>
-                 <TableRow>
-                    <TableCell colSpan={9} className="text-right font-bold text-red-600">Total Unpaid</TableCell>
-                    <TableCell className="font-bold text-right text-red-600">{formatCurrency(totalUnpaid)}</TableCell>
-                    <TableCell colSpan={2}></TableCell>
-                </TableRow>
-                  <TableRow>
-                    <TableCell colSpan={9} className="text-right font-bold text-blue-600">Total Provident Fund</TableCell>
-                    <TableCell className="font-bold text-right text-blue-600">{formatCurrency(totalProvidentFund)}</TableCell>
-                    <TableCell colSpan={2}></TableCell>
-                </TableRow>
-            </TableFooter>
-          </Table>
-        </div>
-      </CardContent>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+                <TableHeader className="bg-gray-800">
+                    <TableRow className="hover:bg-gray-800">
+                        <TableHead className="text-white">#</TableHead>
+                        <TableHead className="text-white">Employee Name</TableHead>
+                        <TableHead className="text-white">Designation</TableHead>
+                        <TableHead className="text-white">Total Working Day</TableHead>
+                        <TableHead className="text-white">Total Present Days</TableHead>
+                        <TableHead className="text-white">Total Absent Days</TableHead>
+                        <TableHead className="text-white">Ontime CheckIN Days</TableHead>
+                        <TableHead className="text-white">Late CheckIN Days</TableHead>
+                        <TableHead className="text-white">Ontime Checkout Days</TableHead>
+                        <TableHead className="text-white">Early Checkout Days</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                      [...Array(5)].map((_, i) => (
+                          <TableRow key={`skel-report-${i}`}>
+                              <TableCell colSpan={10}><Skeleton className="h-8 w-full"/></TableCell>
+                          </TableRow>
+                      ))
+                  ) : salarySheetCalculatedData.length > 0 ? (
+                      (salarySheetCalculatedData as any[]).map((data, index) => (
+                          <TableRow key={data.id} className="odd:bg-white even:bg-gray-50">
+                              <TableCell>{index + 1}</TableCell>
+                              <TableCell className="font-medium">{data.name}</TableCell>
+                              <TableCell>{data.designation}</TableCell>
+                              <TableCell>{data.totalWorkingDay}</TableCell>
+                              <TableCell>{data.presentDays}</TableCell>
+                              <TableCell>{data.absentDays}</TableCell>
+                              <TableCell>{data.ontimeCheckInDays}</TableCell>
+                              <TableCell>{data.lateCheckInDays}</TableCell>
+                              <TableCell>{data.ontimeCheckoutDays}</TableCell>
+                              <TableCell>{data.earlyCheckoutDays}</TableCell>
+                          </TableRow>
+                      ))
+                  ) : (
+                       <TableRow>
+                          <TableCell colSpan={10} className="text-center h-48 text-gray-500">
+                              <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                              No attendance summary data available for this month.
+                          </TableCell>
+                      </TableRow>
+                  )}
+                </TableBody>
+            </Table>
+          </div>
+        </CardContent>
     </Card>
   );
   
+  const settingsContent = (
+      <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+        <CardHeader className="p-6 border-b">
+            <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><Settings className="mr-2 h-5 w-5" />Settings</CardTitle>
+             <CardDescription>Configure attendance and payroll settings.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-6">
+            <div className="space-y-4">
+                <div>
+                    <h3 className="font-semibold mb-2">Weekend Days</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        {WEEK_DAYS.map(day => (
+                            <div key={day} className="flex items-center space-x-2">
+                                <Checkbox
+                                    id={`weekend-${day}`}
+                                    checked={weekendDays.includes(day)}
+                                    onCheckedChange={(checked) => handleWeekendChange(day, checked)}
+                                />
+                                <Label htmlFor={`weekend-${day}`} className="text-sm font-normal">
+                                    {day}
+                                </Label>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                 <Button onClick={handleSaveWeekends}>Save Weekend Settings</Button>
+            </div>
+        </CardContent>
+      </Card>
+  );
+
   const renderActiveTab = () => {
     switch (activeTab) {
       case 'salary_sheet':
         return salarySheetContent;
       case 'employee_list':
         return employeeListContent;
-      case 'employee_performance':
-        return employeePerformanceContent;
-      case 'attendees_report':
-        return attendeesReportContent;
+      case 'settings':
+        return settingsContent;
       default:
         return employeeListContent;
     }
@@ -766,8 +667,7 @@ export default function PayrollPage() {
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
           <TabsTrigger value="employee_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee List</TabsTrigger>
-          <TabsTrigger value="employee_performance" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee Performance</TabsTrigger>
-          <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
+          <TabsTrigger value="settings" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Settings</TabsTrigger>
         </TabsList>
         <div className="mt-6">
             {renderActiveTab()}
@@ -781,7 +681,7 @@ export default function PayrollPage() {
           onOpenChange={(open) => !open && setPayslipToEdit(null)}
           employee={payslipToEdit}
           onSave={() => {
-            fetchData(); // Refetch data after saving
+            fetchData();
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
