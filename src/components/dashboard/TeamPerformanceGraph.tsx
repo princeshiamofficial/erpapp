@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -261,10 +262,10 @@ export function TeamPerformanceGraph({
     }
     return currentUser.role === 'CRM';
   }, [currentUser, isAdminView, selectedTeam, specificUserId, userMap]);
-
-  const { printableReportData, totalTasksDone, totalLikelyCustomers, reportTitle } = useMemo(() => {
+  
+  const { printableReportData, totalTasksDone, totalLikelyCustomers, reportTitle, teamReportData } = useMemo(() => {
     if (!allTasks || !selectedDateRange?.from) {
-      return { printableReportData: [], totalTasksDone: 0, totalLikelyCustomers: 0, reportTitle: 'Performance Report' };
+      return { printableReportData: [], totalTasksDone: 0, totalLikelyCustomers: 0, reportTitle: 'Performance Report', teamReportData: null };
     }
   
     const startDate = startOfDay(selectedDateRange.from);
@@ -294,41 +295,55 @@ export function TeamPerformanceGraph({
         printableReportData: singleUserData, 
         totalTasksDone: tasksTotal, 
         totalLikelyCustomers: likelyTotal,
-        reportTitle: `Daily Performance Report for ${userMap.get(specificUserId)?.name || 'User'}`
+        reportTitle: `Daily Performance Report for ${userMap.get(specificUserId)?.name || 'User'}`,
+        teamReportData: null,
       };
     }
     
-    // Team Report
+    // Team Report (Pivoted)
     if (selectedTeam !== 'all') {
-      filteredTasks = filteredTasks.filter(task => task.role === selectedTeam);
-      
-      const userTotals = filteredTasks.reduce((acc, task) => {
-        if (!acc[task.userId]) {
-          acc[task.userId] = { 
-            userName: task.userName, 
-            taskCount: 0, 
-            likelihood: 0 
-          };
-        }
-        acc[task.userId].taskCount += task.taskCount;
-        acc[task.userId].likelihood += task.likelihood || 0;
-        return acc;
-      }, {} as Record<string, { userName: string; taskCount: number; likelihood: number }>);
-      
-      const teamData = Object.values(userTotals).sort((a,b) => b.taskCount - a.taskCount);
-      const tasksTotal = teamData.reduce((sum, user) => sum + user.taskCount, 0);
-      const likelyTotal = teamData.reduce((sum, user) => sum + user.likelihood, 0);
+        filteredTasks = filteredTasks.filter(task => task.role === selectedTeam);
+        
+        const teamUsers = Array.from(new Set(filteredTasks.map(t => t.userId)))
+            .map(id => userMap.get(id))
+            .filter((u): u is UserType => !!u)
+            .sort((a, b) => a.name.localeCompare(b.name));
 
-      return { 
-        printableReportData: teamData, 
-        totalTasksDone: tasksTotal, 
-        totalLikelyCustomers: likelyTotal,
-        reportTitle: `Team Performance Report: ${selectedTeam}`
-      };
+        const tasksByDate = new Map<string, Record<string, number>>();
+
+        filteredTasks.forEach(task => {
+            const dateStr = format(parseISO(task.date), 'yyyy-MM-dd');
+            if (!tasksByDate.has(dateStr)) {
+                tasksByDate.set(dateStr, {});
+            }
+            const dayEntry = tasksByDate.get(dateStr)!;
+            dayEntry[task.userId] = (dayEntry[task.userId] || 0) + task.taskCount;
+        });
+
+        const pivotedData = Array.from(tasksByDate.entries())
+            .map(([date, userTasks]) => ({ date, ...userTasks }))
+            .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        
+        const userTotals = teamUsers.map(user => {
+            const total = filteredTasks.filter(t => t.userId === user.id).reduce((sum, t) => sum + t.taskCount, 0);
+            return { userId: user.id, total };
+        });
+
+        return {
+            printableReportData: [],
+            totalTasksDone: filteredTasks.reduce((sum, t) => sum + t.taskCount, 0),
+            totalLikelyCustomers: 0,
+            reportTitle: `Team Performance Report: ${selectedTeam}`,
+            teamReportData: {
+                users: teamUsers,
+                data: pivotedData,
+                totals: userTotals,
+            }
+        };
     }
 
     // Default empty state
-    return { printableReportData: [], totalTasksDone: 0, totalLikelyCustomers: 0, reportTitle: 'Performance Report' };
+    return { printableReportData: [], totalTasksDone: 0, totalLikelyCustomers: 0, reportTitle: 'Performance Report', teamReportData: null };
 
   }, [allTasks, selectedDateRange, specificUserId, selectedTeam, userMap]);
 
@@ -569,38 +584,76 @@ export function TeamPerformanceGraph({
         </div>
         <Table>
             <TableHeader>
-                <TableRow>
-                    <TableHead>{specificUserId !== 'all' ? 'Date' : 'User Name'}</TableHead>
-                    <TableHead className="text-center">Tasks Done</TableHead>
-                    {(showLikelihoodChart || selectedTeam === 'all') && <TableHead className="text-center">Likely Customers</TableHead>}
-                </TableRow>
+                {teamReportData ? (
+                    <TableRow>
+                        <TableHead>Date</TableHead>
+                        {teamReportData.users.map(user => <TableHead key={user.id} className="text-center">{user.name}</TableHead>)}
+                    </TableRow>
+                ) : (
+                    <TableRow>
+                        <TableHead>{specificUserId !== 'all' ? 'Date' : 'User Name'}</TableHead>
+                        <TableHead className="text-center">Tasks Done</TableHead>
+                        {(showLikelihoodChart || selectedTeam === 'all') && <TableHead className="text-center">Likely Customers</TableHead>}
+                    </TableRow>
+                )}
             </TableHeader>
             <TableBody>
-                {printableReportData.map((data, index) => (
-                    <TableRow key={'date' in data ? data.id : data.userName}>
-                        <TableCell className="font-medium">{'date' in data ? format(parseISO(data.date), 'PPP') : data.userName}</TableCell>
-                        <TableCell className="text-center">{'taskCount' in data ? data.taskCount : 0}</TableCell>
-                        {(showLikelihoodChart || selectedTeam === 'all') && (
-                            <TableCell className="text-center">{'likelihood' in data ? data.likelihood || 0 : 'N/A'}</TableCell>
-                        )}
-                    </TableRow>
-                ))}
-                 {printableReportData.length === 0 && (
+                {teamReportData ? (
+                    teamReportData.data.map(row => (
+                        <TableRow key={row.date}>
+                            <TableCell>{format(parseISO(row.date), 'PPP')}</TableCell>
+                            {teamReportData.users.map(user => (
+                                <TableCell key={user.id} className="text-center">
+                                    {row[user.id] || 0}
+                                </TableCell>
+                            ))}
+                        </TableRow>
+                    ))
+                ) : (
+                    printableReportData.map((data, index) => (
+                        <TableRow key={'date' in data ? data.id : data.userName}>
+                            <TableCell className="font-medium">{'date' in data ? format(parseISO(data.date), 'PPP') : data.userName}</TableCell>
+                            <TableCell className="text-center">{'taskCount' in data ? data.taskCount : 0}</TableCell>
+                            {(showLikelihoodChart || selectedTeam === 'all') && (
+                                <TableCell className="text-center">{'likelihood' in data ? data.likelihood || 0 : 'N/A'}</TableCell>
+                            )}
+                        </TableRow>
+                    ))
+                )}
+                 {(printableReportData.length === 0 && !teamReportData) && (
                     <TableRow>
                         <TableCell colSpan={(showLikelihoodChart || selectedTeam === 'all') ? 3 : 2} className="h-24 text-center">
                             No data for this period.
                         </TableCell>
                     </TableRow>
                 )}
+                {teamReportData && teamReportData.data.length === 0 && (
+                    <TableRow>
+                        <TableCell colSpan={teamReportData.users.length + 1} className="h-24 text-center">
+                            No data for this period.
+                        </TableCell>
+                    </TableRow>
+                )}
             </TableBody>
              <TableFooter>
-                <TableRow>
-                    <TableCell className="font-bold">Total</TableCell>
-                    <TableCell className="text-center font-bold">{totalTasksDone}</TableCell>
-                    {(showLikelihoodChart || selectedTeam === 'all') && (
-                        <TableCell className="text-center font-bold">{totalLikelyCustomers}</TableCell>
-                    )}
-                </TableRow>
+                {teamReportData ? (
+                    <TableRow>
+                        <TableCell className="font-bold">Total</TableCell>
+                        {teamReportData.users.map(user => (
+                            <TableCell key={user.id} className="text-center font-bold">
+                                {teamReportData.totals.find(t => t.userId === user.id)?.total || 0}
+                            </TableCell>
+                        ))}
+                    </TableRow>
+                ) : (
+                    <TableRow>
+                        <TableCell className="font-bold">Total</TableCell>
+                        <TableCell className="text-center font-bold">{totalTasksDone}</TableCell>
+                        {(showLikelihoodChart || selectedTeam === 'all') && (
+                            <TableCell className="text-center font-bold">{totalLikelyCustomers}</TableCell>
+                        )}
+                    </TableRow>
+                )}
             </TableFooter>
         </Table>
         <div className="report-footer">
