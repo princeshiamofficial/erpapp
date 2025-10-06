@@ -33,9 +33,10 @@ interface EditPayslipDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDate: Date; // Added prop
+  existingPayslip: Payslip | undefined;
 }
 
-export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, selectedDate }: EditPayslipDialogProps) {
+export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, selectedDate, existingPayslip }: EditPayslipDialogProps) {
   const [present, setPresent] = useState('30');
   const [absent, setAbsent] = useState('0');
   const [late, setLate] = useState('0');
@@ -51,7 +52,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
 
   useEffect(() => {
     if (isOpen) {
-      const payslipData = employee.payslips?.[monthYearId];
+      const payslipData = existingPayslip;
       setPresent(payslipData?.presentDays.toString() || '30');
       setAbsent(payslipData?.absentDays.toString() || '0');
       setLate(payslipData?.lateDays.toString() || '0');
@@ -60,7 +61,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       setPaymentStatus(payslipData?.paymentStatus || 'Unpaid');
       setIsSubmitting(false);
     }
-  }, [isOpen, employee, monthYearId]);
+  }, [isOpen, employee, monthYearId, existingPayslip]);
 
   const providentFund = useMemo(() => {
     return (employee.salary || 0) * 0.07;
@@ -86,7 +87,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     e.preventDefault();
     setIsSubmitting(true);
     
-    const payslipData: Omit<Payslip, 'id' | 'updatedAt'> = {
+    const payslipData: Omit<Payslip, 'id' | 'updatedAt' | 'employeeId'> = {
         presentDays: parseInt(present, 10),
         absentDays: parseInt(absent, 10),
         lateDays: parseInt(late, 10),
@@ -96,7 +97,9 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
         paymentStatus: paymentStatus,
     };
 
-    const result = await updatePayslipAction(employee.id, monthYearId, payslipData);
+    const docId = `${monthYearId}-${employee.id}`;
+
+    const result = await updatePayslipAction(docId, payslipData);
     setIsSubmitting(false);
 
     if (result.success) {

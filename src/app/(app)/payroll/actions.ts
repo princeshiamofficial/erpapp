@@ -1,5 +1,4 @@
 
-
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -8,11 +7,12 @@ import {
   addEmployee as addEmployeeService,
   updateEmployee as updateEmployeeService,
   deleteEmployee as deleteEmployeeService,
-  updatePayslip as updatePayslipService,
   getEmployeeById,
   deleteSalaryIncrement as deleteSalaryIncrementService,
   addLeaveRecord as addLeaveRecordService, // Import new service
   deleteLeaveRecord as deleteLeaveRecordService,
+  getPayslipForMonth,
+  updatePayslipInDb,
 } from "@/lib/employee-service";
 
 export async function addEmployeeAction(
@@ -73,12 +73,11 @@ export async function deleteEmployeeAction(employeeId: string): Promise<{ succes
 }
 
 export async function updatePayslipAction(
-  employeeId: string,
   payslipId: string, // e.g., '2024-07'
-  payslipData: Omit<Payslip, 'id' | 'updatedAt'>
+  payslipData: Omit<Payslip, 'id' | 'updatedAt' | 'employeeId'>
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const success = await updatePayslipService(employeeId, payslipId, payslipData);
+    const success = await updatePayslipInDb(payslipId, payslipData);
     if (success) {
       revalidatePath("/(app)/payroll");
       return { success: true };
@@ -89,6 +88,17 @@ export async function updatePayslipAction(
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }
+
+export async function getSalarySheetForMonth(month: string): Promise<Payslip[]> {
+    try {
+        const payslips = await getPayslipForMonth(month);
+        return payslips;
+    } catch (error) {
+        console.error("Error getting salary sheet for month:", error);
+        return [];
+    }
+}
+
 
 export async function incrementEmployeeSalaryAction(
   employeeId: string,
@@ -166,6 +176,4 @@ export async function deleteLeaveRecordAction(employeeId: string, leaveRecordId:
     return { success: false, error: "Failed to delete leave record from database." };
   } catch (error) {
     console.error("Error in deleteLeaveRecordAction:", error);
-    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
-  }
-}
+    return { success: false

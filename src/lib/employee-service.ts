@@ -6,6 +6,9 @@ import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 import { v4 as uuidv4 } from 'uuid';
 
 const EMPLOYEES_COLLECTION = 'employees';
+const SALARY_SHEET_COLLECTION_PREFIX = 'salarySheet-';
+
+const getSalarySheetCollectionName = (month: string) => `${SALARY_SHEET_COLLECTION_PREFIX}${month}`;
 
 const defaultEmployeesData: Array<Omit<Employee, 'id' | 'employeeId' | 'userId'>> = [
   { name: 'John Doe', email: 'john.doe@example.com', mobileNo: '01712345678', dob: subYears(new Date(), 30).toISOString(), designation: 'Software Engineer', joiningDate: subYears(new Date(), 2).toISOString(), status: 'Active', salary: 80000, yearlyLeave: 12, leaveTaken: 0, leaveHistory: [] },
@@ -94,7 +97,6 @@ export const addEmployee = async (employeeData: Omit<Employee, 'id' | 'employeeI
         const newEmployeeData = { 
             ...employeeData, 
             employeeId, 
-            payslips: {}, 
             salaryHistory: [],
             yearlyLeave: employeeData.yearlyLeave || 12,
             leaveTaken: employeeData.leaveTaken || 0,
@@ -175,38 +177,58 @@ export const deleteEmployee = async (employeeId: string): Promise<boolean> => {
     }
 };
 
-// New function to update a payslip record within an employee's document
-export const updatePayslip = async (employeeId: string, payslipId: string, payslipData: Omit<Payslip, 'id' | 'updatedAt'>): Promise<boolean> => {
-  try {
-    const existingEmployee = await getEmployeeById(employeeId);
-    if (!existingEmployee) {
-        throw new Error("Employee not found");
+export const getPayslipForMonth = async (month: string): Promise<Payslip[]> => {
+    const collectionName = getSalarySheetCollectionName(month);
+    try {
+        await ensureCollectionExistsV3(collectionName);
+        const response = await fetchFromApiV3(`collections/${collectionName}/documents?limit=9999`);
+        if (response && Array.isArray(response.documents)) {
+            return response.documents.map((doc: { id: string, data: any }) => ({
+                id: doc.id,
+                ...doc.data
+            } as Payslip));
+        }
+        return [];
+    } catch (error) {
+        console.error(`Error fetching payslips for ${month} via API v3:`, error);
+        return [];
     }
-
-    const updatedPayslip: Payslip = {
-      ...payslipData,
-      id: payslipId,
-      updatedAt: new Date().toISOString(),
-    };
-
-    const updatedPayslips = {
-      ...(existingEmployee.payslips || {}),
-      [payslipId]: updatedPayslip,
-    };
-    
-    const finalData = { ...existingEmployee, payslips: updatedPayslips };
-    delete (finalData as any).id;
-
-    await fetchFromApiV3(`collections/${EMPLOYEES_COLLECTION}/documents/${employeeId}`, {
-        method: 'PUT',
-        body: JSON.stringify({ data: finalData })
-    });
-    return true;
-  } catch (error) {
-    console.error(`Error updating payslip for employee ${employeeId} via API v3:`, error);
-    return false;
-  }
 };
+
+// New function to update a payslip record in its own collection
+export const updatePayslipInDb = async (payslipId: string, payslipData: Omit<Payslip, 'id' | 'updatedAt' | 'employeeId'>): Promise<boolean> => {
+    const month = payslipId.substring(0, 7); // Extract YYYY-MM from payslipId
+    const collectionName = getSalarySheetCollectionName(month);
+    try {
+        const existingPayslip = await fetchFromApiV3(`collections/${collectionName}/documents/${payslipId}`).catch(() => null);
+
+        const dataToSave = {
+            ...(existingPayslip?.data || {}),
+            ...payslipData,
+            employeeId: existingPayslip?.data?.employeeId, // Preserve employeeId
+            updatedAt: new Date().toISOString(),
+        };
+        
+        const payload = { id: payslipId, data: dataToSave };
+
+        if (existingPayslip) {
+            await fetchFromApiV3(`collections/${collectionName}/documents/${payslipId}`, {
+                method: 'PUT',
+                body: JSON.stringify({ data: dataToSave })
+            });
+        } else {
+             await fetchFromApiV3(`collections/${collectionName}/documents`, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+        }
+        return true;
+    } catch (error) {
+        console.error(`Error updating payslip ${payslipId} in ${collectionName} via API v3:`, error);
+        return false;
+    }
+};
+
 
 export const deleteSalaryIncrement = async (employeeId: string, incrementDate: string): Promise<boolean> => {
     try {
@@ -229,7 +251,7 @@ export const deleteSalaryIncrement = async (employeeId: string, incrementDate: s
     }
 };
 
-export const addLeaveRecord = async (employeeId: string, leaveRecord: Omit<LeaveRecord, 'id'>, newTotalLeaveTaken?: number): Promise<boolean> => {
+export const addLeaveRecord = async (employeeId: string, leaveData: Omit<LeaveRecord, 'id'>, newTotalLeaveTaken?: number): Promise<boolean> => {
     try {
         const employee = await getEmployeeById(employeeId);
         if (!employee) {
@@ -237,12 +259,12 @@ export const addLeaveRecord = async (employeeId: string, leaveRecord: Omit<Leave
         }
 
         const newLeaveRecord: LeaveRecord = {
-            ...leaveRecord,
+            ...leaveData,
             id: uuidv4(),
         };
 
         const updatedHistory = [...(employee.leaveHistory || []), newLeaveRecord];
-        const newLeaveTaken = newTotalLeaveTaken !== undefined ? newTotalLeaveTaken : (employee.leaveTaken || 0) + leaveRecord.days;
+        const newLeaveTaken = newTotalLeaveTaken !== undefined ? newTotalLeaveTaken : (employee.leaveTaken || 0) + leaveData.days;
 
         const updates = {
             leaveHistory: updatedHistory,

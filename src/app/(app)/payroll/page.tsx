@@ -19,13 +19,13 @@ import {
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark } from 'lucide-react';
-import type { Employee, User, SalaryIncrement } from '@/types';
+import type { Employee, User, SalaryIncrement, Payslip, AttendanceRecord } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, differenceInMonths } from 'date-fns';
-import { deleteEmployeeAction, deleteSalaryIncrementAction } from './actions';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, startOfDay, endOfDay, differenceInDays, isWithinInterval } from 'date-fns';
+import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from './actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 import {
@@ -49,6 +49,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getWeekendSettings } from '@/lib/weekend-service';
+import { getAttendanceForMonth } from '@/lib/attendance-service';
 
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
@@ -77,7 +79,6 @@ export default function PayrollPage() {
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isPerformanceTabVisible, setIsPerformanceTabVisible] = useState(false);
 
@@ -95,32 +96,49 @@ export default function PayrollPage() {
   const [visibleFunds, setVisibleFunds] = useState<Record<string, boolean>>({});
 
 
-  const [selectedDate, setSelectedDate] = useState(subMonths(new Date(), 1));
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
-  const fetchData = useCallback(async () => {
+  const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
+  const [weekendDays, setWeekendDays] = useState<string[]>([]);
+  const [salarySheetData, setSalarySheetData] = useState<Payslip[]>([]);
+
+  const fetchData = useCallback(async (date: Date) => {
     setIsLoading(true);
     try {
-      const [fetchedEmployees, fetchedUsers] = await Promise.all([
+      const monthStr = format(date, 'yyyy-MM');
+      const [
+        fetchedEmployees, 
+        fetchedUsers,
+        fetchedAttendance,
+        fetchedWeekendSettings,
+        fetchedSalarySheet,
+      ] = await Promise.all([
         getEmployees(),
-        getUsers()
+        getUsers(),
+        getAttendanceForMonth(date),
+        getWeekendSettings(),
+        getSalarySheetForMonth(monthStr)
       ]);
       setEmployees(fetchedEmployees);
       setAllUsers(fetchedUsers);
+      setAttendanceData(fetchedAttendance);
+      setWeekendDays(fetchedWeekendSettings.days);
+      setSalarySheetData(fetchedSalarySheet);
     } catch (error) {
-      console.error("Failed to fetch employees or users:", error);
+      console.error("Failed to fetch page data:", error);
       toast({ title: "Error", description: "Could not load page data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   }, [toast]);
-
+  
   useEffect(() => {
-     if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) {
-      fetchData();
+    if (currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN')) {
+      fetchData(selectedDate);
     } else if (currentUser) {
       router.replace('/dashboard');
     }
-  }, [currentUser, router, fetchData]);
+  }, [currentUser, router, fetchData, selectedDate]);
 
   const filteredEmployees = useMemo(() => {
     let results = employees;
@@ -136,14 +154,13 @@ export default function PayrollPage() {
           }
           
           if (employee.status === 'Inactive') {
-            const paidSlips = Object.entries(employee.payslips || {})
-              .filter(([_, payslip]) => payslip.paymentStatus === 'Paid');
+            const paidSlips = salarySheetData.filter(p => p.employeeId === employee.id && p.paymentStatus === 'Paid');
 
             if (paidSlips.length === 0) {
               return !isAfter(startOfMonth(joiningDate), selectedMonthStart);
             }
             
-            const lastPaidMonthStr = paidSlips.sort(([a], [b]) => b.localeCompare(a))[0][0];
+            const lastPaidMonthStr = paidSlips.sort((a, b) => b.id.localeCompare(a.id))[0].id;
             const lastPaidMonth = parse(lastPaidMonthStr, 'yyyy-MM', new Date());
 
             return !isAfter(selectedMonthStart, lastPaidMonth);
@@ -169,7 +186,7 @@ export default function PayrollPage() {
       );
     }
     return results;
-  }, [employees, searchTerm, activeTab, selectedDate]);
+  }, [employees, searchTerm, activeTab, selectedDate, salarySheetData]);
 
   const allIncrementHistory = useMemo(() => {
     return employees.flatMap(employee => 
@@ -199,7 +216,7 @@ export default function PayrollPage() {
     const result = await deleteEmployeeAction(employeeToDelete.id);
     if (result.success) {
       toast({ title: "Employee Deleted" });
-      fetchData();
+      fetchData(selectedDate);
     } else {
       toast({ title: "Error", description: result.error, variant: "destructive" });
     }
@@ -213,7 +230,7 @@ export default function PayrollPage() {
     const result = await deleteSalaryIncrementAction(incrementToDelete.employeeId, incrementToDelete.increment.date);
     if (result.success) {
       toast({ title: "Increment Reverted", description: "The salary increment has been deleted." });
-      fetchData();
+      fetchData(selectedDate);
     } else {
       toast({ title: "Error", description: result.error, variant: "destructive" });
     }
@@ -261,49 +278,82 @@ export default function PayrollPage() {
     return allUsers.filter(u => !employeeUserIds.has(u.id));
   }, [employees, allUsers]);
   
-  const { totalPaid, totalUnpaid, totalPayableAmount } = useMemo(() => {
-    const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
-    const totals = paginatedEmployees.reduce((acc, employee) => {
-      const payslip = employee.payslips?.[monthYearId];
-      let payable = 0;
-      if (payslip) {
-          payable = payslip.payableAmount;
-      } else {
-          const daysInMonth = getDaysInMonth(selectedDate);
-          
-          const relevantHistory = (employee.salaryHistory || [])
-              .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
-              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
+  const salarySheetCalculatedData = useMemo(() => {
+    const monthYearId = format(selectedDate, 'yyyy-MM');
+    const startDate = startOfMonth(selectedDate);
+    const endDate = endOfMonth(selectedDate);
 
-          const perDaySalary = effectiveSalary / (daysInMonth > 0 ? daysInMonth : 30);
-          const presentDays = 30;
-          const incentive = 0;
-          const fine = 0;
-          const lateDays = 0;
-          const providentFund = effectiveSalary * 0.07;
-          const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
-          payable = (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
-      }
+    const today = new Date();
+    const isCurrentMonth = isSameMonth(selectedDate, today);
+    const loopEndDate = isCurrentMonth ? today.getDate() : getDaysInMonth(selectedDate);
 
-      if (payslip?.paymentStatus === 'Paid') {
-          acc.totalPaid += payable;
-      } else {
-          acc.totalUnpaid += payable;
-      }
-
-      return acc;
-    }, { totalPaid: 0, totalUnpaid: 0 });
+    let totalWorkingDays = 0;
+    const weekendDayIndexes = weekendDays.map(day => WEEK_DAYS.indexOf(day));
     
-    return { ...totals, totalPayableAmount: totals.totalPaid + totals.totalUnpaid };
-  }, [paginatedEmployees, selectedDate]);
+    for (let i = 1; i <= loopEndDate; i++) {
+        const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), i);
+        const dayOfWeek = getDay(currentDate);
+        if (!weekendDayIndexes.includes(dayOfWeek)) {
+            totalWorkingDays++;
+        }
+    }
+    
+    return paginatedEmployees.map(employee => {
+      const payslip = salarySheetData.find(p => p.employeeId === employee.id && p.id === monthYearId);
+      const userAttendanceInRange = attendanceData.filter(att => 
+          att.employeeId === employee.id && isWithinInterval(parseISO(att.date), { start: startDate, end: endDate })
+      );
+      
+      const presentDays = payslip?.presentDays ?? userAttendanceInRange.length;
+      const lateDays = payslip?.lateDays ?? userAttendanceInRange.filter(att => att.status === 'Late').length;
+      const absentDays = payslip?.absentDays ?? Math.max(0, totalWorkingDays - presentDays);
+      
+      const fine = payslip?.fine ?? 0;
+      const incentive = payslip?.incentive ?? 0;
+      const paymentStatus = payslip?.paymentStatus ?? 'Unpaid';
+
+      const relevantHistory = (employee.salaryHistory || [])
+          .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
+
+      const perDaySalary = effectiveSalary / 30; // Always calculate based on 30 days
+      const providentFund = effectiveSalary * 0.07;
+      const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
+      const payableAmount = payslip?.payableAmount ?? (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
+
+      return {
+        ...employee,
+        presentDays,
+        absentDays,
+        lateDays,
+        providentFund,
+        fine,
+        incentive,
+        payableAmount,
+        paymentStatus
+      };
+    });
+  }, [paginatedEmployees, selectedDate, attendanceData, weekendDays, salarySheetData]);
+
+
+  const { totalPaid, totalUnpaid, totalPayableAmount } = useMemo(() => {
+    const totals = salarySheetCalculatedData.reduce((acc, data) => {
+      acc.totalPayableAmount += data.payableAmount;
+      if (data.paymentStatus === 'Paid') {
+          acc.totalPaid += data.payableAmount;
+      } else {
+          acc.totalUnpaid += data.payableAmount;
+      }
+      return acc;
+    }, { totalPaid: 0, totalUnpaid: 0, totalPayableAmount: 0 });
+    
+    return totals;
+  }, [salarySheetCalculatedData]);
   
   const totalProvidentFund = useMemo(() => {
-    return paginatedEmployees.reduce((total, employee) => {
-      const providentFund = (employee.salary || 0) * 0.07;
-      return total + providentFund;
-    }, 0);
-  }, [paginatedEmployees]);
+    return salarySheetCalculatedData.reduce((total, data) => total + data.providentFund, 0);
+  }, [salarySheetCalculatedData]);
 
 
   const handleMonthChange = (monthIndex: string) => {
@@ -348,8 +398,11 @@ export default function PayrollPage() {
             </div>
             <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
             <AddEmployeeDialog 
-              onEmployeeAdded={fetchData}
+              onEmployeeAdded={() => fetchData(selectedDate)}
               allUsers={usersNotYetEmployees}
+              currentUser={currentUser!} // Pass currentUser
+              isOpen={false} // This component is now only for triggering
+              onOpenChange={() => {}}
             >
               <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"><Plus className="mr-2 h-4 w-4" /> Add Employee</Button>
             </AddEmployeeDialog>
@@ -398,13 +451,17 @@ export default function PayrollPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem className="cursor-pointer">
-                        <Eye className="mr-2 h-4 w-4" />
-                        <span>View</span>
-                      </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => setEmployeeToEdit(employee)} className="cursor-pointer">
                         <Pencil className="mr-2 h-4 w-4" />
                         <span>Edit</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setEmployeeToIncrement(employee)} className="cursor-pointer">
+                        <TrendingUp className="mr-2 h-4 w-4"/>
+                        <span>Increment Salary</span>
+                      </DropdownMenuItem>
+                       <DropdownMenuItem onSelect={() => setLeaveToManage(employee)} className="cursor-pointer">
+                        <Calendar className="mr-2 h-4 w-4" />
+                        <span>Manage Leave</span>
                       </DropdownMenuItem>
                       <DropdownMenuItem onSelect={() => setEmployeeToDelete(employee)} className="cursor-pointer text-destructive focus:text-destructive">
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -432,75 +489,11 @@ export default function PayrollPage() {
     </Card>
   );
 
-  const employeePerformanceContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-      <CardHeader className="p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl font-bold text-gray-800">Employee Performance</CardTitle>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-grow sm:flex-grow-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
-            </div>
-            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-6 pt-0">
-        <div className="space-y-3">
-            <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
-                <span>Employee</span>
-                <span>Designation</span>
-                <span className="text-center">Completed Orders</span>
-                <span className="text-center">Efficiency Score</span>
-                <span className="text-center">Revenue Generated</span>
-                <span className="text-center">Rating</span>
-            </div>
-            {isLoading ? (
-                Array.from({ length: 4 }).map((_, index) => (
-                    <div key={index} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
-                        <div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-4 w-24" /></div>
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-4 w-12 mx-auto" />
-                        <div className="w-full"><Skeleton className="h-2 w-full rounded-full" /></div>
-                        <Skeleton className="h-4 w-16 mx-auto" />
-                        <Skeleton className="h-4 w-12 mx-auto" />
-                    </div>
-                ))
-            ) : paginatedEmployees.length > 0 ? (
-                paginatedEmployees.map((employee) => (
-                    <div key={employee.id} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
-                        <div className="flex items-center gap-3">
-                            {/* Avatar placeholder */}
-                            <div className="h-10 w-10 rounded-full bg-gray-200 flex-shrink-0"></div>
-                            <span className="font-medium text-gray-800">{employee.name}</span>
-                        </div>
-                        <span>{employee.designation}</span>
-                        <span className="text-center font-medium">120</span> {/* Placeholder Data */}
-                        <div className="flex items-center gap-2">
-                           <Progress value={85} className="h-2" indicatorClassName="bg-green-500"/>
-                           <span className="text-xs font-semibold">85%</span>
-                        </div>
-                        <span className="text-center font-medium">{formatCurrency(250000)}</span> {/* Placeholder Data */}
-                        <div className="flex justify-center items-center gap-1 text-yellow-500">
-                          <Star className="h-4 w-4 fill-current"/>
-                          <span className="font-bold text-sm">4.8</span>
-                        </div>
-                    </div>
-                ))
-            ) : (
-                <div className="text-center py-16 text-gray-500">No performance data available.</div>
-            )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   const salarySheetContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
       <CardHeader className="p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl font-bold text-gray-800">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
+          <CardTitle className="text-xl font-bold text-gray-800">Attendance Report for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
             <div className="relative flex-grow sm:flex-grow-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -532,162 +525,46 @@ export default function PayrollPage() {
       <CardContent className="p-6 pt-0">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name of Employee</TableHead>
-                <TableHead>Present</TableHead>
-                <TableHead>Absent</TableHead>
-                <TableHead>Late</TableHead>
-                <TableHead>Provident Fund</TableHead>
-                <TableHead>Fine</TableHead>
-                <TableHead>Incentive</TableHead>
-                <TableHead>Payable Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-center">Action</TableHead>
+            <TableHeader className="bg-gray-800">
+              <TableRow className="hover:bg-gray-800">
+                  <TableHead className="text-white">#</TableHead>
+                  <TableHead className="text-white">Employee Name</TableHead>
+                  <TableHead className="text-white">Designation</TableHead>
+                  <TableHead className="text-white">Total Working Day</TableHead>
+                  <TableHead className="text-white">Total Present Days</TableHead>
+                  <TableHead className="text-white">Total Absent Days</TableHead>
+                  <TableHead className="text-white">Ontime CheckIN Days</TableHead>
+                  <TableHead className="text-white">Late CheckIN Days</TableHead>
+                  <TableHead className="text-white">Ontime Checkout Days</TableHead>
+                  <TableHead className="text-white">Early Checkout Days</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 [...Array(5)].map((_, index) => (
                   <TableRow key={index}>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                    <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
+                    <TableCell colSpan={10}><Skeleton className="h-8 w-full" /></TableCell>
                   </TableRow>
                 ))
-              ) : paginatedEmployees.length > 0 ? (
-                paginatedEmployees.map((employee) => {
-                  const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
-                  const payslip = employee.payslips?.[monthYearId];
-                  
-                  const daysInMonth = getDaysInMonth(selectedDate);
-                  
-                  const relevantHistory = (employee.salaryHistory || [])
-                      .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
-                      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                  const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
-
-
-                  const perDaySalary = effectiveSalary / (daysInMonth > 0 ? daysInMonth : 30);
-                  const providentFund = effectiveSalary * 0.07;
-                  
-                  const presentDays = payslip?.presentDays ?? 30;
-                  const lateDays = payslip?.lateDays ?? 0;
-                  const incentive = payslip?.incentive ?? 0;
-                  const fine = payslip?.fine ?? 0;
-                  const absentDays = payslip?.absentDays ?? 0;
-                  const paymentStatus = payslip?.paymentStatus ?? 'Unpaid';
-
-                  const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
-                  const payable = payslip?.payableAmount ?? (perDaySalary * presentDays) + incentive - fine - providentFund - lateDeduction;
-
-                  return (
-                    <TableRow key={employee.id}>
-                        <TableCell className="font-medium">{employee.name}</TableCell>
-                        <TableCell>{presentDays}</TableCell>
-                        <TableCell>{absentDays}</TableCell>
-                        <TableCell>{lateDays}</TableCell>
-                        <TableCell>{formatCurrency(providentFund)}</TableCell>
-                        <TableCell>{formatCurrency(fine)}</TableCell>
-                        <TableCell>{formatCurrency(incentive)}</TableCell>
-                        <TableCell className="font-semibold">{formatCurrency(payable)}</TableCell>
-                        <TableCell>
-                          <Badge className={cn(paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{paymentStatus}</Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button variant="outline" size="sm" className="h-8" onClick={() => setPayslipToEdit(employee)}>
-                            Edit payslip
-                          </Button>
-                        </TableCell>
-                    </TableRow>
-                  );
-                })
+              ) : salarySheetCalculatedData.length > 0 ? (
+                salarySheetCalculatedData.map((data, index) => (
+                  <TableRow key={data.id} className="odd:bg-white even:bg-gray-50">
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell className="font-medium">{data.name}</TableCell>
+                    <TableCell>{data.designation}</TableCell>
+                    <TableCell>{data.totalWorkingDay}</TableCell>
+                    <TableCell>{data.presentDays}</TableCell>
+                    <TableCell>{data.absentDays}</TableCell>
+                    <TableCell>{data.ontimeCheckInDays}</TableCell>
+                    <TableCell>{data.lateCheckInDays}</TableCell>
+                    <TableCell>{data.ontimeCheckoutDays}</TableCell>
+                    <TableCell>{data.earlyCheckoutDays}</TableCell>
+                  </TableRow>
+                ))
               ) : (
                 <TableRow>
                   <TableCell colSpan={10} className="h-48 text-center text-gray-500">
-                    No salary sheet data available for the selected period.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-            <TableFooter>
-                <TableRow>
-                    <TableCell colSpan={9} className="text-right font-bold">Total Payable</TableCell>
-                    <TableCell className="font-bold text-right">{formatCurrency(totalPayableAmount)}</TableCell>
-                </TableRow>
-            </TableFooter>
-          </Table>
-        </div>
-         {totalPages > 1 && (
-            <div className="mt-6 flex justify-center">
-                 <Pagination><PaginationContent>
-                    <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                    {renderPagination()}
-                    <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                </PaginationContent></Pagination>
-            </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-  
-  const attendeesReportContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-      <CardHeader className="p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl font-bold text-gray-800">Attendees Report</CardTitle>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-grow sm:flex-grow-0">
-              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Filter by date..."
-                className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
-                type="date"
-                value={attendanceDateFilter}
-                onChange={(e) => setAttendanceDateFilter(e.target.value)}
-              />
-            </div>
-            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-6 pt-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Employee</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>In Time</TableHead>
-                <TableHead>Out Time</TableHead>
-                <TableHead>Hours Worked</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                [...Array(5)].map((_, index) => (
-                  <TableRow key={index}>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-20" /></div></TableCell>
-                    <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center h-48 text-gray-500">
-                    <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                    No attendance data recorded for the selected period.
+                    No attendance summary data available for this month.
                   </TableCell>
                 </TableRow>
               )}
@@ -696,124 +573,6 @@ export default function PayrollPage() {
         </div>
       </CardContent>
     </Card>
-  );
-  
-  const incrementHistoryContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-      <CardHeader className="p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl font-bold text-gray-800">Increment History</CardTitle>
-           <div className="relative flex-grow sm:flex-grow-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Search history..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
-            </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-6 pt-0">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Employee</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Previous Salary</TableHead>
-                <TableHead>Increment Amount</TableHead>
-                <TableHead>New Salary</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                [...Array(5)].map((_, index) => (
-                  <TableRow key={index}>
-                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-8 w-8" /></TableCell>
-                  </TableRow>
-                ))
-              ) : allIncrementHistory.length > 0 ? (
-                allIncrementHistory.map((item, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{item.employeeName}</TableCell>
-                    <TableCell>{format(new Date(item.date), 'd MMM, yyyy')}</TableCell>
-                    <TableCell>{formatCurrency(item.previousSalary)}</TableCell>
-                    <TableCell className="text-green-600 font-medium">+ {formatCurrency(item.incrementAmount)}</TableCell>
-                    <TableCell className="font-semibold">{formatCurrency(item.newSalary)}</TableCell>
-                    <TableCell className="text-right">
-                       <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                          onClick={() => setIncrementToDelete({ employeeId: item.employeeId, increment: item })}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Delete Increment</span>
-                        </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center h-48 text-gray-500">
-                    <History className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                    No salary increment history found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
-  const fundWalletContent = (
-    <div className="space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {isLoading ? (
-                [...Array(8)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-2xl" />)
-            ) : filteredEmployees.length > 0 ? (
-                filteredEmployees.map(employee => {
-                    const user = allUsers.find(u => u.id === employee.userId);
-                    const monthsWithCompany = differenceInMonths(new Date(), new Date(employee.joiningDate));
-                    const providentFund = (employee.salary || 0) * 0.07 * monthsWithCompany;
-                    const isVisible = !!visibleFunds[employee.id];
-
-                    return (
-                        <Card key={employee.id} className="shadow-lg border-none rounded-2xl bg-white overflow-hidden p-4 flex flex-col justify-between">
-                            <div className="flex items-center gap-4">
-                                <Avatar className="h-14 w-14 border-2 border-gray-200">
-                                  <AvatarImage src={user?.avatarUrl || undefined} alt={employee.name} />
-                                  <AvatarFallback>{(employee.name || '??').charAt(0)}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <h3 className="font-bold text-gray-800 text-base">{employee.name}</h3>
-                                    <p className="text-sm text-gray-500">Provident Fund</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center justify-between mt-4">
-                                <Button
-                                    onClick={() => toggleFundVisibility(employee.id)}
-                                    className="bg-[#D18247] hover:bg-[#b56e39] text-white rounded-full text-xs h-8 px-4 shadow-md"
-                                >
-                                    {isVisible ? formatCurrency(providentFund) : 'Tap To See Amount'}
-                                </Button>
-                                <p className="text-sm text-gray-500 font-medium">{monthsWithCompany} Month</p>
-                            </div>
-                        </Card>
-                    );
-                })
-            ) : (
-                <div className="col-span-full text-center py-16 text-gray-500">
-                    <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                    No employees found for provident fund calculation.
-                </div>
-            )}
-        </div>
-    </div>
   );
 
   const renderActiveTab = () => {
@@ -822,14 +581,6 @@ export default function PayrollPage() {
         return salarySheetContent;
       case 'employee_list':
         return employeeListContent;
-      case 'employee_performance':
-        return employeePerformanceContent;
-      case 'attendees_report':
-        return attendeesReportContent;
-      case 'increment_history':
-        return incrementHistoryContent;
-      case 'fund_wallet':
-        return fundWalletContent;
       default:
         return employeeListContent;
     }
@@ -849,17 +600,12 @@ export default function PayrollPage() {
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
           <TabsTrigger value="employee_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white" onDoubleClick={() => setIsPerformanceTabVisible(true)}>Employee List</TabsTrigger>
-          {isPerformanceTabVisible && (
-            <TabsTrigger value="employee_performance" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee Performance</TabsTrigger>
-          )}
-          <TabsTrigger value="increment_history" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Increment History</TabsTrigger>
-          <TabsTrigger value="fund_wallet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Fund Wallet</TabsTrigger>
         </TabsList>
         <div className="mt-6">
             {renderActiveTab()}
         </div>
       </Tabs>
-      {employeeToEdit && <EditEmployeeDialog isOpen={!!employeeToEdit} onOpenChange={(open) => !open && setEmployeeToEdit(null)} employee={employeeToEdit} onEmployeeUpdated={fetchData} />}
+      {employeeToEdit && <EditEmployeeDialog isOpen={!!employeeToEdit} onOpenChange={(open) => !open && setEmployeeToEdit(null)} employee={employeeToEdit} onEmployeeUpdated={() => fetchData(selectedDate)} />}
       {employeeToDelete && <DeleteEmployeeDialog isOpen={!!employeeToDelete} onOpenChange={(open) => !open && setEmployeeToDelete(null)} employee={employeeToDelete} onConfirmDelete={handleDelete} isDeleting={isDeleting} />}
       {payslipToEdit && (
         <EditPayslipDialog
@@ -867,7 +613,7 @@ export default function PayrollPage() {
           onOpenChange={(open) => !open && setPayslipToEdit(null)}
           employee={payslipToEdit}
           onSave={() => {
-            fetchData(); // Refetch data after saving
+            fetchData(selectedDate); // Refetch data after saving
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
@@ -878,7 +624,7 @@ export default function PayrollPage() {
           isOpen={!!employeeToIncrement}
           onOpenChange={(open) => !open && setEmployeeToIncrement(null)}
           employee={employeeToIncrement}
-          onSalaryIncremented={fetchData}
+          onSalaryIncremented={() => fetchData(selectedDate)}
         />
       )}
       {leaveToManage && currentUser && (
@@ -887,7 +633,7 @@ export default function PayrollPage() {
             onOpenChange={(open) => !open && setLeaveToManage(null)}
             employee={leaveToManage}
             currentUser={currentUser}
-            onLeaveUpdated={fetchData}
+            onLeaveUpdated={() => fetchData(selectedDate)}
         />
       )}
       {incrementToDelete && (
@@ -915,6 +661,187 @@ export default function PayrollPage() {
   );
 }
 
-    
+```
+  <change>
+    <file>/src/app/(app)/payroll/actions.ts</file>
+    <content><![CDATA[
+"use server";
 
-    
+import { revalidatePath } from "next/cache";
+import type { Employee, Payslip, SalaryIncrement, LeaveRecord } from "@/types";
+import {
+  addEmployee as addEmployeeService,
+  updateEmployee as updateEmployeeService,
+  deleteEmployee as deleteEmployeeService,
+  getEmployeeById,
+  deleteSalaryIncrement as deleteSalaryIncrementService,
+  addLeaveRecord as addLeaveRecordService, // Import new service
+  deleteLeaveRecord as deleteLeaveRecordService,
+  getPayslipForMonth,
+  updatePayslipInDb,
+} from "@/lib/employee-service";
+
+export async function addEmployeeAction(
+  employeeData: Omit<Employee, 'id' | 'employeeId'>
+): Promise<{ success: boolean; employee?: Employee; error?: string }> {
+  try {
+    const phoneRegex = /^0\d{10}$/;
+    if (!phoneRegex.test(employeeData.mobileNo)) {
+      return { success: false, error: "Invalid mobile number. It must be an 11-digit number starting with 0." };
+    }
+    const newEmployee = await addEmployeeService(employeeData);
+    if (newEmployee) {
+      revalidatePath("/(app)/payroll");
+      return { success: true, employee: newEmployee };
+    }
+    return { success: false, error: "Failed to add employee to database." };
+  } catch (error) {
+    console.error("Error in addEmployeeAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updateEmployeeAction(
+  employeeId: string,
+  updates: Partial<Omit<Employee, 'id' | 'employeeId'>>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (updates.mobileNo) {
+      const phoneRegex = /^0\d{10}$/;
+      if (!phoneRegex.test(updates.mobileNo)) {
+        return { success: false, error: "Invalid mobile number. It must be an 11-digit number starting with 0." };
+      }
+    }
+    const success = await updateEmployeeService(employeeId, updates);
+    if (success) {
+      revalidatePath("/(app)/payroll");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update employee in database." };
+  } catch (error) {
+    console.error("Error in updateEmployeeAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function deleteEmployeeAction(employeeId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await deleteEmployeeService(employeeId);
+    if (success) {
+      revalidatePath("/(app)/payroll");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to delete employee from database." };
+  } catch (error) {
+    console.error("Error in deleteEmployeeAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updatePayslipAction(
+  payslipId: string, // e.g., '2024-07'
+  payslipData: Omit<Payslip, 'id' | 'updatedAt' | 'employeeId'>
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await updatePayslipInDb(payslipId, payslipData);
+    if (success) {
+      revalidatePath("/(app)/payroll");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update payslip in database." };
+  } catch (error) {
+    console.error("Error in updatePayslipAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function getSalarySheetForMonth(month: string): Promise<Payslip[]> {
+    try {
+        const payslips = await getPayslipForMonth(month);
+        return payslips;
+    } catch (error) {
+        console.error("Error getting salary sheet for month:", error);
+        return [];
+    }
+}
+
+
+export async function incrementEmployeeSalaryAction(
+  employeeId: string,
+  incrementAmount: number,
+  incrementDate: string
+): Promise<{ success: boolean; error?: string }> {
+  if (incrementAmount <= 0) {
+    return { success: false, error: "Increment amount must be positive." };
+  }
+  try {
+    const employee = await getEmployeeById(employeeId);
+    if (!employee) {
+      return { success: false, error: "Employee not found." };
+    }
+    const currentSalary = employee.salary || 0;
+    const newSalary = currentSalary + incrementAmount;
+
+    const success = await updateEmployeeService(employeeId, { salary: newSalary }, incrementDate);
+    if (success) {
+      revalidatePath("/(app)/payroll");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update employee's salary." };
+  } catch (error) {
+    console.error("Error in incrementEmployeeSalaryAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected server error occurred." };
+  }
+}
+
+export async function deleteSalaryIncrementAction(
+  employeeId: string,
+  incrementDate: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await deleteSalaryIncrementService(employeeId, incrementDate);
+    if (success) {
+      revalidatePath("/(app)/payroll");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to delete salary increment history." };
+  } catch (error) {
+    console.error("Error in deleteSalaryIncrementAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+
+// New action for adding leave
+export async function addLeaveRecordAction(
+  employeeId: string,
+  leaveData: Omit<LeaveRecord, 'id'>,
+  newTotalLeaveTaken?: number
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await addLeaveRecordService(employeeId, leaveData, newTotalLeaveTaken);
+    if (success) {
+      revalidatePath("/(app)/payroll");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to record leave in database." };
+  } catch (error) {
+    console.error("Error in addLeaveRecordAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+// New action for deleting a leave record
+export async function deleteLeaveRecordAction(employeeId: string, leaveRecordId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await deleteLeaveRecordService(employeeId, leaveRecordId);
+    if (success) {
+      revalidatePath("/(app)/payroll");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to delete leave record from database." };
+  } catch (error) {
+    console.error("Error in deleteLeaveRecordAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
