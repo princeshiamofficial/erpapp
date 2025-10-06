@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,7 @@ import {
   ArrowUp,
   CalendarClock,
   Briefcase,
+  Target,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -24,10 +25,14 @@ import { format, parseISO, isSameMonth, getDaysInMonth, startOfMonth, getDay, su
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
-import type { AttendanceRecord } from '@/types';
+import type { AttendanceRecord, User, TaskEntry } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getWeekendSettings } from '@/lib/weekend-service';
+import { getTaskEntries } from '@/lib/team-performance-service';
+import { addTaskEntryAction } from '@/app/(app)/dashboard/actions';
+import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
 import {
   ChartContainer,
   ChartTooltip,
@@ -112,11 +117,18 @@ export default function ProfilePage() {
   const [locationAddress, setLocationAddress] = useState('Loading location...');
   
   const [monthlyRecords, setMonthlyRecords] = useState<AttendanceRecord[]>([]);
+  const [allTasks, setAllTasks] = useState<TaskEntry[]>(([]);
   const [isDataLoading, setIsDataLoading] = useState(true);
   
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isClient, setIsClient] = useState(false);
   const [weekendDays, setWeekendDays] = useState<string[]>([]);
+  
+  const [lrTaskCount, setLrTaskCount] = useState('');
+  const [isLrTaskSubmitted, setIsLrTaskSubmitted] = useState(false);
+  const [isSubmittingTask, setIsSubmittingTask] = useState(false);
+  const { toast } = useToast();
+
 
   useEffect(() => {
     setIsClient(true);
@@ -127,12 +139,14 @@ export default function ProfilePage() {
     if (!currentUser) return;
     setIsDataLoading(true);
     try {
-        const [records, weekendSettings] = await Promise.all([
+        const [records, weekendSettings, tasks] = await Promise.all([
             getAttendanceForMonth(month),
             getWeekendSettings(),
+            getTaskEntries() // Fetch tasks
         ]);
         setMonthlyRecords(records.filter(r => r.employeeId === currentUser.id));
         setWeekendDays(weekendSettings.days || []);
+        setAllTasks(tasks); // Store all tasks
     } catch (error) {
         console.error("Failed to fetch attendance or weekend settings:", error);
     } finally {
@@ -170,6 +184,17 @@ export default function ProfilePage() {
     }
   }, [currentUser, selectedDate, fetchAttendanceData]);
 
+  // Check if LR user has submitted tasks for today
+  useEffect(() => {
+    if (currentUser?.role === 'LR' && allTasks.length > 0) {
+      const today = new Date();
+      const hasSubmitted = allTasks.some(task => 
+        task.userId === currentUser.id && isSameDay(parseISO(task.date), today)
+      );
+      setIsLrTaskSubmitted(hasSubmitted);
+    }
+  }, [currentUser, allTasks]);
+
 
   useEffect(() => {
     if (!isAuthLoading && !currentUser) {
@@ -184,7 +209,6 @@ export default function ProfilePage() {
     
     const recordsForSelectedMonth = monthlyRecords.filter(r => isSameMonth(parseISO(r.date), selectedDate));
     
-    // Calculate today's check-in/out based on all records, not just selected month
     const today = new Date();
     const todaysRecord = monthlyRecords.find(r => isSameDay(parseISO(r.date), today));
     const checkIn = todaysRecord ? format(parseISO(todaysRecord.checkInTime), 'HH:mm') : '--:--';
@@ -196,7 +220,6 @@ export default function ProfilePage() {
     let workingDaysSoFar = 0;
     const weekendDayIndexes = weekendDays.map(day => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(day));
 
-    // Determine the loop end date: today if current month, else end of the month
     const loopEndDate = isSameMonth(selectedDate, today) ? today.getDate() : totalDaysInMonth;
 
     for (let i = 1; i <= loopEndDate; i++) {
@@ -226,6 +249,30 @@ export default function ProfilePage() {
       setSelectedDate(newDate);
     }
   };
+  
+  const handleLrTaskSubmit = async () => {
+    if (!currentUser || !lrTaskCount) {
+        toast({ title: "Invalid Input", description: "Please enter a valid number of tasks.", variant: "destructive" });
+        return;
+    }
+    const taskCount = parseInt(lrTaskCount, 10);
+    if (isNaN(taskCount) || taskCount < 0) {
+        toast({ title: "Invalid Input", description: "Task count must be a non-negative number.", variant: "destructive" });
+        return;
+    }
+
+    setIsSubmittingTask(true);
+    const result = await addTaskEntryAction(currentUser, taskCount);
+    setIsSubmittingTask(false);
+
+    if (result.success) {
+        toast({ title: "Tasks Submitted", description: `${taskCount} tasks have been recorded for today.` });
+        setIsLrTaskSubmitted(true);
+        fetchAttendanceData(currentDate ? new Date(currentDate) : new Date()); // Re-fetch to update submission status
+    } else {
+        toast({ title: "Submission Failed", description: result.error || "Could not save your task entry.", variant: "destructive" });
+    }
+  };
 
   const availableYears = useMemo(() => {
       const currentYear = new Date().getFullYear();
@@ -250,6 +297,8 @@ export default function ProfilePage() {
     );
   }
 
+  const isAdminOrLr = currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN' || currentUser.role === 'LR';
+
   return (
     <div className="flex min-h-screen flex-col bg-gray-100 dark:bg-gray-900">
       <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 space-y-6 pb-28">
@@ -270,6 +319,34 @@ export default function ProfilePage() {
             <LogOut className="h-5 w-5" />
           </Button>
         </div>
+
+        {currentUser.role === 'LR' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary" />Daily Task Submission</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLrTaskSubmitted ? (
+                <div className="flex flex-col items-center gap-4 text-center">
+                  <p className="text-green-600 font-semibold">Your tasks for today have been submitted!</p>
+                  <Button asChild>
+                    <Link href="/workflow">Open Desk</Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-end gap-2">
+                  <div className="flex-1 space-y-1">
+                    <Label htmlFor="lr-tasks">Team Tasks Done</Label>
+                    <Input id="lr-tasks" type="number" value={lrTaskCount} onChange={e => setLrTaskCount(e.target.value)} placeholder="Enter task count" />
+                  </div>
+                  <Button onClick={handleLrTaskSubmit} disabled={isSubmittingTask || !lrTaskCount}>
+                    {isSubmittingTask ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Submit'}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Attendance Summary Section */}
         <div className="space-y-4">
@@ -317,7 +394,7 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent className="space-y-1">
             <ProfileLink href="/attendance/history" icon={CalendarClock} label="Leave History" />
-            {(currentUser?.role === 'LR' || currentUser.role === 'ADMIN' || currentUser.role === 'SYSTEM_ADMIN') && (
+            {isAdminOrLr && (
               <ProfileLink href="/projects" icon={Briefcase} label="Projects" />
             )}
           </CardContent>
@@ -327,3 +404,5 @@ export default function ProfilePage() {
     </div>
   );
 }
+
+    
