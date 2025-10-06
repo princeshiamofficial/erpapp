@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -25,7 +24,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, startOfDay, endOfDay, differenceInDays, isWithinInterval, getDay } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, isWithinInterval, endOfDay, getDay } from 'date-fns';
 import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from './actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -56,6 +55,7 @@ import { saveWeekendSettingsAction } from '@/app/(app)/hrm/attendance/actions';
 import { DateRangePicker2 } from '@/components/dashboard/date-range-picker2';
 import type { DateRange } from "react-day-picker";
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
@@ -524,88 +524,108 @@ export default function PayrollPage() {
 
   const salarySheetContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="p-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <CardTitle className="text-xl font-bold text-gray-800">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
-              <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
-                  <div className="relative flex-grow sm:flex-grow-0">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
-                  </div>
-                  <Select value={selectedDate.getMonth().toString()} onValueChange={handleMonthChange}>
-                      <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-full border-gray-200 bg-white">
-                          <SelectValue placeholder="Select Month" />
-                      </SelectTrigger>
-                      <SelectContent>
-                          {months.map(month => (
-                              <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
-                          ))}
-                      </SelectContent>
-                  </Select>
-                  <Select value={selectedDate.getFullYear().toString()} onValueChange={handleYearChange}>
-                      <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-full border-gray-200 bg-white">
-                          <SelectValue placeholder="Select Year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                          {availableYears.map(year => (
-                              <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                          ))}
-                      </SelectContent>
-                  </Select>
-              </div>
+      <CardHeader className="p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <CardTitle className="text-xl font-bold text-gray-800">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
+           <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+            <div className="relative flex-grow sm:flex-grow-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+            </div>
+            <Select value={selectedDate.getMonth().toString()} onValueChange={handleMonthChange}>
+              <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-full border-gray-200 bg-white">
+                  <SelectValue placeholder="Select Month" />
+              </SelectTrigger>
+              <SelectContent>
+                  {months.map(month => (
+                      <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+             <Select value={selectedDate.getFullYear().toString()} onValueChange={handleYearChange}>
+              <SelectTrigger className="w-full sm:w-[120px] h-10 rounded-full border-gray-200 bg-white">
+                  <SelectValue placeholder="Select Year" />
+              </SelectTrigger>
+              <SelectContent>
+                  {availableYears.map(year => (
+                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-                <TableHeader className="bg-gray-800">
-                    <TableRow className="hover:bg-gray-800">
-                        <TableHead className="text-white">#</TableHead>
-                        <TableHead className="text-white">Employee Name</TableHead>
-                        <TableHead className="text-white">Designation</TableHead>
-                        <TableHead className="text-white">Total Working Day</TableHead>
-                        <TableHead className="text-white">Total Present Days</TableHead>
-                        <TableHead className="text-white">Total Absent Days</TableHead>
-                        <TableHead className="text-white">Ontime CheckIN Days</TableHead>
-                        <TableHead className="text-white">Late CheckIN Days</TableHead>
-                        <TableHead className="text-white">Ontime Checkout Days</TableHead>
-                        <TableHead className="text-white">Early Checkout Days</TableHead>
+        </div>
+      </CardHeader>
+      <CardContent className="p-6 pt-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name of Employee</TableHead>
+                <TableHead>Present</TableHead>
+                <TableHead>Absent</TableHead>
+                <TableHead>Late</TableHead>
+                <TableHead>Provident Fund</TableHead>
+                <TableHead>Fine</TableHead>
+                <TableHead>Incentive</TableHead>
+                <TableHead>Payable Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-center">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                [...Array(5)].map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : salarySheetCalculatedData.length > 0 ? (
+                salarySheetCalculatedData.map((data) => (
+                    <TableRow key={data.id}>
+                        <TableCell className="font-medium">{data.name}</TableCell>
+                        <TableCell>{data.presentDays}</TableCell>
+                        <TableCell>{data.absentDays}</TableCell>
+                        <TableCell>{data.lateDays}</TableCell>
+                        <TableCell>{formatCurrency(data.providentFund)}</TableCell>
+                        <TableCell>{formatCurrency(data.fine)}</TableCell>
+                        <TableCell>{formatCurrency(data.incentive)}</TableCell>
+                        <TableCell className="font-semibold">{formatCurrency(data.payableAmount)}</TableCell>
+                        <TableCell>
+                          <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button variant="outline" size="sm" className="h-8" onClick={() => setPayslipToEdit(data)}>
+                            Edit payslip
+                          </Button>
+                        </TableCell>
                     </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                      [...Array(5)].map((_, i) => (
-                          <TableRow key={`skel-report-${i}`}>
-                              <TableCell colSpan={10}><Skeleton className="h-8 w-full"/></TableCell>
-                          </TableRow>
-                      ))
-                  ) : salarySheetCalculatedData.length > 0 ? (
-                      (salarySheetCalculatedData as any[]).map((data, index) => (
-                          <TableRow key={data.id} className="odd:bg-white even:bg-gray-50">
-                              <TableCell>{index + 1}</TableCell>
-                              <TableCell className="font-medium">{data.name}</TableCell>
-                              <TableCell>{data.designation}</TableCell>
-                              <TableCell>{data.totalWorkingDay}</TableCell>
-                              <TableCell>{data.presentDays}</TableCell>
-                              <TableCell>{data.absentDays}</TableCell>
-                              <TableCell>{data.ontimeCheckInDays}</TableCell>
-                              <TableCell>{data.lateCheckInDays}</TableCell>
-                              <TableCell>{data.ontimeCheckoutDays}</TableCell>
-                              <TableCell>{data.earlyCheckoutDays}</TableCell>
-                          </TableRow>
-                      ))
-                  ) : (
-                       <TableRow>
-                          <TableCell colSpan={10} className="text-center h-48 text-gray-500">
-                              <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                              No attendance summary data available for this month.
-                          </TableCell>
-                      </TableRow>
-                  )}
-                </TableBody>
-            </Table>
-          </div>
-        </CardContent>
+                  ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={10} className="h-48 text-center text-gray-500">
+                    No salary sheet data available for the selected period.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+            <TableFooter>
+                <TableRow>
+                    <TableCell colSpan={9} className="text-right font-bold">Total Payable</TableCell>
+                    <TableCell className="font-bold text-right">{formatCurrency(totalPayableAmount)}</TableCell>
+                </TableRow>
+            </TableFooter>
+          </Table>
+        </div>
+      </CardContent>
     </Card>
   );
   
