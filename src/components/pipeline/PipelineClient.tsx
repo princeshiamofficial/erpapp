@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -172,18 +173,22 @@ export function PipelineClient() {
   const filteredLeads = useMemo(() => {
     let baseLeads = [...leads];
 
+    // Show all leads for any CRM user
     if (currentUser?.role === 'CRM') {
-        const hasGlobalAccess = globalSettings?.pipelineAccess?.canViewAllLeads.includes(currentUser.id);
-        if (!hasGlobalAccess) {
-            baseLeads = baseLeads.filter(lead => lead.crmId === currentUser.id);
+      // No filtering is applied, so all leads are visible to any CRM
+    } else if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') {
+        // Admin filtering logic
+        if (selectedCrmId === 'unassigned') {
+          baseLeads = baseLeads.filter(lead => !lead.crmId);
+        } else if (selectedCrmId.startsWith('[Deleted User:')) {
+          const deletedUserId = selectedCrmId.substring(15, selectedCrmId.length - 1);
+          baseLeads = baseLeads.filter(lead => lead.crmId === deletedUserId);
+        } else if (selectedCrmId !== 'all') {
+          baseLeads = baseLeads.filter(lead => lead.crmId === selectedCrmId);
         }
-    } else if (selectedCrmId === 'unassigned') {
-      baseLeads = baseLeads.filter(lead => !lead.crmId);
-    } else if (selectedCrmId.startsWith('[Deleted User:')) {
-      const deletedUserId = selectedCrmId.substring(15, selectedCrmId.length - 1);
-      baseLeads = baseLeads.filter(lead => lead.crmId === deletedUserId);
-    } else if (selectedCrmId !== 'all') {
-      baseLeads = baseLeads.filter(lead => lead.crmId === selectedCrmId);
+    } else {
+        // Default for any other role (e.g., if a DR gets access somehow): show only their own
+        baseLeads = baseLeads.filter(lead => lead.crmId === currentUser?.id);
     }
     
     // Date filter
@@ -377,6 +382,7 @@ export function PipelineClient() {
   const renderPagination = () => {
     const pageNumbers = [];
     const maxPagesToShow = 5; 
+    
     if (totalPages <= maxPagesToShow) {
       for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
     } else {
