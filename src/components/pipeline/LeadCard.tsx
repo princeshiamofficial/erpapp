@@ -109,9 +109,9 @@ export function LeadCard({ lead, isOverlay = false, currentUser, onViewLead, onD
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenuItem onSelect={() => onViewLead(lead)} className="cursor-pointer"><Eye className="mr-2 h-4 w-4"/> View Details</DropdownMenuItem>
-                        {canTransfer && <DropdownMenuItem onSelect={() => onTransferLead(lead)} className="cursor-pointer"><Users className="mr-2 h-4 w-4"/> Transfer Lead</DropdownMenuItem>}
+                        
                         {canDelete && <DropdownMenuItem onSelect={() => onDeleteLead(lead)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Delete Lead</DropdownMenuItem>}
-                        {!canTransfer && !canDelete && <DropdownMenuItem disabled>No actions available</DropdownMenuItem>}
+                        {!canDelete && <DropdownMenuItem disabled>No actions available</DropdownMenuItem>}
                     </DropdownMenuContent>
                  </DropdownMenu>
             </div>

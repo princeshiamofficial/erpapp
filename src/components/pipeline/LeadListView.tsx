@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import type { Lead, User, LeadCategory } from '@/types';
@@ -177,8 +176,7 @@ export function LeadListView({ leads, isLoading, currentUser, onViewLead, onDele
                                                         </DropdownMenuPortal>
                                                     </DropdownMenuSub>
                                                 )}
-
-                                                {canTransfer(lead) && <DropdownMenuItem onSelect={() => onTransferLead(lead)} className="cursor-pointer"><Users className="mr-2 h-4 w-4"/> Transfer</DropdownMenuItem>}
+                                                
                                                 {canDelete(lead) && <DropdownMenuItem onSelect={() => onDeleteLead(lead)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Delete</DropdownMenuItem>}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
