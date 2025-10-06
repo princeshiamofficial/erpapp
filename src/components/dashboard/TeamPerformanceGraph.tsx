@@ -365,23 +365,31 @@ export function TeamPerformanceGraph({
   
     const { users, data, totals } = teamReportData;
   
-    // Create Headers
     const headers = ["Date"];
     users.forEach(user => {
       const userMonthlyTarget = totals.find(t => t.userId === user.id)?.monthlyTarget || 0;
-      headers.push(`${user.name.split(' ')[0]} (Target: ${userMonthlyTarget})`);
+      const firstName = user.name.split(' ')[0];
+      headers.push(`${firstName} (Target: ${userMonthlyTarget})`);
     });
   
-    // Create Rows
     const rows = data.map(row => {
       const rowData: Record<string, any> = { 'Date': format(parseISO(row.date), 'd-MMM-yy') };
       users.forEach(user => {
         const userMonthlyTarget = totals.find(t => t.userId === user.id)?.monthlyTarget || 0;
+        const firstName = user.name.split(' ')[0];
         const userTasks = row[user.id] || { tasks: 0, likelihood: 0 };
-        rowData[`${user.name.split(' ')[0]} (Target: ${userMonthlyTarget})`] = `tasks: ${userTasks.tasks} / Likely: ${userTasks.likelihood}`;
+        rowData[`${firstName} (Target: ${userMonthlyTarget})`] = `tasks: ${userTasks.tasks} / Likely: ${userTasks.likelihood}`;
       });
       return rowData;
     });
+
+    const totalsRow: Record<string, any> = { 'Date': 'Total' };
+    users.forEach(user => {
+        const userTotal = totals.find(t => t.userId === user.id) || { totalTasks: 0, totalLikelihood: 0, monthlyTarget: 0 };
+        const firstName = user.name.split(' ')[0];
+        totalsRow[`${firstName} (Target: ${userTotal.monthlyTarget})`] = `tasks: ${userTotal.totalTasks} / Likely: ${userTotal.totalLikelihood}`;
+    });
+    rows.push(totalsRow);
   
     const csv = Papa.unparse({
       fields: headers,
@@ -789,7 +797,7 @@ export function TeamPerformanceGraph({
           }
           .logo {
             object-fit: contain;
-            border-radius: 8px;
+            border-radius: 0.5rem; /* Equivalent to rounded-lg */
           }
           .report-logo-placeholder {
             width: 200px; /* To balance the header */
@@ -816,6 +824,9 @@ export function TeamPerformanceGraph({
             background-color: #f9fafb;
             font-weight: 700;
           }
+           .printable-report-area tfoot td {
+              font-weight: 700;
+           }
           .report-footer {
             margin-top: 2rem;
             text-align: center;
@@ -908,4 +919,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
-
