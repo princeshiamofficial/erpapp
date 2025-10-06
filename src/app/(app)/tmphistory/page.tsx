@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -96,7 +97,7 @@ const TeamPerformanceReport = () => {
         });
 
         return {
-            reportTitle: `Team Performance Report: ${team}`,
+            reportTitle: `Team Performance Report: ${team.replace(/_/g, ' ')}`,
             teamReportData: {
                 users: teamUsers,
                 data: pivotedData,
@@ -168,7 +169,7 @@ const TeamPerformanceReport = () => {
                     <TableBody>
                         {data.map(row => (
                             <TableRow key={row.date}>
-                                <TableCell>{format(parseISO(row.date), 'PPP')}</TableCell>
+                                <TableCell>{format(parseISO(row.date), 'MMMM do, yyyy')}</TableCell>
                                 {users.map(user => (
                                     <React.Fragment key={user.id}>
                                         <TableCell className="text-center">
@@ -210,14 +211,14 @@ const TeamPerformanceReport = () => {
                 }
                 .printable-report-area {
                     display: block;
-                    padding: 1.5rem;
+                    padding: 1rem;
                     font-family: sans-serif;
                 }
                 .report-header {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    margin-bottom: 2rem;
+                    margin-bottom: 1.5rem;
                     border-bottom: 2px solid #e5e7eb;
                     padding-bottom: 1rem;
                 }
@@ -226,14 +227,14 @@ const TeamPerformanceReport = () => {
                 .report-sub-title { font-size: 0.75rem; color: #6b7280; }
                 .logo { 
                   object-fit: contain;
-                  border-radius: 8px; /* Rounded corners for the logo */
+                  border-radius: 8px;
                 }
                 .report-logo-placeholder { width: 200px; }
-                table { width: 100%; border-collapse: collapse; font-size: 0.7rem; }
-                th, td { border: 1px solid #e5e7eb; padding: 0.4rem; text-align: left; }
+                table { width: 100%; border-collapse: collapse; font-size: 0.65rem; }
+                th, td { border: 1px solid #e5e7eb; padding: 0.3rem; text-align: left; }
                 thead th { 
-                  background-color: #111827; /* Black background */
-                  color: #ffffff; /* White text */
+                  background-color: #111827;
+                  color: #ffffff;
                   font-weight: 600; 
                 }
                 .text-center { text-align: center; }
@@ -246,16 +247,15 @@ const TeamPerformanceReport = () => {
                   font-weight: 700;
                 }
                 .border-r { border-right: 1px solid #e5e7eb; }
-                .report-footer { margin-top: 2rem; text-align: center; font-size: 0.65rem; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 1rem; }
+                .report-footer { margin-top: 1.5rem; text-align: center; font-size: 0.6rem; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 0.5rem; }
                 
                 @media print {
-                    body {
-                        background-color: white !important;
+                    html, body {
                         -webkit-print-color-adjust: exact; 
                         print-color-adjust: exact;
                     }
                     .printable-report-area {
-                        display: block; /* Ensure it is block for printing */
+                        padding: 0;
                     }
                 }
             `}</style>
@@ -264,3 +264,4 @@ const TeamPerformanceReport = () => {
 };
 
 export default TeamPerformanceReport;
+
