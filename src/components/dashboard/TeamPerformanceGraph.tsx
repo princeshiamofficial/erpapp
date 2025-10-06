@@ -101,7 +101,7 @@ export function TeamPerformanceGraph({
   const [chartType, setChartType] = useState<'line'>('line');
   const [tasksDone, setTasksDone] = useState('');
   const [likelihoodCustomers, setLikelihoodCustomers] = useState('');
-  const [isSubmitting, setIsSubmitting(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionsTodayCount, setSubmissionsTodayCount] = useState(0);
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -724,5 +724,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
-
-    
