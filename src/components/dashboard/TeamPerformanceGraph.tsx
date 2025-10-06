@@ -264,102 +264,43 @@ export function TeamPerformanceGraph({
     return currentUser.role === 'CRM';
   }, [currentUser, isAdminView, selectedTeam, specificUserId, userMap]);
   
-  const { printableReportData, totalTasksDone, totalLikelyCustomers, reportTitle, teamReportData } = useMemo(() => {
-    if (!allTasks || !selectedDateRange?.from || !globalSettings) {
-      return { printableReportData: [], totalTasksDone: 0, totalLikelyCustomers: 0, reportTitle: 'Performance Report', teamReportData: null };
+  const handlePrint = () => {
+    if (!selectedDateRange?.from) {
+      toast({ title: "Date Range Required", description: "Please select a date range before printing.", variant: "destructive" });
+      return;
     }
   
-    const startDate = startOfDay(selectedDateRange.from);
-    const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
+    const from = format(selectedDateRange.from, 'yyyy-MM-dd');
+    const to = format(selectedDateRange.to || selectedDateRange.from, 'yyyy-MM-dd');
   
-    let filteredTasks = allTasks.filter(task => {
-      try {
-        const taskDate = parseISO(task.date);
-        return isWithinInterval(taskDate, { start: startDate, end: endDate });
-      } catch {
-        return false;
-      }
-    });
-
-    // Single User Report
+    let url = `/tmphistory?from=${from}&to=${to}`;
+  
     if (specificUserId !== 'all') {
-      filteredTasks = filteredTasks.filter(task => task.userId === specificUserId);
-      const tasksTotal = filteredTasks.reduce((sum, task) => sum + task.taskCount, 0);
-      const likelyTotal = filteredTasks.reduce((sum, task) => sum + (task.likelihood || 0), 0);
-      
-      const singleUserData = filteredTasks.map(task => ({
-        ...task,
-        userName: userMap.get(task.userId)?.name || task.userName,
-      })).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-      return { 
-        printableReportData: singleUserData, 
-        totalTasksDone: tasksTotal, 
-        totalLikelyCustomers: likelyTotal,
-        reportTitle: `Daily Performance Report for ${userMap.get(specificUserId)?.name || 'User'}`,
-        teamReportData: null,
-      };
+        // If a specific user is selected, that takes precedence
+        const user = userMap.get(specificUserId);
+        if (user) {
+            url += `&team=${user.role}`; // We pass the team of the specific user
+        }
+    } else if (selectedTeam !== 'all') {
+        url += `&team=${selectedTeam}`;
+    } else {
+        toast({ title: "Selection Required", description: "Please select a specific team to print a report.", variant: "destructive" });
+        return;
     }
-    
-    // Team Report (Pivoted)
-    if (selectedTeam !== 'all') {
-        filteredTasks = filteredTasks.filter(task => task.role === selectedTeam);
-        
-        const teamUsers = Array.from(new Set(filteredTasks.map(t => t.userId)))
-            .map(id => userMap.get(id))
-            .filter((u): u is UserType => !!u)
-            .sort((a, b) => a.name.localeCompare(b.name));
-
-        const tasksByDate = new Map<string, Record<string, { tasks: number; likelihood: number }>>();
-
-        filteredTasks.forEach(task => {
-            const dateStr = format(parseISO(task.date), 'yyyy-MM-dd');
-            if (!tasksByDate.has(dateStr)) {
-                tasksByDate.set(dateStr, {});
-            }
-            const dayEntry = tasksByDate.get(dateStr)!;
-            if (!dayEntry[task.userId]) {
-                dayEntry[task.userId] = { tasks: 0, likelihood: 0 };
-            }
-            dayEntry[task.userId].tasks += task.taskCount;
-            dayEntry[task.userId].likelihood += task.likelihood || 0;
-        });
-
-        const pivotedData = Array.from(tasksByDate.entries())
-            .map(([date, userTasks]) => ({ date, ...userTasks }))
-            .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-        
-        const userTotals = teamUsers.map(user => {
-            const totalTasks = filteredTasks.filter(t => t.userId === user.id).reduce((sum, t) => sum + t.taskCount, 0);
-            const totalLikelihood = filteredTasks.filter(t => t.userId === user.id).reduce((sum, t) => sum + (t.likelihood || 0), 0);
-            const monthlyTarget = user.monthlyOrderTarget || globalSettings?.roleBasedTargets?.[user.role as keyof typeof globalSettings.roleBasedTargets] || 0;
-            return { userId: user.id, totalTasks, totalLikelihood, monthlyTarget };
-        });
-        
-        const grandTotalTasks = userTotals.reduce((sum, t) => sum + t.totalTasks, 0);
-        const grandTotalLikelihood = userTotals.reduce((sum, t) => sum + t.totalLikelihood, 0);
-
-        return {
-            printableReportData: [],
-            totalTasksDone: grandTotalTasks,
-            totalLikelyCustomers: grandTotalLikelihood,
-            reportTitle: `Team Performance Report: ${selectedTeam}`,
-            teamReportData: {
-                users: teamUsers,
-                data: pivotedData,
-                totals: userTotals,
-            }
-        };
-    }
-
-    // Default empty state
-    return { printableReportData: [], totalTasksDone: 0, totalLikelyCustomers: 0, reportTitle: 'Performance Report', teamReportData: null };
-
-  }, [allTasks, selectedDateRange, specificUserId, selectedTeam, userMap, globalSettings]);
+  
+    window.open(url, '_blank');
+  };
 
   const handleExport = () => {
+    if (selectedTeam === 'all' || specificUserId !== 'all') {
+      toast({ title: "Export Not Available", description: "Please select a specific team (not 'All Teams') and ensure no specific user is selected to export team data.", variant: "destructive" });
+      return;
+    }
+
+    const { teamReportData } = calculateTeamReportData();
+  
     if (!teamReportData) {
-      toast({ title: "Export Not Available", description: "Please select a specific team to export data.", variant: "destructive" });
+      toast({ title: "No Data", description: "No data available to export for the selected team and date range.", variant: "destructive" });
       return;
     }
   
@@ -408,6 +349,67 @@ export function TeamPerformanceGraph({
     document.body.removeChild(link);
     
     toast({ title: "Export Successful", description: "Team performance data has been downloaded." });
+  };
+  
+  const calculateTeamReportData = () => {
+    if (!allTasks || !selectedDateRange?.from || !globalSettings) {
+      return { teamReportData: null };
+    }
+  
+    const startDate = startOfDay(selectedDateRange.from);
+    const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
+  
+    let filteredTasks = allTasks.filter(task => {
+      try {
+        const taskDate = parseISO(task.date);
+        return isWithinInterval(taskDate, { start: startDate, end: endDate });
+      } catch {
+        return false;
+      }
+    });
+
+    if (selectedTeam !== 'all') {
+        filteredTasks = filteredTasks.filter(task => task.role === selectedTeam);
+    }
+        
+    const teamUsers = Array.from(new Set(filteredTasks.map(t => t.userId)))
+        .map(id => userMap.get(id))
+        .filter((u): u is UserType => !!u)
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+    const tasksByDate = new Map<string, Record<string, { tasks: number; likelihood: number }>>();
+
+    filteredTasks.forEach(task => {
+        const dateStr = format(parseISO(task.date), 'yyyy-MM-dd');
+        if (!tasksByDate.has(dateStr)) {
+            tasksByDate.set(dateStr, {});
+        }
+        const dayEntry = tasksByDate.get(dateStr)!;
+        if (!dayEntry[task.userId]) {
+            dayEntry[task.userId] = { tasks: 0, likelihood: 0 };
+        }
+        dayEntry[task.userId].tasks += task.taskCount;
+        dayEntry[task.userId].likelihood += task.likelihood || 0;
+    });
+
+    const pivotedData = Array.from(tasksByDate.entries())
+        .map(([date, userTasks]) => ({ date, ...userTasks }))
+        .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    const userTotals = teamUsers.map(user => {
+        const totalTasks = filteredTasks.filter(t => t.userId === user.id).reduce((sum, t) => sum + t.taskCount, 0);
+        const totalLikelihood = filteredTasks.filter(t => t.userId === user.id).reduce((sum, t) => sum + (t.likelihood || 0), 0);
+        const monthlyTarget = user.monthlyOrderTarget || globalSettings?.roleBasedTargets?.[user.role as keyof typeof globalSettings.roleBasedTargets] || 0;
+        return { userId: user.id, totalTasks, totalLikelihood, monthlyTarget };
+    });
+    
+    return {
+        teamReportData: {
+            users: teamUsers,
+            data: pivotedData,
+            totals: userTotals,
+        }
+    };
   };
 
 
@@ -616,7 +618,7 @@ export function TeamPerformanceGraph({
                       <Button
                         variant="outline"
                         size="icon"
-                        onClick={() => window.print()}
+                        onClick={handlePrint}
                         className="h-10 w-10 print-hide"
                         title="Print Report"
                         disabled={specificUserId === 'all' && selectedTeam === 'all'}
@@ -636,212 +638,6 @@ export function TeamPerformanceGraph({
           </div>
         </CardContent>
       </Card>
-      
-      <div className="printable-report-area">
-        <div className="report-header">
-            <Image
-                src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
-                alt="Color Hut Logo"
-                width={200}
-                height={50}
-                priority
-                className="logo"
-            />
-            <div className="report-titles">
-              <h2 className="report-main-title">
-                  {reportTitle}
-              </h2>
-              <p className="report-sub-title">
-                Date Range: {selectedDateRange?.from ? format(selectedDateRange.from, 'd MMM, yyyy') : 'N/A'} - {selectedDateRange?.to ? format(selectedDateRange.to, 'd MMM, yyyy') : 'N/A'}
-              </p>
-            </div>
-            <div className="report-logo-placeholder"></div>
-        </div>
-        <Table>
-            <TableHeader>
-                {teamReportData ? (
-                    <>
-                        <TableRow>
-                            <TableHead rowSpan={2} className="align-bottom">Date</TableHead>
-                            {teamReportData.users.map(user => <TableHead key={user.id} colSpan={2} className="text-center">{user.name.split(' ')[0]}</TableHead>)}
-                        </TableRow>
-                        <TableRow>
-                            {teamReportData.users.map(user => (
-                                <React.Fragment key={user.id}>
-                                    <TableHead className="text-center text-xs font-medium">Tasks</TableHead>
-                                    <TableHead className="text-center text-xs font-medium border-r">Likely</TableHead>
-                                </React.Fragment>
-                            ))}
-                        </TableRow>
-                    </>
-                ) : (
-                    <TableRow>
-                        <TableHead>{specificUserId !== 'all' ? 'Date' : 'User Name'}</TableHead>
-                        <TableHead className="text-center">Tasks Done</TableHead>
-                        {(showLikelihoodChart || selectedTeam === 'all') && <TableHead className="text-center">Likely Customers</TableHead>}
-                    </TableRow>
-                )}
-            </TableHeader>
-            <TableBody>
-                {teamReportData ? (
-                    teamReportData.data.map(row => (
-                        <TableRow key={row.date}>
-                            <TableCell>{format(parseISO(row.date), 'PPP')}</TableCell>
-                            {teamReportData.users.map(user => (
-                                <React.Fragment key={user.id}>
-                                    <TableCell className="text-center">
-                                        {row[user.id]?.tasks || 0}
-                                    </TableCell>
-                                     <TableCell className="text-center border-r">
-                                        {row[user.id]?.likelihood || 0}
-                                    </TableCell>
-                                </React.Fragment>
-                            ))}
-                        </TableRow>
-                    ))
-                ) : (
-                    printableReportData.map((data, index) => (
-                        <TableRow key={'id' in data ? data.id : index}>
-                            <TableCell className="font-medium">{'date' in data ? format(parseISO(data.date), 'PPP') : data.userName}</TableCell>
-                            <TableCell className="text-center">{'taskCount' in data ? data.taskCount : 0}</TableCell>
-                            {(showLikelihoodChart || selectedTeam === 'all') && (
-                                <TableCell className="text-center">{'likelihood' in data ? data.likelihood || 0 : 'N/A'}</TableCell>
-                            )}
-                        </TableRow>
-                    ))
-                )}
-                 {(printableReportData.length === 0 && !teamReportData) && (
-                    <TableRow>
-                        <TableCell colSpan={(showLikelihoodChart || selectedTeam === 'all') ? 3 : 2} className="h-24 text-center">
-                            No data for this period.
-                        </TableCell>
-                    </TableRow>
-                )}
-                {teamReportData && teamReportData.data.length === 0 && (
-                    <TableRow>
-                        <TableCell colSpan={teamReportData.users.length * 2 + 1} className="h-24 text-center">
-                            No data for this period.
-                        </TableCell>
-                    </TableRow>
-                )}
-            </TableBody>
-             <TableFooter>
-                {teamReportData ? (
-                    <TableRow>
-                        <TableCell className="font-bold">Total</TableCell>
-                        {teamReportData.users.map(user => (
-                            <React.Fragment key={user.id}>
-                                <TableCell className="text-center font-bold">
-                                    {teamReportData.totals.find(t => t.userId === user.id)?.totalTasks || 0}
-                                </TableCell>
-                                 <TableCell className="text-center font-bold border-r">
-                                    {teamReportData.totals.find(t => t.userId === user.id)?.totalLikelihood || 0}
-                                </TableCell>
-                            </React.Fragment>
-                        ))}
-                    </TableRow>
-                ) : (
-                    <TableRow>
-                        <TableCell className="font-bold">Total</TableCell>
-                        <TableCell className="text-center font-bold">{totalTasksDone}</TableCell>
-                        {(showLikelihoodChart || selectedTeam === 'all') && (
-                            <TableCell className="text-center font-bold">{totalLikelyCustomers}</TableCell>
-                        )}
-                    </TableRow>
-                )}
-            </TableFooter>
-        </Table>
-        <div className="report-footer">
-          <p>&copy; {new Date().getFullYear()} Color Hut. All Rights Reserved.</p>
-        </div>
-      </div>
-
-       <style jsx global>{`
-        @media print {
-          body {
-            background-color: white !important;
-            -webkit-print-color-adjust: exact; 
-            print-color-adjust: exact;
-          }
-          .print-hide {
-            display: none !important;
-          }
-          .printable-report-area {
-            display: block !important;
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            padding: 1.5rem;
-            font-family: sans-serif;
-          }
-          .report-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 1rem;
-          }
-          .report-titles {
-            text-align: center;
-          }
-          .report-main-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #111827;
-          }
-          .report-sub-title {
-            font-size: 0.875rem;
-            color: #6b7280;
-          }
-          .logo {
-            object-fit: contain;
-            border-radius: 0.5rem; /* Equivalent to rounded-lg */
-          }
-          .report-logo-placeholder {
-            width: 200px; /* To balance the header */
-          }
-          .printable-report-area table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.8rem;
-          }
-          .printable-report-area th, .printable-report-area td {
-            border: 1px solid #e5e7eb;
-            padding: 0.5rem;
-            text-align: left;
-          }
-          .printable-report-area th {
-            background-color: #f9fafb;
-            font-weight: 600;
-            color: #374151;
-          }
-          .printable-report-area .text-center {
-            text-align: center;
-          }
-          .printable-report-area tfoot {
-            background-color: #f9fafb;
-            font-weight: 700;
-          }
-           .printable-report-area tfoot td {
-              font-weight: 700;
-           }
-          .report-footer {
-            margin-top: 2rem;
-            text-align: center;
-            font-size: 0.75rem;
-            color: #9ca3af;
-            border-top: 1px solid #e5e7eb;
-            padding-top: 1rem;
-          }
-        }
-        @media not print {
-          .printable-report-area {
-            display: none;
-          }
-        }
-      `}</style>
     </>
   );
 }
