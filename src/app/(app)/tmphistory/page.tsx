@@ -169,13 +169,13 @@ const TeamPerformanceReport = () => {
                     <TableBody>
                         {data.map(row => (
                             <TableRow key={row.date}>
-                                <TableCell>{format(parseISO(row.date), 'MMMM do, yyyy')}</TableCell>
+                                <TableCell className="py-1">{format(parseISO(row.date), 'MMMM do, yyyy')}</TableCell>
                                 {users.map(user => (
                                     <React.Fragment key={user.id}>
-                                        <TableCell className="text-center">
+                                        <TableCell className="text-center py-1">
                                             {(row[user.id] as { tasks: number })?.tasks || 0}
                                         </TableCell>
-                                        <TableCell className="text-center border-r">
+                                        <TableCell className="text-center border-r py-1">
                                             {(row[user.id] as { likelihood: number })?.likelihood || 0}
                                         </TableCell>
                                     </React.Fragment>
@@ -185,13 +185,13 @@ const TeamPerformanceReport = () => {
                     </TableBody>
                     <TableFooter>
                         <TableRow>
-                            <TableCell className="font-bold">Total</TableCell>
+                            <TableCell className="font-bold py-1">Total</TableCell>
                             {users.map(user => (
                                 <React.Fragment key={user.id}>
-                                    <TableCell className="text-center font-bold">
+                                    <TableCell className="text-center font-bold py-1">
                                         {totals.find(t => t.userId === user.id)?.totalTasks || 0}
                                     </TableCell>
-                                    <TableCell className="text-center font-bold border-r">
+                                    <TableCell className="text-center font-bold border-r py-1">
                                         {totals.find(t => t.userId === user.id)?.totalLikelihood || 0}
                                     </TableCell>
                                 </React.Fragment>
@@ -264,4 +264,5 @@ const TeamPerformanceReport = () => {
 };
 
 export default TeamPerformanceReport;
+
 
