@@ -309,7 +309,6 @@ export default function ProfilePage() {
             <CardTitle className="text-lg">Account</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1">
-            <ProfileLink href="#" icon={Bell} label="Notifications" />
             <ProfileLink href="/attendance/history" icon={CalendarClock} label="Leave History" />
           </CardContent>
         </Card>
