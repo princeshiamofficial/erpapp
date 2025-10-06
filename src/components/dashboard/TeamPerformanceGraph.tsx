@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -263,32 +262,75 @@ export function TeamPerformanceGraph({
     return currentUser.role === 'CRM';
   }, [currentUser, isAdminView, selectedTeam, specificUserId, userMap]);
 
-  const { printableReportData, totalTasksDone, totalLikelyCustomers } = useMemo(() => {
-    if (!allTasks || !selectedDateRange?.from || specificUserId === 'all') {
-      return { printableReportData: [], totalTasksDone: 0, totalLikelyCustomers: 0 };
+  const { printableReportData, totalTasksDone, totalLikelyCustomers, reportTitle } = useMemo(() => {
+    if (!allTasks || !selectedDateRange?.from) {
+      return { printableReportData: [], totalTasksDone: 0, totalLikelyCustomers: 0, reportTitle: 'Performance Report' };
     }
-
+  
     const startDate = startOfDay(selectedDateRange.from);
     const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
+  
+    let filteredTasks = allTasks.filter(task => {
+      try {
+        const taskDate = parseISO(task.date);
+        return isWithinInterval(taskDate, { start: startDate, end: endDate });
+      } catch {
+        return false;
+      }
+    });
 
-    const data = allTasks
-      .filter(task => {
-        if (task.userId !== specificUserId) return false;
-        try {
-          const taskDate = parseISO(task.date);
-          return isWithinInterval(taskDate, { start: startDate, end: endDate });
-        } catch {
-          return false;
+    // Single User Report
+    if (specificUserId !== 'all') {
+      filteredTasks = filteredTasks.filter(task => task.userId === specificUserId);
+      const tasksTotal = filteredTasks.reduce((sum, task) => sum + task.taskCount, 0);
+      const likelyTotal = filteredTasks.reduce((sum, task) => sum + (task.likelihood || 0), 0);
+      
+      const singleUserData = filteredTasks.map(task => ({
+        ...task,
+        userName: userMap.get(task.userId)?.name || task.userName,
+      }));
+
+      return { 
+        printableReportData: singleUserData, 
+        totalTasksDone: tasksTotal, 
+        totalLikelyCustomers: likelyTotal,
+        reportTitle: `Daily Performance Report for ${userMap.get(specificUserId)?.name || 'User'}`
+      };
+    }
+    
+    // Team Report
+    if (selectedTeam !== 'all') {
+      filteredTasks = filteredTasks.filter(task => task.role === selectedTeam);
+      
+      const userTotals = filteredTasks.reduce((acc, task) => {
+        if (!acc[task.userId]) {
+          acc[task.userId] = { 
+            userName: task.userName, 
+            taskCount: 0, 
+            likelihood: 0 
+          };
         }
-      })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        acc[task.userId].taskCount += task.taskCount;
+        acc[task.userId].likelihood += task.likelihood || 0;
+        return acc;
+      }, {} as Record<string, { userName: string; taskCount: number; likelihood: number }>);
       
-    const tasksTotal = data.reduce((sum, task) => sum + task.taskCount, 0);
-    const likelyTotal = data.reduce((sum, task) => sum + (task.likelihood || 0), 0);
+      const teamData = Object.values(userTotals).sort((a,b) => b.taskCount - a.taskCount);
+      const tasksTotal = teamData.reduce((sum, user) => sum + user.taskCount, 0);
+      const likelyTotal = teamData.reduce((sum, user) => sum + user.likelihood, 0);
 
-    return { printableReportData: data, totalTasksDone: tasksTotal, totalLikelyCustomers: likelyTotal };
-      
-  }, [allTasks, selectedDateRange, specificUserId]);
+      return { 
+        printableReportData: teamData, 
+        totalTasksDone: tasksTotal, 
+        totalLikelyCustomers: likelyTotal,
+        reportTitle: `Team Performance Report: ${selectedTeam}`
+      };
+    }
+
+    // Default empty state
+    return { printableReportData: [], totalTasksDone: 0, totalLikelyCustomers: 0, reportTitle: 'Performance Report' };
+
+  }, [allTasks, selectedDateRange, specificUserId, selectedTeam, userMap]);
 
 
   const renderChart = () => {
@@ -488,7 +530,7 @@ export function TeamPerformanceGraph({
                       onClick={() => window.print()}
                       className="h-10 w-10 print-hide"
                       title="Print Report"
-                      disabled={specificUserId === 'all'}
+                      disabled={specificUserId === 'all' && selectedTeam === 'all'}
                     >
                       <Printer className="h-5 w-5" />
                     </Button>
@@ -517,7 +559,7 @@ export function TeamPerformanceGraph({
             />
             <div className="report-titles">
               <h2 className="report-main-title">
-                  Daily Performance Report for {userMap.get(specificUserId)?.name}
+                  {reportTitle}
               </h2>
               <p className="report-sub-title">
                 Date Range: {selectedDateRange?.from ? format(selectedDateRange.from, 'd MMM, yyyy') : 'N/A'} - {selectedDateRange?.to ? format(selectedDateRange.to, 'd MMM, yyyy') : 'N/A'}
@@ -528,22 +570,24 @@ export function TeamPerformanceGraph({
         <Table>
             <TableHeader>
                 <TableRow>
-                    <TableHead>Date</TableHead>
+                    <TableHead>{specificUserId !== 'all' ? 'Date' : 'User Name'}</TableHead>
                     <TableHead className="text-center">Tasks Done</TableHead>
-                    {userMap.get(specificUserId)?.role === 'CRM' && <TableHead className="text-center">Likely Customers</TableHead>}
+                    {(showLikelihoodChart || selectedTeam === 'all') && <TableHead className="text-center">Likely Customers</TableHead>}
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {printableReportData.map((data) => (
-                    <TableRow key={data.id}>
-                        <TableCell className="font-medium">{format(parseISO(data.date), 'PPP')}</TableCell>
-                        <TableCell className="text-center">{data.taskCount}</TableCell>
-                        {userMap.get(specificUserId)?.role === 'CRM' && <TableCell className="text-center">{data.likelihood || 0}</TableCell>}
+                {printableReportData.map((data, index) => (
+                    <TableRow key={'date' in data ? data.id : data.userName}>
+                        <TableCell className="font-medium">{'date' in data ? format(parseISO(data.date), 'PPP') : data.userName}</TableCell>
+                        <TableCell className="text-center">{'taskCount' in data ? data.taskCount : 0}</TableCell>
+                        {(showLikelihoodChart || selectedTeam === 'all') && (
+                            <TableCell className="text-center">{'likelihood' in data ? data.likelihood || 0 : 'N/A'}</TableCell>
+                        )}
                     </TableRow>
                 ))}
                  {printableReportData.length === 0 && (
                     <TableRow>
-                        <TableCell colSpan={userMap.get(specificUserId)?.role === 'CRM' ? 3 : 2} className="h-24 text-center">
+                        <TableCell colSpan={(showLikelihoodChart || selectedTeam === 'all') ? 3 : 2} className="h-24 text-center">
                             No data for this period.
                         </TableCell>
                     </TableRow>
@@ -553,7 +597,7 @@ export function TeamPerformanceGraph({
                 <TableRow>
                     <TableCell className="font-bold">Total</TableCell>
                     <TableCell className="text-center font-bold">{totalTasksDone}</TableCell>
-                    {userMap.get(specificUserId)?.role === 'CRM' && (
+                    {(showLikelihoodChart || selectedTeam === 'all') && (
                         <TableCell className="text-center font-bold">{totalLikelyCustomers}</TableCell>
                     )}
                 </TableRow>
