@@ -25,7 +25,7 @@ import {
     ChartTooltip,
     ChartTooltipContent,
   } from "@/components/ui/chart"
-import { parseISO, startOfDay, isSameDay, getDaysInMonth, startOfMonth, subMonths, format, differenceInDays, endOfDay, endOfMonth } from 'date-fns';
+import { parseISO, startOfDay, isSameDay, getDaysInMonth, startOfMonth, subMonths, format, differenceInDays, endOfDay, endOfMonth, isWithinInterval } from 'date-fns';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { Input } from '@/components/ui/input';
@@ -331,173 +331,175 @@ export function TeamPerformanceGraph({
   }, [specificUserId, userMap]);
 
   return (
-    <Card className="bg-white/95 dark:bg-card/80 backdrop-blur-sm border-border/30 shadow-xl print-container">
-      <CardHeader className="print-hide">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-                <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>{performanceTitle}</CardTitle>
-                <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
-            </div>
-             <div className="flex items-baseline gap-2 text-right">
-                <span className="text-sm text-muted-foreground">Done</span>
-                <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">
-                    {totals.totalDone.toLocaleString()}
-                </div>
-                <div className="text-muted-foreground">
-                    /
-                </div>
-                <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">
-                    {totalPerformanceTarget.toLocaleString()}
-                </div>
-                <span className="text-sm text-muted-foreground">Target</span>
-            </div>
-            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
-                 {isInputVisible && (
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                        {canSubmitFirstLikelihood && (
-                          <div className="relative">
-                             <Label htmlFor="likelihood-customers-input" className="sr-only">Likely Customers</Label>
-                             <Input
-                              id="likelihood-customers-input"
-                              type="number"
-                              placeholder="Likely Customers..."
-                              value={likelihoodCustomers}
-                              onChange={(e) => setLikelihoodCustomers(e.target.value)}
-                              className="h-10 w-full sm:w-40"
-                              min="0"
+    <>
+      <Card className="bg-white/95 dark:bg-card/80 backdrop-blur-sm border-border/30 shadow-xl print-container">
+        <CardHeader className="print-hide">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                  <CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-primary"/>{performanceTitle}</CardTitle>
+                  <CardDescription>Aggregated daily task completion against targets for all users.</CardDescription>
+              </div>
+               <div className="flex items-baseline gap-2 text-right">
+                  <span className="text-sm text-muted-foreground">Done</span>
+                  <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">
+                      {totals.totalDone.toLocaleString()}
+                  </div>
+                  <div className="text-muted-foreground">
+                      /
+                  </div>
+                  <div className="text-xl sm:text-2xl font-bold text-foreground tabular-nums">
+                      {totalPerformanceTarget.toLocaleString()}
+                  </div>
+                  <span className="text-sm text-muted-foreground">Target</span>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap justify-end">
+                   {isInputVisible && (
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                          {canSubmitFirstLikelihood && (
+                            <div className="relative">
+                               <Label htmlFor="likelihood-customers-input" className="sr-only">Likely Customers</Label>
+                               <Input
+                                id="likelihood-customers-input"
+                                type="number"
+                                placeholder="Likely Customers..."
+                                value={likelihoodCustomers}
+                                onChange={(e) => setLikelihoodCustomers(e.target.value)}
+                                className="h-10 w-full sm:w-40"
+                                min="0"
+                               />
+                            </div>
+                          )}
+                          {canSubmitSecondEntry && (
+                            <>
+                             <div className="relative">
+                               <Label htmlFor="likelihood-customers-input-2" className="sr-only">Likely Customers</Label>
+                               <Input
+                                id="likelihood-customers-input-2"
+                                type="number"
+                                placeholder="Likely Customers..."
+                                value={likelihoodCustomers}
+                                onChange={(e) => setLikelihoodCustomers(e.target.value)}
+                                className="h-10 w-full sm:w-40"
+                                min="0"
+                               />
+                             </div>
+                             <Input 
+                                id="tasks-done-input"
+                                type="number" 
+                                placeholder={`${inputLabel}...`}
+                                value={tasksDone} 
+                                onChange={(e) => setTasksDone(e.target.value)} 
+                                className="h-10 w-full sm:w-32"
+                                min="0"
                              />
-                          </div>
-                        )}
-                        {canSubmitSecondEntry && (
-                          <>
-                           <div className="relative">
-                             <Label htmlFor="likelihood-customers-input-2" className="sr-only">Likely Customers</Label>
-                             <Input
-                              id="likelihood-customers-input-2"
-                              type="number"
-                              placeholder="Likely Customers..."
-                              value={likelihoodCustomers}
-                              onChange={(e) => setLikelihoodCustomers(e.target.value)}
-                              className="h-10 w-full sm:w-40"
-                              min="0"
+                            </>
+                          )}
+                          {canSubmitTasks && (
+                             <Input 
+                                id="tasks-done-input-single"
+                                type="number" 
+                                placeholder={`${inputLabel}...`}
+                                value={tasksDone} 
+                                onChange={(e) => setTasksDone(e.target.value)} 
+                                className="h-10 w-full sm:w-32"
+                                min="0"
                              />
-                           </div>
-                           <Input 
-                              id="tasks-done-input"
-                              type="number" 
-                              placeholder={`${inputLabel}...`}
-                              value={tasksDone} 
-                              onChange={(e) => setTasksDone(e.target.value)} 
-                              className="h-10 w-full sm:w-32"
-                              min="0"
-                           />
-                          </>
-                        )}
-                        {canSubmitTasks && (
-                           <Input 
-                              id="tasks-done-input-single"
-                              type="number" 
-                              placeholder={`${inputLabel}...`}
-                              value={tasksDone} 
-                              onChange={(e) => setTasksDone(e.target.value)} 
-                              className="h-10 w-full sm:w-32"
-                              min="0"
-                           />
-                        )}
+                          )}
 
-                        {(canSubmitFirstLikelihood || canSubmitSecondEntry || canSubmitTasks) && (
-                          <Button onClick={handleDoneClick} disabled={isSubmitting || (canSubmitFirstLikelihood && likelihoodCustomers.trim() === '') || (canSubmitSecondEntry && (likelihoodCustomers.trim() === '' || tasksDone.trim() === '')) || (canSubmitTasks && tasksDone.trim() === '')} className="h-10">
-                              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Done"}
-                          </Button>
-                        )}
-                        
-                        {hasCompletedDailySubmissions &&
-                          <Button asChild className="h-10 w-full sm:w-auto">
-                            <Link href="/workflow">
-                              Open Desk
-                            </Link>
-                          </Button>
-                        }
-                    </div>
-                 )}
-                 {isAdminView && (
-                    <Button asChild className="h-10 w-full sm:w-auto">
-                        <Link href="/workflow">
-                            Open Desk
-                        </Link>
-                    </Button>
-                 )}
-                {isAdminView && onTeamChange && (
-                  <Select value={selectedTeam} onValueChange={(value) => onTeamChange(value as UserRole | 'all')}>
-                    <SelectTrigger className="w-full sm:w-[150px] h-10">
-                      <SelectValue placeholder="Select Team" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Teams</SelectItem>
-                      <SelectItem value="CRM">CRM</SelectItem>
-                      <SelectItem value="DESIGNER_REPRESENTATIVE">Designer Reps</SelectItem>
-                      <SelectItem value="LR">Logistics (LR)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-                 {isAdminView && onSpecificUserChange && (
-                    <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" role="combobox" aria-expanded={isUserPopoverOpen} className="w-full sm:w-[180px] justify-between h-10">
-                                <span className="truncate">{selectedSpecificUserName}</span>
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          {(canSubmitFirstLikelihood || canSubmitSecondEntry || canSubmitTasks) && (
+                            <Button onClick={handleDoneClick} disabled={isSubmitting || (canSubmitFirstLikelihood && likelihoodCustomers.trim() === '') || (canSubmitSecondEntry && (likelihoodCustomers.trim() === '' || tasksDone.trim() === '')) || (canSubmitTasks && tasksDone.trim() === '')} className="h-10">
+                                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Done"}
                             </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                            <Command>
-                                <CommandInput placeholder="Search user..." />
-                                <CommandList>
-                                    <CommandEmpty>No user found.</CommandEmpty>
-                                    <CommandGroup>
-                                        <CommandItem onSelect={() => { if (onSpecificUserChange) { onSpecificUserChange('all'); setIsUserPopoverOpen(false); } }} className="cursor-pointer">
-                                            <Check className={cn("mr-2 h-4 w-4", specificUserId === 'all' ? "opacity-100" : "opacity-0")} />
-                                            All Users
-                                        </CommandItem>
-                                        {specificUserOptions.map(user => (
-                                            <CommandItem key={user.id} onSelect={() => { if (onSpecificUserChange) { onSpecificUserChange(user.id); setIsUserPopoverOpen(false); } }} className="cursor-pointer">
-                                                <Check className={cn("mr-2 h-4 w-4", specificUserId === user.id ? "opacity-100" : "opacity-0")} />
-                                                {user.name} ({user.role})
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
-                 )}
-                {selectedDateRange && <DateRangePicker 
-                  initialRange={selectedDateRange} 
-                  onDateRangeChange={handleDateChange}
-                  className="w-full sm:w-auto h-10"
-                />}
-                {isAdminView && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => window.print()}
-                    className="h-10 w-10 print-hide"
-                    title="Print Report"
-                    disabled={specificUserId === 'all'}
-                  >
-                    <Printer className="h-5 w-5" />
-                  </Button>
-                )}
-            </div>
-        </div>
-      </CardHeader>
-      <CardContent className="print-hide">
-        <div className="h-[400px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            {renderChart()}
+                          )}
+                          
+                          {hasCompletedDailySubmissions &&
+                            <Button asChild className="h-10 w-full sm:w-auto">
+                              <Link href="/workflow">
+                                Open Desk
+                              </Link>
+                            </Button>
+                          }
+                      </div>
+                   )}
+                   {isAdminView && (
+                      <Button asChild className="h-10 w-full sm:w-auto">
+                          <Link href="/workflow">
+                              Open Desk
+                          </Link>
+                      </Button>
+                   )}
+                  {isAdminView && onTeamChange && (
+                    <Select value={selectedTeam} onValueChange={(value) => onTeamChange(value as UserRole | 'all')}>
+                      <SelectTrigger className="w-full sm:w-[150px] h-10">
+                        <SelectValue placeholder="Select Team" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Teams</SelectItem>
+                        <SelectItem value="CRM">CRM</SelectItem>
+                        <SelectItem value="DESIGNER_REPRESENTATIVE">Designer Reps</SelectItem>
+                        <SelectItem value="LR">Logistics (LR)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                   {isAdminView && onSpecificUserChange && (
+                      <Popover open={isUserPopoverOpen} onOpenChange={setIsUserPopoverOpen}>
+                          <PopoverTrigger asChild>
+                              <Button variant="outline" role="combobox" aria-expanded={isUserPopoverOpen} className="w-full sm:w-[180px] justify-between h-10">
+                                  <span className="truncate">{selectedSpecificUserName}</span>
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                              <Command>
+                                  <CommandInput placeholder="Search user..." />
+                                  <CommandList>
+                                      <CommandEmpty>No user found.</CommandEmpty>
+                                      <CommandGroup>
+                                          <CommandItem onSelect={() => { if (onSpecificUserChange) { onSpecificUserChange('all'); setIsUserPopoverOpen(false); } }} className="cursor-pointer">
+                                              <Check className={cn("mr-2 h-4 w-4", specificUserId === 'all' ? "opacity-100" : "opacity-0")} />
+                                              All Users
+                                          </CommandItem>
+                                          {specificUserOptions.map(user => (
+                                              <CommandItem key={user.id} onSelect={() => { if (onSpecificUserChange) { onSpecificUserChange(user.id); setIsUserPopoverOpen(false); } }} className="cursor-pointer">
+                                                  <Check className={cn("mr-2 h-4 w-4", specificUserId === user.id ? "opacity-100" : "opacity-0")} />
+                                                  {user.name} ({user.role})
+                                              </CommandItem>
+                                          ))}
+                                      </CommandGroup>
+                                  </CommandList>
+                              </Command>
+                          </PopoverContent>
+                      </Popover>
+                   )}
+                  {selectedDateRange && <DateRangePicker 
+                    initialRange={selectedDateRange} 
+                    onDateRangeChange={handleDateChange}
+                    className="w-full sm:w-auto h-10"
+                  />}
+                  {isAdminView && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => window.print()}
+                      className="h-10 w-10 print-hide"
+                      title="Print Report"
+                      disabled={specificUserId === 'all'}
+                    >
+                      <Printer className="h-5 w-5" />
+                    </Button>
+                  )}
+              </div>
+          </div>
+        </CardHeader>
+        <CardContent className="print-hide">
+          <div className="h-[400px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              {renderChart()}
           </ResponsiveContainer>
-        </div>
-      </CardContent>
-
+          </div>
+        </CardContent>
+      </Card>
+      
       <div className="hidden print:block p-4">
         <div className="flex justify-center mb-4">
             <Image
@@ -531,23 +533,37 @@ export function TeamPerformanceGraph({
                         {userMap.get(specificUserId)?.role === 'CRM' && <TableCell className="text-center">{data.likelihood || 0}</TableCell>}
                     </TableRow>
                 ))}
+                 {printableReportData.length === 0 && (
+                    <TableRow>
+                        <TableCell colSpan={userMap.get(specificUserId)?.role === 'CRM' ? 3 : 2} className="h-24 text-center">
+                            No data for this period.
+                        </TableCell>
+                    </TableRow>
+                )}
             </TableBody>
         </Table>
       </div>
 
        <style jsx global>{`
         @media print {
+          body * {
+            visibility: hidden;
+          }
+          .print-container, .print-container * {
+            visibility: visible;
+          }
+          .print-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+          }
           .print-hide {
             display: none !important;
           }
-          .print-container {
-            box-shadow: none !important;
-            border: none !important;
-            padding: 0 !important;
-          }
         }
       `}</style>
-    </Card>
+    </>
   );
 }
 
