@@ -25,7 +25,7 @@ import {
     ChartTooltip,
     ChartTooltipContent,
   } from "@/components/ui/chart"
-import { parseISO, startOfDay, isSameDay, getDaysInMonth, startOfMonth, subMonths, format, differenceInDays, endOfDay, endOfMonth, isWithinInterval } from 'date-fns';
+import { parseISO, startOfDay, isSameDay, getDaysInMonth, startOfMonth, subMonths, format, differenceInDays, endOfDay, isWithinInterval } from 'date-fns';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { Input } from '@/components/ui/input';
@@ -39,7 +39,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area'; 
 import type { GlobalSettings } from '@/types';
 import Link from 'next/link';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import Image from 'next/image';
 
 
@@ -101,7 +101,7 @@ export function TeamPerformanceGraph({
   const [chartType, setChartType] = useState<'line'>('line');
   const [tasksDone, setTasksDone] = useState('');
   const [likelihoodCustomers, setLikelihoodCustomers] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting(false);
   const [submissionsTodayCount, setSubmissionsTodayCount] = useState(0);
   const { currentUser } = useAuth();
   const { toast } = useToast();
@@ -263,15 +263,15 @@ export function TeamPerformanceGraph({
     return currentUser.role === 'CRM';
   }, [currentUser, isAdminView, selectedTeam, specificUserId, userMap]);
 
- const printableReportData = useMemo(() => {
+  const { printableReportData, totalTasksDone, totalLikelyCustomers } = useMemo(() => {
     if (!allTasks || !selectedDateRange?.from || specificUserId === 'all') {
-      return [];
+      return { printableReportData: [], totalTasksDone: 0, totalLikelyCustomers: 0 };
     }
 
     const startDate = startOfDay(selectedDateRange.from);
     const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
 
-    return allTasks
+    const data = allTasks
       .filter(task => {
         if (task.userId !== specificUserId) return false;
         try {
@@ -282,6 +282,11 @@ export function TeamPerformanceGraph({
         }
       })
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      
+    const tasksTotal = data.reduce((sum, task) => sum + task.taskCount, 0);
+    const likelyTotal = data.reduce((sum, task) => sum + (task.likelihood || 0), 0);
+
+    return { printableReportData: data, totalTasksDone: tasksTotal, totalLikelyCustomers: likelyTotal };
       
   }, [allTasks, selectedDateRange, specificUserId]);
 
@@ -544,6 +549,15 @@ export function TeamPerformanceGraph({
                     </TableRow>
                 )}
             </TableBody>
+             <TableFooter>
+                <TableRow>
+                    <TableCell className="font-bold">Total</TableCell>
+                    <TableCell className="text-center font-bold">{totalTasksDone}</TableCell>
+                    {userMap.get(specificUserId)?.role === 'CRM' && (
+                        <TableCell className="text-center font-bold">{totalLikelyCustomers}</TableCell>
+                    )}
+                </TableRow>
+            </TableFooter>
         </Table>
         <div className="report-footer">
           <p>&copy; {new Date().getFullYear()} Color Hut. All Rights Reserved.</p>
@@ -591,6 +605,7 @@ export function TeamPerformanceGraph({
           }
           .logo {
             object-fit: contain;
+            border-radius: 8px; /* Added border-radius */
           }
           .report-logo-placeholder {
             width: 200px; /* To balance the header */
@@ -612,6 +627,10 @@ export function TeamPerformanceGraph({
           }
           .printable-report-area .text-center {
             text-align: center;
+          }
+          .printable-report-area tfoot {
+            background-color: #f9fafb;
+            font-weight: 700;
           }
           .report-footer {
             margin-top: 2rem;
@@ -705,3 +724,5 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
+    
