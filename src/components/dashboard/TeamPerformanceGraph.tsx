@@ -605,16 +605,7 @@ export function TeamPerformanceGraph({
                   />}
                   {isAdminView && (
                     <>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={handleExport}
-                        className="h-10 w-10 print-hide"
-                        title="Export Team Data to CSV"
-                        disabled={selectedTeam === 'all' || specificUserId !== 'all'}
-                      >
-                        <Download className="h-5 w-5" />
-                      </Button>
+                      
                       <Button
                         variant="outline"
                         size="icon"
