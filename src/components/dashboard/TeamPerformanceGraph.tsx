@@ -209,7 +209,7 @@ export function TeamPerformanceGraph({
     if (currentUser?.role === 'CRM') {
       return submissionsTodayCount >= 2; 
     }
-    if (currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR') {
+    if (currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser.role === 'LR') {
       return submissionsTodayCount > 0;
     }
     return false;
@@ -500,7 +500,7 @@ export function TeamPerformanceGraph({
         </CardContent>
       </Card>
       
-      <div className="hidden print:block p-4">
+      <div className="printable-report-area">
         <div className="flex justify-center mb-4">
             <Image
                 src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg"
@@ -549,17 +549,19 @@ export function TeamPerformanceGraph({
           body * {
             visibility: hidden;
           }
-          .print-container, .print-container * {
+          .printable-report-area, .printable-report-area * {
             visibility: visible;
           }
-          .print-container {
+          .printable-report-area {
             position: absolute;
             left: 0;
             top: 0;
             width: 100%;
           }
-          .print-hide {
-            display: none !important;
+        }
+        @media not print {
+          .printable-report-area {
+            display: none;
           }
         }
       `}</style>
