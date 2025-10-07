@@ -97,6 +97,7 @@ export default function PayrollPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   
   const [payslipToEdit, setPayslipToEdit] = useState<Employee | null>(null);
+  const [existingPayslipForDialog, setExistingPayslipForDialog] = useState<Payslip | undefined>(undefined);
   const [employeeToIncrement, setEmployeeToIncrement] = useState<Employee | null>(null);
 
   const [incrementToDelete, setIncrementToDelete] = useState<{ employeeId: string, increment: SalaryIncrement } | null>(null);
@@ -243,12 +244,12 @@ export default function PayrollPage() {
               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
           const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
 
-          const perDaySalaryForAbsence = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
-          const perDaySalaryForFine = effectiveSalary / 30; // New logic as requested
+          const perDaySalaryForFine = effectiveSalary / 30;
 
           const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
           const fine = payslip?.fine ?? automaticFine;
 
+          const perDaySalaryForAbsence = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
           const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
           
           const providentFund = effectiveSalary * 0.07;
@@ -638,26 +639,33 @@ export default function PayrollPage() {
                   </TableRow>
                 ))
               ) : salarySheetCalculatedData.length > 0 ? (
-                salarySheetCalculatedData.map((data) => (
-                    <TableRow key={data.id}>
-                        <TableCell className="font-medium">{data.name}</TableCell>
-                        <TableCell>{data.presentDays}</TableCell>
-                        <TableCell>{data.absentDays}</TableCell>
-                        <TableCell>{data.lateDays}</TableCell>
-                        <TableCell>{formatCurrency(data.providentFund)}</TableCell>
-                        <TableCell>{formatCurrency(data.fine)}</TableCell>
-                        <TableCell>{formatCurrency(data.incentive)}</TableCell>
-                        <TableCell className="font-semibold">{formatCurrency(data.payableAmount)}</TableCell>
-                        <TableCell>
-                          <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button variant="outline" size="sm" className="h-8" onClick={() => setPayslipToEdit(data)}>
-                            Edit payslip
-                          </Button>
-                        </TableCell>
-                    </TableRow>
-                  ))
+                salarySheetCalculatedData.map((data) => {
+                    const monthYearId = format(selectedDate, 'yyyy-MM');
+                    const payslipForDialog = salarySheetData.find(p => p.employeeId === data.employeeId && p.id.startsWith(monthYearId));
+                    return (
+                        <TableRow key={data.id}>
+                            <TableCell className="font-medium">{data.name}</TableCell>
+                            <TableCell>{data.presentDays}</TableCell>
+                            <TableCell>{data.absentDays}</TableCell>
+                            <TableCell>{data.lateDays}</TableCell>
+                            <TableCell>{formatCurrency(data.providentFund)}</TableCell>
+                            <TableCell>{formatCurrency(data.fine)}</TableCell>
+                            <TableCell>{formatCurrency(data.incentive)}</TableCell>
+                            <TableCell className="font-semibold">{formatCurrency(data.payableAmount)}</TableCell>
+                            <TableCell>
+                            <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                            <Button variant="outline" size="sm" className="h-8" onClick={() => {
+                                setPayslipToEdit(data);
+                                setExistingPayslipForDialog(payslipForDialog);
+                            }}>
+                                Edit payslip
+                            </Button>
+                            </TableCell>
+                        </TableRow>
+                    );
+                })
               ) : (
                 <TableRow>
                   <TableCell colSpan={10} className="h-48 text-center text-gray-500">
@@ -787,6 +795,7 @@ export default function PayrollPage() {
           }}
           selectedDate={selectedDate}
           weekendDays={selectedWeekends}
+          existingPayslip={existingPayslipForDialog}
         />
       )}
     </div>
