@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -621,15 +620,43 @@ export default function PayrollPage() {
       </CardContent>
     </Card>
   );
+
+  const summaryContent = (
+      <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+          <CardHeader className="p-6">
+              <CardTitle className="text-xl font-bold text-gray-800">Summary</CardTitle>
+              <CardDescription>A summary of payroll for {format(selectedDate, 'MMMM yyyy')}.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-6 pt-0">
+              <div className="text-center p-10 bg-gray-50 rounded-lg">
+                <h3 className="text-lg text-gray-500">Summary view is under construction.</h3>
+              </div>
+          </CardContent>
+      </Card>
+  );
+
+  const settingsContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+        <CardHeader className="p-6">
+            <CardTitle className="text-xl font-bold text-gray-800">Settings</CardTitle>
+            <CardDescription>Configure payroll and attendance settings.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 pt-0">
+            <div className="text-center p-10 bg-gray-50 rounded-lg">
+                <h3 className="text-lg text-gray-500">Settings are under construction.</h3>
+            </div>
+        </CardContent>
+    </Card>
+  );
+
   
   const renderActiveTab = () => {
     switch (activeTab) {
-      case 'salary_sheet':
-        return salarySheetContent;
-      case 'employee_list':
-        return employeeListContent;
-      default:
-        return employeeListContent;
+      case 'salary_sheet': return salarySheetContent;
+      case 'employee_list': return employeeListContent;
+      case 'summary': return summaryContent;
+      case 'settings': return settingsContent;
+      default: return employeeListContent;
     }
   };
 
@@ -647,6 +674,8 @@ export default function PayrollPage() {
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
           <TabsTrigger value="employee_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee List</TabsTrigger>
+          <TabsTrigger value="summary" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Summary</TabsTrigger>
+          <TabsTrigger value="settings" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Settings</TabsTrigger>
         </TabsList>
         <div className="mt-6">
             {renderActiveTab()}
