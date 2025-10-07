@@ -67,7 +67,12 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       return workingDays;
   }, [selectedDate, weekendDays]);
 
-  const perDaySalary = useMemo(() => {
+  const perDaySalaryForFine = useMemo(() => {
+    const baseSalary = employee.salary || 0;
+    return baseSalary / 30; // Always divide by 30 for fine calculation
+  }, [employee.salary]);
+
+  const perDaySalaryForAbsence = useMemo(() => {
       const baseSalary = employee.salary || 0;
       return totalWorkingDays > 0 ? baseSalary / totalWorkingDays : 0;
   }, [employee.salary, totalWorkingDays]);
@@ -81,22 +86,22 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       const initialLateDays = payslipData?.lateDays.toString() || employee.lateDays?.toString() || '0';
       setLate(initialLateDays);
       
-      const calculatedFine = Math.floor(parseInt(initialLateDays, 10) / 3) * perDaySalary;
+      const calculatedFine = Math.floor(parseInt(initialLateDays, 10) / 3) * perDaySalaryForFine;
       setFine(payslipData?.fine?.toString() ?? calculatedFine.toFixed(2));
       
       setIncentive(payslipData?.incentive.toString() || '0');
       setPaymentStatus(payslipData?.paymentStatus || 'Unpaid');
       setIsSubmitting(false);
     }
-  }, [isOpen, employee, monthYearId, existingPayslip, totalWorkingDays, perDaySalary]);
+  }, [isOpen, employee, monthYearId, existingPayslip, totalWorkingDays, perDaySalaryForFine]);
 
   useEffect(() => {
     const lateDaysNum = parseInt(late, 10);
     if (!isNaN(lateDaysNum) && lateDaysNum >= 0) {
-      const calculatedFine = Math.floor(lateDaysNum / 3) * perDaySalary;
+      const calculatedFine = Math.floor(lateDaysNum / 3) * perDaySalaryForFine;
       setFine(calculatedFine.toFixed(2));
     }
-  }, [late, perDaySalary]);
+  }, [late, perDaySalaryForFine]);
 
   const providentFund = useMemo(() => {
     return (employee.salary || 0) * 0.07;
@@ -107,10 +112,10 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     const fineNum = parseFloat(fine) || 0;
     const presentDays = parseInt(present, 10) || 0;
     
-    const salaryForDaysWorked = perDaySalary * presentDays;
+    const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
     
     return (salaryForDaysWorked) + incentiveNum - fineNum - providentFund;
-  }, [incentive, fine, providentFund, present, perDaySalary]);
+  }, [incentive, fine, providentFund, present, perDaySalaryForAbsence]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {

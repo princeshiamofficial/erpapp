@@ -243,14 +243,15 @@ export default function PayrollPage() {
               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
           const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
 
-          const perDaySalary = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
-          const providentFund = effectiveSalary * 0.07;
-          
-          // Calculate fine from late days automatically
-          const automaticFine = Math.floor(lateDays / 3) * perDaySalary;
-          const fine = payslip?.fine ?? automaticFine; // Use payslip fine if it exists, otherwise use calculated one
+          const perDaySalaryForAbsence = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
+          const perDaySalaryForFine = effectiveSalary / 30; // New logic as requested
 
-          const salaryForDaysWorked = perDaySalary * presentDays;
+          const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
+          const fine = payslip?.fine ?? automaticFine;
+
+          const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
+          
+          const providentFund = effectiveSalary * 0.07;
           
           const payableAmount = payslip?.payableAmount ?? (salaryForDaysWorked) + incentive - fine - providentFund;
 
