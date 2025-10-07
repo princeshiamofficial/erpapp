@@ -50,6 +50,7 @@ const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeave
 
 
 const ITEMS_PER_PAGE = 8;
+
 const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 
@@ -269,7 +270,7 @@ export default function PayrollPage() {
           const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
           const fine = payslip?.fine ?? automaticFine;
 
-          const perDaySalaryForAbsence = workingDaysInMonth > 0 ? effectiveSalary / workingDaysInMonth : 0;
+          const perDaySalaryForAbsence = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
           const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
           
           const providentFund = effectiveSalary * 0.07;
@@ -412,7 +413,6 @@ export default function PayrollPage() {
       value: i.toString(),
       label: format(new Date(0, i), 'MMMM'),
   })), []);
-
 
   const employeeListContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
@@ -599,15 +599,15 @@ export default function PayrollPage() {
                             <TableCell>{formatCurrency(data.incentive)}</TableCell>
                             <TableCell className="font-semibold">{formatCurrency(data.payableAmount)}</TableCell>
                             <TableCell>
-                            <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
+                              <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
                             </TableCell>
                             <TableCell className="text-center">
-                            <Button variant="outline" size="sm" className="h-8" onClick={() => {
-                                setPayslipToEdit(data);
-                                setExistingPayslipForDialog(payslipForDialog);
-                            }}>
+                              <Button variant="outline" size="sm" className="h-8" onClick={() => {
+                                  setPayslipToEdit(data);
+                                  setExistingPayslipForDialog(payslipForDialog);
+                              }}>
                                 Edit payslip
-                            </Button>
+                              </Button>
                             </TableCell>
                         </TableRow>
                     );
@@ -661,7 +661,7 @@ export default function PayrollPage() {
       <SummaryCard 
         title="Total Fine"
         value={formatCurrency(totalFineAmount)}
-        icon={AlertTriangle}
+        icon={Receipt}
         iconColorClass="text-red-600"
         circleBgClass="bg-red-100 dark:bg-red-700/20"
         isLoading={isLoading}
@@ -708,7 +708,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -732,8 +732,8 @@ export default function PayrollPage() {
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
-          existingPayslip={existingPayslipForDialog}
           weekendDays={weekendDays}
+          existingPayslip={existingPayslipForDialog}
         />
       )}
       {employeeToIncrement && <IncrementSalaryDialog isOpen={!!employeeToIncrement} onOpenChange={(open) => !open && setEmployeeToIncrement(null)} employee={employeeToIncrement} onSalaryIncremented={fetchData}/>}
