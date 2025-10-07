@@ -33,7 +33,7 @@ interface EditPayslipDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDate: Date; // Added prop
-  existingPayslip: Payslip | undefined;
+  existingPayslip?: Payslip;
 }
 
 export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, selectedDate, existingPayslip }: EditPayslipDialogProps) {
@@ -97,7 +97,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
         paymentStatus: paymentStatus,
     };
 
-    const docId = `${monthYearId}-${employee.id}`;
+    const docId = `${monthYearId}-${employee.employeeId}`;
 
     const result = await updatePayslipAction(docId, payslipData);
     setIsSubmitting(false);

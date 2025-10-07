@@ -108,7 +108,7 @@ export default function PayrollPage() {
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
-  const [weekendDays, setWeekendDays] = useState<string[]>([]);
+  const [selectedWeekends, setSelectedWeekends] = useState<string[]>([]);
   const [salarySheetData, setSalarySheetData] = useState<Payslip[]>([]);
 
   const fetchData = useCallback(async () => {
@@ -118,20 +118,20 @@ export default function PayrollPage() {
       const [
         fetchedEmployees, 
         fetchedUsers,
-        fetchedAttendance,
+        fetchedAttendance, 
         fetchedWeekendSettings,
         fetchedSalarySheet,
       ] = await Promise.all([
         getEmployees(),
         getUsers(),
-        getAttendanceForMonth(selectedDate),
+        getAttendanceForMonth(selectedDate), 
         getWeekendSettings(),
         getSalarySheetForMonth(monthStr)
       ]);
       setEmployees(fetchedEmployees);
       setAllUsers(fetchedUsers);
       setAttendanceData(fetchedAttendance);
-      setWeekendDays(fetchedWeekendSettings.days);
+      setSelectedWeekends(fetchedWeekendSettings.days);
       setSalarySheetData(fetchedSalarySheet);
     } catch (error) {
       console.error("Failed to fetch page data:", error);
@@ -163,7 +163,7 @@ export default function PayrollPage() {
           }
           
           if (employee.status === 'Inactive') {
-            const paidSlips = salarySheetData.filter(p => p.employeeId === employee.id && p.paymentStatus === 'Paid');
+            const paidSlips = salarySheetData.filter(p => p.employeeId === employee.employeeId && p.paymentStatus === 'Paid');
 
             if (paidSlips.length === 0) {
               return !isAfter(startOfMonth(joiningDate), selectedMonthStart);
@@ -197,23 +197,78 @@ export default function PayrollPage() {
     return results;
   }, [employees, searchTerm, activeTab, selectedDate, salarySheetData]);
 
-  const allIncrementHistory = useMemo(() => {
-    return employees.flatMap(employee => 
-        (employee.salaryHistory || []).map(history => ({
-            ...history,
-            employeeName: employee.name,
-            employeeId: employee.id
-        }))
-    ).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [employees]);
+  const totalPages = useMemo(() => {
+    if (activeTab === 'salary_sheet') return Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
+    return 1;
+  },[filteredEmployees, activeTab]);
 
-
-  const totalPages = Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
   const paginatedEmployees = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    return filteredEmployees.slice(startIndex, endIndex);
-  }, [filteredEmployees, currentPage]);
+    if (activeTab === 'salary_sheet') {
+      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+      const endIndex = startIndex + ITEMS_PER_PAGE;
+      return filteredEmployees.slice(startIndex, endIndex);
+    }
+    return filteredEmployees;
+  }, [filteredEmployees, currentPage, activeTab]);
+  
+  const salarySheetCalculatedData = useMemo(() => {
+    const monthYearId = format(selectedDate, 'yyyy-MM');
+    const startDate = startOfMonth(selectedDate);
+    const endDate = endOfMonth(selectedDate);
+
+    const daysInSelectedMonth = getDaysInMonth(selectedDate);
+
+    let totalWorkingDays = 0;
+    const weekendDayIndexes = selectedWeekends.map(day => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(day));
+
+    for (let i = 1; i <= daysInSelectedMonth; i++) {
+        const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), i);
+        const dayOfWeek = getDay(currentDate);
+        if (!weekendDayIndexes.includes(dayOfWeek)) {
+            totalWorkingDays++;
+        }
+    }
+    
+    return paginatedEmployees.map(employee => {
+      const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id === monthYearId);
+      const userAttendanceInRange = attendanceData.filter(att => 
+          att.employeeId === employee.userId && isWithinInterval(parseISO(att.date), { start: startDate, end: endDate })
+      );
+      
+      const presentDays = payslip?.presentDays ?? userAttendanceInRange.length;
+      const lateDays = payslip?.lateDays ?? userAttendanceInRange.filter(att => att.status === 'Late').length;
+      const absentDays = payslip?.absentDays ?? Math.max(0, totalWorkingDays - presentDays);
+      
+      const fine = payslip?.fine ?? 0;
+      const incentive = payslip?.incentive ?? 0;
+      const paymentStatus = payslip?.paymentStatus ?? 'Unpaid';
+
+      const relevantHistory = (employee.salaryHistory || [])
+          .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
+
+      const perDaySalary = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
+      const providentFund = effectiveSalary * 0.07;
+      const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
+      
+      const salaryForDaysWorked = perDaySalary * presentDays;
+      
+      const payableAmount = payslip?.payableAmount ?? (salaryForDaysWorked) + incentive - fine - providentFund - lateDeduction;
+
+      return {
+        ...employee,
+        presentDays,
+        absentDays,
+        lateDays,
+        providentFund,
+        fine,
+        incentive,
+        payableAmount,
+        paymentStatus
+      };
+    });
+  }, [paginatedEmployees, selectedDate, attendanceData, selectedWeekends, salarySheetData]);
   
   useEffect(() => {
       setCurrentPage(1);
@@ -287,68 +342,6 @@ export default function PayrollPage() {
     return allUsers.filter(u => !employeeUserIds.has(u.id));
   }, [employees, allUsers]);
   
-  const salarySheetCalculatedData = useMemo(() => {
-    const monthYearId = format(selectedDate, 'yyyy-MM');
-    const startDate = startOfMonth(selectedDate);
-    const endDate = endOfMonth(selectedDate);
-
-    const daysInSelectedMonth = getDaysInMonth(selectedDate);
-
-    let totalWorkingDays = 0;
-    const weekendDayIndexes = weekendDays.map(day => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(day));
-
-    for (let i = 1; i <= daysInSelectedMonth; i++) {
-        const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), i);
-        const dayOfWeek = getDay(currentDate);
-        if (!weekendDayIndexes.includes(dayOfWeek)) {
-            totalWorkingDays++;
-        }
-    }
-    
-    return paginatedEmployees.map(employee => {
-      const payslip = salarySheetData.find(p => p.employeeId === employee.id && p.id === monthYearId);
-      const userAttendanceInRange = attendanceData.filter(att => 
-          att.employeeId === employee.userId && isWithinInterval(parseISO(att.date), { start: startDate, end: endDate })
-      );
-      
-      const presentDays = payslip?.presentDays ?? userAttendanceInRange.length;
-      const lateDays = payslip?.lateDays ?? userAttendanceInRange.filter(att => att.status === 'Late').length;
-      const absentDays = payslip?.absentDays ?? Math.max(0, totalWorkingDays - presentDays);
-      
-      const fine = payslip?.fine ?? 0;
-      const incentive = payslip?.incentive ?? 0;
-      const paymentStatus = payslip?.paymentStatus ?? 'Unpaid';
-
-      const relevantHistory = (employee.salaryHistory || [])
-          .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
-
-      const perDaySalary = effectiveSalary / 30; // Always calculate based on 30 days
-      const providentFund = effectiveSalary * 0.07;
-      const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
-
-      const salaryForDaysWorked = perDaySalary * presentDays;
-      // Salary for weekends is included if they worked the whole month, so we add it back if they were present on all working days
-      const weekendSalaryAdjustment = (presentDays >= totalWorkingDays) ? (perDaySalary * (daysInSelectedMonth - totalWorkingDays)) : 0;
-      
-      const payableAmount = payslip?.payableAmount ?? (salaryForDaysWorked + weekendSalaryAdjustment) + incentive - fine - providentFund - lateDeduction;
-
-      return {
-        ...employee,
-        presentDays,
-        absentDays,
-        lateDays,
-        providentFund,
-        fine,
-        incentive,
-        payableAmount,
-        paymentStatus
-      };
-    });
-  }, [paginatedEmployees, selectedDate, attendanceData, weekendDays, salarySheetData]);
-
-
   const { totalPaid, totalUnpaid, totalPayableAmount } = useMemo(() => {
     const totals = salarySheetCalculatedData.reduce((acc, data) => {
       acc.totalPayableAmount += data.payableAmount;
@@ -399,13 +392,13 @@ export default function PayrollPage() {
   };
   
     const handleWeekendChange = (day: string, checked: boolean | 'indeterminate') => {
-        setWeekendDays(prev => 
+        setSelectedWeekends(prev => 
             checked ? [...prev, day] : prev.filter(d => d !== day)
         );
     };
 
     const handleSaveWeekends = async () => {
-        const result = await saveWeekendSettingsAction(weekendDays);
+        const result = await saveWeekendSettingsAction(selectedWeekends);
         if (result.success) {
             toast({
                 title: "Settings Saved",
@@ -771,7 +764,7 @@ export default function PayrollPage() {
                             <div key={day} className="flex items-center space-x-2">
                                 <Checkbox
                                     id={`weekend-${day}`}
-                                    checked={weekendDays.includes(day)}
+                                    checked={selectedWeekends.includes(day)}
                                     onCheckedChange={(checked) => handleWeekendChange(day, checked)}
                                 />
                                 <Label htmlFor={`weekend-${day}`} className="text-sm font-normal">
@@ -843,5 +836,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
-    

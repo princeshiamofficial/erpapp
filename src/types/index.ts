@@ -36,7 +36,8 @@ export interface LeaveRecord {
 }
 
 export interface Payslip {
-    id: string; // e.g., '2024-07' for July 2024
+    id: string; // e.g., '2024-07-CRM-001'
+    employeeId: string;
     presentDays: number;
     absentDays: number;
     lateDays: number;

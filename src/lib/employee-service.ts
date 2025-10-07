@@ -198,6 +198,7 @@ export const getPayslipForMonth = async (month: string): Promise<Payslip[]> => {
 // New function to update a payslip record in its own collection
 export const updatePayslipInDb = async (payslipId: string, payslipData: Omit<Payslip, 'id' | 'updatedAt' | 'employeeId'>): Promise<boolean> => {
     const month = payslipId.substring(0, 7); // Extract YYYY-MM from payslipId
+    const employeeId = payslipId.substring(8); // Extract employeeId from payslipId
     const collectionName = getSalarySheetCollectionName(month);
     try {
         const existingPayslip = await fetchFromApiV3(`collections/${collectionName}/documents/${payslipId}`).catch(() => null);
@@ -205,14 +206,14 @@ export const updatePayslipInDb = async (payslipId: string, payslipData: Omit<Pay
         const dataToSave = {
             ...(existingPayslip?.data || {}),
             ...payslipData,
-            employeeId: existingPayslip?.data?.employeeId, // Preserve employeeId
+            employeeId: employeeId,
             updatedAt: new Date().toISOString(),
         };
         
         const payload = { id: payslipId, data: dataToSave };
 
         if (existingPayslip) {
-            await fetchFromApiV3(`collections/${collectionName}/documents/${payslipId}`, {
+             await fetchFromApiV3(`collections/${collectionName}/documents/${payslipId}`, {
                 method: 'PUT',
                 body: JSON.stringify({ data: dataToSave })
             });
