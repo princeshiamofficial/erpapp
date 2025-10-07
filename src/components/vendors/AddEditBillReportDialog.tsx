@@ -15,26 +15,33 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
+import type { User } from '@/types';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 interface AddEditBillReportDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onSave: () => void;
-  // Add props for editing if needed, e.g., billReport?: BillReportType | null;
+  vendors: User[];
 }
 
-export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave }: AddEditBillReportDialogProps) {
+export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors }: AddEditBillReportDialogProps) {
   const [invoiceId, setInvoiceId] = useState('');
   const [amount, setAmount] = useState('');
   const [payment, setPayment] = useState('');
   const [method, setMethod] = useState('');
+  const [selectedVendor, setSelectedVendor] = useState('');
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!invoiceId || !amount || !payment || !method) {
+    if (!invoiceId || !amount || !payment || !method || !selectedVendor || !selectedDate) {
       toast({ title: "Validation Error", description: "All fields are required.", variant: "destructive" });
       return;
     }
@@ -56,6 +63,41 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave }: AddEdi
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="py-4 space-y-4">
+          <div className="space-y-1">
+            <Label htmlFor="vendor">Vendor</Label>
+            <Select value={selectedVendor} onValueChange={setSelectedVendor} required>
+                <SelectTrigger id="vendor">
+                    <SelectValue placeholder="Select a vendor" />
+                </SelectTrigger>
+                <SelectContent>
+                    {vendors.map(vendor => (
+                        <SelectItem key={vendor.id} value={vendor.id}>{vendor.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+          </div>
+           <div className="space-y-1">
+            <Label htmlFor="date">Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn("w-full justify-start text-left font-normal", !selectedDate && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? format(selectedDate, "PPP") : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
           <div className="space-y-1">
             <Label htmlFor="invoice-id">Invoice ID</Label>
             <Input id="invoice-id" value={invoiceId} onChange={e => setInvoiceId(e.target.value)} required />

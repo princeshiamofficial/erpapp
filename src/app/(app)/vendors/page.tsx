@@ -712,7 +712,7 @@ export default function VendorsPage() {
         onOpenChange={setIsAddUserDialogOpen}
         defaultRole="VENDOR"
       >
-        {null}
+        <React.Fragment key="add-user-trigger" />
       </AddUserDialog>
 
       {userToEdit && (
@@ -789,8 +789,9 @@ export default function VendorsPage() {
           onOpenChange={setIsAddEditBillReportDialogOpen}
           onSave={() => {
               // Add logic to refetch or update data for bill reports
-              setIsAddEditBillReportDialogOpens(false);
+              setIsAddEditBillReportDialogOpen(false);
           }}
+          vendors={filteredVendors}
       />
       
        {billToDelete && (
