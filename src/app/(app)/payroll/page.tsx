@@ -24,7 +24,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay } from 'date-fns';
 import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from './actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -38,6 +38,7 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getAttendanceForMonth } from '@/lib/attendance-service';
+import { getWeekendSettings } from '@/lib/weekend-service';
 
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
@@ -87,6 +88,7 @@ export default function PayrollPage() {
 
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
   const [salarySheetData, setSalarySheetData] = useState<Payslip[]>([]);
+  const [weekendDays, setWeekendDays] = useState<string[]>([]);
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -97,16 +99,19 @@ export default function PayrollPage() {
         fetchedUsers,
         fetchedAttendance, 
         fetchedSalarySheet,
+        fetchedWeekendSettings
       ] = await Promise.all([
         getEmployees(),
         getUsers(),
         getAttendanceForMonth(selectedDate), 
-        getSalarySheetForMonth(monthStr)
+        getSalarySheetForMonth(monthStr),
+        getWeekendSettings()
       ]);
       setEmployees(fetchedEmployees);
       setAllUsers(fetchedUsers);
       setAttendanceData(fetchedAttendance);
       setSalarySheetData(fetchedSalarySheet);
+      setWeekendDays(fetchedWeekendSettings.days);
     } catch (error) {
       console.error("Failed to fetch page data:", error);
       toast({ title: "Error", description: "Could not load page data.", variant: "destructive" });
@@ -186,6 +191,16 @@ export default function PayrollPage() {
   const salarySheetCalculatedData = useMemo(() => {
         const monthYearId = format(selectedDate, 'yyyy-MM');
         
+        const daysInMonth = getDaysInMonth(selectedDate);
+        const weekendDayIndexes = weekendDays.map(day => WEEK_DAYS.indexOf(day));
+        let workingDaysInMonth = 0;
+        for (let i = 1; i <= daysInMonth; i++) {
+            const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
+            if (!weekendDayIndexes.includes(getDay(currentDate))) {
+                workingDaysInMonth++;
+            }
+        }
+        
         return filteredEmployees.map(employee => {
           const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
           const userAttendanceInRange = attendanceData.filter(att => 
@@ -194,7 +209,7 @@ export default function PayrollPage() {
           
           const presentDays = payslip?.presentDays ?? userAttendanceInRange.length;
           const lateDays = payslip?.lateDays ?? userAttendanceInRange.filter(att => att.status === 'Late').length;
-          const absentDays = 30 - presentDays;
+          const absentDays = payslip?.absentDays ?? (workingDaysInMonth - presentDays);
           
           const incentive = payslip?.incentive ?? 0;
           const paymentStatus = payslip?.paymentStatus ?? 'Unpaid';
@@ -204,13 +219,13 @@ export default function PayrollPage() {
               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
           const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
 
-          const perDaySalaryForFine = effectiveSalary / 30;
+          const perDaySalaryForFine = effectiveSalary / 30; // Always divide by 30 for fine
 
           const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
           const fine = payslip?.fine ?? automaticFine;
 
-          const perDaySalaryForAbsence = 30;
-          const salaryForDaysWorked = (effectiveSalary/30) * presentDays;
+          const perDaySalaryForAbsence = workingDaysInMonth > 0 ? effectiveSalary / workingDaysInMonth : 0;
+          const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
           
           const providentFund = effectiveSalary * 0.07;
           
@@ -219,7 +234,7 @@ export default function PayrollPage() {
           return {
             ...employee,
             presentDays,
-            absentDays,
+            absentDays: Math.max(0, absentDays),
             lateDays,
             providentFund,
             fine,
@@ -228,7 +243,7 @@ export default function PayrollPage() {
             paymentStatus
           };
         });
-    }, [filteredEmployees, selectedDate, attendanceData, salarySheetData]);
+    }, [filteredEmployees, selectedDate, attendanceData, salarySheetData, weekendDays]);
   
   useEffect(() => {
       setCurrentPage(1);
@@ -567,9 +582,9 @@ export default function PayrollPage() {
       </CardContent>
     </Card>
   );
-  
+
   const summaryContent = (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
             <CardHeader className="p-6 flex flex-row items-center justify-between">
                 <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><CheckCircle className="mr-2 h-6 w-6 text-green-500"/>Salary Paid</CardTitle>
@@ -579,16 +594,34 @@ export default function PayrollPage() {
                 <p className="text-sm text-gray-500">Total salary disbursed for {format(selectedDate, 'MMMM yyyy')}.</p>
             </CardContent>
         </Card>
-         <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
             <CardHeader className="p-6 flex flex-row items-center justify-between">
                 <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><AlertTriangle className="mr-2 h-6 w-6 text-red-500"/>Salary Unpaid</CardTitle>
-                 <div className="text-2xl font-bold text-red-500">{formatCurrency(totalUnpaidAmount)}</div>
+                <div className="text-2xl font-bold text-red-500">{formatCurrency(totalUnpaidAmount)}</div>
             </CardHeader>
             <CardContent className="p-6 pt-0">
                 <p className="text-sm text-gray-500">Total salary pending for {format(selectedDate, 'MMMM yyyy')}.</p>
             </CardContent>
         </Card>
-      </div>
+        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+            <CardHeader className="p-6 flex flex-row items-center justify-between">
+                <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><Landmark className="mr-2 h-6 w-6 text-blue-500"/>Provident Fund</CardTitle>
+                <div className="text-2xl font-bold text-blue-600">{formatCurrency(totalProvidentFund)}</div>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+                <p className="text-sm text-gray-500">Total provident fund collected for {format(selectedDate, 'MMMM yyyy')}.</p>
+            </CardContent>
+        </Card>
+        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+            <CardHeader className="p-6 flex flex-row items-center justify-between">
+                <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><Wallet className="mr-2 h-6 w-6 text-indigo-500"/>Total Payroll</CardTitle>
+                <div className="text-2xl font-bold text-indigo-600">{formatCurrency(totalPayableAmount)}</div>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+                <p className="text-sm text-gray-500">Total payable salary for {format(selectedDate, 'MMMM yyyy')}.</p>
+            </CardContent>
+        </Card>
+    </div>
   );
 
   const settingsContent = (
@@ -630,7 +663,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
+    <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -650,15 +683,42 @@ export default function PayrollPage() {
           onOpenChange={(open) => !open && setPayslipToEdit(null)}
           employee={payslipToEdit}
           onSave={() => {
-            fetchData(); // Refetch data after saving
+            fetchData();
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
           existingPayslip={existingPayslipForDialog}
+          weekendDays={weekendDays}
+        />
+      )}
+      {employeeToIncrement && <IncrementSalaryDialog isOpen={!!employeeToIncrement} onOpenChange={(open) => !open && setEmployeeToIncrement(null)} employee={employeeToIncrement} onSalaryIncremented={fetchData}/>}
+      {incrementToDelete && (
+        <AlertDialog open={!!incrementToDelete} onOpenChange={(open) => { if(!open) setIncrementToDelete(null) }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the salary increment from <span className="font-semibold">{format(new Date(incrementToDelete.increment.date), 'MMMM yyyy')}</span>. This action cannot be undone and may affect historical payroll data.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeletingIncrement} onClick={() => setIncrementToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction disabled={isDeletingIncrement} onClick={handleConfirmDeleteIncrement} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                {isDeletingIncrement ? <><Loader2 className="h-4 w-4 animate-spin mr-2"/> Reverting...</> : 'Revert Increment'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+       {leaveToManage && currentUser && (
+        <ManageLeaveDialog
+            isOpen={!!leaveToManage}
+            onOpenChange={(open) => !open && setLeaveToManage(null)}
+            employee={leaveToManage}
+            currentUser={currentUser}
+            onLeaveUpdated={fetchData}
         />
       )}
     </div>
   );
 }
-
-    

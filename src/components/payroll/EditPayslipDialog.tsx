@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -55,6 +54,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
   }, [selectedDate]);
   
   const totalWorkingDays = useMemo(() => {
+      if (!weekendDays) return 30; // Fallback
       const daysInMonth = getDaysInMonth(selectedDate);
       const weekendDayIndexes = weekendDays.map(day => WEEK_DAYS.indexOf(day));
       let workingDays = 0;
