@@ -51,9 +51,6 @@ const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeave
 
 const ITEMS_PER_PAGE = 8;
 
-const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-
-
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
@@ -168,7 +165,7 @@ export default function PayrollPage() {
     }
   }, [currentUser, router, fetchData]);
 
-  const filteredEmployees = useMemo(() => {
+  const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount } = useMemo(() => {
     let results = employees;
 
     if (activeTab === 'salary_sheet' || activeTab === 'summary') {
@@ -177,29 +174,24 @@ export default function PayrollPage() {
       results = results.filter(employee => {
         try {
           const joiningDate = new Date(employee.joiningDate);
-          // Always include active employees if their joining date is not after the start of the selected month.
           if (employee.status === 'Active') {
             return !isAfter(startOfMonth(joiningDate), selectedMonthStart);
           }
           
-          // For inactive employees, check if they were paid in or after the selected month
           if (employee.status === 'Inactive') {
             const paidSlips = salarySheetData.filter(p => p.employeeId === employee.employeeId && p.paymentStatus === 'Paid');
 
             if (paidSlips.length === 0) {
-              // If never paid, include them if they joined before the month ended.
               return !isAfter(startOfMonth(joiningDate), selectedMonthStart);
             }
             
-            // Find the last paid month
             const lastPaidMonthStr = paidSlips.sort((a, b) => b.id.localeCompare(a.id))[0].id;
             const lastPaidMonth = parse(lastPaidMonthStr, 'yyyy-MM', new Date());
 
-            // Show the employee if the selected month is on or before their last paid month
             return !isAfter(selectedMonthStart, lastPaidMonth);
           }
 
-          return false; // Should not be reached if status is only 'Active' or 'Inactive'
+          return false;
 
         } catch (e) {
           console.error(`Error processing filter for employee ${employee.id}`, e);
@@ -207,7 +199,6 @@ export default function PayrollPage() {
         }
       });
     }
-
 
     if (searchTerm) {
       const lowercasedFilter = searchTerm.toLowerCase();
@@ -218,16 +209,11 @@ export default function PayrollPage() {
         employee.designation.toLowerCase().includes(lowercasedFilter)
       );
     }
-    return results;
-  }, [employees, searchTerm, activeTab, selectedDate, salarySheetData]);
-  
-  const { salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount } = useMemo(() => {
-    if (!weekendDays) {
-        return { salarySheetCalculatedData: [], totalPayableAmount: 0, totalPaidAmount: 0, totalUnpaidAmount: 0, totalProvidentFund: 0, totalFineAmount: 0 };
-    }
-    
+
+    // Calculations
+    const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const daysInMonth = getDaysInMonth(selectedDate);
-    const weekendDayIndexes = weekendDays.map(day => WEEK_DAYS.indexOf(day));
+    const weekendDayIndexes = (weekendDays || []).map(day => WEEK_DAYS.indexOf(day));
     let totalWorkingDays = 0;
     for (let i = 1; i <= daysInMonth; i++) {
         const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
@@ -236,7 +222,7 @@ export default function PayrollPage() {
         }
     }
     
-    const calculatedData = filteredEmployees.map(employee => {
+    const calculatedData = results.map(employee => {
       const monthYearId = format(selectedDate, 'yyyy-MM');
       const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
       const userAttendanceInRange = attendanceData.filter(att => 
@@ -285,14 +271,15 @@ export default function PayrollPage() {
     const fineTotal = calculatedData.reduce((total, data) => total + (data.fine || 0), 0);
 
     return { 
+      filteredEmployees: results,
       salarySheetCalculatedData: calculatedData,
       totalPaidAmount: paid,
       totalUnpaidAmount: unpaid,
       totalProvidentFund: providentFundTotal,
       totalFineAmount: fineTotal
     };
-  }, [filteredEmployees, selectedDate, attendanceData, salarySheetData, weekendDays]);
 
+  }, [employees, searchTerm, activeTab, selectedDate, salarySheetData, attendanceData, weekendDays]);
 
   const totalPages = useMemo(() => {
     if (activeTab !== 'employee_list') return 1;
@@ -300,11 +287,11 @@ export default function PayrollPage() {
   },[filteredEmployees, activeTab]);
 
   const paginatedEmployees = useMemo(() => {
-    if (activeTab !== 'employee_list') return filteredEmployees;
+    if (activeTab !== 'employee_list') return salarySheetCalculatedData;
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     const endIndex = startIndex + ITEMS_PER_PAGE;
     return filteredEmployees.slice(startIndex, endIndex);
-  }, [filteredEmployees, currentPage, activeTab]);
+  }, [filteredEmployees, currentPage, activeTab, salarySheetCalculatedData]);
   
   useEffect(() => {
       setCurrentPage(1);
@@ -448,7 +435,7 @@ export default function PayrollPage() {
               </div>
             ))
           ) : paginatedEmployees.length > 0 ? (
-            paginatedEmployees.map((employee, index) => (
+            (paginatedEmployees as Employee[]).map((employee, index) => (
               <div key={employee.id} className="grid grid-cols-[30px_1fr_1.5fr_1.5fr_1fr_1fr_1fr_1fr_1fr_80px_80px] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
                 <span className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</span>
                 <span>{employee.employeeId}</span><span className="font-medium text-gray-800">{employee.name}</span>
@@ -504,70 +491,6 @@ export default function PayrollPage() {
                 </PaginationContent></Pagination>
             </div>
         )}
-      </CardContent>
-    </Card>
-  );
-
-  const employeePerformanceContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-      <CardHeader className="p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl font-bold text-gray-800">Employee Performance</CardTitle>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <div className="relative flex-grow sm:flex-grow-0">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
-            </div>
-            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="p-6 pt-0">
-        <div className="space-y-3">
-            <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
-                <span>Employee</span>
-                <span>Designation</span>
-                <span className="text-center">Completed Orders</span>
-                <span className="text-center">Efficiency Score</span>
-                <span className="text-center">Revenue Generated</span>
-                <span className="text-center">Rating</span>
-            </div>
-            {isLoading ? (
-                Array.from({ length: 4 }).map((_, index) => (
-                    <div key={index} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
-                        <div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-4 w-24" /></div>
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-4 w-12 mx-auto" />
-                        <div className="w-full"><Skeleton className="h-2 w-full rounded-full" /></div>
-                        <Skeleton className="h-4 w-16 mx-auto" />
-                        <Skeleton className="h-4 w-12 mx-auto" />
-                    </div>
-                ))
-            ) : paginatedEmployees.length > 0 ? (
-                paginatedEmployees.map((employee) => (
-                    <div key={employee.id} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
-                        <div className="flex items-center gap-3">
-                            {/* Avatar placeholder */}
-                            <div className="h-10 w-10 rounded-full bg-gray-200 flex-shrink-0"></div>
-                            <span className="font-medium text-gray-800">{employee.name}</span>
-                        </div>
-                        <span>{employee.designation}</span>
-                        <span className="text-center font-medium">120</span> {/* Placeholder Data */}
-                        <div className="flex items-center gap-2">
-                           <Progress value={85} className="h-2" indicatorClassName="bg-green-500"/>
-                           <span className="text-xs font-semibold">85%</span>
-                        </div>
-                        <span className="text-center font-medium">{formatCurrency(250000)}</span> {/* Placeholder Data */}
-                        <div className="flex justify-center items-center gap-1 text-yellow-500">
-                          <Star className="h-4 w-4 fill-current"/>
-                          <span className="font-bold text-sm">4.8</span>
-                        </div>
-                    </div>
-                ))
-            ) : (
-                <div className="text-center py-16 text-gray-500">No performance data available.</div>
-            )}
-        </div>
       </CardContent>
     </Card>
   );
@@ -698,20 +621,20 @@ export default function PayrollPage() {
         circleBgClass="bg-yellow-100 dark:bg-yellow-700/20"
         isLoading={isLoading}
       />
+       <SummaryCard 
+        title="Total Fine"
+        value={formatCurrency(totalFineAmount)}
+        icon={Receipt}
+        iconColorClass="text-red-600"
+        circleBgClass="bg-red-100 dark:bg-red-700/20"
+        isLoading={isLoading}
+      />
       <SummaryCard 
         title="Total Provident Fund"
         value={formatCurrency(totalProvidentFund)}
         icon={Landmark}
         iconColorClass="text-blue-600"
         circleBgClass="bg-blue-100 dark:bg-blue-700/20"
-        isLoading={isLoading}
-      />
-      <SummaryCard 
-        title="Total Fine"
-        value={formatCurrency(totalFineAmount)}
-        icon={Receipt}
-        iconColorClass="text-red-600"
-        circleBgClass="bg-red-100 dark:bg-red-700/20"
         isLoading={isLoading}
       />
     </div>
@@ -738,8 +661,6 @@ export default function PayrollPage() {
         return salarySheetContent;
       case 'employee_list':
         return employeeListContent;
-      case 'employee_performance':
-        return employeePerformanceContent;
       case 'summary':
         return summaryContent;
       case 'settings':
@@ -764,7 +685,6 @@ export default function PayrollPage() {
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
           <TabsTrigger value="employee_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee List</TabsTrigger>
            <TabsTrigger value="summary" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Summary</TabsTrigger>
-          <TabsTrigger value="employee_performance" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee Performance</TabsTrigger>
           <TabsTrigger value="settings" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Settings</TabsTrigger>
         </TabsList>
         <div className="mt-6">
