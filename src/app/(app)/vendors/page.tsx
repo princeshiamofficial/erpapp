@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -385,6 +386,9 @@ export default function VendorsPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input placeholder="Search vendors..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
                     </div>
+                     <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => setIsAddUserDialogOpen(true)}>
+                        <Plus className="mr-2 h-4 w-4" /> Add Vendor
+                     </Button>
                 </div>
             </div>
             </CardHeader>
@@ -442,6 +446,15 @@ export default function VendorsPage() {
                 </Table>
             </div>
             </CardContent>
+             {totalPages > 1 && (
+                <CardFooter className="py-4 border-t">
+                    <Pagination><PaginationContent>
+                        <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
+                        {renderPagination()}
+                        <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
+                    </PaginationContent></Pagination>
+                </CardFooter>
+            )}
           </Card>
         );
       case 'products':
@@ -689,9 +702,7 @@ export default function VendorsPage() {
         onOpenChange={setIsAddUserDialogOpen}
         defaultRole="VENDOR"
       >
-        <button onClick={() => setIsAddUserDialogOpen(true)} className="fixed bottom-20 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center z-50">
-            <Plus className="h-6 w-6"/>
-        </button>
+        {null}
       </AddUserDialog>
 
       {userToEdit && (
@@ -784,5 +795,7 @@ export default function VendorsPage() {
     </>
   );
 }
+
+    
 
     

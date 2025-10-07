@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -19,7 +20,7 @@ interface AddUserDialogProps {
   currentUser: User;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  children?: React.ReactNode;
+  children: React.ReactNode;
   defaultRole?: UserRole;
 }
 
@@ -341,3 +342,5 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
     </Dialog>
   );
 }
+
+    
