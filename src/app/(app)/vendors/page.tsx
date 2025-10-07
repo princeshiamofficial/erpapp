@@ -43,7 +43,7 @@ import {
   AlertDialogCancel, 
   AlertDialogContent, 
   AlertDialogDescription, 
-  AlertDialogFooter, c
+  AlertDialogFooter,
   AlertDialogHeader, 
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
@@ -789,7 +789,7 @@ export default function VendorsPage() {
           onOpenChange={setIsAddEditBillReportDialogOpen}
           onSave={() => {
               // Add logic to refetch or update data for bill reports
-              setIsAddEditBillReportDialogOpen(false);
+              setIsAddEditBillReportDialogOpens(false);
           }}
       />
       
