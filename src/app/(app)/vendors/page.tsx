@@ -319,7 +319,7 @@ export default function VendorsPage() {
   const totalPages = useMemo(() => {
     if (activeTab === 'vendor_list') return Math.ceil(filteredVendors.length / ITEMS_PER_PAGE);
     if (activeTab === 'products') return Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
-    if (activeTab === 'vendor_bills') return Math.ceil(filteredBills.length / ITEMS_PER_PAGE);
+    if (activeTab === 'vendor_bills' || activeTab === 'bill_reports') return Math.ceil(filteredBills.length / ITEMS_PER_PAGE);
     // Add other tabs here...
     return 1;
   }, [activeTab, filteredVendors, filteredProducts, filteredBills]);
@@ -329,7 +329,7 @@ export default function VendorsPage() {
     const endIndex = startIndex + ITEMS_PER_PAGE;
     if (activeTab === 'vendor_list') return filteredVendors.slice(startIndex, endIndex);
     if (activeTab === 'products') return filteredProducts.slice(startIndex, endIndex);
-    if (activeTab === 'vendor_bills') return filteredBills.slice(startIndex, endIndex);
+    if (activeTab === 'vendor_bills' || activeTab === 'bill_reports') return filteredBills.slice(startIndex, endIndex);
     // Add other tabs here...
     return [];
   }, [activeTab, currentPage, filteredVendors, filteredProducts, filteredBills]);
@@ -644,6 +644,22 @@ export default function VendorsPage() {
                 )}
               </Card>
         );
+        case 'bill_reports':
+          return (
+            <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+                <CardHeader className="p-6">
+                    <CardTitle className="text-xl font-bold text-gray-800">Bill Reports</CardTitle>
+                    <CardDescription>View and analyze billing reports.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6 pt-0 h-96 flex items-center justify-center">
+                    <div className="text-center text-gray-500">
+                        <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                        <p className="font-semibold">Bill Reports Content</p>
+                        <p className="text-sm">This section is under construction.</p>
+                    </div>
+                </CardContent>
+            </Card>
+          );
       default:
         return null;
     }
@@ -658,6 +674,7 @@ export default function VendorsPage() {
             <TabsTrigger value="products" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Products</TabsTrigger>
             <TabsTrigger value="categories" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Categories</TabsTrigger>
             <TabsTrigger value="vendor_bills" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor Bills</TabsTrigger>
+            <TabsTrigger value="bill_reports" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Bill Reports</TabsTrigger>
           </TabsList>
             <div className="mt-6">
                 {renderActiveTabContent()}
@@ -767,3 +784,5 @@ export default function VendorsPage() {
     </>
   );
 }
+
+    
