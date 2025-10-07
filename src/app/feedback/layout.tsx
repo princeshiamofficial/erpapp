@@ -131,7 +131,35 @@ export default function FeedbackLayout({
               if (submitBtn) {
                   submitBtn.addEventListener('click', () => {
                       const feedbackData = {};
+                      let allRequiredAnswered = true;
                       
+                      // Get all feedback sections except the optional one
+                      const requiredSections = document.querySelectorAll('.feedback-section:not([data-question="ওপেন ফিডব্যাক"])');
+                      
+                      requiredSections.forEach(section => {
+                          const starRating = section.querySelector('.star-rating');
+                          const optionGroup = section.querySelector('.option-group');
+                          const emojiGroup = section.querySelector('.emoji-group');
+
+                          let isAnswered = false;
+                          if (starRating && parseInt(starRating.dataset.value, 10) > 0) {
+                              isAnswered = true;
+                          } else if (optionGroup && optionGroup.querySelector('.option.selected')) {
+                              isAnswered = true;
+                          } else if (emojiGroup && emojiGroup.querySelector('.emoji.selected')) {
+                              isAnswered = true;
+                          }
+                          
+                          if (!isAnswered) {
+                              allRequiredAnswered = false;
+                          }
+                      });
+
+                      if (!allRequiredAnswered) {
+                          alert("Please answer all required questions before submitting.");
+                          return;
+                      }
+
                       // Get star ratings
                       starContainers.forEach(container => {
                           const question = container.closest('.feedback-section').dataset.question;
