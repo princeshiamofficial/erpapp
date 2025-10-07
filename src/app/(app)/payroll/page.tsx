@@ -19,7 +19,7 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, PlusCircle as Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings } from 'lucide-react';
+import { Search, Filter, PlusCircle, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings } from 'lucide-react';
 import type { Employee, User, SalaryIncrement, Payslip, AttendanceRecord } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
@@ -199,36 +199,33 @@ export default function PayrollPage() {
   }, [employees, searchTerm, activeTab, selectedDate, salarySheetData]);
 
   const totalPages = useMemo(() => {
-    if (activeTab === 'salary_sheet') return Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
-    return 1;
+    if (activeTab !== 'employee_list') return 1;
+    return Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
   },[filteredEmployees, activeTab]);
 
   const paginatedEmployees = useMemo(() => {
-    if (activeTab === 'salary_sheet') {
-      const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-      const endIndex = startIndex + ITEMS_PER_PAGE;
-      return filteredEmployees.slice(startIndex, endIndex);
-    }
-    return filteredEmployees;
+    if (activeTab !== 'employee_list') return filteredEmployees;
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredEmployees.slice(startIndex, endIndex);
   }, [filteredEmployees, currentPage, activeTab]);
   
   const salarySheetCalculatedData = useMemo(() => {
         const monthYearId = format(selectedDate, 'yyyy-MM');
-        const startDate = startOfMonth(selectedDate);
+        
         const daysInSelectedMonth = getDaysInMonth(selectedDate);
-
         let totalWorkingDays = 0;
         const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
 
         for (let i = 1; i <= daysInSelectedMonth; i++) {
-          const currentDate = new Date(startDate.getFullYear(), startDate.getMonth(), i);
+          const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
           const dayOfWeek = getDay(currentDate);
           if (!weekendDayIndexes.includes(dayOfWeek)) {
             totalWorkingDays++;
           }
         }
         
-        return paginatedEmployees.map(employee => {
+        return filteredEmployees.map(employee => {
           const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
           const userAttendanceInRange = attendanceData.filter(att => 
               att.employeeId === employee.userId && isSameMonth(parseISO(att.date), selectedDate)
@@ -269,7 +266,7 @@ export default function PayrollPage() {
             paymentStatus
           };
         });
-    }, [paginatedEmployees, selectedDate, attendanceData, selectedWeekends, salarySheetData]);
+    }, [filteredEmployees, selectedDate, attendanceData, selectedWeekends, salarySheetData]);
   
   useEffect(() => {
       setCurrentPage(1);
@@ -420,7 +417,7 @@ export default function PayrollPage() {
               onEmployeeAdded={fetchData}
               allUsers={usersNotYetEmployees}
             >
-              <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"><Plus className="mr-2 h-4 w-4" /> Add Employee</Button>
+              <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"><PlusCircle className="mr-2 h-4 w-4" /> Add Employee</Button>
             </AddEmployeeDialog>
           </div>
         </div>
@@ -788,6 +785,7 @@ export default function PayrollPage() {
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
+          weekendDays={selectedWeekends}
         />
       )}
     </div>
