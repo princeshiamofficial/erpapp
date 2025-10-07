@@ -53,6 +53,7 @@ const ITEMS_PER_PAGE = 8;
 
 const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
@@ -220,8 +221,8 @@ export default function PayrollPage() {
     return results;
   }, [employees, searchTerm, activeTab, selectedDate, salarySheetData]);
   
-  const { salarySheetCalculatedData, totalPayableAmount, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount } = useMemo(() => {
-    if (!weekendDays || weekendDays.length === 0) {
+  const { salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount } = useMemo(() => {
+    if (!weekendDays) {
         return { salarySheetCalculatedData: [], totalPayableAmount: 0, totalPaidAmount: 0, totalUnpaidAmount: 0, totalProvidentFund: 0, totalFineAmount: 0 };
     }
     
@@ -278,15 +279,13 @@ export default function PayrollPage() {
       };
     });
 
-    const payable = calculatedData.reduce((total, data) => total + data.payableAmount, 0);
     const paid = calculatedData.filter(data => data.paymentStatus === 'Paid').reduce((total, data) => total + data.payableAmount, 0);
     const unpaid = calculatedData.filter(data => data.paymentStatus === 'Unpaid').reduce((total, data) => total + data.payableAmount, 0);
     const providentFundTotal = calculatedData.reduce((total, data) => total + data.providentFund, 0);
     const fineTotal = calculatedData.reduce((total, data) => total + (data.fine || 0), 0);
 
     return { 
-      salarySheetCalculatedData: calculatedData, 
-      totalPayableAmount: payable,
+      salarySheetCalculatedData: calculatedData,
       totalPaidAmount: paid,
       totalUnpaidAmount: unpaid,
       totalProvidentFund: providentFundTotal,
@@ -639,8 +638,8 @@ export default function PayrollPage() {
                     <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
                   </TableRow>
                 ))
-              ) : salarySheetCalculatedData.salarySheetCalculatedData.length > 0 ? (
-                salarySheetCalculatedData.salarySheetCalculatedData.map((data) => {
+              ) : salarySheetCalculatedData && salarySheetCalculatedData.length > 0 ? (
+                salarySheetCalculatedData.map((data) => {
                     const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
                     const payslipForDialog = salarySheetData.find(p => p.employeeId === data.employeeId && p.id.startsWith(monthYearId));
                     return (
@@ -680,7 +679,7 @@ export default function PayrollPage() {
       </CardContent>
     </Card>
   );
-
+  
   const summaryContent = (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
       <SummaryCard 
@@ -819,3 +818,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
