@@ -630,35 +630,27 @@ export default function PayrollPage() {
   const summaryContent = (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
       <SummaryCard 
-        title="Net"
-        value={formatCurrency(0)}
+        title="Salary Paid"
+        value={formatCurrency(totalPaidAmount)}
         icon={BadgeDollarSign}
         iconColorClass="text-green-600"
         circleBgClass="bg-green-100 dark:bg-green-700/20"
         isLoading={isLoading}
       />
       <SummaryCard 
-        title="Total Sell Return"
-        value={formatCurrency(0)}
-        icon={Undo2}
-        iconColorClass="text-red-600"
-        circleBgClass="bg-red-100 dark:bg-red-700/20"
-        isLoading={isLoading}
-      />
-      <SummaryCard 
-        title="Total purchase"
-        value={formatCurrency(0)}
-        icon={Download}
+        title="Total Provident Fund"
+        value={formatCurrency(totalProvidentFund)}
+        icon={Landmark}
         iconColorClass="text-blue-600"
         circleBgClass="bg-blue-100 dark:bg-blue-700/20"
         isLoading={isLoading}
       />
       <SummaryCard 
-        title="Purchase due"
-        value={formatCurrency(0)}
+        title="Salary Unpaid"
+        value={formatCurrency(totalUnpaidAmount)}
         icon={AlertTriangle}
-        iconColorClass="text-amber-600"
-        circleBgClass="bg-amber-100 dark:bg-amber-700/20"
+        iconColorClass="text-red-600"
+        circleBgClass="bg-red-100 dark:bg-red-700/20"
         isLoading={isLoading}
       />
     </div>
@@ -762,3 +754,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
