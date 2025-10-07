@@ -852,7 +852,7 @@ function DashboardContent() {
                   chartGranularity === 'hourly' ? 
                   (() => {
                       const hour = parseInt(label); 
-                      if (isNaN(hour)) return value; 
+                      if (isNaN(hour)) return label; 
                       if (hour === 0) return '12 AM';
                       if (hour === 12) return '12 PM';
                       if (hour < 12) return `${hour} AM`;
@@ -1093,7 +1093,7 @@ function DashboardContent() {
                           tickMargin={8}
                           tickFormatter={(value) => {
                             if (chartGranularity === 'hourly') {
-                              const hour = parseInt(label); 
+                              const hour = parseInt(value); 
                               if (isNaN(hour)) return value; 
                               if (hour === 0) return '12 AM';
                               if (hour === 12) return '12 PM';
