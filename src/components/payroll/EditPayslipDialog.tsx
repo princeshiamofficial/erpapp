@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -16,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import type { Employee, Payslip } from '@/types';
-import { getDaysInMonth } from 'date-fns';
+import { getDaysInMonth, getDay } from 'date-fns';
 import { updatePayslipAction } from '@/app/(app)/payroll/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -33,10 +34,11 @@ interface EditPayslipDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDate: Date; // Added prop
+  weekendDays: string[]; // Added prop
   existingPayslip?: Payslip;
 }
 
-export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, selectedDate, existingPayslip }: EditPayslipDialogProps) {
+export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, selectedDate, weekendDays, existingPayslip }: EditPayslipDialogProps) {
   const [present, setPresent] = useState('30');
   const [absent, setAbsent] = useState('0');
   const [late, setLate] = useState('0');
@@ -71,16 +73,27 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     const baseSalary = employee.salary || 0;
     const incentiveNum = parseFloat(incentive) || 0;
     const fineNum = parseFloat(fine) || 0;
-    
-    // New calculation logic based on days
-    const perDaySalary = baseSalary / 30;
     const presentDays = parseInt(present, 10) || 0;
     const lateDays = parseInt(late, 10) || 0;
+    
+    // Calculate total working days in the month, excluding weekends
+    const daysInMonth = getDaysInMonth(selectedDate);
+    const weekendDayIndexes = weekendDays.map(day => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(day));
+    let totalWorkingDays = 0;
+    for (let i = 1; i <= daysInMonth; i++) {
+        const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
+        if (!weekendDayIndexes.includes(getDay(currentDate))) {
+            totalWorkingDays++;
+        }
+    }
 
+    const perDaySalary = totalWorkingDays > 0 ? baseSalary / totalWorkingDays : 0;
     const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
-
-    return (perDaySalary * presentDays) + incentiveNum - fineNum - providentFund - lateDeduction;
-  }, [employee.salary, incentive, fine, providentFund, present, late, selectedDate]);
+    
+    const salaryForDaysWorked = perDaySalary * presentDays;
+    
+    return (salaryForDaysWorked) + incentiveNum - fineNum - providentFund - lateDeduction;
+  }, [employee.salary, incentive, fine, providentFund, present, late, selectedDate, weekendDays]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
