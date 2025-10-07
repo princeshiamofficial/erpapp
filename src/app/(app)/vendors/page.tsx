@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Store, PlusCircle, Package, Layers, Edit, Receipt } from 'lucide-react';
-import type { Employee, User, VendorProduct, VendorCategory, VendorBill, VendorBillStatus } from '@/types';
+import type { Employee, User, VendorProduct, VendorCategory, VendorBill, VendorBillStatus, ServicePaymentMethodItem } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
@@ -50,6 +50,7 @@ import {
 import { getVendorCategories, deleteVendorCategory } from '@/lib/vendor-category-service';
 import { getVendorProducts, deleteVendorProduct } from '@/lib/vendor-product-service';
 import { getVendorBills, deleteVendorBill } from '@/lib/vendor-bill-service';
+import { getPaymentMethods } from '@/lib/service-options-service';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 
@@ -126,6 +127,7 @@ export default function VendorsPage() {
   const [products, setProducts] = useState<VendorProduct[]>([]);
   const [categories, setCategories] = useState<VendorCategory[]>([]);
   const [bills, setBills] = useState<VendorBill[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<ServicePaymentMethodItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddEditBillReportDialogOpen, setIsAddEditBillReportDialogOpen] = useState(false);
 
@@ -133,16 +135,18 @@ export default function VendorsPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedUsers, fetchedCategories, fetchedProducts, fetchedBills] = await Promise.all([
+      const [fetchedUsers, fetchedCategories, fetchedProducts, fetchedBills, fetchedPaymentMethods] = await Promise.all([
         getUsers(),
         getVendorCategories(),
         getVendorProducts(),
         getVendorBills(),
+        getPaymentMethods(),
       ]);
       setAllUsers(fetchedUsers);
       setCategories(fetchedCategories);
       setProducts(fetchedProducts);
       setBills(fetchedBills);
+      setPaymentMethods(fetchedPaymentMethods);
     } catch (error) {
       console.error("Failed to fetch vendor page data:", error);
       toast({ title: "Error", description: "Could not load required data.", variant: "destructive" });
@@ -772,10 +776,11 @@ export default function VendorsPage() {
           isOpen={isAddEditBillReportDialogOpen}
           onOpenChange={setIsAddEditBillReportDialogOpen}
           onSave={() => {
-              // Add logic to refetch or update data for bill reports
               setIsAddEditBillReportDialogOpen(false);
+              fetchData();
           }}
           vendors={filteredVendors}
+          paymentMethods={paymentMethods}
       />
       
        {billToDelete && (

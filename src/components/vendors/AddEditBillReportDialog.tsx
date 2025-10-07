@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
-import type { User } from '@/types';
+import type { User, ServicePaymentMethodItem } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
@@ -27,9 +27,10 @@ interface AddEditBillReportDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   onSave: () => void;
   vendors: User[];
+  paymentMethods: ServicePaymentMethodItem[];
 }
 
-export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors }: AddEditBillReportDialogProps) {
+export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors, paymentMethods }: AddEditBillReportDialogProps) {
   const [invoiceId, setInvoiceId] = useState('');
   const [amount, setAmount] = useState('');
   const [payment, setPayment] = useState('');
@@ -117,10 +118,9 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors 
                     <SelectValue placeholder="Select a method" />
                 </SelectTrigger>
                 <SelectContent>
-                    <SelectItem value="Cash">Cash</SelectItem>
-                    <SelectItem value="Card">Card</SelectItem>
-                    <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-                    <SelectItem value="Mobile Banking">Mobile Banking</SelectItem>
+                    {paymentMethods.map(pm => (
+                        <SelectItem key={pm.id} value={pm.name}>{pm.name}</SelectItem>
+                    ))}
                 </SelectContent>
             </Select>
           </div>
