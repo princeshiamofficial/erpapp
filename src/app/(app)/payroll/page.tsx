@@ -37,25 +37,6 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogCancel, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter, 
-  AlertDialogHeader, 
-  AlertDialogTitle 
-} from "@/components/ui/alert-dialog";
-import Image from 'next/image';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getWeekendSettings } from '@/lib/weekend-service';
-import { getAttendanceForMonth } from '@/lib/attendance-service';
-import { saveWeekendSettingsAction } from '@/app/(app)/hrm/attendance/actions';
-import { DateRangePicker2 } from '@/components/dashboard/date-range-picker2';
-import type { DateRange } from "react-day-picker";
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
 
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
@@ -66,15 +47,12 @@ const IncrementSalaryDialog = dynamic(() => import('@/components/payroll/Increme
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
 
 
-const ITEMS_PER_PAGE = 25;
+const ITEMS_PER_PAGE = 8;
 
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
 };
-
-
-const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 
 export default function PayrollPage() {
@@ -89,7 +67,6 @@ export default function PayrollPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [attendanceDateFilter, setAttendanceDateFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [isPerformanceTabVisible, setIsPerformanceTabVisible] = useState(false);
 
   const [employeeToEdit, setEmployeeToEdit] = useState<Employee | null>(null);
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
@@ -103,13 +80,11 @@ export default function PayrollPage() {
   const [isDeletingIncrement, setIsDeletingIncrement] = useState(false);
 
   const [leaveToManage, setLeaveToManage] = useState<Employee | null>(null);
-  const [visibleFunds, setVisibleFunds] = useState<Record<string, boolean>>({});
 
 
   const [selectedDate, setSelectedDate] = useState(subMonths(new Date(), 1));
 
   const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
-  const [selectedWeekends, setSelectedWeekends] = useState<string[]>([]);
   const [salarySheetData, setSalarySheetData] = useState<Payslip[]>([]);
 
   const fetchData = useCallback(async () => {
@@ -120,19 +95,16 @@ export default function PayrollPage() {
         fetchedEmployees, 
         fetchedUsers,
         fetchedAttendance, 
-        fetchedWeekendSettings,
         fetchedSalarySheet,
       ] = await Promise.all([
         getEmployees(),
         getUsers(),
         getAttendanceForMonth(selectedDate), 
-        getWeekendSettings(),
         getSalarySheetForMonth(monthStr)
       ]);
       setEmployees(fetchedEmployees);
       setAllUsers(fetchedUsers);
       setAttendanceData(fetchedAttendance);
-      setSelectedWeekends(fetchedWeekendSettings.days);
       setSalarySheetData(fetchedSalarySheet);
     } catch (error) {
       console.error("Failed to fetch page data:", error);
@@ -153,7 +125,7 @@ export default function PayrollPage() {
   const filteredEmployees = useMemo(() => {
     let results = employees;
 
-    if (activeTab === 'salary_sheet' || activeTab === 'fund_wallet') {
+    if (activeTab === 'salary_sheet') {
       const selectedMonthStart = startOfMonth(selectedDate);
       
       results = results.filter(employee => {
@@ -213,18 +185,6 @@ export default function PayrollPage() {
   const salarySheetCalculatedData = useMemo(() => {
         const monthYearId = format(selectedDate, 'yyyy-MM');
         
-        const daysInSelectedMonth = getDaysInMonth(selectedDate);
-        let totalWorkingDays = 0;
-        const weekendDayIndexes = selectedWeekends.map(day => WEEK_DAYS.indexOf(day));
-
-        for (let i = 1; i <= daysInSelectedMonth; i++) {
-          const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
-          const dayOfWeek = getDay(currentDate);
-          if (!weekendDayIndexes.includes(dayOfWeek)) {
-            totalWorkingDays++;
-          }
-        }
-        
         return filteredEmployees.map(employee => {
           const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
           const userAttendanceInRange = attendanceData.filter(att => 
@@ -233,7 +193,7 @@ export default function PayrollPage() {
           
           const presentDays = payslip?.presentDays ?? userAttendanceInRange.length;
           const lateDays = payslip?.lateDays ?? userAttendanceInRange.filter(att => att.status === 'Late').length;
-          const absentDays = payslip?.absentDays ?? Math.max(0, totalWorkingDays - presentDays);
+          const absentDays = 30 - presentDays;
           
           const incentive = payslip?.incentive ?? 0;
           const paymentStatus = payslip?.paymentStatus ?? 'Unpaid';
@@ -248,8 +208,8 @@ export default function PayrollPage() {
           const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
           const fine = payslip?.fine ?? automaticFine;
 
-          const perDaySalaryForAbsence = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
-          const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
+          const perDaySalaryForAbsence = 30;
+          const salaryForDaysWorked = (effectiveSalary/30) * presentDays;
           
           const providentFund = effectiveSalary * 0.07;
           
@@ -267,7 +227,7 @@ export default function PayrollPage() {
             paymentStatus
           };
         });
-    }, [filteredEmployees, selectedDate, attendanceData, selectedWeekends, salarySheetData]);
+    }, [filteredEmployees, selectedDate, attendanceData, salarySheetData]);
   
   useEffect(() => {
       setCurrentPage(1);
@@ -387,32 +347,6 @@ export default function PayrollPage() {
       value: i.toString(),
       label: format(new Date(0, i), 'MMMM'),
   })), []);
-  
-  const toggleFundVisibility = (employeeId: string) => {
-    setVisibleFunds(prev => ({ ...prev, [employeeId]: !prev[employeeId] }));
-  };
-  
-    const handleWeekendChange = (day: string, checked: boolean | 'indeterminate') => {
-        setSelectedWeekends(prev => 
-            checked ? [...prev, day] : prev.filter(d => d !== day)
-        );
-    };
-
-    const handleSaveWeekends = async () => {
-        const result = await saveWeekendSettingsAction(selectedWeekends);
-        if (result.success) {
-            toast({
-                title: "Settings Saved",
-                description: "Weekend days have been updated.",
-            });
-        } else {
-             toast({
-                title: "Error",
-                description: result.error || "Failed to save weekend settings.",
-                variant: "destructive",
-            });
-        }
-    };
 
 
   const employeeListContent = (
@@ -429,9 +363,7 @@ export default function PayrollPage() {
             <AddEmployeeDialog 
               onEmployeeAdded={fetchData}
               allUsers={usersNotYetEmployees}
-              isOpen={false} onOpenChange={function (open: boolean): void {
-                                throw new Error('Function not implemented.');
-                            } }            >
+            >
               <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"><Plus className="mr-2 h-4 w-4" /> Add Employee</Button>
             </AddEmployeeDialog>
           </div>
@@ -631,15 +563,6 @@ export default function PayrollPage() {
             </TableFooter>
           </Table>
         </div>
-         {totalPages > 1 && (
-            <div className="mt-6 flex justify-center">
-                 <Pagination><PaginationContent>
-                    <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                    {renderPagination()}
-                    <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
-                </PaginationContent></Pagination>
-            </div>
-        )}
       </CardContent>
     </Card>
   );
@@ -667,28 +590,33 @@ export default function PayrollPage() {
       </div>
   );
 
-    const settingsContent = (
-      <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-          <CardHeader className="p-6">
-              <CardTitle className="text-xl font-bold text-gray-800">Settings</CardTitle>
-              <CardDescription>Configure payroll and attendance settings.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-6 pt-0">
-              <div className="text-center p-10 bg-gray-50 rounded-lg">
-                <h3 className="text-lg text-gray-500">Settings view is under construction.</h3>
-              </div>
-          </CardContent>
-      </Card>
-    );
+  const settingsContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+      <CardHeader className="p-6">
+        <CardTitle className="text-xl font-bold text-gray-800">Settings</CardTitle>
+        <CardDescription>Configure payroll and attendance settings.</CardDescription>
+      </CardHeader>
+      <CardContent className="p-6 pt-0">
+        <div className="text-center p-10 bg-gray-50 rounded-lg">
+          <h3 className="text-lg text-gray-500">Settings view is under construction.</h3>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   
   const renderActiveTab = () => {
     switch (activeTab) {
-      case 'salary_sheet': return salarySheetContent;
-      case 'employee_list': return employeeListContent;
-      case 'summary': return summaryContent;
-      case 'settings': return settingsContent;
-      default: return employeeListContent;
+      case 'salary_sheet':
+        return salarySheetContent;
+      case 'employee_list':
+        return employeeListContent;
+      case 'summary':
+        return summaryContent;
+      case 'settings':
+        return settingsContent;
+      default:
+        return employeeListContent;
     }
   };
 
@@ -701,7 +629,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -725,7 +653,6 @@ export default function PayrollPage() {
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
-          weekendDays={selectedWeekends}
           existingPayslip={existingPayslipForDialog}
         />
       )}
