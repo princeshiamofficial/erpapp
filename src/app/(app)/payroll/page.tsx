@@ -53,7 +53,6 @@ const ITEMS_PER_PAGE = 8;
 
 const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
@@ -247,6 +246,9 @@ export default function PayrollPage() {
             }
         }
         
+        // Define totalWorkingDays here to be accessible throughout the map function
+        const totalWorkingDays = workingDaysInMonth;
+
         return filteredEmployees.map(employee => {
           const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
           const userAttendanceInRange = attendanceData.filter(att => 
@@ -255,7 +257,7 @@ export default function PayrollPage() {
           
           const presentDays = payslip?.presentDays ?? userAttendanceInRange.length;
           const lateDays = payslip?.lateDays ?? userAttendanceInRange.filter(att => att.status === 'Late').length;
-          const absentDays = payslip?.absentDays ?? (workingDaysInMonth - presentDays);
+          const absentDays = payslip?.absentDays ?? (totalWorkingDays - presentDays);
           
           const incentive = payslip?.incentive ?? 0;
           const paymentStatus = payslip?.paymentStatus ?? 'Unpaid';
@@ -633,8 +635,8 @@ export default function PayrollPage() {
   );
   
   const summaryContent = (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-       <SummaryCard 
+     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <SummaryCard 
         title="Salary Paid"
         value={formatCurrency(totalPaidAmount)}
         icon={Receipt}
@@ -713,7 +715,7 @@ export default function PayrollPage() {
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
           <TabsTrigger value="employee_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee List</TabsTrigger>
-          <TabsTrigger value="summary" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Summary</TabsTrigger>
+           <TabsTrigger value="summary" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Summary</TabsTrigger>
           <TabsTrigger value="settings" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Settings</TabsTrigger>
         </TabsList>
         <div className="mt-6">
