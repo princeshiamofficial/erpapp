@@ -17,7 +17,7 @@ import {
   PaginationPrevious,
   PaginationEllipsis
 } from "@/components/ui/pagination";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Store, PlusCircle, Package, Layers, Edit, Receipt } from 'lucide-react';
 import type { Employee, User, VendorProduct, VendorCategory, VendorBill, VendorBillStatus } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
@@ -369,7 +369,7 @@ export default function VendorsPage() {
   };
   
   if (!currentUser || !['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role)) {
-    return <div className="p-8 text-center">Access Denied.</div>;
+    return <div className="p-8 text-center">Access Denied.</div>
   }
 
   const renderActiveTabContent = () => {
@@ -659,9 +659,14 @@ export default function VendorsPage() {
         case 'bill_reports':
           return (
             <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-                <CardHeader className="p-6">
-                    <CardTitle className="text-xl font-bold text-gray-800">Bill Reports</CardTitle>
-                    <CardDescription>View and analyze billing reports.</CardDescription>
+                <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                    <div>
+                        <CardTitle className="text-xl font-bold text-gray-800">Bill Reports</CardTitle>
+                        <CardDescription>View and analyze billing reports.</CardDescription>
+                    </div>
+                     <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground">
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add New
+                     </Button>
                 </CardHeader>
                 <CardContent className="p-6 pt-0 h-96 flex items-center justify-center">
                     <div className="text-center text-gray-500">
@@ -679,7 +684,7 @@ export default function VendorsPage() {
 
   return (
     <>
-      <div className="space-y-6 p-4 sm:p-6 lg:p-8 min-h-screen">
+      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="inline-flex h-10 items-center justify-center text-muted-foreground bg-white p-1 rounded-full shadow-sm border border-gray-200">
             <TabsTrigger value="vendor_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor List</TabsTrigger>
