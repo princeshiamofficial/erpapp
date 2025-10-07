@@ -93,13 +93,13 @@ export default function TrackingLinksPage() {
   };
 
   const handleCopyLink = async (linkId: string) => {
-    const urlToCopy = `${window.location.origin}/track/${linkId}`;
+    const urlToCopy = `${window.location.origin}/feedback/${linkId}`;
     try {
       if (!navigator.clipboard) {
         throw new Error("Clipboard API not available.");
       }
       await navigator.clipboard.writeText(urlToCopy);
-      toast({ title: "Link Copied!", description: "The tracking link has been copied to your clipboard." });
+      toast({ title: "Link Copied!", description: "The feedback link has been copied to your clipboard." });
       setCopiedLinkId(linkId);
       setTimeout(() => setCopiedLinkId(null), 2000); 
     } catch (err) {
@@ -292,7 +292,7 @@ export default function TrackingLinksPage() {
                                 className="cursor-pointer"
                               >
                                 {copiedLinkId === link.id ? <Check className="mr-2 h-4 w-4 text-green-500" /> : <ClipboardCopy className="mr-2 h-4 w-4" />}
-                                {copiedLinkId === link.id ? "Copied!" : "Copy Link"}
+                                {copiedLinkId === link.id ? "Copied!" : "Copy Feedback Link"}
                               </DropdownMenuItem>
                               <DropdownMenuItem asChild className="cursor-pointer">
                                 <Link href={`/track/${link.id}`}>
