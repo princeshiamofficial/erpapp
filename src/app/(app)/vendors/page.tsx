@@ -53,7 +53,6 @@ import { getVendorBills, deleteVendorBill } from '@/lib/vendor-bill-service';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
 
-const AddUserDialog = dynamic(() => import('@/components/users/add-user-dialog').then(mod => mod.AddUserDialog));
 const EditUserInfoDialog = dynamic(() => import('@/components/users/edit-user-info-dialog').then(mod => mod.EditUserInfoDialog));
 const DeleteUserDialog = dynamic(() => import('@/components/users/delete-user-dialog').then(mod => mod.DeleteUserDialog));
 const AddEditProductDialog = dynamic(() => import('@/components/vendors/AddEditProductDialog').then(mod => mod.AddEditProductDialog));
@@ -108,7 +107,6 @@ export default function VendorsPage() {
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isAddEditProductDialogOpen, setIsAddEditProductDialogOpen] = useState(false);
   const [productToEdit, setProductToEdit] = useState<any | null>(null); 
   const [productToDelete, setProductToDelete] = useState<VendorProduct | null>(null);
@@ -196,7 +194,6 @@ export default function VendorsPage() {
 
   const handleUserSaved = () => {
     setUserToEdit(null);
-    setIsAddUserDialogOpen(false);
     fetchData();
   };
 
@@ -387,9 +384,6 @@ export default function VendorsPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input placeholder="Search vendors..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
                     </div>
-                     <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => setIsAddUserDialogOpen(true)}>
-                        <Plus className="mr-2 h-4 w-4" /> Add Vendor
-                     </Button>
                 </div>
             </div>
             </CardHeader>
@@ -704,16 +698,6 @@ export default function VendorsPage() {
             </div>
         </Tabs>
       </div>
-
-      <AddUserDialog 
-        onUserAdded={handleUserSaved}
-        currentUser={currentUser}
-        isOpen={isAddUserDialogOpen}
-        onOpenChange={setIsAddUserDialogOpen}
-        defaultRole="VENDOR"
-      >
-        <React.Fragment key="add-user-trigger" />
-      </AddUserDialog>
 
       {userToEdit && (
         <EditUserInfoDialog
