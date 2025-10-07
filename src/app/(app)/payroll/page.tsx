@@ -238,7 +238,6 @@ export default function PayrollPage() {
           const lateDays = payslip?.lateDays ?? userAttendanceInRange.filter(att => att.status === 'Late').length;
           const absentDays = payslip?.absentDays ?? Math.max(0, totalWorkingDays - presentDays);
           
-          const fine = payslip?.fine ?? 0;
           const incentive = payslip?.incentive ?? 0;
           const paymentStatus = payslip?.paymentStatus ?? 'Unpaid';
 
@@ -249,11 +248,14 @@ export default function PayrollPage() {
 
           const perDaySalary = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
           const providentFund = effectiveSalary * 0.07;
-          const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
           
+          // Calculate fine from late days automatically
+          const automaticFine = Math.floor(lateDays / 3) * perDaySalary;
+          const fine = payslip?.fine ?? automaticFine; // Use payslip fine if it exists, otherwise use calculated one
+
           const salaryForDaysWorked = perDaySalary * presentDays;
           
-          const payableAmount = payslip?.payableAmount ?? (salaryForDaysWorked) + incentive - fine - providentFund - lateDeduction;
+          const payableAmount = payslip?.payableAmount ?? (salaryForDaysWorked) + incentive - fine - providentFund;
 
           return {
             ...employee,
@@ -737,37 +739,6 @@ export default function PayrollPage() {
       </CardContent>
     </Card>
   );
-  
-  const settingsContent = (
-      <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="p-6 border-b">
-            <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><Settings className="mr-2 h-5 w-5" />Settings</CardTitle>
-             <CardDescription>Configure attendance and payroll settings.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-6">
-            <div className="space-y-4">
-                <div>
-                    <h3 className="font-semibold mb-2">Weekend Days</h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                        {WEEK_DAYS.map(day => (
-                            <div key={day} className="flex items-center space-x-2">
-                                <Checkbox
-                                    id={`weekend-${day}`}
-                                    checked={selectedWeekends.includes(day)}
-                                    onCheckedChange={(checked) => handleWeekendChange(day, checked)}
-                                />
-                                <Label htmlFor={`weekend-${day}`} className="text-sm font-normal">
-                                    {day}
-                                </Label>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                 <Button onClick={handleSaveWeekends}>Save Weekend Settings</Button>
-            </div>
-        </CardContent>
-      </Card>
-  );
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -779,8 +750,6 @@ export default function PayrollPage() {
         return employeePerformanceContent;
       case 'attendees_report':
         return attendeesReportContent;
-      case 'settings':
-        return settingsContent;
       default:
         return employeeListContent;
     }
@@ -802,7 +771,6 @@ export default function PayrollPage() {
           <TabsTrigger value="employee_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee List</TabsTrigger>
           <TabsTrigger value="employee_performance" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee Performance</TabsTrigger>
           <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
-          <TabsTrigger value="settings" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Settings</TabsTrigger>
         </TabsList>
         <div className="mt-6">
             {renderActiveTab()}
@@ -820,10 +788,8 @@ export default function PayrollPage() {
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
-          weekendDays={selectedWeekends}
         />
       )}
     </div>
   );
 }
-

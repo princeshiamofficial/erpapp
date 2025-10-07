@@ -38,6 +38,8 @@ interface EditPayslipDialogProps {
   existingPayslip?: Payslip;
 }
 
+const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, selectedDate, weekendDays, existingPayslip }: EditPayslipDialogProps) {
   const [present, setPresent] = useState('30');
   const [absent, setAbsent] = useState('0');
@@ -51,49 +53,64 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
   const monthYearId = useMemo(() => {
     return `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
   }, [selectedDate]);
+  
+  const totalWorkingDays = useMemo(() => {
+      const daysInMonth = getDaysInMonth(selectedDate);
+      const weekendDayIndexes = weekendDays.map(day => WEEK_DAYS.indexOf(day));
+      let workingDays = 0;
+      for (let i = 1; i <= daysInMonth; i++) {
+          const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
+          if (!weekendDayIndexes.includes(getDay(currentDate))) {
+              workingDays++;
+          }
+      }
+      return workingDays;
+  }, [selectedDate, weekendDays]);
+
+  const perDaySalary = useMemo(() => {
+      const baseSalary = employee.salary || 0;
+      return totalWorkingDays > 0 ? baseSalary / totalWorkingDays : 0;
+  }, [employee.salary, totalWorkingDays]);
 
   useEffect(() => {
     if (isOpen) {
       const payslipData = existingPayslip;
-      setPresent(payslipData?.presentDays.toString() || employee.presentDays?.toString() || '30');
+      setPresent(payslipData?.presentDays.toString() || employee.presentDays?.toString() || totalWorkingDays.toString());
       setAbsent(payslipData?.absentDays.toString() || employee.absentDays?.toString() || '0');
-      setLate(payslipData?.lateDays.toString() || employee.lateDays?.toString() || '0');
-      setFine(payslipData?.fine.toString() || '0');
+      
+      const initialLateDays = payslipData?.lateDays.toString() || employee.lateDays?.toString() || '0';
+      setLate(initialLateDays);
+      
+      const calculatedFine = Math.floor(parseInt(initialLateDays, 10) / 3) * perDaySalary;
+      setFine(payslipData?.fine?.toString() ?? calculatedFine.toFixed(2));
+      
       setIncentive(payslipData?.incentive.toString() || '0');
       setPaymentStatus(payslipData?.paymentStatus || 'Unpaid');
       setIsSubmitting(false);
     }
-  }, [isOpen, employee, monthYearId, existingPayslip]);
+  }, [isOpen, employee, monthYearId, existingPayslip, totalWorkingDays, perDaySalary]);
+
+  useEffect(() => {
+    const lateDaysNum = parseInt(late, 10);
+    if (!isNaN(lateDaysNum) && lateDaysNum >= 0) {
+      const calculatedFine = Math.floor(lateDaysNum / 3) * perDaySalary;
+      setFine(calculatedFine.toFixed(2));
+    }
+  }, [late, perDaySalary]);
 
   const providentFund = useMemo(() => {
     return (employee.salary || 0) * 0.07;
   }, [employee.salary]);
 
   const payableAmount = useMemo(() => {
-    const baseSalary = employee.salary || 0;
     const incentiveNum = parseFloat(incentive) || 0;
     const fineNum = parseFloat(fine) || 0;
     const presentDays = parseInt(present, 10) || 0;
-    const lateDays = parseInt(late, 10) || 0;
-    
-    // Calculate total working days in the month, excluding weekends
-    const daysInMonth = getDaysInMonth(selectedDate);
-    const weekendDayIndexes = weekendDays.map(day => ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(day));
-    let totalWorkingDays = 0;
-    for (let i = 1; i <= daysInMonth; i++) {
-        const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
-        if (!weekendDayIndexes.includes(getDay(currentDate))) {
-            totalWorkingDays++;
-        }
-    }
-
-    const perDaySalary = totalWorkingDays > 0 ? baseSalary / totalWorkingDays : 0;
-    const lateDeduction = Math.floor(lateDays / 3) * perDaySalary;
     
     const salaryForDaysWorked = perDaySalary * presentDays;
     
-    return (salaryForDaysWorked) + incentiveNum - fineNum - providentFund - lateDeduction;
-  }, [employee.salary, incentive, fine, providentFund, present, late, selectedDate, weekendDays]);
+    return (salaryForDaysWorked) + incentiveNum - fineNum - providentFund;
+  }, [incentive, fine, providentFund, present, perDaySalary]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
