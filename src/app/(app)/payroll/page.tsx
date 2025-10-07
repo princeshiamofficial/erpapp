@@ -52,6 +52,7 @@ const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeave
 const ITEMS_PER_PAGE = 8;
 const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
@@ -427,9 +428,7 @@ export default function PayrollPage() {
             <AddEmployeeDialog 
               onEmployeeAdded={fetchData}
               allUsers={usersNotYetEmployees}
-              isOpen={false} onOpenChange={function (open: boolean): void {
-                                throw new Error('Function not implemented.');
-                            } }            >
+            >
               <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"><Plus className="mr-2 h-4 w-4" /> Add Employee</Button>
             </AddEmployeeDialog>
           </div>
@@ -635,20 +634,12 @@ export default function PayrollPage() {
   
   const summaryContent = (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-      <SummaryCard 
+       <SummaryCard 
         title="Salary Paid"
         value={formatCurrency(totalPaidAmount)}
-        icon={BadgeDollarSign}
+        icon={Receipt}
         iconColorClass="text-green-600"
         circleBgClass="bg-green-100 dark:bg-green-700/20"
-        isLoading={isLoading}
-      />
-      <SummaryCard 
-        title="Total Provident Fund"
-        value={formatCurrency(totalProvidentFund)}
-        icon={Landmark}
-        iconColorClass="text-blue-600"
-        circleBgClass="bg-blue-100 dark:bg-blue-700/20"
         isLoading={isLoading}
       />
       <SummaryCard 
@@ -657,6 +648,14 @@ export default function PayrollPage() {
         icon={AlertTriangle}
         iconColorClass="text-yellow-600"
         circleBgClass="bg-yellow-100 dark:bg-yellow-700/20"
+        isLoading={isLoading}
+      />
+      <SummaryCard 
+        title="Total Provident Fund"
+        value={formatCurrency(totalProvidentFund)}
+        icon={Landmark}
+        iconColorClass="text-blue-600"
+        circleBgClass="bg-blue-100 dark:bg-blue-700/20"
         isLoading={isLoading}
       />
       <SummaryCard 
