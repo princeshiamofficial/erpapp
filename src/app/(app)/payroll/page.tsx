@@ -18,7 +18,7 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings, Wallet, CheckCircle } from 'lucide-react';
 import type { Employee, User, SalaryIncrement, Payslip, AttendanceRecord } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
@@ -344,6 +344,18 @@ export default function PayrollPage() {
   const totalPayableAmount = useMemo(() => {
     return salarySheetCalculatedData.reduce((total, data) => total + data.payableAmount, 0);
   }, [salarySheetCalculatedData]);
+
+  const totalPaidAmount = useMemo(() => {
+    return salarySheetCalculatedData
+      .filter(data => data.paymentStatus === 'Paid')
+      .reduce((total, data) => total + data.payableAmount, 0);
+  }, [salarySheetCalculatedData]);
+
+  const totalUnpaidAmount = useMemo(() => {
+    return salarySheetCalculatedData
+      .filter(data => data.paymentStatus === 'Unpaid')
+      .reduce((total, data) => total + data.payableAmount, 0);
+  }, [salarySheetCalculatedData]);
   
   const totalProvidentFund = useMemo(() => {
     return salarySheetCalculatedData.reduce((total, data) => total + data.providentFund, 0);
@@ -417,7 +429,9 @@ export default function PayrollPage() {
             <AddEmployeeDialog 
               onEmployeeAdded={fetchData}
               allUsers={usersNotYetEmployees}
-            >
+              isOpen={false} onOpenChange={function (open: boolean): void {
+                                throw new Error('Function not implemented.');
+                            } }            >
               <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"><Plus className="mr-2 h-4 w-4" /> Add Employee</Button>
             </AddEmployeeDialog>
           </div>
@@ -575,7 +589,7 @@ export default function PayrollPage() {
                 ))
               ) : salarySheetCalculatedData.length > 0 ? (
                 salarySheetCalculatedData.map((data) => {
-                    const monthYearId = format(selectedDate, 'yyyy-MM');
+                    const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
                     const payslipForDialog = salarySheetData.find(p => p.employeeId === data.employeeId && p.id.startsWith(monthYearId));
                     return (
                         <TableRow key={data.id}>
@@ -617,37 +631,55 @@ export default function PayrollPage() {
             </TableFooter>
           </Table>
         </div>
+         {totalPages > 1 && (
+            <div className="mt-6 flex justify-center">
+                 <Pagination><PaginationContent>
+                    <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
+                    {renderPagination()}
+                    <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
+                </PaginationContent></Pagination>
+            </div>
+        )}
       </CardContent>
     </Card>
   );
-
+  
   const summaryContent = (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+            <CardHeader className="p-6 flex flex-row items-center justify-between">
+                <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><CheckCircle className="mr-2 h-6 w-6 text-green-500"/>Salary Paid</CardTitle>
+                <div className="text-2xl font-bold text-green-600">{formatCurrency(totalPaidAmount)}</div>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+                <p className="text-sm text-gray-500">Total salary disbursed for {format(selectedDate, 'MMMM yyyy')}.</p>
+            </CardContent>
+        </Card>
+         <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+            <CardHeader className="p-6 flex flex-row items-center justify-between">
+                <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><AlertTriangle className="mr-2 h-6 w-6 text-red-500"/>Salary Unpaid</CardTitle>
+                 <div className="text-2xl font-bold text-red-500">{formatCurrency(totalUnpaidAmount)}</div>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+                <p className="text-sm text-gray-500">Total salary pending for {format(selectedDate, 'MMMM yyyy')}.</p>
+            </CardContent>
+        </Card>
+      </div>
+  );
+
+    const settingsContent = (
       <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
           <CardHeader className="p-6">
-              <CardTitle className="text-xl font-bold text-gray-800">Summary</CardTitle>
-              <CardDescription>A summary of payroll for {format(selectedDate, 'MMMM yyyy')}.</CardDescription>
+              <CardTitle className="text-xl font-bold text-gray-800">Settings</CardTitle>
+              <CardDescription>Configure payroll and attendance settings.</CardDescription>
           </CardHeader>
           <CardContent className="p-6 pt-0">
               <div className="text-center p-10 bg-gray-50 rounded-lg">
-                <h3 className="text-lg text-gray-500">Summary view is under construction.</h3>
+                <h3 className="text-lg text-gray-500">Settings view is under construction.</h3>
               </div>
           </CardContent>
       </Card>
-  );
-
-  const settingsContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-        <CardHeader className="p-6">
-            <CardTitle className="text-xl font-bold text-gray-800">Settings</CardTitle>
-            <CardDescription>Configure payroll and attendance settings.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-6 pt-0">
-            <div className="text-center p-10 bg-gray-50 rounded-lg">
-                <h3 className="text-lg text-gray-500">Settings are under construction.</h3>
-            </div>
-        </CardContent>
-    </Card>
-  );
+    );
 
   
   const renderActiveTab = () => {
@@ -700,3 +732,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
