@@ -43,7 +43,7 @@ import {
   AlertDialogCancel, 
   AlertDialogContent, 
   AlertDialogDescription, 
-  AlertDialogFooter, 
+  AlertDialogFooter, c
   AlertDialogHeader, 
   AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
@@ -61,6 +61,7 @@ const AddEditCategoryDialog = dynamic(() => import('@/components/vendors/AddEdit
 const DeleteCategoryDialog = dynamic(() => import('@/components/vendors/DeleteCategoryDialog').then(mod => mod.DeleteCategoryDialog));
 const DeleteProductDialog = dynamic(() => import('@/components/vendors/DeleteProductDialog').then(mod => mod.DeleteProductDialog));
 const AddEditBillDialog = dynamic(() => import('@/components/vendors/AddEditBillDialog').then(mod => mod.AddEditBillDialog));
+const AddEditBillReportDialog = dynamic(() => import('@/components/vendors/AddEditBillReportDialog').then(mod => mod.AddEditBillReportDialog));
 
 
 const getInitials = (name: string) => {
@@ -128,6 +129,7 @@ export default function VendorsPage() {
   const [categories, setCategories] = useState<VendorCategory[]>([]);
   const [bills, setBills] = useState<VendorBill[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [isAddEditBillReportDialogOpen, setIsAddEditBillReportDialogOpen] = useState(false);
 
 
   const fetchData = useCallback(async () => {
@@ -657,34 +659,38 @@ export default function VendorsPage() {
               </Card>
         );
         case 'bill_reports':
-          return (
-            <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-                <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                    <div>
-                        <CardTitle className="text-xl font-bold text-gray-800">Bill Reports</CardTitle>
-                        <CardDescription>View and analyze billing reports.</CardDescription>
-                    </div>
-                     <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground">
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add New
-                     </Button>
-                </CardHeader>
-                <CardContent className="p-6 pt-0 h-96 flex items-center justify-center">
-                    <div className="text-center text-gray-500">
-                        <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                        <p className="font-semibold">Bill Reports Content</p>
-                        <p className="text-sm">This section is under construction.</p>
-                    </div>
-                </CardContent>
-            </Card>
-          );
+            return (
+              <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+                  <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                      <div>
+                          <CardTitle className="text-xl font-bold text-gray-800">Bill Reports</CardTitle>
+                          <CardDescription>View and analyze billing reports.</CardDescription>
+                      </div>
+                       <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => setIsAddEditBillReportDialogOpen(true)}>
+                          <PlusCircle className="mr-2 h-4 w-4" /> Add New
+                       </Button>
+                  </CardHeader>
+                  <CardContent className="p-6 pt-0 h-96 flex items-center justify-center">
+                      <div className="text-center text-gray-500">
+                          <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                          <p className="font-semibold">Bill Reports Content</p>
+                          <p className="text-sm">This section is under construction.</p>
+                      </div>
+                  </CardContent>
+              </Card>
+            );
       default:
         return null;
     }
   };
 
+  if (!currentUser || !['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role)) {
+    return <div className="p-8 text-center">Access Denied.</div>
+  }
+
   return (
     <>
-      <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="space-y-6">
          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="inline-flex h-10 items-center justify-center text-muted-foreground bg-white p-1 rounded-full shadow-sm border border-gray-200">
             <TabsTrigger value="vendor_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor List</TabsTrigger>
@@ -776,6 +782,15 @@ export default function VendorsPage() {
           currentUser={currentUser}
           vendors={filteredVendors}
           products={products}
+      />
+
+      <AddEditBillReportDialog
+          isOpen={isAddEditBillReportDialogOpen}
+          onOpenChange={setIsAddEditBillReportDialogOpen}
+          onSave={() => {
+              // Add logic to refetch or update data for bill reports
+              setIsAddEditBillReportDialogOpen(false);
+          }}
       />
       
        {billToDelete && (
