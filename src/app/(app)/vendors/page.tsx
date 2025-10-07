@@ -644,22 +644,6 @@ export default function VendorsPage() {
                 )}
               </Card>
         );
-        case 'bill_reports':
-          return (
-            <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-              <CardHeader className="p-6">
-                  <CardTitle className="text-xl font-bold text-gray-800">Bill Reports</CardTitle>
-                  <CardDescription>View and generate reports for vendor bills.</CardDescription>
-              </CardHeader>
-              <CardContent className="p-6 pt-0">
-                  <div className="flex flex-col items-center justify-center text-center text-muted-foreground h-48 border-2 border-dashed rounded-lg">
-                      <BarChartHorizontal className="h-10 w-10 mb-2" />
-                      <p className="font-semibold">Bill Reports Coming Soon</p>
-                      <p className="text-sm">This section is under construction.</p>
-                  </div>
-              </CardContent>
-            </Card>
-          );
       default:
         return null;
     }
@@ -674,7 +658,6 @@ export default function VendorsPage() {
             <TabsTrigger value="products" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Products</TabsTrigger>
             <TabsTrigger value="categories" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Categories</TabsTrigger>
             <TabsTrigger value="vendor_bills" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Vendor Bills</TabsTrigger>
-            <TabsTrigger value="bill_reports" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Bill Reports</TabsTrigger>
           </TabsList>
             <div className="mt-6">
                 {renderActiveTabContent()}
@@ -689,8 +672,9 @@ export default function VendorsPage() {
         onOpenChange={setIsAddUserDialogOpen}
         defaultRole="VENDOR"
       >
-        {/* Empty trigger because it is manually controlled */}
-        <></>
+        <button onClick={() => setIsAddUserDialogOpen(true)} className="fixed bottom-20 right-6 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center z-50">
+            <Plus className="h-6 w-6"/>
+        </button>
       </AddUserDialog>
 
       {userToEdit && (

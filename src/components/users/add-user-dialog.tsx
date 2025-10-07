@@ -190,7 +190,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
       avatarUrl: avatarBase64Url,
       monthlyOrderTarget: 0, 
       weeklyOrderTarget: 0,  
-      isBanned: false,
+      isBanned: false, 
       fcmToken: null, 
     };
 
