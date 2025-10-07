@@ -18,7 +18,7 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings, Wallet, CheckCircle } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings, Wallet, CheckCircle, BadgeDollarSign, Undo2, Download, Receipt } from 'lucide-react';
 import type { Employee, User, SalaryIncrement, Payslip, AttendanceRecord } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
@@ -55,6 +55,44 @@ const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frid
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
   return new Intl.NumberFormat('en-BD', { style: 'currency', currency: 'BDT' }).format(value);
+};
+
+interface SummaryCardProps {
+  title: string;
+  value: string;
+  icon: React.ElementType;
+  iconColorClass?: string;
+  circleBgClass?: string;
+  isLoading?: boolean;
+}
+
+const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, iconColorClass = "text-primary", circleBgClass = "bg-primary/10", isLoading }) => {
+  if (isLoading) {
+    return (
+      <Card className="bg-card p-4 shadow-md">
+        <div className="flex items-center space-x-4">
+          <Skeleton className="h-12 w-12 rounded-full" />
+          <div className="space-y-1.5">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-7 w-32" />
+          </div>
+        </div>
+      </Card>
+    );
+  }
+  return (
+    <Card className="shadow-md hover:shadow-lg transition-shadow bg-card p-4">
+      <div className="flex items-center space-x-4">
+        <div className={`p-3 rounded-full ${circleBgClass}`}>
+          <Icon className={`h-6 w-6 ${iconColorClass}`} />
+        </div>
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-2xl font-bold text-foreground font-mono">{value}</p>
+        </div>
+      </div>
+    </Card>
+  );
 };
 
 
@@ -132,30 +170,35 @@ export default function PayrollPage() {
   const filteredEmployees = useMemo(() => {
     let results = employees;
 
-    if (activeTab === 'salary_sheet') {
+    if (activeTab === 'salary_sheet' || activeTab === 'summary') {
       const selectedMonthStart = startOfMonth(selectedDate);
       
       results = results.filter(employee => {
         try {
           const joiningDate = new Date(employee.joiningDate);
+          // Always include active employees if their joining date is not after the start of the selected month.
           if (employee.status === 'Active') {
             return !isAfter(startOfMonth(joiningDate), selectedMonthStart);
           }
           
+          // For inactive employees, check if they were paid in or after the selected month
           if (employee.status === 'Inactive') {
             const paidSlips = salarySheetData.filter(p => p.employeeId === employee.employeeId && p.paymentStatus === 'Paid');
 
             if (paidSlips.length === 0) {
+              // If never paid, include them if they joined before the month ended.
               return !isAfter(startOfMonth(joiningDate), selectedMonthStart);
             }
             
+            // Find the last paid month
             const lastPaidMonthStr = paidSlips.sort((a, b) => b.id.localeCompare(a.id))[0].id;
             const lastPaidMonth = parse(lastPaidMonthStr, 'yyyy-MM', new Date());
 
+            // Show the employee if the selected month is on or before their last paid month
             return !isAfter(selectedMonthStart, lastPaidMonth);
           }
 
-          return false;
+          return false; // Should not be reached if status is only 'Active' or 'Inactive'
 
         } catch (e) {
           console.error(`Error processing filter for employee ${employee.id}`, e);
@@ -220,7 +263,7 @@ export default function PayrollPage() {
               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
           const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
 
-          const perDaySalaryForFine = effectiveSalary / 30; // Always divide by 30 for fine
+          const perDaySalaryForFine = effectiveSalary / 30; // Always divide by 30 for fine calculation
 
           const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
           const fine = payslip?.fine ?? automaticFine;
@@ -583,45 +626,41 @@ export default function PayrollPage() {
       </CardContent>
     </Card>
   );
-
+  
   const summaryContent = (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-            <CardHeader className="p-6 flex flex-row items-center justify-between">
-                <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><CheckCircle className="mr-2 h-6 w-6 text-green-500"/>Salary Paid</CardTitle>
-                <div className="text-2xl font-bold text-green-600">{formatCurrency(totalPaidAmount)}</div>
-            </CardHeader>
-            <CardContent className="p-6 pt-0">
-                <p className="text-sm text-gray-500">Total salary disbursed for {format(selectedDate, 'MMMM yyyy')}.</p>
-            </CardContent>
-        </Card>
-        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-            <CardHeader className="p-6 flex flex-row items-center justify-between">
-                <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><AlertTriangle className="mr-2 h-6 w-6 text-red-500"/>Salary Unpaid</CardTitle>
-                <div className="text-2xl font-bold text-red-500">{formatCurrency(totalUnpaidAmount)}</div>
-            </CardHeader>
-            <CardContent className="p-6 pt-0">
-                <p className="text-sm text-gray-500">Total salary pending for {format(selectedDate, 'MMMM yyyy')}.</p>
-            </CardContent>
-        </Card>
-        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-            <CardHeader className="p-6 flex flex-row items-center justify-between">
-                <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><Landmark className="mr-2 h-6 w-6 text-blue-500"/>Provident Fund</CardTitle>
-                <div className="text-2xl font-bold text-blue-600">{formatCurrency(totalProvidentFund)}</div>
-            </CardHeader>
-            <CardContent className="p-6 pt-0">
-                <p className="text-sm text-gray-500">Total provident fund collected for {format(selectedDate, 'MMMM yyyy')}.</p>
-            </CardContent>
-        </Card>
-        <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-            <CardHeader className="p-6 flex flex-row items-center justify-between">
-                <CardTitle className="text-xl font-bold text-gray-800 flex items-center"><Wallet className="mr-2 h-6 w-6 text-indigo-500"/>Total Payroll</CardTitle>
-                <div className="text-2xl font-bold text-indigo-600">{formatCurrency(totalPayableAmount)}</div>
-            </CardHeader>
-            <CardContent className="p-6 pt-0">
-                <p className="text-sm text-gray-500">Total payable salary for {format(selectedDate, 'MMMM yyyy')}.</p>
-            </CardContent>
-        </Card>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <SummaryCard 
+        title="Net"
+        value={formatCurrency(0)}
+        icon={BadgeDollarSign}
+        iconColorClass="text-green-600"
+        circleBgClass="bg-green-100 dark:bg-green-700/20"
+        isLoading={isLoading}
+      />
+      <SummaryCard 
+        title="Total Sell Return"
+        value={formatCurrency(0)}
+        icon={Undo2}
+        iconColorClass="text-red-600"
+        circleBgClass="bg-red-100 dark:bg-red-700/20"
+        isLoading={isLoading}
+      />
+      <SummaryCard 
+        title="Total purchase"
+        value={formatCurrency(0)}
+        icon={Download}
+        iconColorClass="text-blue-600"
+        circleBgClass="bg-blue-100 dark:bg-blue-700/20"
+        isLoading={isLoading}
+      />
+      <SummaryCard 
+        title="Purchase due"
+        value={formatCurrency(0)}
+        icon={AlertTriangle}
+        iconColorClass="text-amber-600"
+        circleBgClass="bg-amber-100 dark:bg-amber-700/20"
+        isLoading={isLoading}
+      />
     </div>
   );
 
