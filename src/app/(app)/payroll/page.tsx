@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -18,7 +19,7 @@ import {
   PaginationEllipsis
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings, Wallet, CheckCircle, BadgeDollarSign, Undo2, Download, Receipt } from 'lucide-react';
+import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Landmark, Settings, Wallet, CheckCircle, Receipt } from 'lucide-react';
 import type { Employee, User, SalaryIncrement, Payslip, AttendanceRecord } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
@@ -115,7 +116,6 @@ export default function PayrollPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   
   const [payslipToEdit, setPayslipToEdit] = useState<Employee | null>(null);
-  const [existingPayslipForDialog, setExistingPayslipForDialog] = useState<Payslip | undefined>(undefined);
   const [employeeToIncrement, setEmployeeToIncrement] = useState<Employee | null>(null);
 
   const [incrementToDelete, setIncrementToDelete] = useState<{ employeeId: string, increment: SalaryIncrement } | null>(null);
@@ -220,7 +220,7 @@ export default function PayrollPage() {
     }
     return results;
   }, [employees, searchTerm, activeTab, selectedDate, salarySheetData]);
-
+  
   const totalPages = useMemo(() => {
     if (activeTab !== 'employee_list') return 1;
     return Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
@@ -232,23 +232,19 @@ export default function PayrollPage() {
     const endIndex = startIndex + ITEMS_PER_PAGE;
     return filteredEmployees.slice(startIndex, endIndex);
   }, [filteredEmployees, currentPage, activeTab]);
-  
+
   const salarySheetCalculatedData = useMemo(() => {
         const monthYearId = format(selectedDate, 'yyyy-MM');
-        
         const daysInMonth = getDaysInMonth(selectedDate);
         const weekendDayIndexes = weekendDays.map(day => WEEK_DAYS.indexOf(day));
-        let workingDaysInMonth = 0;
+        let totalWorkingDays = 0;
         for (let i = 1; i <= daysInMonth; i++) {
             const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
             if (!weekendDayIndexes.includes(getDay(currentDate))) {
-                workingDaysInMonth++;
+                totalWorkingDays++;
             }
         }
         
-        // Define totalWorkingDays here to be accessible throughout the map function
-        const totalWorkingDays = workingDaysInMonth;
-
         return filteredEmployees.map(employee => {
           const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
           const userAttendanceInRange = attendanceData.filter(att => 
@@ -267,7 +263,7 @@ export default function PayrollPage() {
               .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
           const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
 
-          const perDaySalaryForFine = effectiveSalary / 30; // Always divide by 30 for fine calculation
+          const perDaySalaryForFine = effectiveSalary / 30;
 
           const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
           const fine = payslip?.fine ?? automaticFine;
@@ -292,6 +288,30 @@ export default function PayrollPage() {
           };
         });
     }, [filteredEmployees, selectedDate, attendanceData, salarySheetData, weekendDays]);
+
+  const totalPayableAmount = useMemo(() => {
+    return salarySheetCalculatedData.reduce((total, data) => total + data.payableAmount, 0);
+  }, [salarySheetCalculatedData]);
+
+  const totalPaidAmount = useMemo(() => {
+    return salarySheetCalculatedData
+      .filter(data => data.paymentStatus === 'Paid')
+      .reduce((total, data) => total + data.payableAmount, 0);
+  }, [salarySheetCalculatedData]);
+
+  const totalUnpaidAmount = useMemo(() => {
+    return salarySheetCalculatedData
+      .filter(data => data.paymentStatus === 'Unpaid')
+      .reduce((total, data) => total + data.payableAmount, 0);
+  }, [salarySheetCalculatedData]);
+
+  const totalProvidentFund = useMemo(() => {
+    return salarySheetCalculatedData.reduce((total, data) => total + data.providentFund, 0);
+  }, [salarySheetCalculatedData]);
+
+  const totalFineAmount = useMemo(() => {
+    return salarySheetCalculatedData.reduce((total, data) => total + (data.fine || 0), 0);
+  }, [salarySheetCalculatedData]);
   
   useEffect(() => {
       setCurrentPage(1);
@@ -364,31 +384,6 @@ export default function PayrollPage() {
     const employeeUserIds = new Set(employees.map(e => e.userId));
     return allUsers.filter(u => !employeeUserIds.has(u.id));
   }, [employees, allUsers]);
-  
-  const totalPayableAmount = useMemo(() => {
-    return salarySheetCalculatedData.reduce((total, data) => total + data.payableAmount, 0);
-  }, [salarySheetCalculatedData]);
-
-  const totalPaidAmount = useMemo(() => {
-    return salarySheetCalculatedData
-      .filter(data => data.paymentStatus === 'Paid')
-      .reduce((total, data) => total + data.payableAmount, 0);
-  }, [salarySheetCalculatedData]);
-
-  const totalUnpaidAmount = useMemo(() => {
-    return salarySheetCalculatedData
-      .filter(data => data.paymentStatus === 'Unpaid')
-      .reduce((total, data) => total + data.payableAmount, 0);
-  }, [salarySheetCalculatedData]);
-  
-  const totalProvidentFund = useMemo(() => {
-    return salarySheetCalculatedData.reduce((total, data) => total + data.providentFund, 0);
-  }, [salarySheetCalculatedData]);
-
-  const totalFineAmount = useMemo(() => {
-    return salarySheetCalculatedData.reduce((total, data) => total + (data.fine || 0), 0);
-  }, [salarySheetCalculatedData]);
-
 
   const handleMonthChange = (monthIndex: string) => {
     const newDate = new Date(selectedDate);
@@ -606,7 +601,7 @@ export default function PayrollPage() {
                             <TableCell className="text-center">
                               <Button variant="outline" size="sm" className="h-8" onClick={() => {
                                   setPayslipToEdit(data);
-                                  setExistingPayslipForDialog(payslipForDialog);
+                                  // setExistingPayslipForDialog(payslipForDialog);
                               }}>
                                 Edit payslip
                               </Button>
@@ -635,7 +630,7 @@ export default function PayrollPage() {
   );
   
   const summaryContent = (
-     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
       <SummaryCard 
         title="Salary Paid"
         value={formatCurrency(totalPaidAmount)}
@@ -647,7 +642,7 @@ export default function PayrollPage() {
       <SummaryCard 
         title="Salary Unpaid"
         value={formatCurrency(totalUnpaidAmount)}
-        icon={AlertTriangle}
+        icon={Receipt}
         iconColorClass="text-yellow-600"
         circleBgClass="bg-yellow-100 dark:bg-yellow-700/20"
         isLoading={isLoading}
@@ -710,7 +705,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8 bg-gray-50">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -735,7 +730,7 @@ export default function PayrollPage() {
           }}
           selectedDate={selectedDate}
           weekendDays={weekendDays}
-          existingPayslip={existingPayslipForDialog}
+          // existingPayslip={existingPayslipForDialog}
         />
       )}
       {employeeToIncrement && <IncrementSalaryDialog isOpen={!!employeeToIncrement} onOpenChange={(open) => !open && setEmployeeToIncrement(null)} employee={employeeToIncrement} onSalaryIncremented={fetchData}/>}
