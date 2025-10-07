@@ -381,6 +381,10 @@ export default function PayrollPage() {
     return salarySheetCalculatedData.reduce((total, data) => total + data.providentFund, 0);
   }, [salarySheetCalculatedData]);
 
+  const totalFineAmount = useMemo(() => {
+    return salarySheetCalculatedData.reduce((total, data) => total + (data.fine || 0), 0);
+  }, [salarySheetCalculatedData]);
+
 
   const handleMonthChange = (monthIndex: string) => {
     const newDate = new Date(selectedDate);
@@ -423,7 +427,9 @@ export default function PayrollPage() {
             <AddEmployeeDialog 
               onEmployeeAdded={fetchData}
               allUsers={usersNotYetEmployees}
-            >
+              isOpen={false} onOpenChange={function (open: boolean): void {
+                                throw new Error('Function not implemented.');
+                            } }            >
               <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"><Plus className="mr-2 h-4 w-4" /> Add Employee</Button>
             </AddEmployeeDialog>
           </div>
@@ -649,6 +655,14 @@ export default function PayrollPage() {
         title="Salary Unpaid"
         value={formatCurrency(totalUnpaidAmount)}
         icon={AlertTriangle}
+        iconColorClass="text-yellow-600"
+        circleBgClass="bg-yellow-100 dark:bg-yellow-700/20"
+        isLoading={isLoading}
+      />
+      <SummaryCard 
+        title="Total Fine"
+        value={formatCurrency(totalFineAmount)}
+        icon={AlertTriangle}
         iconColorClass="text-red-600"
         circleBgClass="bg-red-100 dark:bg-red-700/20"
         isLoading={isLoading}
@@ -754,5 +768,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
-    
