@@ -50,6 +50,7 @@ const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeave
 
 
 const ITEMS_PER_PAGE = 8;
+const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
@@ -663,7 +664,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 min-h-screen">
+    <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -683,7 +684,7 @@ export default function PayrollPage() {
           onOpenChange={(open) => !open && setPayslipToEdit(null)}
           employee={payslipToEdit}
           onSave={() => {
-            fetchData();
+            fetchData(); // Refetch data after saving
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
