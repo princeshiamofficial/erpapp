@@ -220,19 +220,7 @@ export default function PayrollPage() {
     return results;
   }, [employees, searchTerm, activeTab, selectedDate, salarySheetData]);
   
-  const totalPages = useMemo(() => {
-    if (activeTab !== 'employee_list') return 1;
-    return Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
-  },[filteredEmployees, activeTab]);
-
-  const paginatedEmployees = useMemo(() => {
-    if (activeTab !== 'employee_list') return filteredEmployees;
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    return filteredEmployees.slice(startIndex, endIndex);
-  }, [filteredEmployees, currentPage, activeTab]);
-
-  const { salarySheetCalculatedData, totalPayableAmount, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount } = useMemo(() => {
+  const salarySheetCalculatedData = useMemo(() => {
     if (!weekendDays) {
       return { salarySheetCalculatedData: [], totalPayableAmount: 0, totalPaidAmount: 0, totalUnpaidAmount: 0, totalProvidentFund: 0, totalFineAmount: 0 };
     }
@@ -304,6 +292,20 @@ export default function PayrollPage() {
       totalFineAmount: fineTotal
     };
   }, [filteredEmployees, selectedDate, attendanceData, salarySheetData, weekendDays]);
+
+  const { totalPayableAmount, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount } = salarySheetCalculatedData;
+
+  const totalPages = useMemo(() => {
+    if (activeTab !== 'employee_list') return 1;
+    return Math.ceil(filteredEmployees.length / ITEMS_PER_PAGE);
+  },[filteredEmployees, activeTab]);
+
+  const paginatedEmployees = useMemo(() => {
+    if (activeTab !== 'employee_list') return filteredEmployees;
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredEmployees.slice(startIndex, endIndex);
+  }, [filteredEmployees, currentPage, activeTab]);
   
   useEffect(() => {
       setCurrentPage(1);
@@ -573,8 +575,8 @@ export default function PayrollPage() {
                     <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
                   </TableRow>
                 ))
-              ) : salarySheetCalculatedData.length > 0 ? (
-                salarySheetCalculatedData.map((data) => {
+              ) : salarySheetCalculatedData.salarySheetCalculatedData.length > 0 ? (
+                salarySheetCalculatedData.salarySheetCalculatedData.map((data) => {
                     const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
                     const payslipForDialog = salarySheetData.find(p => p.employeeId === data.employeeId && p.id.startsWith(monthYearId));
                     return (
@@ -609,12 +611,6 @@ export default function PayrollPage() {
                 </TableRow>
               )}
             </TableBody>
-            <TableFooter>
-                <TableRow>
-                    <TableCell colSpan={9} className="text-right font-bold">Total Payable</TableCell>
-                    <TableCell className="font-bold text-right">{formatCurrency(totalPayableAmount)}</TableCell>
-                </TableRow>
-            </TableFooter>
           </Table>
         </div>
       </CardContent>
@@ -739,6 +735,10 @@ export default function PayrollPage() {
         return salarySheetContent;
       case 'employee_list':
         return employeeListContent;
+      case 'employee_performance':
+        return employeePerformanceContent;
+      case 'attendees_report':
+        return attendeesReportContent;
       case 'summary':
         return summaryContent;
       case 'settings':
@@ -757,12 +757,13 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
+    <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
           <TabsTrigger value="employee_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee List</TabsTrigger>
            <TabsTrigger value="summary" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Summary</TabsTrigger>
+          <TabsTrigger value="attendees_report" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Attendees Report</TabsTrigger>
           <TabsTrigger value="settings" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Settings</TabsTrigger>
         </TabsList>
         <div className="mt-6">
