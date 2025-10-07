@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -233,85 +232,78 @@ export default function PayrollPage() {
     return filteredEmployees.slice(startIndex, endIndex);
   }, [filteredEmployees, currentPage, activeTab]);
 
-  const salarySheetCalculatedData = useMemo(() => {
-        const monthYearId = format(selectedDate, 'yyyy-MM');
-        const daysInMonth = getDaysInMonth(selectedDate);
-        const weekendDayIndexes = weekendDays.map(day => WEEK_DAYS.indexOf(day));
-        let totalWorkingDays = 0;
-        for (let i = 1; i <= daysInMonth; i++) {
-            const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
-            if (!weekendDayIndexes.includes(getDay(currentDate))) {
-                totalWorkingDays++;
-            }
+  const { salarySheetCalculatedData, totalPayableAmount, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount } = useMemo(() => {
+    if (!weekendDays) {
+      return { salarySheetCalculatedData: [], totalPayableAmount: 0, totalPaidAmount: 0, totalUnpaidAmount: 0, totalProvidentFund: 0, totalFineAmount: 0 };
+    }
+    const daysInMonth = getDaysInMonth(selectedDate);
+    const weekendDayIndexes = weekendDays.map(day => WEEK_DAYS.indexOf(day));
+    let totalWorkingDays = 0;
+    for (let i = 1; i <= daysInMonth; i++) {
+        const currentDate = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), i);
+        if (!weekendDayIndexes.includes(getDay(currentDate))) {
+            totalWorkingDays++;
         }
-        
-        return filteredEmployees.map(employee => {
-          const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
-          const userAttendanceInRange = attendanceData.filter(att => 
-              att.employeeId === employee.userId && isSameMonth(parseISO(att.date), selectedDate)
-          );
-          
-          const presentDays = payslip?.presentDays ?? userAttendanceInRange.length;
-          const lateDays = payslip?.lateDays ?? userAttendanceInRange.filter(att => att.status === 'Late').length;
-          const absentDays = payslip?.absentDays ?? (totalWorkingDays - presentDays);
-          
-          const incentive = payslip?.incentive ?? 0;
-          const paymentStatus = payslip?.paymentStatus ?? 'Unpaid';
+    }
+    
+    const calculatedData = filteredEmployees.map(employee => {
+      const monthYearId = format(selectedDate, 'yyyy-MM');
+      const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
+      const userAttendanceInRange = attendanceData.filter(att => 
+          att.employeeId === employee.userId && isSameMonth(parseISO(att.date), selectedDate)
+      );
+      
+      const presentDays = payslip?.presentDays ?? userAttendanceInRange.length;
+      const lateDays = payslip?.lateDays ?? userAttendanceInRange.filter(att => att.status === 'Late').length;
+      const absentDays = payslip?.absentDays ?? (totalWorkingDays - presentDays);
+      
+      const incentive = payslip?.incentive ?? 0;
+      const paymentStatus = payslip?.paymentStatus ?? 'Unpaid';
 
-          const relevantHistory = (employee.salaryHistory || [])
-              .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
-              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
+      const relevantHistory = (employee.salaryHistory || [])
+          .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const effectiveSalary = relevantHistory.length > 0 ? relevantHistory[0].newSalary : employee.salary || 0;
 
-          const perDaySalaryForFine = effectiveSalary / 30;
+      const perDaySalaryForFine = effectiveSalary / 30;
+      const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
+      const fine = payslip?.fine ?? automaticFine;
 
-          const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
-          const fine = payslip?.fine ?? automaticFine;
+      const perDaySalaryForAbsence = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
+      const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
+      
+      const providentFund = effectiveSalary * 0.07;
+      
+      const payableAmount = payslip?.payableAmount ?? (salaryForDaysWorked) + incentive - fine - providentFund;
 
-          const perDaySalaryForAbsence = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
-          const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
-          
-          const providentFund = effectiveSalary * 0.07;
-          
-          const payableAmount = payslip?.payableAmount ?? (salaryForDaysWorked) + incentive - fine - providentFund;
+      return {
+        ...employee,
+        presentDays,
+        absentDays: Math.max(0, absentDays),
+        lateDays,
+        providentFund,
+        fine,
+        incentive,
+        payableAmount,
+        paymentStatus
+      };
+    });
 
-          return {
-            ...employee,
-            presentDays,
-            absentDays: Math.max(0, absentDays),
-            lateDays,
-            providentFund,
-            fine,
-            incentive,
-            payableAmount,
-            paymentStatus
-          };
-        });
-    }, [filteredEmployees, selectedDate, attendanceData, salarySheetData, weekendDays]);
+    const payable = calculatedData.reduce((total, data) => total + data.payableAmount, 0);
+    const paid = calculatedData.filter(data => data.paymentStatus === 'Paid').reduce((total, data) => total + data.payableAmount, 0);
+    const unpaid = calculatedData.filter(data => data.paymentStatus === 'Unpaid').reduce((total, data) => total + data.payableAmount, 0);
+    const providentFundTotal = calculatedData.reduce((total, data) => total + data.providentFund, 0);
+    const fineTotal = calculatedData.reduce((total, data) => total + (data.fine || 0), 0);
 
-  const totalPayableAmount = useMemo(() => {
-    return salarySheetCalculatedData.reduce((total, data) => total + data.payableAmount, 0);
-  }, [salarySheetCalculatedData]);
-
-  const totalPaidAmount = useMemo(() => {
-    return salarySheetCalculatedData
-      .filter(data => data.paymentStatus === 'Paid')
-      .reduce((total, data) => total + data.payableAmount, 0);
-  }, [salarySheetCalculatedData]);
-
-  const totalUnpaidAmount = useMemo(() => {
-    return salarySheetCalculatedData
-      .filter(data => data.paymentStatus === 'Unpaid')
-      .reduce((total, data) => total + data.payableAmount, 0);
-  }, [salarySheetCalculatedData]);
-
-  const totalProvidentFund = useMemo(() => {
-    return salarySheetCalculatedData.reduce((total, data) => total + data.providentFund, 0);
-  }, [salarySheetCalculatedData]);
-
-  const totalFineAmount = useMemo(() => {
-    return salarySheetCalculatedData.reduce((total, data) => total + (data.fine || 0), 0);
-  }, [salarySheetCalculatedData]);
+    return { 
+      salarySheetCalculatedData: calculatedData, 
+      totalPayableAmount: payable,
+      totalPaidAmount: paid,
+      totalUnpaidAmount: unpaid,
+      totalProvidentFund: providentFundTotal,
+      totalFineAmount: fineTotal
+    };
+  }, [filteredEmployees, selectedDate, attendanceData, salarySheetData, weekendDays]);
   
   useEffect(() => {
       setCurrentPage(1);
@@ -629,6 +621,66 @@ export default function PayrollPage() {
     </Card>
   );
   
+  const attendeesReportContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+      <CardHeader className="p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <CardTitle className="text-xl font-bold text-gray-800">Attendees Report</CardTitle>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-grow sm:flex-grow-0">
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Filter by date..."
+                className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"
+                type="date"
+                value={attendanceDateFilter}
+                onChange={(e) => setAttendanceDateFilter(e.target.value)}
+              />
+            </div>
+            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-6 pt-0">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Employee</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>In Time</TableHead>
+                <TableHead>Out Time</TableHead>
+                <TableHead>Hours Worked</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                [...Array(5)].map((_, index) => (
+                  <TableRow key={index}>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-20" /></div></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center h-48 text-gray-500">
+                    <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                    No attendance data recorded for the selected period.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+  
   const summaryContent = (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
       <SummaryCard 
@@ -705,7 +757,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="min-h-screen p-4 sm:p-6 lg:p-8 bg-gray-50">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -730,7 +782,7 @@ export default function PayrollPage() {
           }}
           selectedDate={selectedDate}
           weekendDays={weekendDays}
-          // existingPayslip={existingPayslipForDialog}
+          existingPayslip={salarySheetData.find(p => p.employeeId === payslipToEdit.employeeId && p.id.startsWith(format(selectedDate, 'yyyy-MM')))}
         />
       )}
       {employeeToIncrement && <IncrementSalaryDialog isOpen={!!employeeToIncrement} onOpenChange={(open) => !open && setEmployeeToIncrement(null)} employee={employeeToIncrement} onSalaryIncremented={fetchData}/>}
