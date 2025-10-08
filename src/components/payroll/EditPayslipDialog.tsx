@@ -45,6 +45,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
   const [late, setLate] = useState('0');
   const [fine, setFine] = useState('0');
   const [incentive, setIncentive] = useState('0');
+  const [trainingFee, setTrainingFee] = useState('0');
   const [paymentStatus, setPaymentStatus] = useState<'Paid' | 'Unpaid'>('Unpaid');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -76,6 +77,12 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       const baseSalary = employee.salary || 0;
       return totalWorkingDays > 0 ? baseSalary / totalWorkingDays : 0;
   }, [employee.salary, totalWorkingDays]);
+  
+  const isNewEmployee = useMemo(() => {
+    if (!employee?.joiningDate) return false;
+    const joiningDate = new Date(employee.joiningDate);
+    return isSameMonth(joiningDate, selectedDate) && isSameYear(joiningDate, selectedDate);
+  }, [employee.joiningDate, selectedDate]);
 
   useEffect(() => {
     if (isOpen) {
@@ -90,6 +97,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       setFine(payslipData?.fine?.toString() ?? calculatedFine.toFixed(2));
       
       setIncentive(payslipData?.incentive?.toString() || '0');
+      setTrainingFee(payslipData?.trainingFee?.toString() || '0');
       setPaymentStatus(payslipData?.paymentStatus || 'Unpaid');
       setIsSubmitting(false);
     }
@@ -107,26 +115,16 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     return (employee.salary || 0) * 0.07;
   }, [employee.salary]);
 
-  const { trainingFee, isNewEmployee } = useMemo(() => {
-    if (!employee?.joiningDate) return { trainingFee: 0, isNewEmployee: false };
-    const joiningDate = new Date(employee.joiningDate);
-    const isNew = isSameMonth(joiningDate, selectedDate) && isSameYear(joiningDate, selectedDate);
-    if (isNew) {
-        const presentDays = parseInt(present, 10) || 0;
-        return { trainingFee: 200 * presentDays, isNewEmployee: true };
-    }
-    return { trainingFee: 0, isNewEmployee: false };
-  }, [employee.joiningDate, selectedDate, present]);
-
   const payableAmount = useMemo(() => {
     const incentiveNum = parseFloat(incentive) || 0;
     const fineNum = parseFloat(fine) || 0;
     const presentDays = parseInt(present, 10) || 0;
+    const trainingFeeNum = isNewEmployee ? (parseFloat(trainingFee) || 0) : 0;
     
     const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
     
-    return (salaryForDaysWorked) + incentiveNum - fineNum - providentFund - trainingFee;
-  }, [incentive, fine, providentFund, present, perDaySalaryForAbsence, trainingFee]);
+    return (salaryForDaysWorked) + incentiveNum - fineNum - providentFund - trainingFeeNum;
+  }, [incentive, fine, providentFund, present, perDaySalaryForAbsence, trainingFee, isNewEmployee]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -139,6 +137,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
         lateDays: parseInt(late, 10),
         fine: parseFloat(fine),
         incentive: parseFloat(incentive),
+        trainingFee: isNewEmployee ? parseFloat(trainingFee) : undefined, // Only save if new employee
         payableAmount: payableAmount,
         paymentStatus: paymentStatus,
     };
@@ -210,7 +209,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
             {isNewEmployee && (
               <div className="space-y-1">
                   <Label htmlFor="training-fee">Training Fee</Label>
-                  <Input id="training-fee" type="text" value={formatCurrency(trainingFee)} readOnly disabled className="bg-muted/50 text-destructive" />
+                  <Input id="training-fee" type="number" value={trainingFee} onChange={e => setTrainingFee(e.target.value)} placeholder="Enter training fee" className="text-destructive" />
               </div>
             )}
 

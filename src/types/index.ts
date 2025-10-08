@@ -43,6 +43,7 @@ export interface Payslip {
     lateDays: number;
     fine: number;
     incentive: number;
+    trainingFee?: number; // Added training fee
     payableAmount: number; // Storing the calculated amount for record-keeping
     paymentStatus: 'Paid' | 'Unpaid'; // New field
     updatedAt: string; // ISO string
