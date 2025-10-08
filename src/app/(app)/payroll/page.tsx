@@ -112,7 +112,7 @@ export default function PayrollPage() {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  const [payslipToEdit, setPayslipToEdit] = useState<(Employee & { presentDays?: number, absentDays?: number, lateDays?: number }) | null>(null);
+  const [payslipToEdit, setPayslipToEdit] = useState<(Employee & { presentDays?: number, absentDays?: number, lateDays?: number, fine?: number; }) | null>(null);
   const [existingPayslipData, setExistingPayslipData] = useState<Payslip | undefined>(undefined);
   const [employeeToIncrement, setEmployeeToIncrement] = useState<Employee | null>(null);
 
@@ -226,6 +226,24 @@ export default function PayrollPage() {
     const calculatedData = results.map(employee => {
       const monthYearId = format(selectedDate, 'yyyy-MM');
       const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
+      
+      if (payslip) {
+        // If a saved payslip exists, use its data directly.
+        return {
+          ...employee,
+          presentDays: payslip.presentDays,
+          absentDays: payslip.absentDays,
+          lateDays: payslip.lateDays,
+          providentFund: (employee.salary || 0) * 0.07, // PF is always based on current salary
+          fine: payslip.fine,
+          incentive: payslip.incentive,
+          payableAmount: payslip.payableAmount,
+          paymentStatus: payslip.paymentStatus,
+          trainingFee: payslip.trainingFee ?? 0,
+        };
+      }
+      
+      // If no saved payslip, calculate from attendance.
       const userAttendanceInRange = attendanceData.filter(att => 
           att.employeeId === employee.userId && isSameMonth(parseISO(att.date), selectedDate)
       );
@@ -234,9 +252,6 @@ export default function PayrollPage() {
       const lateDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
       const absentDays = (totalWorkingDays - presentDays);
       
-      const incentive = payslip?.incentive ?? 0;
-      const paymentStatus = payslip?.paymentStatus ?? 'Unpaid';
-
       const relevantHistory = (employee.salaryHistory || [])
           .filter(h => !isAfter(startOfMonth(new Date(h.date)), selectedDate))
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -244,21 +259,13 @@ export default function PayrollPage() {
 
       const perDaySalaryForFine = effectiveSalary / 30;
       const automaticFine = Math.floor(lateDays / 3) * perDaySalaryForFine;
-      const fine = payslip?.fine ?? automaticFine;
-
+      
       const perDaySalaryForAbsence = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
-      
-      let trainingFee = 0;
-      const joiningDate = new Date(employee.joiningDate);
-      if (isSameMonth(joiningDate, selectedDate) && isSameYear(joiningDate, selectedDate)) {
-        trainingFee = payslip?.trainingFee ?? 0;
-      }
-      
       const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
-      
       const providentFund = effectiveSalary * 0.07;
+      const trainingFee = 0; // Default, can be edited
       
-      const payableAmount = payslip?.payableAmount ?? (salaryForDaysWorked) + incentive - fine - providentFund - trainingFee;
+      const payableAmount = salaryForDaysWorked - automaticFine - providentFund;
 
       return {
         ...employee,
@@ -266,10 +273,10 @@ export default function PayrollPage() {
         absentDays: Math.max(0, absentDays),
         lateDays,
         providentFund,
-        fine,
-        incentive,
-        payableAmount,
-        paymentStatus,
+        fine: automaticFine,
+        incentive: 0,
+        payableAmount: payableAmount,
+        paymentStatus: 'Unpaid',
         trainingFee,
       };
     });
@@ -612,7 +619,7 @@ export default function PayrollPage() {
           <Table>
             <TableHeader className="print:bg-gray-100">
               <TableRow className="hover:bg-transparent">
-                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Name</TableHead>
+                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Name of Employee</TableHead>
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Present</TableHead>
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Absent</TableHead>
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Late</TableHead>
@@ -857,7 +864,6 @@ export default function PayrollPage() {
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
-          weekendDays={weekendDays}
         />
       )}
       {employeeToIncrement && <IncrementSalaryDialog isOpen={!!employeeToIncrement} onOpenChange={(open) => !open && setEmployeeToIncrement(null)} employee={employeeToIncrement} onSalaryIncremented={fetchData}/>}
@@ -891,5 +897,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
-    
