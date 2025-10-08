@@ -28,7 +28,7 @@ const formatCurrency = (value?: number | null): string => {
 };
 
 interface EditPayslipDialogProps {
-  employee: Employee & { presentDays?: number; absentDays?: number; lateDays?: number; };
+  employee: Employee & { presentDays?: number; absentDays?: number; lateDays?: number; fine?: number; };
   onSave: () => void;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -86,10 +86,10 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       const initialLateDays = payslipData?.lateDays.toString() || employee.lateDays?.toString() || '0';
       setLate(initialLateDays);
       
-      const calculatedFine = Math.floor(parseInt(initialLateDays, 10) / 3) * perDaySalaryForFine;
-      setFine(payslipData?.fine?.toString() ?? calculatedFine.toFixed(2));
+      // Use the fine passed from the employee object which contains the calculated default
+      setFine(payslipData?.fine?.toString() ?? (employee.fine !== undefined ? employee.fine.toFixed(2) : '0.00'));
       
-      setIncentive(payslipData?.incentive.toString() || '0');
+      setIncentive(payslipData?.incentive?.toString() || '0');
       setPaymentStatus(payslipData?.paymentStatus || 'Unpaid');
       setIsSubmitting(false);
     }
@@ -99,9 +99,12 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     const lateDaysNum = parseInt(late, 10);
     if (!isNaN(lateDaysNum) && lateDaysNum >= 0) {
       const calculatedFine = Math.floor(lateDaysNum / 3) * perDaySalaryForFine;
-      setFine(calculatedFine.toFixed(2));
+      // Only set calculated fine if it's not already edited by user (or from existing payslip)
+      if (fine === (Math.floor((parseInt(late,10) -1 )/ 3) * perDaySalaryForFine).toFixed(2) || fine === '0.00' || fine === '0' || !existingPayslip?.fine) {
+         setFine(calculatedFine.toFixed(2));
+      }
     }
-  }, [late, perDaySalaryForFine]);
+  }, [late, perDaySalaryForFine, fine, existingPayslip?.fine]);
 
   const providentFund = useMemo(() => {
     return (employee.salary || 0) * 0.07;

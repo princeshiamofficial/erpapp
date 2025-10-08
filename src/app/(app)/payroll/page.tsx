@@ -495,12 +495,79 @@ export default function PayrollPage() {
     </Card>
   );
 
-  const salarySheetContent = (
+  const employeePerformanceContent = (
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
       <CardHeader className="p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <CardTitle className="text-xl font-bold text-gray-800">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
-           <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+          <CardTitle className="text-xl font-bold text-gray-800">Employee Performance</CardTitle>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="relative flex-grow sm:flex-grow-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
+            </div>
+            <Button variant="outline" className="h-10 rounded-full border-gray-200 bg-white"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="p-6 pt-0">
+        <div className="space-y-3">
+            <div className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
+                <span>Employee</span>
+                <span>Designation</span>
+                <span className="text-center">Completed Orders</span>
+                <span className="text-center">Efficiency Score</span>
+                <span className="text-center">Revenue Generated</span>
+                <span className="text-center">Rating</span>
+            </div>
+            {isLoading ? (
+                Array.from({ length: 4 }).map((_, index) => (
+                    <div key={index} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+                        <div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><Skeleton className="h-4 w-24" /></div>
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-4 w-12 mx-auto" />
+                        <div className="w-full"><Skeleton className="h-2 w-full rounded-full" /></div>
+                        <Skeleton className="h-4 w-16 mx-auto" />
+                        <Skeleton className="h-4 w-12 mx-auto" />
+                    </div>
+                ))
+            ) : paginatedEmployees.length > 0 ? (
+                paginatedEmployees.map((employee) => (
+                    <div key={employee.id} className="grid grid-cols-[1.5fr_1.5fr_1fr_1fr_1fr_1fr] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
+                        <div className="flex items-center gap-3">
+                            {/* Avatar placeholder */}
+                            <div className="h-10 w-10 rounded-full bg-gray-200 flex-shrink-0"></div>
+                            <span className="font-medium text-gray-800">{employee.name}</span>
+                        </div>
+                        <span>{employee.designation}</span>
+                        <span className="text-center font-medium">120</span> {/* Placeholder Data */}
+                        <div className="flex items-center gap-2">
+                           <Progress value={85} className="h-2" indicatorClassName="bg-green-500"/>
+                           <span className="text-xs font-semibold">85%</span>
+                        </div>
+                        <span className="text-center font-medium">{formatCurrency(250000)}</span> {/* Placeholder Data */}
+                        <div className="flex justify-center items-center gap-1 text-yellow-500">
+                          <Star className="h-4 w-4 fill-current"/>
+                          <span className="font-bold text-sm">4.8</span>
+                        </div>
+                    </div>
+                ))
+            ) : (
+                <div className="text-center py-16 text-gray-500">No performance data available.</div>
+            )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+
+  const salarySheetContent = (
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden print:shadow-none print:border-none">
+      <CardHeader className="p-6 print:p-2 print:pb-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-4">
+              <img src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" alt="Logo" className="h-12 hidden print:block" />
+              <CardTitle className="text-xl font-bold text-gray-800">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
+          </div>
+           <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap print:hidden">
             <div className="relative flex-grow sm:flex-grow-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
@@ -528,11 +595,11 @@ export default function PayrollPage() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-6 pt-0">
+      <CardContent className="p-6 pt-0 print:p-2">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="print:bg-gray-100">
                 <TableHead>Name of Employee</TableHead>
                 <TableHead>Present</TableHead>
                 <TableHead>Absent</TableHead>
@@ -542,7 +609,7 @@ export default function PayrollPage() {
                 <TableHead>Incentive</TableHead>
                 <TableHead>Payable Amount</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-center">Action</TableHead>
+                <TableHead className="text-center print:hidden">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -558,31 +625,27 @@ export default function PayrollPage() {
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                    <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
+                    <TableCell className="text-center print:hidden"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : salarySheetCalculatedData && salarySheetCalculatedData.length > 0 ? (
                 salarySheetCalculatedData.map((data) => {
                     const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
-                    const payslipForDialog = salarySheetData.find(p => p.employeeId === data.employeeId && p.id.startsWith(monthYearId));
                     return (
                         <TableRow key={data.id}>
-                            <TableCell className="font-medium">{data.name}</TableCell>
-                            <TableCell>{data.presentDays}</TableCell>
-                            <TableCell>{data.absentDays}</TableCell>
-                            <TableCell>{data.lateDays}</TableCell>
-                            <TableCell>{formatCurrency(data.providentFund)}</TableCell>
-                            <TableCell>{formatCurrency(data.fine)}</TableCell>
-                            <TableCell>{formatCurrency(data.incentive)}</TableCell>
-                            <TableCell className="font-semibold">{formatCurrency(data.payableAmount)}</TableCell>
-                            <TableCell>
+                            <TableCell className="font-medium whitespace-nowrap">{data.name}</TableCell>
+                            <TableCell className="whitespace-nowrap">{data.presentDays}</TableCell>
+                            <TableCell className="whitespace-nowrap">{data.absentDays}</TableCell>
+                            <TableCell className="whitespace-nowrap">{data.lateDays}</TableCell>
+                            <TableCell className="whitespace-nowrap">{formatCurrency(data.providentFund)}</TableCell>
+                            <TableCell className="whitespace-nowrap">{formatCurrency(data.fine)}</TableCell>
+                            <TableCell className="whitespace-nowrap">{formatCurrency(data.incentive)}</TableCell>
+                            <TableCell className="font-semibold whitespace-nowrap">{formatCurrency(data.payableAmount)}</TableCell>
+                            <TableCell className="whitespace-nowrap">
                               <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
                             </TableCell>
-                            <TableCell className="text-center">
-                              <Button variant="outline" size="sm" className="h-8" onClick={() => {
-                                  setPayslipToEdit(data);
-                                  // setExistingPayslipForDialog(payslipForDialog);
-                              }}>
+                            <TableCell className="text-center print:hidden">
+                              <Button variant="outline" size="sm" className="h-8" onClick={() => setPayslipToEdit(data)}>
                                 Edit payslip
                               </Button>
                             </TableCell>
@@ -597,6 +660,13 @@ export default function PayrollPage() {
                 </TableRow>
               )}
             </TableBody>
+             <TableFooter>
+                <TableRow className="print:bg-gray-100">
+                    <TableCell colSpan={7} className="text-right font-bold">Total</TableCell>
+                    <TableCell className="font-bold whitespace-nowrap">{formatCurrency(totalPayableAmount)}</TableCell>
+                    <TableCell colSpan={2}></TableCell>
+                </TableRow>
+            </TableFooter>
           </Table>
         </div>
       </CardContent>
@@ -661,10 +731,10 @@ export default function PayrollPage() {
         return salarySheetContent;
       case 'employee_list':
         return employeeListContent;
-      case 'summary':
-        return summaryContent;
-      case 'settings':
-        return settingsContent;
+      case 'employee_performance':
+        return employeePerformanceContent;
+      case 'attendees_report':
+        return attendeesReportContent;
       default:
         return employeeListContent;
     }
@@ -679,9 +749,9 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
+        <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200 print:hidden">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
           <TabsTrigger value="employee_list" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Employee List</TabsTrigger>
            <TabsTrigger value="summary" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Summary</TabsTrigger>
@@ -738,5 +808,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
-    
