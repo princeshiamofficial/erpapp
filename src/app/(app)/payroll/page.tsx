@@ -240,6 +240,7 @@ export default function PayrollPage() {
           payableAmount: payslip.payableAmount,
           paymentStatus: payslip.paymentStatus,
           trainingFee: payslip.trainingFee ?? 0,
+          advance: payslip.advance ?? 0,
         };
       }
       
@@ -278,13 +279,14 @@ export default function PayrollPage() {
         payableAmount: payableAmount,
         paymentStatus: 'Unpaid',
         trainingFee,
+        advance: 0,
       };
     });
 
     const paid = calculatedData.filter(data => data.paymentStatus === 'Paid').reduce((total, data) => total + data.payableAmount, 0);
     const unpaid = calculatedData.filter(data => data.paymentStatus === 'Unpaid').reduce((total, data) => total + data.payableAmount, 0);
     const providentFundTotal = calculatedData.reduce((total, data) => total + data.providentFund, 0);
-    const fineTotal = calculatedData.reduce((total, data) => total + (data.fine || 0), 0);
+    const fineTotal = calculatedData.reduce((total, data) => total + (data.fine || 0) + (data.advance || 0), 0);
     const payableTotal = calculatedData.reduce((total, data) => total + data.payableAmount, 0);
 
 
@@ -624,10 +626,10 @@ export default function PayrollPage() {
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Absent</TableHead>
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Late</TableHead>
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Provident Fund</TableHead>
-                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Fine</TableHead>
+                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Fine/Advance</TableHead>
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Incentive</TableHead>
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Payable Amount</TableHead>
-                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Status</TableHead>
+                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap print:hidden">Status</TableHead>
                 <TableHead className="text-center print:hidden !text-gray-800 font-semibold !whitespace-nowrap">Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -640,10 +642,10 @@ export default function PayrollPage() {
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                    <TableCell className="print:hidden"><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
                     <TableCell className="text-center print:hidden"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
                   </TableRow>
                 ))
@@ -655,10 +657,10 @@ export default function PayrollPage() {
                         <TableCell className="whitespace-nowrap">{data.absentDays}</TableCell>
                         <TableCell className="whitespace-nowrap">{data.lateDays}</TableCell>
                         <TableCell className="whitespace-nowrap">{formatCurrency(data.providentFund)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatCurrency(data.fine)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatCurrency((data.fine || 0) + (data.advance || 0))}</TableCell>
                         <TableCell className="whitespace-nowrap">{formatCurrency(data.incentive)}</TableCell>
                         <TableCell className="font-semibold whitespace-nowrap">{formatCurrency(data.payableAmount)}</TableCell>
-                        <TableCell className="whitespace-nowrap">
+                        <TableCell className="whitespace-nowrap print:hidden">
                           <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
                         </TableCell>
                         <TableCell className="text-center print:hidden">
@@ -688,8 +690,9 @@ export default function PayrollPage() {
             </TableBody>
             <TableFooter>
                 <TableRow className="print:bg-gray-100">
-                    <TableCell colSpan={7} className="text-right font-bold">Total</TableCell>
-                    <TableCell className="font-bold whitespace-nowrap">{formatCurrency(totalPayableAmount)}</TableCell>
+                    <TableCell colSpan={9} className="text-right font-bold print:hidden">Total</TableCell>
+                    <TableCell colSpan={7} className="text-right font-bold hidden print:table-cell">Total</TableCell>
+                    <TableCell className="font-bold text-right whitespace-nowrap">{formatCurrency(totalPayableAmount)}</TableCell>
                     <TableCell colSpan={2} className="print:hidden"></TableCell>
                 </TableRow>
             </TableFooter>
@@ -857,8 +860,8 @@ export default function PayrollPage() {
         <EditPayslipDialog
           isOpen={!!payslipToEdit}
           onOpenChange={(open) => !open && setPayslipToEdit(null)}
-          employee={payslipToEdit}
-          existingPayslip={salarySheetData.find(p => p.employeeId === payslipToEdit.employeeId && p.id.startsWith(`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`))}
+          employee={salarySheetCalculatedData.find(e => e.id === payslipToEdit.id) || payslipToEdit}
+          existingPayslip={existingPayslipData}
           onSave={() => {
             fetchData(); // Refetch data after saving
             setPayslipToEdit(null);
