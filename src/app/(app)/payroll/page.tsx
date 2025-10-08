@@ -575,8 +575,8 @@ export default function PayrollPage() {
     <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden print:shadow-none print:border-none">
       <CardHeader className="p-6 print:p-2 print:pb-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-4">
-              <Image src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" alt="Logo" width={120} height={30} className="h-12 w-auto hidden print:block" />
+          <div className="flex items-center gap-4 print:w-full print:justify-between">
+              <Image src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" alt="Logo" width={120} height={30} className="h-12 w-auto hidden print:block print:rounded-md" />
               <CardTitle className="text-xl font-bold text-gray-800 !mt-0 whitespace-nowrap">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
           </div>
            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap print:hidden">
@@ -620,7 +620,7 @@ export default function PayrollPage() {
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Fine</TableHead>
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Incentive</TableHead>
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Payable Amount</TableHead>
-                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap print:hidden">Status</TableHead>
+                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Status</TableHead>
                 <TableHead className="text-center print:hidden !text-gray-800 font-semibold !whitespace-nowrap">Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -636,7 +636,7 @@ export default function PayrollPage() {
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell className="print:hidden"><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
                     <TableCell className="text-center print:hidden"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
                   </TableRow>
                 ))
@@ -651,7 +651,7 @@ export default function PayrollPage() {
                         <TableCell className="whitespace-nowrap">{formatCurrency(data.fine)}</TableCell>
                         <TableCell className="whitespace-nowrap">{formatCurrency(data.incentive)}</TableCell>
                         <TableCell className="font-semibold whitespace-nowrap">{formatCurrency(data.payableAmount)}</TableCell>
-                        <TableCell className="whitespace-nowrap print:hidden">
+                        <TableCell className="whitespace-nowrap">
                           <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
                         </TableCell>
                         <TableCell className="text-center print:hidden">
@@ -851,13 +851,11 @@ export default function PayrollPage() {
           isOpen={!!payslipToEdit}
           onOpenChange={(open) => !open && setPayslipToEdit(null)}
           employee={payslipToEdit}
-          existingPayslip={existingPayslipData}
           onSave={() => {
             fetchData(); // Refetch data after saving
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
-          weekendDays={weekendDays}
         />
       )}
       {employeeToIncrement && <IncrementSalaryDialog isOpen={!!employeeToIncrement} onOpenChange={(open) => !open && setEmployeeToIncrement(null)} employee={employeeToIncrement} onSalaryIncremented={fetchData}/>}
