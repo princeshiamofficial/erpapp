@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -632,29 +633,26 @@ export default function PayrollPage() {
                   </TableRow>
                 ))
               ) : salarySheetCalculatedData && salarySheetCalculatedData.length > 0 ? (
-                salarySheetCalculatedData.map((data) => {
-                    const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
-                    return (
-                        <TableRow key={data.id}>
-                            <TableCell className="font-medium whitespace-nowrap">{data.name}</TableCell>
-                            <TableCell className="whitespace-nowrap">{data.presentDays}</TableCell>
-                            <TableCell className="whitespace-nowrap">{data.absentDays}</TableCell>
-                            <TableCell className="whitespace-nowrap">{data.lateDays}</TableCell>
-                            <TableCell className="whitespace-nowrap">{formatCurrency(data.providentFund)}</TableCell>
-                            <TableCell className="whitespace-nowrap">{formatCurrency(data.fine)}</TableCell>
-                            <TableCell className="whitespace-nowrap">{formatCurrency(data.incentive)}</TableCell>
-                            <TableCell className="font-semibold whitespace-nowrap">{formatCurrency(data.payableAmount)}</TableCell>
-                            <TableCell className="whitespace-nowrap">
-                              <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
-                            </TableCell>
-                            <TableCell className="text-center print:hidden">
-                              <Button variant="outline" size="sm" className="h-8" onClick={() => setPayslipToEdit(data)}>
-                                Edit payslip
-                              </Button>
-                            </TableCell>
-                        </TableRow>
-                    );
-                })
+                salarySheetCalculatedData.map((data) => (
+                    <TableRow key={data.id}>
+                        <TableCell className="font-medium whitespace-nowrap">{data.name}</TableCell>
+                        <TableCell className="whitespace-nowrap">{data.presentDays}</TableCell>
+                        <TableCell className="whitespace-nowrap">{data.absentDays}</TableCell>
+                        <TableCell className="whitespace-nowrap">{data.lateDays}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatCurrency(data.providentFund)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatCurrency(data.fine)}</TableCell>
+                        <TableCell className="whitespace-nowrap">{formatCurrency(data.incentive)}</TableCell>
+                        <TableCell className="font-semibold whitespace-nowrap">{formatCurrency(data.payableAmount)}</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center print:hidden">
+                          <Button variant="outline" size="sm" className="h-8" onClick={() => setPayslipToEdit(data)}>
+                            Edit payslip
+                          </Button>
+                        </TableCell>
+                    </TableRow>
+                  ))
               ) : (
                 <TableRow>
                   <TableCell colSpan={10} className="h-48 text-center text-gray-500">

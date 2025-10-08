@@ -86,7 +86,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       const initialLateDays = payslipData?.lateDays.toString() || employee.lateDays?.toString() || '0';
       setLate(initialLateDays);
       
-      // Use the fine passed from the employee object which contains the calculated default
+      // Use the fine from the payslip if it exists, otherwise use the calculated one from the employee object
       setFine(payslipData?.fine?.toString() ?? (employee.fine !== undefined ? employee.fine.toFixed(2) : '0.00'));
       
       setIncentive(payslipData?.incentive?.toString() || '0');
@@ -97,14 +97,11 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
 
   useEffect(() => {
     const lateDaysNum = parseInt(late, 10);
-    if (!isNaN(lateDaysNum) && lateDaysNum >= 0) {
+    if (!isNaN(lateDaysNum) && lateDaysNum >= 0 && !existingPayslip?.fine) { // Only auto-calculate if there's no manually saved fine
       const calculatedFine = Math.floor(lateDaysNum / 3) * perDaySalaryForFine;
-      // Only set calculated fine if it's not already edited by user (or from existing payslip)
-      if (fine === (Math.floor((parseInt(late,10) -1 )/ 3) * perDaySalaryForFine).toFixed(2) || fine === '0.00' || fine === '0' || !existingPayslip?.fine) {
-         setFine(calculatedFine.toFixed(2));
-      }
+      setFine(calculatedFine.toFixed(2));
     }
-  }, [late, perDaySalaryForFine, fine, existingPayslip?.fine]);
+  }, [late, perDaySalaryForFine, existingPayslip?.fine]);
 
   const providentFund = useMemo(() => {
     return (employee.salary || 0) * 0.07;
