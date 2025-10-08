@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -187,8 +186,8 @@ export default function VendorsPage() {
         (bill.billId && bill.billId.toLowerCase().includes(lowerSearchTerm))
     );
   }, [bills, searchTerm]);
-
-  const billReportsByDate = useMemo(() => {
+  
+  const billReportsByVendor = useMemo(() => {
     let reportsToFilter = billReports;
     if (searchTerm) {
         const lowerSearchTerm = searchTerm.toLowerCase();
@@ -197,19 +196,23 @@ export default function VendorsPage() {
             report.invoiceId.toLowerCase().includes(lowerSearchTerm)
         );
     }
-
+  
     const grouped = reportsToFilter.reduce((acc, report) => {
-        const dateKey = format(parseISO(report.date), 'yyyy-MM-dd');
-        if (!acc[dateKey]) {
-            acc[dateKey] = [];
+        const vendorId = report.vendorId;
+        if (!acc[vendorId]) {
+            acc[vendorId] = [];
         }
-        acc[dateKey].push(report);
+        acc[vendorId].push(report);
         return acc;
     }, {} as Record<string, BillReport[]>);
-
+  
     return Object.entries(grouped)
-        .sort(([dateA], [dateB]) => new Date(dateB).getTime() - new Date(dateA).getTime());
-}, [billReports, searchTerm]);
+        .sort(([vendorIdA], [vendorIdB]) => {
+            const vendorA = allUsers.find(u => u.id === vendorIdA);
+            const vendorB = allUsers.find(u => u.id === vendorIdB);
+            return (vendorA?.name || '').localeCompare(vendorB?.name || '');
+        });
+  }, [billReports, searchTerm, allUsers]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -341,9 +344,10 @@ export default function VendorsPage() {
   const totalPages = useMemo(() => {
     if (activeTab === 'vendor_list') return Math.ceil(filteredVendors.length / ITEMS_PER_PAGE);
     if (activeTab === 'products') return Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
-    if (activeTab === 'vendor_bills' || activeTab === 'bill_reports') return Math.ceil(filteredBills.length / ITEMS_PER_PAGE);
+    if (activeTab === 'vendor_bills') return Math.ceil(filteredBills.length / ITEMS_PER_PAGE);
+    if (activeTab === 'bill_reports') return Math.ceil(billReportsByVendor.length / ITEMS_PER_PAGE);
     return 1;
-  }, [activeTab, filteredVendors, filteredProducts, filteredBills]);
+  }, [activeTab, filteredVendors, filteredProducts, filteredBills, billReportsByVendor]);
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
@@ -351,9 +355,9 @@ export default function VendorsPage() {
     if (activeTab === 'vendor_list') return filteredVendors.slice(startIndex, endIndex);
     if (activeTab === 'products') return filteredProducts.slice(startIndex, endIndex);
     if (activeTab === 'vendor_bills') return filteredBills.slice(startIndex, endIndex);
-    if (activeTab === 'bill_reports') return billReportsByDate;
+    if (activeTab === 'bill_reports') return billReportsByVendor; // Accordion handles its own view, so no pagination needed here.
     return [];
-  }, [activeTab, currentPage, filteredVendors, filteredProducts, filteredBills, billReportsByDate]);
+  }, [activeTab, currentPage, filteredVendors, filteredProducts, filteredBills, billReportsByVendor]);
 
   const renderPagination = () => {
     const pageNumbers = [];
@@ -517,7 +521,7 @@ export default function VendorsPage() {
                                     <DropdownMenu>
                                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                       <DropdownMenuContent align="end">
-                                          <DropdownMenuItem onSelect={() => handleOpenEditProductDialog(product)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                          <DropdownMenuItem onSelect={()={() => handleOpenEditProductDialog(product)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
                                           <DropdownMenuItem onSelect={() => setProductToDelete(product)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
                                       </DropdownMenuContent>
                                     </DropdownMenu>
@@ -675,68 +679,83 @@ export default function VendorsPage() {
               </Card>
         );
         case 'bill_reports':
-            const reportsByDate = paginatedData as [string, BillReport[]][];
-            return (
-              <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-                  <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                      <div>
-                          <CardTitle className="text-xl font-bold text-gray-800">Bill Reports</CardTitle>
-                          <CardDescription>View and analyze billing reports.</CardDescription>
+          const reportsByVendor = paginatedData as [string, BillReport[]][];
+          return (
+            <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+                <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                    <div>
+                        <CardTitle className="text-xl font-bold text-gray-800">Bill Reports</CardTitle>
+                        <CardDescription>View and analyze billing reports.</CardDescription>
+                    </div>
+                     <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => setIsAddEditBillReportDialogOpen(true)}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add New
+                     </Button>
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? <Skeleton className="h-64 w-full" /> : reportsByVendor.length > 0 ? (
+                      <Accordion type="single" collapsible className="w-full space-y-3">
+                          {reportsByVendor.map(([vendorId, reports], index) => {
+                            const vendor = allUsers.find(u => u.id === vendorId);
+                            const totalAmount = reports.reduce((sum, r) => sum + r.amount, 0);
+                            const totalPayment = reports.reduce((sum, r) => sum + r.payment, 0);
+
+                            return (
+                              <div key={vendorId} className="group relative bg-muted/30 rounded-lg shadow-sm border">
+                              <AccordionItem value={`vendor-${index}`} className="border-b-0">
+                                  <AccordionTrigger className="px-4 py-3 text-left font-semibold text-foreground hover:no-underline">
+                                  <div className="flex items-center gap-4 flex-1">
+                                      {vendor && (
+                                        <Avatar className="h-9 w-9 border"><AvatarImage src={vendor.avatarUrl || undefined} /><AvatarFallback>{getInitials(vendor.name)}</AvatarFallback></Avatar>
+                                      )}
+                                      <div className="flex-1">
+                                          <p className="text-sm font-medium">{vendor?.name || 'Unknown Vendor'}</p>
+                                          <p className="text-xs text-muted-foreground">{reports.length} report(s)</p>
+                                      </div>
+                                       <div className="text-right">
+                                            <p className="text-xs text-muted-foreground">Total: {formatCurrency(totalAmount)}</p>
+                                            <p className="text-xs text-green-600">Paid: {formatCurrency(totalPayment)}</p>
+                                       </div>
+                                  </div>
+                                  </AccordionTrigger>
+                                  <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
+                                      <Table>
+                                          <TableHeader>
+                                              <TableRow>
+                                                  <TableHead>Date</TableHead>
+                                                  <TableHead>Invoice ID</TableHead>
+                                                  <TableHead>Amount</TableHead>
+                                                  <TableHead>Payment</TableHead>
+                                                  <TableHead>Method</TableHead>
+                                              </TableRow>
+                                          </TableHeader>
+                                          <TableBody>
+                                              {reports.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(report => (
+                                                  <TableRow key={report.id}>
+                                                      <TableCell>{formatDate(report.date)}</TableCell>
+                                                      <TableCell>{report.invoiceId}</TableCell>
+                                                      <TableCell>{formatCurrency(report.amount)}</TableCell>
+                                                      <TableCell>{formatCurrency(report.payment)}</TableCell>
+                                                      <TableCell>{report.method}</TableCell>
+                                                  </TableRow>
+                                              ))}
+                                          </TableBody>
+                                      </Table>
+                                  </AccordionContent>
+                              </AccordionItem>
+                              </div>
+                            )
+                          })}
+                      </Accordion>
+                    ) : (
+                      <div className="text-center text-gray-500 py-16">
+                          <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                          <p className="font-semibold">No Bill Reports Found</p>
+                          <p className="text-sm">Create a new bill report to see it here.</p>
                       </div>
-                       <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => setIsAddEditBillReportDialogOpen(true)}>
-                          <PlusCircle className="mr-2 h-4 w-4" /> Add New
-                       </Button>
-                  </CardHeader>
-                  <CardContent>
-                      {isLoading ? <Skeleton className="h-64 w-full" /> : reportsByDate.length > 0 ? (
-                        <Accordion type="single" collapsible className="w-full space-y-3">
-                            {reportsByDate.map(([date, reports], index) => (
-                                <div key={date} className="group relative bg-muted/30 rounded-lg shadow-sm border">
-                                <AccordionItem value={`item-${index}`} className="border-b-0">
-                                    <AccordionTrigger className="px-4 py-3 text-left font-semibold text-foreground hover:no-underline">
-                                    <div className="flex items-center gap-4 flex-1">
-                                        <p className="text-sm font-medium">{format(parseISO(date), 'PPP')}</p>
-                                        <p className="text-xs text-muted-foreground ml-auto">{reports.length} report(s)</p>
-                                    </div>
-                                    </AccordionTrigger>
-                                    <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Vendor</TableHead>
-                                                    <TableHead>Invoice ID</TableHead>
-                                                    <TableHead>Amount</TableHead>
-                                                    <TableHead>Payment</TableHead>
-                                                    <TableHead>Method</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {reports.map(report => (
-                                                    <TableRow key={report.id}>
-                                                        <TableCell>{report.vendorName}</TableCell>
-                                                        <TableCell>{report.invoiceId}</TableCell>
-                                                        <TableCell>{formatCurrency(report.amount)}</TableCell>
-                                                        <TableCell>{formatCurrency(report.payment)}</TableCell>
-                                                        <TableCell>{report.method}</TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </AccordionContent>
-                                </AccordionItem>
-                                </div>
-                            ))}
-                        </Accordion>
-                      ) : (
-                        <div className="text-center text-gray-500 py-16">
-                            <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                            <p className="font-semibold">No Bill Reports Found</p>
-                            <p className="text-sm">Create a new bill report to see it here.</p>
-                        </div>
-                      )}
-                  </CardContent>
-              </Card>
-            );
+                    )}
+                </CardContent>
+            </Card>
+          );
       default:
         return null;
     }
@@ -864,3 +883,5 @@ export default function VendorsPage() {
     </>
   );
 }
+
+    
