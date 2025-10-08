@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -25,7 +24,7 @@ import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay } from 'date-fns';
+import { format, isAfter, getDaysInMonth, subMonths, isSameMonth, getDate, endOfMonth, startOfMonth, parse, parseISO, getDay, isSameYear } from 'date-fns';
 import { deleteEmployeeAction, deleteSalaryIncrementAction, getSalarySheetForMonth } from './actions';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
@@ -247,11 +246,18 @@ export default function PayrollPage() {
       const fine = payslip?.fine ?? automaticFine;
 
       const perDaySalaryForAbsence = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
+      
+      let newEmployeeDeduction = 0;
+      const joiningDate = new Date(employee.joiningDate);
+      if (isSameMonth(joiningDate, selectedDate) && isSameYear(joiningDate, selectedDate)) {
+        newEmployeeDeduction = 200 * presentDays;
+      }
+      
       const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
       
       const providentFund = effectiveSalary * 0.07;
       
-      const payableAmount = payslip?.payableAmount ?? (salaryForDaysWorked) + incentive - fine - providentFund;
+      const payableAmount = payslip?.payableAmount ?? (salaryForDaysWorked) + incentive - fine - providentFund - newEmployeeDeduction;
 
       return {
         ...employee,
@@ -661,7 +667,7 @@ export default function PayrollPage() {
                 </TableRow>
               )}
             </TableBody>
-             <TableFooter>
+            <TableFooter>
                 <TableRow className="print:bg-gray-100">
                     <TableCell colSpan={7} className="text-right font-bold">Total</TableCell>
                     <TableCell className="font-bold whitespace-nowrap">{formatCurrency(totalPayableAmount)}</TableCell>
@@ -814,7 +820,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
+    <div className="space-y-6">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200 print:hidden">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
