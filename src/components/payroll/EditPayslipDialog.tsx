@@ -119,12 +119,11 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
 
   useEffect(() => {
     const lateDaysNum = parseInt(late, 10);
-    // Only auto-update fine if it hasn't been manually edited/saved before for this payslip
-    if (!isNaN(lateDaysNum) && lateDaysNum >= 0 && existingPayslip?.fine === undefined) { 
+    if (!isNaN(lateDaysNum) && lateDaysNum >= 0) {
       const calculatedFine = Math.floor(lateDaysNum / 3) * perDaySalaryForFine;
       setFine(calculatedFine.toFixed(2));
     }
-  }, [late, perDaySalaryForFine, existingPayslip?.fine]);
+  }, [late, perDaySalaryForFine]);
 
   const providentFund = useMemo(() => {
     return (employee.salary || 0) * 0.07;
