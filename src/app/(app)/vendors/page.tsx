@@ -726,6 +726,8 @@ export default function VendorsPage() {
                                                   <TableHead>Amount</TableHead>
                                                   <TableHead>Payment</TableHead>
                                                   <TableHead>Method</TableHead>
+                                                  <TableHead>Due Amount</TableHead>
+                                                  <TableHead className="text-right">Action</TableHead>
                                               </TableRow>
                                           </TableHeader>
                                           <TableBody>
@@ -736,6 +738,10 @@ export default function VendorsPage() {
                                                       <TableCell>{formatCurrency(report.amount)}</TableCell>
                                                       <TableCell>{formatCurrency(report.payment)}</TableCell>
                                                       <TableCell>{report.method}</TableCell>
+                                                      <TableCell className="font-medium text-destructive">{formatCurrency(report.amount - report.payment)}</TableCell>
+                                                      <TableCell className="text-right">
+                                                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+                                                      </TableCell>
                                                   </TableRow>
                                               ))}
                                           </TableBody>
@@ -883,5 +889,7 @@ export default function VendorsPage() {
     </>
   );
 }
+
+    
 
     
