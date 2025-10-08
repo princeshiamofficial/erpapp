@@ -517,6 +517,17 @@ export interface VendorBill {
   createdByUserName: string;
 }
 
+export interface BillReport {
+    id: string;
+    vendorId: string;
+    vendorName: string;
+    date: string; // ISO String
+    invoiceId: string;
+    amount: number;
+    payment: number;
+    method: string;
+}
+
 export interface LrEntryItem {
   id: string;
   companyName: string;

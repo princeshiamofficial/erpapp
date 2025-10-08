@@ -16,11 +16,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
-import type { User, ServicePaymentMethodItem } from '@/types';
+import type { User, ServicePaymentMethodItem, BillReport } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { addBillReportAction } from '@/app/(app)/vendors/actions';
+
 
 interface AddEditBillReportDialogProps {
   isOpen: boolean;
@@ -47,11 +49,27 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
       return;
     }
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const reportData: Omit<BillReport, 'id'> = {
+      vendorId: selectedVendor,
+      vendorName: vendors.find(v => v.id === selectedVendor)?.name || 'Unknown',
+      date: selectedDate.toISOString(),
+      invoiceId,
+      amount: parseFloat(amount),
+      payment: parseFloat(payment),
+      method,
+    };
+
+    const result = await addBillReportAction(reportData);
+
     setIsSubmitting(false);
-    toast({ title: "Success", description: "Bill report has been saved." });
-    onSave();
+
+    if (result.success) {
+      toast({ title: "Success", description: "Bill report has been saved." });
+      onSave();
+    } else {
+       toast({ title: "Error", description: result.error || "Failed to save report.", variant: "destructive" });
+    }
   };
 
   return (
@@ -109,7 +127,7 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
           </div>
           <div className="space-y-1">
             <Label htmlFor="payment">Payment</Label>
-            <Input id="payment" value={payment} onChange={e => setPayment(e.target.value)} required />
+            <Input id="payment" type="number" value={payment} onChange={e => setPayment(e.target.value)} required />
           </div>
           <div className="space-y-1">
             <Label htmlFor="method">Method</Label>

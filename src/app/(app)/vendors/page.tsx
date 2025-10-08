@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/pagination";
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, Filter, Plus, ArrowUpDown, Eye, Pencil, Trash2, Loader2, MoreVertical, TrendingUp, Star, Calendar, Clock, BarChartHorizontal, UserRoundX, History, AlertTriangle, Store, PlusCircle, Package, Layers, Edit, Receipt } from 'lucide-react';
-import type { Employee, User, VendorProduct, VendorCategory, VendorBill, VendorBillStatus, ServicePaymentMethodItem } from '@/types';
+import type { Employee, User, VendorProduct, VendorCategory, VendorBill, VendorBillStatus, ServicePaymentMethodItem, BillReport } from '@/types';
 import { getEmployees } from '@/lib/employee-service';
 import { getUsers } from '@/lib/user-service';
 import { useToast } from '@/hooks/use-toast';
@@ -37,19 +38,10 @@ import {
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  AlertDialog, 
-  AlertDialogAction, 
-  AlertDialogCancel, 
-  AlertDialogContent, 
-  AlertDialogDescription, 
-  AlertDialogFooter,
-  AlertDialogHeader, 
-  AlertDialogTitle 
-} from "@/components/ui/alert-dialog";
 import { getVendorCategories, deleteVendorCategory } from '@/lib/vendor-category-service';
 import { getVendorProducts, deleteVendorProduct } from '@/lib/vendor-product-service';
 import { getVendorBills, deleteVendorBill } from '@/lib/vendor-bill-service';
+import { getBillReports } from '@/lib/bill-report-service'; // Import new service
 import { getPaymentMethods } from '@/lib/service-options-service';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
@@ -127,6 +119,7 @@ export default function VendorsPage() {
   const [products, setProducts] = useState<VendorProduct[]>([]);
   const [categories, setCategories] = useState<VendorCategory[]>([]);
   const [bills, setBills] = useState<VendorBill[]>([]);
+  const [billReports, setBillReports] = useState<BillReport[]>([]); // New state for bill reports
   const [paymentMethods, setPaymentMethods] = useState<ServicePaymentMethodItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddEditBillReportDialogOpen, setIsAddEditBillReportDialogOpen] = useState(false);
@@ -135,18 +128,20 @@ export default function VendorsPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedUsers, fetchedCategories, fetchedProducts, fetchedBills, fetchedPaymentMethods] = await Promise.all([
+      const [fetchedUsers, fetchedCategories, fetchedProducts, fetchedBills, fetchedPaymentMethods, fetchedBillReports] = await Promise.all([
         getUsers(),
         getVendorCategories(),
         getVendorProducts(),
         getVendorBills(),
         getPaymentMethods(),
+        getBillReports(), // Fetch bill reports
       ]);
       setAllUsers(fetchedUsers);
       setCategories(fetchedCategories);
       setProducts(fetchedProducts);
       setBills(fetchedBills);
       setPaymentMethods(fetchedPaymentMethods);
+      setBillReports(fetchedBillReports); // Set bill reports state
     } catch (error) {
       console.error("Failed to fetch vendor page data:", error);
       toast({ title: "Error", description: "Could not load required data.", variant: "destructive" });
@@ -191,6 +186,15 @@ export default function VendorsPage() {
         (bill.billId && bill.billId.toLowerCase().includes(lowerSearchTerm))
     );
   }, [bills, searchTerm]);
+
+  const filteredBillReports = useMemo(() => {
+    if (!searchTerm) return billReports;
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return billReports.filter(report =>
+        report.vendorName.toLowerCase().includes(lowerSearchTerm) ||
+        report.invoiceId.toLowerCase().includes(lowerSearchTerm)
+    );
+  }, [billReports, searchTerm]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -323,7 +327,6 @@ export default function VendorsPage() {
     if (activeTab === 'vendor_list') return Math.ceil(filteredVendors.length / ITEMS_PER_PAGE);
     if (activeTab === 'products') return Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
     if (activeTab === 'vendor_bills' || activeTab === 'bill_reports') return Math.ceil(filteredBills.length / ITEMS_PER_PAGE);
-    // Add other tabs here...
     return 1;
   }, [activeTab, filteredVendors, filteredProducts, filteredBills]);
 
@@ -332,10 +335,10 @@ export default function VendorsPage() {
     const endIndex = startIndex + ITEMS_PER_PAGE;
     if (activeTab === 'vendor_list') return filteredVendors.slice(startIndex, endIndex);
     if (activeTab === 'products') return filteredProducts.slice(startIndex, endIndex);
-    if (activeTab === 'vendor_bills' || activeTab === 'bill_reports') return filteredBills.slice(startIndex, endIndex);
-    // Add other tabs here...
+    if (activeTab === 'vendor_bills') return filteredBills.slice(startIndex, endIndex);
+    if (activeTab === 'bill_reports') return filteredBillReports.slice(startIndex, endIndex);
     return [];
-  }, [activeTab, currentPage, filteredVendors, filteredProducts, filteredBills]);
+  }, [activeTab, currentPage, filteredVendors, filteredProducts, filteredBills, filteredBillReports]);
 
   const renderPagination = () => {
     const pageNumbers = [];
@@ -668,13 +671,49 @@ export default function VendorsPage() {
                           <PlusCircle className="mr-2 h-4 w-4" /> Add New
                        </Button>
                   </CardHeader>
-                  <CardContent className="p-6 pt-0 h-96 flex items-center justify-center">
-                      <div className="text-center text-gray-500">
+                  <CardContent>
+                      {isLoading ? <Skeleton className="h-64 w-full" /> : paginatedData.length > 0 ? (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Vendor</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Invoice ID</TableHead>
+                                    <TableHead>Amount</TableHead>
+                                    <TableHead>Payment</TableHead>
+                                    <TableHead>Method</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {(paginatedData as BillReport[]).map(report => (
+                                    <TableRow key={report.id}>
+                                        <TableCell>{report.vendorName}</TableCell>
+                                        <TableCell>{formatDate(report.date)}</TableCell>
+                                        <TableCell>{report.invoiceId}</TableCell>
+                                        <TableCell>{formatCurrency(report.amount)}</TableCell>
+                                        <TableCell>{formatCurrency(report.payment)}</TableCell>
+                                        <TableCell>{report.method}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    ) : (
+                      <div className="text-center text-gray-500 py-16">
                           <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                          <p className="font-semibold">Bill Reports Content</p>
-                          <p className="text-sm">This section is under construction.</p>
+                          <p className="font-semibold">No Bill Reports Found</p>
+                          <p className="text-sm">Create a new bill report to see it here.</p>
                       </div>
+                    )}
                   </CardContent>
+                   {totalPages > 1 && (
+                    <CardFooter className="py-4 border-t">
+                        <Pagination><PaginationContent>
+                            <PaginationItem><PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.max(1, p - 1)); }} aria-disabled={currentPage === 1} className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
+                            {renderPagination()}
+                            <PaginationItem><PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage(p => Math.min(totalPages, p + 1)); }} aria-disabled={currentPage === totalPages} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}/></PaginationItem>
+                        </PaginationContent></Pagination>
+                    </CardFooter>
+                  )}
               </Card>
             );
       default:
