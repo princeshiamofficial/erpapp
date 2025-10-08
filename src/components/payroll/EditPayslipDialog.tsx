@@ -86,8 +86,8 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       const initialLateDays = payslipData?.lateDays.toString() || employee.lateDays?.toString() || '0';
       setLate(initialLateDays);
       
-      // Use the fine from the payslip if it exists, otherwise use the calculated one from the employee object
-      setFine(payslipData?.fine?.toString() ?? (employee.fine !== undefined ? employee.fine.toFixed(2) : '0.00'));
+      const calculatedFine = Math.floor(parseInt(initialLateDays, 10) / 3) * perDaySalaryForFine;
+      setFine(payslipData?.fine?.toString() ?? calculatedFine.toFixed(2));
       
       setIncentive(payslipData?.incentive?.toString() || '0');
       setPaymentStatus(payslipData?.paymentStatus || 'Unpaid');
