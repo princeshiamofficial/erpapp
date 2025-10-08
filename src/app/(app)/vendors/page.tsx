@@ -521,7 +521,7 @@ export default function VendorsPage() {
                                     <DropdownMenu>
                                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
                                       <DropdownMenuContent align="end">
-                                          <DropdownMenuItem onSelect={()={() => handleOpenEditProductDialog(product)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                          <DropdownMenuItem onSelect={() => handleOpenEditProductDialog(product)} className="cursor-pointer"><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
                                           <DropdownMenuItem onSelect={() => setProductToDelete(product)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
                                       </DropdownMenuContent>
                                     </DropdownMenu>
@@ -679,21 +679,21 @@ export default function VendorsPage() {
               </Card>
         );
         case 'bill_reports':
-          const reportsByVendor = paginatedData as [string, BillReport[]][];
-          return (
-            <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
-                <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                    <div>
-                        <CardTitle className="text-xl font-bold text-gray-800">Bill Reports</CardTitle>
-                        <CardDescription>View and analyze billing reports.</CardDescription>
-                    </div>
-                     <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => setIsAddEditBillReportDialogOpen(true)}>
-                        <PlusCircle className="mr-2 h-4 w-4" /> Add New
-                     </Button>
-                </CardHeader>
-                <CardContent>
-                    {isLoading ? <Skeleton className="h-64 w-full" /> : reportsByVendor.length > 0 ? (
-                      <Accordion type="single" collapsible className="w-full space-y-3">
+            const reportsByVendor = paginatedData as [string, BillReport[]][];
+            return (
+              <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+                  <CardHeader className="p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                      <div>
+                          <CardTitle className="text-xl font-bold text-gray-800">Bill Reports</CardTitle>
+                          <CardDescription>View and analyze billing reports.</CardDescription>
+                      </div>
+                       <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => setIsAddEditBillReportDialogOpen(true)}>
+                          <PlusCircle className="mr-2 h-4 w-4" /> Add New
+                       </Button>
+                  </CardHeader>
+                  <CardContent>
+                      {isLoading ? <Skeleton className="h-64 w-full" /> : reportsByVendor.length > 0 ? (
+                        <Accordion type="single" collapsible className="w-full space-y-3">
                           {reportsByVendor.map(([vendorId, reports], index) => {
                             const vendor = allUsers.find(u => u.id === vendorId);
                             const totalAmount = reports.reduce((sum, r) => sum + r.amount, 0);
@@ -745,17 +745,17 @@ export default function VendorsPage() {
                               </div>
                             )
                           })}
-                      </Accordion>
-                    ) : (
-                      <div className="text-center text-gray-500 py-16">
-                          <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
-                          <p className="font-semibold">No Bill Reports Found</p>
-                          <p className="text-sm">Create a new bill report to see it here.</p>
-                      </div>
-                    )}
-                </CardContent>
-            </Card>
-          );
+                        </Accordion>
+                      ) : (
+                        <div className="text-center text-gray-500 py-16">
+                            <BarChartHorizontal className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                            <p className="font-semibold">No Bill Reports Found</p>
+                            <p className="text-sm">Create a new bill report to see it here.</p>
+                        </div>
+                      )}
+                  </CardContent>
+              </Card>
+            );
       default:
         return null;
     }
