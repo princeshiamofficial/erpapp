@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import type { Employee, Payslip } from '@/types';
-import { getDaysInMonth, getDay } from 'date-fns';
+import { getDaysInMonth, getDay, isSameMonth, isSameYear } from 'date-fns';
 import { updatePayslipAction } from '@/app/(app)/payroll/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -107,6 +107,17 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     return (employee.salary || 0) * 0.07;
   }, [employee.salary]);
 
+  const { trainingFee, isNewEmployee } = useMemo(() => {
+    if (!employee?.joiningDate) return { trainingFee: 0, isNewEmployee: false };
+    const joiningDate = new Date(employee.joiningDate);
+    const isNew = isSameMonth(joiningDate, selectedDate) && isSameYear(joiningDate, selectedDate);
+    if (isNew) {
+        const presentDays = parseInt(present, 10) || 0;
+        return { trainingFee: 200 * presentDays, isNewEmployee: true };
+    }
+    return { trainingFee: 0, isNewEmployee: false };
+  }, [employee.joiningDate, selectedDate, present]);
+
   const payableAmount = useMemo(() => {
     const incentiveNum = parseFloat(incentive) || 0;
     const fineNum = parseFloat(fine) || 0;
@@ -114,8 +125,8 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     
     const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
     
-    return (salaryForDaysWorked) + incentiveNum - fineNum - providentFund;
-  }, [incentive, fine, providentFund, present, perDaySalaryForAbsence]);
+    return (salaryForDaysWorked) + incentiveNum - fineNum - providentFund - trainingFee;
+  }, [incentive, fine, providentFund, present, perDaySalaryForAbsence, trainingFee]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -195,6 +206,14 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
                 </SelectContent>
               </Select>
             </div>
+            
+            {isNewEmployee && (
+              <div className="space-y-1">
+                  <Label htmlFor="training-fee">Training Fee</Label>
+                  <Input id="training-fee" type="text" value={formatCurrency(trainingFee)} readOnly disabled className="bg-muted/50 text-destructive" />
+              </div>
+            )}
+
             <div className="mt-4 pt-4 border-t">
                 <div className="flex justify-between items-center text-lg font-semibold">
                     <span>Payable Amount:</span>
