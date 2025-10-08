@@ -33,13 +33,13 @@ interface EditPayslipDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   selectedDate: Date; // Added prop
-  weekendDays: string[]; // Added prop
+  weekendDays?: string[]; // Added prop
   existingPayslip?: Payslip;
 }
 
 const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, selectedDate, weekendDays, existingPayslip }: EditPayslipDialogProps) {
+export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, selectedDate, weekendDays = [], existingPayslip }: EditPayslipDialogProps) {
   const [present, setPresent] = useState('30');
   const [absent, setAbsent] = useState('0');
   const [late, setLate] = useState('0');
@@ -93,8 +93,14 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
       const initialLateDays = payslipData?.lateDays.toString() || employee.lateDays?.toString() || '0';
       setLate(initialLateDays);
       
-      const calculatedFine = Math.floor(parseInt(initialLateDays, 10) / 3) * perDaySalaryForFine;
-      setFine(payslipData?.fine?.toString() ?? calculatedFine.toFixed(2));
+      // Fine is now calculated based on late days if not already set
+      const manuallySetFine = payslipData?.fine?.toString();
+      if (manuallySetFine !== undefined) {
+        setFine(manuallySetFine);
+      } else {
+        const calculatedFine = Math.floor(parseInt(initialLateDays, 10) / 3) * perDaySalaryForFine;
+        setFine(calculatedFine.toFixed(2));
+      }
       
       setIncentive(payslipData?.incentive?.toString() || '0');
       setTrainingFee(payslipData?.trainingFee?.toString() || '0');
@@ -105,7 +111,8 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
 
   useEffect(() => {
     const lateDaysNum = parseInt(late, 10);
-    if (!isNaN(lateDaysNum) && lateDaysNum >= 0 && !existingPayslip?.fine) { // Only auto-calculate if there's no manually saved fine
+    // Only auto-update fine if it hasn't been manually edited/saved before for this payslip
+    if (!isNaN(lateDaysNum) && lateDaysNum >= 0 && existingPayslip?.fine === undefined) { 
       const calculatedFine = Math.floor(lateDaysNum / 3) * perDaySalaryForFine;
       setFine(calculatedFine.toFixed(2));
     }
@@ -193,26 +200,27 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
                     <Input id="incentive" type="number" value={incentive} onChange={e => setIncentive(e.target.value)} required />
                 </div>
             </div>
-             <div className="space-y-1">
-              <Label htmlFor="payment-status">Payment Status</Label>
-              <Select value={paymentStatus} onValueChange={(v) => setPaymentStatus(v as 'Paid' | 'Unpaid')}>
-                <SelectTrigger id="payment-status">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Unpaid">Unpaid</SelectItem>
-                  <SelectItem value="Paid">Paid</SelectItem>
-                </SelectContent>
-              </Select>
+             <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="payment-status">Payment Status</Label>
+                <Select value={paymentStatus} onValueChange={(v) => setPaymentStatus(v as 'Paid' | 'Unpaid')}>
+                  <SelectTrigger id="payment-status">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Unpaid">Unpaid</SelectItem>
+                    <SelectItem value="Paid">Paid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {isNewEmployee && (
+                <div className="space-y-1">
+                    <Label htmlFor="training-fee">Training Fee</Label>
+                    <Input id="training-fee" type="number" value={trainingFee} onChange={e => setTrainingFee(e.target.value)} placeholder="Enter training fee" />
+                </div>
+              )}
             </div>
             
-            {isNewEmployee && (
-              <div className="space-y-1">
-                  <Label htmlFor="training-fee">Training Fee</Label>
-                  <Input id="training-fee" type="number" value={trainingFee} onChange={e => setTrainingFee(e.target.value)} placeholder="Enter training fee" />
-              </div>
-            )}
-
             <div className="mt-4 pt-4 border-t">
                 <div className="flex justify-between items-center text-lg font-semibold">
                     <span>Payable Amount:</span>
