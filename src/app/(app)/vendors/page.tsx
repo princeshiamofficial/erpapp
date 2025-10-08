@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -41,7 +40,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getVendorCategories, deleteVendorCategory } from '@/lib/vendor-category-service';
 import { getVendorProducts, deleteVendorProduct } from '@/lib/vendor-product-service';
 import { getVendorBills, deleteVendorBill } from '@/lib/vendor-bill-service';
-import { getBillReports, deleteBillReport } from '@/lib/bill-report-service'; 
+import { getBillReports, deleteBillReport, updateBillReportAction as updateBillReport, addBillReportAction as addBillReport } from '@/lib/bill-report-service'; 
 import { getPaymentMethods } from '@/lib/service-options-service';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
@@ -741,7 +740,7 @@ export default function VendorsPage() {
                                       )}
                                       <div className="flex-1">
                                           <p className="text-sm font-medium">{vendor?.name || 'Unknown Vendor'}</p>
-                                          <p className="text-xs text-muted-foreground">{reports.length} report(s)</p>
+                                          <p className="text-xs text-muted-foreground">{reports.length} Bill's</p>
                                       </div>
                                        <div className="text-right">
                                             <p className="text-xs text-muted-foreground">Total: {formatCurrency(totalAmount)}</p>
@@ -815,10 +814,6 @@ export default function VendorsPage() {
         return null;
     }
   };
-
-  if (!currentUser || !['SYSTEM_ADMIN', 'ADMIN'].includes(currentUser.role)) {
-    return <div className="p-8 text-center">Access Denied.</div>
-  }
 
   return (
     <>
