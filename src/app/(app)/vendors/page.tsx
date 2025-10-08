@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -40,7 +41,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getVendorCategories, deleteVendorCategory } from '@/lib/vendor-category-service';
 import { getVendorProducts, deleteVendorProduct } from '@/lib/vendor-product-service';
 import { getVendorBills, deleteVendorBill } from '@/lib/vendor-bill-service';
-import { getBillReports } from '@/lib/bill-report-service'; // Import new service
+import { getBillReports, deleteBillReport } from '@/lib/bill-report-service'; 
 import { getPaymentMethods } from '@/lib/service-options-service';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
@@ -54,6 +55,7 @@ const DeleteCategoryDialog = dynamic(() => import('@/components/vendors/DeleteCa
 const DeleteProductDialog = dynamic(() => import('@/components/vendors/DeleteProductDialog').then(mod => mod.DeleteProductDialog));
 const AddEditBillDialog = dynamic(() => import('@/components/vendors/AddEditBillDialog').then(mod => mod.AddEditBillDialog));
 const AddEditBillReportDialog = dynamic(() => import('@/components/vendors/AddEditBillReportDialog').then(mod => mod.AddEditBillReportDialog));
+const DeleteBillReportDialog = dynamic(() => import('@/components/vendors/DeleteBillReportDialog').then(mod => mod.DeleteBillReportDialog));
 
 
 const getInitials = (name: string) => {
@@ -122,7 +124,11 @@ export default function VendorsPage() {
   const [billReports, setBillReports] = useState<BillReport[]>([]); // New state for bill reports
   const [paymentMethods, setPaymentMethods] = useState<ServicePaymentMethodItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+
   const [isAddEditBillReportDialogOpen, setIsAddEditBillReportDialogOpen] = useState(false);
+  const [reportToEdit, setReportToEdit] = useState<BillReport | null>(null);
+  const [reportToDelete, setReportToDelete] = useState<BillReport | null>(null);
+  const [isDeletingReport, setIsDeletingReport] = useState(false);
 
 
   const fetchData = useCallback(async () => {
@@ -134,14 +140,14 @@ export default function VendorsPage() {
         getVendorProducts(),
         getVendorBills(),
         getPaymentMethods(),
-        getBillReports(), // Fetch bill reports
+        getBillReports(), 
       ]);
       setAllUsers(fetchedUsers);
       setCategories(fetchedCategories);
       setProducts(fetchedProducts);
       setBills(fetchedBills);
       setPaymentMethods(fetchedPaymentMethods);
-      setBillReports(fetchedBillReports); // Set bill reports state
+      setBillReports(fetchedBillReports); 
     } catch (error) {
       console.error("Failed to fetch vendor page data:", error);
       toast({ title: "Error", description: "Could not load required data.", variant: "destructive" });
@@ -298,6 +304,31 @@ export default function VendorsPage() {
       } else {
         toast({ title: "Error", description: "Failed to delete bill.", variant: "destructive" });
       }
+  };
+
+  const handleOpenAddBillReportDialog = () => {
+    setReportToEdit(null);
+    setIsAddEditBillReportDialogOpen(true);
+  };
+
+  const handleOpenEditReportDialog = (report: BillReport) => {
+    setReportToEdit(report);
+    setIsAddEditBillReportDialogOpen(true);
+  };
+
+  const handleConfirmDeleteReport = async () => {
+    if (!reportToDelete) return;
+    setIsDeletingReport(true);
+    const result = await deleteBillReport(reportToDelete.id);
+    setIsDeletingReport(false);
+    setReportToDelete(null);
+
+    if (result.success) {
+      toast({ title: "Report Deleted", description: "The bill report has been deleted." });
+      fetchData();
+    } else {
+      toast({ title: "Error", description: result.error, variant: "destructive" });
+    }
   };
 
 
@@ -687,7 +718,7 @@ export default function VendorsPage() {
                           <CardTitle className="text-xl font-bold text-gray-800">Bill Reports</CardTitle>
                           <CardDescription>View and analyze billing reports.</CardDescription>
                       </div>
-                       <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={() => setIsAddEditBillReportDialogOpen(true)}>
+                       <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleOpenAddBillReportDialog}>
                           <PlusCircle className="mr-2 h-4 w-4" /> Add New
                        </Button>
                   </CardHeader>
@@ -698,6 +729,7 @@ export default function VendorsPage() {
                             const vendor = allUsers.find(u => u.id === vendorId);
                             const totalAmount = reports.reduce((sum, r) => sum + r.amount, 0);
                             const totalPayment = reports.reduce((sum, r) => sum + r.payment, 0);
+                            const totalDue = totalAmount - totalPayment;
 
                             return (
                               <div key={vendorId} className="group relative bg-muted/30 rounded-lg shadow-sm border">
@@ -714,6 +746,7 @@ export default function VendorsPage() {
                                        <div className="text-right">
                                             <p className="text-xs text-muted-foreground">Total: {formatCurrency(totalAmount)}</p>
                                             <p className="text-xs text-green-600">Paid: {formatCurrency(totalPayment)}</p>
+                                            <p className="text-xs text-destructive">Due: {formatCurrency(totalDue)}</p>
                                        </div>
                                   </div>
                                   </AccordionTrigger>
@@ -740,7 +773,23 @@ export default function VendorsPage() {
                                                       <TableCell>{report.method}</TableCell>
                                                       <TableCell className="font-medium text-destructive">{formatCurrency(report.amount - report.payment)}</TableCell>
                                                       <TableCell className="text-right">
-                                                          <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+                                                        <DropdownMenu>
+                                                          <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                              <MoreVertical className="h-4 w-4" />
+                                                            </Button>
+                                                          </DropdownMenuTrigger>
+                                                          <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onSelect={() => handleOpenEditReportDialog(report)} className="cursor-pointer">
+                                                              <Edit className="mr-2 h-4 w-4" />
+                                                              Edit
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onSelect={() => setReportToDelete(report)} className="cursor-pointer text-destructive focus:text-destructive">
+                                                              <Trash2 className="mr-2 h-4 w-4" />
+                                                              Delete
+                                                            </DropdownMenuItem>
+                                                          </DropdownMenuContent>
+                                                        </DropdownMenu>
                                                       </TableCell>
                                                   </TableRow>
                                               ))}
@@ -862,10 +911,12 @@ export default function VendorsPage() {
           onOpenChange={setIsAddEditBillReportDialogOpen}
           onSave={() => {
               setIsAddEditBillReportDialogOpen(false);
+              setReportToEdit(null);
               fetchData();
           }}
           vendors={filteredVendors}
           paymentMethods={paymentMethods}
+          reportToEdit={reportToEdit}
       />
       
        {billToDelete && (
@@ -886,10 +937,16 @@ export default function VendorsPage() {
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      {reportToDelete && (
+          <DeleteBillReportDialog
+              isOpen={!!reportToDelete}
+              onOpenChange={() => setReportToDelete(null)}
+              onConfirmDelete={handleConfirmDeleteReport}
+              report={reportToDelete}
+              isDeleting={isDeletingReport}
+          />
+      )}
     </>
   );
 }
-
-    
-
-    

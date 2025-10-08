@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -20,8 +21,8 @@ import type { User, ServicePaymentMethodItem, BillReport } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { addBillReportAction } from '@/app/(app)/vendors/actions';
+import { format, parseISO } from 'date-fns';
+import { addBillReportAction, updateBillReportAction } from '@/lib/bill-report-service';
 
 
 interface AddEditBillReportDialogProps {
@@ -30,9 +31,10 @@ interface AddEditBillReportDialogProps {
   onSave: () => void;
   vendors: User[];
   paymentMethods: ServicePaymentMethodItem[];
+  reportToEdit?: BillReport | null;
 }
 
-export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors, paymentMethods }: AddEditBillReportDialogProps) {
+export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors, paymentMethods, reportToEdit }: AddEditBillReportDialogProps) {
   const [invoiceId, setInvoiceId] = useState('');
   const [amount, setAmount] = useState('');
   const [payment, setPayment] = useState('');
@@ -41,6 +43,29 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  
+  const isEditMode = !!reportToEdit;
+
+  useEffect(() => {
+    if (isOpen) {
+        if (isEditMode && reportToEdit) {
+            setInvoiceId(reportToEdit.invoiceId);
+            setAmount(reportToEdit.amount.toString());
+            setPayment(reportToEdit.payment.toString());
+            setMethod(reportToEdit.method);
+            setSelectedVendor(reportToEdit.vendorId);
+            setSelectedDate(new Date(reportToEdit.date));
+        } else {
+            setInvoiceId('');
+            setAmount('');
+            setPayment('');
+            setMethod('');
+            setSelectedVendor('');
+            setSelectedDate(new Date());
+        }
+    }
+  }, [isOpen, reportToEdit, isEditMode]);
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +75,7 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
     }
     setIsSubmitting(true);
     
-    const reportData: Omit<BillReport, 'id'> = {
+    const reportData = {
       vendorId: selectedVendor,
       vendorName: vendors.find(v => v.id === selectedVendor)?.name || 'Unknown',
       date: selectedDate.toISOString(),
@@ -60,7 +85,12 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
       method,
     };
 
-    const result = await addBillReportAction(reportData);
+    let result;
+    if (isEditMode && reportToEdit) {
+        result = await updateBillReportAction(reportToEdit.id, reportData);
+    } else {
+        result = await addBillReportAction(reportData);
+    }
 
     setIsSubmitting(false);
 
@@ -76,7 +106,7 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add/Edit Bill Report</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit' : 'Add New'} Bill Report</DialogTitle>
           <DialogDescription>
             Enter the details for the bill report.
           </DialogDescription>
