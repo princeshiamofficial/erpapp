@@ -112,7 +112,7 @@ export default function PayrollPage() {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  const [payslipToEdit, setPayslipToEdit] = useState<Employee | null>(null);
+  const [payslipToEdit, setPayslipToEdit] = useState<(Employee & { presentDays?: number, absentDays?: number, lateDays?: number }) | null>(null);
   const [existingPayslipData, setExistingPayslipData] = useState<Payslip | undefined>(undefined);
   const [employeeToIncrement, setEmployeeToIncrement] = useState<Employee | null>(null);
 
@@ -230,9 +230,9 @@ export default function PayrollPage() {
           att.employeeId === employee.userId && isSameMonth(parseISO(att.date), selectedDate)
       );
       
-      const presentDays = payslip?.presentDays ?? userAttendanceInRange.length;
-      const lateDays = payslip?.lateDays ?? userAttendanceInRange.filter(att => att.status === 'Late').length;
-      const absentDays = payslip?.absentDays ?? (totalWorkingDays - presentDays);
+      const presentDays = userAttendanceInRange.length;
+      const lateDays = userAttendanceInRange.filter(att => att.status === 'Late').length;
+      const absentDays = (totalWorkingDays - presentDays);
       
       const incentive = payslip?.incentive ?? 0;
       const paymentStatus = payslip?.paymentStatus ?? 'Unpaid';
@@ -662,7 +662,7 @@ export default function PayrollPage() {
                               onClick={() => {
                                 const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
                                 const payslipForDialog = salarySheetData.find(p => p.employeeId === data.employeeId && p.id.startsWith(monthYearId));
-                                setExistingPayslipData(payslipForDialog); // Pass existing saved data
+                                setExistingPayslipData(payslipForDialog);
                                 setPayslipToEdit(data);
                               }}
                            >
@@ -851,11 +851,13 @@ export default function PayrollPage() {
           isOpen={!!payslipToEdit}
           onOpenChange={(open) => !open && setPayslipToEdit(null)}
           employee={payslipToEdit}
+          existingPayslip={salarySheetData.find(p => p.employeeId === payslipToEdit.employeeId && p.id.startsWith(`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`))}
           onSave={() => {
             fetchData(); // Refetch data after saving
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
+          weekendDays={weekendDays}
         />
       )}
       {employeeToIncrement && <IncrementSalaryDialog isOpen={!!employeeToIncrement} onOpenChange={(open) => !open && setEmployeeToIncrement(null)} employee={employeeToIncrement} onSalaryIncremented={fetchData}/>}
@@ -889,3 +891,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
