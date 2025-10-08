@@ -165,7 +165,7 @@ export default function PayrollPage() {
     }
   }, [currentUser, router, fetchData]);
 
-  const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount } = useMemo(() => {
+  const { filteredEmployees, salarySheetCalculatedData, totalPaidAmount, totalUnpaidAmount, totalProvidentFund, totalFineAmount, totalPayableAmount } = useMemo(() => {
     let results = employees;
 
     if (activeTab === 'salary_sheet' || activeTab === 'summary') {
@@ -269,6 +269,8 @@ export default function PayrollPage() {
     const unpaid = calculatedData.filter(data => data.paymentStatus === 'Unpaid').reduce((total, data) => total + data.payableAmount, 0);
     const providentFundTotal = calculatedData.reduce((total, data) => total + data.providentFund, 0);
     const fineTotal = calculatedData.reduce((total, data) => total + (data.fine || 0), 0);
+    const payableTotal = calculatedData.reduce((total, data) => total + data.payableAmount, 0);
+
 
     return { 
       filteredEmployees: results,
@@ -276,7 +278,8 @@ export default function PayrollPage() {
       totalPaidAmount: paid,
       totalUnpaidAmount: unpaid,
       totalProvidentFund: providentFundTotal,
-      totalFineAmount: fineTotal
+      totalFineAmount: fineTotal,
+      totalPayableAmount: payableTotal
     };
 
   }, [employees, searchTerm, activeTab, selectedDate, salarySheetData, attendanceData, weekendDays]);
@@ -565,7 +568,7 @@ export default function PayrollPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
               <img src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" alt="Logo" className="h-12 hidden print:block" />
-              <CardTitle className="text-xl font-bold text-gray-800">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
+              <CardTitle className="text-xl font-bold text-gray-800 !mt-0">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
           </div>
            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap print:hidden">
             <div className="relative flex-grow sm:flex-grow-0">
@@ -598,18 +601,18 @@ export default function PayrollPage() {
       <CardContent className="p-6 pt-0 print:p-2">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
-              <TableRow className="print:bg-gray-100">
-                <TableHead>Name of Employee</TableHead>
-                <TableHead>Present</TableHead>
-                <TableHead>Absent</TableHead>
-                <TableHead>Late</TableHead>
-                <TableHead>Provident Fund</TableHead>
-                <TableHead>Fine</TableHead>
-                <TableHead>Incentive</TableHead>
-                <TableHead>Payable Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-center print:hidden">Action</TableHead>
+            <TableHeader className="print:bg-gray-100">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Name</TableHead>
+                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Present</TableHead>
+                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Absent</TableHead>
+                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Late</TableHead>
+                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Provident Fund</TableHead>
+                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Fine</TableHead>
+                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Incentive</TableHead>
+                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Payable Amount</TableHead>
+                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Status</TableHead>
+                <TableHead className="text-center print:hidden !text-gray-800 font-semibold !whitespace-nowrap">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -735,6 +738,10 @@ export default function PayrollPage() {
         return employeePerformanceContent;
       case 'attendees_report':
         return attendeesReportContent;
+      case 'summary':
+        return summaryContent;
+      case 'settings':
+        return settingsContent;
       default:
         return employeeListContent;
     }
