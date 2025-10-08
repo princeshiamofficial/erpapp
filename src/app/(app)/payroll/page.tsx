@@ -629,7 +629,7 @@ export default function PayrollPage() {
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Fine/Advance</TableHead>
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Incentive</TableHead>
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Payable Amount</TableHead>
-                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap print:hidden">Status</TableHead>
+                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Status</TableHead>
                 <TableHead className="text-center print:hidden !text-gray-800 font-semibold !whitespace-nowrap">Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -660,7 +660,7 @@ export default function PayrollPage() {
                         <TableCell className="whitespace-nowrap">{formatCurrency((data.fine || 0) + (data.advance || 0))}</TableCell>
                         <TableCell className="whitespace-nowrap">{formatCurrency(data.incentive)}</TableCell>
                         <TableCell className="font-semibold whitespace-nowrap">{formatCurrency(data.payableAmount)}</TableCell>
-                        <TableCell className="whitespace-nowrap print:hidden">
+                        <TableCell className="whitespace-nowrap">
                           <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
                         </TableCell>
                         <TableCell className="text-center print:hidden">
@@ -842,7 +842,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200 print:hidden">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -900,3 +900,5 @@ export default function PayrollPage() {
     </div>
   );
 }
+
+    
