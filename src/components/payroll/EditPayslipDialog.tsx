@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 import type { Employee, Payslip } from '@/types';
-import { getDaysInMonth, getDay, isSameMonth, isSameYear } from 'date-fns';
+import { getDaysInMonth, getDay } from 'date-fns';
 import { updatePayslipAction } from '@/app/(app)/payroll/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -46,7 +46,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
   const [fine, setFine] = useState('0');
   const [incentive, setIncentive] = useState('0');
   const [trainingFee, setTrainingFee] = useState('0');
-  const [advance, setAdvance] = useState('0'); // New state for advance
+  const [advance, setAdvance] = useState('0'); 
   const [paymentStatus, setPaymentStatus] = useState<'Paid' | 'Unpaid'>('Unpaid');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -82,12 +82,13 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
   const isNewEmployee = useMemo(() => {
     if (!employee?.joiningDate) return false;
     const joiningDate = new Date(employee.joiningDate);
-    return isSameMonth(joiningDate, selectedDate) && isSameYear(joiningDate, selectedDate);
+    const selectedMonthStart = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1);
+    const selectedMonthEnd = new Date(selectedDate.getFullYear(), selectedDate.getMonth() + 1, 0);
+    return joiningDate >= selectedMonthStart && joiningDate <= selectedMonthEnd;
   }, [employee.joiningDate, selectedDate]);
 
   useEffect(() => {
     if (isOpen) {
-      // Prioritize existing payslip data from the database if it exists
       if (existingPayslip) {
         setPresent(existingPayslip.presentDays.toString());
         setAbsent(existingPayslip.absentDays.toString());
@@ -98,16 +99,14 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
         setAdvance(existingPayslip.advance?.toString() || '0');
         setPaymentStatus(existingPayslip.paymentStatus);
       } else {
-        // If no payslip, use calculated data for initialization
         const initialPresent = employee.presentDays?.toString() || totalWorkingDays.toString();
         const initialLate = employee.lateDays?.toString() || '0';
-        const initialAbsent = employee.absentDays?.toString() || '0';
+        const initialAbsent = employee.absentDays?.toString() || (totalWorkingDays - parseInt(initialPresent, 10)).toString();
         
         setPresent(initialPresent);
         setAbsent(initialAbsent);
         setLate(initialLate);
         
-        // Calculate initial fine based on late days
         const calculatedFine = Math.floor(parseInt(initialLate, 10) / 3) * perDaySalaryForFine;
         setFine(calculatedFine.toFixed(2));
         
@@ -155,7 +154,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
         lateDays: parseInt(late, 10),
         fine: parseFloat(fine),
         incentive: parseFloat(incentive),
-        trainingFee: isNewEmployee ? parseFloat(trainingFee) : undefined, // Only save if new employee
+        trainingFee: isNewEmployee ? parseFloat(trainingFee) : undefined,
         advance: parseFloat(advance) || 0,
         payableAmount: payableAmount,
         paymentStatus: paymentStatus,
@@ -168,7 +167,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
 
     if (result.success) {
         toast({ title: "Payslip Updated", description: "Payslip details have been saved successfully." });
-        onSave(); // This will trigger a re-fetch in the parent
+        onSave();
     } else {
         toast({ title: "Error", description: result.error, variant: "destructive" });
     }
