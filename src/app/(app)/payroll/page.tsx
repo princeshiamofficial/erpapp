@@ -574,7 +574,7 @@ export default function PayrollPage() {
       <CardHeader className="p-6 print:p-2 print:pb-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex items-center gap-4">
-              <Image src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" alt="Logo" width={120} height={30} className="h-12 w-auto hidden print:block rounded-md" />
+              <Image src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" alt="Logo" width={120} height={30} className="h-12 w-auto hidden print:block" />
               <CardTitle className="text-xl font-bold text-gray-800 !mt-0 whitespace-nowrap">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
           </div>
            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap print:hidden">
@@ -844,8 +844,6 @@ export default function PayrollPage() {
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
-          weekendDays={weekendDays}
-          existingPayslip={salarySheetData.find(p => p.employeeId === payslipToEdit.employeeId && p.id.startsWith(format(selectedDate, 'yyyy-MM')))}
         />
       )}
       {employeeToIncrement && <IncrementSalaryDialog isOpen={!!employeeToIncrement} onOpenChange={(open) => !open && setEmployeeToIncrement(null)} employee={employeeToIncrement} onSalaryIncremented={fetchData}/>}
@@ -879,5 +877,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
-    

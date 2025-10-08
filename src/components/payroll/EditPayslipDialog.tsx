@@ -209,7 +209,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
             {isNewEmployee && (
               <div className="space-y-1">
                   <Label htmlFor="training-fee">Training Fee</Label>
-                  <Input id="training-fee" type="number" value={trainingFee} onChange={e => setTrainingFee(e.target.value)} placeholder="Enter training fee" className="text-destructive" />
+                  <Input id="training-fee" type="number" value={trainingFee} onChange={e => setTrainingFee(e.target.value)} placeholder="Enter training fee" />
               </div>
             )}
 
