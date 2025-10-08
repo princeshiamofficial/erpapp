@@ -46,6 +46,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
   const [fine, setFine] = useState('0');
   const [incentive, setIncentive] = useState('0');
   const [trainingFee, setTrainingFee] = useState('0');
+  const [advance, setAdvance] = useState('0'); // New state for advance
   const [paymentStatus, setPaymentStatus] = useState<'Paid' | 'Unpaid'>('Unpaid');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -94,6 +95,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
         setFine(existingPayslip.fine.toString());
         setIncentive(existingPayslip.incentive.toString());
         setTrainingFee(existingPayslip.trainingFee?.toString() || '0');
+        setAdvance(existingPayslip.advance?.toString() || '0');
         setPaymentStatus(existingPayslip.paymentStatus);
       } else {
         // If no payslip, use calculated data for initialization
@@ -111,6 +113,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
         
         setIncentive('0');
         setTrainingFee('0');
+        setAdvance('0');
         setPaymentStatus('Unpaid');
       }
       setIsSubmitting(false);
@@ -134,11 +137,12 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
     const fineNum = parseFloat(fine) || 0;
     const presentDays = parseInt(present, 10) || 0;
     const trainingFeeNum = isNewEmployee ? (parseFloat(trainingFee) || 0) : 0;
+    const advanceNum = parseFloat(advance) || 0;
     
     const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
     
-    return (salaryForDaysWorked) + incentiveNum - fineNum - providentFund - trainingFeeNum;
-  }, [incentive, fine, providentFund, present, perDaySalaryForAbsence, trainingFee, isNewEmployee]);
+    return (salaryForDaysWorked) + incentiveNum - fineNum - providentFund - trainingFeeNum - advanceNum;
+  }, [incentive, fine, providentFund, present, perDaySalaryForAbsence, trainingFee, isNewEmployee, advance]);
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,6 +156,7 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
         fine: parseFloat(fine),
         incentive: parseFloat(incentive),
         trainingFee: isNewEmployee ? parseFloat(trainingFee) : undefined, // Only save if new employee
+        advance: parseFloat(advance) || 0,
         payableAmount: payableAmount,
         paymentStatus: paymentStatus,
     };
@@ -208,6 +213,10 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
                 </div>
             </div>
              <div className="grid grid-cols-2 gap-4">
+               <div className="space-y-1">
+                    <Label htmlFor="advance">Advance</Label>
+                    <Input id="advance" type="number" value={advance} onChange={e => setAdvance(e.target.value)} placeholder="Enter advance amount" />
+                </div>
               <div className="space-y-1">
                 <Label htmlFor="payment-status">Payment Status</Label>
                 <Select value={paymentStatus} onValueChange={(v) => setPaymentStatus(v as 'Paid' | 'Unpaid')}>
