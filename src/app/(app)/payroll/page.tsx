@@ -113,6 +113,7 @@ export default function PayrollPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   
   const [payslipToEdit, setPayslipToEdit] = useState<Employee | null>(null);
+  const [existingPayslipData, setExistingPayslipData] = useState<Payslip | undefined>(undefined);
   const [employeeToIncrement, setEmployeeToIncrement] = useState<Employee | null>(null);
 
   const [incrementToDelete, setIncrementToDelete] = useState<{ employeeId: string, increment: SalaryIncrement } | null>(null);
@@ -247,17 +248,17 @@ export default function PayrollPage() {
 
       const perDaySalaryForAbsence = totalWorkingDays > 0 ? effectiveSalary / totalWorkingDays : 0;
       
-      let newEmployeeDeduction = 0;
+      let trainingFee = 0;
       const joiningDate = new Date(employee.joiningDate);
       if (isSameMonth(joiningDate, selectedDate) && isSameYear(joiningDate, selectedDate)) {
-        newEmployeeDeduction = 200 * presentDays;
+        trainingFee = payslip?.trainingFee ?? 0;
       }
       
       const salaryForDaysWorked = perDaySalaryForAbsence * presentDays;
       
       const providentFund = effectiveSalary * 0.07;
       
-      const payableAmount = payslip?.payableAmount ?? (salaryForDaysWorked) + incentive - fine - providentFund - newEmployeeDeduction;
+      const payableAmount = payslip?.payableAmount ?? (salaryForDaysWorked) + incentive - fine - providentFund - trainingFee;
 
       return {
         ...employee,
@@ -268,7 +269,8 @@ export default function PayrollPage() {
         fine,
         incentive,
         payableAmount,
-        paymentStatus
+        paymentStatus,
+        trainingFee,
       };
     });
 
@@ -618,7 +620,7 @@ export default function PayrollPage() {
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Fine</TableHead>
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Incentive</TableHead>
                 <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Payable Amount</TableHead>
-                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Status</TableHead>
+                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap print:hidden">Status</TableHead>
                 <TableHead className="text-center print:hidden !text-gray-800 font-semibold !whitespace-nowrap">Action</TableHead>
               </TableRow>
             </TableHeader>
@@ -634,7 +636,7 @@ export default function PayrollPage() {
                     <TableCell><Skeleton className="h-4 w-12" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                    <TableCell className="print:hidden"><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
                     <TableCell className="text-center print:hidden"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
                   </TableRow>
                 ))
@@ -649,11 +651,21 @@ export default function PayrollPage() {
                         <TableCell className="whitespace-nowrap">{formatCurrency(data.fine)}</TableCell>
                         <TableCell className="whitespace-nowrap">{formatCurrency(data.incentive)}</TableCell>
                         <TableCell className="font-semibold whitespace-nowrap">{formatCurrency(data.payableAmount)}</TableCell>
-                        <TableCell className="whitespace-nowrap">
+                        <TableCell className="whitespace-nowrap print:hidden">
                           <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
                         </TableCell>
                         <TableCell className="text-center print:hidden">
-                          <Button variant="outline" size="sm" className="h-8" onClick={() => setPayslipToEdit(data)}>
+                           <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="h-8" 
+                              onClick={() => {
+                                const monthYearId = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}`;
+                                const payslipForDialog = salarySheetData.find(p => p.employeeId === data.employeeId && p.id.startsWith(monthYearId));
+                                setExistingPayslipData(payslipForDialog); // Pass existing saved data
+                                setPayslipToEdit(data);
+                              }}
+                           >
                             Edit payslip
                           </Button>
                         </TableCell>
@@ -671,7 +683,7 @@ export default function PayrollPage() {
                 <TableRow className="print:bg-gray-100">
                     <TableCell colSpan={7} className="text-right font-bold">Total</TableCell>
                     <TableCell className="font-bold whitespace-nowrap">{formatCurrency(totalPayableAmount)}</TableCell>
-                    <TableCell colSpan={2}></TableCell>
+                    <TableCell colSpan={2} className="print:hidden"></TableCell>
                 </TableRow>
             </TableFooter>
           </Table>
@@ -839,11 +851,13 @@ export default function PayrollPage() {
           isOpen={!!payslipToEdit}
           onOpenChange={(open) => !open && setPayslipToEdit(null)}
           employee={payslipToEdit}
+          existingPayslip={existingPayslipData}
           onSave={() => {
             fetchData(); // Refetch data after saving
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
+          weekendDays={weekendDays}
         />
       )}
       {employeeToIncrement && <IncrementSalaryDialog isOpen={!!employeeToIncrement} onOpenChange={(open) => !open && setEmployeeToIncrement(null)} employee={employeeToIncrement} onSalaryIncremented={fetchData}/>}

@@ -86,28 +86,36 @@ export function EditPayslipDialog({ employee, onSave, isOpen, onOpenChange, sele
 
   useEffect(() => {
     if (isOpen) {
-      const payslipData = existingPayslip;
-      setPresent(payslipData?.presentDays.toString() || employee.presentDays?.toString() || totalWorkingDays.toString());
-      setAbsent(payslipData?.absentDays.toString() || employee.absentDays?.toString() || '0');
-      
-      const initialLateDays = payslipData?.lateDays.toString() || employee.lateDays?.toString() || '0';
-      setLate(initialLateDays);
-      
-      // Fine is now calculated based on late days if not already set
-      const manuallySetFine = payslipData?.fine?.toString();
-      if (manuallySetFine !== undefined) {
-        setFine(manuallySetFine);
+      // Prioritize existing payslip data from the database if it exists
+      if (existingPayslip) {
+        setPresent(existingPayslip.presentDays.toString());
+        setAbsent(existingPayslip.absentDays.toString());
+        setLate(existingPayslip.lateDays.toString());
+        setFine(existingPayslip.fine.toString());
+        setIncentive(existingPayslip.incentive.toString());
+        setTrainingFee(existingPayslip.trainingFee?.toString() || '0');
+        setPaymentStatus(existingPayslip.paymentStatus);
       } else {
-        const calculatedFine = Math.floor(parseInt(initialLateDays, 10) / 3) * perDaySalaryForFine;
+        // If no payslip, use calculated data for initialization
+        const initialPresent = employee.presentDays?.toString() || totalWorkingDays.toString();
+        const initialLate = employee.lateDays?.toString() || '0';
+        const initialAbsent = employee.absentDays?.toString() || '0';
+        
+        setPresent(initialPresent);
+        setAbsent(initialAbsent);
+        setLate(initialLate);
+        
+        // Calculate initial fine based on late days
+        const calculatedFine = Math.floor(parseInt(initialLate, 10) / 3) * perDaySalaryForFine;
         setFine(calculatedFine.toFixed(2));
+        
+        setIncentive('0');
+        setTrainingFee('0');
+        setPaymentStatus('Unpaid');
       }
-      
-      setIncentive(payslipData?.incentive?.toString() || '0');
-      setTrainingFee(payslipData?.trainingFee?.toString() || '0');
-      setPaymentStatus(payslipData?.paymentStatus || 'Unpaid');
       setIsSubmitting(false);
     }
-  }, [isOpen, employee, monthYearId, existingPayslip, totalWorkingDays, perDaySalaryForFine]);
+  }, [isOpen, employee, existingPayslip, totalWorkingDays, perDaySalaryForFine]);
 
   useEffect(() => {
     const lateDaysNum = parseInt(late, 10);
