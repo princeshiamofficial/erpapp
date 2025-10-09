@@ -72,7 +72,7 @@ export default function SalaryTransferPage() {
   };
 
   return (
-    <div className="space-y-6 printable-area">
+    <div className="space-y-6 printable-area p-4 sm:p-6 lg:p-8">
       <Card className="shadow-lg print:shadow-none print:border-none print:bg-white">
         <CardHeader className="text-center print:text-black">
           <CardTitle className="text-2xl font-bold text-red-600">Company Name</CardTitle>
@@ -144,13 +144,13 @@ export default function SalaryTransferPage() {
               </TableBody>
               <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={5} className="font-bold border border-gray-300">Grand Total:</TableCell>
+                  <TableCell colSpan={5} className="font-bold border border-gray-300 text-right">Grand Total:</TableCell>
                   <TableCell className="text-right font-bold border border-gray-300">{formatCurrency(totalPayableAmount)}</TableCell>
                 </TableRow>
               </TableFooter>
             </Table>
             </div>
-            <div className="flex justify-end mt-6 print:hidden">
+            <div className="flex justify-end mt-6 no-print">
               <Button onClick={handlePrint} variant="outline">
                 <Printer className="mr-2 h-4 w-4" />
                 Print
@@ -160,9 +160,20 @@ export default function SalaryTransferPage() {
       </Card>
       <style jsx global>{`
         @media print {
-          .printable-area {
+          body {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
+          }
+          .printable-area {
+            padding: 1in;
+            border: none;
+            box-shadow: none;
+          }
+          .no-print {
+            display: none;
+          }
+          th, td {
+            white-space: nowrap;
           }
         }
       `}</style>
