@@ -48,12 +48,13 @@ export default function SalaryTransferPage() {
     fetchData();
   }, [fetchData]);
   
-  const paidEmployeesData = useMemo(() => {
+  const unpaidEmployeesData = useMemo(() => {
     return employees
       .map(employee => {
         const monthYearId = format(selectedDate, 'yyyy-MM');
         const payslip = salarySheetData.find(p => p.employeeId === employee.employeeId && p.id.startsWith(monthYearId));
-        if (payslip && payslip.paymentStatus === 'Paid') {
+        // Show employees with an unpaid payslip for the month
+        if (payslip && payslip.paymentStatus === 'Unpaid') {
           return {
             ...employee,
             payableAmount: payslip.payableAmount,
@@ -65,8 +66,8 @@ export default function SalaryTransferPage() {
   }, [employees, salarySheetData, selectedDate]);
 
   const totalPayableAmount = useMemo(() => {
-    return paidEmployeesData.reduce((total, data) => total + (data.payableAmount || 0), 0);
-  }, [paidEmployeesData]);
+    return unpaidEmployeesData.reduce((total, data) => total + (data.payableAmount || 0), 0);
+  }, [unpaidEmployeesData]);
 
   const handlePrint = () => {
     window.print();
@@ -116,8 +117,8 @@ export default function SalaryTransferPage() {
                       <TableCell className="border border-gray-300 text-right p-2"><Skeleton className="h-4 w-24 ml-auto" /></TableCell>
                     </TableRow>
                   ))
-                ) : paidEmployeesData.length > 0 ? (
-                  paidEmployeesData.map((employee, index) => (
+                ) : unpaidEmployeesData.length > 0 ? (
+                  unpaidEmployeesData.map((employee, index) => (
                     <TableRow key={employee.id}>
                       <TableCell className="border border-gray-300 p-2">{index + 1}</TableCell>
                       <TableCell className="border border-gray-300 p-2">{employee.employeeId}</TableCell>
@@ -130,11 +131,11 @@ export default function SalaryTransferPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center h-24 text-muted-foreground border border-gray-300 p-2">
-                      No paid salaries found for this month.
+                      No unpaid salaries found for this month.
                     </TableCell>
                   </TableRow>
                 )}
-                 {Array.from({ length: Math.max(0, 10 - paidEmployeesData.length) }).map((_, i) => (
+                 {Array.from({ length: Math.max(0, 10 - unpaidEmployeesData.length) }).map((_, i) => (
                   <TableRow key={`empty-row-${i}`} className="h-10">
                       <TableCell className="border border-gray-300 p-2">&nbsp;</TableCell>
                       <TableCell className="border border-gray-300 p-2"></TableCell>
