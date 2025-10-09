@@ -81,7 +81,7 @@ const navItems: NavItem[] = [
     href: "",
     subItems: [
       { href: "/payroll", label: "Payroll", icon: Landmark, roles: ["SYSTEM_ADMIN", "ADMIN"] },
-      { href: "/payroll/salary-transfer", label: "Salary Transfer", icon: Wallet, roles: ["SYSTEM_ADMIN", "ADMIN"] },
+      { href: "/salary-transfer", label: "Salary Transfer", icon: Wallet, roles: ["SYSTEM_ADMIN", "ADMIN"] },
       { href: "/hrm/attendance", label: "Attendance", icon: Users, roles: ["SYSTEM_ADMIN", "ADMIN"] },
       { href: "/hrm/geoforce", label: "Office Location", icon: MapPin, roles: ["SYSTEM_ADMIN", "ADMIN"] },
     ]
