@@ -52,7 +52,7 @@ const IncrementSalaryDialog = dynamic(() => import('@/components/payroll/Increme
 const ManageLeaveDialog = dynamic(() => import('@/components/payroll/ManageLeaveDialog').then(mod => mod.ManageLeaveDialog));
 
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 50;
 
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
@@ -437,68 +437,94 @@ export default function PayrollPage() {
         </div>
       </CardHeader>
       <CardContent className="p-6 pt-0">
-        <div className="space-y-3">
-          <div className="grid grid-cols-[30px_1.5fr_1fr_1fr_80px_80px] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
-            <span>SL</span>
-            <span>Name of Employee</span>
-            <span>Designation</span>
-            <span>Salary</span>
-            <span>Status</span>
-            <span className="text-center">Action</span>
-          </div>
-
-          {isLoading ? (
-            Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
-              <div key={index} className="grid grid-cols-[30px_1.5fr_1fr_1fr_80px_80px] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
-                <Skeleton className="h-4 w-4" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-16" /><Skeleton className="h-5 w-16 rounded-full" />
-                <div className="flex justify-center items-center gap-2"><Skeleton className="h-6 w-6" /><Skeleton className="h-6 w-6" /><Skeleton className="h-6 w-6" /></div>
-              </div>
-            ))
-          ) : paginatedEmployees.length > 0 ? (
-            paginatedEmployees.map((employee, index) => (
-              <div key={employee.id} className="grid grid-cols-[30px_1.5fr_1fr_1fr_80px_80px] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
-                <span className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</span>
-                <span className="font-medium text-gray-800">{employee.name}</span>
-                <span>{employee.designation}</span>
-                <span className="font-medium text-gray-800">{formatCurrency(employee.salary)}</span>
-                <span><Badge className={cn(employee.status === 'Active' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{employee.status}</Badge></span>
-                <span className="flex justify-center items-center">
-                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <span className="sr-only">Open menu</span>
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem className="cursor-pointer" onSelect={() => setHistoryToView(employee)}>
-                        <Eye className="mr-2 h-4 w-4" />
-                        <span>View</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setEmployeeToEdit(employee)} className="cursor-pointer">
-                        <Pencil className="mr-2 h-4 w-4" />
-                        <span>Edit</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setEmployeeToIncrement(employee)} className="cursor-pointer">
-                        <TrendingUp className="mr-2 h-4 w-4"/>
-                        <span>Increment Salary</span>
-                      </DropdownMenuItem>
-                       <DropdownMenuItem onSelect={() => setLeaveToManage(employee)} className="cursor-pointer">
-                        <Calendar className="mr-2 h-4 w-4" />
-                        <span>Manage Leave</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setEmployeeToDelete(employee)} className="cursor-pointer text-destructive focus:text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        <span>Delete</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </span>
-              </div>
-            ))
-          ) : (
-             <div className="text-center py-16 text-gray-500">No employees found.</div>
-          )}
+        <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>SL</TableHead>
+                  <TableHead>Employee ID</TableHead>
+                  <TableHead>Name of Employee</TableHead>
+                  <TableHead>Designation</TableHead>
+                  <TableHead>Mobile NO</TableHead>
+                  <TableHead>Date of Birth</TableHead>
+                  <TableHead>Salary</TableHead>
+                  <TableHead>Joining Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-center">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  [...Array(ITEMS_PER_PAGE)].map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-8 w-8 mx-auto rounded-md" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : paginatedEmployees.length > 0 ? (
+                   paginatedEmployees.map((employee, index) => (
+                      <TableRow key={employee.id}>
+                          <TableCell className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</TableCell>
+                          <TableCell>{employee.employeeId}</TableCell>
+                          <TableCell className="font-medium">{employee.name}</TableCell>
+                          <TableCell>{employee.designation}</TableCell>
+                          <TableCell>{employee.mobileNo}</TableCell>
+                          <TableCell>{format(new Date(employee.dob), 'yyyy-MM-dd')}</TableCell>
+                          <TableCell className="font-medium text-gray-800">{formatCurrency(employee.salary)}</TableCell>
+                          <TableCell>{format(new Date(employee.joiningDate), 'yyyy-MM-dd')}</TableCell>
+                          <TableCell><Badge className={cn(employee.status === 'Active' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{employee.status}</Badge></TableCell>
+                          <TableCell className="text-center">
+                               <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <span className="sr-only">Open menu</span>
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem className="cursor-pointer" onSelect={() => setHistoryToView(employee)}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    <span>View</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onSelect={() => setEmployeeToEdit(employee)} className="cursor-pointer">
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    <span>Edit</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onSelect={() => setEmployeeToIncrement(employee)} className="cursor-pointer">
+                                    <TrendingUp className="mr-2 h-4 w-4"/>
+                                    <span>Increment Salary</span>
+                                  </DropdownMenuItem>
+                                   <DropdownMenuItem onSelect={() => setLeaveToManage(employee)} className="cursor-pointer">
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    <span>Manage Leave</span>
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onSelect={() => setEmployeeToDelete(employee)} className="cursor-pointer text-destructive focus:text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Delete</span>
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                          </TableCell>
+                      </TableRow>
+                   ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={10} className="text-center h-48 text-gray-500">
+                      <UserRoundX className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+                       No employees found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
         </div>
         {totalPages > 1 && (
             <div className="mt-6 flex justify-center">
@@ -629,7 +655,7 @@ export default function PayrollPage() {
       </CardContent>
     </Card>
   );
-
+  
   const summaryContent = (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
       <SummaryCard 
@@ -706,7 +732,7 @@ export default function PayrollPage() {
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 lg:p-8 bg-gray-50 min-h-screen">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8 min-h-screen">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-full shadow-sm border border-gray-200">
           <TabsTrigger value="salary_sheet" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white">Salary Sheet</TabsTrigger>
@@ -730,6 +756,8 @@ export default function PayrollPage() {
             setPayslipToEdit(null);
           }}
           selectedDate={selectedDate}
+          existingPayslip={existingPayslipData}
+          weekendDays={weekendDays}
         />
       )}
       {employeeToIncrement && (
