@@ -41,6 +41,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getAttendanceForMonth } from '@/lib/attendance-service';
 import { getWeekendSettings } from '@/lib/weekend-service';
 import Image from 'next/image';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const AddEmployeeDialog = dynamic(() => import('@/components/payroll/AddEmployeeDialog').then(mod => mod.AddEmployeeDialog));
 const EditEmployeeDialog = dynamic(() => import('@/components/payroll/EditEmployeeDialog').then(mod => mod.EditEmployeeDialog));
@@ -121,6 +123,7 @@ export default function PayrollPage() {
   const [isDeletingIncrement, setIsDeletingIncrement] = useState(false);
 
   const [leaveToManage, setLeaveToManage] = useState<Employee | null>(null);
+  const [historyToView, setHistoryToView] = useState<Employee | null>(null);
 
 
   const [selectedDate, setSelectedDate] = useState(subMonths(new Date(), 1));
@@ -435,36 +438,29 @@ export default function PayrollPage() {
       </CardHeader>
       <CardContent className="p-6 pt-0">
         <div className="space-y-3">
-          <div className="grid grid-cols-[30px_1fr_1.5fr_1.5fr_1fr_1fr_1fr_1fr_1fr_80px_80px] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
+          <div className="grid grid-cols-[30px_1.5fr_1fr_1fr_80px_80px] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
             <span>SL</span>
-            <span className="flex items-center gap-1 cursor-pointer"><ArrowUpDown className="h-3 w-3" />Employee ID</span>
             <span>Name of Employee</span>
-            <span>Email</span>
-            <span>Mobile NO</span>
-            <span>Date of Birth</span>
             <span>Designation</span>
             <span>Salary</span>
-            <span className="flex items-center gap-1 cursor-pointer"><ArrowUpDown className="h-3 w-3" />Joining Date</span>
             <span>Status</span>
             <span className="text-center">Action</span>
           </div>
 
           {isLoading ? (
             Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
-              <div key={index} className="grid grid-cols-[30px_1fr_1.5fr_1.5fr_1fr_1fr_1fr_1fr_1fr_80px_80px] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
-                <Skeleton className="h-4 w-4" /><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-16" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-20" /><Skeleton className="h-5 w-16 rounded-full" />
+              <div key={index} className="grid grid-cols-[30px_1.5fr_1fr_1fr_80px_80px] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+                <Skeleton className="h-4 w-4" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-16" /><Skeleton className="h-5 w-16 rounded-full" />
                 <div className="flex justify-center items-center gap-2"><Skeleton className="h-6 w-6" /><Skeleton className="h-6 w-6" /><Skeleton className="h-6 w-6" /></div>
               </div>
             ))
           ) : paginatedEmployees.length > 0 ? (
             paginatedEmployees.map((employee, index) => (
-              <div key={employee.id} className="grid grid-cols-[30px_1fr_1.5fr_1.5fr_1fr_1fr_1fr_1fr_1fr_80px_80px] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
+              <div key={employee.id} className="grid grid-cols-[30px_1.5fr_1fr_1fr_80px_80px] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
                 <span className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</span>
-                <span>{employee.employeeId}</span><span className="font-medium text-gray-800">{employee.name}</span>
-                <span className="truncate">{employee.email}</span><span>{employee.mobileNo}</span>
-                <span>{format(new Date(employee.dob), 'yyyy-MM-dd')}</span><span>{employee.designation}</span>
+                <span className="font-medium text-gray-800">{employee.name}</span>
+                <span>{employee.designation}</span>
                 <span className="font-medium text-gray-800">{formatCurrency(employee.salary)}</span>
-                <span>{format(new Date(employee.joiningDate), 'yyyy-MM-dd')}</span>
                 <span><Badge className={cn(employee.status === 'Active' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{employee.status}</Badge></span>
                 <span className="flex justify-center items-center">
                    <DropdownMenu>
@@ -475,7 +471,7 @@ export default function PayrollPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem className="cursor-pointer" onSelect={() => toast({title: "Coming Soon!", description: "Viewing detailed employee profiles will be available in a future update."})}>
+                      <DropdownMenuItem className="cursor-pointer" onSelect={() => setHistoryToView(employee)}>
                         <Eye className="mr-2 h-4 w-4" />
                         <span>View</span>
                       </DropdownMenuItem>
@@ -768,6 +764,45 @@ export default function PayrollPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+      )}
+       {historyToView && (
+        <Sheet open={!!historyToView} onOpenChange={(open) => !open && setHistoryToView(null)}>
+          <SheetContent>
+            <SheetHeader>
+              <SheetTitle>Salary History for {historyToView.name}</SheetTitle>
+              <SheetDescription>
+                A record of all salary increments for this employee.
+              </SheetDescription>
+            </SheetHeader>
+            <ScrollArea className="h-[calc(100vh-10rem)] mt-4 pr-4">
+              <div className="space-y-4">
+                {(historyToView.salaryHistory || []).length > 0 ? (
+                  historyToView.salaryHistory.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((inc, index) => (
+                    <Card key={index} onDoubleClick={() => setIncrementToDelete({employeeId: historyToView.id, increment: inc})}>
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-semibold">{format(new Date(inc.date), 'MMMM yyyy')}</p>
+                            <p className="text-sm text-green-600 font-medium">Increment: {formatCurrency(inc.incrementAmount)}</p>
+                          </div>
+                          <div className="text-right">
+                             <p className="text-xs text-muted-foreground">Previous: {formatCurrency(inc.previousSalary)}</p>
+                             <p className="text-lg font-bold">{formatCurrency(inc.newSalary)}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center text-muted-foreground pt-10">
+                    <History className="h-10 w-10 mx-auto mb-2 opacity-50"/>
+                    No salary increment history found.
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          </SheetContent>
+        </Sheet>
       )}
     </div>
   );
