@@ -93,59 +93,59 @@ export default function SalaryTransferPage() {
             <Table className="w-full border-collapse border border-gray-300">
               <TableHeader>
                 <TableRow className="bg-green-200/50 print:bg-green-200">
-                  <TableHead className="border border-gray-300 text-black font-semibold">Sl. No.</TableHead>
-                  <TableHead className="border border-gray-300 text-black font-semibold">ID No.</TableHead>
-                  <TableHead className="border border-gray-300 text-black font-semibold">Name of the Employees</TableHead>
-                  <TableHead className="border border-gray-300 text-black font-semibold">Designation</TableHead>
-                  <TableHead className="border border-gray-300 text-black font-semibold">Accounts No.</TableHead>
-                  <TableHead className="border border-gray-300 text-black font-semibold text-right">Amount</TableHead>
+                  <TableHead className="border border-gray-300 text-black font-semibold p-2">Sl. No.</TableHead>
+                  <TableHead className="border border-gray-300 text-black font-semibold p-2">ID No.</TableHead>
+                  <TableHead className="border border-gray-300 text-black font-semibold p-2">Name of the Employees</TableHead>
+                  <TableHead className="border border-gray-300 text-black font-semibold p-2">Designation</TableHead>
+                  <TableHead className="border border-gray-300 text-black font-semibold p-2">Accounts No.</TableHead>
+                  <TableHead className="border border-gray-300 text-black font-semibold text-right p-2">Amount</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   [...Array(5)].map((_, i) => (
                     <TableRow key={`skel-row-${i}`} className="h-10">
-                      <TableCell className="border border-gray-300"><Skeleton className="h-4 w-10" /></TableCell>
-                      <TableCell className="border border-gray-300"><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell className="border border-gray-300"><Skeleton className="h-4 w-40" /></TableCell>
-                      <TableCell className="border border-gray-300"><Skeleton className="h-4 w-32" /></TableCell>
-                      <TableCell className="border border-gray-300"><Skeleton className="h-4 w-40" /></TableCell>
-                      <TableCell className="border border-gray-300 text-right"><Skeleton className="h-4 w-24 ml-auto" /></TableCell>
+                      <TableCell className="border border-gray-300 p-2"><Skeleton className="h-4 w-10" /></TableCell>
+                      <TableCell className="border border-gray-300 p-2"><Skeleton className="h-4 w-20" /></TableCell>
+                      <TableCell className="border border-gray-300 p-2"><Skeleton className="h-4 w-40" /></TableCell>
+                      <TableCell className="border border-gray-300 p-2"><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell className="border border-gray-300 p-2"><Skeleton className="h-4 w-40" /></TableCell>
+                      <TableCell className="border border-gray-300 text-right p-2"><Skeleton className="h-4 w-24 ml-auto" /></TableCell>
                     </TableRow>
                   ))
                 ) : paidEmployeesData.length > 0 ? (
                   paidEmployeesData.map((employee, index) => (
                     <TableRow key={employee.id}>
-                      <TableCell className="border border-gray-300">{index + 1}</TableCell>
-                      <TableCell className="border border-gray-300">{employee.employeeId}</TableCell>
-                      <TableCell className="border border-gray-300">{employee.name}</TableCell>
-                      <TableCell className="border border-gray-300">{employee.designation}</TableCell>
-                      <TableCell className="border border-gray-300">{/* Account No. Placeholder */}</TableCell>
-                      <TableCell className="border border-gray-300 text-right">{formatCurrency(employee.payableAmount)}</TableCell>
+                      <TableCell className="border border-gray-300 p-2">{index + 1}</TableCell>
+                      <TableCell className="border border-gray-300 p-2">{employee.employeeId}</TableCell>
+                      <TableCell className="border border-gray-300 p-2">{employee.name}</TableCell>
+                      <TableCell className="border border-gray-300 p-2">{employee.designation}</TableCell>
+                      <TableCell className="border border-gray-300 p-2">{/* Account No. Placeholder */}</TableCell>
+                      <TableCell className="border border-gray-300 text-right p-2">{formatCurrency(employee.payableAmount)}</TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground border border-gray-300">
+                    <TableCell colSpan={6} className="text-center h-24 text-muted-foreground border border-gray-300 p-2">
                       No paid salaries found for this month.
                     </TableCell>
                   </TableRow>
                 )}
                  {Array.from({ length: Math.max(0, 10 - paidEmployeesData.length) }).map((_, i) => (
                   <TableRow key={`empty-row-${i}`} className="h-10">
-                      <TableCell className="border border-gray-300">&nbsp;</TableCell>
-                      <TableCell className="border border-gray-300"></TableCell>
-                      <TableCell className="border border-gray-300"></TableCell>
-                      <TableCell className="border border-gray-300"></TableCell>
-                      <TableCell className="border border-gray-300"></TableCell>
-                      <TableCell className="border border-gray-300"></TableCell>
+                      <TableCell className="border border-gray-300 p-2">&nbsp;</TableCell>
+                      <TableCell className="border border-gray-300 p-2"></TableCell>
+                      <TableCell className="border border-gray-300 p-2"></TableCell>
+                      <TableCell className="border border-gray-300 p-2"></TableCell>
+                      <TableCell className="border border-gray-300 p-2"></TableCell>
+                      <TableCell className="border border-gray-300 p-2"></TableCell>
                   </TableRow>
                 ))}
               </TableBody>
               <TableFooter>
                 <TableRow>
-                  <TableCell colSpan={5} className="font-bold border border-gray-300 text-right">Grand Total:</TableCell>
-                  <TableCell className="text-right font-bold border border-gray-300">{formatCurrency(totalPayableAmount)}</TableCell>
+                  <TableCell colSpan={5} className="font-bold border border-gray-300 text-right p-2">Grand Total:</TableCell>
+                  <TableCell className="text-right font-bold border border-gray-300 p-2">{formatCurrency(totalPayableAmount)}</TableCell>
                 </TableRow>
               </TableFooter>
             </Table>
