@@ -435,37 +435,39 @@ export default function PayrollPage() {
       </CardHeader>
       <CardContent className="p-6 pt-0">
         <div className="space-y-3">
-          <div className="grid grid-cols-[30px_1fr_1fr_1fr_1fr_1fr_1fr_1fr_80px_80px] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
+          <div className="grid grid-cols-[30px_1fr_1.5fr_1fr_1fr_1fr_1fr_1fr_1fr_80px_80px] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
             <span>SL</span>
             <span className="flex items-center gap-1 cursor-pointer"><ArrowUpDown className="h-3 w-3" />Employee ID</span>
-            <span>Name</span>
+            <span>Name of Employee</span>
             <span>Mobile NO</span>
-            <span>ID No.</span>
+            <span>Date of Birth</span>
             <span>Accounts No.</span>
             <span>Designation</span>
             <span>Salary</span>
-            <span>Joining Date</span>
+            <span className="flex items-center gap-1 cursor-pointer"><ArrowUpDown className="h-3 w-3" />Joining Date</span>
+            <span>Status</span>
             <span className="text-center">Action</span>
           </div>
 
           {isLoading ? (
             Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
-              <div key={index} className="grid grid-cols-[30px_1fr_1fr_1fr_1fr_1fr_1fr_1fr_80px_80px] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
-                <Skeleton className="h-4 w-4" /><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-16" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-20" />
+              <div key={index} className="grid grid-cols-[30px_1fr_1.5fr_1fr_1fr_1fr_1fr_1fr_1fr_80px_80px] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+                <Skeleton className="h-4 w-4" /><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-16" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-20" /><Skeleton className="h-5 w-16 rounded-full" />
                 <div className="flex justify-center items-center gap-2"><Skeleton className="h-6 w-6" /><Skeleton className="h-6 w-6" /><Skeleton className="h-6 w-6" /></div>
               </div>
             ))
           ) : paginatedEmployees.length > 0 ? (
             (paginatedEmployees as Employee[]).map((employee, index) => (
-              <div key={employee.id} className="grid grid-cols-[30px_1fr_1fr_1fr_1fr_1fr_1fr_1fr_80px_80px] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
+              <div key={employee.id} className="grid grid-cols-[30px_1fr_1.5fr_1fr_1fr_1fr_1fr_1fr_1fr_80px_80px] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
                 <span className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</span>
                 <span>{employee.employeeId}</span><span className="font-medium text-gray-800">{employee.name}</span>
                 <span>{employee.mobileNo}</span>
-                <span>{employee.nationalId || 'N/A'}</span>
+                <span>{format(new Date(employee.dob), 'yyyy-MM-dd')}</span>
                 <span>{employee.accountNo || 'N/A'}</span>
                 <span>{employee.designation}</span>
                 <span className="font-medium text-gray-800">{formatCurrency(employee.salary)}</span>
                 <span>{format(new Date(employee.joiningDate), 'yyyy-MM-dd')}</span>
+                <span><Badge className={cn(employee.status === 'Active' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{employee.status}</Badge></span>
                 <span className="flex justify-center items-center">
                    <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -856,8 +858,7 @@ export default function PayrollPage() {
         <EditPayslipDialog
           isOpen={!!payslipToEdit}
           onOpenChange={(open) => !open && setPayslipToEdit(null)}
-          employee={salarySheetCalculatedData.find(e => e.id === payslipToEdit.id) || payslipToEdit}
-          existingPayslip={existingPayslipData}
+          employee={payslipToEdit}
           onSave={() => {
             fetchData(); // Refetch data after saving
             setPayslipToEdit(null);
@@ -868,4 +869,3 @@ export default function PayrollPage() {
     </div>
   );
 }
-
