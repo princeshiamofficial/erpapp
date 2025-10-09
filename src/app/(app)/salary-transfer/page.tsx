@@ -80,7 +80,7 @@ export default function SalaryTransferPage() {
           <div className="flex justify-center">
              <Image src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" alt="Company Logo" width={160} height={40} className="object-contain rounded-md" />
           </div>
-          <CardDescription className="text-red-500">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</CardDescription>
+          <CardDescription className="text-red-500 font-semibold">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</CardDescription>
         </CardHeader>
         <CardContent className="px-2 sm:px-6">
            <div className="border-y border-gray-300 py-2 my-4">
