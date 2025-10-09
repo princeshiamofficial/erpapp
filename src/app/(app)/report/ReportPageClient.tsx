@@ -174,6 +174,13 @@ function ReportFilterSettingsDialog({ isOpen, onOpenChange, initialFilters, onSa
   );
 }
 
+const getInitials = (name: string | undefined): string => {
+  if (!name) return '??';
+  const names = name.split(' ');
+  if (names.length === 1) return names[0].charAt(0).toUpperCase();
+  return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
+};
+
 
 export function ReportPageClient() {
   const [orders, setOrders] = useState<TrackingLink[]>([]);
@@ -234,7 +241,7 @@ export function ReportPageClient() {
     if (!selectedDateRange?.from) return orders;
 
     const startDate = startOfDay(selectedDateRange.from);
-    const endDate = endOfDay(selectedDateRange.to || selectedDateRange.from);
+    const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
 
     return orders.filter(order => {
       if (!order.createdAt) return false;
@@ -331,7 +338,7 @@ export function ReportPageClient() {
   return (
     <>
       <div className="space-y-6 p-1 sm:p-0">
-        <div className="grid grid-cols-1 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card className="w-full">
               <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
@@ -399,6 +406,66 @@ export function ReportPageClient() {
                       </TableRow>
                     )}
                   </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <Card className="w-full">
+              <CardHeader>
+                  <CardTitle>Team Performance</CardTitle>
+                  <CardDescription>
+                    Sales breakdown by CRM for the selected period.
+                  </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>CRM</TableHead>
+                            <TableHead className="text-right">Total Sales</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading ? (
+                            [...Array(4)].map((_, i) => (
+                                <TableRow key={`crm-skel-${i}`}>
+                                    <TableCell>
+                                        <div className="flex items-center gap-3">
+                                            <Skeleton className="h-10 w-10 rounded-full" />
+                                            <Skeleton className="h-5 w-32" />
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Skeleton className="h-5 w-24 ml-auto" />
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        ) : crmSalesData.length > 0 ? (
+                            crmSalesData.map(crm => (
+                                <TableRow key={crm.crmId}>
+                                    <TableCell>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="h-10 w-10 border">
+                                                <AvatarImage src={crm.avatarUrl || undefined} alt={crm.crmName} />
+                                                <AvatarFallback>{getInitials(crm.crmName)}</AvatarFallback>
+                                            </Avatar>
+                                            <span className="font-medium">{crm.crmName}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right font-mono text-base font-semibold">
+                                        {formatCurrency(crm.totalSales)}
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                             <TableRow>
+                                <TableCell colSpan={2} className="h-24 text-center">
+                                    <UsersIcon className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
+                                    No CRM sales data for this period.
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
                 </Table>
               </CardContent>
             </Card>
