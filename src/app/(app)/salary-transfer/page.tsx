@@ -121,10 +121,10 @@ export default function SalaryTransferPage() {
                   unpaidEmployeesData.map((employee, index) => (
                     <TableRow key={employee.id}>
                       <TableCell className="border border-gray-300 p-2">{index + 1}</TableCell>
-                      <TableCell className="border border-gray-300 p-2">{employee.employeeId}</TableCell>
+                      <TableCell className="border border-gray-300 p-2">{employee.nationalId || 'N/A'}</TableCell>
                       <TableCell className="border border-gray-300 p-2">{employee.name}</TableCell>
                       <TableCell className="border border-gray-300 p-2">{employee.designation}</TableCell>
-                      <TableCell className="border border-gray-300 p-2">{/* Account No. Placeholder */}</TableCell>
+                      <TableCell className="border border-gray-300 p-2">{employee.accountNo || 'N/A'}</TableCell>
                       <TableCell className="border border-gray-300 text-right p-2">{formatCurrency(employee.payableAmount)}</TableCell>
                     </TableRow>
                   ))

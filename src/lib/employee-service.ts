@@ -11,8 +11,8 @@ const SALARY_SHEET_COLLECTION_PREFIX = 'salarySheet-';
 const getSalarySheetCollectionName = (month: string) => `${SALARY_SHEET_COLLECTION_PREFIX}${month}`;
 
 const defaultEmployeesData: Array<Omit<Employee, 'id' | 'employeeId' | 'userId'>> = [
-  { name: 'John Doe', email: 'john.doe@example.com', mobileNo: '01712345678', dob: subYears(new Date(), 30).toISOString(), designation: 'Software Engineer', joiningDate: subYears(new Date(), 2).toISOString(), status: 'Active', salary: 80000, yearlyLeave: 12, leaveTaken: 0, leaveHistory: [] },
-  { name: 'Jane Smith', email: 'jane.smith@example.com', mobileNo: '01812345678', dob: subYears(new Date(), 25).toISOString(), designation: 'Project Manager', joiningDate: subYears(new Date(), 1).toISOString(), status: 'Active', salary: 95000, yearlyLeave: 12, leaveTaken: 0, leaveHistory: [] },
+  { name: 'John Doe', email: 'john.doe@example.com', mobileNo: '01712345678', dob: subYears(new Date(), 30).toISOString(), designation: 'Software Engineer', joiningDate: subYears(new Date(), 2).toISOString(), status: 'Active', salary: 80000, yearlyLeave: 12, leaveTaken: 0, leaveHistory: [], nationalId: '1234567890123', accountNo: '112233445566' },
+  { name: 'Jane Smith', email: 'jane.smith@example.com', mobileNo: '01812345678', dob: subYears(new Date(), 25).toISOString(), designation: 'Project Manager', joiningDate: subYears(new Date(), 1).toISOString(), status: 'Active', salary: 95000, yearlyLeave: 12, leaveTaken: 0, leaveHistory: [], nationalId: '9876543210987', accountNo: '665544332211' },
 ];
 
 export const seedDefaultEmployees = async (): Promise<Employee[]> => {

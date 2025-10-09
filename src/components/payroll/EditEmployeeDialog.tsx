@@ -37,17 +37,21 @@ export function EditEmployeeDialog({ employee, onEmployeeUpdated, isOpen, onOpen
     const [salary, setSalary] = useState('');
     const [joiningDate, setJoiningDate] = useState('');
     const [status, setStatus] = useState<'Active' | 'Inactive'>('Active');
+    const [nationalId, setNationalId] = useState('');
+    const [accountNo, setAccountNo] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
         if (employee && isOpen) {
             setName(employee.name);
-            setEmail(employee.email);
+            setEmail(employee.email || '');
             setMobileNo(employee.mobileNo);
             setDesignation(employee.designation);
             setStatus(employee.status);
             setSalary((employee.salary || '').toString());
+            setNationalId(employee.nationalId || '');
+            setAccountNo(employee.accountNo || '');
             try {
               setDob(format(new Date(employee.dob), 'yyyy-MM-dd'));
               setJoiningDate(format(new Date(employee.joiningDate), 'yyyy-MM-dd'));
@@ -72,6 +76,8 @@ export function EditEmployeeDialog({ employee, onEmployeeUpdated, isOpen, onOpen
             dob: new Date(dob).toISOString(),
             joiningDate: new Date(joiningDate).toISOString(),
             salary: numericSalary,
+            nationalId: nationalId || undefined,
+            accountNo: accountNo || undefined,
         };
 
         const result = await updateEmployeeAction(employee.id, updates);
@@ -120,6 +126,16 @@ export function EditEmployeeDialog({ employee, onEmployeeUpdated, isOpen, onOpen
                           title="Phone number must be an 11-digit number starting with 0."
                           placeholder="01xxxxxxxxx"
                         />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                            <Label htmlFor="edit-nationalId">ID No.</Label>
+                            <Input id="edit-nationalId" value={nationalId} onChange={e => setNationalId(e.target.value)} />
+                        </div>
+                        <div className="space-y-1">
+                            <Label htmlFor="edit-accountNo">Accounts No.</Label>
+                            <Input id="edit-accountNo" value={accountNo} onChange={e => setAccountNo(e.target.value)} />
+                        </div>
                     </div>
                     <div className="space-y-1">
                         <Label htmlFor="edit-designation">Designation</Label>

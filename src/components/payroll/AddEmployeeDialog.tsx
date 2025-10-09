@@ -39,6 +39,8 @@ export function AddEmployeeDialog({ onEmployeeAdded, children, allUsers }: AddEm
   const [designation, setDesignation] = useState('');
   const [salary, setSalary] = useState('');
   const [joiningDate, setJoiningDate] = useState('');
+  const [nationalId, setNationalId] = useState('');
+  const [accountNo, setAccountNo] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUserPopoverOpen, setIsUserPopoverOpen] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState("");
@@ -49,6 +51,8 @@ export function AddEmployeeDialog({ onEmployeeAdded, children, allUsers }: AddEm
         setSelectedUserId(null);
         setName('');
         setEmail('');
+        setNationalId('');
+        setAccountNo('');
     }
   }, [isOpen]);
 
@@ -57,7 +61,7 @@ export function AddEmployeeDialog({ onEmployeeAdded, children, allUsers }: AddEm
         const selectedUser = allUsers.find(u => u.id === selectedUserId);
         if (selectedUser) {
             setName(selectedUser.name);
-            setEmail(selectedUser.email);
+            setEmail(selectedUser.email || '');
         }
     } else {
         setName('');
@@ -85,7 +89,9 @@ export function AddEmployeeDialog({ onEmployeeAdded, children, allUsers }: AddEm
       designation,
       salary: numericSalary,
       joiningDate: new Date(joiningDate).toISOString(),
-      status: 'Active'
+      status: 'Active',
+      nationalId: nationalId || undefined,
+      accountNo: accountNo || undefined,
     };
     
     const result = await addEmployeeAction(newEmployeeData);
@@ -104,7 +110,7 @@ export function AddEmployeeDialog({ onEmployeeAdded, children, allUsers }: AddEm
     if (!userSearchQuery) return allUsers;
     return allUsers.filter(user =>
       user.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(userSearchQuery.toLowerCase())
+      (user.email && user.email.toLowerCase().includes(userSearchQuery.toLowerCase()))
     );
   }, [allUsers, userSearchQuery]);
 
@@ -186,6 +192,16 @@ export function AddEmployeeDialog({ onEmployeeAdded, children, allUsers }: AddEm
               disabled={isSubmitting}
             />
           </div>
+           <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="nationalId">ID No.</Label>
+                <Input id="nationalId" value={nationalId} onChange={e => setNationalId(e.target.value)} disabled={isSubmitting} />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="accountNo">Accounts No.</Label>
+                <Input id="accountNo" value={accountNo} onChange={e => setAccountNo(e.target.value)} disabled={isSubmitting} />
+              </div>
+            </div>
           <div className="space-y-1">
             <Label htmlFor="designation">Designation</Label>
             <Input id="designation" value={designation} onChange={e => setDesignation(e.target.value)} required disabled={isSubmitting} />
@@ -204,7 +220,7 @@ export function AddEmployeeDialog({ onEmployeeAdded, children, allUsers }: AddEm
                 <Input id="joiningDate" type="date" value={joiningDate} onChange={e => setJoiningDate(e.target.value)} required disabled={isSubmitting} />
               </div>
           </div>
-          <DialogFooter className="pt-4 border-t">
+          <DialogFooter className="pt-4 border-t border-border/30">
             <Button type="button" variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>
               {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Adding...</> : "Add Employee"}
