@@ -8,7 +8,7 @@ import { Construction } from 'lucide-react';
 export default function SalaryTransferPage() {
   return (
     <div className="space-y-6">
-       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
+       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header hidden">
         <div>
           <h1 className="page-title">Salary Transfer</h1>
           <p className="page-description">
