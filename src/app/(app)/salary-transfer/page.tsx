@@ -165,7 +165,8 @@ export default function SalaryTransferPage() {
             print-color-adjust: exact;
           }
           .printable-area {
-            padding: 1in;
+            padding: 0 !important;
+            margin: 0 !important;
             border: none;
             box-shadow: none;
           }
