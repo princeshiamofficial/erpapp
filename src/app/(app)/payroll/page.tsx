@@ -435,37 +435,37 @@ export default function PayrollPage() {
       </CardHeader>
       <CardContent className="p-6 pt-0">
         <div className="space-y-3">
-          <div className="grid grid-cols-[30px_1fr_1.5fr_1.5fr_1fr_1fr_1fr_1fr_1fr_80px_80px] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
+          <div className="grid grid-cols-[30px_1fr_1fr_1fr_1fr_1fr_1fr_1fr_80px_80px] gap-4 px-4 py-3 bg-gray-50 rounded-lg text-xs font-semibold text-gray-500">
             <span>SL</span>
             <span className="flex items-center gap-1 cursor-pointer"><ArrowUpDown className="h-3 w-3" />Employee ID</span>
-            <span>Name of Employee</span>
-            <span>Email</span>
+            <span>Name</span>
             <span>Mobile NO</span>
-            <span>Date of Birth</span>
+            <span>ID No.</span>
+            <span>Accounts No.</span>
             <span>Designation</span>
             <span>Salary</span>
-            <span className="flex items-center gap-1 cursor-pointer"><ArrowUpDown className="h-3 w-3" />Joining Date</span>
-            <span>Status</span>
+            <span>Joining Date</span>
             <span className="text-center">Action</span>
           </div>
 
           {isLoading ? (
             Array.from({ length: ITEMS_PER_PAGE }).map((_, index) => (
-              <div key={index} className="grid grid-cols-[30px_1fr_1.5fr_1.5fr_1fr_1fr_1fr_1fr_1fr_80px_80px] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
-                <Skeleton className="h-4 w-4" /><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-32" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-16" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-20" /><Skeleton className="h-5 w-16 rounded-full" />
+              <div key={index} className="grid grid-cols-[30px_1fr_1fr_1fr_1fr_1fr_1fr_1fr_80px_80px] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+                <Skeleton className="h-4 w-4" /><Skeleton className="h-4 w-12" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-24" /><Skeleton className="h-4 w-16" /><Skeleton className="h-4 w-20" /><Skeleton className="h-4 w-20" />
                 <div className="flex justify-center items-center gap-2"><Skeleton className="h-6 w-6" /><Skeleton className="h-6 w-6" /><Skeleton className="h-6 w-6" /></div>
               </div>
             ))
           ) : paginatedEmployees.length > 0 ? (
             (paginatedEmployees as Employee[]).map((employee, index) => (
-              <div key={employee.id} className="grid grid-cols-[30px_1fr_1.5fr_1.5fr_1fr_1fr_1fr_1fr_1fr_80px_80px] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
+              <div key={employee.id} className="grid grid-cols-[30px_1fr_1fr_1fr_1fr_1fr_1fr_1fr_80px_80px] items-center gap-4 p-4 bg-white rounded-lg shadow-sm border border-gray-100 text-sm text-gray-700">
                 <span className="text-gray-500">{String((currentPage - 1) * ITEMS_PER_PAGE + index + 1).padStart(2, '0')}</span>
                 <span>{employee.employeeId}</span><span className="font-medium text-gray-800">{employee.name}</span>
-                <span className="truncate">{employee.email}</span><span>{employee.mobileNo}</span>
-                <span>{format(new Date(employee.dob), 'yyyy-MM-dd')}</span><span>{employee.designation}</span>
+                <span>{employee.mobileNo}</span>
+                <span>{employee.nationalId || 'N/A'}</span>
+                <span>{employee.accountNo || 'N/A'}</span>
+                <span>{employee.designation}</span>
                 <span className="font-medium text-gray-800">{formatCurrency(employee.salary)}</span>
                 <span>{format(new Date(employee.joiningDate), 'yyyy-MM-dd')}</span>
-                <span><Badge className={cn(employee.status === 'Active' ? 'bg-green-100 text-green-700 hover:bg-green-200 border-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200 border-red-200', 'border')}>{employee.status}</Badge></span>
                 <span className="flex justify-center items-center">
                    <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -582,14 +582,11 @@ export default function PayrollPage() {
   );
 
   const salarySheetContent = (
-    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden print:shadow-none print:border-none">
-      <CardHeader className="p-6 print:p-2 print:pb-4">
+    <Card className="shadow-lg border-none rounded-2xl bg-white overflow-hidden">
+      <CardHeader className="p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-4 print:w-full print:justify-between">
-              <Image src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" alt="Logo" width={120} height={30} className="h-12 w-auto hidden print:block print:rounded-md" />
-              <CardTitle className="text-xl font-bold text-gray-800 !mt-0 whitespace-nowrap">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
-          </div>
-           <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap print:hidden">
+          <CardTitle className="text-xl font-bold text-gray-800">Salary Sheet for {format(selectedDate, 'MMMM yyyy')}</CardTitle>
+           <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
             <div className="relative flex-grow sm:flex-grow-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input placeholder="Search employee..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 bg-gray-50 border-gray-200 rounded-full h-10 w-full"/>
@@ -617,21 +614,21 @@ export default function PayrollPage() {
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-6 pt-0 print:p-2">
+      <CardContent className="p-6 pt-0">
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="print:bg-gray-100">
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Name of Employee</TableHead>
-                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Present</TableHead>
-                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Absent</TableHead>
-                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Late</TableHead>
-                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Provident Fund</TableHead>
-                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Fine</TableHead>
-                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Incentive</TableHead>
-                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Payable Amount</TableHead>
-                <TableHead className="!text-gray-800 font-semibold !whitespace-nowrap">Status</TableHead>
-                <TableHead className="text-center print:hidden !text-gray-800 font-semibold !whitespace-nowrap">Action</TableHead>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name of Employee</TableHead>
+                <TableHead>Present</TableHead>
+                <TableHead>Absent</TableHead>
+                <TableHead>Late</TableHead>
+                <TableHead>Provident Fund</TableHead>
+                <TableHead>Fine</TableHead>
+                <TableHead>Incentive</TableHead>
+                <TableHead>Payable Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-center">Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -647,26 +644,24 @@ export default function PayrollPage() {
                     <TableCell><Skeleton className="h-4 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                    <TableCell className="text-center print:hidden"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-8 w-20 mx-auto" /></TableCell>
                   </TableRow>
                 ))
               ) : salarySheetCalculatedData && salarySheetCalculatedData.length > 0 ? (
                 salarySheetCalculatedData.map((data) => (
                     <TableRow key={data.id}>
-                        <TableCell className="font-medium whitespace-nowrap">{data.name}</TableCell>
-                        <TableCell className="whitespace-nowrap">{data.presentDays}</TableCell>
-                        <TableCell className="whitespace-nowrap">{data.absentDays}</TableCell>
-                        <TableCell className="whitespace-nowrap">{data.lateDays}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatCurrency(data.providentFund)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatCurrency(data.fine)}</TableCell>
-                        <TableCell className="whitespace-nowrap">{formatCurrency(data.incentive)}</TableCell>
-                        <TableCell className="font-semibold whitespace-nowrap">{formatCurrency(data.payableAmount)}</TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700', 'print:text-black print:shadow-none')} style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
-                            {data.paymentStatus}
-                          </Badge>
+                        <TableCell className="font-medium">{data.name}</TableCell>
+                        <TableCell>{data.presentDays}</TableCell>
+                        <TableCell>{data.absentDays}</TableCell>
+                        <TableCell>{data.lateDays}</TableCell>
+                        <TableCell>{formatCurrency(data.providentFund)}</TableCell>
+                        <TableCell>{formatCurrency(data.fine)}</TableCell>
+                        <TableCell>{formatCurrency(data.incentive)}</TableCell>
+                        <TableCell className="font-semibold">{formatCurrency(data.payableAmount)}</TableCell>
+                        <TableCell>
+                          <Badge className={cn(data.paymentStatus === 'Paid' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700')}>{data.paymentStatus}</Badge>
                         </TableCell>
-                        <TableCell className="text-center print:hidden">
+                        <TableCell className="text-center">
                            <Button 
                               variant="outline" 
                               size="sm" 
@@ -692,11 +687,9 @@ export default function PayrollPage() {
               )}
             </TableBody>
             <TableFooter>
-                <TableRow className="print:bg-gray-100">
-                    <TableCell colSpan={7} className="text-right font-bold print:hidden">Total</TableCell>
-                    <TableCell colSpan={7} className="text-right font-bold hidden print:table-cell">Total</TableCell>
-                    <TableCell className="font-bold text-right whitespace-nowrap">{formatCurrency(totalPayableAmount)}</TableCell>
-                    <TableCell colSpan={2} className="print:hidden"></TableCell>
+                <TableRow>
+                    <TableCell colSpan={9} className="text-right font-bold">Total Payable</TableCell>
+                    <TableCell className="font-bold text-right">{formatCurrency(totalPayableAmount)}</TableCell>
                 </TableRow>
             </TableFooter>
           </Table>
@@ -876,4 +869,3 @@ export default function PayrollPage() {
   );
 }
 
-    
