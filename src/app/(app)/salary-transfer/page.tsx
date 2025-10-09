@@ -12,6 +12,7 @@ import { getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
 import type { Employee, Payslip } from '@/types';
 import { format, subMonths } from 'date-fns';
 import { Printer } from 'lucide-react';
+import Image from 'next/image';
 
 const formatCurrency = (value?: number | null): string => {
   if (value === undefined || value === null) return 'N/A';
@@ -72,10 +73,12 @@ export default function SalaryTransferPage() {
   };
 
   return (
-    <div className="space-y-6 printable-area p-4 sm:p-6 lg:p-8">
+    <div className="space-y-6 printable-area">
       <Card className="shadow-lg print:shadow-none print:border-none print:bg-white">
         <CardHeader className="text-center print:text-black">
-          <CardTitle className="text-2xl font-bold text-red-600">Company Name</CardTitle>
+          <div className="flex justify-center">
+             <Image src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" alt="Company Logo" width={160} height={40} className="object-contain" />
+          </div>
           <CardDescription className="text-red-500">Address</CardDescription>
         </CardHeader>
         <CardContent className="px-2 sm:px-6">
