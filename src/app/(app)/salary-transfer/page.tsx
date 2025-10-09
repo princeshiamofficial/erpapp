@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -77,7 +77,7 @@ export default function SalaryTransferPage() {
       <Card className="shadow-lg print:shadow-none print:border-none print:bg-white">
         <CardHeader className="text-center print:text-black">
           <div className="flex justify-center">
-             <Image src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" alt="Company Logo" width={160} height={40} className="object-contain" />
+             <Image src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" alt="Company Logo" width={160} height={40} className="object-contain rounded-md" />
           </div>
           <CardDescription className="text-red-500">Address</CardDescription>
         </CardHeader>
@@ -152,12 +152,6 @@ export default function SalaryTransferPage() {
                 </TableRow>
               </TableFooter>
             </Table>
-            </div>
-            <div className="flex justify-end mt-6 no-print">
-              <Button onClick={handlePrint} variant="outline">
-                <Printer className="mr-2 h-4 w-4" />
-                Print
-              </Button>
             </div>
         </CardContent>
       </Card>
