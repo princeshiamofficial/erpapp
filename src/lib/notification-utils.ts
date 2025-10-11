@@ -66,7 +66,7 @@ export const initializeFCM = async (): Promise<string | null> => {
     const activeSwRegistration = await navigator.serviceWorker.ready; 
     console.log("[NotificationUtils] Service worker is active and ready. Active SW Registration:", activeSwRegistration);
     
-    const VAPID_KEY = "BMmAKwUdHqgZl3RoxiEl36O8f_tNusP9JF8daxFJ99CTMjH1VGmLv7ctXnTcSeUKxRcWdbzhrkh2GPtY9Gw2R04";
+    const VAPID_KEY = "BMLD4tBKrzeVD7gh99dJGpWPDmcUPEuc23879zSSPVkG_swfL7M00xw-agMVnZdFqU8HhzFkApNdbUOPRyYsLDc";
     console.log("[NotificationUtils] Attempting to get FCM token using active SW registration and VAPID key.");
 
     const currentToken = await getToken(fcmMessaging, {
