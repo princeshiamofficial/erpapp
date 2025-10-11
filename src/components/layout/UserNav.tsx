@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/auth-context";
-import { LogOut, User as UserIcon, Settings, Edit3 } from "lucide-react";
+import { LogOut, User as UserIcon, Settings, Edit3, Bot } from "lucide-react";
 import { EditProfileDialog } from "@/components/users/edit-profile-dialog";
 
 export function UserNav() {
@@ -65,6 +65,10 @@ export function UserNav() {
               <span>Edit Profile</span>
             </DropdownMenuItem>
           </EditProfileDialog>
+           <DropdownMenuItem disabled>
+            <Bot className="mr-2 h-4 w-4" />
+            <span>Assistant</span>
+          </DropdownMenuItem>
           <DropdownMenuItem disabled>
             <UserIcon className="mr-2 h-4 w-4" />
             <span>Profile (Soon)</span>
