@@ -52,6 +52,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   rolesAllowedToEditOrders: ['SYSTEM_ADMIN', 'ADMIN'],
   rolesAllowedToDeleteOrders: ['SYSTEM_ADMIN'],
   rolesAllowedToViewFinancials: ['SYSTEM_ADMIN', 'ADMIN'],
+  isPaymentValidationEnabled: true, // New setting default
   toastSoundUrl: DEFAULT_TOAST_SOUND_URL,
   leaderboardBackgroundImageUrl: DEFAULT_LEADERBOARD_BACKGROUND_URL,
   expenseLoggingPermissions: DEFAULT_EXPENSE_LOGGING_PERMISSIONS,
@@ -102,6 +103,7 @@ export async function getGlobalSettings(): Promise<GlobalSettings> {
         rolesAllowedToEditOrders: data.rolesAllowedToEditOrders ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToEditOrders,
         rolesAllowedToDeleteOrders: data.rolesAllowedToDeleteOrders ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToDeleteOrders,
         rolesAllowedToViewFinancials: data.rolesAllowedToViewFinancials ?? DEFAULT_GLOBAL_SETTINGS.rolesAllowedToViewFinancials,
+        isPaymentValidationEnabled: data.isPaymentValidationEnabled ?? DEFAULT_GLOBAL_SETTINGS.isPaymentValidationEnabled,
         toastSoundUrl: data.toastSoundUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.toastSoundUrl : data.toastSoundUrl,
         leaderboardBackgroundImageUrl: data.leaderboardBackgroundImageUrl === undefined ? DEFAULT_GLOBAL_SETTINGS.leaderboardBackgroundImageUrl : data.leaderboardBackgroundImageUrl,
         expenseLoggingPermissions: fullExpensePerms,
@@ -261,6 +263,26 @@ export async function setRolesAllowedToViewFinancials(roles: UserRole[]): Promis
     return true;
   } catch (error) {
     console.error("Error setting roles allowed to view financials:", error);
+    return false;
+  }
+}
+
+export async function setPaymentValidationStatus(enabled: boolean): Promise<boolean> {
+  try {
+    const settingsDocRef = doc(db, GLOBAL_SETTINGS_COLLECTION, MAIN_SETTINGS_DOC_ID);
+    const docSnap = await getDoc(settingsDocRef);
+    if (docSnap.exists()) {
+      await updateDoc(settingsDocRef, { isPaymentValidationEnabled: enabled });
+    } else {
+      const initialData: GlobalSettings = {
+        ...DEFAULT_GLOBAL_SETTINGS,
+        isPaymentValidationEnabled: enabled
+      };
+      await setDoc(settingsDocRef, initialData);
+    }
+    return true;
+  } catch (error) {
+    console.error("Error setting payment validation status:", error);
     return false;
   }
 }

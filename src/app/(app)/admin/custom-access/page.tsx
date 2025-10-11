@@ -21,14 +21,16 @@ import {
   updateProjectStageAccessAction,
   updatePipelineAccessAction,
   updateLeadCategoryAccessAction,
+  updatePaymentValidationAction, // Import new action
 } from '../crm-target-settings/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban, ChevronsUpDown, CheckIcon, Search } from 'lucide-react';
+import { RefreshCw, UserCheck, Trash2, DollarSign, Briefcase, Shield, Filter, FolderKanban, ChevronsUpDown, CheckIcon, Search, CreditCard } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch'; // Import Switch
 
 const EDITABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'];
 const DELETABLE_ROLES_FOR_ORDERS: UserRole[] = ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'LR'];
@@ -49,6 +51,7 @@ export default function CustomAccessPage() {
   const [projectStageAccess, setProjectStageAccess] = useState<Record<ProjectStatusType, UserRole[]>>({} as Record<ProjectStatusType, UserRole[]>);
   const [leadCategoryAccess, setLeadCategoryAccess] = useState<Record<LeadCategory, LeadCategoryAccessSettings>>({} as Record<LeadCategory, LeadCategoryAccessSettings>);
   const [pipelineAccess, setPipelineAccess] = useState<Set<string>>(new Set());
+  const [isPaymentValidationEnabled, setIsPaymentValidationEnabled] = useState(true); // New state for payment validation
   const [crmUsers, setCrmUsers] = useState<User[]>([]);
   const [crmSearchTerm, setCrmSearchTerm] = useState('');
 
@@ -56,6 +59,7 @@ export default function CustomAccessPage() {
   const [isSubmittingOrderEditing, setIsSubmittingOrderEditing] = useState(false);
   const [isSubmittingOrderDeletion, setIsSubmittingOrderDeletion] = useState(false);
   const [isSubmittingFinancialVisibility, setIsSubmittingFinancialVisibility] = useState(false);
+  const [isSubmittingPaymentValidation, setIsSubmittingPaymentValidation] = useState(false); // New state for submitting payment validation
   const [isSubmittingProjectStageAccess, setIsSubmittingProjectStageAccess] = useState(false);
   const [isSubmittingLeadCategoryAccess, setIsSubmittingLeadCategoryAccess] = useState(false);
   const [isSubmittingPipelineAccess, setIsSubmittingPipelineAccess] = useState(false);
@@ -76,6 +80,7 @@ export default function CustomAccessPage() {
       setProjectStageAccess(globalSettings.projectStageAccess || ({} as Record<ProjectStatusType, UserRole[]>));
       setLeadCategoryAccess(globalSettings.leadCategoryAccess || ({} as Record<LeadCategory, LeadCategoryAccessSettings>));
       setPipelineAccess(new Set(globalSettings.pipelineAccess?.canViewAllLeads ?? []));
+      setIsPaymentValidationEnabled(globalSettings.isPaymentValidationEnabled ?? true); // Fetch new setting
       setCrmUsers(allUsers.filter(u => u.role === 'CRM'));
     } catch (error) {
       console.error("Error fetching settings:", error);
@@ -124,6 +129,18 @@ export default function CustomAccessPage() {
     if (result.success) toast({ title: "Permissions Updated", description: "Financial visibility permissions saved." });
     else toast({ title: "Update Failed", description: result.error, variant: "destructive" });
     setIsSubmittingFinancialVisibility(false);
+  };
+  
+  const handleTogglePaymentValidation = async (enabled: boolean) => {
+    setIsSubmittingPaymentValidation(true);
+    const result = await updatePaymentValidationAction(enabled);
+    if (result.success) {
+        setIsPaymentValidationEnabled(enabled);
+        toast({ title: "Settings Updated", description: `Payment validation is now ${enabled ? 'enabled' : 'disabled'}.` });
+    } else {
+        toast({ title: "Update Failed", description: result.error || "Could not update payment validation setting.", variant: "destructive" });
+    }
+    setIsSubmittingPaymentValidation(false);
   };
 
   const handleProjectStageAccessChange = (stage: ProjectStatusType, role: UserRole, checked: boolean | "indeterminate") => {
@@ -265,25 +282,53 @@ export default function CustomAccessPage() {
         </Card>
       </div>
       
-      <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
-          <CardHeader className="border-b p-5">
-            <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><DollarSign className="h-6 w-6 text-primary" /> Financial Visibility Permissions</CardTitle>
-            <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which roles can see price and payment details on tracking pages.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-6">
-            {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
-              : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                  {FINANCIAL_VISIBILITY_ROLES.map((role) => (<div key={`role-financial-perm-${role}`} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
-                      <Checkbox id={`role-financial-perm-${role}`} checked={rolesAllowedToViewFinancials.has(role)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToViewFinancials, role, checked)} disabled={isSubmittingFinancialVisibility}/>
-                      <Label htmlFor={`role-financial-perm-${role}`} className="text-sm font-medium leading-none cursor-pointer">{role.replace(/_/g, ' ')}</Label></div>))}
-                </div>}
-          </CardContent>
-           <CardFooter className="border-t p-5 flex justify-end">
-            <Button onClick={handleSaveFinancialVisibilityPermissions} disabled={isLoading || isSubmittingFinancialVisibility}>
-                {isSubmittingFinancialVisibility ? "Saving..." : "Save Financial Permissions"}
-            </Button>
-          </CardFooter>
+       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+            <CardHeader className="border-b p-5">
+                <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><DollarSign className="h-6 w-6 text-primary" /> Financial Visibility</CardTitle>
+                <CardDescription className="text-muted-foreground text-sm mt-0.5">Define which roles can see price and payment details on tracking pages.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+                {isLoading ? <div className="space-y-4">{[...Array(3)].map((_, i) => <div key={i} className="flex items-center space-x-2"><Skeleton className="h-5 w-5 rounded" /><Skeleton className="h-5 w-52 rounded" /></div>)}</div>
+                : <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-x-6 gap-y-4">
+                    {FINANCIAL_VISIBILITY_ROLES.map((role) => (<div key={`role-financial-perm-${role}`} className="flex items-center space-x-3 p-2.5 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                        <Checkbox id={`role-financial-perm-${role}`} checked={rolesAllowedToViewFinancials.has(role)} onCheckedChange={(checked) => handleRolePermissionChange(setRolesAllowedToViewFinancials, role, checked)} disabled={isSubmittingFinancialVisibility}/>
+                        <Label htmlFor={`role-financial-perm-${role}`} className="text-sm font-medium leading-none cursor-pointer">{role.replace(/_/g, ' ')}</Label></div>))}
+                    </div>}
+            </CardContent>
+            <CardFooter className="border-t p-5 flex justify-end">
+                <Button onClick={handleSaveFinancialVisibilityPermissions} disabled={isLoading || isSubmittingFinancialVisibility}>
+                    {isSubmittingFinancialVisibility ? "Saving..." : "Save Financial Permissions"}
+                </Button>
+            </CardFooter>
         </Card>
+
+        <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
+            <CardHeader className="border-b p-5">
+                <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><CreditCard className="h-6 w-6 text-primary" /> Payment Validation</CardTitle>
+                <CardDescription className="text-muted-foreground text-sm mt-0.5">Enable or disable the 45% payment check before moving projects to Logistics.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+                {isLoading ? (
+                    <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30"><Skeleton className="h-5 w-48 rounded" /><Skeleton className="h-6 w-12 rounded-full" /></div>
+                ) : (
+                    <div className="flex items-center justify-between space-x-2 p-3 rounded-md border border-border/30 hover:bg-muted/50 transition-colors">
+                        <Label htmlFor="paymentValidationSwitch" className="flex flex-col space-y-1 cursor-pointer">
+                            <span>Enforce 45% Payment for Logistics</span>
+                            <span className="font-normal leading-snug text-muted-foreground text-xs">If disabled, this check will be skipped.</span>
+                        </Label>
+                        <Switch
+                            id="paymentValidationSwitch"
+                            checked={isPaymentValidationEnabled}
+                            onCheckedChange={handleTogglePaymentValidation}
+                            disabled={isSubmittingPaymentValidation}
+                            aria-label="Toggle payment validation enforcement"
+                        />
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+      </div>
 
       <Card className="shadow-lg border bg-card rounded-lg overflow-hidden">
         <CardHeader className="border-b p-5" onDoubleClick={() => setIsLeadCategoryAccessVisible(prev => !prev)}>

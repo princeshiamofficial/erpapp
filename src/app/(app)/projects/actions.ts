@@ -5,7 +5,7 @@
 import { revalidatePath } from "next/cache";
 import type { Project, ProjectStatusType, User, OrderLogEntry } from "@/types";
 import { updateProjectStatus as updateProjectStatusInDb } from '@/lib/project-service';
-import { getOrderById, updateOrder, autoSettleOrderIfDelivered, unsettleOrderPayment, addShippedOrderEntry, deleteShippedOrderEntry } from "@/lib/order-service"; 
+import { getOrderById, updateOrder, autoSettleOrderIfDelivered, unsettleOrderPayment, addShippedOrderEntry, deleteShippedOrderEntry } from '@/lib/order-service'; 
 import { CANCELLED_STATUS_ID, ON_HOLD_STATUS_ID, LOGISTICS_STATUS_ID, SHIPPED_STATUS_ID, DELIVERED_STATUS_ID, ORDER_SUBMITTED_ID, READY_FOR_DESIGN_STATUS_ID } from '@/lib/status-service'; 
 import { v4 as uuidv4 } from 'uuid'; 
 import { getGlobalSettings } from '@/lib/settings-service';
@@ -35,6 +35,23 @@ export async function updateProjectStatusAction(
       }
     }
     
+    // New validation logic for "Logistics" stage based on global setting
+    if (newStatus === 'Logistics' && settings.isPaymentValidationEnabled && currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
+      const orderForValidation = await getOrderById(project.id);
+      if (orderForValidation) {
+        const orderSubtotal = (orderForValidation.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+        const effectiveDiscount = orderForValidation.specialClientDiscount || 0;
+        const netPayable = orderSubtotal - effectiveDiscount;
+        const totalAdvancePaid = (orderForValidation.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
+        const paymentPercentage = netPayable > 0 ? (totalAdvancePaid / netPayable) * 100 : 100;
+        if (paymentPercentage < 45) {
+          setPaymentValidationError(`Payment is only ${paymentPercentage.toFixed(1)}%. At least 45% is required to move to Logistics.`);
+          return { success: false, error: `Payment is only ${paymentPercentage.toFixed(1)}%. At least 45% is required.` };
+        }
+      }
+    }
+
+
     const originalStatus = project.status; // Capture original status before update
     const projectUpdateSuccess = await updateProjectStatusInDb(project.id, newStatus, project);
     if (!projectUpdateSuccess) {

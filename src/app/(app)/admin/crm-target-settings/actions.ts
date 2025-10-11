@@ -14,10 +14,11 @@ import {
   setExpenseLoggingPermissions, 
   setProjectStageAccess, 
   setMaintenanceMode,
-  setDrAssignmentNotificationTemplates, // New
+  setDrAssignmentNotificationTemplates,
   setRoleBasedTargets,
   setPipelineAccess,
   setLeadCategoryAccess,
+  setPaymentValidationStatus, // Import new service function
 } from "@/lib/settings-service";
 import type { UserRole, User, ExpenseLoggingPermissions, ProjectStatusType, RoleBasedTarget, PipelineAccessSettings, LeadCategory, LeadCategoryAccessSettings } from "@/types"; 
 import { adminApp } from '@/lib/firebase-admin';
@@ -98,6 +99,21 @@ export async function updateRolesAllowedToViewFinancialsAction(roles: UserRole[]
     return { success: false, error: "Failed to update financial visibility permissions in database." };
   } catch (error) {
     console.error("Error in updateRolesAllowedToViewFinancialsAction:", error);
+    return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
+  }
+}
+
+export async function updatePaymentValidationAction(enabled: boolean): Promise<{ success: boolean; error?: string }> {
+  try {
+    const success = await setPaymentValidationStatus(enabled);
+    if (success) {
+      revalidatePath("/(app)/admin/custom-access");
+      revalidatePath("/(app)/projects");
+      return { success: true };
+    }
+    return { success: false, error: "Failed to update payment validation setting in database." };
+  } catch (error) {
+    console.error("Error in updatePaymentValidationAction:", error);
     return { success: false, error: error instanceof Error ? error.message : "An unexpected error occurred." };
   }
 }

@@ -253,6 +253,7 @@ export interface GlobalSettings {
   rolesAllowedToEditOrders?: UserRole[];
   rolesAllowedToDeleteOrders?: UserRole[];
   rolesAllowedToViewFinancials?: UserRole[];
+  isPaymentValidationEnabled?: boolean; // New setting
   toastSoundUrl?: string | null;
   leaderboardBackgroundImageUrl?: string | null;
   leaderboardThemeSettings?: LeaderboardThemeSettings | null;
