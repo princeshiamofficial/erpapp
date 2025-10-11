@@ -4,6 +4,7 @@
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 import { app } from '@/lib/firebase'; 
 import { toast } from '@/hooks/use-toast';
+import { storeUserFCMTokenAction } from '@/app/(app)/users/actions';
 
 export const requestNotificationPermission = async (): Promise<NotificationPermission | null> => {
   console.log("[NotificationUtils] requestNotificationPermission called");
@@ -65,7 +66,7 @@ export const initializeFCM = async (): Promise<string | null> => {
     const activeSwRegistration = await navigator.serviceWorker.ready; 
     console.log("[NotificationUtils] Service worker is active and ready. Active SW Registration:", activeSwRegistration);
     
-    const VAPID_KEY = "BCEAg-Aq5Kb_qJ_9VQNYrMJ2uLC1Aht5gsqfSjfnYkIVjCLAD6Y-HwALizBLvoPT--UApnUeSmr8K1Qc5BcIvrs"; 
+    const VAPID_KEY = "BMmAKwUdHqgZl3RoxiEl36O8f_tNusP9JF8daxFJ99CTMjH1VGmLv7ctXnTcSeUKxRcWdbzhrkh2GPtY9Gw2R04";
     console.log("[NotificationUtils] Attempting to get FCM token using active SW registration and VAPID key.");
 
     const currentToken = await getToken(fcmMessaging, {
@@ -78,7 +79,7 @@ export const initializeFCM = async (): Promise<string | null> => {
       // No toast here for successful token acquisition as it's a common operation
     } else {
       console.warn('[NotificationUtils] No registration token available. Check VAPID key in Firebase project and SW console for errors. Ensure SW is active.');
-      toast({ title: "Notification Token Error", description: "Could not get notification token. Check VAPID key & SW. See console for details.", variant: "destructive", duration: 10000 });
+      // toast({ title: "Notification Token Error", description: "Could not get notification token. Check VAPID key & SW. See console for details.", variant: "destructive", duration: 10000 });
       return null;
     }
 
@@ -142,11 +143,11 @@ export const initializeFCM = async (): Promise<string | null> => {
          .then(() => console.log("[NotificationUtils] Foreground notification shown via SW registration successfully."))
          .catch(err => {
             console.error("[NotificationUtils] Error showing foreground notification via SW registration:", err);
-            toast({ title: "Notif Display Error", description: `FG (SW Show): ${err.message}`, variant: "destructive" });
+            toast({ title: "Notif Display Error", description: `FG (SW Show): ${''+err.message}`, variant: "destructive" });
          });
       }).catch(err => {
         console.error("[NotificationUtils] Error getting SW registration for foreground notification display:", err);
-        toast({ title: "SW Reg Error", description: `FG (SW Ready): ${err.message}`, variant: "destructive" });
+        toast({ title: "SW Reg Error", description: `FG (SW Ready): ${''+err.message}`, variant: "destructive" });
       });
 
       // This toast is for app-level feedback, separate from the actual system notification.
@@ -162,7 +163,7 @@ export const initializeFCM = async (): Promise<string | null> => {
     console.error('[NotificationUtils] FATAL Error during FCM Initialization:', error);
     let description = "Could not set up push notifications. Check console for detailed error.";
     if (error.name === 'InvalidStateError' && error.message.includes('PushManager')) {
-        description = "PushManager Invalid State: Possible inactive SW or VAPID key. Ensure provided VAPID key is correct.";
+        description = `PushManager Invalid State: Possible inactive SW or VAPID key. Ensure provided VAPID key is correct. Error: ${error.message}`;
     } else if (error.code === 'messaging/failed-service-worker-registration' || (error.message && (error.message.includes('ServiceWorker script evaluation failed') || error.message.includes("Failed to register a ServiceWorker")) ) ) {
         description = "Service Worker Reg/Eval Failed: '/firebase-messaging-sw.js' issue. Check SW console & config.";
     } else if (error.code === 'messaging/invalid-vapid-key' || (error.message && (error.message.toLowerCase().includes('applicationserverkey') || error.message.toLowerCase().includes('vapid key')))) {
@@ -176,7 +177,8 @@ export const initializeFCM = async (): Promise<string | null> => {
     } else if (error.message) {
         description = `Error: ${error.message} (Code: ${error.code || 'N/A'})`;
     }
-    toast({ title: "FCM Setup Error", description: description, variant: "destructive", duration: 25000 });
+    // We cannot use the useToast hook here. The caller should handle displaying this error.
+    console.error("FCM Setup Error:", description);
     return null;
   }
 };
