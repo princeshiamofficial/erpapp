@@ -11,7 +11,8 @@ import {
   PauseCircle,
   Truck,
   CheckCircle,
-  PackageCheck
+  PackageCheck,
+  AlertTriangle
 } from 'lucide-react'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,6 +45,9 @@ import type { TrackingLink } from '@/types';
 import { Briefcase } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { KanbanColumn } from './KanbanColumn';
+import { getOrderById } from '@/lib/order-service';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
+
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
 const ProjectCard = dynamic(() => import('@/components/projects/ProjectCard').then(mod => mod.ProjectCard), {
@@ -114,6 +118,7 @@ export function ProjectsKanbanClient() {
   
   const [projectForLogistics, setProjectForLogistics] = useState<Project | null>(null);
   const [isLogisticsConfirmDialogOpen, setIsLogisticsConfirmDialogOpen] = useState(false);
+  const [paymentValidationError, setPaymentValidationError] = useState<string | null>(null);
 
 
   const sensors = useSensors(
@@ -277,60 +282,84 @@ export function ProjectsKanbanClient() {
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     setActiveProject(null);
     const { active, over } = event;
-
+  
     if (!currentUser) {
       toast({ title: "Authentication Error", description: "Cannot update project, user not authenticated.", variant: "destructive" });
       return;
     }
-
+  
     if (!over || !active.data.current?.project) {
       return;
     }
-
+  
     const project = active.data.current.project as Project;
     const newStatus = over.id as ProjectStatusType;
     const originalStatus = project.status;
-
+  
     if (newStatus === originalStatus) {
       return;
     }
-    
+  
     if (currentUser.role !== 'SYSTEM_ADMIN' && globalSettings) {
-        const permissions = globalSettings.projectStageAccess;
-        if (permissions && permissions[newStatus] && !permissions[newStatus].includes(currentUser.role)) {
-            toast({
-                title: "Permission Denied",
-                description: `You do not have permission to move projects to the '${newStatus}' stage.`,
-                variant: "destructive"
-            });
-            return;
-        }
+      const permissions = globalSettings.projectStageAccess;
+      if (permissions && permissions[newStatus] && !permissions[newStatus].includes(currentUser.role)) {
+        toast({
+          title: "Permission Denied",
+          description: `You do not have permission to move projects to the '${newStatus}' stage.`,
+          variant: "destructive"
+        });
+        return;
+      }
     }
-
-
+  
+    // New validation logic for "Logistics" stage
+    if (newStatus === 'Logistics' && currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
+      setIsLoading(true);
+      const order = await getOrderById(project.id);
+      setIsLoading(false);
+  
+      if (!order) {
+        toast({ title: "Error", description: "Could not retrieve order details for validation.", variant: "destructive" });
+        return;
+      }
+  
+      const orderSubtotal = (order.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+      const effectiveDiscount = order.specialClientDiscount || 0;
+      const netPayable = orderSubtotal - effectiveDiscount;
+      const totalAdvancePaid = (order.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
+      const paymentPercentage = netPayable > 0 ? (totalAdvancePaid / netPayable) * 100 : 100;
+  
+      if (paymentPercentage < 45) {
+        setPaymentValidationError(`Payment is only ${paymentPercentage.toFixed(1)}%. At least 45% is required to move to Logistics.`);
+        // The server action for push notification is not needed here as per the prompt.
+        // The logic for notifications should be self-contained if required.
+        return; 
+      }
+    }
+  
+    // Existing checks
     if (newStatus === 'On Design' && !project.designerRepresentativeId) {
       handleOpenAssignDrDialog(project);
       return;
     }
     
     if (newStatus === 'On Hold') {
-        setProjectToHold(project);
-        setIsHoldReasonDialogOpen(true);
-        return;
+      setProjectToHold(project);
+      setIsHoldReasonDialogOpen(true);
+      return;
     }
-
+  
     if (newStatus === 'Logistics') {
-        setProjectForLogistics(project);
-        setIsLogisticsConfirmDialogOpen(true);
-        return;
+      setProjectForLogistics(project);
+      setIsLogisticsConfirmDialogOpen(true);
+      return;
     }
     
     if (newStatus === 'Courier') {
       setProjectToCourier(project);
       return;
     }
-
-    // Optimistically update the UI for other statuses
+  
     handleConfirmStatusUpdate(project, newStatus);
   }, [currentUser, globalSettings, toast, handleConfirmStatusUpdate]);
   
@@ -529,6 +558,28 @@ export function ProjectsKanbanClient() {
             }}
           />
       )}
+
+      {paymentValidationError && (
+        <AlertDialog open={!!paymentValidationError} onOpenChange={() => setPaymentValidationError(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                        <AlertTriangle className="h-6 w-6 text-destructive" />
+                        Payment Incomplete
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                        {paymentValidationError}
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogAction onClick={() => setPaymentValidationError(null)}>
+                        OK
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+      )}
+
     </DndContext>
   );
 }
