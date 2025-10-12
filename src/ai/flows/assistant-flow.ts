@@ -35,9 +35,11 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
     tools: [orderSearchTool],
   });
 
-  const toolResponse = llmResponse.toolRequest();
-  if (toolResponse) {
-    const toolResult = await toolResponse.run();
+  const toolRequests = llmResponse.toolRequests;
+  if (toolRequests && toolRequests.length > 0) {
+    const toolRequest = toolRequests[0]; // Handle the first tool request
+    const toolResult = await toolRequest.run();
+    
     const secondResponse = await ai.generate({
         prompt: input.query,
         tools: [orderSearchTool],
