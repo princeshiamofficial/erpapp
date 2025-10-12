@@ -717,9 +717,14 @@ export default function VendorsPage() {
                           <CardTitle className="text-xl font-bold text-gray-800">Bill Reports</CardTitle>
                           <CardDescription>View and analyze billing reports.</CardDescription>
                       </div>
-                       <Button className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground" onClick={handleOpenAddBillReportDialog}>
-                          <PlusCircle className="mr-2 h-4 w-4" /> Add New
-                       </Button>
+                       <div className="flex items-center gap-2">
+                            <Button className="h-10 rounded-full" onClick={handleOpenAddBillDialog}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Bill
+                            </Button>
+                            <Button className="h-10 rounded-full" onClick={handleOpenAddBillReportDialog}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Payment
+                            </Button>
+                       </div>
                   </CardHeader>
                   <CardContent>
                       {isLoading ? <Skeleton className="h-64 w-full" /> : reportsByVendor.length > 0 ? (
@@ -750,7 +755,7 @@ export default function VendorsPage() {
                                   </div>
                                   </AccordionTrigger>
                                   <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
-                                      <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
                                         <div className="space-y-2">
                                           <h4 className="font-semibold text-sm border-b pb-1">Billing</h4>
                                           <Table>
@@ -966,3 +971,5 @@ export default function VendorsPage() {
     </>
   );
 }
+
+    
