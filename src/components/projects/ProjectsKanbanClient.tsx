@@ -338,8 +338,6 @@ export function ProjectsKanbanClient() {
   
       if (paymentPercentage < 45) {
         setPaymentValidationError(`Payment is only ${paymentPercentage.toFixed(1)}%. At least 45% is required to move to Logistics.`);
-        // The server action for push notification is not needed here as per the prompt.
-        // The logic for notifications should be self-contained if required.
         return; 
       }
     }
@@ -421,7 +419,6 @@ export function ProjectsKanbanClient() {
   if (isLoading) {
     return <KanbanSkeleton />;
   }
-
 
   return (
     <DndContext 
@@ -586,9 +583,6 @@ export function ProjectsKanbanClient() {
             </AlertDialogContent>
         </AlertDialog>
       )}
-
     </DndContext>
   );
 }
-
-```
