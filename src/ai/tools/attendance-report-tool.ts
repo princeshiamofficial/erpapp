@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A Genkit tool for generating attendance reports.
@@ -20,7 +21,10 @@ import {
   endOfYear, 
   parseISO,
   differenceInDays,
-  isSameDay
+  isSameDay,
+  startOfDay, // Missing import
+  endOfDay,   // Missing import
+  format      // Missing import
 } from 'date-fns';
 
 const DateRangeEnum = z.enum(['today', 'yesterday', 'last7days', 'last30days', 'thisWeek', 'lastWeek', 'thisMonth', 'lastMonth', 'thisYear', 'lastYear']);
@@ -71,7 +75,7 @@ export const attendanceReportTool = ai.defineTool(
 
       const monthsToFetch = new Set<string>();
       let tempDate = startOfMonth(startDate);
-      while (tempDate <= endOfMonth(endDate)) {
+      while (tempDate <= endDate) {
         monthsToFetch.add(format(tempDate, 'yyyy-MM'));
         tempDate = new Date(tempDate.getFullYear(), tempDate.getMonth() + 1, 1);
       }
