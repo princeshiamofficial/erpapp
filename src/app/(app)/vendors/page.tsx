@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -749,7 +750,7 @@ export default function VendorsPage() {
                                        </div>
                                   </div>
                                   </AccordionTrigger>
-                                  <AccordionContent className="px-4 pt-0 pb-4">
+                                  <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
                                       <div className="grid grid-cols-2 gap-x-8 gap-y-4">
                                         <div className="space-y-2">
                                           <h4 className="font-semibold text-sm border-b pb-1">Billing</h4>
@@ -759,6 +760,7 @@ export default function VendorsPage() {
                                                       <TableHead>Date</TableHead>
                                                       <TableHead>Invoice ID</TableHead>
                                                       <TableHead className="text-right">Amount</TableHead>
+                                                      <TableHead className="text-right">Action</TableHead>
                                                   </TableRow>
                                               </TableHeader>
                                               <TableBody>
@@ -767,6 +769,15 @@ export default function VendorsPage() {
                                                           <TableCell>{formatDate(report.date)}</TableCell>
                                                           <TableCell>{report.invoiceId}</TableCell>
                                                           <TableCell className="text-right">{formatCurrency(report.amount)}</TableCell>
+                                                           <TableCell className="text-right">
+                                                            <DropdownMenu>
+                                                              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                              <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem onSelect={() => handleOpenEditReportDialog(report)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                                                <DropdownMenuItem onSelect={() => setReportToDelete(report)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                                                              </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                          </TableCell>
                                                       </TableRow>
                                                   ))}
                                               </TableBody>
@@ -781,7 +792,6 @@ export default function VendorsPage() {
                                                       <TableHead>Date</TableHead>
                                                       <TableHead>Method</TableHead>
                                                       <TableHead className="text-right">Payment</TableHead>
-                                                      <TableHead className="text-right">Action</TableHead>
                                                   </TableRow>
                                               </TableHeader>
                                               <TableBody>
@@ -790,15 +800,6 @@ export default function VendorsPage() {
                                                           <TableCell>{formatDate(report.date)}</TableCell>
                                                           <TableCell>{report.method}</TableCell>
                                                           <TableCell className="text-right">{formatCurrency(report.payment)}</TableCell>
-                                                          <TableCell className="text-right">
-                                                            <DropdownMenu>
-                                                              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                                                              <DropdownMenuContent align="end">
-                                                                <DropdownMenuItem onSelect={() => handleOpenEditReportDialog(report)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
-                                                                <DropdownMenuItem onSelect={() => setReportToDelete(report)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
-                                                              </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                          </TableCell>
                                                       </TableRow>
                                                   ))}
                                               </TableBody>
