@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -24,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { addBillPaymentAction } from '@/app/(app)/vendors/actions';
 import { updateBillReport } from '@/lib/bill-report-service';
+
 
 interface AddEditBillPaymentDialogProps {
   isOpen: boolean;
@@ -157,7 +157,7 @@ export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors
           </div>
            <div className="space-y-1">
             <Label htmlFor="payment">Payment Amount *</Label>
-            <Input id="payment" type="number" value={payment} onChange={e => setPayment(e.target.value)} required min="0.01"/>
+            <Input id="payment" type="number" value={payment} onChange={e => setPayment(e.target.value)} required min="0.01" step="any"/>
           </div>
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
