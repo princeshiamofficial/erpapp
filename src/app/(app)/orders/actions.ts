@@ -369,9 +369,8 @@ export async function updateOrderAction(
                 projectUpdates.designerRepresentativeName = finalUpdates.designerRepresentativeName;
                 projectUpdates.designerRepresentativeAvatarUrl = null;
             }
-            projectUpdates.updatedAt = new Date().toISOString();
             
-            if(Object.keys(projectUpdates).length > 1) {
+            if(Object.keys(projectUpdates).length > 0) {
                  const payload = { data: { ...project.data, ...projectUpdates }};
                  await fetchFromApiV3(`collections/projects/documents/${orderId}`, {
                     method: 'PUT',
