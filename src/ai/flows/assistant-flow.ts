@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { orderSearchTool } from '@/ai/tools/order-search-tool';
 import { salesReportTool } from '@/ai/tools/sales-report-tool';
 import { userSearchTool } from '@/ai/tools/user-search-tool';
-import { attendanceReportTool } from '@/ai/tools/attendance-report-tool'; // Import new tool
+import { attendanceReportTool } from '@/ai/tools/attendance-report-tool';
 import { salarySheetTool } from '@/ai/tools/salary-sheet-tool';
 
 export type AssistantInput = z.infer<typeof AssistantInputSchema>;
@@ -43,7 +43,7 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
       
   const llmResponse = await ai.generate({
     prompt: `${systemPrompt}\n\nUser query: ${input.query}`,
-    tools: [orderSearchTool, salesReportTool, userSearchTool, attendanceReportTool, salarySheetTool], // Add new tool
+    tools: [orderSearchTool, salesReportTool, userSearchTool, attendanceReportTool, salarySheetTool],
   });
 
   const toolRequests = llmResponse.toolRequests;
@@ -53,7 +53,7 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
     
     const secondResponse = await ai.generate({
         prompt: input.query,
-        tools: [orderSearchTool, salesReportTool, userSearchTool, attendanceReportTool, salarySheetTool], // Add new tool
+        tools: [orderSearchTool, salesReportTool, userSearchTool, attendanceReportTool, salarySheetTool],
         history: [
             llmResponse.request,
             llmResponse.response,

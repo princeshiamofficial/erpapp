@@ -7,16 +7,28 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { getEmployees } from '@/lib/employee-service';
 import { getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
-import { format, parse, isValid, startOfMonth, subMonths } from 'date-fns';
+import { 
+  format, 
+  startOfMonth, 
+  subMonths, 
+  startOfToday,
+  subDays,
+  startOfWeek,
+  endOfWeek,
+  endOfMonth,
+  startOfYear,
+  endOfYear,
+  endOfDay
+} from 'date-fns';
 
-const MonthEnum = z.enum(['thisMonth', 'lastMonth']);
+const DateRangeEnum = z.enum(['today', 'yesterday', 'last7days', 'last30days', 'thisWeek', 'lastWeek', 'thisMonth', 'lastMonth', 'thisYear', 'lastYear']);
 
 export const salarySheetTool = ai.defineTool(
   {
     name: 'salarySheetTool',
     description: 'Generates a salary sheet for all employees for a given month. Use this for queries like "generate the salary sheet for this month" or "show me last month\'s salary sheet".',
     inputSchema: z.object({
-      month: MonthEnum.describe('The month for the report, e.g., "thisMonth" or "lastMonth".'),
+      dateRange: DateRangeEnum.describe('The date range for the report. For salary sheets, this will be interpreted as the month of the given range (e.g., "last7days" will use the current month).'),
     }),
     outputSchema: z.object({
       month: z.string(),
@@ -45,15 +57,26 @@ export const salarySheetTool = ai.defineTool(
         const now = new Date();
         let targetDate: Date;
 
-        switch(input.month) {
-            case 'thisMonth':
-                targetDate = startOfMonth(now);
-                break;
+        // Interpret the date range to determine the target month
+        switch(input.dateRange) {
             case 'lastMonth':
                 targetDate = startOfMonth(subMonths(now, 1));
                 break;
+            case 'lastYear':
+                 targetDate = startOfYear(subDays(now, 365));
+                 break;
+            // All other ranges default to the current month's salary sheet
+            case 'today':
+            case 'yesterday':
+            case 'last7days':
+            case 'last30days':
+            case 'thisWeek':
+            case 'lastWeek':
+            case 'thisMonth':
+            case 'thisYear':
             default:
-                throw new Error('Invalid month specified for salary sheet.');
+                targetDate = startOfMonth(now);
+                break;
         }
 
         const monthStr = format(targetDate, 'yyyy-MM');
