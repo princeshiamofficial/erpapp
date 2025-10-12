@@ -3,3 +3,5 @@ import './flows/assistant-flow';
 import './tools/order-search-tool';
 import './tools/sales-report-tool';
 import './tools/user-search-tool';
+import './tools/attendance-report-tool';
+import './tools/salary-sheet-tool.ts';
