@@ -7,14 +7,16 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { getEmployees } from '@/lib/employee-service';
 import { getSalarySheetForMonth } from '@/app/(app)/payroll/actions';
-import { format, parse, isValid } from 'date-fns';
+import { format, parse, isValid, startOfMonth, subMonths } from 'date-fns';
+
+const MonthEnum = z.enum(['thisMonth', 'lastMonth']);
 
 export const salarySheetTool = ai.defineTool(
   {
     name: 'salarySheetTool',
-    description: 'Generates a salary sheet for all employees for a given month and year. Use this for queries like "generate the salary sheet for June 2024".',
+    description: 'Generates a salary sheet for all employees for a given month. Use this for queries like "generate the salary sheet for this month" or "show me last month\'s salary sheet".',
     inputSchema: z.object({
-      monthYear: z.string().describe('The month and year for the report in "Month YYYY" format, e.g., "June 2024".'),
+      month: MonthEnum.describe('The month for the report, e.g., "thisMonth" or "lastMonth".'),
     }),
     outputSchema: z.object({
       month: z.string(),
@@ -40,11 +42,21 @@ export const salarySheetTool = ai.defineTool(
   },
   async (input) => {
     try {
-        const parsedDate = parse(input.monthYear, 'MMMM yyyy', new Date());
-        if (!isValid(parsedDate)) {
-            throw new Error('Invalid date format. Please use "Month YYYY", e.g., "June 2024".');
+        const now = new Date();
+        let targetDate: Date;
+
+        switch(input.month) {
+            case 'thisMonth':
+                targetDate = startOfMonth(now);
+                break;
+            case 'lastMonth':
+                targetDate = startOfMonth(subMonths(now, 1));
+                break;
+            default:
+                throw new Error('Invalid month specified for salary sheet.');
         }
-        const monthStr = format(parsedDate, 'yyyy-MM');
+
+        const monthStr = format(targetDate, 'yyyy-MM');
         
         const [allEmployees, salarySheet] = await Promise.all([
             getEmployees(),
@@ -102,7 +114,7 @@ export const salarySheetTool = ai.defineTool(
         });
 
         return {
-            month: format(parsedDate, 'MMMM yyyy'),
+            month: format(targetDate, 'MMMM yyyy'),
             report,
             totals: {
                 totalPayable,
