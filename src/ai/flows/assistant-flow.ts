@@ -7,6 +7,8 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { orderSearchTool } from '@/ai/tools/order-search-tool';
+import { salesReportTool } from '@/ai/tools/sales-report-tool';
+import { userSearchTool } from '@/ai/tools/user-search-tool';
 
 export type AssistantInput = z.infer<typeof AssistantInputSchema>;
 const AssistantInputSchema = z.object({
@@ -24,15 +26,20 @@ const AssistantOutputSchema = z.string().describe("The assistant's response.");
  */
 export async function assistant(input: AssistantInput): Promise<AssistantOutput> {
   const systemPrompt = `You are a helpful AI assistant for an application called Color Hut.
-      If the user asks about an order, use the orderSearchTool to find information.
-      When presenting order details, format it nicely. Be concise and helpful.
-      Summarize the key details of an order if found. If multiple orders are found, list them briefly.
-      If no orders are found, inform the user.
-      Do not make up information. If the tool does not provide an answer, say you cannot find the information.`;
+      You have access to several tools to get information about orders, sales reports, and users.
+      - If the user asks about a specific order, use the orderSearchTool.
+      - If the user asks for sales data, order counts, or revenue over a period of time (e.g., "today's sales", "last week's orders", "this year's revenue"), use the salesReportTool.
+      - If the user asks for information about a user, use the userSearchTool.
+      - You can also perform simple calculations and answer general knowledge questions.
+
+      When presenting details, format it nicely using Markdown. Be concise and helpful.
+      Summarize the key details. If multiple items are found, list them briefly.
+      If no information is found, inform the user.
+      Do not make up information. If a tool does not provide an answer, say you cannot find the information.`;
       
   const llmResponse = await ai.generate({
     prompt: `${systemPrompt}\n\nUser query: ${input.query}`,
-    tools: [orderSearchTool],
+    tools: [orderSearchTool, salesReportTool, userSearchTool],
   });
 
   const toolRequests = llmResponse.toolRequests;
@@ -42,7 +49,7 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
     
     const secondResponse = await ai.generate({
         prompt: input.query,
-        tools: [orderSearchTool],
+        tools: [orderSearchTool, salesReportTool, userSearchTool],
         history: [
             llmResponse.request,
             llmResponse.response,
