@@ -22,16 +22,17 @@ export type AssistantOutput = z.infer<typeof AssistantOutputSchema>;
  * @returns {Promise<AssistantOutput>} The assistant's response.
  */
 export async function assistant(input: AssistantInput): Promise<AssistantOutput> {
-  const llmResponse = await ai.generate({
-    prompt: input.query,
-    model: 'googleai/gemini-1.5-flash-latest',
-    tools: [orderSearchTool],
-    system: `You are a helpful AI assistant for an application called Color Hut.
+  const systemPrompt = `You are a helpful AI assistant for an application called Color Hut.
       If the user asks about an order, use the orderSearchTool to find information.
       When presenting order details, format it nicely. Be concise and helpful.
       Summarize the key details of an order if found. If multiple orders are found, list them briefly.
       If no orders are found, inform the user.
-      Do not make up information. If the tool does not provide an answer, say you cannot find the information.`,
+      Do not make up information. If the tool does not provide an answer, say you cannot find the information.`;
+      
+  const llmResponse = await ai.generate({
+    prompt: `${systemPrompt}\n\nUser query: ${input.query}`,
+    model: 'googleai/gemini-1.5-flash-latest',
+    tools: [orderSearchTool],
   });
 
   const toolResponse = llmResponse.toolRequest();
