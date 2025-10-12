@@ -10,7 +10,7 @@ import { orderSearchTool } from '@/ai/tools/order-search-tool';
 import { salesReportTool } from '@/ai/tools/sales-report-tool';
 import { userSearchTool } from '@/ai/tools/user-search-tool';
 import { attendanceReportTool } from '@/ai/tools/attendance-report-tool'; // Import new tool
-import { salarySheetTool } from '@/ai/tools/salary-sheet-tool';
+import { salarySheetTool } from '@/ai/tools/salary-sheet-tool.ts';
 
 export type AssistantInput = z.infer<typeof AssistantInputSchema>;
 const AssistantInputSchema = z.object({
