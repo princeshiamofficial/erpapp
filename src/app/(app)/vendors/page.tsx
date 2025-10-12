@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -792,6 +791,7 @@ export default function VendorsPage() {
                                                       <TableHead>Date</TableHead>
                                                       <TableHead>Method</TableHead>
                                                       <TableHead className="text-right">Payment</TableHead>
+                                                      <TableHead className="text-right">Action</TableHead>
                                                   </TableRow>
                                               </TableHeader>
                                               <TableBody>
@@ -800,6 +800,15 @@ export default function VendorsPage() {
                                                           <TableCell>{formatDate(report.date)}</TableCell>
                                                           <TableCell>{report.method}</TableCell>
                                                           <TableCell className="text-right">{formatCurrency(report.payment)}</TableCell>
+                                                          <TableCell className="text-right">
+                                                            <DropdownMenu>
+                                                              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                              <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem onSelect={() => handleOpenEditReportDialog(report)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                                                <DropdownMenuItem onSelect={() => setReportToDelete(report)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                                                              </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                          </TableCell>
                                                       </TableRow>
                                                   ))}
                                               </TableBody>
