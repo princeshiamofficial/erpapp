@@ -7,12 +7,12 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { orderSearchTool } from '@/ai/tools/order-search-tool';
 
-export const AssistantInputSchema = z.object({
+const AssistantInputSchema = z.object({
   query: z.string().describe('The user\'s query for the assistant.'),
 });
 export type AssistantInput = z.infer<typeof AssistantInputSchema>;
 
-export const AssistantOutputSchema = z.string().describe("The assistant's response.");
+const AssistantOutputSchema = z.string().describe("The assistant's response.");
 export type AssistantOutput = z.infer<typeof AssistantOutputSchema>;
 
 
@@ -53,7 +53,7 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
   return llmResponse.text ?? "I'm sorry, I couldn't generate a response.";
 }
 
-const assistantFlow = ai.defineFlow(
+ai.defineFlow(
   {
     name: 'assistantFlow',
     inputSchema: AssistantInputSchema,
