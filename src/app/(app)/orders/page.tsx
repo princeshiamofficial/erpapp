@@ -126,19 +126,6 @@ export default function OrdersPage() {
     setIsClient(true);
     fetchOrderData();
   }, [fetchOrderData]);
-  
-  useEffect(() => {
-    // Only set up polling if no dialogs are open
-    if (!isCreateOrderDialogOpen && !isEditOrderDialogOpen) {
-      const interval = setInterval(() => {
-        console.log("Auto-refreshing order data...");
-        fetchOrderData();
-      }, 10000); // 10 seconds
-
-      return () => clearInterval(interval);
-    }
-  }, [fetchOrderData, isCreateOrderDialogOpen, isEditOrderDialogOpen]);
-
 
   const memoizedAvailableStatusesForDialog = useMemo(() => {
     return allStatuses.filter(s => s.isVisible !== false);
