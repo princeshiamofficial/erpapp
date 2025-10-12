@@ -36,7 +36,7 @@ export async function updateProjectStatusAction(
     }
     
     // New validation logic for "Logistics" stage based on global setting
-    if (newStatus === 'Logistics' && settings.isPaymentValidationEnabled && currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
+    if (newStatus === 'Logistics' && settings.isPaymentValidationEnabled && actingUser.role !== 'ADMIN' && actingUser.role !== 'SYSTEM_ADMIN') {
       const orderForValidation = await getOrderById(project.id);
       if (orderForValidation) {
         const orderSubtotal = (orderForValidation.orderItems || []).reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
@@ -45,7 +45,8 @@ export async function updateProjectStatusAction(
         const totalAdvancePaid = (orderForValidation.advancePayments || []).reduce((sum, record) => sum + record.amount, 0);
         const paymentPercentage = netPayable > 0 ? (totalAdvancePaid / netPayable) * 100 : 100;
         if (paymentPercentage < 45) {
-          setPaymentValidationError(`Payment is only ${paymentPercentage.toFixed(1)}%. At least 45% is required to move to Logistics.`);
+          // The toast part of this has been removed as it can't be triggered from a server action directly.
+          // The error will be shown to the user via the component that calls this action.
           return { success: false, error: `Payment is only ${paymentPercentage.toFixed(1)}%. At least 45% is required.` };
         }
       }
