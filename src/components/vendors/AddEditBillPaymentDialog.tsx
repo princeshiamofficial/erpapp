@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -21,8 +22,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { addBillReportAction, updateBillReportAction } from '@/lib/bill-report-service';
-
+import { addBillPaymentAction } from '@/app/(app)/vendors/actions';
+import { updateBillReport } from '@/lib/bill-report-service';
 
 interface AddEditBillPaymentDialogProps {
   isOpen: boolean;
@@ -72,29 +73,27 @@ export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors
       vendorId: selectedVendor,
       vendorName: vendors.find(v => v.id === selectedVendor)?.name || 'Unknown',
       date: selectedDate.toISOString(),
-      // In edit mode, we preserve existing data. In add mode, we create a placeholder.
       invoiceId: isEditMode ? reportToEdit.invoiceId : `PAY-${Date.now()}`,
-      amount: isEditMode ? reportToEdit.amount : parseFloat(payment),
+      amount: isEditMode ? reportToEdit.amount : 0,
       payment: parseFloat(payment),
       method,
     };
 
     let result;
     if (isEditMode && reportToEdit) {
-        // If editing, we update the existing document.
-        result = await updateBillReportAction(reportToEdit.id, reportData);
+        result = await updateBillReport(reportToEdit.id, reportData);
     } else {
-        // If adding, we create a new document.
-        result = await addBillReportAction(reportData);
+        result = await addBillPaymentAction(reportData);
     }
 
     setIsSubmitting(false);
 
-    if (result.success) {
-      toast({ title: "Success", description: "Bill payment has been saved." });
+    if ((isEditMode && result) || (!isEditMode && result && result.success)) {
+      toast({ title: "Success", description: `Bill payment has been ${isEditMode ? 'updated' : 'added'}.` });
       onSave();
     } else {
-       toast({ title: "Error", description: result.error || "Failed to save payment.", variant: "destructive" });
+       const errorMessage = !isEditMode && result ? result.error : "Failed to save payment.";
+       toast({ title: "Error", description: errorMessage, variant: "destructive" });
     }
   };
 
@@ -102,16 +101,16 @@ export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit' : 'Add New'} Bill Payment</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit' : 'Add'} Bill Payment</DialogTitle>
           <DialogDescription>
-            Enter the details for the bill payment.
+            Record a payment made to a vendor.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="py-4 space-y-4">
           <div className="space-y-1">
-            <Label htmlFor="vendor">Vendor</Label>
-            <Select value={selectedVendor} onValueChange={setSelectedVendor} required>
-                <SelectTrigger id="vendor">
+            <Label htmlFor="vendor">Vendor *</Label>
+            <Select value={selectedVendor} onValueChange={setSelectedVendor} required disabled={isEditMode}>
+                <SelectTrigger id="vendor" disabled={isEditMode}>
                     <SelectValue placeholder="Select a vendor" />
                 </SelectTrigger>
                 <SelectContent>
@@ -122,7 +121,7 @@ export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors
             </Select>
           </div>
            <div className="space-y-1">
-            <Label htmlFor="date">Date</Label>
+            <Label htmlFor="date">Date *</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -144,7 +143,7 @@ export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors
             </Popover>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="method">Method</Label>
+            <Label htmlFor="method">Method *</Label>
             <Select value={method} onValueChange={setMethod} required>
                 <SelectTrigger id="method">
                     <SelectValue placeholder="Select a method" />
@@ -157,8 +156,8 @@ export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors
             </Select>
           </div>
            <div className="space-y-1">
-            <Label htmlFor="payment">Payment Amount</Label>
-            <Input id="payment" type="number" value={payment} onChange={e => setPayment(e.target.value)} required />
+            <Label htmlFor="payment">Payment Amount *</Label>
+            <Input id="payment" type="number" value={payment} onChange={e => setPayment(e.target.value)} required min="0.01"/>
           </div>
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>

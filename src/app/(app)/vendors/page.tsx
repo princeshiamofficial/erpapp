@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -642,7 +643,7 @@ export default function VendorsPage() {
                       </div>
                       <Button 
                         className="h-10 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                        onClick={handleOpenAddBillDialog}
+                        onClick={() => setIsAddEditBillDialogOpen(true)}
                       >
                           <PlusCircle className="mr-2 h-4 w-4" /> Create New bill
                       </Button>
@@ -777,7 +778,7 @@ export default function VendorsPage() {
                                                   </TableRow>
                                               </TableHeader>
                                               <TableBody>
-                                                  {reports.map(report => (
+                                                  {reports.filter(r => r.amount > 0).map(report => (
                                                       <TableRow key={`${report.id}-billing`}>
                                                           <TableCell>{formatDate(report.date)}</TableCell>
                                                           <TableCell>{report.invoiceId}</TableCell>
@@ -809,7 +810,7 @@ export default function VendorsPage() {
                                                   </TableRow>
                                               </TableHeader>
                                               <TableBody>
-                                                 {reports.map(report => (
+                                                 {reports.filter(r => r.payment > 0).map(report => (
                                                       <TableRow key={`${report.id}-payment`}>
                                                           <TableCell>{formatDate(report.date)}</TableCell>
                                                           <TableCell>{report.method}</TableCell>
