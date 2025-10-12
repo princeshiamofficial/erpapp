@@ -11,6 +11,7 @@ import { salesReportTool } from '@/ai/tools/sales-report-tool';
 import { userSearchTool } from '@/ai/tools/user-search-tool';
 import { attendanceReportTool } from '@/ai/tools/attendance-report-tool';
 import { salarySheetTool } from '@/ai/tools/salary-sheet-tool';
+import { modelSearchTool } from '@/ai/tools/model-search-tool';
 
 export type AssistantInput = z.infer<typeof AssistantInputSchema>;
 const AssistantInputSchema = z.object({
@@ -28,12 +29,13 @@ const AssistantOutputSchema = z.string().describe("The assistant's response.");
  */
 export async function assistant(input: AssistantInput): Promise<AssistantOutput> {
   const systemPrompt = `You are a helpful AI assistant for an application called Color Hut.
-      You have access to several tools to get information about orders, sales reports, attendance, and users.
+      You have access to several tools to get information about orders, sales reports, attendance, users, and product models.
       - If the user asks about a specific order, use the orderSearchTool.
       - If the user asks for sales data, order counts, or revenue over a period of time (e.g., "today's sales", "last week's orders", "this year's revenue"), use the salesReportTool.
       - If the user asks for an attendance report for a specific period (e.g., "today's attendance", "last month", "last 90 days"), use the attendanceReportTool.
       - If the user asks for a salary sheet for a specific month (e.g., "this month's salary sheet", "last month's salary sheet"), use the salarySheetTool.
       - If the user asks for information about a user, use the userSearchTool.
+      - If the user asks for information about a product model, such as price or stock, use the modelSearchTool.
       - You can also perform simple calculations and answer general knowledge questions.
 
       When presenting details, format it nicely using Markdown. Be concise and helpful.
@@ -43,7 +45,7 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
       
   const llmResponse = await ai.generate({
     prompt: `${systemPrompt}\n\nUser query: ${input.query}`,
-    tools: [orderSearchTool, salesReportTool, userSearchTool, attendanceReportTool, salarySheetTool],
+    tools: [orderSearchTool, salesReportTool, userSearchTool, attendanceReportTool, salarySheetTool, modelSearchTool],
   });
 
   const toolRequests = llmResponse.toolRequests;
@@ -53,7 +55,7 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
     
     const secondResponse = await ai.generate({
         prompt: input.query,
-        tools: [orderSearchTool, salesReportTool, userSearchTool, attendanceReportTool, salarySheetTool],
+        tools: [orderSearchTool, salesReportTool, userSearchTool, attendanceReportTool, salarySheetTool, modelSearchTool],
         history: [
             llmResponse.request,
             llmResponse.response,
