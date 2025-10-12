@@ -19,6 +19,9 @@ import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { assistant } from '@/ai/flows/assistant-flow';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+
 
 interface AssistantSheetProps {
   children: React.ReactNode;
@@ -102,10 +105,10 @@ export function AssistantSheet({ children }: AssistantSheetProps) {
                                 </Avatar>
                             )}
                             <div className={cn(
-                                "max-w-xs sm:max-w-md p-3 rounded-2xl",
+                                "max-w-xs sm:max-w-md p-3 rounded-2xl prose prose-sm dark:prose-invert prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-headings:my-3",
                                 msg.sender === 'user' ? "bg-primary text-primary-foreground rounded-br-none" : "bg-muted rounded-bl-none"
                             )}>
-                                <p className="text-sm whitespace-pre-wrap">{msg.text}</p>
+                               <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
                             </div>
                             {msg.sender === 'user' && (
                                 <Avatar className="h-8 w-8 border-2">
