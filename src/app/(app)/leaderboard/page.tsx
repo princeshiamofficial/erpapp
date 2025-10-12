@@ -18,6 +18,9 @@ import {
   endOfDay,
   sub,
   format,
+  isSameDay,
+  startOfMonth,
+  endOfMonth,
 } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
@@ -63,6 +66,8 @@ export default function LeaderboardPage() {
     };
   });
   const [currentDateRangeLabel, setCurrentDateRangeLabel] = useState("Today");
+  const [selectedPredefinedRange, setSelectedPredefinedRange] = useState<PredefinedRange | "custom" | null>("today");
+
 
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [allOrders, setAllOrders] = useState<TrackingLink[]>([]);
@@ -90,7 +95,8 @@ export default function LeaderboardPage() {
     orders: TrackingLink[],
     globalSettings: GlobalSettings,
     dateRange: DateRange | undefined,
-    roleToCalculate: UserRole
+    roleToCalculate: UserRole,
+    predefinedRange: PredefinedRange | "custom" | null
   ): CrmPerformanceData[] => {
     if (!dateRange?.from || !dateRange?.to) {
         return [];
@@ -98,8 +104,6 @@ export default function LeaderboardPage() {
     const periodStart = startOfDay(dateRange.from);
     const periodEnd = endOfDay(dateRange.to);
     
-    const numDaysInRange = differenceInDays(periodEnd, periodStart) + 1;
-
     const roleFilteredUsers = users.filter(user => user.role === roleToCalculate);
     
     const jobFirstSeenDate = new Map<string, Date>();
@@ -154,8 +158,16 @@ export default function LeaderboardPage() {
       
       const roleBasedTargets = globalSettings.roleBasedTargets || {};
       const monthlyTarget = (user.monthlyOrderTarget ?? roleBasedTargets[roleToCalculate as keyof typeof roleBasedTargets] ?? 0);
-      const dailyTarget = monthlyTarget / 30;
-      const target = Math.round(dailyTarget * numDaysInRange);
+      
+      let target = 0;
+      if (predefinedRange === 'thisMonth' || predefinedRange === 'lastMonth') {
+        target = monthlyTarget;
+      } else {
+        const numDaysInRange = differenceInDays(periodEnd, periodStart) + 1;
+        const dailyTarget = monthlyTarget / 30; // Assume a 30-day month for proration
+        target = Math.round(dailyTarget * numDaysInRange);
+      }
+
 
       return {
         userId: user.id,
@@ -224,14 +236,16 @@ export default function LeaderboardPage() {
   useEffect(() => {
     if (isLoadingData || !allUsers.length || !globalSettings || !selectedDateRange?.from || !selectedDateRange?.to) return;
     
-    const rangeDuration = differenceInDays(selectedDateRange.to!, selectedDateRange.from!);
-    const previousPeriodStart = sub(selectedDateRange.from!, { days: rangeDuration + 1 });
-    const previousPeriodEnd = sub(selectedDateRange.to!, { days: rangeDuration + 1 });
+    // Determine the duration and start of the previous period
+    const rangeDuration = differenceInDays(selectedDateRange.to, selectedDateRange.from);
+    const previousPeriodStart = sub(selectedDateRange.from, { days: rangeDuration + 1 });
+    const previousPeriodEnd = endOfDay(sub(selectedDateRange.to, { days: rangeDuration + 1 })); // Ensure end of day
     const previousPeriodRange = { from: previousPeriodStart, to: previousPeriodEnd };
 
     // Calculate for CR
-    let crData = calculatePerformance(allUsers, allOrders, globalSettings, selectedDateRange, 'CRM');
-    const prevCrData = calculatePerformance(allUsers, allOrders, globalSettings, previousPeriodRange, 'CRM');
+    let crData = calculatePerformance(allUsers, allOrders, globalSettings, selectedDateRange, 'CRM', selectedPredefinedRange);
+    const prevCrData = calculatePerformance(allUsers, allOrders, globalSettings, previousPeriodRange, 'CRM', selectedPredefinedRange);
+    
     const prevCrMap = new Map(prevCrData.map(d => [d.userId, d]));
     crData = crData.map(currentData => {
         const prevData = prevCrMap.get(currentData.userId);
@@ -246,8 +260,8 @@ export default function LeaderboardPage() {
     });
 
     // Calculate for DR
-    let drData = calculatePerformance(allUsers, allOrders, globalSettings, selectedDateRange, 'DESIGNER_REPRESENTATIVE');
-    const prevDrData = calculatePerformance(allUsers, allOrders, globalSettings, previousPeriodRange, 'DESIGNER_REPRESENTATIVE');
+    let drData = calculatePerformance(allUsers, allOrders, globalSettings, selectedDateRange, 'DESIGNER_REPRESENTATIVE', selectedPredefinedRange);
+    const prevDrData = calculatePerformance(allUsers, allOrders, globalSettings, previousPeriodRange, 'DESIGNER_REPRESENTATIVE', selectedPredefinedRange);
     const prevDrMap = new Map(prevDrData.map(d => [d.userId, d]));
     drData = drData.map(currentData => {
         const prevData = prevDrMap.get(currentData.userId);
@@ -262,12 +276,13 @@ export default function LeaderboardPage() {
     setPerformanceData(crData);
     setDrPerformanceData(drData);
 
-  }, [isLoadingData, allUsers, allOrders, globalSettings, selectedDateRange, calculatePerformance]);
+  }, [isLoadingData, allUsers, allOrders, globalSettings, selectedDateRange, calculatePerformance, selectedPredefinedRange]);
   
 
   const handleDateRangeChange = (range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
     setCurrentDateRangeLabel(displayLabel);
+    setSelectedPredefinedRange(predefinedValue);
   };
   
   const showTabs = useMemo(() => {
