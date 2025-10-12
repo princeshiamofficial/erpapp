@@ -32,7 +32,6 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
       
   const llmResponse = await ai.generate({
     prompt: `${systemPrompt}\n\nUser query: ${input.query}`,
-    model: 'gemini-1.5-pro',
     tools: [orderSearchTool],
   });
 
