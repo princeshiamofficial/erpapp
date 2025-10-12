@@ -749,51 +749,62 @@ export default function VendorsPage() {
                                        </div>
                                   </div>
                                   </AccordionTrigger>
-                                  <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
-                                      <Table>
-                                          <TableHeader>
-                                              <TableRow>
-                                                  <TableHead>Date</TableHead>
-                                                  <TableHead>Invoice ID</TableHead>
-                                                  <TableHead>Amount</TableHead>
-                                                  <TableHead>Payment</TableHead>
-                                                  <TableHead>Method</TableHead>
-                                                  <TableHead>Due Amount</TableHead>
-                                                  <TableHead className="text-right">Action</TableHead>
-                                              </TableRow>
-                                          </TableHeader>
-                                          <TableBody>
-                                              {reports.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(report => (
-                                                  <TableRow key={report.id}>
-                                                      <TableCell>{formatDate(report.date)}</TableCell>
-                                                      <TableCell>{report.invoiceId}</TableCell>
-                                                      <TableCell>{formatCurrency(report.amount)}</TableCell>
-                                                      <TableCell>{formatCurrency(report.payment)}</TableCell>
-                                                      <TableCell>{report.method}</TableCell>
-                                                      <TableCell className="font-medium text-destructive">{formatCurrency(report.amount - report.payment)}</TableCell>
-                                                      <TableCell className="text-right">
-                                                        <DropdownMenu>
-                                                          <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                              <MoreVertical className="h-4 w-4" />
-                                                            </Button>
-                                                          </DropdownMenuTrigger>
-                                                          <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem onSelect={() => handleOpenEditReportDialog(report)} className="cursor-pointer">
-                                                              <Edit className="mr-2 h-4 w-4" />
-                                                              Edit
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem onSelect={() => setReportToDelete(report)} className="cursor-pointer text-destructive focus:text-destructive">
-                                                              <Trash2 className="mr-2 h-4 w-4" />
-                                                              Delete
-                                                            </DropdownMenuItem>
-                                                          </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                      </TableCell>
+                                  <AccordionContent className="px-4 pt-0 pb-4">
+                                      <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                                        <div className="space-y-2">
+                                          <h4 className="font-semibold text-sm border-b pb-1">Billing</h4>
+                                          <Table>
+                                              <TableHeader>
+                                                  <TableRow>
+                                                      <TableHead>Date</TableHead>
+                                                      <TableHead>Invoice ID</TableHead>
+                                                      <TableHead className="text-right">Amount</TableHead>
                                                   </TableRow>
-                                              ))}
-                                          </TableBody>
-                                      </Table>
+                                              </TableHeader>
+                                              <TableBody>
+                                                  {reports.map(report => (
+                                                      <TableRow key={`${report.id}-billing`}>
+                                                          <TableCell>{formatDate(report.date)}</TableCell>
+                                                          <TableCell>{report.invoiceId}</TableCell>
+                                                          <TableCell className="text-right">{formatCurrency(report.amount)}</TableCell>
+                                                      </TableRow>
+                                                  ))}
+                                              </TableBody>
+                                          </Table>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                           <h4 className="font-semibold text-sm border-b pb-1">Payment</h4>
+                                           <Table>
+                                              <TableHeader>
+                                                  <TableRow>
+                                                      <TableHead>Date</TableHead>
+                                                      <TableHead>Method</TableHead>
+                                                      <TableHead className="text-right">Payment</TableHead>
+                                                      <TableHead className="text-right">Action</TableHead>
+                                                  </TableRow>
+                                              </TableHeader>
+                                              <TableBody>
+                                                 {reports.map(report => (
+                                                      <TableRow key={`${report.id}-payment`}>
+                                                          <TableCell>{formatDate(report.date)}</TableCell>
+                                                          <TableCell>{report.method}</TableCell>
+                                                          <TableCell className="text-right">{formatCurrency(report.payment)}</TableCell>
+                                                          <TableCell className="text-right">
+                                                            <DropdownMenu>
+                                                              <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                                                              <DropdownMenuContent align="end">
+                                                                <DropdownMenuItem onSelect={() => handleOpenEditReportDialog(report)} className="cursor-pointer"><Edit className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                                                                <DropdownMenuItem onSelect={() => setReportToDelete(report)} className="cursor-pointer text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                                                              </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                          </TableCell>
+                                                      </TableRow>
+                                                  ))}
+                                              </TableBody>
+                                           </Table>
+                                        </div>
+                                      </div>
                                   </AccordionContent>
                               </AccordionItem>
                               </div>
