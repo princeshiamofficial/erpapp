@@ -10,6 +10,7 @@ import { orderSearchTool } from '@/ai/tools/order-search-tool';
 import { salesReportTool } from '@/ai/tools/sales-report-tool';
 import { userSearchTool } from '@/ai/tools/user-search-tool';
 import { attendanceReportTool } from '@/ai/tools/attendance-report-tool'; // Import new tool
+import { salarySheetTool } from '@/ai/tools/salary-sheet-tool';
 
 export type AssistantInput = z.infer<typeof AssistantInputSchema>;
 const AssistantInputSchema = z.object({
@@ -30,7 +31,8 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
       You have access to several tools to get information about orders, sales reports, attendance, and users.
       - If the user asks about a specific order, use the orderSearchTool.
       - If the user asks for sales data, order counts, or revenue over a period of time (e.g., "today's sales", "last week's orders", "this year's revenue"), use the salesReportTool.
-      - If the user asks for an attendance report for a specific period, use the attendanceReportTool.
+      - If the user asks for an attendance report for a specific period (e.g., "today's attendance", "last month", "last 90 days"), use the attendanceReportTool.
+      - If the user asks for a salary sheet for a specific month (e.g., "salary sheet for June 2024"), use the salarySheetTool.
       - If the user asks for information about a user, use the userSearchTool.
       - You can also perform simple calculations and answer general knowledge questions.
 
@@ -41,7 +43,7 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
       
   const llmResponse = await ai.generate({
     prompt: `${systemPrompt}\n\nUser query: ${input.query}`,
-    tools: [orderSearchTool, salesReportTool, userSearchTool, attendanceReportTool], // Add new tool
+    tools: [orderSearchTool, salesReportTool, userSearchTool, attendanceReportTool, salarySheetTool], // Add new tool
   });
 
   const toolRequests = llmResponse.toolRequests;
@@ -51,7 +53,7 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
     
     const secondResponse = await ai.generate({
         prompt: input.query,
-        tools: [orderSearchTool, salesReportTool, userSearchTool, attendanceReportTool], // Add new tool
+        tools: [orderSearchTool, salesReportTool, userSearchTool, attendanceReportTool, salarySheetTool], // Add new tool
         history: [
             llmResponse.request,
             llmResponse.response,

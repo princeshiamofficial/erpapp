@@ -22,12 +22,12 @@ import {
   parseISO,
   differenceInDays,
   isSameDay,
-  startOfDay, // Missing import
-  endOfDay,   // Missing import
-  format      // Missing import
+  startOfDay,
+  endOfDay,
+  format
 } from 'date-fns';
 
-const DateRangeEnum = z.enum(['today', 'yesterday', 'last7days', 'last30days', 'thisWeek', 'lastWeek', 'thisMonth', 'lastMonth', 'thisYear', 'lastYear']);
+const DateRangeEnum = z.enum(['today', 'yesterday', 'last7days', 'last30days', 'last90days', 'thisWeek', 'lastWeek', 'thisMonth', 'lastMonth', 'thisYear', 'lastYear']);
 const WEEK_DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export const attendanceReportTool = ai.defineTool(
@@ -59,6 +59,7 @@ export const attendanceReportTool = ai.defineTool(
         case 'yesterday': startDate = startOfDay(subDays(now, 1)); endDate = endOfDay(subDays(now, 1)); break;
         case 'last7days': startDate = subDays(now, 6); break;
         case 'last30days': startDate = subDays(now, 29); break;
+        case 'last90days': startDate = subDays(now, 89); break;
         case 'thisWeek': startDate = startOfWeek(now); endDate = endOfWeek(now); break;
         case 'lastWeek': startDate = startOfWeek(subDays(now, 7)); endDate = endOfWeek(subDays(now, 7)); break;
         case 'thisMonth': startDate = startOfMonth(now); endDate = endOfMonth(now); break;
