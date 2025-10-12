@@ -13,11 +13,52 @@ const GIFTS_COLLECTION = 'serviceGifts';
 
 // --- Model Functions ---
 
+const seedDefaultModels = async (): Promise<ServiceModelItem[]> => {
+    await ensureCollectionExistsV3(MODELS_COLLECTION);
+    const createdItems: ServiceModelItem[] = [];
+    const defaultModelsData = [
+        { name: "Design Charge", sellingPrice: 500 },
+        { name: "Menu Book", sellingPrice: 1200 },
+        { name: "Pizza Box", sellingPrice: 30 },
+        { name: "Business Card", sellingPrice: 2 },
+        { name: "Visiting Card", sellingPrice: 2 },
+        { name: "T-shirt", sellingPrice: 450 },
+        { name: "Poster", sellingPrice: 15 },
+        { name: "Sticker", sellingPrice: 1 },
+    ];
+
+    for (const modelData of defaultModelsData) {
+        try {
+            const newModel: Omit<ServiceModelItem, 'id'> = {
+                name: modelData.name,
+                buyingPrice: 0,
+                sellingPrice: modelData.sellingPrice,
+                imageUrl: null,
+                isReadyMade: false,
+                stockCount: 0,
+            };
+            const newDoc = await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents`, {
+                method: 'POST',
+                body: JSON.stringify({ data: newModel }),
+            });
+            createdItems.push({ id: newDoc.id, ...newDoc.data });
+        } catch (error) {
+            console.error(`Error seeding model "${modelData.name}" via API v3:`, error);
+        }
+    }
+    console.log('Default service models seeded via API v3.');
+    return createdItems;
+};
+
 export const getModels = async (): Promise<ServiceModelItem[]> => {
   try {
     await ensureCollectionExistsV3(MODELS_COLLECTION);
     const response = await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents?limit=9999&orderBy=name&direction=asc`);
     if (response && Array.isArray(response.documents)) {
+        if (response.documents.length === 0) {
+            console.log("No service models found, seeding defaults via API v3.");
+            return await seedDefaultModels();
+        }
         return response.documents.map((doc: { id: string, data: any }) => ({
             id: doc.id,
             ...doc.data
