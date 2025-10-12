@@ -18,7 +18,7 @@ import { Bot, Send, User as UserIcon, Loader2, Sparkles } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-
+import { assistant } from '@/ai/flows/assistant-flow';
 
 interface AssistantSheetProps {
   children: React.ReactNode;
@@ -31,14 +31,14 @@ const getInitials = (name: string) => {
     return names[0].charAt(0).toUpperCase() + (names[names.length - 1] ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
-const mockMessages = [
-    { sender: 'assistant', text: 'Hello! How can I assist you with your app today?' },
+const initialMessages = [
+    { sender: 'assistant', text: 'Hello! How can I assist you with your app today? You can ask me about an order by its ID or company name.' },
 ];
 
 export function AssistantSheet({ children }: AssistantSheetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState(mockMessages);
+  const [messages, setMessages] = useState(initialMessages);
   const [isLoading, setIsLoading] = useState(false);
   const { currentUser } = useAuth();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -49,7 +49,7 @@ export function AssistantSheet({ children }: AssistantSheetProps) {
     }
   }, [messages]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
 
@@ -58,12 +58,17 @@ export function AssistantSheet({ children }: AssistantSheetProps) {
     setInput('');
     setIsLoading(true);
 
-    // Mock AI response
-    setTimeout(() => {
-      const aiResponse = { sender: 'assistant', text: `This is a mock response for: "${userMessage.text}". I am not yet connected to a live AI model.` };
+    try {
+      const response = await assistant({ query: userMessage.text });
+      const aiResponse = { sender: 'assistant', text: response };
       setMessages(prev => [...prev, aiResponse]);
-      setIsLoading(false);
-    }, 1500);
+    } catch (error) {
+        console.error("Error calling assistant flow:", error);
+        const errorResponse = { sender: 'assistant', text: "Sorry, I encountered an error. Please try again." };
+        setMessages(prev => [...prev, errorResponse]);
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
