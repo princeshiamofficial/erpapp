@@ -23,8 +23,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { addBillReportAction, updateBillReportAction } from '@/lib/bill-report-service';
 
-
-interface AddEditBillReportDialogProps {
+interface AddEditBillPaymentDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onSave: () => void;
@@ -33,7 +32,7 @@ interface AddEditBillReportDialogProps {
   reportToEdit?: BillReport | null;
 }
 
-export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors, paymentMethods, reportToEdit }: AddEditBillReportDialogProps) {
+export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors, paymentMethods, reportToEdit }: AddEditBillPaymentDialogProps) {
   const [invoiceId, setInvoiceId] = useState('');
   const [amount, setAmount] = useState('');
   const [payment, setPayment] = useState('');
@@ -94,10 +93,10 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
     setIsSubmitting(false);
 
     if (result.success) {
-      toast({ title: "Success", description: "Bill report has been saved." });
+      toast({ title: "Success", description: "Bill payment has been saved." });
       onSave();
     } else {
-       toast({ title: "Error", description: result.error || "Failed to save report.", variant: "destructive" });
+       toast({ title: "Error", description: result.error || "Failed to save payment.", variant: "destructive" });
     }
   };
 
@@ -105,9 +104,9 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit' : 'Add New'} Bill Report</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit' : 'Add New'} Bill Payment</DialogTitle>
           <DialogDescription>
-            Enter the details for the bill report.
+            Enter the details for the bill payment.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="py-4 space-y-4">
@@ -174,7 +173,7 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save Report'}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save Payment'}
             </Button>
           </DialogFooter>
         </form>
@@ -183,4 +182,4 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
   );
 }
 
-export default AddEditBillReportDialog;
+export default AddEditBillPaymentDialog;

@@ -40,7 +40,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getVendorCategories, deleteVendorCategory } from '@/lib/vendor-category-service';
 import { getVendorProducts, deleteVendorProduct } from '@/lib/vendor-product-service';
 import { getVendorBills, deleteVendorBill } from '@/lib/vendor-bill-service';
-import { getBillReports, deleteBillReport, updateBillReportAction as updateBillReport, addBillReportAction as addBillReport } from '@/lib/bill-report-service'; 
+import { getBillReports, deleteBillReport } from '@/lib/bill-report-service';
 import { getPaymentMethods } from '@/lib/service-options-service';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import Link from 'next/link';
@@ -53,7 +53,7 @@ const AddEditCategoryDialog = dynamic(() => import('@/components/vendors/AddEdit
 const DeleteCategoryDialog = dynamic(() => import('@/components/vendors/DeleteCategoryDialog').then(mod => mod.DeleteCategoryDialog));
 const DeleteProductDialog = dynamic(() => import('@/components/vendors/DeleteProductDialog').then(mod => mod.DeleteProductDialog));
 const AddEditBillDialog = dynamic(() => import('@/components/vendors/AddEditBillDialog').then(mod => mod.AddEditBillDialog));
-const AddEditBillReportDialog = dynamic(() => import('@/components/vendors/AddEditBillReportDialog').then(mod => mod.AddEditBillReportDialog));
+const AddEditBillPaymentDialog = dynamic(() => import('@/components/vendors/AddEditBillPaymentDialog').then(mod => mod.AddEditBillPaymentDialog));
 const DeleteBillReportDialog = dynamic(() => import('@/components/vendors/DeleteBillReportDialog').then(mod => mod.DeleteBillReportDialog));
 
 
@@ -120,7 +120,7 @@ export default function VendorsPage() {
   const [products, setProducts] = useState<VendorProduct[]>([]);
   const [categories, setCategories] = useState<VendorCategory[]>([]);
   const [bills, setBills] = useState<VendorBill[]>([]);
-  const [billReports, setBillReports] = useState<BillReport[]>([]); // New state for bill reports
+  const [billReports, setBillReports] = useState<BillReport[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<ServicePaymentMethodItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -280,6 +280,12 @@ export default function VendorsPage() {
     setBillToEdit(null);
     fetchData();
   };
+  
+  const handleBillPaymentSaved = () => {
+    setIsAddEditBillReportDialogOpen(false);
+    setReportToEdit(null);
+    fetchData();
+  };
 
   const handleOpenAddBillDialog = () => {
     setBillToEdit(null);
@@ -385,7 +391,7 @@ export default function VendorsPage() {
     if (activeTab === 'vendor_list') return filteredVendors.slice(startIndex, endIndex);
     if (activeTab === 'products') return filteredProducts.slice(startIndex, endIndex);
     if (activeTab === 'vendor_bills') return filteredBills.slice(startIndex, endIndex);
-    if (activeTab === 'bill_reports') return billReportsByVendor; // Accordion handles its own view, so no pagination needed here.
+    if (activeTab === 'bill_reports') return billReportsByVendor;
     return [];
   }, [activeTab, currentPage, filteredVendors, filteredProducts, filteredBills, billReportsByVendor]);
 
@@ -927,14 +933,10 @@ export default function VendorsPage() {
           products={products}
       />
 
-      <AddEditBillReportDialog
+      <AddEditBillPaymentDialog
           isOpen={isAddEditBillReportDialogOpen}
           onOpenChange={setIsAddEditBillReportDialogOpen}
-          onSave={() => {
-              setIsAddEditBillReportDialogOpen(false);
-              setReportToEdit(null);
-              fetchData();
-          }}
+          onSave={handleBillPaymentSaved}
           vendors={filteredVendors}
           paymentMethods={paymentMethods}
           reportToEdit={reportToEdit}
@@ -971,5 +973,3 @@ export default function VendorsPage() {
     </>
   );
 }
-
-    

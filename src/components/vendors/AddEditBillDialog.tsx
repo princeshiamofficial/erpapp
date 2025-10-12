@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -11,14 +10,13 @@ import { Textarea } from "@/components/ui/textarea";
 import type { User, VendorProduct, VendorBill, BillItem, VendorBillStatus, ServicePaymentMethodItem, BillPaymentRecord } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { addVendorBill, updateVendorBill } from '@/lib/vendor-bill-service';
-import { getPaymentMethods } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, CalendarDays, Percent, ReceiptText } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, CalendarDays, Percent } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from '@/lib/utils';
-import { Separator } from "@/components/ui/separator";
+import { Separator } from '@/components/ui/separator';
 import { format, parseISO } from 'date-fns';
 import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -67,37 +65,15 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
   const [discount, setDiscount] = useState('');
   const [calculatedDiscount, setCalculatedDiscount] = useState(0);
   const [netTotal, setNetTotal] = useState(0);
-  const [amountDue, setAmountDue] = useState(0);
   
-  const [newPaidAmount, setNewPaidAmount] = useState('');
-  const [newPaymentMethod, setNewPaymentMethod] = useState('');
-  const [newPaymentNotes, setNewPaymentNotes] = useState('');
-
-  const [existingPayments, setExistingPayments] = useState<BillPaymentRecord[]>([]);
-
   const [popoverOpenStates, setPopoverOpenStates] = useState<Record<string, boolean>>({});
-  const [paymentMethodOptions, setPaymentMethodOptions] = useState<ServicePaymentMethodItem[]>([]);
-  const [isLoadingOptions, setIsLoadingOptions] = useState(false);
-
+  const [isLoadingOptions, setIsLoadingOptions] = useState(false); // Although not fetching here, keep for consistency if needed later
 
   const { toast } = useToast();
   const isEditMode = !!bill;
 
-  const fetchOptions = useCallback(async () => {
-    setIsLoadingOptions(true);
-    try {
-      const fetchedPaymentMethods = await getPaymentMethods();
-      setPaymentMethodOptions(fetchedPaymentMethods);
-    } catch (error) {
-      toast({ title: "Error", description: "Could not load payment methods.", variant: "destructive" });
-    } finally {
-      setIsLoadingOptions(false);
-    }
-  }, [toast]);
-
   useEffect(() => {
     if (isOpen) {
-      fetchOptions();
       if (isEditMode && bill) {
         setSelectedVendorId(bill.vendorId);
         setBillDate(new Date(bill.billDate));
@@ -108,11 +84,6 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
         })));
         setNotes(bill.notes || '');
         setDiscount(bill.discount > 0 ? bill.discount.toString() : '');
-        setExistingPayments(bill.payments || []);
-        // Reset new payment fields for edit mode
-        setNewPaidAmount('');
-        setNewPaymentMethod('');
-        setNewPaymentNotes('');
       } else {
         setSelectedVendorId('');
         setBillDate(new Date());
@@ -120,14 +91,10 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
         setBillItems([{ ...initialBillItemState, id: uuidv4() }]);
         setNotes('');
         setDiscount('');
-        setExistingPayments([]);
-        setNewPaidAmount('');
-        setNewPaymentMethod('');
-        setNewPaymentNotes('');
       }
       setIsSubmitting(false);
     }
-  }, [isOpen, bill, isEditMode, fetchOptions]);
+  }, [isOpen, bill, isEditMode]);
   
   const filteredProductsByVendor = useMemo(() => {
     if (!selectedVendorId) {
@@ -163,23 +130,14 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
 
     const currentNetTotal = Math.max(0, total - discountVal);
     setNetTotal(currentNetTotal);
-
-    const totalPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0) + (parseFloat(newPaidAmount) || 0);
-    setAmountDue(Math.max(0, currentNetTotal - totalPaid));
-  }, [billItems, discount, newPaidAmount, existingPayments]);
+  }, [billItems, discount]);
 
   const canSubmit = useMemo(() => {
     if (isSubmitting) return false;
     if (!selectedVendorId || !billDate) return false;
     if (billItems.length === 0 || billItems.some(item => !item.productName || !item.quantity || parseInt(item.quantity) <= 0)) return false;
-    
-    const paidAmountNum = parseFloat(newPaidAmount) || 0;
-    if (paidAmountNum > 0 && !newPaymentMethod) {
-      return false;
-    }
-    
     return true;
-  }, [isSubmitting, selectedVendorId, billDate, billItems, newPaidAmount, newPaymentMethod]);
+  }, [isSubmitting, selectedVendorId, billDate, billItems]);
 
 
   const calculateLineItemTotal = (unitPrice: number | null, quantityStr: string): number | null => {
@@ -229,21 +187,8 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
     
     setIsSubmitting(true);
     
-    const allPayments = [...existingPayments];
-    const newPaidAmountNum = parseFloat(newPaidAmount) || 0;
-    if (newPaidAmountNum > 0) {
-      allPayments.push({
-        id: uuidv4(),
-        amount: newPaidAmountNum,
-        date: new Date().toISOString(),
-        paymentMethod: newPaymentMethod,
-        notes: newPaymentNotes.trim() || null,
-        recordedByUserId: currentUser.id,
-        recordedByUserName: currentUser.name,
-      });
-    }
-
-    const totalPaid = allPayments.reduce((sum, p) => sum + p.amount, 0);
+    const existingPayments = (isEditMode && bill?.payments) || [];
+    const totalPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0);
     const finalAmountDue = Math.max(0, netTotal - totalPaid);
     const status: VendorBillStatus = finalAmountDue <= 0 ? 'Paid' : (totalPaid > 0 ? 'Partially Paid' : 'Unpaid');
     
@@ -260,7 +205,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
       paidAmount: totalPaid,
       dueAmount: finalAmountDue,
       status,
-      payments: allPayments,
+      payments: existingPayments,
       createdAt: isEditMode && bill ? bill.createdAt : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       createdByUserId: isEditMode && bill ? bill.createdByUserId : currentUser.id,
@@ -323,7 +268,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
 
             <div className="space-y-3 mt-4 border-t border-border pt-4">
               <Label className="text-lg font-semibold">Bill Items</Label>
-              {billItems.map((item, index) => (
+              {billItems.map((item) => (
                 <div key={item.id} className="p-3 border rounded-md bg-secondary/30 space-y-3">
                    <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr_auto] gap-x-3 gap-y-2 items-end">
                       <div className="space-y-1">
@@ -372,25 +317,6 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
             </div>
 
             <Separator className="my-4" />
-
-            {existingPayments.length > 0 && (
-            <div className="mt-4 space-y-2">
-                <Label className="text-md font-semibold flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80"/>Payment History</Label>
-                <div className="max-h-40 overflow-y-auto border rounded-md bg-muted/20 p-2 custom-scrollbar">
-                <Table size="sm">
-                    <TableHeader><TableRow><TableHead className="h-8 text-xs">Date</TableHead><TableHead className="h-8 text-xs">Amount</TableHead><TableHead className="h-8 text-xs">Method</TableHead><TableHead className="h-8 text-xs">Notes</TableHead></TableRow></TableHeader>
-                    <TableBody>
-                    {existingPayments.map(p => (
-                        <TableRow key={p.id}><TableCell className="text-xs py-1.5">{format(new Date(p.date), 'd MMM yyyy')}</TableCell><TableCell className="text-xs py-1.5">{formatCurrencyBdt(p.amount)}</TableCell><TableCell className="text-xs py-1.5">{p.paymentMethod}</TableCell><TableCell className="text-xs py-1.5">{p.notes || 'N/A'}</TableCell></TableRow>
-                    ))}
-                    </TableBody>
-                </Table>
-                </div>
-            </div>
-            )}
-            
-            <Separator className="my-4" />
-
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                 <div className="space-y-1">
                     <Label htmlFor="discount">Discount</Label>
@@ -399,29 +325,8 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
                        <Percent className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     </div>
                 </div>
-                <div className="space-y-1">
-                    <Label htmlFor="paidAmount">Add Payment</Label>
-                    <Input id="paidAmount" type="number" value={newPaidAmount} onChange={(e) => setNewPaidAmount(e.target.value)} placeholder="e.g., 5000" min="0" />
-                </div>
-                 {(parseFloat(newPaidAmount) || 0) > 0 && (
-                  <>
-                    <div className="space-y-1">
-                      <Label htmlFor="paymentMethod">Payment Method</Label>
-                      <Select value={newPaymentMethod} onValueChange={setNewPaymentMethod} required={(parseFloat(newPaidAmount) || 0) > 0}>
-                        <SelectTrigger><SelectValue placeholder="Select method..." /></SelectTrigger>
-                        <SelectContent>
-                          {isLoadingOptions ? <div className="p-2 text-sm">Loading...</div> : paymentMethodOptions.map(opt => <SelectItem key={opt.id} value={opt.name}>{opt.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1 md:col-span-2 lg:col-span-3">
-                        <Label htmlFor="paymentNotes">Payment Notes</Label>
-                        <Input id="paymentNotes" value={newPaymentNotes} onChange={(e) => setNewPaymentNotes(e.target.value)} placeholder="Optional notes for this payment" />
-                    </div>
-                  </>
-                )}
             </div>
-
+            
             <div className="mt-4 p-4 border rounded-md bg-muted/30 space-y-2">
               <h4 className="text-md font-semibold text-foreground mb-2">Summary</h4>
               <div className="flex justify-between text-sm">
@@ -434,17 +339,9 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
                     <span className="font-medium text-red-600">- {formatCurrencyBdt(calculatedDiscount)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-sm font-semibold">
-                  <span className="text-foreground">Net Total:</span>
-                  <span className="text-foreground">{formatCurrencyBdt(netTotal)}</span>
-              </div>
-              <div className="flex justify-between text-sm pt-1 border-t border-dashed">
-                    <span className="text-muted-foreground">Total Paid:</span>
-                    <span className="font-medium text-green-600">{formatCurrencyBdt(existingPayments.reduce((sum, p) => sum + p.amount, 0) + (parseFloat(newPaidAmount) || 0))}</span>
-              </div>
               <div className="flex justify-between text-lg font-bold mt-1 pt-1 border-t border-border">
-                <span className="text-primary">Amount Due:</span>
-                <span className="text-primary">{formatCurrencyBdt(amountDue)}</span>
+                <span className="text-primary">Net Total:</span>
+                <span className="text-primary">{formatCurrencyBdt(netTotal)}</span>
               </div>
             </div>
 
@@ -462,4 +359,4 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
 }
 
 export default AddEditBillDialog;
-
+    
