@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { addBillReportAction, updateBillReportAction } from '@/lib/bill-report-service';
 
+
 interface AddEditBillPaymentDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
@@ -33,8 +34,6 @@ interface AddEditBillPaymentDialogProps {
 }
 
 export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors, paymentMethods, reportToEdit }: AddEditBillPaymentDialogProps) {
-  const [invoiceId, setInvoiceId] = useState('');
-  const [amount, setAmount] = useState('');
   const [payment, setPayment] = useState('');
   const [method, setMethod] = useState('');
   const [selectedVendor, setSelectedVendor] = useState('');
@@ -47,15 +46,11 @@ export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors
   useEffect(() => {
     if (isOpen) {
         if (isEditMode && reportToEdit) {
-            setInvoiceId(reportToEdit.invoiceId);
-            setAmount(reportToEdit.amount.toString());
             setPayment(reportToEdit.payment.toString());
             setMethod(reportToEdit.method);
             setSelectedVendor(reportToEdit.vendorId);
             setSelectedDate(new Date(reportToEdit.date));
         } else {
-            setInvoiceId('');
-            setAmount('');
             setPayment('');
             setMethod('');
             setSelectedVendor('');
@@ -67,7 +62,7 @@ export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!invoiceId || !amount || !payment || !method || !selectedVendor || !selectedDate) {
+    if (!payment || !method || !selectedVendor || !selectedDate) {
       toast({ title: "Validation Error", description: "All fields are required.", variant: "destructive" });
       return;
     }
@@ -77,16 +72,19 @@ export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors
       vendorId: selectedVendor,
       vendorName: vendors.find(v => v.id === selectedVendor)?.name || 'Unknown',
       date: selectedDate.toISOString(),
-      invoiceId,
-      amount: parseFloat(amount),
+      // In edit mode, we preserve existing data. In add mode, we create a placeholder.
+      invoiceId: isEditMode ? reportToEdit.invoiceId : `PAY-${Date.now()}`,
+      amount: isEditMode ? reportToEdit.amount : parseFloat(payment),
       payment: parseFloat(payment),
       method,
     };
 
     let result;
     if (isEditMode && reportToEdit) {
+        // If editing, we update the existing document.
         result = await updateBillReportAction(reportToEdit.id, reportData);
     } else {
+        // If adding, we create a new document.
         result = await addBillReportAction(reportData);
     }
 
@@ -146,18 +144,6 @@ export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors
             </Popover>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="invoice-id">Invoice ID</Label>
-            <Input id="invoice-id" value={invoiceId} onChange={e => setInvoiceId(e.target.value)} required />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="amount">Amount</Label>
-            <Input id="amount" type="number" value={amount} onChange={e => setAmount(e.target.value)} required />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="payment">Payment</Label>
-            <Input id="payment" type="number" value={payment} onChange={e => setPayment(e.target.value)} required />
-          </div>
-          <div className="space-y-1">
             <Label htmlFor="method">Method</Label>
             <Select value={method} onValueChange={setMethod} required>
                 <SelectTrigger id="method">
@@ -169,6 +155,10 @@ export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors
                     ))}
                 </SelectContent>
             </Select>
+          </div>
+           <div className="space-y-1">
+            <Label htmlFor="payment">Payment Amount</Label>
+            <Input id="payment" type="number" value={payment} onChange={e => setPayment(e.target.value)} required />
           </div>
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>

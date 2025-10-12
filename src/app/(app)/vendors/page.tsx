@@ -55,6 +55,7 @@ const DeleteProductDialog = dynamic(() => import('@/components/vendors/DeletePro
 const AddEditBillDialog = dynamic(() => import('@/components/vendors/AddEditBillDialog').then(mod => mod.AddEditBillDialog));
 const AddEditBillPaymentDialog = dynamic(() => import('@/components/vendors/AddEditBillPaymentDialog').then(mod => mod.AddEditBillPaymentDialog));
 const DeleteBillReportDialog = dynamic(() => import('@/components/vendors/DeleteBillReportDialog').then(mod => mod.DeleteBillReportDialog));
+const AddEditBillReportDialog = dynamic(() => import('@/components/vendors/AddEditBillReportDialog').then(mod => mod.AddEditBillReportDialog));
 
 
 const getInitials = (name: string) => {
@@ -125,6 +126,7 @@ export default function VendorsPage() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const [isAddEditBillReportDialogOpen, setIsAddEditBillReportDialogOpen] = useState(false);
+  const [isAddEditBillPaymentDialogOpen, setIsAddEditBillPaymentDialogOpen] = useState(false);
   const [reportToEdit, setReportToEdit] = useState<BillReport | null>(null);
   const [reportToDelete, setReportToDelete] = useState<BillReport | null>(null);
   const [isDeletingReport, setIsDeletingReport] = useState(false);
@@ -282,15 +284,21 @@ export default function VendorsPage() {
   };
   
   const handleBillPaymentSaved = () => {
-    setIsAddEditBillReportDialogOpen(false);
+    setIsAddEditBillPaymentDialogOpen(false);
     setReportToEdit(null);
     fetchData();
   };
 
   const handleOpenAddBillDialog = () => {
-    setBillToEdit(null);
-    setIsAddEditBillDialogOpen(true);
+    setReportToEdit(null);
+    setIsAddEditBillReportDialogOpen(true);
   };
+  
+  const handleOpenAddPaymentDialog = () => {
+    setReportToEdit(null);
+    setIsAddEditBillPaymentDialogOpen(true);
+  };
+
 
   const handleOpenEditBillDialog = (bill: VendorBill) => {
     setBillToEdit(bill);
@@ -311,14 +319,9 @@ export default function VendorsPage() {
       }
   };
 
-  const handleOpenAddBillReportDialog = () => {
-    setReportToEdit(null);
-    setIsAddEditBillReportDialogOpen(true);
-  };
-
   const handleOpenEditReportDialog = (report: BillReport) => {
     setReportToEdit(report);
-    setIsAddEditBillReportDialogOpen(true);
+    setIsAddEditBillPaymentDialogOpen(true); // Re-using payment dialog for editing
   };
 
   const handleConfirmDeleteReport = async () => {
@@ -727,7 +730,7 @@ export default function VendorsPage() {
                             <Button className="h-10 rounded-full" onClick={handleOpenAddBillDialog}>
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Bill
                             </Button>
-                            <Button className="h-10 rounded-full" onClick={handleOpenAddBillReportDialog}>
+                            <Button className="h-10 rounded-full" onClick={handleOpenAddPaymentDialog}>
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Payment
                             </Button>
                        </div>
@@ -934,11 +937,19 @@ export default function VendorsPage() {
       />
 
       <AddEditBillPaymentDialog
+          isOpen={isAddEditBillPaymentDialogOpen}
+          onOpenChange={setIsAddEditBillPaymentDialogOpen}
+          onSave={handleBillPaymentSaved}
+          vendors={filteredVendors}
+          paymentMethods={paymentMethods}
+          reportToEdit={reportToEdit}
+      />
+
+       <AddEditBillReportDialog
           isOpen={isAddEditBillReportDialogOpen}
           onOpenChange={setIsAddEditBillReportDialogOpen}
           onSave={handleBillPaymentSaved}
           vendors={filteredVendors}
-          paymentMethods={paymentMethods}
           reportToEdit={reportToEdit}
       />
       

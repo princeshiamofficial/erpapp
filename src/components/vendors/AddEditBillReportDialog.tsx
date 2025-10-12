@@ -16,28 +16,24 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Calendar as CalendarIcon } from 'lucide-react';
-import type { User, ServicePaymentMethodItem, BillReport } from '@/types';
+import type { User, BillReport } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { addBillReportAction, updateBillReportAction } from '@/lib/bill-report-service';
 
-
 interface AddEditBillReportDialogProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
   onSave: () => void;
   vendors: User[];
-  paymentMethods: ServicePaymentMethodItem[];
   reportToEdit?: BillReport | null;
 }
 
-export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors, paymentMethods, reportToEdit }: AddEditBillReportDialogProps) {
+export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors, reportToEdit }: AddEditBillReportDialogProps) {
   const [invoiceId, setInvoiceId] = useState('');
   const [amount, setAmount] = useState('');
-  const [payment, setPayment] = useState('');
-  const [method, setMethod] = useState('');
   const [selectedVendor, setSelectedVendor] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -50,15 +46,11 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
         if (isEditMode && reportToEdit) {
             setInvoiceId(reportToEdit.invoiceId);
             setAmount(reportToEdit.amount.toString());
-            setPayment(reportToEdit.payment.toString());
-            setMethod(reportToEdit.method);
             setSelectedVendor(reportToEdit.vendorId);
             setSelectedDate(new Date(reportToEdit.date));
         } else {
             setInvoiceId('');
             setAmount('');
-            setPayment('');
-            setMethod('');
             setSelectedVendor('');
             setSelectedDate(new Date());
         }
@@ -68,7 +60,7 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!invoiceId || !amount || !payment || !method || !selectedVendor || !selectedDate) {
+    if (!invoiceId || !amount || !selectedVendor || !selectedDate) {
       toast({ title: "Validation Error", description: "All fields are required.", variant: "destructive" });
       return;
     }
@@ -80,8 +72,8 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
       date: selectedDate.toISOString(),
       invoiceId,
       amount: parseFloat(amount),
-      payment: parseFloat(payment),
-      method,
+      payment: isEditMode ? reportToEdit.payment : 0, // Keep existing payment on edit, 0 on add
+      method: isEditMode ? reportToEdit.method : 'N/A', // Keep existing method on edit
     };
 
     let result;
@@ -94,10 +86,10 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
     setIsSubmitting(false);
 
     if (result.success) {
-      toast({ title: "Success", description: "Bill report has been saved." });
+      toast({ title: "Success", description: "Bill has been saved." });
       onSave();
     } else {
-       toast({ title: "Error", description: result.error || "Failed to save report.", variant: "destructive" });
+       toast({ title: "Error", description: result.error || "Failed to save bill.", variant: "destructive" });
     }
   };
 
@@ -105,9 +97,9 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit' : 'Add New'} Bill Report</DialogTitle>
+          <DialogTitle>{isEditMode ? 'Edit' : 'Add New'} Bill</DialogTitle>
           <DialogDescription>
-            Enter the details for the bill report.
+            Enter the details for the vendor bill.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="py-4 space-y-4">
@@ -154,27 +146,10 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
             <Label htmlFor="amount">Amount</Label>
             <Input id="amount" type="number" value={amount} onChange={e => setAmount(e.target.value)} required />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="payment">Payment</Label>
-            <Input id="payment" type="number" value={payment} onChange={e => setPayment(e.target.value)} required />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="method">Method</Label>
-            <Select value={method} onValueChange={setMethod} required>
-                <SelectTrigger id="method">
-                    <SelectValue placeholder="Select a method" />
-                </SelectTrigger>
-                <SelectContent>
-                    {paymentMethods.map(pm => (
-                        <SelectItem key={pm.id} value={pm.name}>{pm.name}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-          </div>
           <DialogFooter className="pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save Report'}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : 'Save Bill'}
             </Button>
           </DialogFooter>
         </form>
