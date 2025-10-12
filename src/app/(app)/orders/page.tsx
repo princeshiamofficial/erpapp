@@ -91,14 +91,14 @@ export default function OrdersPage() {
   const [viewType, setViewType] = useState<'orders' | 'reorders'>('orders');
 
   const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
+  
+  const [isCreateOrderDialogOpen, setIsCreateOrderDialogOpen] = useState(false);
 
 
   const fetchOrderData = useCallback(async () => {
     if (!currentUser) {
-      // No need to set loading to false here, as it's handled in the initial check
       return;
     }
-    // Only set loading to true if it's the initial fetch, not for background refreshes
     if (orders.length === 0) {
       setIsLoading(true);
     }
@@ -120,21 +120,24 @@ export default function OrdersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentUser, toast, orders.length]); // orders.length dependency prevents setIsLoading(true) on subsequent fetches
+  }, [currentUser, toast, orders.length]);
 
   useEffect(() => {
     setIsClient(true);
-    fetchOrderData(); // Initial fetch
+    fetchOrderData();
+  }, [fetchOrderData]);
+  
+  useEffect(() => {
+    // Only set up polling if no dialogs are open
+    if (!isCreateOrderDialogOpen && !isEditOrderDialogOpen) {
+      const interval = setInterval(() => {
+        console.log("Auto-refreshing order data...");
+        fetchOrderData();
+      }, 10000); // 10 seconds
 
-    // Set up polling to refresh data every 10 seconds
-    const interval = setInterval(() => {
-      console.log("Auto-refreshing order data...");
-      fetchOrderData();
-    }, 10000); // 10 seconds
-
-    // Cleanup interval on component unmount
-    return () => clearInterval(interval);
-  }, [fetchOrderData]); // The dependency array should just contain fetchOrderData
+      return () => clearInterval(interval);
+    }
+  }, [fetchOrderData, isCreateOrderDialogOpen, isEditOrderDialogOpen]);
 
 
   const memoizedAvailableStatusesForDialog = useMemo(() => {
@@ -213,7 +216,7 @@ export default function OrdersPage() {
     if (status) {
       return { name: status.name, color: status.color, textColor: getContrastTextColor(status.color) };
     }
-    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' };
+    return { name: statusId, color: '#A1A1AA', textColor: '#FFFFFF' }; 
   }, [allStatuses]);
 
   useEffect(() => {
@@ -412,6 +415,8 @@ export default function OrdersPage() {
                 await fetchOrderData();
               }}
               allOrders={orders}
+              isOpen={isCreateOrderDialogOpen}
+              onOpenChange={setIsCreateOrderDialogOpen}
             >
               <Button
                 size="lg"
@@ -595,6 +600,8 @@ export default function OrdersPage() {
                             await fetchOrderData();
                           }}
                           allOrders={orders}
+                          isOpen={isCreateOrderDialogOpen}
+                          onOpenChange={setIsCreateOrderDialogOpen}
                         >
                           <Button size="sm" className="mt-4" disabled={isLoading || (allStatuses.length === 0)}>
                             {(isLoading && allStatuses.length === 0) ? (
@@ -650,7 +657,7 @@ export default function OrdersPage() {
               setStatusesForDialog(null);
             }
           }}
-          order={selectedOrderForDrAssignment}
+          order={selectedOrderForDrAssignment} 
           currentUser={currentUser}
           allStatuses={statusesForDialog}
           onDrAssigned={handleDrAssignmentSuccess}
