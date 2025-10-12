@@ -312,10 +312,20 @@ export const getPaymentMethods = async (): Promise<ServicePaymentMethodItem[]> =
             console.log("No payment methods found, seeding defaults via API v3.");
             return await seedDefaultPaymentMethods();
         }
-        return response.documents.map((doc: { id: string; data: any }) => ({
-            id: doc.id,
-            ...doc.data,
-        }));
+        
+        // Filter out duplicates
+        const uniqueMethods: ServicePaymentMethodItem[] = [];
+        const seenNames = new Set<string>();
+        response.documents.forEach((doc: { id: string; data: any }) => {
+            if (!seenNames.has(doc.data.name)) {
+                seenNames.add(doc.data.name);
+                uniqueMethods.push({
+                    id: doc.id,
+                    ...doc.data,
+                });
+            }
+        });
+        return uniqueMethods;
     }
     return [];
   } catch (error) {
