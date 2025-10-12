@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -80,6 +79,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   const [selectedPaymentProof, setSelectedPaymentProof] = useState<File | null>(null);
   const [isUploadingProof, setIsUploadingProof] = useState(false);
   const paymentProofRef = useRef<HTMLInputElement>(null);
+  const jobIdInputRef = useRef<HTMLInputElement>(null);
 
 
   const [modelOptions, setModelOptions] = useState<ServiceModelItem[]>([]);
@@ -160,6 +160,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
           setJobId('1'); // Start with 1 if no orders exist
         }
       }
+      setTimeout(() => {
+        jobIdInputRef.current?.focus();
+      }, 100);
     } else {
         resetForm();
     }
@@ -501,7 +504,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label htmlFor="jobId">Job ID *</Label>
-                <Input id="jobId" value={jobId} onChange={handleJobIdChange} required placeholder="e.g., CUST101, J123" />
+                <Input id="jobId" ref={jobIdInputRef} value={jobId} onChange={handleJobIdChange} required placeholder="e.g., CUST101, J123" />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="companyName">Company Name *</Label>

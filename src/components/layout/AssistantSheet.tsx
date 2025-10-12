@@ -45,12 +45,21 @@ export function AssistantSheet({ children }: AssistantSheetProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { currentUser } = useAuth();
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (scrollAreaRef.current) {
         scrollAreaRef.current.scrollTo({ top: scrollAreaRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [messages]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
+    }
+  }, [isOpen]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,6 +147,7 @@ export function AssistantSheet({ children }: AssistantSheetProps) {
         <SheetFooter className="p-4 border-t bg-background">
           <form onSubmit={handleSendMessage} className="w-full flex items-center gap-2">
             <Input
+              ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Ask the assistant..."

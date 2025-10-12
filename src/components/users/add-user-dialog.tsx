@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -40,6 +39,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const resetForm = useCallback(() => {
     setName('');
@@ -62,6 +62,9 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
       resetForm();
     } else {
        setRole(defaultRole);
+       setTimeout(() => {
+        nameInputRef.current?.focus();
+       }, 100);
     }
   }, [isOpen, resetForm, defaultRole]);
   
@@ -218,7 +221,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
           <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name-add" className="text-right">Name</Label>
-              <Input id="name-add" value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" required />
+              <Input id="name-add" ref={nameInputRef} value={name} onChange={(e) => setName(e.target.value)} className="col-span-3" required />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="email-add" className="text-right">Email</Label>
@@ -332,7 +335,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
 
           </div>
           <DialogFooter className="pt-4 border-t border-border/30">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground" disabled={isSubmitting}>
               {isSubmitting ? "Adding User..." : "Add User"}
             </Button>
@@ -342,5 +345,3 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
     </Dialog>
   );
 }
-
-    

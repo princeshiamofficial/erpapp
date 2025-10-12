@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -48,6 +48,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
   const [customerType, setCustomerType] = useState<CustomerType | ''>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const contactNameInputRef = useRef<HTMLInputElement>(null);
 
   const isEditMode = !!lead;
 
@@ -87,6 +88,9 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
         setCustomerType('');
         setPhoneError(null); // Reset error on load
       }
+      setTimeout(() => {
+        contactNameInputRef.current?.focus();
+      }, 100);
     }
   }, [isOpen, lead, isEditMode]);
 
@@ -201,7 +205,7 @@ export function AddEditLeadDialog({ isOpen, onOpenChange, onLeadSaved, lead, cur
             </div>
             <div className="space-y-1">
                 <Label htmlFor="contactName">Contact Name</Label>
-                <Input id="contactName" value={contactName} onChange={(e) => setContactName(e.target.value)} required />
+                <Input id="contactName" ref={contactNameInputRef} value={contactName} onChange={(e) => setContactName(e.target.value)} required />
               </div>
             <div className="space-y-1">
               <Label htmlFor="businessName">Business Name</Label>
