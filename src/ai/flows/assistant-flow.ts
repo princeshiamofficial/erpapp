@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview The main AI assistant flow for the application.
@@ -31,7 +32,7 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
       
   const llmResponse = await ai.generate({
     prompt: `${systemPrompt}\n\nUser query: ${input.query}`,
-    model: 'googleai/gemini-1.5-flash',
+    model: 'gemini-1.5-flash',
     tools: [orderSearchTool],
   });
 
