@@ -261,14 +261,19 @@ export function ProjectsKanbanClient() {
   const handleConfirmStatusUpdate = useCallback(async (project: Project, newStatus: ProjectStatusType, notes?: string) => {
     if (!currentUser) return;
     const originalStatus = project.status;
-     setProjects(prevProjects => {
+    
+    // Optimistic UI update
+    setProjects(prevProjects => {
       return prevProjects.map(p =>
         p.id === project.id ? { ...p, status: newStatus } : p
       );
     });
+
     const result = await updateProjectStatusAction(project, newStatus, currentUser, notes);
+    
     if (!result.success) {
       toast({ title: "Update Failed", description: result.error || `Could not update status.`, variant: "destructive" });
+      // Revert UI on failure
       setProjects(prevProjects => {
         return prevProjects.map(p =>
           p.id === project.id ? { ...p, status: originalStatus } : p
@@ -276,6 +281,8 @@ export function ProjectsKanbanClient() {
       });
     } else {
       toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
+      // Optional: Refetch data to ensure full consistency if other fields change on the backend
+      // await fetchData(); 
     }
   }, [currentUser, toast]);
 
@@ -583,3 +590,5 @@ export function ProjectsKanbanClient() {
     </DndContext>
   );
 }
+
+```
