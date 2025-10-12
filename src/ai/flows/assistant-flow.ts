@@ -7,13 +7,13 @@ import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { orderSearchTool } from '@/ai/tools/order-search-tool';
 
-const AssistantInputSchema = z.object({
-  query: z.string().describe('The user\'s query for the assistant.'),
-});
 export type AssistantInput = z.infer<typeof AssistantInputSchema>;
+const AssistantInputSchema = z.object({
+  query: z.string().describe("The user's query for the assistant."),
+});
 
-const AssistantOutputSchema = z.string().describe("The assistant's response.");
 export type AssistantOutput = z.infer<typeof AssistantOutputSchema>;
+const AssistantOutputSchema = z.string().describe("The assistant's response.");
 
 
 /**
@@ -31,7 +31,7 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
       
   const llmResponse = await ai.generate({
     prompt: `${systemPrompt}\n\nUser query: ${input.query}`,
-    model: 'googleai/gemini-1.5-flash-latest',
+    model: 'googleai/gemini-1.5-flash',
     tools: [orderSearchTool],
   });
 
@@ -40,7 +40,6 @@ export async function assistant(input: AssistantInput): Promise<AssistantOutput>
     const toolResult = await toolResponse.run();
     const secondResponse = await ai.generate({
         prompt: input.query,
-        model: 'googleai/gemini-1.5-flash-latest',
         tools: [orderSearchTool],
         history: [
             llmResponse.request,
