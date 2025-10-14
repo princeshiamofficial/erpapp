@@ -40,6 +40,7 @@ export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors
   const [selectedVendor, setSelectedVendor] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const { toast } = useToast();
   
   const isEditMode = !!reportToEdit;
@@ -91,6 +92,7 @@ export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors
     if ((isEditMode && result) || (!isEditMode && result && result.success)) {
       toast({ title: "Success", description: `Bill payment has been ${isEditMode ? 'updated' : 'added'}.` });
       onSave();
+      onOpenChange(false);
     } else {
        const errorMessage = !isEditMode && result ? result.error : "Failed to save payment.";
        toast({ title: "Error", description: errorMessage, variant: "destructive" });
@@ -122,7 +124,7 @@ export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors
           </div>
            <div className="space-y-1">
             <Label htmlFor="date">Date *</Label>
-            <Popover>
+            <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant={"outline"}
@@ -136,7 +138,10 @@ export function AddEditBillPaymentDialog({ isOpen, onOpenChange, onSave, vendors
                 <Calendar
                   mode="single"
                   selected={selectedDate}
-                  onSelect={setSelectedDate}
+                  onSelect={(date) => {
+                    setSelectedDate(date);
+                    setIsDatePickerOpen(false);
+                  }}
                   initialFocus
                 />
               </PopoverContent>

@@ -39,6 +39,7 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
   const [selectedVendor, setSelectedVendor] = useState('');
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const { toast } = useToast();
   
   const isEditMode = !!reportToEdit;
@@ -123,7 +124,7 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
           </div>
            <div className="space-y-1">
             <Label htmlFor="date">Date *</Label>
-            <Popover>
+            <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant={"outline"}
@@ -137,7 +138,10 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
                 <Calendar
                   mode="single"
                   selected={selectedDate}
-                  onSelect={setSelectedDate}
+                  onSelect={(date) => {
+                    setSelectedDate(date);
+                    setIsDatePickerOpen(false);
+                  }}
                   initialFocus
                 />
               </PopoverContent>
