@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -92,6 +91,7 @@ export function AddEditBillReportDialog({ isOpen, onOpenChange, onSave, vendors,
     if ((isEditMode && result) || (!isEditMode && result && result.success)) {
       toast({ title: "Success", description: "Bill has been saved." });
       onSave();
+      onOpenChange(false); // This line ensures the dialog closes on success
     } else {
        const errorMessage = !isEditMode && result ? result.error : "Failed to save bill.";
        toast({ title: "Error", description: errorMessage, variant: "destructive" });
