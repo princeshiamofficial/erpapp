@@ -213,7 +213,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
       billId: isEditMode && bill ? bill.billId : null,
     };
 
-    let result = null;
+    let result;
     if (isEditMode && bill) {
       result = await updateVendorBill(bill.id, billPayload);
     } else {
@@ -225,7 +225,7 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
     if (result) {
         toast({ title: `Bill ${isEditMode ? 'Updated' : 'Created'}`, description: `Vendor bill has been saved successfully.`});
         onBillSaved();
-        onOpenChange(false);
+        onOpenChange(false); // This will now correctly close the dialog
     } else {
         toast({ title: "Error", description: "Failed to save the vendor bill.", variant: "destructive" });
     }
@@ -359,6 +359,8 @@ export function AddEditBillDialog({ isOpen, onOpenChange, onBillSaved, bill, cur
 }
 
 export default AddEditBillDialog;
+    
+
     
 
     
