@@ -1235,7 +1235,7 @@ function DashboardContent() {
           </>
         )}
         
-        <div className={cn("grid grid-cols-1 gap-6", isDesignerRepOrLr || isCoUser ? "lg:grid-cols-1" : "")}>
+        <div className={cn("grid grid-cols-1 gap-6", (isDesignerRepOrLr || isCoUser) ? "lg:grid-cols-1" : "")}>
           <div className="lg:col-span-1">
             <TeamPerformanceGraph
               allTasks={allTasks}
@@ -1266,66 +1266,68 @@ function DashboardContent() {
               <OrderAnalysisClient allOrders={allOrders} />
             </div>
         )}
-         <div className={cn("grid grid-cols-1 gap-6 mt-6 print:hidden", !isDesignerRepOrLr && !isCoUser ? "lg:grid-cols-2" : "")}>
-           <Card className="shadow-xl bg-card">
-              <CardHeader>
-                <CardTitle className="flex items-center text-xl text-foreground">
-                  <MessageSquare className="mr-2 h-6 w-6 text-primary" />
-                  Recent Feedback
-                </CardTitle>
-                <CardDescription>Latest client feedback from tracking pages.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {isLoadingContent ? (
-                  <div className="space-y-4">
-                    {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
-                  </div>
-                ) : recentFeedback.length > 0 ? (
-                  <ScrollArea className="h-[400px] pr-3">
+        <div className={cn("grid grid-cols-1 gap-6 mt-6 print:hidden", !isDesignerRepOrLr && !isCoUser ? "lg:grid-cols-2" : "")}>
+           {!isCoUser && (
+              <Card className="shadow-xl bg-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-xl text-foreground">
+                    <MessageSquare className="mr-2 h-6 w-6 text-primary" />
+                    Recent Feedback
+                  </CardTitle>
+                  <CardDescription>Latest client feedback from tracking pages.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingContent ? (
                     <div className="space-y-4">
-                      {recentFeedback.map(feedback => {
-                        const crmUser = userMap.get(feedback.crmUserId || '');
-                        return (
-                            <div key={feedback.id} className="p-4 border rounded-lg bg-secondary/30" onDoubleClick={canDeleteFeedback ? () => setFeedbackToDelete(feedback) : undefined}>
-                              <div className="flex justify-between items-start">
-                                <div className="flex items-center gap-3">
-                                  <Avatar className="h-10 w-10 border-2 border-primary/20">
-                                    <AvatarImage src={crmUser?.avatarUrl || undefined} alt={crmUser?.name} />
-                                    <AvatarFallback>{getInitials(crmUser?.name)}</AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                      <p className="font-semibold text-foreground">{feedback.companyName}</p>
-                                      <p className="text-xs text-muted-foreground">Order ID: {feedback.orderId}</p>
+                      {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+                    </div>
+                  ) : recentFeedback.length > 0 ? (
+                    <ScrollArea className="h-[400px] pr-3">
+                      <div className="space-y-4">
+                        {recentFeedback.map(feedback => {
+                          const crmUser = userMap.get(feedback.crmUserId || '');
+                          return (
+                              <div key={feedback.id} className="p-4 border rounded-lg bg-secondary/30" onDoubleClick={canDeleteFeedback ? () => setFeedbackToDelete(feedback) : undefined}>
+                                <div className="flex justify-between items-start">
+                                  <div className="flex items-center gap-3">
+                                    <Avatar className="h-10 w-10 border-2 border-primary/20">
+                                      <AvatarImage src={crmUser?.avatarUrl || undefined} alt={crmUser?.name} />
+                                      <AvatarFallback>{getInitials(crmUser?.name)}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <p className="font-semibold text-foreground">{feedback.companyName}</p>
+                                        <p className="text-xs text-muted-foreground">Order ID: {feedback.orderId}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 text-amber-500">
+                                      {[...Array(5)].map((_, i) => (
+                                          <Star
+                                          key={i}
+                                          className={cn("h-4 w-4", i < feedback.rating ? "fill-amber-400 text-amber-400" : "fill-muted stroke-muted-foreground")}
+                                          />
+                                      ))}
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-1.5 text-amber-500">
-                                    {[...Array(5)].map((_, i) => (
-                                        <Star
-                                        key={i}
-                                        className={cn("h-4 w-4", i < feedback.rating ? "fill-amber-400 text-amber-400" : "fill-muted stroke-muted-foreground")}
-                                        />
-                                    ))}
-                                </div>
+                                <p className="text-sm text-foreground/90 mt-3 italic border-l-2 border-primary pl-3">
+                                    {renderFeedbackText(feedback.text)}
+                                </p>
+                                <p className="text-xs text-right text-muted-foreground mt-2">
+                                    - Submitted {format(parseISO(feedback.submittedAt), "d MMM, yyyy")}
+                                </p>
                               </div>
-                              <p className="text-sm text-foreground/90 mt-3 italic border-l-2 border-primary pl-3">
-                                  {renderFeedbackText(feedback.text)}
-                              </p>
-                              <p className="text-xs text-right text-muted-foreground mt-2">
-                                  - Submitted {format(parseISO(feedback.submittedAt), "d MMM, yyyy")}
-                              </p>
-                            </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
+                        <MessageSquare className="h-16 w-16 opacity-30 mb-4" />
+                        <p className="font-medium">No feedback has been submitted yet.</p>
                     </div>
-                  </ScrollArea>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-[350px] text-muted-foreground">
-                      <MessageSquare className="h-16 w-16 opacity-30 mb-4" />
-                      <p className="font-medium">No feedback has been submitted yet.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                  )}
+                </CardContent>
+              </Card>
+           )}
             {(isDesignerRepOrLr || isCoUser) && ( <div className="lg:col-span-1"></div>)}
         </div>
         
@@ -1399,4 +1401,3 @@ function DashboardContent() {
     </>
   );
 }
-
