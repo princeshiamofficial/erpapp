@@ -80,6 +80,7 @@ export async function updateProjectStatusAction(
         case 'Courier': targetOrderStatusId = SHIPPED_STATUS_ID; statusUpdateNote = `Order shipped (project in Courier stage) by ${actingUser.name}.`; break;
         case 'On Design': targetOrderStatusId = READY_FOR_DESIGN_STATUS_ID; statusUpdateNote = `Order moved to 'On Design' via project board by ${actingUser.name}.`; break;
         case 'CR Clearance': targetOrderStatusId = ORDER_SUBMITTED_ID; statusUpdateNote = `Order moved back to CR Clearance from project board by ${actingUser.name}.`; break;
+        case 'CO Clearance': targetOrderStatusId = 'co-clearance'; statusUpdateNote = `Order moved to CO Clearance by ${actingUser.name}.`; break;
         case 'Delivered': targetOrderStatusId = DELIVERED_STATUS_ID; statusUpdateNote = `Order marked as delivered via project board by ${actingUser.name}.`; break;
       }
       

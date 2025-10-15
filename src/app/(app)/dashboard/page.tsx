@@ -41,6 +41,7 @@ import {
   MessageSquare, // For Feedback
   Star, // For Feedback stars
   Trash2, // For delete icon
+  ClipboardList
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -187,12 +188,13 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ title, value, icon: Icon, ico
 
 const ALL_PROJECT_STATUSES_CONFIG: Array<{ title: string; status: ProjectStatusType; icon: React.ElementType; color: string; gradient: string; shadow: string; }> = [
     { title: 'CR Clearance', status: 'CR Clearance', icon: ClipboardCheck, color: '#3b82f6', gradient: 'linear-gradient(to right, #3b82f6, #60a5fa)', shadow: '0 4px 15px 0 rgba(59, 130, 246, 0.4)' },
-    { title: 'Cancel', status: 'Cancel', icon: ClipboardX, color: '#ef4444', gradient: 'linear-gradient(to right, #ef4444, #f87171)', shadow: '0 4px 15px 0 rgba(239, 68, 68, 0.4)' },
+    { title: 'CO Clearance', status: 'CO Clearance', icon: ClipboardList, color: '#10b981', gradient: 'linear-gradient(to right, #10b981, #34d399)', shadow: '0 4px 15px 0 rgba(16, 185, 129, 0.4)' },
     { title: 'On Design', status: 'On Design', icon: DraftingCompass, color: '#8b5cf6', gradient: 'linear-gradient(to right, #8b5cf6, #a78bfa)', shadow: '0 4px 15px 0 rgba(139, 92, 246, 0.4)' },
     { title: 'On Hold', status: 'On Hold', icon: PauseCircle, color: '#f97316', gradient: 'linear-gradient(to right, #f97316, #fb923c)', shadow: '0 4px 15px 0 rgba(249, 115, 22, 0.4)' },
     { title: 'Logistics', status: 'Logistics', icon: Truck, color: '#78350f', gradient: 'linear-gradient(to right, #78350f, #a16207)', shadow: '0 4px 15px 0 rgba(120, 53, 15, 0.4)' },
     { title: 'Courier', status: 'Courier', icon: CheckCircle, color: '#16a34a', gradient: 'linear-gradient(to right, #16a34a, #4ade80)', shadow: '0 4px 15px 0 rgba(22, 163, 74, 0.4)' },
     { title: 'Delivered', status: 'Delivered', icon: PackageCheck, color: '#65a30d', gradient: 'linear-gradient(to right, #65a30d, #84cc16)', shadow: '0 4px 15px 0 rgba(101, 163, 13, 0.4)' },
+    { title: 'Cancel', status: 'Cancel', icon: ClipboardX, color: '#ef4444', gradient: 'linear-gradient(to right, #ef4444, #f87171)', shadow: '0 4px 15px 0 rgba(239, 68, 68, 0.4)' },
 ];
 
 const ALL_LEAD_CATEGORIES_CONFIG: Array<{ title: string; category: LeadCategory; icon: React.ElementType; color: string; gradient: string; shadow: string; }> = [
@@ -493,7 +495,7 @@ function DashboardContent() {
 
   const projectCounts = useMemo(() => {
     const counts: Record<ProjectStatusType, number> = {
-      'CR Clearance': 0, 'Cancel': 0, 'On Design': 0, 'On Hold': 0, 'Logistics': 0, 'Courier': 0, 'Delivered': 0,
+      'CR Clearance': 0, 'CO Clearance': 0, 'Cancel': 0, 'On Design': 0, 'On Hold': 0, 'Logistics': 0, 'Courier': 0, 'Delivered': 0,
     };
     
     let projectsToCount = filteredProjects;
@@ -999,7 +1001,7 @@ function DashboardContent() {
           </p>
         </div>
 
-        {!isCoUser && !isDesignerRepOrLr && (
+        {!isCoUser && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 print:hidden">
               <Card className="shadow-sm bg-card">
@@ -1257,7 +1259,7 @@ function DashboardContent() {
           
         </div>
         
-        {!isCoUser && !isDesignerRepOrLr && (
+        {!isCoUser && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 print:hidden">
               <SalesPerformanceClient
                 allOrders={salesPerformanceOrders}
@@ -1401,3 +1403,4 @@ function DashboardContent() {
     </>
   );
 }
+

@@ -16,6 +16,7 @@ const PROJECTS_COLLECTION = 'projects';
 const getInitialStatusTimestampField = (status: ProjectStatusType): keyof Project | undefined => {
   switch (status) {
     case 'CR Clearance': return 'crClearanceAt';
+    case 'CO Clearance': return 'coClearanceAt';
     case 'Cancel': return 'cancelAt';
     case 'On Design': return 'onDesignAt';
     case 'On Hold': return 'onHoldAt';
@@ -61,6 +62,7 @@ export const getProjects = async (): Promise<Project[]> => {
         else if (order.currentStatus === 'shipped') projectStatus = 'Courier';
         else if (order.currentStatus === 'on-hold') projectStatus = 'On Hold';
         else if (order.currentStatus === 'logistics') projectStatus = 'Logistics';
+        else if (order.currentStatus === 'co-clearance') projectStatus = 'CO Clearance';
         else if (order.currentStatus === 'ready-for-design' || order.currentStatus.toLowerCase().includes('design')) projectStatus = 'On Design';
         else projectStatus = 'CR Clearance';
 
@@ -121,7 +123,7 @@ export const updateProjectStatus = async (
     } else if (projectDataIfCreating) {
       const { 
         id: _oldId, status: _oldStatus, updatedAt: _oldUpdatedAt, createdAt: _oldCreatedAt,
-        crClearanceAt, cancelAt, onDesignAt, onHoldAt, logisticsAt, courierAt, deliveredAt,
+        crClearanceAt, coClearanceAt, cancelAt, onDesignAt, onHoldAt, logisticsAt, courierAt, deliveredAt,
         ...restOfProjectData 
       } = projectDataIfCreating;
       

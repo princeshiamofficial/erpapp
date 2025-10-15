@@ -20,6 +20,7 @@ const DEFAULT_EXPENSE_LOGGING_PERMISSIONS: ExpenseLoggingPermissions = {
 
 const DEFAULT_PROJECT_STAGE_ACCESS: Record<ProjectStatusType, UserRole[]> = {
   'CR Clearance': ['SYSTEM_ADMIN', 'ADMIN', 'CRM'],
+  'CO Clearance': ['SYSTEM_ADMIN', 'ADMIN', 'CO'],
   'Cancel': ['SYSTEM_ADMIN', 'ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'],
   'On Design': ['SYSTEM_ADMIN', 'ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'],
   'On Hold': ['SYSTEM_ADMIN', 'ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE'],
@@ -64,6 +65,7 @@ const DEFAULT_GLOBAL_SETTINGS: GlobalSettings = {
   drAssignmentNotificationBody: 'You have been assigned to a new design order: %orderId%.',
   reportProductFilters: ['Design Charge', 'Menu Book', 'Menu Card', 'Pizza Box', 'X-Banner', 'Business Card', 'Visiting Card'],
   roleBasedTargets: DEFAULT_ROLE_BASED_TARGETS,
+  pipelineAccess: { canViewAllLeads: [] },
 };
 
 // Gets global settings from Firestore
