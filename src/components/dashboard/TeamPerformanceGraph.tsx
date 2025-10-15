@@ -30,7 +30,7 @@ import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/da
 import type { DateRange } from "react-day-picker";
 import { Input } from '@/components/ui/input';
 import { Loader2, ChevronsUpDown, Check } from 'lucide-react';
-import { useAuth } from '@/contexts/auth-context';
+import { useAuth } from '@/hooks/use-auth';
 import { Label } from "@/components/ui/label";
 import { addTaskEntryAction } from '@/app/(app)/dashboard/actions';
 import { useToast } from '@/hooks/use-toast';
@@ -114,7 +114,7 @@ export function TeamPerformanceGraph({
   const performanceTitle = useMemo(() => {
     if (!currentUser) return "Team Performance";
     const userRole = currentUser.role;
-    if (userRole === 'CRM' || userRole === 'DESIGNER_REPRESENTATIVE') {
+    if (userRole === 'CRM' || userRole === 'DESIGNER_REPRESENTATIVE' || userRole === 'CO') {
       return "My Performance";
     }
     return "Team Performance";
@@ -706,3 +706,21 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
+
+```
+- src/hooks/use-is-client.ts:
+```ts
+// This file is no longer in use as the logic has been moved to relevant components
+// that need to check if they are running on the client-side.
+// You can safely delete this file.
+// Placeholder comment for deletion.
+
+```
+- src/hooks/use-media-query.ts:
+```ts
+// This file is no longer in use. It has been replaced by the more specific
+// use-is-mobile.ts hook to avoid ambiguity.
+// You can safely delete this file.
+// Placeholder comment for deletion.
+
+```
