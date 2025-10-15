@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
@@ -64,7 +65,8 @@ export function DocsCompleteDialog({ isOpen, onOpenChange, onConfirm }: DocsComp
   
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
-      if (!isOpen) return;
+      if (!isOpen) return; 
+      
       const items = event.clipboardData?.items;
       if (items) {
         for (let i = 0; i < items.length; i++) {
@@ -75,7 +77,7 @@ export function DocsCompleteDialog({ isOpen, onOpenChange, onConfirm }: DocsComp
                if (processed) {
                  toast({title: "Image Pasted", description: "Image from clipboard has been attached as proof."});
                }
-               event.preventDefault();
+               event.preventDefault(); 
                return;
             }
           }
@@ -128,7 +130,6 @@ export function DocsCompleteDialog({ isOpen, onOpenChange, onConfirm }: DocsComp
       toast({ title: "Upload Failed", description: "Could not upload proof image. Please try again.", variant: "destructive" });
     } finally {
       setIsUploading(false);
-      onOpenChange(false);
     }
   };
 
@@ -168,7 +169,7 @@ export function DocsCompleteDialog({ isOpen, onOpenChange, onConfirm }: DocsComp
                  <div className="text-center relative group/preview">
                     <NextImage src={previewUrl} alt="Preview" width={120} height={120} className="rounded-md object-cover max-h-32 w-auto mx-auto mb-2" />
                     <p className="text-sm text-foreground font-medium truncate max-w-xs">{selectedFile?.name}</p>
-                    <p className="text-xs text-muted-foreground">({(selectedFile?.size || 0 / (1024*1024)).toFixed(2)} MB)</p>
+                    <p className="text-xs text-muted-foreground">({selectedFile ? (selectedFile.size / (1024*1024)).toFixed(2) : 0} MB)</p>
                     <button type="button" onClick={handleRemovePreview} className="absolute -top-2 -right-2 h-6 w-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center opacity-0 group-hover/preview:opacity-100 transition-opacity">
                         <XCircle className="h-4 w-4" />
                     </button>
@@ -177,7 +178,7 @@ export function DocsCompleteDialog({ isOpen, onOpenChange, onConfirm }: DocsComp
                 <>
                   <UploadCloud className="h-10 w-10 text-muted-foreground mb-2" />
                   <p className="text-sm text-muted-foreground">Drag & drop, paste, or click to upload proof</p>
-                  <p className="text-xs text-muted-foreground">(Optional, Max 5MB, Images Only)</p>
+                  <p className="text-xs text-muted-foreground">(Required, Max 5MB, Images Only)</p>
                 </>
               )}
             </div>
@@ -197,7 +198,7 @@ export function DocsCompleteDialog({ isOpen, onOpenChange, onConfirm }: DocsComp
             {isUploading ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Uploading & Confirming...</>
             ) : (
-               "Confirm & Move"
+               "Confirm & Proceed"
             )}
           </Button>
         </DialogFooter>

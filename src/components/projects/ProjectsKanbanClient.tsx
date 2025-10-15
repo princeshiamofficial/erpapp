@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -380,34 +381,29 @@ export function ProjectsKanbanClient() {
   };
   
   const handleOpenAssignDrDialog = useCallback(async (projectToAssign: Project) => {
-    console.log("[ProjectsPage] handleOpenAssignDrDialog called for project:", projectToAssign.id);
     if (!currentUser) {
-        toast({ title: "Error", description: "User not authenticated. Cannot assign DR.", variant: "destructive" });
-        console.error("[ProjectsPage] currentUser is null in handleOpenAssignDrDialog");
+        toast({ title: "Error", description: "User not authenticated.", variant: "destructive" });
         return;
     }
-
+    
     const projectShim: TrackingLink = {
         id: projectToAssign.id,
         companyName: projectToAssign.name,
         currentStatus: projectToAssign.status,
         designerRepresentativeId: projectToAssign.designerRepresentativeId || null,
         designerRepresentativeName: projectToAssign.designerRepresentativeName || null,
-        address: '',
-        phoneNumber: '',
-        orderItems: [],
-        crmUserId: projectToAssign.assigneeId,
-        crmUserName: projectToAssign.assigneeName,
-        createdAt: projectToAssign.createdAt || new Date().toISOString(),
-        isPublic: false,
-        statusHistory: [],
-        comments: [],
-        advancePayments: [],
+        address: '', phoneNumber: '', orderItems: [], crmUserId: projectToAssign.assigneeId,
+        crmUserName: projectToAssign.assigneeName, createdAt: projectToAssign.createdAt || new Date().toISOString(),
+        isPublic: false, statusHistory: [], comments: [], advancePayments: [],
     };
-    setSelectedOrderForDrAssignment(projectShim);
     
-    setIsAssignDrDialogOpen(true);
-    console.log("[ProjectsPage] Dialog state set to open for order/project:", projectShim.id);
+    if (!projectToAssign.designerRepresentativeId) {
+      setProjectForDocsComplete(projectToAssign);
+      setIsDocsCompleteDialogOpen(true);
+    } else {
+      setSelectedOrderForDrAssignment(projectShim);
+      setIsAssignDrDialogOpen(true);
+    }
 
   }, [toast, currentUser]);
 
@@ -574,7 +570,21 @@ export function ProjectsKanbanClient() {
           isOpen={isDocsCompleteDialogOpen}
           onOpenChange={setIsDocsCompleteDialogOpen}
           onConfirm={(notes) => {
-            handleConfirmStatusUpdate(projectForDocsComplete, 'On Design', notes);
+            setIsDocsCompleteDialogOpen(false);
+            const projectShim: TrackingLink = {
+              id: projectForDocsComplete.id,
+              companyName: projectForDocsComplete.name,
+              currentStatus: projectForDocsComplete.status,
+              designerRepresentativeId: projectForDocsComplete.designerRepresentativeId || null,
+              designerRepresentativeName: projectForDocsComplete.designerRepresentativeName || null,
+              address: '', phoneNumber: '', orderItems: [],
+              crmUserId: projectForDocsComplete.assigneeId,
+              crmUserName: projectForDocsComplete.assigneeName,
+              createdAt: projectForDocsComplete.createdAt || new Date().toISOString(),
+              isPublic: false, statusHistory: [], comments: [], advancePayments: [],
+            };
+            setSelectedOrderForDrAssignment(projectShim);
+            setIsAssignDrDialogOpen(true);
             setProjectForDocsComplete(null);
           }}
         />
