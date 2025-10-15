@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -23,7 +24,7 @@ interface AddUserDialogProps {
   defaultRole?: UserRole;
 }
 
-const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR"];
+const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO"];
 
 export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, children, defaultRole }: AddUserDialogProps) {
   const [name, setName] = useState('');
@@ -89,7 +90,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
       return ALL_USER_ROLES;
     }
     if (currentUser.role === 'ADMIN') {
-      return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR']; 
+      return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR', 'CO']; 
     }
     return []; 
   };

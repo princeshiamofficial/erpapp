@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -290,7 +291,7 @@ export default function UsersPage() {
     }
     if (currentUser.role === 'ADMIN') {
       if (targetUser.id === currentUser.id) return true; // Admins can edit their own info
-      return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE' || targetUser.role === 'VENDOR' || targetUser.role === 'LR';
+      return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE' || targetUser.role === 'VENDOR' || targetUser.role === 'LR' || targetUser.role === 'CO';
     }
     return false; 
   }, [currentUser]);
@@ -300,7 +301,7 @@ export default function UsersPage() {
     if (targetUser.id === currentUser.id) return false; 
     if (currentUser.role === 'SYSTEM_ADMIN') return targetUser.role !== 'SYSTEM_ADMIN'; 
     if (currentUser.role === 'ADMIN') {
-      return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE' || targetUser.role === 'VENDOR' || targetUser.role === 'LR';
+      return targetUser.role === 'CRM' || targetUser.role === 'DESIGNER_REPRESENTATIVE' || targetUser.role === 'VENDOR' || targetUser.role === 'LR' || targetUser.role === 'CO';
     }
     return false;
   }, [currentUser]);

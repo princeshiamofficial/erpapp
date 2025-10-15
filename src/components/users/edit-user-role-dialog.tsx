@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -16,7 +17,7 @@ interface EditUserRoleDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR"];
+const ALL_USER_ROLES: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "CO"];
 
 export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, isOpen, onOpenChange }: EditUserRoleDialogProps) {
   const [selectedRole, setSelectedRole] = useState<UserRole>(user.role);
@@ -32,9 +33,7 @@ export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, isOpe
     if (!currentUser) return false;
     if (currentUser.role === 'SYSTEM_ADMIN') return true; 
     if (currentUser.role === 'ADMIN') {
-      if (currentUser.id === user.id) return false; 
-      if (user.role === 'ADMIN' || user.role === 'SYSTEM_ADMIN') return false; 
-      return true; 
+      return !(currentUser.id === user.id || user.role === 'ADMIN' || user.role === 'SYSTEM_ADMIN');
     }
     return false;
   };
@@ -52,7 +51,7 @@ export function EditUserRoleDialog({ user, currentUser, onUserRoleUpdated, isOpe
           return [user.role];
       }
       // Can assign these roles to non-admin/non-system-admin users
-      return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR'];
+      return ['ADMIN', 'CRM', 'DESIGNER_REPRESENTATIVE', 'VENDOR', 'LR', 'CO'];
     }
     return [user.role]; // Default: can only select current role (no change)
   };
