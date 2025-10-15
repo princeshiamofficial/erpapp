@@ -706,21 +706,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
-
-```
-- src/hooks/use-is-client.ts:
-```ts
-// This file is no longer in use as the logic has been moved to relevant components
-// that need to check if they are running on the client-side.
-// You can safely delete this file.
-// Placeholder comment for deletion.
-
-```
-- src/hooks/use-media-query.ts:
-```ts
-// This file is no longer in use. It has been replaced by the more specific
-// use-is-mobile.ts hook to avoid ambiguity.
-// You can safely delete this file.
-// Placeholder comment for deletion.
-
-```
