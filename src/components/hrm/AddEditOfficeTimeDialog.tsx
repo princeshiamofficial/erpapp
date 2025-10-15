@@ -32,7 +32,7 @@ interface AddEditOfficeTimeDialogProps {
   officeTime?: OfficeTime | null;
 }
 
-const ALL_ROLES: UserRole[] = ["ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "SYSTEM_ADMIN"];
+const ALL_ROLES: UserRole[] = ["ADMIN", "CRM", "DESIGNER_REPRESENTATIVE", "VENDOR", "LR", "SYSTEM_ADMIN", "CO"];
 
 export function AddEditOfficeTimeDialog({ isOpen, onOpenChange, onOfficeTimeSaved, officeTime }: AddEditOfficeTimeDialogProps) {
   const [name, setName] = useState('');
