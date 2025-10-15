@@ -271,8 +271,7 @@ function DashboardContent() {
   const [isDeletingFeedback, setIsDeletingFeedback] = useState(false);
 
   
-  const isDesignerRepOrLr = currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR';
-  const isCoUser = currentUser?.role === 'CO';
+  const isDesignerRepOrLrOrCo = currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR' || currentUser?.role === 'CO';
 
 
   const fetchDashboardData = useCallback(async () => {
@@ -350,7 +349,7 @@ function DashboardContent() {
   }, [allLeads, selectedDateRange, currentUser, selectedCrmId]);
 
   const filteredProjects = useMemo(() => {
-    const isDrOrLr = currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR';
+    const isDrLrOrCo = currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR' || currentUser?.role === 'CO';
     
     let projectsToFilter = allProjects;
 
@@ -365,8 +364,8 @@ function DashboardContent() {
         projectsToFilter = projectsToFilter.filter(p => p.assigneeId === selectedCrmId);
     }
     
-    // Then, apply date filter unless user is DR/LR
-    if (!isDrOrLr) {
+    // Then, apply date filter unless user is DR/LR/CO
+    if (!isDrLrOrCo) {
       const interval = getDateRangeInterval();
       if (interval) {
         projectsToFilter = projectsToFilter.filter(project => 
@@ -1001,7 +1000,7 @@ function DashboardContent() {
           </p>
         </div>
 
-        {!isCoUser && (
+        {!isDesignerRepOrLrOrCo && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 print:hidden">
               <Card className="shadow-sm bg-card">
@@ -1237,7 +1236,7 @@ function DashboardContent() {
           </>
         )}
         
-        <div className={cn("grid grid-cols-1 gap-6", (isDesignerRepOrLr || isCoUser) ? "lg:grid-cols-1" : "")}>
+        <div className={cn("grid grid-cols-1 gap-6", (isDesignerRepOrLrOrCo) ? "lg:grid-cols-1" : "")}>
           <div className="lg:col-span-1">
             <TeamPerformanceGraph
               allTasks={allTasks}
@@ -1259,7 +1258,7 @@ function DashboardContent() {
           
         </div>
         
-        {!isCoUser && (
+        {!isDesignerRepOrLrOrCo && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 print:hidden">
               <SalesPerformanceClient
                 allOrders={salesPerformanceOrders}
@@ -1268,8 +1267,8 @@ function DashboardContent() {
               <OrderAnalysisClient allOrders={allOrders} />
             </div>
         )}
-        <div className={cn("grid grid-cols-1 gap-6 mt-6 print:hidden", !isDesignerRepOrLr && !isCoUser ? "lg:grid-cols-2" : "")}>
-           {!isCoUser && (
+        <div className={cn("grid grid-cols-1 gap-6 mt-6 print:hidden", !isDesignerRepOrLrOrCo ? "lg:grid-cols-2" : "")}>
+           {!isDesignerRepOrLrOrCo && (
               <Card className="shadow-xl bg-card">
                 <CardHeader>
                   <CardTitle className="flex items-center text-xl text-foreground">
@@ -1330,10 +1329,10 @@ function DashboardContent() {
                 </CardContent>
               </Card>
            )}
-            {(isDesignerRepOrLr || isCoUser) && ( <div className="lg:col-span-1"></div>)}
+            {(isDesignerRepOrLrOrCo) && ( <div className="lg:col-span-1"></div>)}
         </div>
         
-        {!isCoUser && (
+        {!isDesignerRepOrLrOrCo && (
           <div className={cn("grid grid-cols-1 gap-6 mt-6 print:hidden", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
             
             <Card className="shadow-xl bg-card">
@@ -1403,4 +1402,3 @@ function DashboardContent() {
     </>
   );
 }
-
