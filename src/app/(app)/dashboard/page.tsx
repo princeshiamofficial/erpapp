@@ -270,6 +270,8 @@ function DashboardContent() {
 
   
   const isDesignerRepOrLr = currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser?.role === 'LR';
+  const isCoUser = currentUser?.role === 'CO';
+
 
   const fetchDashboardData = useCallback(async () => {
     if (!currentUser) {
@@ -997,7 +999,7 @@ function DashboardContent() {
           </p>
         </div>
 
-        {!isDesignerRepOrLr && (
+        {!isCoUser && !isDesignerRepOrLr && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 print:hidden">
               <Card className="shadow-sm bg-card">
@@ -1233,7 +1235,7 @@ function DashboardContent() {
           </>
         )}
         
-        <div className={cn("grid grid-cols-1 gap-6", isDesignerRepOrLr ? "lg:grid-cols-1" : "")}>
+        <div className={cn("grid grid-cols-1 gap-6", isDesignerRepOrLr || isCoUser ? "lg:grid-cols-1" : "")}>
           <div className="lg:col-span-1">
             <TeamPerformanceGraph
               allTasks={allTasks}
@@ -1255,7 +1257,7 @@ function DashboardContent() {
           
         </div>
         
-        {!isDesignerRepOrLr && (
+        {!isCoUser && !isDesignerRepOrLr && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6 print:hidden">
               <SalesPerformanceClient
                 allOrders={salesPerformanceOrders}
@@ -1264,7 +1266,7 @@ function DashboardContent() {
               <OrderAnalysisClient allOrders={allOrders} />
             </div>
         )}
-         <div className={cn("grid grid-cols-1 gap-6 mt-6 print:hidden", !isDesignerRepOrLr ? "lg:grid-cols-2" : "")}>
+         <div className={cn("grid grid-cols-1 gap-6 mt-6 print:hidden", !isDesignerRepOrLr && !isCoUser ? "lg:grid-cols-2" : "")}>
            <Card className="shadow-xl bg-card">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl text-foreground">
@@ -1324,49 +1326,51 @@ function DashboardContent() {
                 )}
               </CardContent>
             </Card>
-            {isDesignerRepOrLr && ( <div className="lg:col-span-1"></div>)}
+            {(isDesignerRepOrLr || isCoUser) && ( <div className="lg:col-span-1"></div>)}
         </div>
         
-        <div className={cn("grid grid-cols-1 gap-6 mt-6 print:hidden", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
-          
-          <Card className="shadow-xl bg-card">
-            <CardHeader>
-              <CardTitle className="flex items-center text-xl text-foreground">
-                <Briefcase className="mr-2 h-6 w-6 text-primary" />
-                Project Overview
-              </CardTitle>
-               <CardDescription>Project distribution by status for the selected period.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <StatusTimeline
-                counts={projectCounts}
-                config={visibleProjectStatusDisplayConfig}
-                isLoading={isLoadingContent}
-                title="Project Status"
-              />
-            </CardContent>
-          </Card>
-          
-          {currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' && (
+        {!isCoUser && (
+          <div className={cn("grid grid-cols-1 gap-6 mt-6 print:hidden", currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' ? 'xl:grid-cols-2' : 'xl:grid-cols-1')}>
+            
             <Card className="shadow-xl bg-card">
               <CardHeader>
                 <CardTitle className="flex items-center text-xl text-foreground">
-                  <Users className="mr-2 h-6 w-6 text-primary" />
-                  Pipeline Overview
+                  <Briefcase className="mr-2 h-6 w-6 text-primary" />
+                  Project Overview
                 </CardTitle>
-                 <CardDescription>Lead distribution by category for the selected period.</CardDescription>
+                <CardDescription>Project distribution by status for the selected period.</CardDescription>
               </CardHeader>
               <CardContent>
                 <StatusTimeline
-                  counts={leadCategoryCounts}
-                  config={ALL_LEAD_CATEGORIES_CONFIG}
+                  counts={projectCounts}
+                  config={visibleProjectStatusDisplayConfig}
                   isLoading={isLoadingContent}
-                  title="Lead Category"
+                  title="Project Status"
                 />
               </CardContent>
             </Card>
-          )}
-        </div>
+            
+            {currentUser?.role !== 'DESIGNER_REPRESENTATIVE' && currentUser?.role !== 'VENDOR' && currentUser?.role !== 'LR' && (
+              <Card className="shadow-xl bg-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-xl text-foreground">
+                    <Users className="mr-2 h-6 w-6 text-primary" />
+                    Pipeline Overview
+                  </CardTitle>
+                  <CardDescription>Lead distribution by category for the selected period.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <StatusTimeline
+                    counts={leadCategoryCounts}
+                    config={ALL_LEAD_CATEGORIES_CONFIG}
+                    isLoading={isLoadingContent}
+                    title="Lead Category"
+                  />
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
 
       </div>
       
@@ -1395,3 +1399,4 @@ function DashboardContent() {
     </>
   );
 }
+
