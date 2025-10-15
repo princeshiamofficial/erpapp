@@ -77,9 +77,6 @@ export default function SalaryTransferPage() {
     <div className="space-y-6 printable-area">
       <Card className="shadow-lg print:shadow-none print:border-none print:bg-white">
         <CardHeader className="text-center print:text-black">
-          <div className="flex justify-center">
-             <Image src="https://i.ibb.co/FFQMvkz/logo-02-01.jpg" alt="Company Logo" width={160} height={40} className="object-contain rounded-md" />
-          </div>
           <CardTitle className="text-xl font-bold pt-2">COMPANY NAME: COLOR HUT</CardTitle>
           <CardDescription className="text-red-500 font-semibold">House No. 14, Road No. A, Block A, Sontek Area, South Kajla, Jatrabari, Dhaka - 1236</CardDescription>
         </CardHeader>
