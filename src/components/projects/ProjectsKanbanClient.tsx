@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -37,7 +36,6 @@ import { updateProjectStatusAction } from '@/app/(app)/projects/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { CourierConfirmationDialog } from '@/components/projects/CourierConfirmationDialog';
-import { FileUploadConfirmationDialog } from '@/components/projects/FileUploadConfirmationDialog'; 
 import { HoldReasonDialog } from '@/components/projects/HoldReasonDialog'; 
 import { getProjects } from '@/lib/project-service';
 import { getStatuses } from '@/lib/status-service'; 
@@ -49,6 +47,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { KanbanColumn } from './KanbanColumn';
 import { getOrderById } from '@/lib/order-service';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { DocsCompleteDialog } from '@/components/projects/DocsCompleteDialog';
 
 
 const AssignDrDialog = dynamic(() => import('@/components/orders/assign-dr-dialog').then(mod => mod.AssignDrDialog));
@@ -122,6 +121,8 @@ export function ProjectsKanbanClient() {
   const [projectForLogistics, setProjectForLogistics] = useState<Project | null>(null);
   const [isLogisticsConfirmDialogOpen, setIsLogisticsConfirmDialogOpen] = useState(false);
   const [paymentValidationError, setPaymentValidationError] = useState<string | null>(null);
+  const [projectForDocsComplete, setProjectForDocsComplete] = useState<Project | null>(null);
+  const [isDocsCompleteDialogOpen, setIsDocsCompleteDialogOpen] = useState(false);
 
 
   const sensors = useSensors(
@@ -265,7 +266,6 @@ export function ProjectsKanbanClient() {
     if (!currentUser) return;
     const originalStatus = project.status;
     
-    // Optimistic UI update
     setProjects(prevProjects => {
       return prevProjects.map(p =>
         p.id === project.id ? { ...p, status: newStatus } : p
@@ -276,7 +276,6 @@ export function ProjectsKanbanClient() {
     
     if (!result.success) {
       toast({ title: "Update Failed", description: result.error || `Could not update status.`, variant: "destructive" });
-      // Revert UI on failure
       setProjects(prevProjects => {
         return prevProjects.map(p =>
           p.id === project.id ? { ...p, status: originalStatus } : p
@@ -284,8 +283,6 @@ export function ProjectsKanbanClient() {
       });
     } else {
       toast({ title: "Project Updated", description: `Project '${project.name}' status changed to ${newStatus}.` });
-      // Optional: Refetch data to ensure full consistency if other fields change on the backend
-      // await fetchData(); 
     }
   }, [currentUser, toast]);
 
@@ -322,7 +319,15 @@ export function ProjectsKanbanClient() {
       }
     }
   
-    // New validation logic for "Logistics" stage
+    if (newStatus === 'On Design') {
+      if (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
+        setProjectForDocsComplete(project);
+        setIsDocsCompleteDialogOpen(true);
+        return; // Halt direct status update, wait for dialog confirmation
+      }
+    }
+  
+    // Existing checks
     if (newStatus === 'Logistics' && currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN') {
       setIsLoading(true);
       const order = await getOrderById(project.id);
@@ -345,7 +350,6 @@ export function ProjectsKanbanClient() {
       }
     }
   
-    // Existing checks
     if (newStatus === 'On Design' && !project.designerRepresentativeId) {
       handleOpenAssignDrDialog(project);
       return;
@@ -550,7 +554,6 @@ export function ProjectsKanbanClient() {
             isOpen={isLogisticsConfirmDialogOpen}
             onOpenChange={(open) => {
               if(!open) {
-                // If user closes dialog without confirming, revert the optimistic UI update
                 const originalStatus = projects.find(p => p.id === projectForLogistics.id)?.status;
                 if (originalStatus && originalStatus !== 'Logistics') {
                   setProjects(prev => prev.map(p => p.id === projectForLogistics.id ? {...p, status: originalStatus} : p));
@@ -564,6 +567,17 @@ export function ProjectsKanbanClient() {
               setProjectForLogistics(null);
             }}
           />
+      )}
+
+      {projectForDocsComplete && (
+        <DocsCompleteDialog
+          isOpen={isDocsCompleteDialogOpen}
+          onOpenChange={setIsDocsCompleteDialogOpen}
+          onConfirm={(notes) => {
+            handleConfirmStatusUpdate(projectForDocsComplete, 'On Design', notes);
+            setProjectForDocsComplete(null);
+          }}
+        />
       )}
 
       {paymentValidationError && (

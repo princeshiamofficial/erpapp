@@ -103,6 +103,7 @@ const calculateProgressInfo = (
   else if (status === 'Courier') effectiveStartDateIso = courierAt;
   else if (status === 'Cancel') effectiveStartDateIso = cancelAt;
   else if (status === 'Delivered') effectiveStartDateIso = deliveredAt;
+  else if (status === 'CO Clearance') effectiveStartDateIso = project.coClearanceAt || onDesignAt;
 
   if (!effectiveStartDateIso) {
     effectiveStartDateIso = updatedAt || createdAt;
@@ -131,6 +132,10 @@ const calculateProgressInfo = (
     case 'On Design':
       effectiveTargetDate = addHours(effectiveStartDate, 48);
       slaStageName = " (48H SLA)";
+      break;
+    case 'CO Clearance':
+      effectiveTargetDate = addHours(effectiveStartDate, 24);
+      slaStageName = " (24H SLA)";
       break;
     case 'On Hold':
       effectiveTargetDate = addDays(effectiveStartDate, 15); 
@@ -233,12 +238,10 @@ export function ProjectCard({ project, isOverlay = false, currentUser, allStatus
   }, [project]);
 
   const canAssignDrPermission = (currentUser?.role === 'SYSTEM_ADMIN' || currentUser?.role === 'ADMIN' || currentUser?.role === 'CRM');
-  const canOpenDialogFromProjectCard = (project.status === 'CR Clearance' || project.status === 'On Design');
+  const canOpenDialogFromProjectCard = (project.status === 'CR Clearance' || project.status === 'On Design' || project.status === 'CO Clearance');
 
   const crmInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !project.designerRepresentativeName;
   const drInfoClickable = canAssignDrPermission && canOpenDialogFromProjectCard && !!project.designerRepresentativeName;
-
-  const relevantDrStages: ProjectStatusType[] = ['On Design', 'On Hold', 'Logistics', 'Courier'];
 
   return (
     <motion.div
