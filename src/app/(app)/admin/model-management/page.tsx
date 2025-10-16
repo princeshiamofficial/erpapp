@@ -7,7 +7,7 @@ import NextImage from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from '@/components/ui/input';
-import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle, Search, UploadCloud, ImageIcon, PackageCheck } from "lucide-react";
+import { PlusCircle, Edit, Trash2, Layers, RefreshCw, AlertTriangle, Search, UploadCloud, ImageIcon, PackageCheck, ShoppingCart } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { ServiceModelItem } from "@/types";
@@ -21,7 +21,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { Switch } from '@/components/ui/switch'; // For the checkbox
+import { Switch } from '@/components/ui/switch'; 
 
 interface ItemToEdit {
   id: string;
@@ -83,12 +83,15 @@ export default function ModelManagementPage() {
       router.replace('/dashboard');
     }
   }, [currentUser, router, fetchData]);
-
-  const filteredModels = useMemo(() => {
-    if (!modelSearchTerm) return models;
-    return models.filter(model =>
+  
+  const { filteredModels, totalSold } = useMemo(() => {
+    const sold = models.reduce((acc, model) => acc + (model.totalSold || 0), 0);
+    if (!modelSearchTerm) return { filteredModels: models, totalSold: sold };
+    
+    const filtered = models.filter(model =>
       model.name.toLowerCase().includes(modelSearchTerm.toLowerCase())
     );
+    return { filteredModels: filtered, totalSold: sold };
   }, [models, modelSearchTerm]);
 
   const openAddDialog = () => {
@@ -272,7 +275,7 @@ export default function ModelManagementPage() {
     );
   }
   
-  const renderItemList = (items: ServiceModelItem[], title: string, Icon: React.ElementType) => (
+  const renderItemList = (items: ServiceModelItem[], title: string, Icon: React.ElementType, totalSold: number) => (
     <Card className="shadow-xl border bg-card rounded-lg overflow-hidden flex-1 min-w-[300px]">
       <CardHeader className="border-b p-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
@@ -280,9 +283,15 @@ export default function ModelManagementPage() {
             <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Icon className="h-5 w-5 text-primary"/>{title}</CardTitle>
             <CardDescription className="text-muted-foreground text-sm mt-0.5">Manage available {title.toLowerCase()} options for orders.</CardDescription>
           </div>
-          <Button size="sm" onClick={openAddDialog} className="h-9 w-full sm:w-auto">
+           <div className="flex items-center gap-2">
+             <div className="p-3 rounded-lg bg-muted flex flex-col items-center justify-center">
+                <p className="text-xs text-muted-foreground font-semibold">Total Sold</p>
+                <p className="text-xl font-bold text-primary">{totalSold.toLocaleString()}</p>
+             </div>
+             <Button size="sm" onClick={openAddDialog} className="h-9">
               <PlusCircle className="mr-2 h-4 w-4" /> Add New
-          </Button>
+            </Button>
+          </div>
         </div>
         <div className="relative mt-4">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -295,76 +304,86 @@ export default function ModelManagementPage() {
         </div>
       </CardHeader>
       <CardContent className="p-0 max-h-[calc(100vh-350px)] overflow-y-auto">
-        {isLoading ? (
-          <div className="p-4 space-y-3">
-            {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-md" />)}
-          </div>
-        ) : items.length === 0 ? (
-          <div className="p-6 text-center text-muted-foreground">
-            <Icon className="mx-auto h-10 w-10 opacity-50 mb-2" />
-            No {modelSearchTerm ? `${title.toLowerCase()} found for "${modelSearchTerm}"` : `${title.toLowerCase()} found.`}
-          </div>
-        ) : (
-          <ul className="divide-y divide-border/50">
-            {items.map((item) => (
-              <li key={item.id} className="flex items-center justify-between p-3 hover:bg-muted/30 transition-colors">
-                <div className="flex items-center gap-4 flex-1">
-                   <NextImage
-                      src={item.imageUrl || `https://placehold.co/64x64.png`}
-                      alt={item.name}
-                      width={48}
-                      height={48}
-                      className="rounded-md object-cover bg-muted"
-                      data-ai-hint="product photo"
-                      unoptimized={!item.imageUrl?.startsWith('https://colorhutbd.xyz')}
-                  />
-                  <div className="flex-1 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-x-2 sm:gap-x-4 items-center">
-                    <div className="flex flex-col">
-                        <span className="font-medium text-foreground whitespace-nowrap overflow-hidden" title={item.name}>
-                        {item.name}
-                        </span>
-                        {item.isReadyMade && (
-                            <span className={cn(
-                                "text-xs font-semibold flex items-center gap-1",
-                                item.stockCount !== undefined && item.stockCount < 0 ? "text-destructive" : "text-green-600"
-                            )}>
-                                <PackageCheck className="h-3.5 w-3.5" />
-                                Ready Made (Stock: {item.stockCount ?? 0})
-                            </span>
-                        )}
-                    </div>
-                    <span className="font-bold text-[hsl(var(--chart-1))] flex items-center justify-between min-w-[7rem] md:min-w-[7.5rem] py-1">
-                      <span className="flex items-center">
-                        <span className="text-muted-foreground/90 text-[0.75rem] sm:text-xs w-9 text-right mr-1.5 flex-shrink-0">Buy:</span>
-                      </span>
-                      <span className="font-mono text-sm sm:text-base">{formatCurrency(item.buyingPrice)}</span>
-                    </span>
-                    <span className="font-bold text-[hsl(var(--chart-2))] flex items-center justify-between min-w-[7rem] md:min-w-[7.5rem] py-1">
-                      <span className="flex items-center">
-                        <span className="text-muted-foreground/90 text-[0.75rem] sm:text-xs w-9 text-right mr-1.5 flex-shrink-0">Sell:</span>
-                      </span>
-                      <span className="font-mono text-sm sm:text-base">{formatCurrency(item.sellingPrice)}</span>
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 ml-4">
-                  <Button variant="outline" size="icon" onClick={() => openEditDialog(item)} title={`Edit model`} className="h-8 w-8">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => openDeleteDialog(item)} 
-                    title={`Delete model`} 
-                    className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        <div className="overflow-x-auto">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead className="w-12 pl-4">SL</TableHead>
+                        <TableHead className="min-w-[64px]">Image</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Buying Price</TableHead>
+                        <TableHead>Selling Price</TableHead>
+                        <TableHead className="text-center">Sold</TableHead>
+                        <TableHead className="text-center">Stock Info</TableHead>
+                        <TableHead className="pr-4 text-right">Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                 {isLoading ? (
+                    [...Array(5)].map((_, i) => <TableRow key={i}><TableCell colSpan={8}><Skeleton className="h-16 w-full rounded-md" /></TableCell></TableRow>)
+                  ) : items.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="p-6 text-center text-muted-foreground">
+                        <Icon className="mx-auto h-10 w-10 opacity-50 mb-2" />
+                        No {modelSearchTerm ? `${title.toLowerCase()} found for "${modelSearchTerm}"` : `${title.toLowerCase()} found.`}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    items.map((item, index) => (
+                      <TableRow key={item.id} className="hover:bg-muted/30 transition-colors">
+                        <TableCell className="pl-4 font-mono text-muted-foreground">{String(index + 1).padStart(2, '0')}</TableCell>
+                        <TableCell>
+                            <NextImage
+                                src={item.imageUrl || `https://placehold.co/64x64.png`}
+                                alt={item.name}
+                                width={48}
+                                height={48}
+                                className="rounded-md object-cover bg-muted"
+                                data-ai-hint="product photo"
+                                unoptimized={!item.imageUrl?.startsWith('https://colorhutbd.xyz')}
+                            />
+                        </TableCell>
+                        <TableCell>
+                           <span className="font-medium text-foreground">{item.name}</span>
+                        </TableCell>
+                        <TableCell className="font-mono">{formatCurrency(item.buyingPrice)}</TableCell>
+                        <TableCell className="font-mono">{formatCurrency(item.sellingPrice)}</TableCell>
+                        <TableCell className="text-center">
+                            <span className="font-semibold text-primary">{item.totalSold || 0}</span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                           {item.isReadyMade ? (
+                                <span className={cn(
+                                    "text-xs font-semibold flex items-center justify-center gap-1 p-1 rounded-full",
+                                    item.stockCount !== undefined && item.stockCount < 0 ? "bg-destructive/10 text-destructive" : "bg-green-500/10 text-green-600"
+                                )}>
+                                    <PackageCheck className="h-3.5 w-3.5" />
+                                    Stock: {item.stockCount ?? 0}
+                                </span>
+                            ) : (<span className="text-xs text-muted-foreground italic">N/A</span>)}
+                        </TableCell>
+                        <TableCell className="pr-4 text-right">
+                           <div className="flex items-center justify-end gap-2">
+                            <Button variant="outline" size="icon" onClick={() => openEditDialog(item)} title={`Edit model`} className="h-8 w-8">
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => openDeleteDialog(item)} 
+                                title={`Delete model`} 
+                                className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive-foreground"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                            </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+            </Table>
+        </div>
       </CardContent>
     </Card>
   );
@@ -382,7 +401,7 @@ export default function ModelManagementPage() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {renderItemList(filteredModels, 'Models', Layers)}
+        {renderItemList(filteredModels, 'Models', Layers, totalSold)}
       </div>
 
       <Dialog open={isAddEditDialogOpen} onOpenChange={(open) => {

@@ -3,6 +3,7 @@
 import type { ServiceModelItem, ServiceLaminationItem, ServicePaymentMethodItem, ServiceGiftItem } from '@/types';
 import { v4 as uuidv4 } from 'uuid';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
+import { getOrders } from './order-service';
 
 
 const MODELS_COLLECTION = 'serviceModels';
@@ -53,16 +54,35 @@ const seedDefaultModels = async (): Promise<ServiceModelItem[]> => {
 export const getModels = async (): Promise<ServiceModelItem[]> => {
   try {
     await ensureCollectionExistsV3(MODELS_COLLECTION);
-    const response = await fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents?limit=9999&orderBy=name&direction=asc`);
-    if (response && Array.isArray(response.documents)) {
-        if (response.documents.length === 0) {
-            console.log("No service models found, seeding defaults via API v3.");
-            return await seedDefaultModels();
-        }
-        return response.documents.map((doc: { id: string, data: any }) => ({
+    const [modelsResponse, allOrders] = await Promise.all([
+        fetchFromApiV3(`collections/${MODELS_COLLECTION}/documents?limit=9999&orderBy=name&direction=asc`),
+        getOrders()
+    ]);
+
+    if (modelsResponse && Array.isArray(modelsResponse.documents)) {
+        let models = modelsResponse.documents.map((doc: { id: string, data: any }) => ({
             id: doc.id,
             ...doc.data
         } as ServiceModelItem));
+
+        if (models.length === 0) {
+            console.log("No service models found, seeding defaults via API v3.");
+            models = await seedDefaultModels();
+        }
+
+        // Calculate sold counts
+        const soldCounts = new Map<string, number>();
+        allOrders.forEach(order => {
+            order.orderItems.forEach(item => {
+                soldCounts.set(item.model, (soldCounts.get(item.model) || 0) + item.quantity);
+            });
+        });
+        
+        // Add totalSold to each model
+        return models.map(model => ({
+            ...model,
+            totalSold: soldCounts.get(model.name) || 0
+        }));
     }
     return [];
   } catch (error) {
@@ -81,7 +101,7 @@ export const addModel = async (name: string, buyingPrice?: number, sellingPrice?
 
   try {
     await ensureCollectionExistsV3(MODELS_COLLECTION);
-    const newModelData: Omit<ServiceModelItem, 'id'> = { 
+    const newModelData: Omit<ServiceModelItem, 'id' | 'totalSold'> = { 
       name: name.trim(), 
       buyingPrice: numBuyingPrice, 
       sellingPrice: numSellingPrice, 

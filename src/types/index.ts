@@ -200,6 +200,7 @@ export interface ServiceModelItem {
   imageUrl?: string | null;
   isReadyMade?: boolean;
   stockCount?: number;
+  totalSold?: number;
 }
 
 export interface ServiceLaminationItem {
