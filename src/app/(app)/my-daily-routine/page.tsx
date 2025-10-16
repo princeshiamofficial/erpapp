@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowLeft, ArrowRight, PlusCircle, Edit, Trash2 } from "lucide-react";
+import { Loader2, ArrowLeft, ArrowRight, PlusCircle, Edit, Trash2, ClipboardList } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { DailyRoutine, User } from '@/types';
@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AddEditRoutineDialog } from '@/components/daily-routine/AddEditRoutineDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Card } from '@/components/ui/card';
 
 
 export default function MyDailyRoutinePage() {
@@ -73,11 +74,11 @@ export default function MyDailyRoutinePage() {
     setRoutinesData(prev => {
         const newRoutines = { ...prev };
         const dayRoutine = newRoutines[dateKey] || { id: dateKey, userId: currentUser.id, completedTasks: [], updatedAt: new Date().toISOString() };
-        const taskIndex = dayRoutine.completedTasks.indexOf(taskId);
+        const taskIndex = (dayRoutine.completedTasks || []).indexOf(taskId);
         if (taskIndex > -1) {
-            dayRoutine.completedTasks = dayRoutine.completedTasks.filter(t => t !== taskId);
+            dayRoutine.completedTasks = (dayRoutine.completedTasks || []).filter(t => t !== taskId);
         } else {
-            dayRoutine.completedTasks = [...dayRoutine.completedTasks, taskId];
+            dayRoutine.completedTasks = [...(dayRoutine.completedTasks || []), taskId];
         }
         newRoutines[dateKey] = dayRoutine;
         return newRoutines;
@@ -146,59 +147,76 @@ export default function MyDailyRoutinePage() {
           </Button>
         </div>
 
-        <div className="overflow-x-auto bg-card p-2 rounded-lg shadow-sm">
-          <table className="w-full border-collapse">
-              <thead>
-                  <tr>
-                      <th className="border p-1 align-top bg-orange-200 dark:bg-orange-800/50 w-32 min-w-[128px]">
-                        <Button onClick={openAddDialog} size="sm" className="w-full">
-                          <PlusCircle className="h-4 w-4 mr-2"/> Add Routine
-                        </Button>
-                      </th>
-                      {routineHeaders.map(header => (
-                          <th key={header.id} className={cn("border p-1 text-center font-semibold text-sm group relative", header.color)}>
-                              <div className="flex flex-col h-full justify-between min-h-[5rem]">
-                                  <span>{header.title}</span>
-                                  <span className="font-normal text-xs">{header.time}</span>
-                              </div>
-                              <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEditDialog(header)}><Edit className="h-3 w-3"/></Button>
-                                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={() => setRoutineToDelete(header)}><Trash2 className="h-3 w-3"/></Button>
-                              </div>
-                          </th>
-                      ))}
-                  </tr>
-              </thead>
-              <tbody>
-                  {weekDays.map(date => {
-                      const dateKey = format(date, 'yyyy-MM-dd');
-                      const dayRoutine = routinesData[dateKey];
-                      return (
-                          <tr key={dateKey} className="hover:bg-muted/30">
-                              <td className="border p-2 text-center bg-orange-200 dark:bg-orange-800/50">
-                                  <p className="font-semibold text-sm">{format(date, 'dd/MM/yy')}</p>
-                                  <p className="text-xs">{format(date, 'EEEE')}</p>
-                              </td>
-                              {routineHeaders.map(header => (
-                                  <td key={`${dateKey}-${header.id}`} className="border p-2 text-center align-middle">
-                                      {header.id !== 'remarks' ? (
-                                          <Checkbox
-                                              checked={dayRoutine?.completedTasks.includes(header.id)}
-                                              onCheckedChange={() => handleToggleTask(date, header.id)}
-                                              aria-label={`Mark ${header.title} as completed for ${format(date, 'PPP')}`}
-                                              className="h-5 w-5"
-                                          />
-                                      ) : (
-                                          <div className="w-full h-full min-w-[100px]"></div> // Placeholder for remarks input
-                                      )}
-                                  </td>
-                              ))}
-                          </tr>
-                      )
-                  })}
-              </tbody>
-          </table>
-        </div>
+        {isLoading ? (
+          <div className="overflow-x-auto bg-card p-2 rounded-lg shadow-sm">
+            <Skeleton className="h-[400px] w-full" />
+          </div>
+        ) : routineHeaders.length > 0 ? (
+          <div className="overflow-x-auto bg-card p-2 rounded-lg shadow-sm">
+            <table className="w-full border-collapse">
+                <thead>
+                    <tr>
+                        <th className="border p-1 align-top bg-orange-200 dark:bg-orange-800/50 w-32 min-w-[128px]">
+                          <Button onClick={openAddDialog} size="sm" className="w-full">
+                            <PlusCircle className="h-4 w-4 mr-2"/> Add Routine
+                          </Button>
+                        </th>
+                        {routineHeaders.map(header => (
+                            <th key={header.id} className="border p-1 text-center font-semibold text-sm group relative" style={{ backgroundColor: header.color }}>
+                                <div className="flex flex-col h-full justify-between min-h-[5rem]">
+                                    <span className="text-white">{header.title}</span>
+                                    <span className="font-normal text-xs text-white/80">{header.time}</span>
+                                </div>
+                                <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => openEditDialog(header)}><Edit className="h-3 w-3"/></Button>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => setRoutineToDelete(header)}><Trash2 className="h-3 w-3"/></Button>
+                                </div>
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {weekDays.map(date => {
+                        const dateKey = format(date, 'yyyy-MM-dd');
+                        const dayRoutine = routinesData[dateKey];
+                        return (
+                            <tr key={dateKey} className="hover:bg-muted/30">
+                                <td className="border p-2 text-center bg-orange-200 dark:bg-orange-800/50">
+                                    <p className="font-semibold text-sm">{format(date, 'dd/MM/yy')}</p>
+                                    <p className="text-xs">{format(date, 'EEEE')}</p>
+                                </td>
+                                {routineHeaders.map(header => (
+                                    <td key={`${dateKey}-${header.id}`} className="border p-2 text-center align-middle">
+                                        {header.id !== 'remarks' ? (
+                                            <Checkbox
+                                                checked={(dayRoutine?.completedTasks || []).includes(header.id)}
+                                                onCheckedChange={() => handleToggleTask(date, header.id)}
+                                                aria-label={`Mark ${header.title} as completed for ${format(date, 'PPP')}`}
+                                                className="h-5 w-5"
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full min-w-[100px]"></div>
+                                        )}
+                                    </td>
+                                ))}
+                            </tr>
+                        )
+                    })}
+                </tbody>
+            </table>
+          </div>
+        ) : (
+          <Card className="md:col-span-2 lg:col-span-3">
+             <CardContent className="h-64 flex flex-col items-center justify-center text-center text-muted-foreground">
+               <ClipboardList className="h-12 w-12 mb-4 opacity-50" />
+               <p className="text-lg font-semibold">No routines yet!</p>
+               <p className="text-sm">Click "Add Routine" to get started.</p>
+                <Button onClick={openAddDialog} size="sm" className="mt-4">
+                  <PlusCircle className="h-4 w-4 mr-2"/> Add Routine
+                </Button>
+             </CardContent>
+           </Card>
+        )}
       </div>
       <AddEditRoutineDialog
         isOpen={isAddEditDialogOpen}
@@ -228,4 +246,3 @@ export default function MyDailyRoutinePage() {
     </>
   );
 }
-
