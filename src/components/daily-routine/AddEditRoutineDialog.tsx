@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -21,7 +22,7 @@ import { addRoutineAction, updateRoutineAction } from '@/app/(app)/my-daily-rout
 
 interface AddEditRoutineDialogProps {
   isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
+  onOpenChange: (open: boolean) => void;
   onRoutineSaved: (savedRoutine: DailyRoutine, isEdit: boolean) => void;
   routine?: DailyRoutine | null;
   currentUser: User;
@@ -31,6 +32,7 @@ export function AddEditRoutineDialog({ isOpen, onOpenChange, onRoutineSaved, rou
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [time, setTime] = useState('');
+  const [color, setColor] = useState('#f3f4f6');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -39,13 +41,15 @@ export function AddEditRoutineDialog({ isOpen, onOpenChange, onRoutineSaved, rou
   useEffect(() => {
     if (isOpen) {
       if (isEditMode && routine) {
-        setTitle(routine.title);
+        setTitle(routine.title || '');
         setDescription(routine.description || '');
-        setTime(routine.time);
+        setTime(routine.time || '');
+        setColor(routine.color || '#f3f4f6');
       } else {
         setTitle('');
         setDescription('');
         setTime('');
+        setColor('#f3f4f6');
       }
     }
   }, [isOpen, routine, isEditMode]);
@@ -62,21 +66,21 @@ export function AddEditRoutineDialog({ isOpen, onOpenChange, onRoutineSaved, rou
     if (isEditMode && routine) {
       const updates: Partial<Omit<DailyRoutine, 'id' | 'userId'>> = {
         title: title.trim(),
-        description: description.trim() || null,
+        description: description.trim() || undefined,
         time,
+        color,
       };
       result = await updateRoutineAction(routine.id, updates, currentUser.id);
       if (result.success) {
-        // Since update action doesn't return the object, we construct it
-        onRoutineSaved({ ...routine, ...updates }, true);
+        onRoutineSaved({ ...routine, ...updates } as DailyRoutine, true);
       }
     } else {
-      const routineData: Omit<DailyRoutine, 'id' | 'createdAt'> = {
+      const routineData: Omit<DailyRoutine, 'id' | 'createdAt' | 'updatedAt' | 'completedTasks'> = {
         userId: currentUser.id,
         title: title.trim(),
-        description: description.trim() || null,
+        description: description.trim() || undefined,
         time,
-        isCompleted: false, // Always false for new routines
+        color,
       };
       result = await addRoutineAction(routineData);
       if (result.success && result.routine) {
@@ -107,11 +111,14 @@ export function AddEditRoutineDialog({ isOpen, onOpenChange, onRoutineSaved, rou
           </div>
           <div className="space-y-1">
             <Label htmlFor="routine-time">Time *</Label>
-            <Input id="routine-time" type="time" value={time} onChange={e => setTime(e.target.value)} required />
+            <Input id="routine-time" value={time} onChange={e => setTime(e.target.value)} required placeholder="e.g., 6:00 AM to 7:00 AM" />
           </div>
           <div className="space-y-1">
-            <Label htmlFor="routine-description">Description (Optional)</Label>
-            <Textarea id="routine-description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Add more details..." />
+            <Label htmlFor="routine-color">Color</Label>
+            <div className="flex items-center gap-2">
+                <Input id="routine-color" type="color" value={color} onChange={e => setColor(e.target.value)} className="w-16 h-10 p-1"/>
+                <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: color }} />
+            </div>
           </div>
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>

@@ -629,11 +629,20 @@ export interface MonthlyTargetHistory {
     undone: number;
 }
 
-// New data structure for the Daily Routine page
+// Updated data structure for the Daily Routine page
 export interface DailyRoutine {
-  id: string; // Corresponds to the date string 'YYYY-MM-DD'
+  id: string; // Document ID for a header can be anything, for a daily record it's YYYY-MM-DD
   userId: string;
-  completedTasks: string[]; // An array of task identifiers, e.g., ['wakeup', 'namaz_fazar']
+  
+  // Fields for a routine header
+  title?: string;
+  time?: string;
+  color?: string;
+  
+  // Fields for a daily record
+  completedTasks?: string[]; // An array of routine header IDs
   remarks?: string;
+
+  createdAt?: string; // ISO string, for sorting headers
   updatedAt: string; // ISO string
 }
