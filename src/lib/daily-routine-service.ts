@@ -14,7 +14,7 @@ export const getRoutineHeadersForUser = async (userId: string): Promise<DailyRou
   if (!userId) return [];
   const collectionPath = getHeadersCollectionName(userId);
   try {
-    const endpoint = `collections/${collectionPath}/documents?limit=9999&orderBy=createdAt&direction=asc`;
+    const endpoint = `collections/${collectionPath}/documents?limit=9999&orderBy=createdAt&direction=desc`;
     const response = await fetchFromApiV3(endpoint);
     
     if (response && Array.isArray(response.documents)) {
@@ -94,10 +94,29 @@ export const deleteRoutineHeader = async (id: string, userId: string): Promise<b
 
 // Functions for daily check-in data
 
+export const getRoutinesAction = async (userId: string): Promise<DailyRoutine[]> => {
+  if (!userId) return [];
+  const today = new Date();
+  const oneMonthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+  
+  try {
+    const [currentMonthRoutines, previousMonthRoutines] = await Promise.all([
+      getRoutinesForUser(userId, today),
+      getRoutinesForUser(userId, oneMonthAgo)
+    ]);
+    // Combine and deduplicate if necessary, although fetching by month should prevent duplicates.
+    return [...previousMonthRoutines, ...currentMonthRoutines];
+  } catch (error) {
+    console.error("Error fetching routines for two months", error);
+    return [];
+  }
+}
+
 export const getRoutinesForUser = async (userId: string, month: Date): Promise<DailyRoutine[]> => {
   if (!userId) return [];
   const collectionPath = getDailyCollectionName(userId, month);
   try {
+    await ensureCollectionExistsV3(collectionPath);
     const endpoint = `collections/${collectionPath}/documents?limit=9999`;
     const response = await fetchFromApiV3(endpoint);
     
@@ -124,6 +143,7 @@ export const getRoutineById = async (routineId: string, userId: string): Promise
     const collectionPath = getDailyCollectionName(userId, dateFromId);
     const endpoint = `collections/${collectionPath}/documents/${routineId}`;
     try {
+        await ensureCollectionExistsV3(collectionPath);
         const response = await fetchFromApiV3(endpoint);
         return { id: response.id, ...response.data } as DailyRoutine;
     } catch (error) {
