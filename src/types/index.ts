@@ -628,3 +628,13 @@ export interface MonthlyTargetHistory {
     achieved: number;
     undone: number;
 }
+
+export interface DailyRoutine {
+  id: string;
+  userId: string;
+  title: string;
+  description?: string | null;
+  time: string; // "HH:mm" format
+  isCompleted: boolean;
+  createdAt: string; // ISO string
+}
