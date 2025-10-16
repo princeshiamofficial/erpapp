@@ -629,12 +629,11 @@ export interface MonthlyTargetHistory {
     undone: number;
 }
 
+// New data structure for the Daily Routine page
 export interface DailyRoutine {
-  id: string;
+  id: string; // Corresponds to the date string 'YYYY-MM-DD'
   userId: string;
-  title: string;
-  description?: string | null;
-  time: string; // "HH:mm" format
-  isCompleted: boolean;
-  createdAt: string; // ISO string
+  completedTasks: string[]; // An array of task identifiers, e.g., ['wakeup', 'namaz_fazar']
+  remarks?: string;
+  updatedAt: string; // ISO string
 }
