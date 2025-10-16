@@ -131,20 +131,6 @@ export default function MyDailyRoutinePage() {
     setIsDeleting(false);
     setRoutineToDelete(null);
   };
-  
-  function lightenHexColor(hex: string, percent: number) {
-    if (!hex) return '#ffffff';
-    let r = parseInt(hex.substring(1, 3), 16);
-    let g = parseInt(hex.substring(3, 5), 16);
-    let b = parseInt(hex.substring(5, 7), 16);
-    
-    r = Math.min(255, r + (255 - r) * (percent / 100));
-    g = Math.min(255, g + (255 - g) * (percent / 100));
-    b = Math.min(255, b + (255 - b) * (percent / 100));
-    
-    return `#${Math.round(r).toString(16).padStart(2, '0')}${Math.round(g).toString(16).padStart(2, '0')}${Math.round(b).toString(16).padStart(2, '0')}`;
-  }
-
 
   if (isAuthLoading || !currentUser) {
     return <div className="flex h-screen w-full items-center justify-center"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>;
@@ -160,15 +146,9 @@ export default function MyDailyRoutinePage() {
           <h2 className="text-lg font-semibold text-center">
             {format(currentWeekStart, "MMMM d")} - {format(addDays(currentWeekStart, 6), "MMMM d, yyyy")}
           </h2>
-          <div className="flex items-center gap-2">
-            <Button onClick={() => setCurrentWeekStart(addDays(currentWeekStart, 7))} variant="outline">
-              Next Week <ArrowRight className="h-4 w-4 ml-2" />
-            </Button>
-            <Button size="sm" className="h-10 rounded-md shrink-0" onClick={openAddDialog}>
-              <PlusCircle className="h-4 w-4 mr-1 sm:mr-2"/>
-              <span className="hidden sm:inline">Add New</span>
-            </Button>
-          </div>
+          <Button onClick={() => setCurrentWeekStart(addDays(currentWeekStart, 7))} variant="outline">
+            Next Week <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
         </div>
 
         {isLoading ? (
@@ -185,18 +165,11 @@ export default function MyDailyRoutinePage() {
                         </th>
                         {routineHeaders.map(header => {
                            const textColor = getContrastTextColor(header.color || '#f3f4f6');
-                           const gradientStart = lightenHexColor(header.color || '#f3f4f6', 20);
-                           const gradientEnd = header.color || '#f3f4f6';
-                           const gradientStyle = {
-                             backgroundImage: `linear-gradient(to bottom, ${gradientStart}, ${gradientEnd})`,
-                             borderTop: `3px solid ${lightenHexColor(header.color || '#f3f4f6', 40)}`,
-                           };
-
                            return (
-                            <th key={header.id} className="border p-1 text-center font-semibold text-sm group relative" style={gradientStyle}>
+                            <th key={header.id} className="border p-1 text-center font-semibold text-sm group relative" style={{ backgroundColor: header.color || '#f3f4f6' }}>
                                 <div className="flex flex-col h-full justify-start min-h-[5rem]">
-                                    <span style={{ color: textColor, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}>{header.title}</span>
-                                    <span className="font-normal text-xs" style={{ color: textColor, opacity: 0.8, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}>{header.time}</span>
+                                    <span style={{ color: textColor }}>{header.title}</span>
+                                    <span className="font-normal text-xs" style={{ color: textColor, opacity: 0.8 }}>{header.time}</span>
                                 </div>
                                 <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/20" onClick={() => openEditDialog(header)}><Edit className="h-3 w-3" style={{ color: textColor }}/></Button>
@@ -205,6 +178,12 @@ export default function MyDailyRoutinePage() {
                             </th>
                            )
                         })}
+                        <th className="border p-2 align-top bg-muted/50 w-24 min-w-[96px]">
+                          <Button size="sm" className="w-full h-full" onClick={openAddDialog}>
+                            <PlusCircle className="h-4 w-4 mr-1 sm:mr-2"/>
+                            <span className="hidden sm:inline">New</span>
+                          </Button>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -227,6 +206,7 @@ export default function MyDailyRoutinePage() {
                                         />
                                     </td>
                                 ))}
+                                <td className="border p-2"></td>
                             </tr>
                         )
                     })}
@@ -238,7 +218,7 @@ export default function MyDailyRoutinePage() {
              <CardContent className="h-64 flex flex-col items-center justify-center text-center text-muted-foreground">
                <ClipboardList className="h-12 w-12 mb-4 opacity-50" />
                <p className="text-lg font-semibold">No routines yet!</p>
-               <p className="text-sm">Click "Add Routine" to get started.</p>
+               <p className="text-sm">Click "Add New" to get started.</p>
                 <Button onClick={openAddDialog} size="sm" className="mt-4">
                   <PlusCircle className="h-4 w-4 mr-2"/> Add Routine
                 </Button>
@@ -274,4 +254,3 @@ export default function MyDailyRoutinePage() {
     </>
   );
 }
-
