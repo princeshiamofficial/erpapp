@@ -6,8 +6,7 @@ import type { DailyRoutine } from '@/types';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 import { v4 as uuidv4 } from 'uuid';
 
-const getCollectionName = (userId: string) => `routines-${userId}`;
-const ROUTINE_HEADERS_DOC_ID = 'routineHeaders';
+const getCollectionName = (userId: string) => `routine-${userId}`;
 
 export const getRoutineHeadersForUser = async (userId: string): Promise<DailyRoutine[]> => {
   if (!userId) return [];
@@ -35,14 +34,19 @@ export const getRoutineHeadersForUser = async (userId: string): Promise<DailyRou
   }
 };
 
-export const addRoutineHeader = async (routineData: Omit<DailyRoutine, 'id' | 'createdAt' | 'isCompleted'>): Promise<DailyRoutine | null> => {
+export const addRoutineHeader = async (routineData: Omit<DailyRoutine, 'id' | 'createdAt' | 'updatedAt' | 'completedTasks'>): Promise<DailyRoutine | null> => {
   if (!routineData.userId || !routineData.title) return null;
   const collectionPath = getCollectionName(routineData.userId);
   try {
     await ensureCollectionExistsV3(collectionPath);
-    const dataWithTimestamp = {
-      ...routineData,
+    const dataWithTimestamp: Omit<DailyRoutine, 'id'> = {
+      userId: routineData.userId,
+      title: routineData.title,
+      time: routineData.time,
+      description: routineData.description,
+      color: routineData.color,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     const newDoc = await fetchFromApiV3(`collections/${collectionPath}/documents`, {
       method: 'POST',
