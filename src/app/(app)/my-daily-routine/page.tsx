@@ -42,8 +42,9 @@ export default function MyDailyRoutinePage() {
         getRoutinesAction(currentUser.id),
         getRoutineHeadersAction(currentUser.id)
       ]);
+      
       const routinesMap = fetchedRoutines.reduce((acc, routine) => {
-        acc[routine.id] = routine;
+        acc[routine.id] = routine; // The ID of a daily record is its date string 'YYYY-MM-DD'
         return acc;
       }, {} as Record<string, DailyRoutine>);
       setRoutinesData(routinesMap);
@@ -80,12 +81,15 @@ export default function MyDailyRoutinePage() {
         const newRoutines = { ...prev };
         const dayRoutine = newRoutines[dateKey] || { id: dateKey, userId: currentUser.id, completedTasks: [], updatedAt: new Date().toISOString() };
         const taskIndex = (dayRoutine.completedTasks || []).indexOf(taskId);
+        let updatedTasks: string[];
+
         if (taskIndex > -1) {
-            dayRoutine.completedTasks = (dayRoutine.completedTasks || []).filter(t => t !== taskId);
+            updatedTasks = (dayRoutine.completedTasks || []).filter(t => t !== taskId);
         } else {
-            dayRoutine.completedTasks = [...(dayRoutine.completedTasks || []), taskId];
+            updatedTasks = [...(dayRoutine.completedTasks || []), taskId];
         }
-        newRoutines[dateKey] = dayRoutine;
+        
+        newRoutines[dateKey] = { ...dayRoutine, completedTasks: updatedTasks };
         return newRoutines;
     });
 

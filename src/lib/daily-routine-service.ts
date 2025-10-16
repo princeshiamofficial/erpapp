@@ -94,24 +94,6 @@ export const deleteRoutineHeader = async (id: string, userId: string): Promise<b
 
 // Functions for daily check-in data
 
-export const getRoutinesAction = async (userId: string): Promise<DailyRoutine[]> => {
-  if (!userId) return [];
-  const today = new Date();
-  const oneMonthAgo = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-  
-  try {
-    const [currentMonthRoutines, previousMonthRoutines] = await Promise.all([
-      getRoutinesForUser(userId, today),
-      getRoutinesForUser(userId, oneMonthAgo)
-    ]);
-    // Combine and deduplicate if necessary, although fetching by month should prevent duplicates.
-    return [...previousMonthRoutines, ...currentMonthRoutines];
-  } catch (error) {
-    console.error("Error fetching routines for two months", error);
-    return [];
-  }
-}
-
 export const getRoutinesForUser = async (userId: string, month: Date): Promise<DailyRoutine[]> => {
   if (!userId) return [];
   const collectionPath = getDailyCollectionName(userId, month);
@@ -166,10 +148,14 @@ export const toggleRoutineTask = async (userId: string, date: string, taskId: st
     await ensureCollectionExistsV3(collectionPath);
     let existingDoc = await getRoutineById(docId, userId);
 
+    let updatedTasks: string[];
+
     if (!existingDoc) {
+      // If the document for the day doesn't exist, create it with the first completed task.
+      updatedTasks = [taskId];
       const newRoutine: Omit<DailyRoutine, 'id'> = {
         userId,
-        completedTasks: [taskId],
+        completedTasks: updatedTasks,
         updatedAt: new Date().toISOString(),
       };
       const payload = { id: docId, data: newRoutine };
@@ -179,14 +165,14 @@ export const toggleRoutineTask = async (userId: string, date: string, taskId: st
       });
       return { id: docId, ...newRoutine };
     } else {
+      // If the document exists, toggle the task in the array.
       const currentTasks = existingDoc.completedTasks || [];
       const taskIndex = currentTasks.indexOf(taskId);
       
-      let updatedTasks: string[];
       if (taskIndex > -1) {
-        updatedTasks = currentTasks.filter(t => t !== taskId);
+        updatedTasks = currentTasks.filter(t => t !== taskId); // Remove task
       } else {
-        updatedTasks = [...currentTasks, taskId];
+        updatedTasks = [...currentTasks, taskId]; // Add task
       }
       
       const updates = {
