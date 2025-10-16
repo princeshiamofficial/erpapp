@@ -14,7 +14,7 @@ export const getRoutineHeadersForUser = async (userId: string): Promise<DailyRou
   if (!userId) return [];
   const collectionPath = getHeadersCollectionName(userId);
   try {
-    const endpoint = `collections/${collectionPath}/documents?limit=9999&orderBy=createdAt&direction=desc`;
+    const endpoint = `collections/${collectionPath}/documents?limit=9999&orderBy=createdAt&direction=asc`;
     const response = await fetchFromApiV3(endpoint);
     
     if (response && Array.isArray(response.documents)) {
