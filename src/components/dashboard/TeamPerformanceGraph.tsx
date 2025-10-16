@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -198,7 +197,7 @@ export function TeamPerformanceGraph({
   
   const isInputVisible = useMemo(() => {
     if (!currentUser) return false;
-    const visibleRoles: UserRole[] = ['CRM', 'DESIGNER_REPRESENTATIVE', 'LR'];
+    const visibleRoles: UserRole[] = ['CRM', 'DESIGNER_REPRESENTATIVE', 'LR', 'CO'];
     return visibleRoles.includes(currentUser.role);
   }, [currentUser]);
   
@@ -211,7 +210,7 @@ export function TeamPerformanceGraph({
     if (currentUser?.role === 'CRM') {
       return submissionsTodayCount >= 2; 
     }
-    if (currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser.role === 'LR') {
+    if (currentUser?.role === 'DESIGNER_REPRESENTATIVE' || currentUser.role === 'LR' || currentUser.role === 'CO') {
       return submissionsTodayCount > 0;
     }
     return false;
@@ -227,7 +226,7 @@ export function TeamPerformanceGraph({
 
   const canSubmitTasks = useMemo(() => {
     if (!currentUser) return false;
-    if (currentUser.role === 'DESIGNER_REPRESENTATIVE' || currentUser.role === 'LR') {
+    if (currentUser.role === 'DESIGNER_REPRESENTATIVE' || currentUser.role === 'LR' || currentUser.role === 'CO') {
       return submissionsTodayCount === 0;
     }
     return false;
@@ -707,5 +706,3 @@ const DoneTargetTooltipContent = ({ active, payload, label, userMap, currentUser
     }
     return null;
 }
-
-    
