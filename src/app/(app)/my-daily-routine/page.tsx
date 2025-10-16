@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { DailyRoutine, User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { getRoutinesAction, toggleRoutineTaskAction, getRoutineHeadersAction, deleteRoutineAction } from './actions';
+import { getRoutinesForUser, toggleRoutineTaskAction, getRoutineHeadersForUser, deleteRoutineAction, addRoutineAction, updateRoutineAction } from './actions';
 import { format, addDays, startOfWeek, subDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -38,8 +38,8 @@ export default function MyDailyRoutinePage() {
     setIsLoading(true);
     try {
       const [fetchedRoutines, fetchedHeaders] = await Promise.all([
-        getRoutinesAction(currentUser.id),
-        getRoutineHeadersAction(currentUser.id)
+        getRoutinesForUser(currentUser.id),
+        getRoutineHeadersForUser(currentUser.id)
       ]);
       const routinesMap = fetchedRoutines.reduce((acc, routine) => {
         acc[routine.id] = routine;
@@ -155,10 +155,8 @@ export default function MyDailyRoutinePage() {
             <table className="w-full border-collapse">
                 <thead>
                     <tr>
-                        <th className="border p-1 align-top bg-orange-200 dark:bg-orange-800/50 w-32 min-w-[128px]">
-                          <Button onClick={openAddDialog} size="sm" className="w-full">
-                            <PlusCircle className="h-4 w-4 mr-2"/> Add Routine
-                          </Button>
+                        <th className="border p-2 align-top bg-orange-200 dark:bg-orange-800/50 w-32 min-w-[128px]">
+                            <p className="font-semibold text-sm">Date</p>
                         </th>
                         {routineHeaders.map(header => (
                             <th key={header.id} className="border p-1 text-center font-semibold text-sm group relative" style={{ backgroundColor: header.color }}>
@@ -172,6 +170,11 @@ export default function MyDailyRoutinePage() {
                                 </div>
                             </th>
                         ))}
+                         <th className="border p-1 align-top bg-orange-200 dark:bg-orange-800/50 w-32 min-w-[128px]">
+                          <Button onClick={openAddDialog} size="sm" className="w-full">
+                            <PlusCircle className="h-4 w-4 mr-2"/> Add Routine
+                          </Button>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -198,6 +201,7 @@ export default function MyDailyRoutinePage() {
                                         )}
                                     </td>
                                 ))}
+                                <td className="border p-2"></td>
                             </tr>
                         )
                     })}
