@@ -49,9 +49,11 @@ export default function MyDailyRoutinePage() {
       }, {} as Record<string, DailyRoutine>);
       setRoutinesData(routinesMap);
       
-      const sortedHeaders = fetchedHeaders.sort((a, b) => 
-        new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
-      );
+      const sortedHeaders = fetchedHeaders.sort((a, b) => {
+          const timeA = a.time?.split(' ')[0];
+          const timeB = b.time?.split(' ')[0];
+          return (timeA || '').localeCompare(timeB || '');
+      });
       setRoutineHeaders(sortedHeaders);
 
     } catch (error) {
