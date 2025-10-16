@@ -30,7 +30,8 @@ interface AddEditRoutineDialogProps {
 export function AddEditRoutineDialog({ isOpen, onOpenChange, onRoutineSaved, routine, currentUser }: AddEditRoutineDialogProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [time, setTime] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [color, setColor] = useState('#f3f4f6');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
@@ -42,12 +43,16 @@ export function AddEditRoutineDialog({ isOpen, onOpenChange, onRoutineSaved, rou
       if (isEditMode && routine) {
         setTitle(routine.title || '');
         setDescription(routine.description || '');
-        setTime(routine.time || '');
+        // Split the time string into start and end times
+        const timeParts = routine.time?.split(' to ') || ['', ''];
+        setStartTime(timeParts[0] || '');
+        setEndTime(timeParts[1] || '');
         setColor(routine.color || '#f3f4f6');
       } else {
         setTitle('');
         setDescription('');
-        setTime('');
+        setStartTime('');
+        setEndTime('');
         setColor('#f3f4f6');
       }
     }
@@ -55,18 +60,20 @@ export function AddEditRoutineDialog({ isOpen, onOpenChange, onRoutineSaved, rou
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !time.trim()) {
-      toast({ title: "Validation Error", description: "Title and time are required.", variant: "destructive" });
+    if (!title.trim() || !startTime || !endTime) {
+      toast({ title: "Validation Error", description: "Title, Start Time, and End Time are required.", variant: "destructive" });
       return;
     }
     setIsSubmitting(true);
+
+    const formattedTime = `${startTime} to ${endTime}`;
 
     let result;
     if (isEditMode && routine) {
       const updates: Partial<Omit<DailyRoutine, 'id' | 'userId'>> = {
         title: title.trim(),
         description: description.trim() || undefined,
-        time,
+        time: formattedTime,
         color,
       };
       result = await updateRoutineAction(routine.id, updates, currentUser.id);
@@ -78,7 +85,7 @@ export function AddEditRoutineDialog({ isOpen, onOpenChange, onRoutineSaved, rou
         userId: currentUser.id,
         title: title.trim(),
         description: description.trim() || undefined,
-        time,
+        time: formattedTime,
         color,
       };
       result = await addRoutineAction(routineData);
@@ -108,9 +115,15 @@ export function AddEditRoutineDialog({ isOpen, onOpenChange, onRoutineSaved, rou
             <Label htmlFor="routine-title">Title *</Label>
             <Input id="routine-title" value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g., Morning Workout" required />
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="routine-time">Time *</Label>
-            <Input id="routine-time" value={time} onChange={e => setTime(e.target.value)} required placeholder="e.g., 6:00 AM to 7:00 AM" />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="routine-start-time">Start Time *</Label>
+              <Input id="routine-start-time" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} required />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="routine-end-time">End Time *</Label>
+              <Input id="routine-end-time" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} required />
+            </div>
           </div>
           <div className="space-y-1">
             <Label htmlFor="routine-color">Color</Label>
