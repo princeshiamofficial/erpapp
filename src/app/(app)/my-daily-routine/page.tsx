@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import type { DailyRoutine, User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { getRoutinesAction, toggleRoutineTaskAction, getRoutineHeadersAction, deleteRoutineAction } from './actions';
-import { format, addDays, startOfWeek, subDays } from 'date-fns';
+import { format, addDays, startOfWeek, subDays, parse } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,6 +17,25 @@ import { AddEditRoutineDialog } from '@/components/daily-routine/AddEditRoutineD
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from '@/components/ui/card';
 import { getContrastTextColor } from '@/lib/status-service';
+
+
+// Helper function to format time string to AM/PM
+const formatTime12Hour = (timeStr?: string): string => {
+  if (!timeStr) return '';
+  const parts = timeStr.split(' to ');
+  return parts.map(part => {
+    if (!part.includes(':')) return part; // Return as is if not a valid time format
+    try {
+      const [hours, minutes] = part.split(':');
+      const date = new Date();
+      date.setHours(parseInt(hours, 10));
+      date.setMinutes(parseInt(minutes, 10));
+      return format(date, "hh:mm a");
+    } catch (e) {
+      return part; // Return original part on parsing error
+    }
+  }).join(' to ');
+};
 
 
 export default function MyDailyRoutinePage() {
@@ -175,7 +194,7 @@ export default function MyDailyRoutinePage() {
                             <th key={header.id} className="border p-1 text-center font-semibold text-sm group relative" style={{ backgroundColor: header.color || '#f3f4f6' }}>
                                 <div className="flex flex-col h-full justify-start min-h-[5rem]">
                                     <span style={{ color: textColor }}>{header.title}</span>
-                                    <span className="font-normal text-xs" style={{ color: textColor, opacity: 0.8 }}>{header.time}</span>
+                                    <span className="font-normal text-xs" style={{ color: textColor, opacity: 0.8 }}>{formatTime12Hour(header.time)}</span>
                                 </div>
                                 <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/20" onClick={() => openEditDialog(header)}><Edit className="h-3 w-3" style={{ color: textColor }}/></Button>
