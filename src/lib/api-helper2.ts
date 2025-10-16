@@ -1,3 +1,4 @@
+
 // NOTE: This is a new helper file for the v3 API. It is not yet used by the application.
 // To use this, you would import functions from this file instead of 'api-helper.ts'.
 
@@ -25,7 +26,7 @@ export async function fetchFromApiV3(endpoint: string, options: RequestInit = {}
 
     if (!response.ok) {
         const errorText = await response.text();
-        let errorData = { message: `API v3 request failed with status ${response.status}. Response: ${errorText}` };
+        let errorData = { message: `API v3 request failed with status ${response.status}. Endpoint: ${endpoint}. Response: ${errorText}` };
         try {
             const parsedJson = JSON.parse(errorText);
             errorData.message = parsedJson.message || parsedJson.error || errorData.message;
