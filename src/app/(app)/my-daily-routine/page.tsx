@@ -46,7 +46,13 @@ export default function MyDailyRoutinePage() {
         return acc;
       }, {} as Record<string, DailyRoutine>);
       setRoutinesData(routinesMap);
-      setRoutineHeaders(fetchedHeaders);
+      
+      // Sort headers here to guarantee order
+      const sortedHeaders = fetchedHeaders.sort((a, b) => 
+        new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+      );
+      setRoutineHeaders(sortedHeaders);
+
     } catch (error) {
       console.error("Error fetching routines:", error);
       toast({ title: "Error", description: "Could not load your daily routines.", variant: "destructive" });
