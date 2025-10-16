@@ -165,7 +165,7 @@ export default function MyDailyRoutinePage() {
                 <thead>
                     <tr>
                         <th className="border p-2 align-top bg-orange-200 dark:bg-orange-800/50 w-32 min-w-[128px]">
-                            <p className="font-semibold text-sm">Date / Day</p>
+                            <p className="font-semibold text-sm">Date With Day</p>
                         </th>
                         {routineHeaders.map(header => {
                            const textColor = getContrastTextColor(header.color || '#f3f4f6');
