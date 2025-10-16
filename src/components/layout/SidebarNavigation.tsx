@@ -35,6 +35,7 @@ import {
   Shrink,
   GlobeLock,
   Wallet,
+  Archive,
 } from "lucide-react";
 import type { UserRole, GlobalSettings } from "@/types";
 import { cn } from "@/lib/utils";
@@ -106,6 +107,7 @@ const navItems: NavItem[] = [
       { href: "/admin/crm-target-settings", label: "App Settings", icon: Target, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/service-management", label: "Service Options", icon: Settings2, roles: ["SYSTEM_ADMIN"] },
       { href: "/admin/model-management", label: "Model Management", icon: Layers, roles: ["SYSTEM_ADMIN", "ADMIN"] },
+      { href: "/admin/stock-management", label: "Stock Management", icon: Archive, roles: ["SYSTEM_ADMIN", "ADMIN"] },
     ]
   },
 ];
