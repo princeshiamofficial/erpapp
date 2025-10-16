@@ -60,13 +60,13 @@ export function AddEditRoutineDialog({ isOpen, onOpenChange, onRoutineSaved, rou
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !startTime || !endTime) {
-      toast({ title: "Validation Error", description: "Title, Start Time, and End Time are required.", variant: "destructive" });
+    if (!title.trim() || !startTime) {
+      toast({ title: "Validation Error", description: "Title and Start Time are required.", variant: "destructive" });
       return;
     }
     setIsSubmitting(true);
 
-    const formattedTime = `${startTime} to ${endTime}`;
+    const formattedTime = endTime ? `${startTime} to ${endTime}` : startTime;
 
     let result;
     if (isEditMode && routine) {
@@ -121,8 +121,8 @@ export function AddEditRoutineDialog({ isOpen, onOpenChange, onRoutineSaved, rou
               <Input id="routine-start-time" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} required />
             </div>
             <div className="space-y-1">
-              <Label htmlFor="routine-end-time">End Time *</Label>
-              <Input id="routine-end-time" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} required />
+              <Label htmlFor="routine-end-time">End Time (Optional)</Label>
+              <Input id="routine-end-time" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
             </div>
           </div>
           <div className="space-y-1">
