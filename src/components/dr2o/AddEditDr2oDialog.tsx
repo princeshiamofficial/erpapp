@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -30,7 +31,7 @@ interface AddEditDr2oDialogProps {
   onDr2oSaved: () => void;
   entry?: Dr2oEntry | null;
   currentUser: User;
-  team: 'CR' | 'DR' | 'LR';
+  team: 'CR' | 'DR' | 'LR' | 'CO';
 }
 
 const LR_DRAFT_STORAGE_KEY = 'lrDailyEntryDraft';
@@ -42,7 +43,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
   const [companyNumber, setCompanyNumber] = useState('');
   const [paymentCompanyName, setPaymentCompanyName] = useState('');
   const [paymentNumber, setPaymentNumber] = useState('');
-  // DR Fields
+  // DR/CO Fields
   const [newCustomer1, setNewCustomer1] = useState('');
   const [newCustomer2, setNewCustomer2] = useState('');
   const [newCustomer3, setNewCustomer3] = useState('');
@@ -191,6 +192,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
       case 'CR': return `${action} CR Report`;
       case 'DR': return `${action} DR Report`;
       case 'LR': return `${action} LR Daily Entry`;
+      case 'CO': return `${action} CO Report`;
       default: return `${action} Daily Report`;
     }
   };
@@ -200,6 +202,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
     switch (team) {
       case 'CR': return 'Fill in your daily customer follow-ups.';
       case 'DR': return 'Fill in your daily DR follow-ups.';
+      case 'CO': return 'Fill in your daily CO follow-ups.';
       case 'LR': return 'Submit your daily entry for the logistics team.';
       default: return 'Fill in your daily report.';
     }
@@ -318,7 +321,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
       );
     }
     
-    // Default fields for DR
+    // Default fields for DR and CO
     return (
       <>
         <fieldset className="border p-4 rounded-md">

@@ -32,7 +32,7 @@ const getInitials = (name: string) => {
   return names[0].charAt(0).toUpperCase() + (names.length > 1 ? names[names.length - 1].charAt(0).toUpperCase() : '');
 };
 
-type TeamType = 'CR' | 'DR' | 'LR';
+type TeamType = 'CR' | 'DR' | 'LR' | 'CO';
 
 export default function DR2OPage() {
   const { currentUser } = useAuth();
@@ -68,6 +68,9 @@ export default function DR2OPage() {
           case 'LR':
             setActiveTab('LR');
             break;
+          case 'CO':
+            setActiveTab('CO');
+            break;
           default:
             setActiveTab('CR'); // Fallback for any other roles
             break;
@@ -102,6 +105,8 @@ export default function DR2OPage() {
             fetchData('DR');
         } else if (currentUser.role === 'LR') {
             fetchData('LR');
+        } else if (currentUser.role === 'CO') {
+            fetchData('CO');
         }
     }
   }, [currentUser, activeTab, isAdmin, fetchData]);
@@ -178,6 +183,7 @@ export default function DR2OPage() {
       case 'CR': return 'CR Team';
       case 'DR': return 'DR Team';
       case 'LR': return 'LR Team';
+      case 'CO': return 'CO Team';
       default: return 'Team';
     }
   };
@@ -330,14 +336,15 @@ export default function DR2OPage() {
           </Card>
         );
       case 'DR':
+      case 'CO':
         return (
           <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
             <CardHeader className="border-b p-5">
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                   <div>
-                    <CardTitle className="text-card-foreground text-xl">DR Team Daily Reports</CardTitle>
+                    <CardTitle className="text-card-foreground text-xl">{activeTab} Team Daily Reports</CardTitle>
                     <CardDescription className="text-muted-foreground text-sm mt-0.5">
-                        Daily follow-up reports for new and old customers from the Designer Rep team.
+                        Daily follow-up reports for new and old customers from the {activeTab} team.
                     </CardDescription>
                   </div>
                   <Button onClick={handleOpenAddDialog} disabled={!canAddNew && currentUser?.role !== 'ADMIN' && currentUser?.role !== 'SYSTEM_ADMIN'}>
@@ -354,20 +361,20 @@ export default function DR2OPage() {
                 isAdmin ? (
                   <Accordion type="single" collapsible className="w-full space-y-3">
                     {Object.entries(entriesByUser).map(([userId, entries], userIndex) => {
-                      const drUser = allUsers.find(u => u.id === userId);
+                      const user = allUsers.find(u => u.id === userId);
                       return (
                         <div key={userId} className="group relative bg-muted/30 rounded-lg shadow-sm border">
                           <AccordionItem value={`user-${userIndex}`} className="border-b-0">
                             <AccordionTrigger className="px-4 py-3 text-left font-semibold text-foreground hover:no-underline">
                               <div className="flex items-center gap-4 flex-1">
-                                  {drUser && (
+                                  {user && (
                                       <Avatar className="h-9 w-9">
-                                          <AvatarImage src={drUser.avatarUrl || undefined} alt={drUser.name} />
-                                          <AvatarFallback>{getInitials(drUser.name)}</AvatarFallback>
+                                          <AvatarImage src={user.avatarUrl || undefined} alt={user.name} />
+                                          <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                                       </Avatar>
                                   )}
                                   <div className="flex-1">
-                                      <p className="text-sm font-medium">{drUser?.name || 'Unknown User'}</p>
+                                      <p className="text-sm font-medium">{user?.name || 'Unknown User'}</p>
                                       <p className="text-xs text-muted-foreground">{entries.length} report(s)</p>
                                   </div>
                               </div>
@@ -601,6 +608,7 @@ export default function DR2OPage() {
               <TabsList className="inline-flex h-10 items-center justify-center text-muted-foreground bg-white p-1 rounded-full shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
                   <TabsTrigger value="CR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">CR Team</TabsTrigger>
                   <TabsTrigger value="DR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">DR Team</TabsTrigger>
+                  <TabsTrigger value="CO" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">CO Team</TabsTrigger>
                   <TabsTrigger value="LR" className="rounded-full data-[state=active]:bg-gray-800 data-[state=active]:text-white dark:data-[state=active]:bg-gray-950">LR Team</TabsTrigger>
               </TabsList>
             )}

@@ -12,7 +12,7 @@ import {
 
 export async function addDr2oEntryAction(
   data: Omit<Dr2oEntry, 'id'>,
-  team: 'CR' | 'DR' | 'LR'
+  team: 'CR' | 'DR' | 'LR' | 'CO'
 ): Promise<{ success: boolean; data?: Dr2oEntry; error?: string }> {
   try {
     const newEntry = await addDr2oEntry(data, team);
@@ -30,7 +30,7 @@ export async function addDr2oEntryAction(
 export async function updateDr2oEntryAction(
   id: string,
   updates: Partial<Omit<Dr2oEntry, 'id'>>,
-  team: 'CR' | 'DR' | 'LR'
+  team: 'CR' | 'DR' | 'LR' | 'CO'
 ): Promise<{ success: boolean; data?: Dr2oEntry; error?: string }> {
     try {
         const success = await updateDr2oEntry(id, updates, team);
@@ -47,7 +47,7 @@ export async function updateDr2oEntryAction(
 
 export async function deleteDr2oEntryAction(
     id: string,
-    team: 'CR' | 'DR' | 'LR'
+    team: 'CR' | 'DR' | 'LR' | 'CO'
 ): Promise<{ success: boolean; error?: string }> {
     try {
         const success = await deleteDr2oEntry(id, team);

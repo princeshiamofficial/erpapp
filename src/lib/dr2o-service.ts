@@ -3,16 +3,17 @@
 import type { Dr2oEntry, UserRole } from '@/types';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
-const getCollectionNameForTeam = (team: 'CR' | 'DR' | 'LR'): string => {
+const getCollectionNameForTeam = (team: 'CR' | 'DR' | 'LR' | 'CO'): string => {
     switch (team) {
         case 'CR': return 'CRworkflow';
         case 'DR': return 'DRworkflow';
         case 'LR': return 'LRworkflow';
+        case 'CO': return 'COworkflow';
         default: return 'workflow'; // Fallback
     }
 }
 
-export const getDr2oEntries = async (team: 'CR' | 'DR' | 'LR' = 'CR'): Promise<Dr2oEntry[]> => {
+export const getDr2oEntries = async (team: 'CR' | 'DR' | 'LR' | 'CO' = 'CR'): Promise<Dr2oEntry[]> => {
   const collectionName = getCollectionNameForTeam(team);
   try {
     await ensureCollectionExistsV3(collectionName);
@@ -30,7 +31,7 @@ export const getDr2oEntries = async (team: 'CR' | 'DR' | 'LR' = 'CR'): Promise<D
   }
 };
 
-export const addDr2oEntry = async (entryData: Omit<Dr2oEntry, 'id'>, team: 'CR' | 'DR' | 'LR' = 'CR'): Promise<Dr2oEntry | null> => {
+export const addDr2oEntry = async (entryData: Omit<Dr2oEntry, 'id'>, team: 'CR' | 'DR' | 'LR' | 'CO' = 'CR'): Promise<Dr2oEntry | null> => {
   const collectionName = getCollectionNameForTeam(team);
   try {
     await ensureCollectionExistsV3(collectionName);
@@ -48,7 +49,7 @@ export const addDr2oEntry = async (entryData: Omit<Dr2oEntry, 'id'>, team: 'CR' 
   }
 };
 
-export const updateDr2oEntry = async (id: string, updates: Partial<Dr2oEntry>, team: 'CR' | 'DR' | 'LR' = 'CR'): Promise<boolean> => {
+export const updateDr2oEntry = async (id: string, updates: Partial<Dr2oEntry>, team: 'CR' | 'DR' | 'LR' | 'CO' = 'CR'): Promise<boolean> => {
   const collectionName = getCollectionNameForTeam(team);
   try {
     await ensureCollectionExistsV3(collectionName);
@@ -66,7 +67,7 @@ export const updateDr2oEntry = async (id: string, updates: Partial<Dr2oEntry>, t
   }
 };
 
-export const deleteDr2oEntry = async (id: string, team: 'CR' | 'DR' | 'LR'): Promise<boolean> => {
+export const deleteDr2oEntry = async (id: string, team: 'CR' | 'DR' | 'LR' | 'CO'): Promise<boolean> => {
   const collectionName = getCollectionNameForTeam(team);
   try {
     await fetchFromApiV3(`collections/${collectionName}/documents/${id}`, {
