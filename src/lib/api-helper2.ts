@@ -21,7 +21,7 @@ export async function fetchFromApiV3(endpoint: string, options: RequestInit = {}
     };
 
 
-    const response = await fetch(`${API_V3_URL}/${endpoint}`, requestOptions);
+    const response = await fetch(`${API_V3_URL}${endpoint}`, requestOptions);
 
     if (!response.ok) {
         const errorText = await response.text();
@@ -56,12 +56,12 @@ export async function fetchFromApiV3(endpoint: string, options: RequestInit = {}
  */
 export const ensureCollectionExistsV3 = async (collectionName: string) => {
     try {
-        await fetchFromApiV3(`collections/${collectionName}`);
+        await fetchFromApiV3(`/collections/${collectionName}`);
     } catch (error) {
         if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
             console.log(`V3 Collection '${collectionName}' not found. Attempting to create it...`);
             try {
-                await fetchFromApiV3('collections', {
+                await fetchFromApiV3('/collections', {
                     method: 'POST',
                     body: JSON.stringify({ name: collectionName }),
                 });
