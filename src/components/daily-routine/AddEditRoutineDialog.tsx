@@ -118,11 +118,11 @@ export function AddEditRoutineDialog({ isOpen, onOpenChange, onRoutineSaved, rou
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <Label htmlFor="routine-start-time">Start Time *</Label>
-              <Input id="routine-start-time" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} required />
+              <Input id="routine-start-time" type="text" value={startTime} onChange={e => setStartTime(e.target.value)} required placeholder="e.g., 06:00 AM" />
             </div>
             <div className="space-y-1">
               <Label htmlFor="routine-end-time">End Time (Optional)</Label>
-              <Input id="routine-end-time" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
+              <Input id="routine-end-time" type="text" value={endTime} onChange={e => setEndTime(e.target.value)} placeholder="e.g., 07:00 AM" />
             </div>
           </div>
           <div className="space-y-1">
