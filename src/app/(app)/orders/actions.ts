@@ -573,6 +573,20 @@ export async function deleteOrderAction(
       return { success: false, error: "You do not have permission to delete this order." };
     }
 
+    const orderToDelete = await getOrderById(orderId);
+    if (!orderToDelete) {
+      return { success: false, error: "Order not found." };
+    }
+
+    const allModels = await getModels();
+    for (const item of orderToDelete.orderItems) {
+      const modelInfo = allModels.find(m => m.name === item.model);
+      if (modelInfo && modelInfo.isReadyMade) {
+        // Add the stock back
+        await updateModelStock(modelInfo.id, item.quantity);
+      }
+    }
+
     const success = await deleteOrderFromDb(orderId);
     if (success) {
       revalidatePath("/(app)/orders");
@@ -582,6 +596,8 @@ export async function deleteOrderAction(
       revalidatePath("/(app)/deliveries/monthly");
       revalidatePath("/(app)/deliveries/weekly");
       revalidatePath("/(app)/projects");
+      revalidatePath("/(app)/admin/stock-management");
+      revalidatePath("/(app)/admin/model-management");
       revalidatePath("/(app)/crm/sow"); // Revalidate SOW page
       return { success: true };
     }
@@ -594,3 +610,4 @@ export async function deleteOrderAction(
 }
 
     
+
