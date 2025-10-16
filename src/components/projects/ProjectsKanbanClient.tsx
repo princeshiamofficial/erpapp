@@ -38,6 +38,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { CourierConfirmationDialog } from '@/components/projects/CourierConfirmationDialog';
 import { HoldReasonDialog } from '@/components/projects/HoldReasonDialog'; 
+import { FileUploadConfirmationDialog } from '@/components/projects/FileUploadConfirmationDialog';
 import { getProjects } from '@/lib/project-service';
 import { getStatuses } from '@/lib/status-service'; 
 import { getGlobalSettings } from '@/lib/settings-service';
