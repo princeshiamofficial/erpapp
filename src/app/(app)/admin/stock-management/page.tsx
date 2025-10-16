@@ -11,7 +11,8 @@ import { useRouter } from "next/navigation";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getModels } from '@/lib/service-options-service';
-import type { ServiceModelItem } from '@/types';
+import { getOrders } from '@/lib/order-service'; // Import getOrders
+import type { ServiceModelItem, TrackingLink } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import NextImage from 'next/image';
 import { cn } from '@/lib/utils';
@@ -22,16 +23,21 @@ export default function StockManagementPage() {
   const { toast } = useToast();
 
   const [allModels, setAllModels] = useState<ServiceModelItem[]>([]);
+  const [allOrders, setAllOrders] = useState<TrackingLink[]>([]); // State for orders
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const models = await getModels();
+      const [models, orders] = await Promise.all([
+          getModels(),
+          getOrders() // Fetch orders
+      ]);
       setAllModels(models);
+      setAllOrders(orders);
     } catch (error) {
-      toast({ title: "Error", description: "Could not load model data for stock management.", variant: "destructive" });
+      toast({ title: "Error", description: "Could not load model or order data.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -45,12 +51,27 @@ export default function StockManagementPage() {
 
 
   const stockItems = useMemo(() => {
-    let items = allModels.filter(model => model.isReadyMade);
+    const readyMadeItems = allModels.filter(model => model.isReadyMade);
+    if (readyMadeItems.length === 0) return [];
+    
+    // Calculate sold counts
+    const soldCounts = new Map<string, number>();
+    allOrders.forEach(order => {
+        order.orderItems.forEach(item => {
+            soldCounts.set(item.model, (soldCounts.get(item.model) || 0) + item.quantity);
+        });
+    });
+
+    let items = readyMadeItems.map(item => ({
+        ...item,
+        soldCount: soldCounts.get(item.name) || 0,
+    }));
+
     if (searchTerm) {
       items = items.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }
-    return items.sort((a,b) => (a.stockCount ?? 0) - (b.stockCount ?? 0)); // Sort by stock, lowest first
-  }, [allModels, searchTerm]);
+    return items.sort((a,b) => (a.stockCount ?? 0) - (b.stockCount ?? 0)); // Sort by remaining stock, lowest first
+  }, [allModels, allOrders, searchTerm]);
 
 
   if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
@@ -97,7 +118,8 @@ export default function StockManagementPage() {
                 <TableRow>
                   <TableHead className="pl-6 w-[80px]">Image</TableHead>
                   <TableHead>Product Name</TableHead>
-                  <TableHead className="text-center">Current Stock</TableHead>
+                  <TableHead className="text-center">Sold</TableHead>
+                  <TableHead className="text-center">Remaining Stock</TableHead>
                   <TableHead className="pr-6 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -107,6 +129,7 @@ export default function StockManagementPage() {
                     <TableRow key={`skel-stock-${i}`}>
                       <TableCell className="pl-6"><Skeleton className="h-12 w-12 rounded-md" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                      <TableCell className="text-center"><Skeleton className="h-5 w-16 mx-auto" /></TableCell>
                       <TableCell className="text-center"><Skeleton className="h-5 w-20 mx-auto" /></TableCell>
                       <TableCell className="pr-6 text-right"><Skeleton className="h-9 w-20 ml-auto" /></TableCell>
                     </TableRow>
@@ -124,6 +147,9 @@ export default function StockManagementPage() {
                            />
                          </TableCell>
                          <TableCell className="font-medium">{item.name}</TableCell>
+                         <TableCell className="text-center font-mono text-blue-600 font-medium">
+                            {item.soldCount}
+                         </TableCell>
                          <TableCell className="text-center">
                             <span className={cn(
                                 "font-bold text-lg",
@@ -139,7 +165,7 @@ export default function StockManagementPage() {
                     ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={4} className="h-48 text-center text-muted-foreground">
+                    <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
                       {searchTerm ? (
                          <div className="flex flex-col items-center gap-3">
                             <PackageX className="h-12 w-12 opacity-50" />
