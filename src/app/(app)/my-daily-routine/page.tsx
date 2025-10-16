@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -7,7 +8,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { DailyRoutine, User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { getRoutinesAction, toggleRoutineTaskAction, getRoutineHeadersAction, deleteRoutineAction, addRoutineAction, updateRoutineAction } from './actions';
+import { getRoutinesAction, toggleRoutineTaskAction, getRoutineHeadersAction, deleteRoutineAction } from './actions';
 import { format, addDays, startOfWeek, subDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -47,9 +48,8 @@ export default function MyDailyRoutinePage() {
       }, {} as Record<string, DailyRoutine>);
       setRoutinesData(routinesMap);
       
-      // Sort headers here to guarantee order
       const sortedHeaders = fetchedHeaders.sort((a, b) => 
-        new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+        (a.createdAt || '').localeCompare(b.createdAt || '')
       );
       setRoutineHeaders(sortedHeaders);
 
@@ -101,8 +101,8 @@ export default function MyDailyRoutinePage() {
     return Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
   }, [currentWeekStart]);
 
-  const handleRoutineSaved = (savedRoutine: DailyRoutine, isEdit: boolean) => {
-    toast({ title: `Routine ${isEdit ? 'Updated' : 'Added'}`, description: `"${savedRoutine.title}" has been saved.` });
+  const handleRoutineSaved = () => {
+    toast({ title: "Success", description: "Your routine list has been updated." });
     fetchData(); // Refetch all data to ensure consistency
     setIsAddEditDialogOpen(false);
     setRoutineToEdit(null);
@@ -131,6 +131,19 @@ export default function MyDailyRoutinePage() {
     setIsDeleting(false);
     setRoutineToDelete(null);
   };
+  
+  function lightenHexColor(hex: string, percent: number) {
+    if (!hex) return '#ffffff';
+    let r = parseInt(hex.substring(1, 3), 16);
+    let g = parseInt(hex.substring(3, 5), 16);
+    let b = parseInt(hex.substring(5, 7), 16);
+    
+    r = Math.min(255, r + (255 - r) * (percent / 100));
+    g = Math.min(255, g + (255 - g) * (percent / 100));
+    b = Math.min(255, b + (255 - b) * (percent / 100));
+    
+    return `#${Math.round(r).toString(16).padStart(2, '0')}${Math.round(g).toString(16).padStart(2, '0')}${Math.round(b).toString(16).padStart(2, '0')}`;
+  }
 
 
   if (isAuthLoading || !currentUser) {
@@ -151,6 +164,10 @@ export default function MyDailyRoutinePage() {
             <Button onClick={() => setCurrentWeekStart(addDays(currentWeekStart, 7))} variant="outline">
               Next Week <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
+            <Button size="sm" className="h-10 rounded-md shrink-0" onClick={openAddDialog}>
+              <PlusCircle className="h-4 w-4 mr-1 sm:mr-2"/>
+              <span className="hidden sm:inline">Add New</span>
+            </Button>
           </div>
         </div>
 
@@ -168,25 +185,26 @@ export default function MyDailyRoutinePage() {
                         </th>
                         {routineHeaders.map(header => {
                            const textColor = getContrastTextColor(header.color || '#f3f4f6');
+                           const gradientStart = lightenHexColor(header.color || '#f3f4f6', 20);
+                           const gradientEnd = header.color || '#f3f4f6';
+                           const gradientStyle = {
+                             backgroundImage: `linear-gradient(to bottom, ${gradientStart}, ${gradientEnd})`,
+                             borderTop: `3px solid ${lightenHexColor(header.color || '#f3f4f6', 40)}`,
+                           };
+
                            return (
-                            <th key={header.id} className="border p-1 text-center font-semibold text-sm group relative" style={{ backgroundColor: header.color }}>
+                            <th key={header.id} className="border p-1 text-center font-semibold text-sm group relative" style={gradientStyle}>
                                 <div className="flex flex-col h-full justify-start min-h-[5rem]">
-                                    <span style={{ color: textColor }}>{header.title}</span>
-                                    <span className="font-normal text-xs" style={{ color: textColor, opacity: 0.8 }}>{header.time}</span>
+                                    <span style={{ color: textColor, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}>{header.title}</span>
+                                    <span className="font-normal text-xs" style={{ color: textColor, opacity: 0.8, textShadow: '1px 1px 2px rgba(0,0,0,0.1)' }}>{header.time}</span>
                                 </div>
                                 <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => openEditDialog(header)}><Edit className="h-3 w-3" style={{ color: textColor }}/></Button>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => setRoutineToDelete(header)}><Trash2 className="h-3 w-3" style={{ color: textColor }}/></Button>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/20" onClick={() => openEditDialog(header)}><Edit className="h-3 w-3" style={{ color: textColor }}/></Button>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/20" onClick={() => setRoutineToDelete(header)}><Trash2 className="h-3 w-3" style={{ color: textColor }}/></Button>
                                 </div>
                             </th>
                            )
                         })}
-                         <th className="border p-2 align-top bg-muted w-20 min-w-[80px]">
-                            <Button size="sm" variant="ghost" className="w-full h-full" onClick={openAddDialog}>
-                                <PlusCircle className="h-5 w-5 text-muted-foreground"/>
-                                <span className="sr-only">Add New Routine</span>
-                            </Button>
-                         </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -201,19 +219,14 @@ export default function MyDailyRoutinePage() {
                                 </td>
                                 {routineHeaders.map(header => (
                                     <td key={`${dateKey}-${header.id}`} className="border p-2 text-center align-middle">
-                                        {header.id !== 'remarks' ? (
-                                            <Checkbox
-                                                checked={(dayRoutine?.completedTasks || []).includes(header.id)}
-                                                onCheckedChange={() => handleToggleTask(date, header.id)}
-                                                aria-label={`Mark ${header.title} as completed for ${format(date, 'PPP')}`}
-                                                className="h-5 w-5"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full min-w-[100px]"></div>
-                                        )}
+                                        <Checkbox
+                                            checked={(dayRoutine?.completedTasks || []).includes(header.id)}
+                                            onCheckedChange={() => handleToggleTask(date, header.id)}
+                                            aria-label={`Mark ${header.title} as completed for ${format(date, 'PPP')}`}
+                                            className="h-5 w-5"
+                                        />
                                     </td>
                                 ))}
-                                <td className="border p-2"></td>
                             </tr>
                         )
                     })}
@@ -261,3 +274,4 @@ export default function MyDailyRoutinePage() {
     </>
   );
 }
+
