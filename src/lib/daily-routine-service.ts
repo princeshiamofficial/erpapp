@@ -5,20 +5,20 @@
 import type { DailyRoutine } from '@/types';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 import { v4 as uuidv4 } from 'uuid';
+import { format } from 'date-fns';
 
-const getCollectionName = (userId: string) => `routine-${userId}`;
+const getHeadersCollectionName = (userId: string) => `routine-headers-${userId}`;
+const getDailyCollectionName = (userId: string, date: Date) => `routines-${userId}-${format(date, 'MM-yyyy')}`;
 
 export const getRoutineHeadersForUser = async (userId: string): Promise<DailyRoutine[]> => {
   if (!userId) return [];
-  const collectionPath = getCollectionName(userId);
+  const collectionPath = getHeadersCollectionName(userId);
   try {
     const endpoint = `collections/${collectionPath}/documents?limit=9999&orderBy=createdAt&direction=asc`;
     const response = await fetchFromApiV3(endpoint);
     
     if (response && Array.isArray(response.documents)) {
-      // Filter out the daily records to only return headers
       return response.documents
-        .filter((doc: any) => doc.data.title && doc.data.time) 
         .map((doc: { id: string, data: any }) => ({
           id: doc.id,
           ...doc.data
@@ -36,7 +36,7 @@ export const getRoutineHeadersForUser = async (userId: string): Promise<DailyRou
 
 export const addRoutineHeader = async (routineData: Omit<DailyRoutine, 'id' | 'createdAt' | 'updatedAt' | 'completedTasks'>): Promise<DailyRoutine | null> => {
   if (!routineData.userId || !routineData.title) return null;
-  const collectionPath = getCollectionName(routineData.userId);
+  const collectionPath = getHeadersCollectionName(routineData.userId);
   try {
     await ensureCollectionExistsV3(collectionPath);
     const dataWithTimestamp: Omit<DailyRoutine, 'id'> = {
@@ -61,7 +61,7 @@ export const addRoutineHeader = async (routineData: Omit<DailyRoutine, 'id' | 'c
 
 export const updateRoutineHeader = async (id: string, updates: Partial<Omit<DailyRoutine, 'id' | 'userId'>>, userId: string): Promise<boolean> => {
   if (!id || !userId) return false;
-  const collectionPath = getCollectionName(userId);
+  const collectionPath = getHeadersCollectionName(userId);
   try {
     const existingDoc = await fetchFromApiV3(`collections/${collectionPath}/documents/${id}`);
     const finalData = { ...existingDoc.data, ...updates, updatedAt: new Date().toISOString() };
@@ -79,7 +79,7 @@ export const updateRoutineHeader = async (id: string, updates: Partial<Omit<Dail
 
 export const deleteRoutineHeader = async (id: string, userId: string): Promise<boolean> => {
   if (!id || !userId) return false;
-  const collectionPath = getCollectionName(userId);
+  const collectionPath = getHeadersCollectionName(userId);
   try {
     await fetchFromApiV3(`collections/${collectionPath}/documents/${id}`, {
         method: 'DELETE'
@@ -94,17 +94,15 @@ export const deleteRoutineHeader = async (id: string, userId: string): Promise<b
 
 // Functions for daily check-in data
 
-export const getRoutinesForUser = async (userId: string): Promise<DailyRoutine[]> => {
+export const getRoutinesForUser = async (userId: string, month: Date): Promise<DailyRoutine[]> => {
   if (!userId) return [];
-  const collectionPath = getCollectionName(userId);
+  const collectionPath = getDailyCollectionName(userId, month);
   try {
     const endpoint = `collections/${collectionPath}/documents?limit=9999`;
     const response = await fetchFromApiV3(endpoint);
     
     if (response && Array.isArray(response.documents)) {
-      // Filter for daily records which do not have a 'title'
       return response.documents
-        .filter((doc: any) => !doc.data.title)
         .map((doc: { id: string, data: any }) => ({
           id: doc.id,
           ...doc.data
@@ -122,7 +120,8 @@ export const getRoutinesForUser = async (userId: string): Promise<DailyRoutine[]
 
 export const getRoutineById = async (routineId: string, userId: string): Promise<DailyRoutine | null> => {
     if (!routineId || !userId) return null;
-    const collectionPath = getCollectionName(userId);
+    const dateFromId = new Date(routineId);
+    const collectionPath = getDailyCollectionName(userId, dateFromId);
     const endpoint = `collections/${collectionPath}/documents/${routineId}`;
     try {
         const response = await fetchFromApiV3(endpoint);
@@ -138,7 +137,8 @@ export const getRoutineById = async (routineId: string, userId: string): Promise
 
 export const toggleRoutineTask = async (userId: string, date: string, taskId: string): Promise<DailyRoutine | null> => {
   if (!userId || !date || !taskId) return null;
-  const collectionPath = getCollectionName(userId);
+  const dateObj = new Date(date);
+  const collectionPath = getDailyCollectionName(userId, dateObj);
   const docId = date;
   const endpoint = `collections/${collectionPath}/documents/${docId}`;
   
