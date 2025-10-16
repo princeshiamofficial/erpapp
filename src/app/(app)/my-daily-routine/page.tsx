@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AddEditRoutineDialog } from '@/components/daily-routine/AddEditRoutineDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Card, CardContent } from '@/components/ui/card';
+import { getContrastTextColor } from '@/lib/status-service';
 
 
 export default function MyDailyRoutinePage() {
@@ -141,9 +142,6 @@ export default function MyDailyRoutinePage() {
             {format(currentWeekStart, "MMMM d")} - {format(addDays(currentWeekStart, 6), "MMMM d, yyyy")}
           </h2>
           <div className="flex items-center gap-2">
-            <Button onClick={openAddDialog} size="sm">
-              <PlusCircle className="h-4 w-4 mr-2"/> Add Routine
-            </Button>
             <Button onClick={() => setCurrentWeekStart(addDays(currentWeekStart, 7))} variant="outline">
               Next Week <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
@@ -162,18 +160,27 @@ export default function MyDailyRoutinePage() {
                         <th className="border p-2 align-top bg-orange-200 dark:bg-orange-800/50 w-32 min-w-[128px]">
                             <p className="font-semibold text-sm">Date</p>
                         </th>
-                        {routineHeaders.map(header => (
+                        {routineHeaders.map(header => {
+                           const textColor = getContrastTextColor(header.color || '#f3f4f6');
+                           return (
                             <th key={header.id} className="border p-1 text-center font-semibold text-sm group relative" style={{ backgroundColor: header.color }}>
-                                <div className="flex flex-col h-full justify-between min-h-[5rem]">
-                                    <span className="text-white">{header.title}</span>
-                                    <span className="font-normal text-xs text-white/80">{header.time}</span>
+                                <div className="flex flex-col h-full justify-start min-h-[5rem]">
+                                    <span style={{ color: textColor }}>{header.title}</span>
+                                    <span className="font-normal text-xs" style={{ color: textColor, opacity: 0.8 }}>{header.time}</span>
                                 </div>
                                 <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => openEditDialog(header)}><Edit className="h-3 w-3"/></Button>
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => setRoutineToDelete(header)}><Trash2 className="h-3 w-3"/></Button>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => openEditDialog(header)}><Edit className="h-3 w-3" style={{ color: textColor }}/></Button>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-white/20" onClick={() => setRoutineToDelete(header)}><Trash2 className="h-3 w-3" style={{ color: textColor }}/></Button>
                                 </div>
                             </th>
-                        ))}
+                           )
+                        })}
+                         <th className="border p-2 align-top bg-muted w-20 min-w-[80px]">
+                            <Button size="sm" variant="ghost" className="w-full h-full" onClick={openAddDialog}>
+                                <PlusCircle className="h-5 w-5 text-muted-foreground"/>
+                                <span className="sr-only">Add New Routine</span>
+                            </Button>
+                         </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -200,6 +207,7 @@ export default function MyDailyRoutinePage() {
                                         )}
                                     </td>
                                 ))}
+                                <td className="border p-2"></td>
                             </tr>
                         )
                     })}
