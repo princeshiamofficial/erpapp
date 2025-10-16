@@ -22,7 +22,8 @@ export const getRoutineHeadersForUser = async (userId: string): Promise<DailyRou
         .map((doc: { id: string, data: any }) => ({
           id: doc.id,
           ...doc.data
-        } as DailyRoutine));
+        } as DailyRoutine))
+        .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
     }
     return [];
   } catch (error) {
@@ -94,27 +95,38 @@ export const deleteRoutineHeader = async (id: string, userId: string): Promise<b
 
 // Functions for daily check-in data
 
-export const getRoutinesForUser = async (userId: string, month: Date): Promise<DailyRoutine[]> => {
+export const getRoutinesForUser = async (userId: string): Promise<DailyRoutine[]> => {
   if (!userId) return [];
-  const collectionPath = getDailyCollectionName(userId, month);
+  const now = new Date();
+  const monthsToFetch = [now, new Date(now.getFullYear(), now.getMonth() - 1, 1)];
+
   try {
-    await ensureCollectionExistsV3(collectionPath);
-    const endpoint = `collections/${collectionPath}/documents?limit=9999`;
-    const response = await fetchFromApiV3(endpoint);
-    
-    if (response && Array.isArray(response.documents)) {
-      return response.documents
-        .map((doc: { id: string, data: any }) => ({
-          id: doc.id,
-          ...doc.data
-        } as DailyRoutine));
+    const allRoutines: DailyRoutine[] = [];
+    for (const month of monthsToFetch) {
+      const collectionPath = getDailyCollectionName(userId, month);
+      try {
+        await ensureCollectionExistsV3(collectionPath);
+        const endpoint = `collections/${collectionPath}/documents?limit=9999`;
+        const response = await fetchFromApiV3(endpoint);
+        
+        if (response && Array.isArray(response.documents)) {
+          const routinesFromMonth = response.documents
+            .map((doc: { id: string, data: any }) => ({
+              id: doc.id,
+              ...doc.data
+            } as DailyRoutine));
+          allRoutines.push(...routinesFromMonth);
+        }
+      } catch (error) {
+        if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
+          continue; // It's okay if a month's collection doesn't exist
+        }
+        throw error; // Re-throw other errors
+      }
     }
-    return [];
+    return allRoutines;
   } catch (error) {
-    if (error instanceof Error && error.message.toLowerCase().includes('not found')) {
-      return [];
-    }
-    console.error(`Error fetching routine entries for user ${userId} from collection ${collectionPath} via API v3:`, error);
+    console.error(`Error fetching routine entries for user ${userId} via API v3:`, error);
     return [];
   }
 };
@@ -158,7 +170,11 @@ export const toggleRoutineTask = async (userId: string, date: string, taskId: st
         completedTasks: updatedTasks,
         updatedAt: new Date().toISOString(),
       };
-      const payload = { id: docId, data: newRoutine };
+      // Corrected payload for creating a new document
+      const payload = {
+        id: docId, // Pass the ID in the payload for creation with a specific ID
+        data: newRoutine 
+      };
       await fetchFromApiV3(`collections/${collectionPath}/documents`, {
           method: 'POST',
           body: JSON.stringify(payload)
