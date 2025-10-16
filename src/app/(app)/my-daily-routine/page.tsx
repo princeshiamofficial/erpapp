@@ -50,7 +50,7 @@ export default function MyDailyRoutinePage() {
       setRoutinesData(routinesMap);
       
       const sortedHeaders = fetchedHeaders.sort((a, b) => 
-        (a.createdAt || '').localeCompare(b.createdAt || '')
+        new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
       );
       setRoutineHeaders(sortedHeaders);
 
@@ -165,7 +165,7 @@ export default function MyDailyRoutinePage() {
                 <thead>
                     <tr>
                         <th className="border p-2 align-top bg-orange-200 dark:bg-orange-800/50 w-32 min-w-[128px]">
-                            <p className="font-semibold text-sm">Date</p>
+                            <p className="font-semibold text-sm">Date / Day</p>
                         </th>
                         {routineHeaders.map(header => {
                            const textColor = getContrastTextColor(header.color || '#f3f4f6');
