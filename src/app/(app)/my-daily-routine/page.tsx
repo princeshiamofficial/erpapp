@@ -8,7 +8,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { DailyRoutine, User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { getRoutinesForUser, toggleRoutineTaskAction, getRoutineHeadersForUser, deleteRoutineAction, addRoutineAction, updateRoutineAction } from './actions';
+import { getRoutinesForUser, toggleRoutineTaskAction, getRoutineHeadersAction, deleteRoutineAction, addRoutineAction, updateRoutineAction } from './actions';
 import { format, addDays, startOfWeek, subDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -39,7 +39,7 @@ export default function MyDailyRoutinePage() {
     try {
       const [fetchedRoutines, fetchedHeaders] = await Promise.all([
         getRoutinesForUser(currentUser.id),
-        getRoutineHeadersForUser(currentUser.id)
+        getRoutineHeadersAction(currentUser.id)
       ]);
       const routinesMap = fetchedRoutines.reduce((acc, routine) => {
         acc[routine.id] = routine;
