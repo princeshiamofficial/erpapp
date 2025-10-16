@@ -5,16 +5,15 @@
 import type { DailyRoutine } from '@/types';
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 
-const getCollectionName = (userId: string) => `users/${userId}/dailyRoutines`;
+const getCollectionName = (userId: string) => `routine-${userId}`;
 
 export const getRoutinesForUser = async (userId: string): Promise<DailyRoutine[]> => {
   if (!userId) return [];
   const collectionPath = getCollectionName(userId);
   try {
-    // There is no way to ensure a sub-collection exists with the current API helper.
-    // We'll proceed assuming it might not exist and handle the error gracefully.
-    // The endpoint needs to be correctly formatted for subcollections
-    const endpoint = `/collections/users/documents/${userId}/collections/dailyRoutines/documents?limit=9999`;
+    // Ensuring a user-specific collection exists. If not, it will be created on the first write.
+    // We can attempt to fetch, and if it fails with 'not found', we return an empty array, which is correct.
+    const endpoint = `collections/${collectionPath}/documents?limit=9999`;
     const response = await fetchFromApiV3(endpoint);
     
     if (response && Array.isArray(response.documents)) {
@@ -29,27 +28,30 @@ export const getRoutinesForUser = async (userId: string): Promise<DailyRoutine[]
       // This is expected if the user has no routines yet.
       return [];
     }
-    console.error(`Error fetching routines for user ${userId} via API v3:`, error);
+    console.error(`Error fetching routines for user ${userId} from collection ${collectionPath} via API v3:`, error);
     return [];
   }
 };
 
 export const getRoutineById = async (routineId: string, userId: string): Promise<DailyRoutine | null> => {
     if (!routineId || !userId) return null;
-    const endpoint = `/collections/users/documents/${userId}/collections/dailyRoutines/documents/${routineId}`;
+    const collectionPath = getCollectionName(userId);
+    const endpoint = `collections/${collectionPath}/documents/${routineId}`;
     try {
         const response = await fetchFromApiV3(endpoint);
         return { id: response.id, ...response.data } as DailyRoutine;
     } catch (error) {
-        console.error(`Error fetching routine by ID ${routineId} via API v3:`, error);
+        console.error(`Error fetching routine by ID ${routineId} from ${collectionPath} via API v3:`, error);
         return null;
     }
 };
 
 export const addRoutine = async (routineData: Omit<DailyRoutine, 'id' | 'createdAt'>): Promise<DailyRoutine | null> => {
   if (!routineData.userId) return null;
-  const endpoint = `/collections/users/documents/${routineData.userId}/collections/dailyRoutines/documents`;
+  const collectionPath = getCollectionName(routineData.userId);
+  const endpoint = `collections/${collectionPath}/documents`;
   try {
+    await ensureCollectionExistsV3(collectionPath);
     const dataWithTimestamp = {
         ...routineData,
         createdAt: new Date().toISOString(),
@@ -62,7 +64,7 @@ export const addRoutine = async (routineData: Omit<DailyRoutine, 'id' | 'created
 
     return { id: newDoc.id, ...newDoc.data } as DailyRoutine;
   } catch (error) {
-    console.error(`Error adding routine to ${endpoint} via API v3:`, error);
+    console.error(`Error adding routine to ${collectionPath} via API v3:`, error);
     if (error instanceof Error) throw error;
     return null;
   }
@@ -70,7 +72,8 @@ export const addRoutine = async (routineData: Omit<DailyRoutine, 'id' | 'created
 
 export const updateRoutine = async (routineId: string, userId: string, updates: Partial<Omit<DailyRoutine, 'id' | 'userId'>>): Promise<boolean> => {
   if (!routineId || !userId) return false;
-  const endpoint = `/collections/users/documents/${userId}/collections/dailyRoutines/documents/${routineId}`;
+  const collectionPath = getCollectionName(userId);
+  const endpoint = `collections/${collectionPath}/documents/${routineId}`;
   try {
     const existingDoc = await fetchFromApiV3(endpoint);
     const finalData = { ...existingDoc.data, ...updates };
@@ -81,21 +84,22 @@ export const updateRoutine = async (routineId: string, userId: string, updates: 
     });
     return true;
   } catch (error) {
-    console.error(`Error updating routine ${routineId} in ${endpoint} via API v3:`, error);
+    console.error(`Error updating routine ${routineId} in ${collectionPath} via API v3:`, error);
     return false;
   }
 };
 
 export const deleteRoutine = async (routineId: string, userId: string): Promise<boolean> => {
   if (!routineId || !userId) return false;
-  const endpoint = `/collections/users/documents/${userId}/collections/dailyRoutines/documents/${routineId}`;
+  const collectionPath = getCollectionName(userId);
+  const endpoint = `collections/${collectionPath}/documents/${routineId}`;
   try {
     await fetchFromApiV3(endpoint, {
       method: 'DELETE'
     });
     return true;
   } catch (error) {
-    console.error(`Error deleting routine ${routineId} from ${endpoint} via API v3:`, error);
+    console.error(`Error deleting routine ${routineId} from ${collectionPath} via API v3:`, error);
     return false;
   }
 };
