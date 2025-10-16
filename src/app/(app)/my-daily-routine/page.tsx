@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -8,7 +7,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { useRouter } from "next/navigation";
 import type { DailyRoutine, User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { getRoutinesForUser, toggleRoutineTaskAction, getRoutineHeadersAction, deleteRoutineAction, addRoutineAction, updateRoutineAction } from './actions';
+import { getRoutinesAction, toggleRoutineTaskAction, getRoutineHeadersAction, deleteRoutineAction, addRoutineAction, updateRoutineAction } from './actions';
 import { format, addDays, startOfWeek, subDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -38,7 +37,7 @@ export default function MyDailyRoutinePage() {
     setIsLoading(true);
     try {
       const [fetchedRoutines, fetchedHeaders] = await Promise.all([
-        getRoutinesForUser(currentUser.id),
+        getRoutinesAction(currentUser.id),
         getRoutineHeadersAction(currentUser.id)
       ]);
       const routinesMap = fetchedRoutines.reduce((acc, routine) => {
@@ -141,9 +140,14 @@ export default function MyDailyRoutinePage() {
           <h2 className="text-lg font-semibold text-center">
             {format(currentWeekStart, "MMMM d")} - {format(addDays(currentWeekStart, 6), "MMMM d, yyyy")}
           </h2>
-          <Button onClick={() => setCurrentWeekStart(addDays(currentWeekStart, 7))} variant="outline">
-            Next Week <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={openAddDialog} size="sm">
+              <PlusCircle className="h-4 w-4 mr-2"/> Add Routine
+            </Button>
+            <Button onClick={() => setCurrentWeekStart(addDays(currentWeekStart, 7))} variant="outline">
+              Next Week <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
         </div>
 
         {isLoading ? (
@@ -170,11 +174,6 @@ export default function MyDailyRoutinePage() {
                                 </div>
                             </th>
                         ))}
-                         <th className="border p-1 align-top bg-orange-200 dark:bg-orange-800/50 w-32 min-w-[128px]">
-                          <Button onClick={openAddDialog} size="sm" className="w-full">
-                            <PlusCircle className="h-4 w-4 mr-2"/> Add Routine
-                          </Button>
-                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -201,7 +200,6 @@ export default function MyDailyRoutinePage() {
                                         )}
                                     </td>
                                 ))}
-                                <td className="border p-2"></td>
                             </tr>
                         )
                     })}
