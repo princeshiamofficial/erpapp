@@ -4,6 +4,7 @@
 
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
 import type { UserRole } from '@/types';
+import { format } from 'date-fns';
 
 const COLLECTION_NAME = 'teamPerformance';
 const MONTHLY_TARGET_COLLECTION_NAME = 'monthlyTeamTargets';
@@ -49,28 +50,51 @@ export const getTaskEntries = async (): Promise<TaskEntry[]> => {
 
 // Add or update a task entry for a specific user and date.
 export const addTaskEntry = async (entry: Omit<TaskEntry, 'id' | 'createdAt'>): Promise<TaskEntry | null> => {
+  if (!entry.userId || !entry.date) {
+    console.error("addTaskEntry: userId and date are required.");
+    return null;
+  }
   try {
     await ensureCollectionExistsV3(COLLECTION_NAME);
+    const docId = `${entry.userId}-${entry.date}`;
     
-    // The API v3 does not have a direct equivalent of compound queries needed for "upsert".
-    // We will assume the component logic prevents duplicates and just add a new document.
-    // A more robust solution might involve fetching first, but this is simpler for now.
-    const dataWithTimestamp = {
-        ...entry,
-        createdAt: new Date().toISOString()
-    };
-    
-    const newDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
-        method: 'POST',
-        body: JSON.stringify({ data: dataWithTimestamp }),
-    });
+    const existingDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${docId}`).catch(() => null);
 
-    return {
-        id: newDoc.id,
-        ...newDoc.data
-    } as TaskEntry;
+    if (existingDoc && existingDoc.data) {
+      // Document exists, update it by adding new values
+      const updatedTaskCount = (existingDoc.data.taskCount || 0) + entry.taskCount;
+      const updatedLikelihood = (existingDoc.data.likelihood || 0) + (entry.likelihood || 0);
+      
+      const finalData = { 
+        ...existingDoc.data, 
+        taskCount: updatedTaskCount,
+        likelihood: updatedLikelihood
+      };
+      
+      await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${docId}`, {
+        method: 'PUT',
+        body: JSON.stringify({ data: finalData }),
+      });
+      return { id: docId, ...finalData } as TaskEntry;
+
+    } else {
+      // Document does not exist, create it
+      const dataWithTimestamp = {
+          ...entry,
+          createdAt: new Date().toISOString()
+      };
+      const payload = {
+        id: docId,
+        data: dataWithTimestamp
+      };
+      await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents`, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+      });
+      return { id: docId, ...dataWithTimestamp };
+    }
   } catch (error) {
-    console.error("Error adding task entry via API v3:", error);
+    console.error("Error adding/updating task entry via API v3:", error);
     return null;
   }
 };
