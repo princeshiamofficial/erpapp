@@ -1,8 +1,8 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import dynamic from 'next/dynamic';
 import {
   Card,
   CardContent,
@@ -29,7 +29,7 @@ import { getGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service'; // Import getUsers
 import { getTaskEntries } from '@/lib/team-performance-service'; // Import getTaskEntries
 import { useToast } from '@/hooks/use-toast';
-import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon, BarChart3, ClipboardList } from 'lucide-react'; // Import UsersIcon and ClipboardList
+import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon, BarChart3, ClipboardList, Edit, Trash2 } from 'lucide-react'; // Import UsersIcon and ClipboardList
 import { useAuth } from '@/contexts/auth-context'; // Corrected import path
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -43,6 +43,10 @@ import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay, getYear, for
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Import Avatar components
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import dynamic from 'next/dynamic';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AddEditTaskDialog } from '@/components/report/AddEditTaskDialog';
+import { DeleteTaskDialog } from '@/components/report/DeleteTaskDialog';
 
 
 const formatCurrency = (value: number) => {
@@ -211,6 +215,11 @@ export function ReportPageClient() {
   const [activeTab, setActiveTab] = useState("sales_report");
   const [selectedTeam, setSelectedTeam] = useState<UserRole | 'all'>('CRM');
 
+  const [taskToEdit, setTaskToEdit] = useState<TaskEntry | null>(null);
+  const [isAddEditTaskOpen, setIsAddEditTaskOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<TaskEntry | null>(null);
+  const [isDeletingTask, setIsDeletingTask] = useState(false);
+
   const handleDateRangeChange = useCallback((range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
   }, []);
@@ -254,6 +263,36 @@ export function ReportPageClient() {
       toast({ title: "Error", description: result.error || "Failed to save filters.", variant: "destructive" });
     }
   };
+  
+  const handleTaskSaved = () => {
+    setIsAddEditTaskOpen(false);
+    setTaskToEdit(null);
+    fetchData();
+  };
+
+  const handleOpenEditTaskDialog = (task: TaskEntry) => {
+    setTaskToEdit(task);
+    setIsAddEditTaskOpen(true);
+  };
+
+  const handleDeleteTask = (task: TaskEntry) => {
+    setTaskToDelete(task);
+  };
+  
+  const handleConfirmDeleteTask = async () => {
+    if (!taskToDelete) return;
+    setIsDeletingTask(true);
+    const result = await deleteTaskEntryAction(taskToDelete.id);
+    if (result.success) {
+        toast({ title: "Task Entry Deleted" });
+        fetchData();
+    } else {
+        toast({ title: "Error", description: result.error, variant: "destructive" });
+    }
+    setIsDeletingTask(false);
+    setTaskToDelete(null);
+  };
+
 
   const filteredOrdersByDate = useMemo(() => {
     if (!selectedDateRange?.from) return orders;
@@ -525,7 +564,7 @@ export function ReportPageClient() {
                             <CardTitle className="flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary"/>Team Task Report</CardTitle>
                             <CardDescription>
                                 Count of tasks submitted by team members in the selected period. Total Tasks: <span className="font-bold text-foreground">{totalTasksCount}</span>
-                                {selectedTeam === 'CRM' && `, Total Likely: <span class="font-bold text-foreground">${totalLikelihood}</span>`}
+                                {selectedTeam === 'CRM' && `, Total Likely: <span className="font-bold text-foreground">${totalLikelihood}</span>`}
                             </CardDescription>
                         </div>
                         <Tabs value={selectedTeam} onValueChange={(value) => setSelectedTeam(value as UserRole | 'all')}>
@@ -546,6 +585,7 @@ export function ReportPageClient() {
                                 <TableHead>Date</TableHead>
                                 {selectedTeam === 'CRM' && <TableHead className="text-right">Likely</TableHead>}
                                 <TableHead className="text-right">Task Count</TableHead>
+                                {isAdmin && <TableHead className="text-right">Actions</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -556,6 +596,7 @@ export function ReportPageClient() {
                                         <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                                         {selectedTeam === 'CRM' && <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>}
                                         <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
+                                        {isAdmin && <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded-md" /></TableCell>}
                                     </TableRow>
                                 ))
                             ) : filteredTasksByDate.length > 0 ? (
@@ -575,11 +616,21 @@ export function ReportPageClient() {
                                             <TableCell className="text-right font-mono text-base font-semibold">{task.likelihood || 0}</TableCell>
                                         )}
                                         <TableCell className="text-right font-mono text-base font-semibold">{task.taskCount}</TableCell>
+                                        {isAdmin && (
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEditTaskDialog(task)}>
+                                                    <Edit className="h-4 w-4 text-muted-foreground"/>
+                                                </Button>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/70 hover:text-destructive" onClick={() => handleDeleteTask(task)}>
+                                                    <Trash2 className="h-4 w-4"/>
+                                                </Button>
+                                            </TableCell>
+                                        )}
                                     </TableRow>
                                 ))
                             ) : (
                                  <TableRow>
-                                    <TableCell colSpan={selectedTeam === 'CRM' ? 4 : 3} className="h-24 text-center">
+                                    <TableCell colSpan={isAdmin ? 5 : 4} className="h-24 text-center">
                                         <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
                                         No task data for this period or team.
                                     </TableCell>
@@ -594,6 +645,7 @@ export function ReportPageClient() {
                                 )}
                                 <TableCell className={`text-right font-bold ${selectedTeam !== 'CRM' ? 'col-span-2' : ''}`}>{selectedTeam === 'CRM' ? totalLikelihood : 'Total Tasks:'}</TableCell>
                                 <TableCell className="text-right font-bold">{totalTasksCount}</TableCell>
+                                {isAdmin && <TableCell />}
                             </TableRow>
                         </TableFooter>
                     </Table>
@@ -609,6 +661,26 @@ export function ReportPageClient() {
           onOpenChange={setIsSettingsOpen}
           initialFilters={globalSettings?.reportProductFilters || []}
           onSave={handleSaveFilters}
+        />
+      )}
+
+      {taskToEdit && currentUser && (
+        <AddEditTaskDialog
+            isOpen={isAddEditTaskOpen}
+            onOpenChange={setIsAddEditTaskOpen}
+            onTaskSaved={handleTaskSaved}
+            task={taskToEdit}
+            currentUser={currentUser}
+        />
+      )}
+      
+      {taskToDelete && (
+        <DeleteTaskDialog
+            isOpen={!!taskToDelete}
+            onOpenChange={() => setTaskToDelete(null)}
+            onConfirmDelete={handleConfirmDeleteTask}
+            task={taskToDelete}
+            isDeleting={isDeletingTask}
         />
       )}
     </>

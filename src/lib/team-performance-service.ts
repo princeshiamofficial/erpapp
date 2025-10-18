@@ -1,4 +1,5 @@
 
+
 "use server";
 
 import { fetchFromApiV3, ensureCollectionExistsV3 } from './api-helper2';
@@ -74,6 +75,41 @@ export const addTaskEntry = async (entry: Omit<TaskEntry, 'id' | 'createdAt'>): 
   }
 };
 
+export async function updateTaskEntry(
+  taskId: string,
+  updates: Partial<Omit<TaskEntry, 'id' | 'userId' | 'userName' | 'role' | 'createdAt'>>
+): Promise<boolean> {
+  try {
+    const existingDoc = await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${taskId}`);
+    if (!existingDoc || !existingDoc.data) {
+      throw new Error(`Task entry with ID ${taskId} not found.`);
+    }
+
+    const updatedData = { ...existingDoc.data, ...updates };
+    
+    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${taskId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ data: updatedData })
+    });
+    return true;
+  } catch (error) {
+    console.error(`Error updating task entry ${taskId} via API v3:`, error);
+    return false;
+  }
+}
+
+export async function deleteTaskEntry(taskId: string): Promise<boolean> {
+  try {
+    await fetchFromApiV3(`collections/${COLLECTION_NAME}/documents/${taskId}`, {
+      method: 'DELETE'
+    });
+    return true;
+  } catch (error) {
+    console.error(`Error deleting task entry ${taskId} via API v3:`, error);
+    return false;
+  }
+}
+
 
 // New functions for monthly target history
 
@@ -124,3 +160,5 @@ export const setMonthlyTargetHistory = async (entry: Omit<MonthlyTargetHistory, 
         return null;
     }
 };
+
+export { deleteTaskEntry as deleteTaskEntryFromDb };
