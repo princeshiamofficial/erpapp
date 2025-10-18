@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Card,
   CardContent,
@@ -16,6 +17,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter, // Import TableFooter
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Import Tabs
 import { Progress } from "@/components/ui/progress";
@@ -288,6 +290,14 @@ export function ReportPageClient() {
     return tasksToFilter.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [allTasks, selectedDateRange, selectedTeam]);
 
+  const { totalTasksCount, totalLikelihood } = useMemo(() => {
+    const totalTasks = filteredTasksByDate.reduce((sum, task) => sum + task.taskCount, 0);
+    const totalLikely = filteredTasksByDate.reduce((sum, task) => sum + (task.likelihood || 0), 0);
+    return { totalTasksCount: totalTasks, totalLikelihood: totalLikely };
+  }, [filteredTasksByDate]);
+
+  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
+
   const productSalesData: ProductSalesData[] = useMemo(() => {
     if (filteredOrdersByDate.length === 0 || !globalSettings) {
       return [];
@@ -365,12 +375,6 @@ export function ReportPageClient() {
       .sort((a, b) => b.totalSales - a.totalSales);
   
   }, [filteredOrdersByDate, allUsers]);
-  
-  const totalTasksCount = useMemo(() => {
-    return filteredTasksByDate.reduce((sum, task) => sum + task.taskCount, 0);
-  }, [filteredTasksByDate]);
-
-  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
 
   return (
     <>
@@ -525,7 +529,7 @@ export function ReportPageClient() {
                   <Tabs value={selectedTeam} onValueChange={(value) => setSelectedTeam(value as UserRole | 'all')}>
                     <TabsList>
                       <TabsTrigger value="CRM">CR Team</TabsTrigger>
-                      <TabsTrigger value="DESIGNER_REPRESENTATIVE">DR Team</TabsTrigger>
+                      <TabsTrigger value="DR">DR Team</TabsTrigger>
                       <TabsTrigger value="CO">CO Team</TabsTrigger>
                       <TabsTrigger value="LR">LR Team</TabsTrigger>
                     </TabsList>
@@ -538,6 +542,7 @@ export function ReportPageClient() {
                         <TableRow>
                             <TableHead>User</TableHead>
                             <TableHead>Date</TableHead>
+                            {selectedTeam === 'CRM' && <TableHead className="text-right">Likely</TableHead>}
                             <TableHead className="text-right">Task Count</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -547,6 +552,7 @@ export function ReportPageClient() {
                                 <TableRow key={`task-skel-${i}`}>
                                     <TableCell><div className="flex items-center gap-3"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-28" /></div></TableCell>
                                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                    {selectedTeam === 'CRM' && <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>}
                                     <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
                                 </TableRow>
                             ))
@@ -563,18 +569,31 @@ export function ReportPageClient() {
                                         </div>
                                     </TableCell>
                                     <TableCell>{formatDateSafe(task.date)}</TableCell>
+                                    {selectedTeam === 'CRM' && (
+                                        <TableCell className="text-right font-mono text-base font-semibold">{task.likelihood || 0}</TableCell>
+                                    )}
                                     <TableCell className="text-right font-mono text-base font-semibold">{task.taskCount}</TableCell>
                                 </TableRow>
                             ))
                         ) : (
                              <TableRow>
-                                <TableCell colSpan={3} className="h-24 text-center">
+                                <TableCell colSpan={selectedTeam === 'CRM' ? 4 : 3} className="h-24 text-center">
                                     <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
                                     No task data for this period or team.
                                 </TableCell>
                             </TableRow>
                         )}
                     </TableBody>
+                    <TableFooter>
+                        <TableRow>
+                            <TableCell colSpan={selectedTeam === 'CRM' ? 2 : 1}></TableCell>
+                            {selectedTeam === 'CRM' && (
+                                <TableCell className="text-right font-bold">Total Likely:</TableCell>
+                            )}
+                            <TableCell className={`text-right font-bold ${selectedTeam !== 'CRM' ? 'col-span-2' : ''}`}>{selectedTeam === 'CRM' ? totalLikelihood : 'Total Tasks:'}</TableCell>
+                            <TableCell className="text-right font-bold">{selectedTeam === 'CRM' ? totalTasksCount : totalTasksCount}</TableCell>
+                        </TableRow>
+                    </TableFooter>
                 </Table>
               </CardContent>
             </Card>
@@ -593,5 +612,3 @@ export function ReportPageClient() {
     </>
   );
 }
-
-    
