@@ -137,7 +137,7 @@ export const addStatus = async (name: string, color: string, isVisible: boolean,
       isSystemStatus: false,
       isVisible,
       allowedRoles,
-      xid: customId, // Set xid to the same as the custom id
+      xid: customId,
     };
 
     const payload = {
@@ -268,3 +268,4 @@ export const getContrastTextColor = (hexColor: string): string => {
     return '#FFFFFF'; // Default to white on any error
   }
 };
+
