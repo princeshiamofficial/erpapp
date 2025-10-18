@@ -207,14 +207,6 @@ export default function AllDistrictsDataPage() {
   return (
     <>
       <div className="space-y-6 px-4 pb-4 sm:px-6 sm:pb-6 lg:px-8 lg:pb-8 pt-0">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 page-header">
-          <div>
-            <h1 className="page-title">All Districts Data</h1>
-            <p className="page-description">
-              View and manage district information across all divisions.
-            </p>
-          </div>
-        </div>
         <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
           <CardHeader className="border-b p-5">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
