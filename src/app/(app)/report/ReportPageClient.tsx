@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -35,7 +34,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updateReportFiltersAction } from './actions';
+import { updateReportFiltersAction, deleteTaskEntryAction } from './actions';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
@@ -569,6 +568,7 @@ export function ReportPageClient() {
                         </div>
                         <Tabs value={selectedTeam} onValueChange={(value) => setSelectedTeam(value as UserRole | 'all')}>
                             <TabsList>
+                                <TabsTrigger value="all">All Teams</TabsTrigger>
                                 <TabsTrigger value="CRM">CR Team</TabsTrigger>
                                 <TabsTrigger value="DR">DR Team</TabsTrigger>
                                 <TabsTrigger value="CO">CO Team</TabsTrigger>
@@ -582,6 +582,7 @@ export function ReportPageClient() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>User</TableHead>
+                                <TableHead>Role</TableHead>
                                 <TableHead>Date</TableHead>
                                 {selectedTeam === 'CRM' && <TableHead className="text-right">Likely</TableHead>}
                                 <TableHead className="text-right">Task Count</TableHead>
@@ -593,6 +594,7 @@ export function ReportPageClient() {
                                 [...Array(5)].map((_, i) => (
                                     <TableRow key={`task-skel-${i}`}>
                                         <TableCell><div className="flex items-center gap-3"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-28" /></div></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                                         {selectedTeam === 'CRM' && <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>}
                                         <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
@@ -611,6 +613,7 @@ export function ReportPageClient() {
                                                 <span className="font-medium">{task.userName}</span>
                                             </div>
                                         </TableCell>
+                                        <TableCell>{task.role.replace(/_/g, ' ')}</TableCell>
                                         <TableCell>{formatDateSafe(task.date)}</TableCell>
                                         {selectedTeam === 'CRM' && (
                                             <TableCell className="text-right font-mono text-base font-semibold">{task.likelihood || 0}</TableCell>
@@ -630,7 +633,7 @@ export function ReportPageClient() {
                                 ))
                             ) : (
                                  <TableRow>
-                                    <TableCell colSpan={isAdmin ? 5 : 4} className="h-24 text-center">
+                                    <TableCell colSpan={isAdmin ? (selectedTeam === 'CRM' ? 7 : 6) : (selectedTeam === 'CRM' ? 6 : 5)} className="h-24 text-center">
                                         <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
                                         No task data for this period or team.
                                     </TableCell>
@@ -639,7 +642,7 @@ export function ReportPageClient() {
                         </TableBody>
                          <TableFooter>
                             <TableRow>
-                                <TableCell colSpan={selectedTeam === 'CRM' ? 2 : 1}></TableCell>
+                                <TableCell colSpan={selectedTeam === 'CRM' ? 3 : 2}></TableCell>
                                 {selectedTeam === 'CRM' && (
                                     <TableCell className="text-right font-bold">Total Likely:</TableCell>
                                 )}
@@ -686,3 +689,5 @@ export function ReportPageClient() {
     </>
   );
 }
+
+    
