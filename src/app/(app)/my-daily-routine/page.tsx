@@ -93,18 +93,17 @@ export default function MyDailyRoutinePage() {
     const dateKey = format(date, 'yyyy-MM-dd');
     const originalState = { ...routinesData };
     const dayRoutine = originalState[dateKey];
-    const isCurrentlyChecked = dayRoutine?.completedTasks && dayRoutine.completedTasks[taskId];
+    const isCurrentlyChecked = dayRoutine?.completedTasks && (
+      (typeof dayRoutine.completedTasks === 'object' && dayRoutine.completedTasks[taskId]) ||
+      (Array.isArray(dayRoutine.completedTasks) && dayRoutine.completedTasks.includes(taskId))
+    );
 
-    if (isCurrentlyChecked) {
+    if (isCurrentlyChecked && typeof dayRoutine.completedTasks === 'object' && dayRoutine.completedTasks[taskId]) {
       const checkedTimestamp = parseISO(dayRoutine.completedTasks[taskId]);
       const minutesSinceChecked = differenceInMinutes(new Date(), checkedTimestamp);
       
       if (minutesSinceChecked > 20) {
-        toast({
-          title: "Action Blocked",
-          description: "You can’t uncheck after 20 minutes.",
-          variant: "destructive"
-        });
+        // Silently block the action as requested
         return;
       }
     }
@@ -203,9 +202,9 @@ export default function MyDailyRoutinePage() {
                            const textColor = getContrastTextColor(header.color || '#f3f4f6');
                            return (
                             <th key={header.id} className="border p-1 text-center font-semibold text-sm group relative" style={{ backgroundColor: header.color || '#f3f4f6' }}>
-                                <div className="flex items-center justify-center gap-2 h-full min-h-[5rem]">
+                                <div className="flex items-center justify-center gap-2 h-full min-h-[5rem] whitespace-nowrap">
                                     <span style={{ color: textColor }}>{header.title}</span>
-                                    <span className="font-normal text-xs whitespace-nowrap" style={{ color: textColor, opacity: 0.8 }}>({formatTime12Hour(header.time)})</span>
+                                    <span className="font-normal text-xs" style={{ color: textColor, opacity: 0.8 }}>({formatTime12Hour(header.time)})</span>
                                 </div>
                                 <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/20" onClick={() => openEditDialog(header)}><Edit className="h-3 w-3" style={{ color: textColor }}/></Button>
@@ -233,7 +232,10 @@ export default function MyDailyRoutinePage() {
                                     <p className="text-xs">{format(date, 'EEEE')}</p>
                                 </td>
                                 {routineHeaders.map(header => {
-                                    const isChecked = dayRoutine?.completedTasks && (dayRoutine.completedTasks[header.id] || (Array.isArray(dayRoutine.completedTasks) && dayRoutine.completedTasks.includes(header.id)));
+                                    const isChecked = dayRoutine?.completedTasks && (
+                                      (typeof dayRoutine.completedTasks === 'object' && dayRoutine.completedTasks[header.id]) ||
+                                      (Array.isArray(dayRoutine.completedTasks) && dayRoutine.completedTasks.includes(header.id))
+                                    );
                                     return (
                                         <td key={`${dateKey}-${header.id}`} className="border p-2 text-center align-middle">
                                             <Checkbox
@@ -293,4 +295,3 @@ export default function MyDailyRoutinePage() {
     </>
   );
 }
-
