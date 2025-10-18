@@ -539,7 +539,6 @@ export function ReportPageClient() {
                         <TableRow>
                             <TableHead>User</TableHead>
                             <TableHead>Date (Time)</TableHead>
-                            <TableHead>Role</TableHead>
                             <TableHead className="text-right">Task Count</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -549,7 +548,6 @@ export function ReportPageClient() {
                                 <TableRow key={`task-skel-${i}`}>
                                     <TableCell><div className="flex items-center gap-3"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-28" /></div></TableCell>
                                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                     <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
                                 </TableRow>
                             ))
@@ -566,13 +564,12 @@ export function ReportPageClient() {
                                         </div>
                                     </TableCell>
                                     <TableCell>{formatDateSafe(task.date)}</TableCell>
-                                    <TableCell>{task.role}</TableCell>
                                     <TableCell className="text-right font-mono text-base font-semibold">{task.taskCount}</TableCell>
                                 </TableRow>
                             ))
                         ) : (
                              <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center">
+                                <TableCell colSpan={3} className="h-24 text-center">
                                     <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
                                     No task data for this period or team.
                                 </TableCell>
@@ -597,5 +594,3 @@ export function ReportPageClient() {
     </>
   );
 }
-
-    
