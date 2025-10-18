@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -9,7 +10,7 @@ import { useRouter } from "next/navigation";
 import type { DailyRoutine, User } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { getRoutinesAction, toggleRoutineTaskAction, getRoutineHeadersAction, deleteRoutineAction } from './actions';
-import { format, addDays, startOfWeek, subDays, parse } from 'date-fns';
+import { format, addDays, startOfWeek, subDays, parse, differenceInMinutes, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -68,12 +69,7 @@ export default function MyDailyRoutinePage() {
       }, {} as Record<string, DailyRoutine>);
       setRoutinesData(routinesMap);
       
-      const sortedHeaders = fetchedHeaders.sort((a, b) => {
-          const timeA = a.time?.split(' ')[0];
-          const timeB = b.time?.split(' ')[0];
-          return (timeA || '').localeCompare(timeB || '');
-      });
-      setRoutineHeaders(sortedHeaders);
+      setRoutineHeaders(fetchedHeaders);
 
     } catch (error) {
       console.error("Error fetching routines:", error);
@@ -96,21 +92,36 @@ export default function MyDailyRoutinePage() {
 
     const dateKey = format(date, 'yyyy-MM-dd');
     const originalState = { ...routinesData };
+    const dayRoutine = originalState[dateKey];
+    const isCurrentlyChecked = dayRoutine?.completedTasks && dayRoutine.completedTasks[taskId];
+
+    if (isCurrentlyChecked) {
+      const checkedTimestamp = parseISO(dayRoutine.completedTasks[taskId]);
+      const minutesSinceChecked = differenceInMinutes(new Date(), checkedTimestamp);
+      
+      if (minutesSinceChecked > 20) {
+        toast({
+          title: "Action Blocked",
+          description: "You can’t uncheck after 20 minutes.",
+          variant: "destructive"
+        });
+        return;
+      }
+    }
 
     // Optimistic UI update
     setRoutinesData(prev => {
         const newRoutines = { ...prev };
-        const dayRoutine = newRoutines[dateKey] || { id: dateKey, userId: currentUser.id, completedTasks: [], updatedAt: new Date().toISOString() };
-        const taskIndex = (dayRoutine.completedTasks || []).indexOf(taskId);
-        let updatedTasks: string[];
+        const currentDayRoutine = newRoutines[dateKey] || { id: dateKey, userId: currentUser.id, completedTasks: {}, updatedAt: new Date().toISOString() };
+        const updatedTasks = { ...(currentDayRoutine.completedTasks || {}) };
 
-        if (taskIndex > -1) {
-            updatedTasks = (dayRoutine.completedTasks || []).filter(t => t !== taskId);
+        if (updatedTasks[taskId]) {
+            delete updatedTasks[taskId]; // Uncheck
         } else {
-            updatedTasks = [...(dayRoutine.completedTasks || []), taskId];
+            updatedTasks[taskId] = new Date().toISOString(); // Check
         }
         
-        newRoutines[dateKey] = { ...dayRoutine, completedTasks: updatedTasks };
+        newRoutines[dateKey] = { ...currentDayRoutine, completedTasks: updatedTasks };
         return newRoutines;
     });
 
@@ -192,9 +203,9 @@ export default function MyDailyRoutinePage() {
                            const textColor = getContrastTextColor(header.color || '#f3f4f6');
                            return (
                             <th key={header.id} className="border p-1 text-center font-semibold text-sm group relative" style={{ backgroundColor: header.color || '#f3f4f6' }}>
-                                <div className="flex flex-col h-full justify-start min-h-[5rem]">
+                                <div className="flex items-center justify-center gap-2 h-full min-h-[5rem]">
                                     <span style={{ color: textColor }}>{header.title}</span>
-                                    <span className="font-normal text-xs" style={{ color: textColor, opacity: 0.8 }}>{formatTime12Hour(header.time)}</span>
+                                    <span className="font-normal text-xs whitespace-nowrap" style={{ color: textColor, opacity: 0.8 }}>({formatTime12Hour(header.time)})</span>
                                 </div>
                                 <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/20" onClick={() => openEditDialog(header)}><Edit className="h-3 w-3" style={{ color: textColor }}/></Button>
@@ -221,16 +232,19 @@ export default function MyDailyRoutinePage() {
                                     <p className="font-semibold text-sm">{format(date, 'dd/MM/yy')}</p>
                                     <p className="text-xs">{format(date, 'EEEE')}</p>
                                 </td>
-                                {routineHeaders.map(header => (
-                                    <td key={`${dateKey}-${header.id}`} className="border p-2 text-center align-middle">
-                                        <Checkbox
-                                            checked={(dayRoutine?.completedTasks || []).includes(header.id)}
-                                            onCheckedChange={() => handleToggleTask(date, header.id)}
-                                            aria-label={`Mark ${header.title} as completed for ${format(date, 'PPP')}`}
-                                            className="h-5 w-5"
-                                        />
-                                    </td>
-                                ))}
+                                {routineHeaders.map(header => {
+                                    const isChecked = dayRoutine?.completedTasks && (dayRoutine.completedTasks[header.id] || (Array.isArray(dayRoutine.completedTasks) && dayRoutine.completedTasks.includes(header.id)));
+                                    return (
+                                        <td key={`${dateKey}-${header.id}`} className="border p-2 text-center align-middle">
+                                            <Checkbox
+                                                checked={!!isChecked}
+                                                onCheckedChange={() => handleToggleTask(date, header.id)}
+                                                aria-label={`Mark ${header.title} as completed for ${format(date, 'PPP')}`}
+                                                className="h-5 w-5"
+                                            />
+                                        </td>
+                                    )
+                                })}
                                 <td className="border p-2"></td>
                             </tr>
                         )
@@ -279,3 +293,4 @@ export default function MyDailyRoutinePage() {
     </>
   );
 }
+

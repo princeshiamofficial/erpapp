@@ -23,7 +23,11 @@ export const getRoutineHeadersForUser = async (userId: string): Promise<DailyRou
           id: doc.id,
           ...doc.data
         } as DailyRoutine))
-        .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
+        .sort((a, b) => {
+          const timeA = a.time?.split(' ')[0];
+          const timeB = b.time?.split(' ')[0];
+          return (timeA || '').localeCompare(timeB || '');
+      });
     }
     return [];
   } catch (error) {
@@ -160,19 +164,18 @@ export const toggleRoutineTask = async (userId: string, date: string, taskId: st
     await ensureCollectionExistsV3(collectionPath);
     let existingDoc = await getRoutineById(docId, userId);
 
-    let updatedTasks: string[];
+    let updatedTasks: Record<string, string>;
 
     if (!existingDoc) {
       // If the document for the day doesn't exist, create it with the first completed task.
-      updatedTasks = [taskId];
+      updatedTasks = { [taskId]: new Date().toISOString() };
       const newRoutine: Omit<DailyRoutine, 'id'> = {
         userId,
         completedTasks: updatedTasks,
         updatedAt: new Date().toISOString(),
       };
-      // Corrected payload for creating a new document
       const payload = {
-        id: docId, // Pass the ID in the payload for creation with a specific ID
+        id: docId, 
         data: newRoutine 
       };
       await fetchFromApiV3(`collections/${collectionPath}/documents`, {
@@ -181,14 +184,16 @@ export const toggleRoutineTask = async (userId: string, date: string, taskId: st
       });
       return { id: docId, ...newRoutine };
     } else {
-      // If the document exists, toggle the task in the array.
-      const currentTasks = existingDoc.completedTasks || [];
-      const taskIndex = currentTasks.indexOf(taskId);
+      // If the document exists, toggle the task in the object.
+      const currentTasks = existingDoc.completedTasks || {};
       
-      if (taskIndex > -1) {
-        updatedTasks = currentTasks.filter(t => t !== taskId); // Remove task
+      if (currentTasks[taskId]) {
+        // Task exists, so we are unchecking it. Remove it.
+        const { [taskId]: _, ...remainingTasks } = currentTasks;
+        updatedTasks = remainingTasks;
       } else {
-        updatedTasks = [...currentTasks, taskId]; // Add task
+        // Task does not exist, so we are checking it. Add it with a timestamp.
+        updatedTasks = { ...currentTasks, [taskId]: new Date().toISOString() };
       }
       
       const updates = {

@@ -638,9 +638,10 @@ export interface DailyRoutine {
   title?: string;
   time?: string;
   color?: string;
+  description?: string;
   
   // Fields for a daily record
-  completedTasks?: string[]; // An array of routine header IDs
+  completedTasks?: Record<string, string>; // Maps taskId to ISO timestamp
   remarks?: string;
 
   createdAt?: string; // ISO string, for sorting headers
