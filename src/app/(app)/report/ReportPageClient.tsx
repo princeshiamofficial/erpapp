@@ -206,7 +206,7 @@ export function ReportPageClient() {
     from: subDays(new Date(), 29),
     to: new Date(),
   });
-  const [selectedTeam, setSelectedTeam] = useState<UserRole | 'all'>('all');
+  const [selectedTeam, setSelectedTeam] = useState<UserRole | 'all'>('CRM');
 
   const handleDateRangeChange = useCallback((range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
@@ -524,7 +524,6 @@ export function ReportPageClient() {
                   </div>
                   <Tabs value={selectedTeam} onValueChange={(value) => setSelectedTeam(value as UserRole | 'all')}>
                     <TabsList>
-                      <TabsTrigger value="all">All Teams</TabsTrigger>
                       <TabsTrigger value="CRM">CR Team</TabsTrigger>
                       <TabsTrigger value="DESIGNER_REPRESENTATIVE">DR Team</TabsTrigger>
                       <TabsTrigger value="CO">CO Team</TabsTrigger>
@@ -538,7 +537,7 @@ export function ReportPageClient() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>User</TableHead>
-                            <TableHead>Date (Time)</TableHead>
+                            <TableHead>Date</TableHead>
                             <TableHead className="text-right">Task Count</TableHead>
                         </TableRow>
                     </TableHeader>
@@ -594,3 +593,5 @@ export function ReportPageClient() {
     </>
   );
 }
+
+    
