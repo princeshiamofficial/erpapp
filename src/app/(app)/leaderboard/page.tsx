@@ -104,7 +104,7 @@ export default function LeaderboardPage() {
     const periodStart = startOfDay(dateRange.from);
     const periodEnd = endOfDay(dateRange.to);
     
-    const roleFilteredUsers = users.filter(user => user.role === roleToCalculate);
+    const roleFilteredUsers = users.filter(user => user.role === roleToCalculate && !user.isBanned);
     
     const jobFirstSeenDate = new Map<string, Date>();
     [...orders].sort((a,b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
