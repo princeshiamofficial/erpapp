@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Import Tabs
 import { Progress } from "@/components/ui/progress";
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,7 +38,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
 import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay, getYear, format } from 'date-fns';
-import { READY_FOR_DESIGN_STATUS_ID, LOGISTICS_STATUS_ID } from '@/lib/status-service'; // Import status IDs
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Import Avatar components
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
@@ -368,141 +368,144 @@ export function ReportPageClient() {
   return (
     <>
       <div className="space-y-6 p-1 sm:p-0">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="w-full">
-              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <CardTitle>Product Sales Performance</CardTitle>
-                  <CardDescription>
-                    Sales distribution across all products for the selected period.
-                  </CardDescription>
-                </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <DateRangePicker 
-                      initialRange={selectedDateRange} 
-                      onDateRangeChange={handleDateRangeChange}
-                      className="w-full sm:w-auto"
-                    />
-                    {isAdmin && (
-                      <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} disabled={!globalSettings}>
-                        <Settings className="h-5 w-5" />
-                        <span className="sr-only">Configure Report Filters</span>
-                      </Button>
-                    )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead className="text-right">Sales Amount</TableHead>
-                      <TableHead className="w-[30%] text-center">Sales Percentage</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      [...Array(4)].map((_, i) => (
-                        <TableRow key={i}>
-                          <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                          <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-center gap-4">
-                              <Skeleton className="h-2.5 w-2/3" />
-                              <Skeleton className="h-6 w-16" />
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : productSalesData.length > 0 ? (
-                      productSalesData.map((item) => (
-                        <TableRow key={item.product}>
-                          <TableCell className="font-medium">{item.product}</TableCell>
-                          <TableCell className="text-right font-mono">{formatCurrency(item.sales)}</TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-4">
-                                <Progress value={item.percentage} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
-                                <Badge variant="outline" className="w-16 justify-center">{item.percentage.toFixed(1)}%</Badge>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={3} className="h-24 text-center">
-                          <Package className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
-                          No sales data available for the selected period.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-
-            <Card className="w-full">
-              <CardHeader>
-                  <CardTitle>Team Performance</CardTitle>
-                  <CardDescription>
-                    Sales breakdown by CRM for the selected period.
-                  </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                    <TableHeader>
+        <Tabs defaultValue="sales_report" className="w-full">
+          <div className="flex justify-between items-center mb-4">
+              <TabsList>
+                  <TabsTrigger value="sales_report">Sales Report</TabsTrigger>
+                  <TabsTrigger value="team_report">Team Report</TabsTrigger>
+              </TabsList>
+              <div className="flex items-center gap-2">
+                <DateRangePicker 
+                    initialRange={selectedDateRange} 
+                    onDateRangeChange={handleDateRangeChange}
+                />
+                {isAdmin && (
+                  <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} disabled={!globalSettings}>
+                    <Settings className="h-5 w-5" />
+                    <span className="sr-only">Configure Report Filters</span>
+                  </Button>
+                )}
+              </div>
+          </div>
+          <TabsContent value="sales_report">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="w-full">
+                  <CardHeader>
+                    <CardTitle>Product Sales Performance</CardTitle>
+                    <CardDescription>
+                      Sales distribution across all products for the selected period.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
                         <TableRow>
-                            <TableHead>CRM</TableHead>
-                            <TableHead className="text-right">Total Sales</TableHead>
+                          <TableHead>Product</TableHead>
+                          <TableHead className="text-right">Sales Amount</TableHead>
+                          <TableHead className="w-[30%] text-center">Sales Percentage</TableHead>
                         </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                      </TableHeader>
+                      <TableBody>
                         {isLoading ? (
-                            [...Array(4)].map((_, i) => (
-                                <TableRow key={`crm-skel-${i}`}>
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <Skeleton className="h-10 w-10 rounded-full" />
-                                            <Skeleton className="h-5 w-32" />
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <Skeleton className="h-5 w-24 ml-auto" />
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        ) : crmSalesData.length > 0 ? (
-                            crmSalesData.map(crm => (
-                                <TableRow key={crm.crmId}>
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-10 w-10 border">
-                                                <AvatarImage src={crm.avatarUrl || undefined} alt={crm.crmName} />
-                                                <AvatarFallback>{getInitials(crm.crmName)}</AvatarFallback>
-                                            </Avatar>
-                                            <span className="font-medium">{crm.crmName}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-right font-mono text-base font-semibold">
-                                        {formatCurrency(crm.totalSales)}
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                             <TableRow>
-                                <TableCell colSpan={2} className="h-24 text-center">
-                                    <UsersIcon className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
-                                    No CRM sales data for this period.
-                                </TableCell>
+                          [...Array(4)].map((_, i) => (
+                            <TableRow key={i}>
+                              <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                              <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
+                              <TableCell>
+                                <div className="flex items-center justify-center gap-4">
+                                  <Skeleton className="h-2.5 w-2/3" />
+                                  <Skeleton className="h-6 w-16" />
+                                </div>
+                              </TableCell>
                             </TableRow>
+                          ))
+                        ) : productSalesData.length > 0 ? (
+                          productSalesData.map((item) => (
+                            <TableRow key={item.product}>
+                              <TableCell className="font-medium">{item.product}</TableCell>
+                              <TableCell className="text-right font-mono">{formatCurrency(item.sales)}</TableCell>
+                              <TableCell className="text-center">
+                                <div className="flex items-center justify-center gap-4">
+                                    <Progress value={item.percentage} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
+                                    <Badge variant="outline" className="w-16 justify-center">{item.percentage.toFixed(1)}%</Badge>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={3} className="h-24 text-center">
+                              <Package className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
+                              No sales data available for the selected period.
+                            </TableCell>
+                          </TableRow>
                         )}
-                    </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-        </div>
-        
-        {/* New Team Task Report Card */}
-        <div className="mt-6">
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+                <Card className="w-full">
+                  <CardHeader>
+                      <CardTitle>CRM Sales Breakdown</CardTitle>
+                      <CardDescription>
+                        Sales contribution by each CRM for the selected period.
+                      </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>CRM</TableHead>
+                                <TableHead className="text-right">Total Sales</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                [...Array(4)].map((_, i) => (
+                                    <TableRow key={`crm-skel-${i}`}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                <Skeleton className="h-10 w-10 rounded-full" />
+                                                <Skeleton className="h-5 w-32" />
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Skeleton className="h-5 w-24 ml-auto" />
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : crmSalesData.length > 0 ? (
+                                crmSalesData.map(crm => (
+                                    <TableRow key={crm.crmId}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="h-10 w-10 border">
+                                                    <AvatarImage src={crm.avatarUrl || undefined} alt={crm.crmName} />
+                                                    <AvatarFallback>{getInitials(crm.crmName)}</AvatarFallback>
+                                                </Avatar>
+                                                <span className="font-medium">{crm.crmName}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono text-base font-semibold">
+                                            {formatCurrency(crm.totalSales)}
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                 <TableRow>
+                                    <TableCell colSpan={2} className="h-24 text-center">
+                                        <UsersIcon className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
+                                        No CRM sales data for this period.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+            </div>
+          </TabsContent>
+          <TabsContent value="team_report">
             <Card className="w-full">
               <CardHeader>
                   <CardTitle className="flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary"/>Team Task Report</CardTitle>
@@ -559,7 +562,8 @@ export function ReportPageClient() {
                 </Table>
               </CardContent>
             </Card>
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {isAdmin && (
