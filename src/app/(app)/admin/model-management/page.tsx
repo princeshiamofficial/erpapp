@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -381,16 +380,6 @@ export default function ModelManagementPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 page-header">
-        <div>
-          <h1 className="page-title">Model Management</h1>
-          <p className="page-description">Configure Model options (including buying/selling prices) available for orders.</p>
-        </div>
-        <Button variant="outline" size="icon" onClick={fetchData} disabled={isLoading} className="h-10 w-10" title="Refresh Data">
-          <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
-        </Button>
-      </div>
-
       <div className="flex flex-col lg:flex-row gap-6">
         {renderItemList(filteredModels, 'Models', Layers)}
       </div>
