@@ -85,14 +85,12 @@ export default function ModelManagementPage() {
     }
   }, [currentUser, router, fetchData]);
   
-  const { filteredModels, totalSold } = useMemo(() => {
-    const sold = models.reduce((acc, model) => acc + (model.totalSold || 0), 0);
-    if (!modelSearchTerm) return { filteredModels: models, totalSold: sold };
+  const filteredModels = useMemo(() => {
+    if (!modelSearchTerm) return models;
     
-    const filtered = models.filter(model =>
+    return models.filter(model =>
       model.name.toLowerCase().includes(modelSearchTerm.toLowerCase())
     );
-    return { filteredModels: filtered, totalSold: sold };
   }, [models, modelSearchTerm]);
 
   const openAddDialog = () => {
@@ -276,7 +274,7 @@ export default function ModelManagementPage() {
     );
   }
   
-  const renderItemList = (items: ServiceModelItem[], title: string, Icon: React.ElementType, totalSold: number) => (
+  const renderItemList = (items: ServiceModelItem[], title: string, Icon: React.ElementType) => (
     <Card className="shadow-xl border bg-card rounded-lg overflow-hidden flex-1 min-w-[300px]">
       <CardHeader className="border-b p-5">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
@@ -284,11 +282,7 @@ export default function ModelManagementPage() {
             <CardTitle className="text-card-foreground text-xl flex items-center gap-2"><Icon className="h-5 w-5 text-primary"/>{title}</CardTitle>
             <CardDescription className="text-muted-foreground text-sm mt-0.5">Manage available {title.toLowerCase()} options for orders.</CardDescription>
           </div>
-           <div className="flex items-center gap-2">
-             <div className="p-3 rounded-lg bg-muted flex flex-col items-center justify-center">
-                <p className="text-xs text-muted-foreground font-semibold">Total Sold</p>
-                <p className="text-xl font-bold text-primary">{totalSold.toLocaleString()}</p>
-             </div>
+          <div className="flex items-center gap-2">
              <Button size="sm" onClick={openAddDialog} className="h-9">
               <PlusCircle className="mr-2 h-4 w-4" /> Add New
             </Button>
@@ -314,17 +308,16 @@ export default function ModelManagementPage() {
                         <TableHead>Name</TableHead>
                         <TableHead>Buying Price</TableHead>
                         <TableHead>Selling Price</TableHead>
-                        <TableHead className="text-center">Sold</TableHead>
                         <TableHead className="text-center">Stock Info</TableHead>
                         <TableHead className="pr-4 text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
                  {isLoading ? (
-                    [...Array(5)].map((_, i) => <TableRow key={i}><TableCell colSpan={8}><Skeleton className="h-16 w-full rounded-md" /></TableCell></TableRow>)
+                    [...Array(5)].map((_, i) => <TableRow key={i}><TableCell colSpan={7}><Skeleton className="h-16 w-full rounded-md" /></TableCell></TableRow>)
                   ) : items.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="p-6 text-center text-muted-foreground">
+                      <TableCell colSpan={7} className="p-6 text-center text-muted-foreground">
                         <Icon className="mx-auto h-10 w-10 opacity-50 mb-2" />
                         No {modelSearchTerm ? `${title.toLowerCase()} found for "${modelSearchTerm}"` : `${title.toLowerCase()} found.`}
                       </TableCell>
@@ -349,9 +342,6 @@ export default function ModelManagementPage() {
                         </TableCell>
                         <TableCell className="font-mono">{formatCurrency(item.buyingPrice)}</TableCell>
                         <TableCell className="font-mono">{formatCurrency(item.sellingPrice)}</TableCell>
-                        <TableCell className="text-center">
-                            <span className="font-semibold text-primary">{item.totalSold || 0}</span>
-                        </TableCell>
                         <TableCell className="text-center">
                            {item.isReadyMade ? (
                                 <span className={cn(
@@ -402,7 +392,7 @@ export default function ModelManagementPage() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {renderItemList(filteredModels, 'Models', Layers, totalSold)}
+        {renderItemList(filteredModels, 'Models', Layers)}
       </div>
 
       <Dialog open={isAddEditDialogOpen} onOpenChange={(open) => {
