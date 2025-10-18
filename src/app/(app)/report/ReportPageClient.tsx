@@ -43,7 +43,7 @@ import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay, getYear, for
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Import Avatar components
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
-import dynamic from 'next/dynamic';
+
 
 const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-BD', {
@@ -208,6 +208,7 @@ export function ReportPageClient() {
     from: subDays(new Date(), 29),
     to: new Date(),
   });
+  const [activeTab, setActiveTab] = useState("sales_report");
   const [selectedTeam, setSelectedTeam] = useState<UserRole | 'all'>('CRM');
 
   const handleDateRangeChange = useCallback((range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
@@ -379,7 +380,7 @@ export function ReportPageClient() {
   return (
     <>
       <div className="space-y-6 p-1 sm:p-0">
-        <Tabs defaultValue="sales_report" className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="flex justify-between items-center mb-4">
               <TabsList>
                   <TabsTrigger value="sales_report">Sales Report</TabsTrigger>
@@ -517,85 +518,86 @@ export function ReportPageClient() {
             </div>
           </TabsContent>
           <TabsContent value="team_report">
-            <Card className="w-full">
-              <CardHeader>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div>
-                    <CardTitle className="flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary"/>Team Task Report</CardTitle>
-                    <CardDescription>
-                      Count of tasks submitted by team members in the selected period. Total Tasks: <span className="font-bold text-foreground">{totalTasksCount}</span>
-                    </CardDescription>
-                  </div>
-                  <Tabs value={selectedTeam} onValueChange={(value) => setSelectedTeam(value as UserRole | 'all')}>
-                    <TabsList>
-                      <TabsTrigger value="CRM">CR Team</TabsTrigger>
-                      <TabsTrigger value="DR">DR Team</TabsTrigger>
-                      <TabsTrigger value="CO">CO Team</TabsTrigger>
-                      <TabsTrigger value="LR">LR Team</TabsTrigger>
-                    </TabsList>
-                  </Tabs>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>User</TableHead>
-                            <TableHead>Date</TableHead>
-                            {selectedTeam === 'CRM' && <TableHead className="text-right">Likely</TableHead>}
-                            <TableHead className="text-right">Task Count</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            [...Array(5)].map((_, i) => (
-                                <TableRow key={`task-skel-${i}`}>
-                                    <TableCell><div className="flex items-center gap-3"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-28" /></div></TableCell>
-                                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                    {selectedTeam === 'CRM' && <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>}
-                                    <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
-                                </TableRow>
-                            ))
-                        ) : filteredTasksByDate.length > 0 ? (
-                            filteredTasksByDate.map(task => (
-                                <TableRow key={task.id}>
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <Avatar className="h-8 w-8 border">
-                                                <AvatarImage src={allUsers.find(u => u.id === task.userId)?.avatarUrl || undefined} alt={task.userName} />
-                                                <AvatarFallback>{getInitials(task.userName)}</AvatarFallback>
-                                            </Avatar>
-                                            <span className="font-medium">{task.userName}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>{formatDateSafe(task.date)}</TableCell>
-                                    {selectedTeam === 'CRM' && (
-                                        <TableCell className="text-right font-mono text-base font-semibold">{task.likelihood || 0}</TableCell>
-                                    )}
-                                    <TableCell className="text-right font-mono text-base font-semibold">{task.taskCount}</TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                             <TableRow>
-                                <TableCell colSpan={selectedTeam === 'CRM' ? 4 : 3} className="h-24 text-center">
-                                    <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
-                                    No task data for this period or team.
-                                </TableCell>
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle className="flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary"/>Team Task Report</CardTitle>
+                            <CardDescription>
+                                Count of tasks submitted by team members in the selected period. Total Tasks: <span className="font-bold text-foreground">{totalTasksCount}</span>
+                                {selectedTeam === 'CRM' && `, Total Likely: <span class="font-bold text-foreground">${totalLikelihood}</span>`}
+                            </CardDescription>
+                        </div>
+                        <Tabs value={selectedTeam} onValueChange={(value) => setSelectedTeam(value as UserRole | 'all')}>
+                            <TabsList>
+                                <TabsTrigger value="CRM">CR Team</TabsTrigger>
+                                <TabsTrigger value="DR">DR Team</TabsTrigger>
+                                <TabsTrigger value="CO">CO Team</TabsTrigger>
+                                <TabsTrigger value="LR">LR Team</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>User</TableHead>
+                                <TableHead>Date</TableHead>
+                                {selectedTeam === 'CRM' && <TableHead className="text-right">Likely</TableHead>}
+                                <TableHead className="text-right">Task Count</TableHead>
                             </TableRow>
-                        )}
-                    </TableBody>
-                    <TableFooter>
-                        <TableRow>
-                            <TableCell colSpan={selectedTeam === 'CRM' ? 2 : 1}></TableCell>
-                            {selectedTeam === 'CRM' && (
-                                <TableCell className="text-right font-bold">Total Likely:</TableCell>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading ? (
+                                [...Array(5)].map((_, i) => (
+                                    <TableRow key={`task-skel-${i}`}>
+                                        <TableCell><div className="flex items-center gap-3"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-28" /></div></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                        {selectedTeam === 'CRM' && <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>}
+                                        <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : filteredTasksByDate.length > 0 ? (
+                                filteredTasksByDate.map(task => (
+                                    <TableRow key={task.id}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="h-8 w-8 border">
+                                                    <AvatarImage src={allUsers.find(u => u.id === task.userId)?.avatarUrl || undefined} alt={task.userName} />
+                                                    <AvatarFallback>{getInitials(task.userName)}</AvatarFallback>
+                                                </Avatar>
+                                                <span className="font-medium">{task.userName}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>{formatDateSafe(task.date)}</TableCell>
+                                        {selectedTeam === 'CRM' && (
+                                            <TableCell className="text-right font-mono text-base font-semibold">{task.likelihood || 0}</TableCell>
+                                        )}
+                                        <TableCell className="text-right font-mono text-base font-semibold">{task.taskCount}</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                 <TableRow>
+                                    <TableCell colSpan={selectedTeam === 'CRM' ? 4 : 3} className="h-24 text-center">
+                                        <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
+                                        No task data for this period or team.
+                                    </TableCell>
+                                </TableRow>
                             )}
-                            <TableCell className={`text-right font-bold ${selectedTeam !== 'CRM' ? 'col-span-2' : ''}`}>{selectedTeam === 'CRM' ? totalLikelihood : 'Total Tasks:'}</TableCell>
-                            <TableCell className="text-right font-bold">{selectedTeam === 'CRM' ? totalTasksCount : totalTasksCount}</TableCell>
-                        </TableRow>
-                    </TableFooter>
-                </Table>
-              </CardContent>
+                        </TableBody>
+                         <TableFooter>
+                            <TableRow>
+                                <TableCell colSpan={selectedTeam === 'CRM' ? 2 : 1}></TableCell>
+                                {selectedTeam === 'CRM' && (
+                                    <TableCell className="text-right font-bold">Total Likely:</TableCell>
+                                )}
+                                <TableCell className={`text-right font-bold ${selectedTeam !== 'CRM' ? 'col-span-2' : ''}`}>{selectedTeam === 'CRM' ? totalLikelihood : 'Total Tasks:'}</TableCell>
+                                <TableCell className="text-right font-bold">{totalTasksCount}</TableCell>
+                            </TableRow>
+                        </TableFooter>
+                    </Table>
+                </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
