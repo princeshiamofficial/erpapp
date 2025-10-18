@@ -21,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from "@/components/ui/progress";
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { TrackingLink, GlobalSettings, User, TaskEntry } from '@/types'; // Import User and TaskEntry
+import type { TrackingLink, GlobalSettings, User, TaskEntry, UserRole } from '@/types'; // Import User and TaskEntry
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service'; // Import getUsers
@@ -197,7 +197,7 @@ export function ReportPageClient() {
   const [orders, setOrders] = useState<TrackingLink[]>([]);
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
-  const [allTasks, setAllTasks] = useState<TaskEntry[]>([]); // New state for tasks
+  const [allTasks, setAllTasks] = useState<TaskEntry[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { currentUser } = useAuth();
@@ -206,6 +206,7 @@ export function ReportPageClient() {
     from: subDays(new Date(), 29),
     to: new Date(),
   });
+  const [selectedTeam, setSelectedTeam] = useState<UserRole | 'all'>('all');
 
   const handleDateRangeChange = useCallback((range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
@@ -269,17 +270,23 @@ export function ReportPageClient() {
   }, [orders, selectedDateRange]);
 
   const filteredTasksByDate = useMemo(() => {
-    if (!selectedDateRange?.from) return allTasks;
+    if (!selectedDateRange?.from) return [];
     const startDate = startOfDay(selectedDateRange.from);
     const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
 
-    return allTasks.filter(task => {
+    let tasksToFilter = allTasks.filter(task => {
         try {
             const taskDate = parseISO(task.date);
             return isWithinInterval(taskDate, { start: startDate, end: endDate });
         } catch { return false; }
-    }).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [allTasks, selectedDateRange]);
+    });
+
+    if(selectedTeam !== 'all') {
+      tasksToFilter = tasksToFilter.filter(task => task.role === selectedTeam);
+    }
+
+    return tasksToFilter.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [allTasks, selectedDateRange, selectedTeam]);
 
   const productSalesData: ProductSalesData[] = useMemo(() => {
     if (filteredOrdersByDate.length === 0 || !globalSettings) {
@@ -508,10 +515,23 @@ export function ReportPageClient() {
           <TabsContent value="team_report">
             <Card className="w-full">
               <CardHeader>
-                  <CardTitle className="flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary"/>Team Task Report</CardTitle>
-                  <CardDescription>
-                    Count of tasks submitted by team members in the selected period. Total Tasks: <span className="font-bold text-foreground">{totalTasksCount}</span>
-                  </CardDescription>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <CardTitle className="flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary"/>Team Task Report</CardTitle>
+                    <CardDescription>
+                      Count of tasks submitted by team members in the selected period. Total Tasks: <span className="font-bold text-foreground">{totalTasksCount}</span>
+                    </CardDescription>
+                  </div>
+                  <Tabs value={selectedTeam} onValueChange={(value) => setSelectedTeam(value as UserRole | 'all')}>
+                    <TabsList>
+                      <TabsTrigger value="all">All Teams</TabsTrigger>
+                      <TabsTrigger value="CRM">CR Team</TabsTrigger>
+                      <TabsTrigger value="DESIGNER_REPRESENTATIVE">DR Team</TabsTrigger>
+                      <TabsTrigger value="CO">CO Team</TabsTrigger>
+                      <TabsTrigger value="LR">LR Team</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -554,7 +574,7 @@ export function ReportPageClient() {
                              <TableRow>
                                 <TableCell colSpan={4} className="h-24 text-center">
                                     <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
-                                    No task data for this period.
+                                    No task data for this period or team.
                                 </TableCell>
                             </TableRow>
                         )}
