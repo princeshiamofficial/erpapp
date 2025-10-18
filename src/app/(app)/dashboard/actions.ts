@@ -1,8 +1,7 @@
 
-
 "use server";
 
-import { revalidatePath } from 'revalidatePath';
+import { revalidatePath } from 'next/cache';
 import { getOrderById, updateOrdersBatch, deleteShippedOrderEntry, autoSettleOrderIfDelivered } from '@/lib/order-service'; 
 import { DELIVERED_STATUS_ID, SHIPPED_STATUS_ID } from '@/lib/status-service'; 
 import { getUsers } from '@/lib/user-service';
