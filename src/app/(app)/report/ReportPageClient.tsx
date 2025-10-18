@@ -20,12 +20,13 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { TrackingLink, GlobalSettings, User } from '@/types'; // Import User
+import type { TrackingLink, GlobalSettings, User, TaskEntry } from '@/types'; // Import User and TaskEntry
 import { getOrders } from '@/lib/order-service';
 import { getGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service'; // Import getUsers
+import { getTaskEntries } from '@/lib/team-performance-service'; // Import getTaskEntries
 import { useToast } from '@/hooks/use-toast';
-import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon, BarChart3 } from 'lucide-react'; // Import UsersIcon
+import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon, BarChart3, ClipboardList } from 'lucide-react'; // Import UsersIcon and ClipboardList
 import { useAuth } from '@/contexts/auth-context'; // Corrected import path
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -35,7 +36,7 @@ import { updateReportFiltersAction } from './actions';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
-import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay, getYear } from 'date-fns';
+import { isWithinInterval, parseISO, subDays, startOfDay, endOfDay, getYear, format } from 'date-fns';
 import { READY_FOR_DESIGN_STATUS_ID, LOGISTICS_STATUS_ID } from '@/lib/status-service'; // Import status IDs
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'; // Import Avatar components
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
@@ -48,6 +49,16 @@ const formatCurrency = (value: number) => {
         currency: 'BDT',
     }).format(value);
 };
+
+const formatDateSafe = (dateString?: string) => {
+  if (!dateString) return 'No Date';
+  try {
+    return format(parseISO(dateString), 'd MMM, yyyy');
+  } catch (e) {
+    return 'Invalid Date';
+  }
+};
+
 
 interface ProductSalesData {
   product: string;
@@ -186,6 +197,7 @@ export function ReportPageClient() {
   const [orders, setOrders] = useState<TrackingLink[]>([]);
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [allTasks, setAllTasks] = useState<TaskEntry[]>([]); // New state for tasks
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { currentUser } = useAuth();
@@ -202,14 +214,16 @@ export function ReportPageClient() {
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [fetchedOrders, fetchedSettings, fetchedUsers] = await Promise.all([
+      const [fetchedOrders, fetchedSettings, fetchedUsers, fetchedTasks] = await Promise.all([
         getOrders(),
         getGlobalSettings(),
         getUsers(),
+        getTaskEntries(), // Fetch task entries
       ]);
       setOrders(fetchedOrders);
       setGlobalSettings(fetchedSettings);
       setAllUsers(fetchedUsers);
+      setAllTasks(fetchedTasks); // Set tasks state
     } catch (error) {
       console.error("Failed to fetch data for report:", error);
       toast({
@@ -253,6 +267,19 @@ export function ReportPageClient() {
       }
     });
   }, [orders, selectedDateRange]);
+
+  const filteredTasksByDate = useMemo(() => {
+    if (!selectedDateRange?.from) return allTasks;
+    const startDate = startOfDay(selectedDateRange.from);
+    const endDate = selectedDateRange.to ? endOfDay(selectedDateRange.to) : endOfDay(startDate);
+
+    return allTasks.filter(task => {
+        try {
+            const taskDate = parseISO(task.date);
+            return isWithinInterval(taskDate, { start: startDate, end: endDate });
+        } catch { return false; }
+    }).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [allTasks, selectedDateRange]);
 
   const productSalesData: ProductSalesData[] = useMemo(() => {
     if (filteredOrdersByDate.length === 0 || !globalSettings) {
@@ -327,13 +354,16 @@ export function ReportPageClient() {
         avatarUrl: crm.avatarUrl,
         totalSales: salesByCrm[crm.id]?.totalSales || 0,
       }))
-      .filter(data => data.totalSales > 0) // Only show CRMs with sales in the period
+      .filter(data => data.totalSales > 0)
       .sort((a, b) => b.totalSales - a.totalSales);
   
   }, [filteredOrdersByDate, allUsers]);
+  
+  const totalTasksCount = useMemo(() => {
+    return filteredTasksByDate.reduce((sum, task) => sum + task.taskCount, 0);
+  }, [filteredTasksByDate]);
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
-
 
   return (
     <>
@@ -344,7 +374,7 @@ export function ReportPageClient() {
                 <div>
                   <CardTitle>Product Sales Performance</CardTitle>
                   <CardDescription>
-                    An overview of sales distribution across all products.
+                    Sales distribution across all products for the selected period.
                   </CardDescription>
                 </div>
                 <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -462,6 +492,66 @@ export function ReportPageClient() {
                                 <TableCell colSpan={2} className="h-24 text-center">
                                     <UsersIcon className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
                                     No CRM sales data for this period.
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+        </div>
+        
+        {/* New Team Task Report Card */}
+        <div className="mt-6">
+            <Card className="w-full">
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary"/>Team Task Report</CardTitle>
+                  <CardDescription>
+                    Count of tasks submitted by team members in the selected period. Total Tasks: <span className="font-bold text-foreground">{totalTasksCount}</span>
+                  </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>User</TableHead>
+                            <TableHead>Role</TableHead>
+                            <TableHead>Date (Time)</TableHead>
+                            <TableHead className="text-right">Task Count</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {isLoading ? (
+                            [...Array(5)].map((_, i) => (
+                                <TableRow key={`task-skel-${i}`}>
+                                    <TableCell><div className="flex items-center gap-3"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-5 w-28" /></div></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                    <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
+                                </TableRow>
+                            ))
+                        ) : filteredTasksByDate.length > 0 ? (
+                            filteredTasksByDate.map(task => (
+                                <TableRow key={task.id}>
+                                    <TableCell>
+                                        <div className="flex items-center gap-3">
+                                            <Avatar className="h-8 w-8 border">
+                                                <AvatarImage src={allUsers.find(u => u.id === task.userId)?.avatarUrl || undefined} alt={task.userName} />
+                                                <AvatarFallback>{getInitials(task.userName)}</AvatarFallback>
+                                            </Avatar>
+                                            <span className="font-medium">{task.userName}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell><Badge variant="outline">{task.role.replace(/_/g, ' ')}</Badge></TableCell>
+                                    <TableCell>{formatDateSafe(task.date)}</TableCell>
+                                    <TableCell className="text-right font-mono text-base font-semibold">{task.taskCount}</TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                             <TableRow>
+                                <TableCell colSpan={4} className="h-24 text-center">
+                                    <ClipboardList className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
+                                    No task data for this period.
                                 </TableCell>
                             </TableRow>
                         )}
