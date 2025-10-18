@@ -131,13 +131,12 @@ export const addStatus = async (name: string, color: string, isVisible: boolean,
   try {
     const customDocId = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
-    const newStatusData: Omit<CustomStatus, 'id'> = {
+    const newStatusData: Omit<CustomStatus, 'id' | 'xid'> = {
       name: name.trim(),
       color,
       isSystemStatus: false,
       isVisible,
       allowedRoles,
-      xid: customDocId,
     };
 
     const payload = {
@@ -152,6 +151,7 @@ export const addStatus = async (name: string, color: string, isVisible: boolean,
 
     const createdStatus: CustomStatus = {
         id: customDocId,
+        xid: customDocId,
         ...newStatusData
     };
 
