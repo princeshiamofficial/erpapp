@@ -393,8 +393,10 @@ export function ProjectsKanbanClient() {
         currentStatus: projectToAssign.status,
         designerRepresentativeId: projectToAssign.designerRepresentativeId || null,
         designerRepresentativeName: projectToAssign.designerRepresentativeName || null,
-        address: '', phoneNumber: '', orderItems: [], crmUserId: projectToAssign.assigneeId,
-        crmUserName: projectToAssign.assigneeName, createdAt: projectToAssign.createdAt || new Date().toISOString(),
+        address: '', phoneNumber: '', orderItems: [],
+        crmUserId: projectToAssign.assigneeId,
+        crmUserName: projectToAssign.assigneeName,
+        createdAt: projectToAssign.createdAt || new Date().toISOString(),
         isPublic: false, statusHistory: [], comments: [], advancePayments: [],
     };
     
@@ -461,7 +463,7 @@ export function ProjectsKanbanClient() {
         </div>
 
         {/* Kanban Board Section */}
-        <div className="flex-1 mt-4 overflow-x-auto pb-4">
+        <div className="flex-1 mt-4 overflow-x-auto pb-4 custom-scrollbar-hidden">
           <div className="flex space-x-4 h-full min-w-max px-4 sm:px-0">
             {visibleKanbanColumns.map((col) => (
               <KanbanColumn
