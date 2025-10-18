@@ -93,17 +93,22 @@ export default function MyDailyRoutinePage() {
     const dateKey = format(date, 'yyyy-MM-dd');
     const originalState = { ...routinesData };
     const dayRoutine = originalState[dateKey];
-    const isCurrentlyChecked = dayRoutine?.completedTasks && (
-      (typeof dayRoutine.completedTasks === 'object' && dayRoutine.completedTasks[taskId]) ||
-      (Array.isArray(dayRoutine.completedTasks) && dayRoutine.completedTasks.includes(taskId))
-    );
+    
+    let isCurrentlyChecked = false;
+    if (dayRoutine?.completedTasks) {
+        if (typeof dayRoutine.completedTasks === 'object' && dayRoutine.completedTasks[taskId]) {
+            isCurrentlyChecked = true;
+        } else if (Array.isArray(dayRoutine.completedTasks) && dayRoutine.completedTasks.includes(taskId)) {
+            isCurrentlyChecked = true;
+        }
+    }
 
     if (isCurrentlyChecked && typeof dayRoutine.completedTasks === 'object' && dayRoutine.completedTasks[taskId]) {
       const checkedTimestamp = parseISO(dayRoutine.completedTasks[taskId]);
       const minutesSinceChecked = differenceInMinutes(new Date(), checkedTimestamp);
       
       if (minutesSinceChecked > 20) {
-        // Silently block the action as requested
+        // Silently block the action
         return;
       }
     }
@@ -112,7 +117,20 @@ export default function MyDailyRoutinePage() {
     setRoutinesData(prev => {
         const newRoutines = { ...prev };
         const currentDayRoutine = newRoutines[dateKey] || { id: dateKey, userId: currentUser.id, completedTasks: {}, updatedAt: new Date().toISOString() };
-        const updatedTasks = { ...(currentDayRoutine.completedTasks || {}) };
+        
+        let updatedTasks: Record<string, string>;
+
+        if (typeof currentDayRoutine.completedTasks === 'object' && currentDayRoutine.completedTasks !== null) {
+            updatedTasks = { ...currentDayRoutine.completedTasks };
+        } else if (Array.isArray(currentDayRoutine.completedTasks)) {
+            // Convert legacy array to new object format
+            updatedTasks = currentDayRoutine.completedTasks.reduce((acc, id) => {
+                acc[id] = new Date().toISOString(); // Assign a placeholder timestamp
+                return acc;
+            }, {} as Record<string, string>);
+        } else {
+            updatedTasks = {};
+        }
 
         if (updatedTasks[taskId]) {
             delete updatedTasks[taskId]; // Uncheck
@@ -191,7 +209,7 @@ export default function MyDailyRoutinePage() {
             <Skeleton className="h-[400px] w-full" />
           </div>
         ) : routineHeaders.length > 0 ? (
-          <div className="overflow-x-auto bg-card p-2 rounded-lg shadow-sm">
+          <div className="overflow-x-auto">
             <table className="w-full border-collapse">
                 <thead>
                     <tr>
@@ -202,9 +220,9 @@ export default function MyDailyRoutinePage() {
                            const textColor = getContrastTextColor(header.color || '#f3f4f6');
                            return (
                             <th key={header.id} className="border p-1 text-center font-semibold text-sm group relative" style={{ backgroundColor: header.color || '#f3f4f6' }}>
-                                <div className="flex items-center justify-center gap-2 h-full min-h-[5rem] whitespace-nowrap">
-                                    <span style={{ color: textColor }}>{header.title}</span>
-                                    <span className="font-normal text-xs" style={{ color: textColor, opacity: 0.8 }}>({formatTime12Hour(header.time)})</span>
+                                <div className="flex flex-col items-center justify-center gap-1 h-full min-h-[5rem] px-1">
+                                    <span style={{ color: textColor }} className="text-center">{header.title}</span>
+                                    <span className="font-normal text-xs text-center" style={{ color: textColor, opacity: 0.8 }}>({formatTime12Hour(header.time)})</span>
                                 </div>
                                 <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <Button variant="ghost" size="icon" className="h-6 w-6 hover:bg-white/20" onClick={() => openEditDialog(header)}><Edit className="h-3 w-3" style={{ color: textColor }}/></Button>
@@ -232,14 +250,18 @@ export default function MyDailyRoutinePage() {
                                     <p className="text-xs">{format(date, 'EEEE')}</p>
                                 </td>
                                 {routineHeaders.map(header => {
-                                    const isChecked = dayRoutine?.completedTasks && (
-                                      (typeof dayRoutine.completedTasks === 'object' && dayRoutine.completedTasks[header.id]) ||
-                                      (Array.isArray(dayRoutine.completedTasks) && dayRoutine.completedTasks.includes(header.id))
-                                    );
+                                    let isChecked = false;
+                                    if (dayRoutine?.completedTasks) {
+                                        if (typeof dayRoutine.completedTasks === 'object' && dayRoutine.completedTasks[header.id]) {
+                                            isChecked = true;
+                                        } else if (Array.isArray(dayRoutine.completedTasks) && dayRoutine.completedTasks.includes(header.id)) {
+                                            isChecked = true;
+                                        }
+                                    }
                                     return (
                                         <td key={`${dateKey}-${header.id}`} className="border p-2 text-center align-middle">
                                             <Checkbox
-                                                checked={!!isChecked}
+                                                checked={isChecked}
                                                 onCheckedChange={() => handleToggleTask(date, header.id)}
                                                 aria-label={`Mark ${header.title} as completed for ${format(date, 'PPP')}`}
                                                 className="h-5 w-5"
