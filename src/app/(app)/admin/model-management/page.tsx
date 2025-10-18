@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Switch } from '@/components/ui/switch'; 
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface ItemToEdit {
   id: string;
@@ -51,10 +52,10 @@ export default function ModelManagementPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const [itemName, setItemName] = useState('');
-  const [itemBuyingPrice, setItemBuyingPrice] = useState('');
-  const [itemSellingPrice, setItemSellingPrice] = useState('');
+  const [itemBuyingPrice, setItemBuyingPrice] = useState('0');
+  const [itemSellingPrice, setItemSellingPrice] = useState('0');
   const [itemIsReadyMade, setItemIsReadyMade] = useState(false);
-  const [itemStockCount, setItemStockCount] = useState('');
+  const [itemStockCount, setItemStockCount] = useState('0');
 
   const [editingItem, setEditingItem] = useState<ItemToEdit | null>(null);
   const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
