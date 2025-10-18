@@ -129,7 +129,7 @@ export const addStatus = async (name: string, color: string, isVisible: boolean,
     throw new Error("Status name cannot be empty.");
   }
   try {
-    const customId = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    const customDocId = name.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
     const newStatusData: Omit<CustomStatus, 'id'> = {
       name: name.trim(),
@@ -137,11 +137,11 @@ export const addStatus = async (name: string, color: string, isVisible: boolean,
       isSystemStatus: false,
       isVisible,
       allowedRoles,
-      xid: customId,
+      xid: customDocId,
     };
 
     const payload = {
-        id: customId,
+        id: customDocId,
         data: newStatusData
     };
     
@@ -151,7 +151,7 @@ export const addStatus = async (name: string, color: string, isVisible: boolean,
     });
 
     const createdStatus: CustomStatus = {
-        id: customId,
+        id: customDocId,
         ...newStatusData
     };
 
@@ -268,4 +268,5 @@ export const getContrastTextColor = (hexColor: string): string => {
     return '#FFFFFF'; // Default to white on any error
   }
 };
+
 
