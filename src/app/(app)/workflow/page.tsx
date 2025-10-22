@@ -337,6 +337,9 @@ export default function DR2OPage() {
         );
       case 'DR':
       case 'CO':
+        const headers = activeTab === 'CO' 
+            ? ["Date", "Docx 1", "Docx 2", "Docx 3", "Docx 4", "Docx 5", "Docx 6", "Docx 7", "Action"]
+            : ["Date", "New Customer 1", "New Customer 2", "New Customer 3", "Follow-Up 1", "Follow-Up 2", "Follow-Up 3", "Follow-Up 4", "Action"];
         return (
           <Card className="shadow-xl border bg-card rounded-lg overflow-hidden">
             <CardHeader className="border-b p-5">
@@ -382,17 +385,9 @@ export default function DR2OPage() {
                             <AccordionContent className="px-2 sm:px-4 pt-0 pb-4">
                               <Table>
                                 <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Date</TableHead>
-                                    <TableHead>New Customer 1</TableHead>
-                                    <TableHead>New Customer 2</TableHead>
-                                    <TableHead>New Customer 3</TableHead>
-                                    <TableHead>Follow-Up 1</TableHead>
-                                    <TableHead>Follow-Up 2</TableHead>
-                                    <TableHead>Follow-Up 3</TableHead>
-                                    <TableHead>Follow-Up 4</TableHead>
-                                    <TableHead className="text-right">Action</TableHead>
-                                  </TableRow>
+                                    <TableRow>
+                                        {headers.map(h => <TableHead key={h} className={h === 'Action' ? 'text-right' : ''}>{h}</TableHead>)}
+                                    </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                   {entries.map(row => (
@@ -438,15 +433,7 @@ export default function DR2OPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead>New Customer 1</TableHead>
-                        <TableHead>New Customer 2</TableHead>
-                        <TableHead>New Customer 3</TableHead>
-                        <TableHead>Follow-Up 1</TableHead>
-                        <TableHead>Follow-Up 2</TableHead>
-                        <TableHead>Follow-Up 3</TableHead>
-                        <TableHead>Follow-Up 4</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
+                        {headers.map(h => <TableHead key={h} className={h === 'Action' ? 'text-right' : ''}>{h}</TableHead>)}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
