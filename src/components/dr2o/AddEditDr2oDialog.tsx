@@ -320,41 +320,51 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
       );
     }
     
-    const newCustomerHeader = team === 'CO' ? 'Docx' : 'New Customers';
+    if (team === 'DR') {
+        return (
+          <>
+            <fieldset className="border p-4 rounded-md">
+              <legend className="text-sm font-medium px-1">New Customers</legend>
+              <div className="space-y-2 mt-2">
+                <Input value={newCustomer1} onChange={e => setNewCustomer1(e.target.value)} placeholder="New Customer 1" />
+                <Input value={newCustomer2} onChange={e => setNewCustomer2(e.target.value)} placeholder="New Customer 2" />
+                <Input value={newCustomer3} onChange={e => setNewCustomer3(e.target.value)} placeholder="New Customer 3" />
+              </div>
+            </fieldset>
     
-    const placeholders = team === 'CO'
-      ? {
-          new: ['Docx 1', 'Docx 2', 'Docx 3'],
-        }
-      : {
-          new: ['New Customer 1', 'New Customer 2', 'New Customer 3'],
-          old: ['Follow-Up 1', 'Follow-Up 2', 'Follow-Up 3', 'Follow-Up 4']
-        };
+            <fieldset className="border p-4 rounded-md">
+              <legend className="text-sm font-medium px-1">Old Customer Follow-ups</legend>
+              <div className="space-y-2 mt-2">
+                <Input value={oldCustomer1} onChange={e => setOldCustomer1(e.target.value)} placeholder="Follow-Up 1" />
+                <Input value={oldCustomer2} onChange={e => setOldCustomer2(e.target.value)} placeholder="Follow-Up 2" />
+                <Input value={oldCustomer3} onChange={e => setOldCustomer3(e.target.value)} placeholder="Follow-Up 3" />
+                <Input value={oldCustomer4} onChange={e => setOldCustomer4(e.target.value)} placeholder="Follow-Up 4" />
+              </div>
+            </fieldset>
+          </>
+        );
+    }
+    
+    if (team === 'CO') {
+        return (
+          <>
+            <fieldset className="border p-4 rounded-md">
+              <legend className="text-sm font-medium px-1">Docx Submissions</legend>
+              <div className="space-y-2 mt-2">
+                <Input value={newCustomer1} onChange={e => setNewCustomer1(e.target.value)} placeholder="Docx 1" />
+                <Input value={newCustomer2} onChange={e => setNewCustomer2(e.target.value)} placeholder="Docx 2" />
+                <Input value={newCustomer3} onChange={e => setNewCustomer3(e.target.value)} placeholder="Docx 3" />
+                <Input value={oldCustomer1} onChange={e => setOldCustomer1(e.target.value)} placeholder="Docx 4" />
+                <Input value={oldCustomer2} onChange={e => setOldCustomer2(e.target.value)} placeholder="Docx 5" />
+                <Input value={oldCustomer3} onChange={e => setOldCustomer3(e.target.value)} placeholder="Docx 6" />
+                <Input value={oldCustomer4} onChange={e => setOldCustomer4(e.target.value)} placeholder="Docx 7" />
+              </div>
+            </fieldset>
+          </>
+        );
+    }
 
-    return (
-      <>
-        <fieldset className="border p-4 rounded-md">
-          <legend className="text-sm font-medium px-1">{newCustomerHeader}</legend>
-          <div className="space-y-2 mt-2">
-            <Input value={newCustomer1} onChange={e => setNewCustomer1(e.target.value)} placeholder={placeholders.new[0]} />
-            <Input value={newCustomer2} onChange={e => setNewCustomer2(e.target.value)} placeholder={placeholders.new[1]} />
-            <Input value={newCustomer3} onChange={e => setNewCustomer3(e.target.value)} placeholder={placeholders.new[2]} />
-          </div>
-        </fieldset>
-
-        {team === 'DR' && (
-          <fieldset className="border p-4 rounded-md">
-            <legend className="text-sm font-medium px-1">Old Customer Follow-ups</legend>
-            <div className="space-y-2 mt-2">
-              <Input value={oldCustomer1} onChange={e => setOldCustomer1(e.target.value)} placeholder={placeholders.old[0]} />
-              <Input value={oldCustomer2} onChange={e => setOldCustomer2(e.target.value)} placeholder={placeholders.old[1]} />
-              <Input value={oldCustomer3} onChange={e => setOldCustomer3(e.target.value)} placeholder={placeholders.old[2]} />
-              <Input value={oldCustomer4} onChange={e => setOldCustomer4(e.target.value)} placeholder={placeholders.old[3]} />
-            </div>
-          </fieldset>
-        )}
-      </>
-    );
+    return null;
   };
 
 
@@ -404,5 +414,3 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
     </Dialog>
   );
 }
-
-    
