@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -321,25 +320,37 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
       );
     }
     
-    // Default fields for DR and CO
+    const newCustomerHeader = team === 'CO' ? 'Docx' : 'New Customers';
+    const oldCustomerHeader = team === 'CO' ? 'Docx Follow-up' : 'Old Customer Follow-ups';
+    
+    const placeholders = team === 'CO'
+      ? {
+          new: ['Docx 1', 'Docx 2', 'Docx 3'],
+          old: ['Docx 4', 'Docx 5', 'Docx 6', 'Docx 7']
+        }
+      : {
+          new: ['New Customer 1', 'New Customer 2', 'New Customer 3'],
+          old: ['Follow-Up 1', 'Follow-Up 2', 'Follow-Up 3', 'Follow-Up 4']
+        };
+
     return (
       <>
         <fieldset className="border p-4 rounded-md">
-          <legend className="text-sm font-medium px-1">New Customers</legend>
+          <legend className="text-sm font-medium px-1">{newCustomerHeader}</legend>
           <div className="space-y-2 mt-2">
-            <Input value={newCustomer1} onChange={e => setNewCustomer1(e.target.value)} placeholder="New Customer 1" />
-            <Input value={newCustomer2} onChange={e => setNewCustomer2(e.target.value)} placeholder="New Customer 2" />
-            <Input value={newCustomer3} onChange={e => setNewCustomer3(e.target.value)} placeholder="New Customer 3" />
+            <Input value={newCustomer1} onChange={e => setNewCustomer1(e.target.value)} placeholder={placeholders.new[0]} />
+            <Input value={newCustomer2} onChange={e => setNewCustomer2(e.target.value)} placeholder={placeholders.new[1]} />
+            <Input value={newCustomer3} onChange={e => setNewCustomer3(e.target.value)} placeholder={placeholders.new[2]} />
           </div>
         </fieldset>
 
         <fieldset className="border p-4 rounded-md">
-          <legend className="text-sm font-medium px-1">Old Customer Follow-ups</legend>
+          <legend className="text-sm font-medium px-1">{oldCustomerHeader}</legend>
           <div className="space-y-2 mt-2">
-            <Input value={oldCustomer1} onChange={e => setOldCustomer1(e.target.value)} placeholder="Old Customer 1" />
-            <Input value={oldCustomer2} onChange={e => setOldCustomer2(e.target.value)} placeholder="Old Customer 2" />
-            <Input value={oldCustomer3} onChange={e => setOldCustomer3(e.target.value)} placeholder="Old Customer 3" />
-            <Input value={oldCustomer4} onChange={e => setOldCustomer4(e.target.value)} placeholder="Old Customer 4" />
+            <Input value={oldCustomer1} onChange={e => setOldCustomer1(e.target.value)} placeholder={placeholders.old[0]} />
+            <Input value={oldCustomer2} onChange={e => setOldCustomer2(e.target.value)} placeholder={placeholders.old[1]} />
+            <Input value={oldCustomer3} onChange={e => setOldCustomer3(e.target.value)} placeholder={placeholders.old[2]} />
+            <Input value={oldCustomer4} onChange={e => setOldCustomer4(e.target.value)} placeholder={placeholders.old[3]} />
           </div>
         </fieldset>
       </>
@@ -354,7 +365,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
           <DialogTitle>{getDialogTitle()}</DialogTitle>
           <DialogDescription>{getDialogDescription()}</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="py-4 space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+        <form onSubmit={handleSubmit} className="py-4 space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
           <div className="space-y-1">
             <Label htmlFor="report-date">Date</Label>
             <Popover>
@@ -385,7 +396,7 @@ export function AddEditDr2oDialog({ isOpen, onOpenChange, onDr2oSaved, entry, cu
           <DialogFooter className="pt-4 border-t">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={isSubmitting || !canEditEntry}>
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</> : (isEditMode ? 'Save Changes' : 'Submit Report')}
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Saving...</> : (isEditMode ? 'Save Changes' : 'Submit Report')}
             </Button>
           </DialogFooter>
         </form>
