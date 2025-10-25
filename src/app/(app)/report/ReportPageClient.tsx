@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -371,6 +370,7 @@ export function ReportPageClient() {
         });
       });
   
+      // Handle items that didn't match any category filter
       filteredOrdersByDate.forEach(order => {
         if (processedOrderIds.has(order.id)) return;
         
@@ -722,4 +722,3 @@ export function ReportPageClient() {
     </>
   );
 }
-```
