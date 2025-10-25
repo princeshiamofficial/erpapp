@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -343,14 +344,12 @@ export function ReportPageClient() {
     if (filteredOrdersByDate.length === 0) {
       return [];
     }
-  
     const salesMap: Map<string, { sales: number; quantity: number }> = new Map();
     const filters = globalSettings?.reportProductFilters || [];
   
     if (productViewMode === 'category') {
       const processedOrderIds = new Set<string>();
   
-      // First pass: Group orders by category filters
       filters.forEach(filter => {
         filteredOrdersByDate.forEach(order => {
           if (processedOrderIds.has(order.id)) return;
@@ -361,19 +360,17 @@ export function ReportPageClient() {
   
           if (hasMatchingItem) {
             const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
-            const orderQuantity = order.orderItems.reduce((acc, item) => acc + (item.quantity || 0), 0);
             
             const existing = salesMap.get(filter) || { sales: 0, quantity: 0 };
             salesMap.set(filter, {
               sales: existing.sales + orderTotal,
-              quantity: existing.quantity + orderQuantity,
+              quantity: existing.quantity + 1, // Count as 1 order for the category
             });
             processedOrderIds.add(order.id);
           }
         });
       });
   
-      // Second pass: Process individual items from orders that weren't categorized
       filteredOrdersByDate.forEach(order => {
         if (processedOrderIds.has(order.id)) return;
         
@@ -725,3 +722,4 @@ export function ReportPageClient() {
     </>
   );
 }
+```
