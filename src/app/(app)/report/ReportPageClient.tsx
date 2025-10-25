@@ -68,6 +68,7 @@ const formatDateSafe = (dateString?: string) => {
 interface ProductSalesData {
   product: string;
   sales: number;
+  quantity: number;
   percentage: number;
 }
 
@@ -342,7 +343,7 @@ export function ReportPageClient() {
       return [];
     }
   
-    const salesMap: Map<string, { sales: number }> = new Map();
+    const salesMap: Map<string, { sales: number; quantity: number }> = new Map();
     const filters = globalSettings.reportProductFilters || [];
   
     filteredOrdersByDate.forEach(order => {
@@ -355,8 +356,12 @@ export function ReportPageClient() {
       for (const filter of filters) {
         if (order.orderItems.some(item => item.model.toLowerCase().includes(filter.toLowerCase()))) {
           const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
-          const existing = salesMap.get(filter) || { sales: 0 };
-          salesMap.set(filter, { sales: existing.sales + orderTotal });
+          const orderQuantity = order.orderItems.reduce((acc, item) => acc + (item.quantity || 0), 0);
+          const existing = salesMap.get(filter) || { sales: 0, quantity: 0 };
+          salesMap.set(filter, { 
+            sales: existing.sales + orderTotal,
+            quantity: existing.quantity + orderQuantity,
+          });
           isConsolidated = true;
           break; 
         }
@@ -364,9 +369,10 @@ export function ReportPageClient() {
   
       if (!isConsolidated) {
         order.orderItems.forEach(item => {
-          const existing = salesMap.get(item.model) || { sales: 0 };
+          const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
           salesMap.set(item.model, {
             sales: existing.sales + (item.lineItemTotalPrice || 0),
+            quantity: existing.quantity + (item.quantity || 0),
           });
         });
       }
@@ -379,6 +385,7 @@ export function ReportPageClient() {
       .map(([product, data]) => ({
         product,
         sales: data.sales,
+        quantity: data.quantity,
         percentage: (data.sales / totalSales) * 100,
       }))
       .sort((a, b) => b.sales - a.sales);
@@ -451,8 +458,9 @@ export function ReportPageClient() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Product</TableHead>
+                          <TableHead>Quantity</TableHead>
                           <TableHead className="text-right">Sales Amount</TableHead>
-                           <TableHead>Quality</TableHead>
+                          <TableHead>Quality</TableHead>
                           <TableHead className="w-[30%] text-center">Sales Percentage</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -461,6 +469,7 @@ export function ReportPageClient() {
                           [...Array(4)].map((_, i) => (
                             <TableRow key={i}>
                               <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                              <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                               <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
                               <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                               <TableCell>
@@ -475,6 +484,7 @@ export function ReportPageClient() {
                           productSalesData.map((item) => (
                             <TableRow key={item.product}>
                               <TableCell className="font-medium">{item.product}</TableCell>
+                              <TableCell className="font-mono text-center">{item.quantity}</TableCell>
                               <TableCell className="text-right font-mono">{formatCurrency(item.sales)}</TableCell>
                               <TableCell></TableCell>
                               <TableCell className="text-center">
@@ -487,7 +497,7 @@ export function ReportPageClient() {
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={4} className="h-24 text-center">
+                            <TableCell colSpan={5} className="h-24 text-center">
                               <Package className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
                               No sales data available for the selected period.
                             </TableCell>
@@ -693,3 +703,4 @@ export function ReportPageClient() {
   );
 }
 
+    
