@@ -460,7 +460,6 @@ export function ReportPageClient() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Product</TableHead>
-                          <TableHead>Quantity</TableHead>
                           <TableHead className="text-right">Sales Amount</TableHead>
                           <TableHead className="w-[30%] text-center">Sales Percentage</TableHead>
                         </TableRow>
@@ -470,7 +469,6 @@ export function ReportPageClient() {
                           [...Array(4)].map((_, i) => (
                             <TableRow key={i}>
                               <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                              <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                               <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
                               <TableCell>
                                 <div className="flex items-center justify-center gap-4">
@@ -484,7 +482,6 @@ export function ReportPageClient() {
                           productSalesData.map((item) => (
                             <TableRow key={item.product}>
                               <TableCell className="font-medium">{item.product}</TableCell>
-                              <TableCell className="font-mono text-center">{item.quantity}</TableCell>
                               <TableCell className="text-right font-mono">{formatCurrency(item.sales)}</TableCell>
                               <TableCell className="text-center">
                                 <div className="flex items-center justify-center gap-4">
@@ -496,7 +493,7 @@ export function ReportPageClient() {
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={4} className="h-24 text-center">
+                            <TableCell colSpan={3} className="h-24 text-center">
                               <Package className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
                               No sales data available for the selected period.
                             </TableCell>
@@ -701,4 +698,3 @@ export function ReportPageClient() {
     </>
   );
 }
-
