@@ -24,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { TrackingLink, GlobalSettings, User, TaskEntry, UserRole } from '@/types'; // Import User and TaskEntry
 import { getOrders } from '@/lib/order-service';
-import { getGlobalSettings } from '@/lib/settings-service';
+import { getGlobalSettings, setReportProductFilters } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service'; // Import getUsers
 import { getTaskEntries } from '@/lib/team-performance-service'; // Import getTaskEntries
 import { useToast } from '@/hooks/use-toast';
@@ -34,7 +34,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { deleteTaskEntryAction, updateReportFiltersAction } from './actions';
+import { deleteTaskEntryAction, updateTaskEntryAction } from './actions';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
@@ -129,7 +129,7 @@ function ReportFilterSettingsDialog({ isOpen, onOpenChange, initialFilters, onSa
         <DialogHeader>
           <DialogTitle className="flex items-center"><Settings className="mr-2 h-5 w-5" />Report Filter Settings</DialogTitle>
           <DialogDescription>
-            Manage keywords that group entire orders into a single product category on the report page.
+            Manage keywords that group individual products into a single category on the report page.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4">
@@ -159,7 +159,7 @@ function ReportFilterSettingsDialog({ isOpen, onOpenChange, initialFilters, onSa
               </div>
             ) : (
               <div className="text-sm text-muted-foreground border border-dashed rounded-md p-4 text-center">
-                No filters configured. All order items will be reported individually.
+                No filters configured. All products will be reported individually.
               </div>
             )}
           </div>
@@ -255,13 +255,13 @@ export function ReportPageClient() {
   }, [fetchData]);
   
   const handleSaveFilters = async (newFilters: string[]) => {
-    const result = await updateReportFiltersAction(newFilters);
-    if (result.success) {
+    const result = await setReportProductFilters(newFilters);
+    if (result) {
         toast({ title: "Settings Saved", description: "Report product filters have been updated." });
         setGlobalSettings(prev => prev ? { ...prev, reportProductFilters: newFilters } : { reportProductFilters: newFilters } as GlobalSettings);
         setIsSettingsOpen(false);
     } else {
-        toast({ title: "Error", description: result.error || "Failed to save settings.", variant: "destructive" });
+        toast({ title: "Error", description: "Failed to save settings.", variant: "destructive" });
     }
   };
   
@@ -338,64 +338,35 @@ export function ReportPageClient() {
   }, [filteredTasksByDate]);
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
-
-  const productSalesData: ProductSalesData[] = useMemo(() => {
-    if (filteredOrdersByDate.length === 0) {
-      return [];
-    }
   
+  const productSalesData: ProductSalesData[] = useMemo(() => {
     const salesMap: Map<string, { sales: number; quantity: number }> = new Map();
     const filters = globalSettings?.reportProductFilters || [];
   
-    if (productViewMode === 'category') {
-      const processedOrderIds = new Set<string>();
+    filteredOrdersByDate.forEach(order => {
+      if (!order.orderItems) return;
   
-      filters.forEach(filter => {
-        filteredOrdersByDate.forEach(order => {
-          if (processedOrderIds.has(order.id)) return;
+      order.orderItems.forEach(item => {
+        let productName = item.model;
+        let quantity = item.quantity;
+        let sales = item.lineItemTotalPrice || 0;
   
-          const hasMatchingItem = order.orderItems.some(item =>
-            item.model.toLowerCase().includes(filter.toLowerCase())
+        if (productViewMode === 'category') {
+          const matchingFilter = filters.find(filter =>
+            productName.toLowerCase().includes(filter.toLowerCase())
           );
-  
-          if (hasMatchingItem) {
-            const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
-            
-            const existing = salesMap.get(filter) || { sales: 0, quantity: 0 };
-            salesMap.set(filter, {
-              sales: existing.sales + orderTotal,
-              quantity: existing.quantity + 1,
-            });
-            processedOrderIds.add(order.id);
+          if (matchingFilter) {
+            productName = matchingFilter; // Replace with the category name
           }
-        });
-      });
+        }
   
-      // Handle items from orders that didn't match any category filter
-      filteredOrdersByDate.forEach(order => {
-        if (processedOrderIds.has(order.id)) return;
-        
-        order.orderItems.forEach(item => {
-          const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
-          salesMap.set(item.model, {
-            sales: existing.sales + (item.lineItemTotalPrice || 0),
-            quantity: existing.quantity + item.quantity,
-          });
+        const existing = salesMap.get(productName) || { sales: 0, quantity: 0 };
+        salesMap.set(productName, {
+          sales: existing.sales + sales,
+          quantity: existing.quantity + quantity,
         });
       });
-  
-    } else { // 'single' product view mode
-      filteredOrdersByDate.forEach(order => {
-        if (!order.orderItems) return;
-        order.orderItems.forEach(item => {
-          const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
-          salesMap.set(item.model, {
-            sales: existing.sales + (item.lineItemTotalPrice || 0),
-            quantity: existing.quantity + item.quantity,
-          });
-        });
-      });
-    }
+    });
   
     const totalSales = Array.from(salesMap.values()).reduce((acc, { sales }) => acc + sales, 0);
     if (totalSales === 0) return [];
@@ -410,7 +381,6 @@ export function ReportPageClient() {
       .sort((a, b) => b.sales - a.sales);
   }, [filteredOrdersByDate, productViewMode, globalSettings]);
   
-  
   const crmSalesData: CrmSalesData[] = useMemo(() => {
     if (filteredOrdersByDate.length === 0 || allUsers.length === 0) {
       return [];
@@ -423,7 +393,7 @@ export function ReportPageClient() {
         if (!salesByCrm[order.crmUserId]) {
           salesByCrm[order.crmUserId] = { totalSales: 0 };
         }
-        const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+        const orderTotal = order.orderItems.reduce((sum, item) => sum + (item.lineItemTotalPrice || 0), 0);
         salesByCrm[order.crmUserId].totalSales += orderTotal;
       }
     });
@@ -474,7 +444,7 @@ export function ReportPageClient() {
                               <Button variant={productViewMode === 'single' ? 'secondary' : 'ghost'} size="sm" className="h-8" onClick={() => setProductViewMode('single')}>Product</Button>
                               <Button variant={productViewMode === 'category' ? 'secondary' : 'ghost'} size="sm" className="h-8" onClick={() => setProductViewMode('category')}>Category</Button>
                            </div>
-                           {isAdmin && <Button variant="outline" size="sm" className="h-9" onClick={() => setIsSettingsOpen(true)}><Settings className="mr-2 h-4 w-4"/>Configure Filters</Button>}
+                           {isAdmin && <Button variant="outline" size="sm" className="h-9" onClick={() => setIsSettingsOpen(true)}><Settings className="mr-2 h-4 w-4"/>Filters</Button>}
                         </div>
                     </div>
                   </CardHeader>
@@ -724,3 +694,384 @@ export function ReportPageClient() {
     </>
   );
 }
+
+```
+- src/hooks/use-local-storage.ts:
+```ts
+
+import { useState, useEffect } from 'react';
+
+// This is a custom hook to use localStorage with SSR in mind
+export function useLocalStorage<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+    const [storedValue, setStoredValue] = useState<T>(initialValue);
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+    useEffect(() => {
+        if (isClient) {
+            try {
+                const item = window.localStorage.getItem(key);
+                setStoredValue(item ? JSON.parse(item) : initialValue);
+            } catch (error) {
+                console.error(error);
+                setStoredValue(initialValue);
+            }
+        }
+    }, [isClient, key, initialValue]);
+
+    const setValue: React.Dispatch<React.SetStateAction<T>> = (value) => {
+        try {
+            const valueToStore = value instanceof Function ? value(storedValue) : value;
+            setStoredValue(valueToStore);
+            if (isClient) {
+                window.localStorage.setItem(key, JSON.stringify(valueToStore));
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    return [storedValue, setValue];
+}
+
+```
+- .firebaserc:
+```
+
+{
+  "projects": {
+    "default": "colorhut-57f5a"
+  }
+}
+```
+- firebase.json:
+```json
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  }
+}
+```
+- firestore.rules:
+```
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny all reads and writes
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Allow read access to statuses for all authenticated users
+    match /customOrderStatuses/{statusId} {
+      allow read: if request.auth != null;
+    }
+    
+    // Allow read access to services for all authenticated users
+    match /serviceModels/{modelId} {
+      allow read: if request.auth != null;
+    }
+    match /serviceLaminations/{laminationId} {
+      allow read: if request.auth != null;
+    }
+     match /serviceGifts/{giftId} {
+      allow read: if request.auth != null;
+    }
+     match /servicePaymentMethods/{methodId} {
+      allow read: if request.auth != null;
+    }
+
+    // Orders can be read publicly if isPublic is true
+    match /orders/{orderId} {
+      allow read: if resource.data.isPublic == true || request.auth != null;
+      allow write: if request.auth != null; // Simplified write rule
+    }
+    
+    // Quotations can be read publicly if isPublic is true
+    match /quotations/{quotationId} {
+      allow read: if resource.data.isPublic == true || request.auth != null;
+      allow write: if request.auth != null; // Simplified write rule for now
+    }
+
+    // Users collection rules
+    match /users/{userId} {
+      // Admins and system admins can read/write any user document
+      allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ADMIN', 'SYSTEM_ADMIN'];
+      
+      // A user can read and update their own document, but not delete it or change their role/ban status
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId 
+                      && !(request.resource.data.role != resource.data.role)
+                      && !(request.resource.data.isBanned != resource.data.isBanned);
+    }
+    
+     match /projects/{projectId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /leads/{leadId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /dialogue/{faqId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /employees/{employeeId} {
+      allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ADMIN', 'SYSTEM_ADMIN'];
+    }
+    
+    match /teamPerformance/{entryID} {
+       allow read, write: if request.auth != null;
+    }
+    
+    match /feedback/{feedbackId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    match /CRcase/{messageId} {
+       allow read, write: if request.auth != null;
+    }
+     match /DRcase/{messageId} {
+       allow read, write: if request.auth != null;
+    }
+     match /LRcase/{messageId} {
+       allow read, write: if request.auth != null;
+    }
+     match /globalSettings/{settingsId} {
+      allow read: if true; // Allow public read for settings like maintenance mode
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'SYSTEM_ADMIN';
+    }
+    
+     match /purchaseRequests/{requestId} {
+      allow read, write: if request.auth != null;
+    }
+
+     match /sowData/{entryId} {
+        allow read, write: if request.auth != null;
+     }
+     
+     match /clientGifts/{giftId} {
+        allow read, write: if request.auth != null;
+     }
+
+     match /vendorProducts/{productId} {
+        allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ADMIN', 'SYSTEM_ADMIN'];
+     }
+     
+     match /vendorCategories/{categoryId} {
+        allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ADMIN', 'SYSTEM_ADMIN'];
+     }
+
+      match /vendorBills/{billId} {
+        allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ADMIN', 'SYSTEM_ADMIN'];
+     }
+     
+      match /billReports/{reportId} {
+        allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ADMIN', 'SYSTEM_ADMIN'];
+     }
+     
+      match /officeLocation/{locationId} {
+        allow read, write: if request.auth != null;
+     }
+     
+      match /officeTime/{timeId} {
+        allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ADMIN', 'SYSTEM_ADMIN'];
+     }
+
+      match /attendance-mark/{userId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      match /attendance-{month}/{recordId} {
+        allow read, write: if request.auth != null;
+      }
+
+      match /salarySheet-{month}/{payslipId} {
+        allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ADMIN', 'SYSTEM_ADMIN'];
+      }
+      
+      match /routine-headers-{userId}/{routineId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      match /routines-{userId}-{month}/{routineId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      
+      match /CRworkflow/{entryId} {
+        allow read, write: if request.auth != null;
+      }
+      match /DRworkflow/{entryId} {
+        allow read, write: if request.auth != null;
+      }
+      match /LRworkflow/{entryId} {
+        allow read, write: if request.auth != null;
+      }
+      match /COworkflow/{entryId} {
+        allow read, write: if request.auth != null;
+      }
+      match /weekend/settings {
+        allow read: if true;
+        allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ADMIN', 'SYSTEM_ADMIN'];
+      }
+  }
+}
+
+```
+- public/manifest.json:
+```json
+{
+  "name": "Color Hut",
+  "short_name": "Color Hut",
+  "description": "Seamless Order Tracking and Management",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#EF6C00",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon-72x72.png",
+      "sizes": "72x72",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-96x96.png",
+      "sizes": "96x96",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-128x128.png",
+      "sizes": "128x128",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-144x144.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-152x152.png",
+      "sizes": "152x152",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-384x384.png",
+      "sizes": "384x384",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "gcm_sender_id": "282903959856"
+}
+```
+- public/firebase-messaging-sw.js:
+```javascript
+// /public/firebase-messaging-sw.js
+
+// Scripts for firebase and firebase messaging
+importScripts("https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js");
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyA-OULKM7hL85JFSGlNs0BHdIuTOVN73-I",
+  authDomain: "colorhut-57f5a.firebaseapp.com",
+  projectId: "colorhut-57f5a",
+  storageBucket: "colorhut-57f5a.firebasestorage.app",
+  messagingSenderId: "282903959856",
+  appId: "1:282903959856:web:287ace0c706eb0b11990f5",
+  measurementId: "G-57S6VYXE7H"
+};
+
+// Initialize the Firebase app in the service worker
+firebase.initializeApp(firebaseConfig);
+
+// Retrieve an instance of Firebase Messaging so that it can handle background messages.
+const messaging = firebase.messaging();
+
+console.log("[SW] Firebase Messaging object initialized", messaging);
+
+// If you want to handle background messages, you can do so here.
+messaging.onBackgroundMessage((payload) => {
+  console.log('[SW] Received background message ', payload);
+
+  const notificationData = payload.data || {};
+  
+  const notificationTitle = notificationData.title || 'New Notification';
+  const notificationOptions = {
+    body: notificationData.body || 'Something new happened!',
+    icon: notificationData.iconUrl || '/icons/icon-192x192.png',
+    badge: notificationData.badgeUrl || '/icons/icon-72x72.png',
+    data: {
+      click_action: notificationData.click_action || '/'
+    }
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// Custom event listener for notification clicks
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification click Received.', event.notification);
+
+  event.notification.close();
+
+  const clickAction = event.notification.data?.click_action;
+
+  if (clickAction) {
+    console.log(`[SW] Attempting to open or focus window: ${clickAction}`);
+    event.waitUntil(
+      clients.matchAll({
+        type: "window"
+      }).then((clientList) => {
+        // Check if there's already a window open for the target URL
+        for (const client of clientList) {
+          if (client.url === clickAction && 'focus' in client) {
+            console.log('[SW] Found existing client, focusing it.');
+            return client.focus();
+          }
+        }
+        // If no window found, open a new one
+        if (clients.openWindow) {
+          console.log('[SW] No existing client found, opening new window.');
+          return clients.openWindow(clickAction);
+        }
+      })
+    );
+  }
+});
+```
+- next-env.d.ts:
+```ts
+/// <reference types="next" />
+/// <reference types="next/image" />
+
+```
+- postcss.config.mjs:
+```mjs
+/** @type {import('postcss-load-config').Config} */
+const config = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+
+export default config;
+```
