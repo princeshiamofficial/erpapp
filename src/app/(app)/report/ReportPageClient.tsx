@@ -448,7 +448,9 @@ export function ReportPageClient() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card className="w-full">
                   <CardHeader>
-                    <CardTitle>Product Sales Performance</CardTitle>
+                    <div className="flex justify-between items-center">
+                      <CardTitle>Product Sales Performance</CardTitle>
+                    </div>
                     <CardDescription>
                       Sales distribution across all products for the selected period.
                     </CardDescription>
@@ -460,7 +462,6 @@ export function ReportPageClient() {
                           <TableHead>Product</TableHead>
                           <TableHead>Quantity</TableHead>
                           <TableHead className="text-right">Sales Amount</TableHead>
-                          <TableHead>Quality</TableHead>
                           <TableHead className="w-[30%] text-center">Sales Percentage</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -471,7 +472,6 @@ export function ReportPageClient() {
                               <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                               <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                               <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
-                              <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                               <TableCell>
                                 <div className="flex items-center justify-center gap-4">
                                   <Skeleton className="h-2.5 w-2/3" />
@@ -486,7 +486,6 @@ export function ReportPageClient() {
                               <TableCell className="font-medium">{item.product}</TableCell>
                               <TableCell className="font-mono text-center">{item.quantity}</TableCell>
                               <TableCell className="text-right font-mono">{formatCurrency(item.sales)}</TableCell>
-                              <TableCell></TableCell>
                               <TableCell className="text-center">
                                 <div className="flex items-center justify-center gap-4">
                                     <Progress value={item.percentage} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
@@ -497,7 +496,7 @@ export function ReportPageClient() {
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={5} className="h-24 text-center">
+                            <TableCell colSpan={4} className="h-24 text-center">
                               <Package className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
                               No sales data available for the selected period.
                             </TableCell>
@@ -583,7 +582,7 @@ export function ReportPageClient() {
                             <TabsList>
                                 <TabsTrigger value="all">All Teams</TabsTrigger>
                                 <TabsTrigger value="CRM">CR Team</TabsTrigger>
-                                <TabsTrigger value="DR">DR Team</TabsTrigger>
+                                <TabsTrigger value="DESIGNER_REPRESENTATIVE">DR Team</TabsTrigger>
                                 <TabsTrigger value="CO">CO Team</TabsTrigger>
                                 <TabsTrigger value="LR">LR Team</TabsTrigger>
                             </TabsList>
@@ -703,4 +702,3 @@ export function ReportPageClient() {
   );
 }
 
-    
