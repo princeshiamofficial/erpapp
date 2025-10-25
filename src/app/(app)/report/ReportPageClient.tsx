@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -25,7 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { TrackingLink, GlobalSettings, User, TaskEntry, UserRole } from '@/types'; // Import User and TaskEntry
 import { getOrders } from '@/lib/order-service';
-import { getGlobalSettings } from '@/lib/settings-service';
+import { getGlobalSettings, updateReportFiltersAction } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service'; // Import getUsers
 import { getTaskEntries } from '@/lib/team-performance-service'; // Import getTaskEntries
 import { useToast } from '@/hooks/use-toast';
@@ -220,6 +218,7 @@ export function ReportPageClient() {
   const [isAddEditTaskOpen, setIsAddEditTaskOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<TaskEntry | null>(null);
   const [isDeletingTask, setIsDeletingTask] = useState(false);
+  const [productViewMode, setProductViewMode] = useState<'single' | 'category'>('single');
 
   const handleDateRangeChange = useCallback((range: DateRange | undefined, displayLabel: string, predefinedValue: PredefinedRange | "custom" | null) => {
     setSelectedDateRange(range);
@@ -255,8 +254,14 @@ export function ReportPageClient() {
   }, [fetchData]);
   
   const handleSaveFilters = async (newFilters: string[]) => {
-    // This function is no longer needed as the filter UI is removed, but we keep it to avoid breaking other parts if they depend on it.
-    console.log("Filter saving is disabled.");
+    const result = await updateReportFiltersAction(newFilters);
+    if (result.success) {
+        toast({ title: "Settings Saved", description: "Report product filters have been updated." });
+        setGlobalSettings(prev => prev ? { ...prev, reportProductFilters: newFilters } : { reportProductFilters: newFilters } as GlobalSettings);
+        setIsSettingsOpen(false);
+    } else {
+        toast({ title: "Error", description: result.error || "Failed to save settings.", variant: "destructive" });
+    }
   };
   
   const handleTaskSaved = () => {
@@ -339,20 +344,59 @@ export function ReportPageClient() {
     }
   
     const salesMap: Map<string, { sales: number; quantity: number }> = new Map();
+    const filters = globalSettings?.reportProductFilters || [];
   
-    filteredOrdersByDate.forEach(order => {
-      if (!order.orderItems || order.orderItems.length === 0) {
-        return; 
-      }
+    if (productViewMode === 'category') {
+      const processedOrderIds = new Set<string>();
   
-      order.orderItems.forEach(item => {
-        const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
-        salesMap.set(item.model, {
-          sales: existing.sales + (item.lineItemTotalPrice || 0),
-          quantity: existing.quantity + (item.quantity || 0),
+      // First pass: Group orders by category filters
+      filters.forEach(filter => {
+        filteredOrdersByDate.forEach(order => {
+          if (processedOrderIds.has(order.id)) return;
+  
+          const hasMatchingItem = order.orderItems.some(item =>
+            item.model.toLowerCase().includes(filter.toLowerCase())
+          );
+  
+          if (hasMatchingItem) {
+            const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
+            const orderQuantity = order.orderItems.reduce((acc, item) => acc + (item.quantity || 0), 0);
+            
+            const existing = salesMap.get(filter) || { sales: 0, quantity: 0 };
+            salesMap.set(filter, {
+              sales: existing.sales + orderTotal,
+              quantity: existing.quantity + orderQuantity,
+            });
+            processedOrderIds.add(order.id);
+          }
         });
       });
-    });
+  
+      // Second pass: Process individual items from orders that weren't categorized
+      filteredOrdersByDate.forEach(order => {
+        if (processedOrderIds.has(order.id)) return;
+        
+        order.orderItems.forEach(item => {
+          const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
+          salesMap.set(item.model, {
+            sales: existing.sales + (item.lineItemTotalPrice || 0),
+            quantity: existing.quantity + item.quantity,
+          });
+        });
+      });
+  
+    } else { // 'single' product view mode
+      filteredOrdersByDate.forEach(order => {
+        if (!order.orderItems) return;
+        order.orderItems.forEach(item => {
+          const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
+          salesMap.set(item.model, {
+            sales: existing.sales + (item.lineItemTotalPrice || 0),
+            quantity: existing.quantity + item.quantity,
+          });
+        });
+      });
+    }
   
     const totalSales = Array.from(salesMap.values()).reduce((acc, { sales }) => acc + sales, 0);
     if (totalSales === 0) return [];
@@ -365,7 +409,7 @@ export function ReportPageClient() {
         percentage: (data.sales / totalSales) * 100,
       }))
       .sort((a, b) => b.sales - a.sales);
-  }, [filteredOrdersByDate]);
+  }, [filteredOrdersByDate, productViewMode, globalSettings]);
   
   const crmSalesData: CrmSalesData[] = useMemo(() => {
     if (filteredOrdersByDate.length === 0 || allUsers.length === 0) {
@@ -418,18 +462,29 @@ export function ReportPageClient() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card className="w-full">
                   <CardHeader>
-                    <CardTitle>Product Sales Performance</CardTitle>
-                    <CardDescription>
-                      Sales distribution across all products for the selected period.
-                    </CardDescription>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                        <div>
+                          <CardTitle>Product Sales Performance</CardTitle>
+                          <CardDescription>
+                            Sales distribution for the selected period.
+                          </CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           <div className="flex items-center bg-muted p-1 rounded-lg">
+                              <Button variant={productViewMode === 'single' ? 'secondary' : 'ghost'} size="sm" className="h-8" onClick={() => setProductViewMode('single')}>Product</Button>
+                              <Button variant={productViewMode === 'category' ? 'secondary' : 'ghost'} size="sm" className="h-8" onClick={() => setProductViewMode('category')}>Category</Button>
+                           </div>
+                           {isAdmin && <Button variant="outline" size="sm" className="h-9" onClick={() => setIsSettingsOpen(true)}><Settings className="mr-2 h-4 w-4"/>Configure Filters</Button>}
+                        </div>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Product</TableHead>
-                          <TableHead className="text-right">Sales Amount</TableHead>
+                          <TableHead>{productViewMode === 'category' ? 'Category' : 'Product'}</TableHead>
                           <TableHead className="text-right">Quantity</TableHead>
+                          <TableHead className="text-right">Sales Amount</TableHead>
                           <TableHead className="w-[30%] text-center">Sales Percentage</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -438,8 +493,8 @@ export function ReportPageClient() {
                           [...Array(4)].map((_, i) => (
                             <TableRow key={i}>
                               <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                              <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
                               <TableCell className="text-right"><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
+                              <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
                               <TableCell>
                                 <div className="flex items-center justify-center gap-4">
                                   <Skeleton className="h-2.5 w-2/3" />
@@ -452,8 +507,8 @@ export function ReportPageClient() {
                           productSalesData.map((item) => (
                             <TableRow key={item.product}>
                               <TableCell className="font-medium">{item.product}</TableCell>
+                              <TableCell className="text-right font-mono">{item.quantity.toLocaleString()}</TableCell>
                               <TableCell className="text-right font-mono">{formatCurrency(item.sales)}</TableCell>
-                              <TableCell className="text-right font-mono">{item.quantity}</TableCell>
                               <TableCell className="text-center">
                                 <div className="flex items-center justify-center gap-4">
                                     <Progress value={item.percentage} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
