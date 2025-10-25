@@ -429,7 +429,7 @@ export function ReportPageClient() {
                         <TableRow>
                           <TableHead>Product</TableHead>
                           <TableHead className="text-right">Sales Amount</TableHead>
-                          <TableHead className="text-right">Quality</TableHead>
+                          <TableHead className="text-right">Quantity</TableHead>
                           <TableHead className="w-[30%] text-center">Sales Percentage</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -453,7 +453,7 @@ export function ReportPageClient() {
                             <TableRow key={item.product}>
                               <TableCell className="font-medium">{item.product}</TableCell>
                               <TableCell className="text-right font-mono">{formatCurrency(item.sales)}</TableCell>
-                              <TableCell className="text-right font-mono"></TableCell>
+                              <TableCell className="text-right font-mono">{item.quantity}</TableCell>
                               <TableCell className="text-center">
                                 <div className="flex items-center justify-center gap-4">
                                     <Progress value={item.percentage} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
@@ -669,5 +669,3 @@ export function ReportPageClient() {
     </>
   );
 }
-
-```
