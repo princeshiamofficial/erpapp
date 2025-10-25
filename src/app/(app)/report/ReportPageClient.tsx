@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -28,13 +29,13 @@ import { getGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service';
 import { getTaskEntries } from '@/lib/team-performance-service';
 import { useToast } from '@/hooks/use-toast';
-import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon, BarChart3, ClipboardList, Edit, Trash2 } from 'lucide-react';
+import { Package, Settings, X, PlusCircle, Loader2, Users as UsersIcon, BarChart3, ClipboardList, Edit, Trash2, Download } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updateTaskEntryAction, deleteTaskEntryAction, updateReportFiltersAction } from './actions';
+import { updateTaskEntryAction, deleteTaskEntryAction } from './actions';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
@@ -46,6 +47,10 @@ import dynamic from 'next/dynamic';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AddEditTaskDialog } from '@/components/report/AddEditTaskDialog';
 import { DeleteTaskDialog } from '@/components/report/DeleteTaskDialog';
+import { updateReportFiltersAction } from './actions';
+import { BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, Legend } from 'recharts';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Papa from 'papaparse';
 
 
 const formatCurrency = (value: number) => {
@@ -351,14 +356,13 @@ export function ReportPageClient() {
         let quantity = item.quantity;
         let sales = item.lineItemTotalPrice || 0;
   
-        if (productViewMode === 'category' && filters.length > 0) {
-          const matchingFilter = filters.find(filter =>
-            productName.toLowerCase().includes(filter.toLowerCase())
-          );
-          // If a match is found, replace the product name with the filter keyword for grouping.
-          if (matchingFilter) {
-            productName = matchingFilter;
-          }
+        if (productViewMode === 'category') {
+            const matchingFilter = filters.find(filter =>
+                productName.toLowerCase().includes(filter.toLowerCase())
+            );
+            if (matchingFilter) {
+                productName = matchingFilter; // Use the keyword as the category name
+            }
         }
   
         const existing = salesMap.get(productName) || { sales: 0, quantity: 0 };
@@ -409,7 +413,7 @@ export function ReportPageClient() {
         totalSales: salesByCrm[crm.id]?.totalSales || 0,
       }))
       .filter(data => data.totalSales > 0)
-      .sort((a, b) => b.totalSales - a.sales);
+      .sort((a, b) => b.totalSales - a.totalSales);
   
   }, [filteredOrdersByDate, allUsers]);
 
@@ -695,3 +699,5 @@ export function ReportPageClient() {
     </>
   );
 }
+
+```
