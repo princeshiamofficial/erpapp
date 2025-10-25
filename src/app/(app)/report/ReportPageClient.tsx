@@ -16,6 +16,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableFooter,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from "@/components/ui/progress";
@@ -23,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { TrackingLink, GlobalSettings, User, TaskEntry, UserRole } from '@/types';
 import { getOrders } from '@/lib/order-service';
-import { getGlobalSettings, setReportProductFilters } from '@/lib/settings-service';
+import { getGlobalSettings } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service';
 import { getTaskEntries } from '@/lib/team-performance-service';
 import { useToast } from '@/hooks/use-toast';
@@ -254,8 +255,8 @@ export function ReportPageClient() {
   }, [fetchData]);
   
   const handleSaveFilters = async (newFilters: string[]) => {
-    const result = await setReportProductFilters(newFilters);
-    if (result) {
+    const result = await updateReportFiltersAction(newFilters);
+    if (result.success) {
         toast({ title: "Settings Saved", description: "Report product filters have been updated." });
         setGlobalSettings(prev => prev ? { ...prev, reportProductFilters: newFilters } : { reportProductFilters: newFilters } as GlobalSettings);
         setIsSettingsOpen(false);
@@ -354,8 +355,9 @@ export function ReportPageClient() {
           const matchingFilter = filters.find(filter =>
             productName.toLowerCase().includes(filter.toLowerCase())
           );
+          // If a match is found, replace the product name with the filter keyword for grouping.
           if (matchingFilter) {
-            productName = matchingFilter; // Use the filter keyword as the new product name for grouping
+            productName = matchingFilter;
           }
         }
   
@@ -693,4 +695,3 @@ export function ReportPageClient() {
     </>
   );
 }
-    
