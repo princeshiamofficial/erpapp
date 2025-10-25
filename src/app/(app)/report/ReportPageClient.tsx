@@ -1,5 +1,4 @@
 
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -25,7 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { TrackingLink, GlobalSettings, User, TaskEntry, UserRole } from '@/types';
 import { getOrders } from '@/lib/order-service';
-import { getGlobalSettings } from '@/lib/settings-service';
+import { getGlobalSettings, setReportProductFilters } from '@/lib/settings-service';
 import { getUsers } from '@/lib/user-service';
 import { getTaskEntries } from '@/lib/team-performance-service';
 import { useToast } from '@/hooks/use-toast';
@@ -35,7 +34,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updateTaskEntryAction, deleteTaskEntryAction } from './actions';
+import { updateTaskEntryAction, deleteTaskEntryAction, updateReportFiltersAction } from './actions';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
@@ -47,7 +46,6 @@ import dynamic from 'next/dynamic';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AddEditTaskDialog } from '@/components/report/AddEditTaskDialog';
 import { DeleteTaskDialog } from '@/components/report/DeleteTaskDialog';
-import { updateReportFiltersAction } from './actions';
 import { BarChart as RechartsBarChart, Line, Area, AreaChart as RechartsAreaChart, LineChart as RechartsLineChart, Legend } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Papa from 'papaparse';
@@ -357,12 +355,12 @@ export function ReportPageClient() {
         let sales = item.lineItemTotalPrice || 0;
   
         if (productViewMode === 'category') {
-            const matchingFilter = filters.find(filter =>
-                productName.toLowerCase().includes(filter.toLowerCase())
-            );
-            if (matchingFilter) {
-                productName = matchingFilter; // Use the keyword as the category name
-            }
+          const matchingFilter = filters.find(filter =>
+            productName.toLowerCase().includes(filter.toLowerCase())
+          );
+          if (matchingFilter) {
+            productName = matchingFilter; // Use the keyword as the category name
+          }
         }
   
         const existing = salesMap.get(productName) || { sales: 0, quantity: 0 };
@@ -699,5 +697,3 @@ export function ReportPageClient() {
     </>
   );
 }
-
-```
