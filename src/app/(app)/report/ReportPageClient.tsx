@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -34,7 +35,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { updateReportFiltersAction, deleteTaskEntryAction } from './actions';
+import { deleteTaskEntryAction } from './actions';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DateRangePicker, type PredefinedRange } from '@/components/dashboard/date-range-picker';
 import type { DateRange } from "react-day-picker";
@@ -254,14 +255,8 @@ export function ReportPageClient() {
   }, [fetchData]);
   
   const handleSaveFilters = async (newFilters: string[]) => {
-    const result = await updateReportFiltersAction(newFilters);
-    if (result.success) {
-      toast({ title: "Filters Saved", description: "Your report filter keywords have been updated." });
-      await fetchData();
-      setIsSettingsOpen(false);
-    } else {
-      toast({ title: "Error", description: result.error || "Failed to save filters.", variant: "destructive" });
-    }
+    // This function is no longer needed as the filter UI is removed, but we keep it to avoid breaking other parts if they depend on it.
+    console.log("Filter saving is disabled.");
   };
   
   const handleTaskSaved = () => {
@@ -339,43 +334,24 @@ export function ReportPageClient() {
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN';
 
   const productSalesData: ProductSalesData[] = useMemo(() => {
-    if (filteredOrdersByDate.length === 0 || !globalSettings) {
+    if (filteredOrdersByDate.length === 0) {
       return [];
     }
   
     const salesMap: Map<string, { sales: number; quantity: number }> = new Map();
-    const filters = globalSettings.reportProductFilters || [];
   
     filteredOrdersByDate.forEach(order => {
-      let isConsolidated = false;
-  
       if (!order.orderItems || order.orderItems.length === 0) {
         return; 
       }
-      
-      for (const filter of filters) {
-        if (order.orderItems.some(item => item.model.toLowerCase().includes(filter.toLowerCase()))) {
-          const orderTotal = order.orderItems.reduce((acc, item) => acc + (item.lineItemTotalPrice || 0), 0);
-          const orderQuantity = order.orderItems.reduce((acc, item) => acc + (item.quantity || 0), 0);
-          const existing = salesMap.get(filter) || { sales: 0, quantity: 0 };
-          salesMap.set(filter, { 
-            sales: existing.sales + orderTotal,
-            quantity: existing.quantity + orderQuantity,
-          });
-          isConsolidated = true;
-          break; 
-        }
-      }
   
-      if (!isConsolidated) {
-        order.orderItems.forEach(item => {
-          const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
-          salesMap.set(item.model, {
-            sales: existing.sales + (item.lineItemTotalPrice || 0),
-            quantity: existing.quantity + (item.quantity || 0),
-          });
+      order.orderItems.forEach(item => {
+        const existing = salesMap.get(item.model) || { sales: 0, quantity: 0 };
+        salesMap.set(item.model, {
+          sales: existing.sales + (item.lineItemTotalPrice || 0),
+          quantity: existing.quantity + (item.quantity || 0),
         });
-      }
+      });
     });
   
     const totalSales = Array.from(salesMap.values()).reduce((acc, { sales }) => acc + sales, 0);
@@ -389,7 +365,7 @@ export function ReportPageClient() {
         percentage: (data.sales / totalSales) * 100,
       }))
       .sort((a, b) => b.sales - a.sales);
-  }, [filteredOrdersByDate, globalSettings]);
+  }, [filteredOrdersByDate]);
   
   const crmSalesData: CrmSalesData[] = useMemo(() => {
     if (filteredOrdersByDate.length === 0 || allUsers.length === 0) {
@@ -436,16 +412,13 @@ export function ReportPageClient() {
                     initialRange={selectedDateRange} 
                     onDateRangeChange={handleDateRangeChange}
                 />
-                
               </div>
           </div>
           <TabsContent value="sales_report">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card className="w-full">
                   <CardHeader>
-                    <div className="flex justify-between items-center">
-                      <CardTitle>Product Sales Performance</CardTitle>
-                    </div>
+                    <CardTitle>Product Sales Performance</CardTitle>
                     <CardDescription>
                       Sales distribution across all products for the selected period.
                     </CardDescription>
@@ -456,7 +429,7 @@ export function ReportPageClient() {
                         <TableRow>
                           <TableHead>Product</TableHead>
                           <TableHead className="text-right">Sales Amount</TableHead>
-                          <TableHead className="text-right">Quantity</TableHead>
+                          <TableHead className="text-right">Quality</TableHead>
                           <TableHead className="w-[30%] text-center">Sales Percentage</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -480,7 +453,7 @@ export function ReportPageClient() {
                             <TableRow key={item.product}>
                               <TableCell className="font-medium">{item.product}</TableCell>
                               <TableCell className="text-right font-mono">{formatCurrency(item.sales)}</TableCell>
-                              <TableCell className="text-right font-mono">{item.quantity}</TableCell>
+                              <TableCell className="text-right font-mono"></TableCell>
                               <TableCell className="text-center">
                                 <div className="flex items-center justify-center gap-4">
                                     <Progress value={item.percentage} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
@@ -697,4 +670,4 @@ export function ReportPageClient() {
   );
 }
 
-    
+```
