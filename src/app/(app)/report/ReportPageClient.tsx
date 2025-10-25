@@ -343,6 +343,7 @@ export function ReportPageClient() {
     if (filteredOrdersByDate.length === 0) {
       return [];
     }
+  
     const salesMap: Map<string, { sales: number; quantity: number }> = new Map();
     const filters = globalSettings?.reportProductFilters || [];
   
@@ -363,14 +364,14 @@ export function ReportPageClient() {
             const existing = salesMap.get(filter) || { sales: 0, quantity: 0 };
             salesMap.set(filter, {
               sales: existing.sales + orderTotal,
-              quantity: existing.quantity + 1, // Count as 1 order for the category
+              quantity: existing.quantity + 1,
             });
             processedOrderIds.add(order.id);
           }
         });
       });
   
-      // Handle items that didn't match any category filter
+      // Handle items from orders that didn't match any category filter
       filteredOrdersByDate.forEach(order => {
         if (processedOrderIds.has(order.id)) return;
         
@@ -408,6 +409,7 @@ export function ReportPageClient() {
       }))
       .sort((a, b) => b.sales - a.sales);
   }, [filteredOrdersByDate, productViewMode, globalSettings]);
+  
   
   const crmSalesData: CrmSalesData[] = useMemo(() => {
     if (filteredOrdersByDate.length === 0 || allUsers.length === 0) {
@@ -596,7 +598,7 @@ export function ReportPageClient() {
                             <CardTitle className="flex items-center gap-2"><ClipboardList className="h-5 w-5 text-primary"/>Team Task Report</CardTitle>
                             <CardDescription>
                                 Count of tasks submitted by team members in the selected period. Total Tasks: <span className="font-bold text-foreground">{totalTasksCount}</span>
-                                {selectedTeam === 'CRM' && `, Total Likely: <span className="font-bold text-foreground">${totalLikelihood}</span>`}
+                                {selectedTeam === 'CRM' && `, Total Likely: ${totalLikelihood}`}
                             </CardDescription>
                         </div>
                         <Tabs value={selectedTeam} onValueChange={(value) => setSelectedTeam(value as UserRole | 'all')}>
