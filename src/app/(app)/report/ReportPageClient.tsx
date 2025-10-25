@@ -411,7 +411,7 @@ export function ReportPageClient() {
         totalSales: salesByCrm[crm.id]?.totalSales || 0,
       }))
       .filter(data => data.totalSales > 0)
-      .sort((a, b) => b.totalSales - a.totalSales);
+      .sort((a, b) => b.totalSales - a.sales);
   
   }, [filteredOrdersByDate, allUsers]);
 
@@ -452,6 +452,7 @@ export function ReportPageClient() {
                         <TableRow>
                           <TableHead>Product</TableHead>
                           <TableHead className="text-right">Sales Amount</TableHead>
+                           <TableHead>Quality</TableHead>
                           <TableHead className="w-[30%] text-center">Sales Percentage</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -461,6 +462,7 @@ export function ReportPageClient() {
                             <TableRow key={i}>
                               <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                               <TableCell className="text-right"><Skeleton className="h-5 w-24 ml-auto" /></TableCell>
+                              <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                               <TableCell>
                                 <div className="flex items-center justify-center gap-4">
                                   <Skeleton className="h-2.5 w-2/3" />
@@ -474,6 +476,7 @@ export function ReportPageClient() {
                             <TableRow key={item.product}>
                               <TableCell className="font-medium">{item.product}</TableCell>
                               <TableCell className="text-right font-mono">{formatCurrency(item.sales)}</TableCell>
+                              <TableCell></TableCell>
                               <TableCell className="text-center">
                                 <div className="flex items-center justify-center gap-4">
                                     <Progress value={item.percentage} className="w-2/3 h-2.5" indicatorClassName="bg-primary" />
@@ -484,7 +487,7 @@ export function ReportPageClient() {
                           ))
                         ) : (
                           <TableRow>
-                            <TableCell colSpan={3} className="h-24 text-center">
+                            <TableCell colSpan={4} className="h-24 text-center">
                               <Package className="mx-auto h-10 w-10 text-muted-foreground opacity-50 mb-2" />
                               No sales data available for the selected period.
                             </TableCell>
@@ -690,4 +693,3 @@ export function ReportPageClient() {
   );
 }
 
-    
