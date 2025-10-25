@@ -436,12 +436,7 @@ export function ReportPageClient() {
                     initialRange={selectedDateRange} 
                     onDateRangeChange={handleDateRangeChange}
                 />
-                {isAdmin && (
-                  <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} disabled={!globalSettings}>
-                    <Settings className="h-5 w-5" />
-                    <span className="sr-only">Configure Report Filters</span>
-                  </Button>
-                )}
+                
               </div>
           </div>
           <TabsContent value="sales_report">
@@ -701,3 +696,5 @@ export function ReportPageClient() {
     </>
   );
 }
+
+    
