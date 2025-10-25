@@ -18,6 +18,7 @@ export interface User {
   isBanned?: boolean;
   fcmToken?: string | null;
   feedback?: Feedback[];
+  isLeader?: boolean; // New field for CRM leaders
 }
 
 export interface SalaryIncrement {

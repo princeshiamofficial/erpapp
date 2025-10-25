@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -19,6 +20,7 @@ import type { User, VendorCategory } from "@/types";
 import { useToast } from '@/hooks/use-toast';
 import { updateUserInfoAction } from '@/app/(app)/users/actions';
 import { Edit3 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 interface EditUserInfoDialogProps {
   user: User;
@@ -35,10 +37,12 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
   const [phone, setPhone] = useState(user.phone || '');
   const [address, setAddress] = useState(user.address || ''); // New state for address
   const [category, setCategory] = useState(user.category || '');
+  const [isLeader, setIsLeader] = useState(user.isLeader || false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const isVendor = user.role === 'VENDOR';
+  const isCrm = user.role === 'CRM';
 
   useEffect(() => {
     if (isOpen && user) {
@@ -48,6 +52,7 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
       setPhone(user.phone || '');
       setAddress(user.address || ''); // Set address state
       setCategory(user.category || '');
+      setIsLeader(user.isLeader || false);
     }
   }, [isOpen, user]);
 
@@ -82,10 +87,11 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
     }
 
     setIsLoading(true);
-    const updates: Partial<Pick<User, 'name' | 'email' | 'companyName' | 'phone' | 'address' | 'category'>> = {
+    const updates: Partial<Pick<User, 'name' | 'email' | 'companyName' | 'phone' | 'address' | 'category' | 'isLeader'>> = {
       name: name.trim(),
       email: email.trim(),
       companyName: companyName.trim() || null,
+      isLeader: isCrm ? isLeader : undefined,
     };
     
     if (isVendor) {
@@ -152,6 +158,24 @@ export function EditUserInfoDialog({ user, onUserInfoUpdated, isOpen, onOpenChan
                 required={isVendor}
               />
             </div>
+
+            {isCrm && (
+              <div className="flex items-center justify-between space-x-2 rounded-lg border p-3 shadow-sm bg-muted/30">
+                <div className="space-y-0.5">
+                  <Label htmlFor="leader-switch-edit">Team Leader Status</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Enable if this CRM user is a team leader.
+                  </p>
+                </div>
+                <Switch
+                  id="leader-switch-edit"
+                  checked={isLeader}
+                  onCheckedChange={setIsLeader}
+                  disabled={isLoading}
+                />
+              </div>
+            )}
+            
             {isVendor && (
               <>
                 <div className="space-y-1">

@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { UserCircle, UploadCloud, XCircle, Eye, EyeOff } from 'lucide-react';
 import { addUser as addUserToFirestoreService } from '@/lib/user-service';
+import { Switch } from '@/components/ui/switch'; // Import Switch
 
 interface AddUserDialogProps {
   onUserAdded: () => void;
@@ -41,6 +42,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const [isLeader, setIsLeader] = useState(false);
 
   const resetForm = useCallback(() => {
     setName('');
@@ -53,6 +55,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
     setShowPassword(false);
     setSelectedFile(null);
     setPreviewUrl(null);
+    setIsLeader(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -197,6 +200,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
       weeklyOrderTarget: 0,  
       isBanned: false, 
       fcmToken: null, 
+      isLeader: role === 'CRM' ? isLeader : undefined,
     };
 
     const createdUser = await addUserToFirestoreService(newUserFirestoreData);
@@ -265,6 +269,22 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
               </Select>
             </div>
             
+            {role === 'CRM' && (
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="leader-switch" className="text-right">Leader</Label>
+                <div className="col-span-3 flex items-center space-x-2">
+                  <Switch
+                    id="leader-switch"
+                    checked={isLeader}
+                    onCheckedChange={setIsLeader}
+                  />
+                  <Label htmlFor="leader-switch" className="text-sm font-normal text-muted-foreground">
+                    Mark this CRM user as a team leader.
+                  </Label>
+                </div>
+              </div>
+            )}
+
             {role === 'VENDOR' && (
               <>
                  <div className="grid grid-cols-4 items-center gap-4">
@@ -327,7 +347,7 @@ export function AddUserDialog({ onUserAdded, currentUser, isOpen, onOpenChange, 
                     )}
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground pt-1">
                   Optional. Max 2MB.
                   {selectedFile && <span className="block mt-0.5">Selected: {selectedFile.name}</span>}
                 </p>

@@ -1,4 +1,5 @@
 
+
 'use server'; // Potentially for some functions if called directly from Server Components/Actions
 
 import { db } from './firebase';
@@ -59,6 +60,7 @@ export const addUser = async (userData: Omit<User, 'id'>): Promise<User | null> 
       weeklyOrderTarget: userData.weeklyOrderTarget === undefined ? null : userData.weeklyOrderTarget,
       isBanned: false, 
       fcmToken: null, // Initialize fcmToken as null for new users
+      isLeader: userData.isLeader || false, // Initialize isLeader
     };
     const userDocRef = doc(db, USERS_COLLECTION, userId);
     await setDoc(userDocRef, newUser);
@@ -191,10 +193,10 @@ export const updateUserBanStatus = async (userId: string, isBanned: boolean): Pr
   }
 };
 
-// Update user's basic information (name, email, companyName)
+// Update user's basic information
 export const updateUserInfo = async (
   userId: string,
-  updates: Partial<Pick<User, 'name' | 'email' | 'companyName' | 'phone' | 'address' | 'category'>>
+  updates: Partial<Pick<User, 'name' | 'email' | 'companyName' | 'phone' | 'address' | 'category' | 'isLeader'>>
 ): Promise<boolean> => {
   try {
     const userDoc = doc(db, USERS_COLLECTION, userId);
@@ -205,6 +207,7 @@ export const updateUserInfo = async (
     if (updates.phone !== undefined) dataToUpdate.phone = updates.phone === '' ? null : updates.phone;
     if (updates.address !== undefined) dataToUpdate.address = updates.address === '' ? null : updates.address;
     if (updates.category !== undefined) dataToUpdate.category = updates.category === '' ? null : updates.category;
+    if (updates.isLeader !== undefined) dataToUpdate.isLeader = updates.isLeader;
 
 
     if (Object.keys(dataToUpdate).length === 0) {
@@ -218,6 +221,7 @@ export const updateUserInfo = async (
     return false;
   }
 };
+
 
 // Update user's FCM token
 export async function updateUserFCMTokenInFirestore(userId: string, fcmToken: string | null): Promise<boolean> {
@@ -257,6 +261,7 @@ export const seedInitialAdminUser = async () => {
         weeklyOrderTarget: 0,
         isBanned: false, 
         fcmToken: null,
+        isLeader: false,
       });
       console.log(`Default System Admin user (${adminEmail}) seeded into Firestore.`);
     } else {
