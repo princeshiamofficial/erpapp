@@ -226,14 +226,36 @@ export default function UsersPage() {
   }, [users, currentUser]);
 
   const filteredUsers = useMemo(() => {
-    if (!searchTerm) return usersToDisplay;
-    return usersToDisplay.filter(user => 
-      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.role.toLowerCase().replace(/_/g, ' ').includes(searchTerm.toLowerCase()) ||
-      (user.companyName && user.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
+    const roleOrder: UserRole[] = ["SYSTEM_ADMIN", "ADMIN", "CRM", "CO", "DESIGNER_REPRESENTATIVE", "LR"];
+    
+    let searchFiltered = usersToDisplay;
+    if (searchTerm) {
+      searchFiltered = usersToDisplay.filter(user => 
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.role.toLowerCase().replace(/_/g, ' ').includes(searchTerm.toLowerCase()) ||
+        (user.companyName && user.companyName.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+    
+    return searchFiltered.sort((a, b) => {
+      const roleAIndex = roleOrder.indexOf(a.role);
+      const roleBIndex = roleOrder.indexOf(b.role);
+      
+      // If one role is not in our defined order, push it to the bottom
+      if (roleAIndex === -1 && roleBIndex !== -1) return 1;
+      if (roleAIndex !== -1 && roleBIndex === -1) return -1;
+      
+      // Sort by the index in our roleOrder array
+      if (roleAIndex !== roleBIndex) {
+        return roleAIndex - roleBIndex;
+      }
+      
+      // If roles are the same, sort by name
+      return a.name.localeCompare(b.name);
+    });
   }, [usersToDisplay, searchTerm]);
+
 
   if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SYSTEM_ADMIN')) {
     return (
