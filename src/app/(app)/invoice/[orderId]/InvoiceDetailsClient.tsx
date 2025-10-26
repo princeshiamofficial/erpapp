@@ -226,3 +226,5 @@ export function InvoiceDetailsClient({ order: initialOrder, allStatuses, allUser
     </div>
   );
 }
+
+    
