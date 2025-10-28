@@ -241,7 +241,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   
   const handleCancelPaymentEdit = () => {
     setEditingPaymentId(null);
-    // Optionally reset editingAmount and editingMethod here if needed
   };
 
 
@@ -366,7 +365,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       toast({ title: "Validation Error", description: "Job ID, Company Name, Address, Phone Number, and Date Created are required.", variant: "destructive" }); return;
     }
     if (orderItems.length === 0 || orderItems.some(item => !item.model || !item.lamination || parseInt(item.quantity) < 1 || item.unitPrice === null || item.lineItemTotalPrice === null)) {
-       toast({ title: "Validation Error", description: "All order items must be complete with Model, Quantity, Lamination, and valid pricing.", variant: "destructive" }); return;
+       toast({ title: "Validation Error", description: "All order items must be complete.", variant: "destructive" }); return;
     }
     const parsedNewAdvAmount = parseFloat(newAdvanceAmount) || 0;
     if (parsedNewAdvAmount > 0 && !newAdvancePaymentMethod.trim()) {
@@ -554,9 +553,9 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                     </TableRow></TableHeader>
                       <TableBody>
                         {existingAdvancePayments.map(record => (
-                          <TableRow key={record.id}>
+                          <TableRow key={record.id} className="group" onDoubleClick={() => { if (!editingPaymentId) handleStartEditPayment(record); }}>
                             <TableCell className="text-xs py-1.5">{formatDateForDialogInput(record.date)}</TableCell>
-                            <TableCell className="text-xs py-1.5" onDoubleClick={() => handleStartEditPayment(record)}>
+                            <TableCell className="text-xs py-1.5">
                               {editingPaymentId === record.id ? (
                                 <Input
                                   ref={amountInputRef}
@@ -564,12 +563,13 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                                   value={editingAmount}
                                   onChange={(e) => setEditingAmount(e.target.value)}
                                   className="h-7 text-xs"
+                                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSavePaymentEdit(record.id); } }}
                                 />
                               ) : (
                                 formatCurrencyBdt(record.amount)
                               )}
                             </TableCell>
-                            <TableCell className="text-xs py-1.5" onDoubleClick={() => handleStartEditPayment(record)}>
+                            <TableCell className="text-xs py-1.5">
                               {editingPaymentId === record.id ? (
                                 <Select value={editingMethod} onValueChange={(value) => setEditingMethod(value)}>
                                   <SelectTrigger className="h-7 text-xs">
@@ -586,16 +586,16 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                             <TableCell className="text-xs text-muted-foreground py-1.5">{record.notes || 'N/A'}</TableCell>
                             {isAdmin && (
                               <TableCell className="text-right py-1.5">
-                                  {editingPaymentId === record.id ? (
-                                    <div className="flex gap-1 justify-end">
-                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600 hover:bg-green-100" onClick={() => handleSavePaymentEdit(record.id)}><Check className="h-4 w-4"/></Button>
-                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:bg-muted" onClick={handleCancelPaymentEdit}><X className="h-4 w-4"/></Button>
-                                    </div>
-                                  ) : (
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setPaymentToDelete(record);}}>
-                                        <Trash2 className="h-4 w-4"/>
-                                    </Button>
-                                  )}
+                                {editingPaymentId === record.id ? (
+                                  <div className="flex gap-1 justify-end">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600 hover:bg-green-100" onClick={() => handleSavePaymentEdit(record.id)}><Check className="h-4 w-4"/></Button>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:bg-muted" onClick={handleCancelPaymentEdit}><X className="h-4 w-4"/></Button>
+                                  </div>
+                                ) : (
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); setPaymentToDelete(record); }}>
+                                    <Trash2 className="h-4 w-4"/>
+                                  </Button>
+                                )}
                               </TableCell>
                             )}
                           </TableRow>
@@ -678,5 +678,3 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     </>
   );
 }
-
-```
