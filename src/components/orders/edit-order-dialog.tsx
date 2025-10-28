@@ -20,7 +20,7 @@ import type { TrackingLink, User, ServicePaymentMethodItem, OrderItem, ServiceMo
 import { useToast } from '@/hooks/use-toast';
 import { updateOrderAction } from '@/app/(app)/orders/actions';
 import { getPaymentMethods, getModels, getLaminations } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, UploadCloud, Paperclip, XCircle } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, UploadCloud, Paperclip, XCircle, Link as LinkIcon } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -30,6 +30,7 @@ import { Separator } from '@/components/ui/separator';
 import { format, parseISO } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import NextLink from 'next/link';
 
 
 interface EditOrderDialogProps {
@@ -261,6 +262,10 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   };
   
   const isNewAdvanceEntered = (parseFloat(newAdvanceAmount) || 0) > 0;
+  
+  const isProofRequired = useMemo(() => {
+    return isNewAdvanceEntered && newAdvancePaymentMethod.toLowerCase() !== 'cash';
+  }, [isNewAdvanceEntered, newAdvancePaymentMethod]);
 
   useEffect(() => {
     if (!isNewAdvanceEntered) {
@@ -303,9 +308,9 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       !isLoadingOptions && orderItems.length > 0 && orderItems.every(item => item.model && item.quantity && parseInt(item.quantity) > 0 && item.lamination && item.unitPrice !== null && item.lineItemTotalPrice !== null) &&
       !(isNewAdvanceEntered && !newAdvancePaymentMethod.trim()) &&
       !(isNewAdvanceEntered && newAdvancePaymentMethod.toLowerCase() === 'other' && !newCustomPaymentMethodText.trim()) &&
-      !(isNewAdvanceEntered && !selectedPaymentProof) &&
+      !(isNewAdvanceEntered && isProofRequired && !selectedPaymentProof) && // Proof not required if cash
       isAdvPaymentValid && isDiscountValid;
-  }, [isSubmitting, isUploadingProof, jobIdInput, companyNameInput, address, phoneNumber, createdAt, isLoadingOptions, orderItems, isNewAdvanceEntered, newAdvancePaymentMethod, newCustomPaymentMethodText, currentUser, totalExistingAdvancePaid, newAdvanceAmount, netPayable, orderItemsTotal, calculatedDiscountAmount, selectedPaymentProof]);
+  }, [isSubmitting, isUploadingProof, jobIdInput, companyNameInput, address, phoneNumber, createdAt, isLoadingOptions, orderItems, isNewAdvanceEntered, newAdvancePaymentMethod, newCustomPaymentMethodText, currentUser, totalExistingAdvancePaid, newAdvanceAmount, netPayable, orderItemsTotal, calculatedDiscountAmount, selectedPaymentProof, isProofRequired]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -313,8 +318,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
         toast({ title: "Authentication Error", variant: "destructive" }); return;
     }
     if (!canSubmit) {
-      if (isNewAdvanceEntered && !selectedPaymentProof) {
-        toast({ title: "Validation Error", description: "Payment proof is required for new advance payments.", variant: "destructive" });
+      if (isNewAdvanceEntered && isProofRequired && !selectedPaymentProof) {
+        toast({ title: "Validation Error", description: "Payment proof is required unless payment method is 'Cash'.", variant: "destructive" });
       } else {
         toast({ title: "Validation Error", description: "Please ensure all required fields are filled correctly.", variant: "destructive" });
       }
@@ -499,7 +504,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                     </div>
                     <div className="space-y-1"><Label htmlFor="newAdvancePaymentNotes">New Payment Notes</Label><Textarea id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} rows={1} placeholder="Optional notes for this payment" disabled={isSubmitting}/></div>
                      <div className="space-y-1 md:col-span-2 lg:col-span-3">
-                        <Label htmlFor="payment-proof-edit">Payment Proof *</Label>
+                        <Label htmlFor="payment-proof-edit">Payment Proof {isProofRequired && <span className="text-destructive">*</span>}</Label>
                         <div className="flex items-center gap-2">
                             <Input
                                 id="payment-proof-edit"
@@ -507,7 +512,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                                 ref={paymentProofRef}
                                 onChange={handleProofFileChange}
                                 className="flex-1"
-                                required={isNewAdvanceEntered}
+                                required={isProofRequired}
                                 accept="image/*"
                                 disabled={isSubmitting || isUploadingProof}
                             />

@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -28,6 +29,8 @@ interface CreateOrderDialogProps {
   onOrderCreated: () => void;
   children: React.ReactNode;
   allOrders: TrackingLink[];
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 interface DialogOrderItem {
@@ -53,8 +56,7 @@ const initialOrderItemState: DialogOrderItem = {
   lineItemTotalPrice: null,
 };
 
-export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children, allOrders }: CreateOrderDialogProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreated, children, allOrders, isOpen, onOpenChange }: CreateOrderDialogProps) {
   const [jobId, setJobId] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [address, setAddress] = useState('');
@@ -216,6 +218,10 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
   const advancePaymentValue = parseFloat(advancePaymentAmount);
   const isAdvancePaymentEntered = !isNaN(advancePaymentValue) && advancePaymentValue > 0;
+  
+  const isProofRequired = useMemo(() => {
+    return isAdvancePaymentEntered && advancePaymentMethod.toLowerCase() !== 'cash';
+  }, [isAdvancePaymentEntered, advancePaymentMethod]);
 
   useEffect(() => {
     if (!isAdvancePaymentEntered) {
@@ -299,7 +305,6 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
             });
         }
       } else if (isAutoFilled) {
-        // Job ID changed to something that doesn't exist, clear fields
         setCompanyName('');
         setAddress('');
         setPhoneNumber('');
@@ -398,9 +403,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
       ) &&
       !(isAdvancePaymentEntered && !advancePaymentMethod.trim()) &&
       !(isAdvancePaymentEntered && advancePaymentMethod.toLowerCase() === 'other' && !customPaymentMethodText.trim()) &&
-      !(isAdvancePaymentEntered && !selectedPaymentProof) &&
+      !(isAdvancePaymentEntered && isProofRequired && !selectedPaymentProof) && // Proof not required if cash
       isAdvPaymentValid && isDiscountValid;
-  }, [isSubmitting, isUploadingProof, jobId, companyName, address, phoneNumber, initialStatusId, currentOrderDate, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, advancePaymentMethod, customPaymentMethodText, advancePaymentAmount, netPayable, calculatedDiscountAmount, orderItemsTotal, selectedPaymentProof]);
+  }, [isSubmitting, isUploadingProof, jobId, companyName, address, phoneNumber, initialStatusId, currentOrderDate, availableStatuses, modelOptions, laminationOptions, isLoadingOptions, orderItems, isAdvancePaymentEntered, advancePaymentMethod, customPaymentMethodText, advancePaymentAmount, netPayable, calculatedDiscountAmount, orderItemsTotal, selectedPaymentProof, isProofRequired]);
 
   const handleProofFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -427,8 +432,8 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     
     // Final validations
     if (!canSubmit) {
-      if (isAdvancePaymentEntered && !selectedPaymentProof) {
-        toast({ title: "Validation Error", description: "Payment proof is required when an advance payment is entered.", variant: "destructive" });
+      if (isAdvancePaymentEntered && isProofRequired && !selectedPaymentProof) {
+        toast({ title: "Validation Error", description: "Payment proof is required unless the payment method is 'Cash'.", variant: "destructive" });
       } else {
         toast({ title: "Validation Error", description: "Please fill all required fields correctly.", variant: "destructive" });
       }
@@ -483,14 +488,14 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     } else {
       toast({ title: "Order Created", description: `Order ${result.id} for ${result.companyName} has been created.` });
       onOrderCreated();
-      setIsOpen(false);
+      onOpenChange(false);
       resetForm();
       window.open(`/track/${result.id}`, '_blank');
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { setIsOpen(open); if (!open) resetForm(); }}>
+    <Dialog open={isOpen} onOpenChange={(open) => { onOpenChange(open); if (!open) resetForm(); }}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
@@ -741,7 +746,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                          <span className="flex-1 text-left whitespace-nowrap">
                           {advancePaymentMethod
                             ? paymentMethodOptions.find((option) => option.name === advancePaymentMethod)?.name
-                            : (isLoadingOptions ? "Loading..." : (paymentMethodOptions.length === 0 ? "No methods" : "Select method..."))}
+                            : (isLoadingOptions ? "Loading..." : (paymentMethodOptions.length===0?"No methods":"Select method..."))}
                          </span>
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
@@ -796,7 +801,9 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                     <Input id="newAdvancePaymentNotes" value={newAdvancePaymentNotes} onChange={e=>setNewAdvancePaymentNotes(e.target.value)} placeholder="Reference or Transaction ID"/>
                 </div>
                  <div className="space-y-1 md:col-span-2 lg:col-span-3">
-                  <Label htmlFor="payment-proof">Payment Proof *</Label>
+                  <Label htmlFor="payment-proof">
+                    Payment Proof {isProofRequired && <span className="text-destructive">*</span>}
+                  </Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="payment-proof"
@@ -804,7 +811,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
                       ref={paymentProofRef}
                       onChange={handleProofFileChange}
                       className="flex-1"
-                      required={isAdvancePaymentEntered}
+                      required={isProofRequired}
                       accept="image/*"
                     />
                     {selectedPaymentProof && (
