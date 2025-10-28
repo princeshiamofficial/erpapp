@@ -105,7 +105,11 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   const { toast } = useToast();
   
   const [paymentToDelete, setPaymentToDelete] = useState<AdvancePaymentRecord | null>(null);
-
+  
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+  const [editingAmount, setEditingAmount] = useState('');
+  const amountInputRef = useRef<HTMLInputElement>(null);
+  
 
   const fetchDialogOptions = useCallback(async () => {
     setIsLoadingOptions(true);
@@ -164,6 +168,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setIsSubmitting(false);
     setSelectedPaymentProof(null);
     setIsUploadingProof(false);
+    setEditingPaymentId(null);
+    setEditingAmount('');
   }, [order]);
 
   useEffect(() => {
@@ -201,6 +207,33 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
 
     setAmountDue(Math.max(0, grandTotal - currentTotalExistingAdvance - newAdvanceNum));
   }, [orderItems, specialClientDiscount, newAdvanceAmount, existingAdvancePayments]);
+  
+  useEffect(() => {
+    if (editingPaymentId && amountInputRef.current) {
+        amountInputRef.current.focus();
+        amountInputRef.current.select();
+    }
+  }, [editingPaymentId]);
+
+  const handleStartEditPayment = (payment: AdvancePaymentRecord) => {
+    if (!isAdmin) return;
+    setEditingPaymentId(payment.id);
+    setEditingAmount(payment.amount.toString());
+  };
+  
+  const handleSavePaymentEdit = (paymentId: string) => {
+    const newAmount = parseFloat(editingAmount);
+    if (isNaN(newAmount) || newAmount < 0) {
+      toast({ title: "Invalid Amount", description: "Please enter a valid positive number for the payment.", variant: "destructive" });
+      setEditingAmount(existingAdvancePayments.find(p => p.id === paymentId)?.amount.toString() || '0');
+      return;
+    }
+    setExistingAdvancePayments(prev => 
+      prev.map(p => p.id === paymentId ? { ...p, amount: newAmount } : p)
+    );
+    setEditingPaymentId(null);
+  };
+
 
   const calculateLineItemTotal = (unitPrice: number | null, quantityStr: string): number | null => {
     if (unitPrice === null) return null;
@@ -245,10 +278,14 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     const discountStr = value.trim();
     if (discountStr.endsWith('%')) {
         const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
-        if (!isNaN(percentage) && percentage >= 0) discountVal = (percentage / 100) * orderItemsTotal;
+        if (!isNaN(percentage) && percentage >= 0) {
+            discountVal = (percentage / 100) * orderItemsTotal;
+        }
     } else {
         const fixedAmount = parseFloat(discountStr);
-        if (!isNaN(fixedAmount) && fixedAmount >= 0) discountVal = fixedAmount;
+        if (!isNaN(fixedAmount) && fixedAmount >= 0) {
+            discountVal = fixedAmount;
+        }
     }
 
     if (discountVal > orderItemsTotal && orderItemsTotal > 0) {
@@ -396,6 +433,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     }
   };
 
+  const isAdmin = useMemo(() => currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN', [currentUser]);
+
 
   return (
     <>
@@ -503,16 +542,33 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                   <Label className="text-md font-semibold flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80" />Advance Payment History</Label>
                   <div className="max-h-40 overflow-y-auto border rounded-md bg-muted/20 p-2 custom-scrollbar">
                     <Table size="sm"><TableHeader><TableRow><TableHead className="h-8 text-xs">Date</TableHead><TableHead className="h-8 text-xs">Amount</TableHead><TableHead className="h-8 text-xs">Method</TableHead><TableHead className="h-8 text-xs">Notes</TableHead>
-                    {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && <TableHead className="h-8 text-right text-xs">Actions</TableHead>}
+                    {isAdmin && <TableHead className="h-8 text-right text-xs">Actions</TableHead>}
                     </TableRow></TableHeader>
                       <TableBody>
                         {existingAdvancePayments.map(record => (
                           <TableRow key={record.id}>
                             <TableCell className="text-xs py-1.5">{formatDateForDialogInput(record.date)}</TableCell>
-                            <TableCell className="text-xs py-1.5">{formatCurrencyBdt(record.amount)}</TableCell>
+                            <TableCell className="text-xs py-1.5" onDoubleClick={() => handleStartEditPayment(record)}>
+                              {editingPaymentId === record.id ? (
+                                <Input
+                                  ref={amountInputRef}
+                                  type="number"
+                                  value={editingAmount}
+                                  onChange={(e) => setEditingAmount(e.target.value)}
+                                  onBlur={() => handleSavePaymentEdit(record.id)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSavePaymentEdit(record.id);
+                                    if (e.key === 'Escape') setEditingPaymentId(null);
+                                  }}
+                                  className="h-7 text-xs"
+                                />
+                              ) : (
+                                formatCurrencyBdt(record.amount)
+                              )}
+                            </TableCell>
                             <TableCell className="text-xs py-1.5">{record.paymentMethod || 'N/A'}</TableCell>
                             <TableCell className="text-xs py-1.5">{record.notes || 'N/A'}</TableCell>
-                            {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                            {isAdmin && (
                               <TableCell className="text-right py-1.5">
                                   <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setPaymentToDelete(record)}>
                                       <Trash2 className="h-4 w-4"/>
@@ -599,3 +655,4 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     </>
   );
 }
+```
