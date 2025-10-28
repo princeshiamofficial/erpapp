@@ -494,7 +494,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { onOpenChange(open); if (!open) resetForm(); }}>
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
@@ -857,7 +857,7 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
 
           </div>
           <DialogFooter className="pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => { setIsOpen(false); }} disabled={isSubmitting}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>Cancel</Button>
             <Button type="submit" disabled={!canSubmit}>
               {isSubmitting || isUploadingProof ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {isUploadingProof ? "Uploading..." : "Creating..."}</> : "Create Order"}
             </Button>
@@ -867,5 +867,3 @@ export function CreateOrderDialog({ currentUser, availableStatuses, onOrderCreat
     </Dialog>
   );
 }
-
-    
