@@ -1,5 +1,3 @@
-
-
 "use server";
 
 import { revalidatePath } from "next/cache";
@@ -108,8 +106,8 @@ export async function createOrderAction(
       parsedAdvancePaymentAmount = numAdvancePayment;
     }
     
-    if (parsedAdvancePaymentAmount && parsedAdvancePaymentAmount > 0 && !data.advancePaymentDocumentUrl) {
-      return { error: "Payment proof is required for advance payments." };
+    if (parsedAdvancePaymentAmount && parsedAdvancePaymentAmount > 0 && !data.advancePaymentDocumentUrl && data.advancePaymentMethod?.toLowerCase() !== 'cash') {
+      return { error: "Payment proof is required for advance payments unless it's cash." };
     }
 
     const netPayable = orderItemsTotal - (data.specialClientDiscount || 0);
@@ -316,8 +314,8 @@ export async function updateOrderAction(
         if (!updates.newAdvancePaymentMethod || !updates.newAdvancePaymentMethod.trim()) {
             return { success: false, error: "Payment method is required for new advance payment." };
         }
-        if (!updates.newAdvancePaymentDocumentUrl) {
-            return { success: false, error: "Payment proof is required for new advance payments." };
+        if (updates.newAdvancePaymentMethod.toLowerCase() !== 'cash' && !updates.newAdvancePaymentDocumentUrl) {
+            return { success: false, error: "Payment proof is required unless payment method is 'Cash'." };
         }
 
         const newAdvanceRecord: AdvancePaymentRecord = {
@@ -484,8 +482,8 @@ export async function assignDrToOrderAction(
       console.log(`[assignDrToOrderAction] DR ${designerRepUser.name} has FCM token. Attempting to send push notification.`);
       try {
         const globalSettings = await getGlobalSettings();
-        const rawTitle = globalSettings.drAssignmentNotificationTitle || 'New Task Assigned: %company%';
-        const rawBody = globalSettings.drAssignmentNotificationBody || 'You have been assigned to order %orderId% (Job ID: %jobid%).';
+        const rawTitle = globalSettings.drAssignmentNotificationTitle || 'New Design Assigned By %assignerName%';
+        const rawBody = globalSettings.drAssignmentNotificationBody || 'You have been assigned to a new design order: %orderId%.';
         
         const companyNameParts = currentOrder.companyName.split(' • ');
         const jobId = companyNameParts.length > 1 ? companyNameParts[0].trim() : currentOrder.id;

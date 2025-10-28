@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -19,7 +18,7 @@ import type { TrackingLink, User, ServicePaymentMethodItem, OrderItem, ServiceMo
 import { useToast } from '@/hooks/use-toast';
 import { updateOrderAction } from '@/app/(app)/orders/actions';
 import { getPaymentMethods, getModels, getLaminations } from '@/lib/service-options-service';
-import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, UploadCloud, Paperclip, XCircle, Link as LinkIcon } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, ChevronsUpDown, Check, Info, Percent, CalendarDays, ReceiptText, UploadCloud, Paperclip, XCircle, Link as LinkIcon, Edit, AlertTriangle } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -30,6 +29,7 @@ import { format, parseISO } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import NextLink from 'next/link';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 
 interface EditOrderDialogProps {
@@ -102,6 +102,12 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  
+  // States for editing/deleting payments
+  const [paymentToEdit, setPaymentToEdit] = useState<AdvancePaymentRecord | null>(null);
+  const [isEditPaymentOpen, setIsEditPaymentOpen] = useState(false);
+  const [paymentToDelete, setPaymentToDelete] = useState<AdvancePaymentRecord | null>(null);
+
 
   const fetchDialogOptions = useCallback(async () => {
     setIsLoadingOptions(true);
@@ -241,15 +247,13 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     const discountStr = value.trim();
     if (discountStr.endsWith('%')) {
         const percentage = parseFloat(discountStr.substring(0, discountStr.length - 1));
-        if (!isNaN(percentage) && percentage >= 0) {
-            discountVal = (percentage / 100) * orderItemsTotal;
-        }
+        if (!isNaN(percentage) && percentage >= 0) discountVal = (percentage / 100) * orderItemsTotal;
     } else {
         const fixedAmount = parseFloat(discountStr);
-        if (!isNaN(fixedAmount) && fixedAmount >= 0) {
-            discountVal = fixedAmount;
-        }
+        if (!isNaN(fixedAmount) && fixedAmount >= 0) discountVal = fixedAmount;
     }
+    discountVal = Math.min(discountVal, currentItemsTotal);
+    setCalculatedDiscountAmount(discountVal);
 
     if (discountVal > orderItemsTotal && orderItemsTotal > 0) {
         toast({
@@ -271,7 +275,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
         setNewAdvancePaymentMethod('');
         setNewCustomPaymentMethodText('');
         setShowNewCustomPaymentInput(false);
-        setSelectedPaymentProof(null);
     }
   }, [isNewAdvanceEntered]);
 
@@ -376,7 +379,36 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     }
   };
 
+  const openEditPaymentDialog = (payment: AdvancePaymentRecord) => {
+    setPaymentToEdit(payment);
+    setIsEditPaymentOpen(true);
+  };
+  
+  const handlePaymentUpdated = (updatedPayment: AdvancePaymentRecord) => {
+    setExistingAdvancePayments(prev => 
+      prev.map(p => p.id === updatedPayment.id ? updatedPayment : p)
+    );
+    setIsEditPaymentOpen(false);
+    setPaymentToEdit(null);
+  };
+
+  const handleDeletePayment = (paymentId: string) => {
+    const payment = existingAdvancePayments.find(p => p.id === paymentId);
+    if(payment) {
+      setPaymentToDelete(payment);
+    }
+  };
+
+  const confirmDeletePayment = () => {
+    if (paymentToDelete) {
+      setExistingAdvancePayments(prev => prev.filter(p => p.id !== paymentToDelete.id));
+      setPaymentToDelete(null);
+    }
+  };
+
+
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-3xl xl:max-w-4xl">
         <DialogHeader>
@@ -480,10 +512,21 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                 <div className="mt-4 space-y-2">
                   <Label className="text-md font-semibold flex items-center"><ReceiptText className="mr-2 h-5 w-5 text-primary/80" />Advance Payment History</Label>
                   <div className="max-h-40 overflow-y-auto border rounded-md bg-muted/20 p-2 custom-scrollbar">
-                    <Table size="sm"><TableHeader><TableRow><TableHead className="h-8 text-xs">Date</TableHead><TableHead className="h-8 text-xs">Amount</TableHead><TableHead className="h-8 text-xs">Method</TableHead><TableHead className="h-8 text-xs">Notes</TableHead></TableRow></TableHeader>
+                    <Table size="sm"><TableHeader><TableRow><TableHead className="h-8 text-xs">Date</TableHead><TableHead className="h-8 text-xs">Amount</TableHead><TableHead className="h-8 text-xs">Method</TableHead><TableHead className="h-8 text-xs">Notes</TableHead>{currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN' && <TableHead className="h-8 text-right text-xs">Actions</TableHead>}</TableRow></TableHeader>
                       <TableBody>
                         {existingAdvancePayments.map(record => (
-                          <TableRow key={record.id}><TableCell className="text-xs py-1.5">{formatDateForDialogInput(record.date)}</TableCell><TableCell className="text-xs py-1.5">{formatCurrencyBdt(record.amount)}</TableCell><TableCell className="text-xs py-1.5">{record.paymentMethod || 'N/A'}</TableCell><TableCell className="text-xs py-1.5">{record.notes || 'N/A'}</TableCell></TableRow>
+                          <TableRow key={record.id}><TableCell className="text-xs py-1.5">{formatDateForDialogInput(record.date)}</TableCell><TableCell className="text-xs py-1.5">{formatCurrencyBdt(record.amount)}</TableCell><TableCell className="text-xs py-1.5">{record.paymentMethod || 'N/A'}</TableCell><TableCell className="text-xs py-1.5">{record.notes || 'N/A'}</TableCell>
+                           {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN') && (
+                            <TableCell className="text-right py-1.5">
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openEditPaymentDialog(record)}>
+                                    <Edit className="h-4 w-4"/>
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleDeletePayment(record.id)}>
+                                    <Trash2 className="h-4 w-4"/>
+                                </Button>
+                            </TableCell>
+                          )}
+                          </TableRow>
                         ))}
                       </TableBody>
                     </Table>
@@ -544,7 +587,89 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
           </form>)}
       </DialogContent>
     </Dialog>
+     {paymentToEdit && (
+        <EditPaymentDialog
+          isOpen={isEditPaymentOpen}
+          onOpenChange={setIsEditPaymentOpen}
+          payment={paymentToEdit}
+          onPaymentUpdated={handlePaymentUpdated}
+          paymentMethods={paymentMethodOptions}
+        />
+      )}
+      {paymentToDelete && (
+        <AlertDialog open={!!paymentToDelete} onOpenChange={(open) => !open && setPaymentToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action will permanently delete the payment of {formatCurrencyBdt(paymentToDelete.amount)} made on {formatDateForDialogInput(paymentToDelete.date)}.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPaymentToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeletePayment} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </>
   );
 }
 
-    
+
+interface EditPaymentDialogProps {
+  isOpen: boolean;
+  onOpenChange: (isOpen: boolean) => void;
+  payment: AdvancePaymentRecord;
+  onPaymentUpdated: (updatedPayment: AdvancePaymentRecord) => void;
+  paymentMethods: ServicePaymentMethodItem[];
+}
+
+function EditPaymentDialog({ isOpen, onOpenChange, payment, onPaymentUpdated, paymentMethods }: EditPaymentDialogProps) {
+  const [amount, setAmount] = useState(payment.amount.toString());
+  const [method, setMethod] = useState(payment.paymentMethod || '');
+  const [notes, setNotes] = useState(payment.notes || '');
+
+  const handleSave = () => {
+    const updatedPayment: AdvancePaymentRecord = {
+      ...payment,
+      amount: parseFloat(amount),
+      paymentMethod: method,
+      notes,
+    };
+    onPaymentUpdated(updatedPayment);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Payment Record</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+           <div className="space-y-1">
+             <Label htmlFor="edit-payment-amount">Amount</Label>
+             <Input id="edit-payment-amount" type="number" value={amount} onChange={e => setAmount(e.target.value)} />
+           </div>
+           <div className="space-y-1">
+             <Label htmlFor="edit-payment-method">Method</Label>
+             <Select value={method} onValueChange={setMethod}>
+               <SelectTrigger><SelectValue/></SelectTrigger>
+               <SelectContent>
+                 {paymentMethods.map(pm => <SelectItem key={pm.id} value={pm.name}>{pm.name}</SelectItem>)}
+               </SelectContent>
+             </Select>
+           </div>
+           <div className="space-y-1">
+             <Label htmlFor="edit-payment-notes">Notes</Label>
+             <Textarea id="edit-payment-notes" value={notes} onChange={e => setNotes(e.target.value)} />
+           </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={handleSave}>Save Changes</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
