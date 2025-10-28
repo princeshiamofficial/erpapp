@@ -556,15 +556,13 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                         {existingAdvancePayments.map(record => (
                           <TableRow key={record.id}>
                             <TableCell className="text-xs py-1.5">{formatDateForDialogInput(record.date)}</TableCell>
-                             <TableCell className="text-xs py-1.5" onDoubleClick={() => handleStartEditPayment(record)}>
+                            <TableCell className="text-xs py-1.5" onDoubleClick={() => handleStartEditPayment(record)}>
                               {editingPaymentId === record.id ? (
                                 <Input
                                   ref={amountInputRef}
                                   type="number"
                                   value={editingAmount}
                                   onChange={(e) => setEditingAmount(e.target.value)}
-                                  onBlur={() => handleSavePaymentEdit(record.id)}
-                                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSavePaymentEdit(record.id); } else if (e.key === 'Escape') { handleCancelPaymentEdit(); }}}
                                   className="h-7 text-xs"
                                 />
                               ) : (
@@ -594,7 +592,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                                       <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:bg-muted" onClick={handleCancelPaymentEdit}><X className="h-4 w-4"/></Button>
                                     </div>
                                   ) : (
-                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setPaymentToDelete(record)}>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={(e) => { e.stopPropagation(); setPaymentToDelete(record);}}>
                                         <Trash2 className="h-4 w-4"/>
                                     </Button>
                                   )}
@@ -680,4 +678,5 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     </>
   );
 }
+
 ```
