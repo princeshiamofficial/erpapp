@@ -108,6 +108,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
   
   const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
   const [editingAmount, setEditingAmount] = useState('');
+  const [editingMethod, setEditingMethod] = useState('');
   const amountInputRef = useRef<HTMLInputElement>(null);
   
 
@@ -170,6 +171,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     setIsUploadingProof(false);
     setEditingPaymentId(null);
     setEditingAmount('');
+    setEditingMethod('');
   }, [order]);
 
   useEffect(() => {
@@ -215,10 +217,13 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     }
   }, [editingPaymentId]);
 
+  const isAdmin = useMemo(() => currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN', [currentUser]);
+
   const handleStartEditPayment = (payment: AdvancePaymentRecord) => {
     if (!isAdmin) return;
     setEditingPaymentId(payment.id);
     setEditingAmount(payment.amount.toString());
+    setEditingMethod(payment.paymentMethod || '');
   };
   
   const handleSavePaymentEdit = (paymentId: string) => {
@@ -229,7 +234,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
       return;
     }
     setExistingAdvancePayments(prev => 
-      prev.map(p => p.id === paymentId ? { ...p, amount: newAmount } : p)
+      prev.map(p => p.id === paymentId ? { ...p, amount: newAmount, paymentMethod: editingMethod } : p)
     );
     setEditingPaymentId(null);
   };
@@ -433,8 +438,6 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     }
   };
 
-  const isAdmin = useMemo(() => currentUser?.role === 'ADMIN' || currentUser?.role === 'SYSTEM_ADMIN', [currentUser]);
-
 
   return (
     <>
@@ -548,7 +551,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                         {existingAdvancePayments.map(record => (
                           <TableRow key={record.id}>
                             <TableCell className="text-xs py-1.5">{formatDateForDialogInput(record.date)}</TableCell>
-                            <TableCell className="text-xs py-1.5" onDoubleClick={() => handleStartEditPayment(record)}>
+                             <TableCell className="text-xs py-1.5" onDoubleClick={() => handleStartEditPayment(record)}>
                               {editingPaymentId === record.id ? (
                                 <Input
                                   ref={amountInputRef}
@@ -566,8 +569,21 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                                 formatCurrencyBdt(record.amount)
                               )}
                             </TableCell>
-                            <TableCell className="text-xs py-1.5">{record.paymentMethod || 'N/A'}</TableCell>
-                            <TableCell className="text-xs py-1.5">{record.notes || 'N/A'}</TableCell>
+                            <TableCell className="text-xs py-1.5" onDoubleClick={() => handleStartEditPayment(record)}>
+                              {editingPaymentId === record.id ? (
+                                <Select value={editingMethod} onValueChange={setEditingMethod}>
+                                  <SelectTrigger className="h-7 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {paymentMethodOptions.map(pm => <SelectItem key={pm.id} value={pm.name}>{pm.name}</SelectItem>)}
+                                  </SelectContent>
+                                </Select>
+                              ) : (
+                                record.paymentMethod || 'N/A'
+                              )}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground py-1.5">{record.notes || 'N/A'}</TableCell>
                             {isAdmin && (
                               <TableCell className="text-right py-1.5">
                                   <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => setPaymentToDelete(record)}>
