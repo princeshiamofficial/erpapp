@@ -476,7 +476,7 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                     disabled={isSubmitting}
                     pattern="0\d{10}"
                     maxLength={11}
-                    title="Phone number must be an 11-digit number starting with 0."
+                    title="Phone number must be 11 digits and start with 0."
                     placeholder="01xxxxxxxxx"
                   />
                 </div>
@@ -563,6 +563,8 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
                                   type="number"
                                   value={editingAmount}
                                   onChange={(e) => setEditingAmount(e.target.value)}
+                                  onBlur={() => handleSavePaymentEdit(record.id)}
+                                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleSavePaymentEdit(record.id); } else if (e.key === 'Escape') { handleCancelPaymentEdit(); }}}
                                   className="h-7 text-xs"
                                 />
                               ) : (
@@ -678,5 +680,4 @@ export function EditOrderDialog({ isOpen, onOpenChange, order, currentUser, onOr
     </>
   );
 }
-
-    
+```
